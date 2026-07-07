@@ -144,8 +144,14 @@ export default tseslint.config(
   },
 
   // ADR-001: the port-parametric kernel imports domain/ and ports/ ONLY.
-  // Last on purpose — it replaces the production-wide restriction above
-  // for kernel files with the full boundary.
+  // ALLOWLIST, not a blocklist — everything is banned (other v3 modules,
+  // node builtins, packages) except kernel-internal files and the two
+  // permitted modules; the negative test derives from this claim, not
+  // from an enumerated ban list. Regex, because gitignore-style pattern
+  // negation cannot express ../-relative allowances. Last on purpose — it
+  // replaces the production-wide restriction above for kernel files with
+  // the full boundary. (If kernel/ ever nests subdirectories, their
+  // parent-relative imports need extending the lookahead.)
   {
     files: ["src/kernel/**"],
     ignores: ["src/**/*.test.ts"],
@@ -155,16 +161,9 @@ export default tseslint.config(
         {
           patterns: [
             {
-              group: [
-                "**/store/**",
-                "**/ingress/**",
-                "**/emit/**",
-                "**/floor/**",
-                "**/diag/**",
-                "**/testkit/**",
-              ],
+              regex: "^(?!\\./|\\.\\./domain/|\\.\\./ports/).*",
               message:
-                "ADR-001: the port-parametric kernel imports domain/ and ports/ ONLY — everything else arrives through ports.",
+                "ADR-001: the port-parametric kernel imports domain/ and ports/ ONLY — everything else (other modules, node builtins, packages) arrives through ports.",
             },
           ],
         },
