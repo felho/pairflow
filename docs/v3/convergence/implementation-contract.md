@@ -121,6 +121,37 @@ correlation as fencing) are stated in the model (the L0a note). The mechanics:
   consume projections, never write audit tables; the LC4 purge contract test
   asserts the audit floor survives a purge.
 
+## IC-D — Injected time source (from the v1-operability round, Q3)
+
+- The kernel never reads the clock directly; every timestamp and every time
+  bound comes from a single injected time source. Production binds it to wall
+  clock; tests bind a controlled clock the test advances.
+- Block A's two existing time uses — the process-gate timeout and the LC4
+  `purged_at` timestamp — move onto this source. Where the store stamps commit
+  timestamps (IC-C's commit-boundary authority), that store binding is part of
+  the time source's production binding; tests may bind both to the controlled
+  clock.
+- This is NOT deterministic replay — IC-N's ban stands. Time becomes a
+  swappable dependency, exactly like adapters under IC-E; nothing more.
+- **Enforcement:** every time-dependent contract test runs on the controlled
+  clock (a gate-timeout test that needs a real sleep fails this item); a
+  lint/review rule that kernel code contains no direct wall-clock read; the
+  controlled clock is a named deliverable of the test-kit chapter.
+
+## IC-E — Ingress adapter-independence (from the v1-operability round, Q2)
+
+- Nothing in the ingress path may assume a particular adapter implementation.
+  The kernel must be fully drivable by a scripted actor and fully observable
+  by a fake egress adapter — the two cheapest implementations of the adapter
+  seams, which is exactly why this line is testable at all.
+- The adapter seams (ActorAdapter on the performer side, the egress adapter on
+  the effect side, the gate/process runner) are injected dependencies; kernel
+  code never branches on a concrete adapter type.
+- **Enforcement:** the entire IC contract-test suite runs against the test
+  kit's scripted actor + fake egress + deterministic gate/process fixtures —
+  the suite passing IS the proof of this item; a review rule that no kernel
+  code path special-cases a concrete adapter.
+
 ## IC-N — Non-goals (kernel-shape guardrails)
 
 - No Temporal-style deterministic replay for actor/LLM work.

@@ -5,7 +5,10 @@ Status: **SETTLED (2026-07-07)** — all four questions ratified one at a time
 source; Q4 the ledger as the model↔code contract surface, extended at
 ratification with the pseudocode-unit mapping and the domain-registry lift),
 **plus the external-review addendum (same day, ratified): the debug bundle,
-the operator CLI's command side, and the sharpened runner-MVP chapter.**
+the operator CLI's command side, and the sharpened runner-MVP chapter; plus
+Addendum 2 (third review, ratified): the rejection-visibility seam resolved
+via the diagnostic channel, the Q2/Q3 lines landed as IC-D/IC-E, and the
+domain-registry lift anchored in the model-build backlog.**
 The final section reserves implementation-plan chapters that need no design
 decision now.
 
@@ -93,8 +96,11 @@ while it runs is precisely the most useful affordance in the early period):
 
 - `listInstances(filter)` — what is running / waiting / terminal;
 - `getInstanceDetail(id)` — status, current step, wait kind, actor, round;
-- `getTimeline(id, cursor)` — the transcript rendered as typed rows,
-  including rejected / stale / duplicate diagnostics and gate outcomes;
+- `getTimeline(id, cursor)` — the committed transcript rendered as typed
+  rows, including gate outcomes. *Corrected at the third review:* committed
+  facts only — rejected / stale / duplicate diagnostics are NOT transcript
+  rows (IC-A1: a rejected attempt never becomes a committed operation) and
+  come from the diagnostic channel instead (see Addendum 2, B1);
 - a live tail (`subscribe`-shape over a single instance) — follow a running
   instance's committed facts as they land.
 
@@ -273,7 +279,9 @@ via the Q2 scripted actor, replay a golden trace, dump the debug bundle).
 All writes go through normal ingress — the CLI stays the thin client the
 core-API memo settled; the addendum only states that the command side is in
 the Block A milestone, not after it. Without it the kernel is formally done
-but cannot even be driven comfortably.
+but cannot even be driven comfortably. *The full Block A CLI in one line:*
+the read-only floor (Q1 + the A1 debug bundle) + the command side (A2) + the
+dev verbs.
 
 **A3 — The runner-MVP reserved chapter, sharpened.** The chapter's content
 is now the concrete first-decision trio: the local worktree provider
@@ -284,10 +292,52 @@ Not absorbed: the review's separate "UI/read-model" item — covered by Q1 +
 the inspector-UI memo, and the review itself lands on the same sequencing
 (CLI + read model first, web UI later).
 
+## Addendum 2 (2026-07-07, ratified) — third-review deltas
+
+A third independent review verified the memo's factual claims (all held) and
+surfaced one real design seam plus two landing steps. Its remaining layer —
+treating unstarted implementation-plan steps as gaps — was not absorbed: the
+plan has not started, and "settled in the memo, bound by the plan" is exactly
+where the process stands.
+
+**B1 — The rejection-visibility seam, resolved.** Q1's original wording
+promised rejected / stale / duplicate diagnostics in `getTimeline`, but
+IC-A1 rules that rejected/non-committed attempts never become committed
+operation rows — and the settled tail carries committed facts, and the A1
+debug bundle lists "rejected inputs" with no stated source. Two capabilities
+were conflated. The resolution splits them, using IC-A1's own allowance
+("if rejected attempts need audit, model that as audit, not as the committed
+operation ledger"):
+
+- `getTimeline` runs over **committed rows only** (the Q1 bullet is
+  corrected above);
+- a named **diagnostic channel** — a structured kernel log plus
+  rejection-audit stream, explicitly non-authoritative, separate from the
+  transcript, best-effort — is the stated source for the live tail's
+  diagnostic layer (a rejection is visible the moment it happens) and for
+  the debug bundle's "rejected inputs" section;
+- the broader unnamed category the review identified — kernel-internal,
+  never-committed failures (crashed ingress, stuck adapter, store timeout,
+  runner crash) — belongs to the same channel and becomes the sixth
+  reserved chapter below.
+
+**B2 — The Q2/Q3 contract lines landed as IC items.** The injected time
+source is now [`implementation-contract.md`](../convergence/implementation-contract.md)
+**IC-D** and ingress adapter-independence is **IC-E**, each with enforcement
+bullets in the file's own pattern — the two lines this memo settled are now
+binding, not merely recorded.
+
+**B3 — The domain-registry lift is no longer orphaned.** Q4.4's "the lift
+lands there" now has a "there": a tooling-backlog entry in
+[`core-model-todo.md`](../convergence/core-model-todo.md) points back at
+this memo, so the model-build thread inherits it as an actionable item.
+
 ## Reserved implementation-plan chapters (no design decision needed now)
 
 Recorded so the implementation plan inherits them as chapters, not
-rediscoveries:
+rediscoveries. Ordering these pieces is the plan's job; the natural forcing
+function is a walking-skeleton hello-world that exercises the floor, the
+test kit, the injected clock, and bootstrap in one thin slice.
 
 - **Template file-format spec** — the canonical authoring format (today it
   exists only by example: the config lens + the gate-policy synthesis's
@@ -308,3 +358,11 @@ rediscoveries:
   actually do when a run misbehaves (query the silence via Q1's floor,
   cancel, deleteRequested; no watchdog/retry until L9) — all decided, just
   scattered.
+- **Kernel diagnostics & structured logging** *(added at the third review,
+  Addendum 2 B1)* — the diagnostic channel's concrete form: structured
+  kernel log + rejection-audit stream, non-authoritative and separate from
+  the transcript. Standard implementation hygiene, but named as a chapter
+  because two settled pieces depend on it (the tail's rejection visibility
+  and the debug bundle's "rejected inputs" section), and because
+  kernel-internal failures — the ones that never reach the transcript — have
+  no other home.

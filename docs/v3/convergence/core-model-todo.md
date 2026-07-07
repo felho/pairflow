@@ -446,3 +446,15 @@ Keep the guardrails collected here, but grouped by the logical part they protect
 - MOVED to `implementation-contract.md` IC-N (no full event-sourcing as the source of
   truth; keep the materialized `WorkflowInstance` + transcript/audit + per-instance
   version/CAS shape) — ADR-gated there.
+
+## Tooling backlog (model-src / ledger generator)
+
+### T1. Domain-registry lift — §4 aggregate/entity/relation inventory
+
+Extend the ledger generator with a **§4 domain registry**: an aggregate / entity /
+relation inventory per level, derived from the Domain-lens blocks (already
+semi-structured — every section carries exactly one, with marked-up aggregates and
+entities). This makes the domain vocabulary a semantic checksum on model edits, and
+the source for the implementation's type-layer drift test. Requirement recorded and
+motivated in `../topics/_open-v1-operability.md` Q4.4 (v1-operability round,
+2026-07-07); the lift itself is this thread's work.
