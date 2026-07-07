@@ -128,3 +128,9 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   executed lint negative on an UNTRACKED file via git checkout fails —
   caught because the protocol reruns the bridges after every revert;
   the bridge rerun IS the guard → acknowledged non-issue
+- 2026-07-07 · ch 5 boundary follow-up · the pre-push gate failed on a
+  STALE ROOT-SIDE test: the ci-local command-order pin never learned
+  ch 3's v3 install step — chapter closes ran only the v3 bridges, so
+  a v1-side breakage slept until the next push (root fix: 3835dc49)
+  → README §6 edited: the chapter DoD gains "pnpm ci:local green"
+  (root suite included), effective from chapter 6

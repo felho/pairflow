@@ -230,8 +230,12 @@ survive the performer, not spread uniformly or removed uniformly.
   planes cannot shear.
 - **Chapter definition of done:** contract tests green + drift tests green +
   the chapter-1 intake tables updated (status flipped) + any born ADRs in
-  `accepted` state + the process-log review (§8) held. A chapter without
-  these is not done regardless of code state.
+  `accepted` state + the process-log review (§8) held + **the full local
+  CI gate (`pnpm ci:local`) green** — the ROOT suite included, not just
+  the v3 bridges (adopted at the ch-5 boundary, effective from chapter
+  6: v3-only bridge runs let a stale root-side CI test sleep until the
+  next push). A chapter without these is not done regardless of code
+  state.
 
 ## 7. Process reflection
 
