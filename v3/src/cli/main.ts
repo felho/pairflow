@@ -69,11 +69,13 @@ function openStoreOrInternal(path: string, deps: CliDeps): StoreHandle {
 }
 
 function parseNonNegativeSafeInt(raw: string, flag: string): number {
-  const value = Number(raw);
-  if (!Number.isSafeInteger(value) || value < 0) {
+  // Lexical check FIRST: Number() would coerce "", whitespace, "1e2"
+  // and "0x10" — the contract is a plain decimal integer string
+  // (P4a aftermath finding 2).
+  if (!/^\d+$/.test(raw) || !Number.isSafeInteger(Number(raw))) {
     throw usage("InvalidFlagValue", `${flag} must be a nonnegative safe integer, got '${raw}'`);
   }
-  return value;
+  return Number(raw);
 }
 
 function parseTemplateRef(raw: string): { id: string; version: number } {
@@ -273,10 +275,19 @@ async function verbStart(ctx: VerbContext): Promise<number> {
       ctx.sinks.out(JSON.stringify(started));
       return EXIT.ok;
     } catch (error) {
-      // Start-side failures throw before any state exists (plan §4.1);
-      // with the ref pre-checked above, what remains is start INPUT
-      // trouble (binding coverage) — usage class.
-      throw usage("StartFailed", error instanceof Error ? error.message : String(error));
+      // ONLY the start-INPUT lane is usage — binding coverage, the one
+      // reachable start-side input failure (the ref is pre-checked
+      // above). Everything else (store integrity such as a colliding
+      // minted id, unexpected errors) flows to the outer internal
+      // branch: the 2-vs-1 exit split must not collapse (P4a
+      // aftermath finding 1).
+      if (
+        error instanceof Error &&
+        error.message.startsWith("start failed (binding coverage)")
+      ) {
+        throw usage("StartFailed", error.message);
+      }
+      throw error;
     }
   });
 }

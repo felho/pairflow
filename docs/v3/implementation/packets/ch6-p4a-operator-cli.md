@@ -151,3 +151,15 @@ works); `src/cli/probeWrite.ts` (`commitTransition`) → RED;
 `src/cli/probeWrite2.ts` (`createInstance`) → RED — all four recorded,
 probes removed, suite re-verified green. One typecheck round
 (`parseArgs` options type via `NonNullable`).
+
+**Aftermath (2026-07-08, post-commit review — fixed same day, 202
+tests):** (1) `verbStart` collapsed the 2-vs-1 split — every
+`startInstance` error became usage; now ONLY the binding-coverage
+input lane is usage, store-integrity (colliding minted id) flows to
+internal, negative-tested; (2) the numeric-flag parser coerced via
+`Number()` — now lexical (`/^\d+$/` + safe-integer), the coercion
+lanes ("", " ", "1e2", "0x10", "+1") negative-tested; (3) the tail
+channel rule gained its CLI-level test (mid-stream failure: emitted
+NDJSON rows stay parseable, ONE stderr doc, exit 1). Process-log line
+appended: a canonical matrix needs its lanes DRIVEN, not just
+declared.

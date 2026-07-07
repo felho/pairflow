@@ -134,3 +134,15 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   a v1-side breakage slept until the next push (root fix: 3835dc49)
   → README §6 edited: the chapter DoD gains "pnpm ci:local green"
   (root suite included), effective from chapter 6
+- 2026-07-08 · ch 6 aftermath (P4a) · post-commit review caught the
+  exit-class matrix proving less than its claim in code: verbStart
+  wrapped EVERY startInstance error as usage (a colliding minted id —
+  store integrity — would exit 2, not 1), the numeric-flag parser
+  coerced via Number() ("", whitespace, "1e2", "0x10" passed as
+  integers), and the tail channel rule (rows stay parseable + ONE
+  stderr doc) had no CLI-level test → all three fixed same day,
+  negative-tested (202 tests). The recurring class, one plane up: the
+  MATRIX was the claim, the code was the rule list — a canonical
+  matrix needs its lanes DRIVEN, not just declared (the ch-5
+  chapter rules held for gates; this extends the same discipline to
+  contract matrices)

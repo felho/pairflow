@@ -355,6 +355,64 @@ describe("cli — read verbs (the floor activated)", () => {
   });
 });
 
+describe("cli — P4a aftermath (post-commit review, 2026-07-08)", () => {
+  it("F1 — a colliding minted id is INTERNAL (1), never usage: the 2-vs-1 split holds", async () => {
+    const db = tempDbPath();
+    const deps: CliDeps = { ...testDeps(), instanceIdSource: () => "inst-fixed" };
+    expect((await run(["start", "--db", db, "--task", "t"], deps)).code).toBe(EXIT.ok);
+    assertErrorContract(
+      await run(["start", "--db", db, "--task", "t"], deps),
+      "internal",
+      EXIT.internal,
+    );
+  });
+
+  it("F2 — numeric flags are LEXICAL decimal integers: coercion lanes → 2", async () => {
+    const db = tempDbPath();
+    const deps = testDeps();
+    const id = await startOne(db, deps);
+    for (const bad of ["", " ", "1e2", "0x10", "+1"]) {
+      assertErrorContract(
+        await run(["timeline", id, "--db", db, "--after", bad], deps),
+        "usage",
+        EXIT.usage,
+      );
+    }
+    assertErrorContract(
+      await run(
+        ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", " "],
+        deps,
+      ),
+      "usage",
+      EXIT.usage,
+    );
+  });
+
+  it("test gap — tail mid-stream failure: emitted rows stay parseable, ONE stderr doc, exit 1", async () => {
+    const db = tempDbPath();
+    const setupDeps = testDeps();
+    const id = await startOne(db, setupDeps);
+    await run(
+      ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "1", "--payload", '{"ref":"d"}'],
+      setupDeps,
+    );
+
+    const deps = testDeps({
+      tailSteps: [
+        () => {
+          throw new Error("boom mid-tail");
+        },
+      ],
+    });
+    const result = await run(["tail", id, "--db", db], deps);
+    expect(result.code).toBe(EXIT.internal);
+    expect(result.stdout).toHaveLength(1);
+    expect((JSON.parse(result.stdout[0] ?? "") as { seq: number }).seq).toBe(1);
+    expect(result.stderr).toHaveLength(1);
+    expect((JSON.parse(result.stderr[0] ?? "") as CliErrorDoc).error.class).toBe("internal");
+  });
+});
+
 describe("cli — last-mile smoke: the SHIPPED entrypoint (root tsx bridge)", () => {
   it("start → detail through the real cli/main.ts process", { timeout: 30_000 }, async () => {
     const db = tempDbPath();
