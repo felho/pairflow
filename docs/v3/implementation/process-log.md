@@ -40,3 +40,15 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   the claim-derived rule was adopted mid-day and these two were authored
   BEFORE it — first post-rule gates are the real test of whether the
   rule sticks
+- 2026-07-07 · ch 4 boundary · the first live packet (P1) took two
+  ratification finding rounds: the template had no canonical contract
+  matrix slot, and the matrix's first cut then dropped a registry FIELD
+  (`round`) because it was projected from ledger §4 ENTITY names, not
+  the model's field lists → template §2 step 2 extended (contract/type
+  rows pull the registry field lists, not just entity names); the
+  matrix itself proved out — P2–P4 built against it with zero contract
+  drift and no divergence stops
+- 2026-07-07 · ch 4 boundary · calibration flow (P1 approved pre-build,
+  P2–P4 flowing to commit-boundary review) held; the ch-3 gates ran
+  live for the first time and held (kernel import boundary, testkit
+  direction, NOCLOCK, no-randomness) → no action

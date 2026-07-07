@@ -98,6 +98,11 @@ Spec-writing is projection, not invention. In order:
    cohesion** (rules that cling to the same ledger block stay together),
    not just size.
 2. **Pull the units verbatim** into the operative material. No paraphrase.
+   For contract/type rows (a canonical contract matrix, a domain-type
+   table), pull the registry **field lists** from the model source too —
+   ledger §4 entity NAMES alone under-specify a shape (the ch-4 P1
+   lesson: `round` dropped out of `WorkflowInstance` until a
+   ratification finding caught it).
 3. **Pull the exact rejection strings** for the slice.
 4. **Carry the trace as an executable expectation** — the committed-row
    sequence the tests must reproduce.
