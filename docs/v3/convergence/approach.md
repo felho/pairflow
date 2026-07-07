@@ -821,8 +821,15 @@ chapter (scripted actor, fake egress, fixtures) as a peer of the IC chapter; the
 time source as an IC-style contract line; and the ledger as the model↔code contract surface
 (three drift-tested name-spaces, chapter traces as golden tests, invariant post-condition
 suite). Its ratified external-review addendum adds the debug bundle (one-run structured
-diagnostic export) and the operator CLI's command+dev verbs to the same milestone. It also reserves the implementation plan's practical chapters (template file format,
-bootstrap, storage pick + migration stance, runner MVP scope, operator recourse card).
+diagnostic export) and the operator CLI's command+dev verbs to the same milestone;
+its Addendum 2 (third review, ratified) landed the Q2/Q3 lines as binding IC-D/IC-E,
+resolved `getTimeline` to committed-rows-only with a named non-authoritative diagnostic
+channel, and realized the domain-registry lift (ledger §4, todo T1). It also reserves the
+implementation plan's practical chapters (template file format, bootstrap, storage pick +
+migration stance, runner MVP scope, operator recourse card, kernel diagnostics &
+structured logging). The full plan-facing payload is mirrored as the `PI-*` plan-intake
+checklist at the end of [`implementation-contract.md`](implementation-contract.md), so
+the plan's mandatory first chapter cannot miss it.
 
 **L5 — Help subflow (agent-initiated Ask).**
 Concepts: `Subflow` (blocking / non-blocking); `HELP_PENDING`; the agent-initiated form

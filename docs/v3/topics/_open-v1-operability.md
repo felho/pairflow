@@ -343,6 +343,11 @@ Recorded so the implementation plan inherits them as chapters, not
 rediscoveries. Ordering these pieces is the plan's job; the natural forcing
 function is a walking-skeleton hello-world that exercises the floor, the
 test kit, the injected clock, and bootstrap in one thin slice.
+*(This memo's full plan-facing payload — these chapters plus the Q1–Q4 /
+addenda deliverables — is mirrored as the `PI-*` plan-intake checklist at the
+end of [`implementation-contract.md`](../convergence/implementation-contract.md),
+which the plan's mandatory first chapter consumes; the memo stays the record
+of why.)*
 
 - **Template file-format spec** — the canonical authoring format (today it
   exists only by example: the config lens + the gate-policy synthesis's

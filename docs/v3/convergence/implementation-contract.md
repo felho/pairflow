@@ -8,10 +8,11 @@ failure modes the kernel-spectrum synthesis documented. Extracted from
 `core-model.html`.
 
 **Process rule (the reason this file exists):** the implementation plan's FIRST
-chapter consumes this file. Every item below maps to one or more of: an
+chapter consumes this file. Every `IC-*` item maps to one or more of: an
 acceptance/contract test, a schema/lint/CI check, or an ADR that records a
 deliberate deviation. An item with none of the three is a planning gap. Items
-are numbered `IC-*` for referencing from the plan, tests, and ADRs.
+are numbered `IC-*` for referencing from the plan, tests, and ADRs. (The `PI-*`
+section at the end is different in kind — see its own rule there.)
 
 ## IC-A — Idempotency enforcement (from todo A1/A2)
 
@@ -161,3 +162,45 @@ correlation as fencing) are stated in the model (the L0a note). The mechanics:
 - No reconciler/outbox for the kernel's own internal state consistency.
 - **Enforcement:** ADR-gated — any design document proposing one of these
   shapes must cite and overturn this section explicitly.
+
+## PI — Plan-intake checklist (inherited chapters and deliverables)
+
+These are NOT constraints: no test/lint/ADR mapping. They are the settled
+plan-facing payload of the v1-operability round
+([`../topics/_open-v1-operability.md`](../topics/_open-v1-operability.md) —
+detail and rationale live there), parked here because the plan's first chapter
+consumes this file and therefore cannot miss them. **Rule: every PI item must
+appear in the implementation plan as a chapter or a named deliverable; a PI
+item with no home in the plan is a planning gap.**
+
+- **PI-1. The test-kit chapter** (peer of the IC chapter): scripted actor,
+  fake egress adapter, fixture convention, deterministic gate/process
+  fixtures, and the controlled clock (named in IC-D's enforcement). The IC
+  suite runs on this kit (IC-E's enforcement). *(Memo Q2, Q3.)*
+- **PI-2. The Block A visibility floor + CLI.** Read-only floor:
+  `listInstances` / `getInstanceDetail` / `getTimeline` (committed rows only —
+  IC-A1) / the live tail; the debug bundle (one-run structured export, with
+  the redaction boundary); the operator CLI's command + dev verbs, all writes
+  through normal ingress. *(Memo Q1 + A1/A2 + Addendum 2 B1.)*
+- **PI-3. The ledger→test transfer.** Three unconditional name-space drift
+  tests (85 rejection names / domain registry, ledger §4 / 158 pseudocode
+  units→code mapping); chapter traces as golden tests (mandatory core;
+  rejection-branch traces as the scoped extension over the 85-name
+  checklist); the invariant post-condition suite. *(Memo Q4.)*
+- **PI-4. Kernel diagnostics & structured logging** — the diagnostic
+  channel's concrete form: structured kernel log + rejection-audit stream,
+  non-authoritative, separate from the transcript; feeds the tail's rejection
+  visibility and the debug bundle's "rejected inputs"; the only home of
+  kernel-internal never-committed failures. *(Memo Addendum 2 B1.)*
+- **PI-5. Template file-format spec** — the canonical authoring format.
+- **PI-6. Bootstrap / hello-world** — the walking skeleton that exercises the
+  floor, the test kit, the injected clock, and bootstrap in one thin slice.
+- **PI-7. Storage substrate pick + migration stance** (storage memo open
+  questions #1/#8; an explicit "wipe-and-recreate" prototype stance is
+  acceptable but must be stated).
+- **PI-8. Runner MVP scope** — the first-decision trio: local worktree
+  provider (`pairflow.worktree`), one real actor adapter, the process-gate
+  runner.
+- **PI-9. Operator recourse card** — one page: what a v1 operator can do when
+  a run misbehaves (query via the floor, cancel, deleteRequested; no
+  watchdog/retry until L9).
