@@ -100,6 +100,38 @@ These should be typed kernel/runtime operations, projected into the actor's
 context packet only when applicable. The actor should not infer them from
 prompt prose.
 
+### Addendum (2026-07-07) — the pull form: capability queries
+
+The list above is the **push** form: the context packet projects the
+affordances at dispatch time, and for most workflow steps that is enough.
+The dynamic shapes (fan-out, multi-round child, help-ask) add a **pull**
+need: mid-run, the situation has evolved past what dispatch could project,
+and the actor must be able to *ask*. Name it as one candidate op family for
+the implementation plan's op list:
+
+- `list_my_ops` — what can I emit/call right now (the packet's projection,
+  re-queryable);
+- `list_spawnable_actors` — which actor types can I spawn, each described by
+  **capability flags, never a provider name** (the nanoclaw lesson);
+- `list_addressable_helpers` — who can I direct a help-ask to (pairs with
+  the agent-addressed help leg, L5 #9).
+
+The catalog behind the second and third is the actor registry already parked
+at the Identity/Sandbox/Session seam (GAP-15) — this family is its
+actor-facing read surface, not a new store.
+
+**Boundary:** the runtime serves the *catalog* as typed facts; the
+goal-directed match ("which of these serves my goal?") stays in the actor's
+head. A kernel that recommends tools for goals would re-grow the vocabulary
+the model spent thirteen levels shedding.
+
+*Corroborating observation (2026-07-07, a Claude Code harness walkthrough):*
+a main agent notices it lacks the SendMessage tool and spawns a sub-agent
+that has it — capability self-awareness plus delegate-to-capable in the
+wild. It works there only because the harness makes the tool surface
+visible; the same affordance in v3 is exactly this projection + query
+surface, structured instead of convention.
+
 ## Layer mapping
 
 - L0b context packet: projects the available runtime operation surface for the
