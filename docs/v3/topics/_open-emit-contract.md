@@ -173,6 +173,14 @@ discipline: pre-declared, itemized, ratified at the build review):
   under-specification: the digest now explicitly RIDES the committed fact
   (the HANDLE append and the HELP_REQUEST fact carry `payload_digest`;
   `recorded_digest_of` reads committed facts — rejected attempts record
-  nothing). Class lesson: a trace is a behavioral claim — it must be
-  replayed against the ladder's actual branches, not against the intuition
-  that motivated them.
+  nothing). A second review pass caught the same wrong story surviving in
+  the section's own acceptance-evidence bullet ("a reused op_id under a
+  corrected payload surfaces as a collision") — reworded to match the
+  trace; and the row-2 op_id-contract note was sharpened to say it is
+  CLIENT discipline, not a kernel branch (the kernel only rejects on
+  `Stale`; it never forces a new op_id — a post-`Stale` refresh *should*
+  renew, but nothing enforces it). Class lesson: a trace is a behavioral
+  claim — it must be replayed against the ladder's actual branches, not
+  against the intuition that motivated them, and a fix to a behavioral
+  narrative must sweep every place that narrative is retold (trace AND
+  evidence bullet).

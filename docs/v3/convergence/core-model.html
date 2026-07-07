@@ -10800,7 +10800,7 @@ template:
           </div></div>
           <div class="trace-row"><div class="trace-n">2</div><div class="trace-c">
             <div class="ev">the corrected <code>CONVERGED { summary, findings: [P2…] }</code> — the SAME <code>op_id</code>, legitimately reused</div>
-            <div class="meta">a corrected retry of a REJECTED attempt is the same logical operation (the op_id contract: resend reuses; only a post-<code>Stale</code> refresh renews); payload rung ✓ → the gate pipeline: <code>declarative.threshold</code> (<b>family: policy</b> — round ≥ 2 ✓) and <code>previous_reviewer_verdict</code> (<b>family: policy</b> — separation, not artifact verification) → COMMIT — the transcript fact records the <code>payload_digest</code>; route to <code>perf_test</code></div>
+            <div class="meta">a corrected retry of a REJECTED attempt is the same logical operation (the op_id contract is CLIENT discipline, not a kernel branch: a resend-without-ack reuses the op_id, and a post-<code>Stale</code> refresh <em>should</em> renew it — the kernel only rejects, it never forces a new op_id); payload rung ✓ → the gate pipeline: <code>declarative.threshold</code> (<b>family: policy</b> — round ≥ 2 ✓) and <code>previous_reviewer_verdict</code> (<b>family: policy</b> — separation, not artifact verification) → COMMIT — the transcript fact records the <code>payload_digest</code>; route to <code>perf_test</code></div>
           </div></div>
           <div class="trace-row idem"><div class="trace-n">3</div><div class="trace-c">
             <div class="ev">a buggy client fires one more emit under the now-COMMITTED <code>op_id</code> — with a different payload</div>
@@ -11923,9 +11923,10 @@ template:
         <div class="note evidence">
           <ul style="margin:0">
             <li><b>Scenario coverage:</b> a contradictory CONVERGED (P1 finding) is rejected with field-level
-              diagnostics before any state change; a reused op_id under a corrected payload surfaces as a visible
-              collision; a well-formed emit passes the payload rung, the policy gates, and commits; the verify
-              test gate certifies THIS workspace state; the packet tells the actor the contract up front.</li>
+              diagnostics before any state change and without consuming the op_id; the corrected retry reuses
+              that op_id and commits; a later different payload under the now-committed op_id surfaces as a
+              visible collision; the verify test gate certifies THIS workspace state; the packet tells the actor
+              the contract up front.</li>
             <li><b>Invariant coverage:</b> offer = gate (by identity) ✓; summary never authority ✓; self-report
               never evidence ✓; no stale-green ✓; digest pinned to the full contract ✓; catalog versions pin
               meaning ✓ — and all L0a–L5 + LC1–LC4 invariants still hold.</li>
