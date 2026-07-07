@@ -1,5 +1,6 @@
-/** Milliseconds since the Unix epoch, as produced by the bound TimeSource. */
-export type EpochMillis = number;
+import type { EpochMillis } from "../domain/time.js";
+
+export type { EpochMillis };
 
 /**
  * IC-D: the kernel never reads the clock directly; every timestamp and
