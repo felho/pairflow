@@ -3,7 +3,12 @@
 Status: **settled direction (2026-07-07)** — three rules ratified; the concrete
 op list and naming deferred to the implementation plan (they depend on which
 runtime operations exist, and on the dynamic-orchestrator decision that shapes
-half the candidate list).
+half the candidate list). *Scope note (2026-07-07, v1-operability close-out):
+explicitly NOT in the first implementation round — the pull-form op family
+belongs to the GAP-15 actor registry (Block B era); Block A's context packet
+already projects `available_ops` / `op_contracts` (E8), the push form the
+first round needs. Recorded as the scope-out note under the `PI-*` checklist
+in [`implementation-contract.md`](../convergence/implementation-contract.md).*
 
 1. **The surface exists and is visible.** The agent's context packet projects
    which runtime operations it may call — the same visibility principle as

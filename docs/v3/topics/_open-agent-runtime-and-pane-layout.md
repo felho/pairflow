@@ -4,8 +4,15 @@ Date: 2026-06-20 · Updated: 2026-07-04 (2026-06-25: resumed — studies 11–12
 Status: **SETTLED direction (2026-07-07).** Q1 (per-adapter cleanest channel; tmux =
 observe/takeover only), Q3 (layout config = presentation layer), and Q2 (pane binds
 **per-runtime-context** — one pane = one workspace/sandbox) are all settled; see §6.
-What remains is implementation-plan territory: the concrete config form and the
-MVP-scope sub-decision (local-worktree only vs headless/cloud).
+The config-form sub-decision was **resolved at the v1-operability close-out
+(2026-07-07): there is no layout config in v1** — discovery runs on the visibility
+floor (`listInstances` / `getInstanceDetail`), attach is a per-runtime-context verb
+on the adapter's observe/takeover channel, and the composed tree view belongs to the
+parked inspector UI. The declarative pane-grid config is dropped as a one-bubble-era
+holdover (no studied system built one — §5/§7); if it ever returns, it is a UI-side
+convenience, never template or adapter config. What remains is the MVP-scope
+sub-decision (local-worktree only vs headless/cloud) — anchored as
+`implementation-contract.md` PI-8.
 
 Relation to the rest of the research corpus: this is an **MVP-driven design topic**, not a
 reverse-engineering study. It sits at the convergence layer (mostly **L0e** runtime-context,
@@ -481,13 +488,21 @@ input fallback); the layout is a presentation detail at the edge.**
   parallel work (two workspaces = two panes), matches what a human actually watches ("what is
   happening in that worktree"), and fits the ratified Identity/Sandbox/Session decomposition — a
   pane observes a live session in a sandbox, never an abstract kernel concept. *Deferred to the
-  implementation plan:* the concrete config form (follows Q3) and the MVP-scope sub-decision
-  (local-worktree only vs headless/cloud).
-- **Q3 — Layout config location: SETTLED (runtime-adapter / presentation layer); config form open.**
-  The *location* is settled — presentation config, not the workflow definition or kernel — which
-  keeps the template platform-independent. (omnigent confirms: layout is the UI's job; the
-  `terminals:` config is for ad-hoc shells, not agent launch.) What stays open is only the concrete
-  **config form and binding policy**, which follows from Q2.
+  implementation plan:* the MVP-scope sub-decision (local-worktree only vs headless/cloud) —
+  anchored as PI-8. *(The config-form sub-decision resolved 2026-07-07: no layout config in v1 —
+  see the status header and Q3 below.)*
+- **Q3 — Layout config location: SETTLED (runtime-adapter / presentation layer); config form
+  RESOLVED (2026-07-07): none in v1.** The *location* was settled — presentation config, never the
+  workflow definition or kernel — which keeps the template platform-independent. The follow-up
+  config-form question then resolved to "no config at all": the runtime-context set is dynamic
+  (children spawn, worktrees come and go; no kernel plan object exists to lay out ahead of time —
+  the dynamic-orchestrator decision), so a declarative grid has no stable referent. The v1 shape:
+  the visibility floor is the discovery surface (what instances / runtime contexts exist), and
+  **attach is a per-runtime-context verb** on the adapter's observe/takeover channel (tmux for the
+  local adapter) — you attach to one runner, not to "the workflow". The composed tree view is the
+  parked inspector UI's job (omnigent confirms: layout is the UI's job; the UI composes the view;
+  layout is not configured). A multi-pane "watch these N" convenience may return later as UI-side
+  presentation state, never as template or adapter config.
 
 ## 7. v1 grounding results
 

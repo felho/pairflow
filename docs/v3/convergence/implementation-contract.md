@@ -200,7 +200,22 @@ item with no home in the plan is a planning gap.**
   acceptable but must be stated).
 - **PI-8. Runner MVP scope** — the first-decision trio: local worktree
   provider (`pairflow.worktree`), one real actor adapter, the process-gate
-  runner.
+  runner; plus the adapter's **attach channel** — a per-runtime-context
+  observe/takeover verb (tmux for the local adapter), discovered via the
+  PI-2 floor. There is NO pane-layout config in v1 (resolved 2026-07-07 —
+  the agent-runtime memo Q3: the runtime-context set is dynamic, a
+  declarative grid has no stable referent; the composed tree view is the
+  parked inspector UI's job). Remaining sub-decision for the chapter:
+  local-worktree only vs headless/cloud.
 - **PI-9. Operator recourse card** — one page: what a v1 operator can do when
   a run misbehaves (query via the floor, cancel, deleteRequested; no
   watchdog/retry until L9).
+
+**Scoped OUT of the first round (deliberate, not an omission):** the
+capability-query op family (`list_my_ops` / `list_spawnable_actors` /
+`list_addressable_helpers` —
+[`../topics/_open-runtime-capability-surface.md`](../topics/_open-runtime-capability-surface.md)).
+Its memo says "op list + naming → implementation plan", but the pull form
+belongs to the GAP-15 actor registry (Block B era); Block A's context packet
+already projects `available_ops` / `op_contracts` (the emit contract's E8),
+which is the push form the first round needs.
