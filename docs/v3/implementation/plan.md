@@ -104,6 +104,12 @@ convention is itself a chapter-1 rule.
 | 9 | Runner MVP: local worktree provider, one real actor adapter, process-gate runner, attach channel (tmux observe/takeover); sub-decision: local-worktree only vs headless/cloud | PI-8 | planned(ch 9) |
 | 10 | Operator recourse card: one page (query via the floor, cancel, deleteRequested; no watchdog/retry until L9) | PI-9 | planned(ch 10) |
 
+**Ordering note (walking-skeleton-first, README §3.4).** Chapter 3 before
+chapter 4 does not contradict the principle: ch 3 is the constraint-sink /
+test-kit **foundation** the skeleton runs on (controlled clock, scripted
+actor, fake egress, emit-lib); the first **runtime code slice** is still the
+ch 4 walking skeleton.
+
 **MD-1 (declared migration debt).** Chapter 4's walking skeleton instantiates
 from a **fixture-form template** (hardcoded, test-kit shaped) so the skeleton
 stays thin. The canonical authoring format lands in chapter 8, which MUST
@@ -121,8 +127,14 @@ accounting *rules* — the in-scope inventory it asserts over — are fixed in
 Per README §5.4, "in scope" is a plan decision. The round-1 inventory:
 
 - **158 pseudocode units — all in scope.** Every unit has exactly one owner
-  task packet; shared ownership only by explicit declaration. The
-  unit→code mapping drift test is unconditional (PI-3).
+  task packet; shared ownership only by explicit declaration. Ownership
+  carries a **disposition** (the template's Units line: `implement` /
+  `type/schema` / `test-only` / `generated/mapped` / `alias/inherited` /
+  `review-only`) — the ledger's units include declarations, helper
+  contracts, overrides, and inherited/reprinted units, and not all of them
+  realize as code the same way; the coverage script asserts ownership +
+  disposition, never uniform code implementation. The unit→code mapping
+  drift test is unconditional (PI-3).
 - **85 rejection names — names unconditional, behavior scoped.** The
   implementation's rejection type carries all 85 names from day one (drift
   test); a rejection-branch trace that *triggers* each name is the **scoped

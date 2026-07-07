@@ -10,6 +10,17 @@ deferred until 2–3 real tasks validate the shape (README §8); the global
 `CreatePairflowSpec` stays untouched — its ergonomics layer is inherited
 below as rubric content, not by forking the skill.
 
+**Pairflow metadata rule.** The packet is the executable unit (plan genre
+note), but this template does not itself satisfy the v1 Pairflow task
+metadata contract. A packet enters the machinery in one of two forms:
+either it is authored WITH Pairflow Task frontmatter (the packet IS the
+task document), or it is embedded as the **"v3 packet" section** of a
+metadata-bearing Pairflow task document — in which case the wrapper task
+owns routing/lineage/bubble metadata and the packet is content, **not a
+standalone routing authority**. During calibration (manual execution)
+either form is fine; the choice per task class is recorded when chaining
+starts.
+
 ## 1. The template
 
 ```markdown
@@ -19,7 +30,9 @@ Plan step: <plan.md chapter/step reference>
 Autonomy stage: calibration | measurement | chaining
 
 ## Ledger slice (declared — feeds the coverage accounting)
-- Units: <unit ids this packet realizes>
+- Units: <unit id + owner disposition, one of:
+  implement | type/schema | test-only | generated/mapped |
+  alias/inherited | review-only>
 - Rejections: <the EXACT rejection strings realized or exercised>
 - Invariants: <ids + disposition: checker | type/schema | test | review>
 - Traces: <chapter-trace refs / rejection-branch-trace refs>
