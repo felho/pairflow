@@ -204,7 +204,7 @@ derived from contract density, ramped in three stages:
 
 1. **Calibration** — the first chapters (intake, skeleton, test kit) run
    task-by-task with manual approve; the packets are built by checklist (see
-   §7). Partly necessity: the mechanical gates are themselves being built
+   §8). Partly necessity: the mechanical gates are themselves being built
    here.
 2. **Measurement** — anything the operator's hand catches that no gate did
    becomes either a new gate or a new checkpoint rule.
@@ -226,10 +226,31 @@ survive the performer, not spread uniformly or removed uniformly.
   planes cannot shear.
 - **Chapter definition of done:** contract tests green + drift tests green +
   the chapter-1 intake tables updated (status flipped) + any born ADRs in
-  `accepted` state. A chapter without these is not done regardless of code
-  state.
+  `accepted` state + the process-log review (§8) held. A chapter without
+  these is not done regardless of code state.
 
-## 7. Deferred: skill-ification
+## 7. Process reflection
+
+The process itself is new (sample size: one), so it carries its own feedback
+loop — pre-defined **capture**, deferred **structure**:
+
+- **Friction log** — [`process-log.md`](process-log.md), append-only, one
+  line per observation, written **the moment the friction happens** (a
+  session summary will not preserve it later). Anything qualifies: a packet
+  that needed out-of-packet fishing, a gate that fired late, a rule that
+  read ambiguous, a step that felt ceremonial.
+- **Capture, don't fix.** No process edits mid-chapter unless the issue
+  blocks; the log is the pressure valve that keeps work from drifting into
+  process-polishing.
+- **Reflection point = the chapter boundary** (already a ratification
+  checkpoint, now part of the chapter DoD): review the new log lines; each
+  becomes a gate, a checkpoint rule, a README edit, or an acknowledged
+  non-issue. This extends §5.5's measurement stage (hand-catches become
+  gates) from the build loop to the process itself.
+- **No pre-defined metrics or retro template** — what is worth measuring is
+  itself an empirical question; let the first chapters' log answer it.
+
+## 8. Deferred: skill-ification
 
 The v3-mode task-packet flow starts as a **template + projection checklist**
 in this directory (a named deliverable of plan chapter 1), executed manually
