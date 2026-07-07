@@ -1,7 +1,7 @@
 # V3 Implementation Plan
 
 Written chapter by chapter, each chapter proposed → ratified → committed
-(process: [`README.md`](README.md) §3). Chapters present: 1–2.
+(process: [`README.md`](README.md) §3). Chapters present: 1–3.
 
 **Genre note.** This is the implementation **master plan** — it is NOT a
 directly `ExecutePairflowPlan`-executable task list, and it carries no
@@ -342,3 +342,174 @@ DoD: integrity check green; the four ADRs `accepted`; chapter-1 statuses
 flipped (the IC-N gate row, the ch-2 map row → realized, covering PI-7 and
 PI-10); process-log review held at this boundary (log empty — recorded in
 the log).
+
+---
+
+## Chapter 3 — Test kit, emit-lib, coverage accounting (ratified 2026-07-07)
+
+Autonomy stage: **calibration** (README §5.5).
+
+This chapter is the main **constraint sink** (README §5.3): rules that ride
+review surfaces today become environment enforcement here — types, lint,
+kit fixtures, CI wiring. It realizes PI-1 (the test kit) and PI-11's
+mechanical half (the coverage-accounting script), and turns seven intake
+rows green.
+
+### 3.1 Ports first — the kit's type base
+
+The kit is built BEFORE the kernel (the §1.3 ordering note), so the
+`ports/` content this chapter authors is exactly what the kit realizes:
+
+- `TimeSource` — the injected clock (IC-D);
+- `EgressAdapter` — the send signature REQUIRES an idempotency-key
+  parameter: **this is `CHK-A2-IDEMKEY`, enforced at the type level**; the
+  fake egress adapter implements it first (IC-A2's enforcement line);
+- `ActorAdapter` — the performer-side seam the scripted actor plays;
+- `GateRunner` / process-runner seam — the surface the deterministic
+  gate/process fixtures implement.
+
+`StorePort` content stays chapter-4 work.
+
+**No-mini-domain rule (ratification finding).** Chapter 3 must not freeze a
+parallel domain model for the ch-4/5 work to dodge. Port signatures use
+**opaque payloads** (`unknown` / generic parameters) wherever the ledger §4
+type does not exist yet; any NAMED type this chapter introduces either
+(a) uses exact ledger terminology as a final basic (e.g. `DispatchIntent`
+as a name), with its shape explicitly **ch-4-owned** and marked so in the
+source, or (b) stays port-local plumbing (e.g. `IdempotencyKey`,
+`EpochMillis`). The ch-5 drift tests are the arbiter — nothing authored
+here may compete with ledger §4.
+
+### 3.2 The test kit (PI-1) — `v3/src/testkit/` (ADR-005)
+
+`testkit/` is a NEW module — ADR-001's map did not carry it, so **ADR-005
+(amends ADR-001)** adds it with the binding import rule: a **test-only
+support module** — production modules never import `testkit/`; `testkit/`
+imports `ports/`, `domain/`, and `emit/` at most, never `kernel/` or
+`store/` (it is the far side of the seams, not a consumer of the kernel).
+
+Deliverables:
+
+- **Controlled clock** — the named IC-D deliverable: `now()` + `advance()`;
+  gate-timeout integration deepens in ch 5 with the first time-dependent CT.
+- **Fake egress adapter** — implements `EgressAdapter` first
+  (`CHK-A2-IDEMKEY`'s runtime witness): records every call WITH its
+  idempotency key; scripted acks, including the no-ack outcome (IC-A2's
+  distinct non-terminal state).
+- **Scripted actor** — plays an ingress-op sequence against an injected
+  deliver seam (the kernel does not exist yet; the seam is a parameter).
+  The ch-5 golden-trace engine; consumes the emit-lib for `op_id`s.
+- **Deterministic gate/process fixtures** — scripted verdicts / scripted
+  process results; typed builders.
+- **Fixture convention** (short `testkit/README.md`): fixtures never read
+  wall-clock time and never randomize — both halves MECHANIZED in §3.3
+  (ratification minor), not left as prose.
+
+### 3.3 The lint layer — rules become environment
+
+eslint enters at its first consumer (ADR-002). Isolated v3 config
+(`v3/eslint.config.mjs`); the ROOT lint ignores `v3/**` — the standalone
+package lints itself (ratification finding: separate bridges, no root
+entanglement).
+
+- **`CHK-D-NOCLOCK`** — `Date.now` / `new Date()` / `performance.now` /
+  timer globals banned under `kernel/` and `domain/`; all time flows
+  through `TimeSource`.
+- **Import-boundary check** — the mechanization ADR-001 promised for this
+  chapter: `kernel/` imports `domain/` + `ports/` ONLY; production modules
+  never import `testkit/`; `testkit/` never imports `kernel/` / `store/`
+  (ADR-005).
+- **`CHK-D-TESTCLOCK`** — real-sleep primitives (`setTimeout` etc.) banned
+  in v3 tests; the kit's controlled clock is the only `TimeSource` a test
+  binds. A test needing a real sleep fails the lint, not a review.
+- **No-randomness** — `Math.random` / `crypto.randomUUID` banned in
+  `testkit/` and tests (the fixture convention's second half, mechanized).
+  The emit-lib's nonce path is not an accidental exemption: it takes an
+  injected nonce source (§3.5) — production binds crypto, tests bind a
+  deterministic source.
+
+Every lint rule lands **negative-tested**: a deliberate violation must fail
+before the rule counts as realized (the ch-2 aftermath lesson: a gate must
+prove its claim).
+
+### 3.4 Vitest + CI wiring (`CHK-E-SUITE-ON-KIT`)
+
+- v3 vitest config; suite convention: a contract test drives the kernel
+  ONLY through the kit (scripted actor + fake egress + fixtures +
+  controlled clock). The named `CT-*` rows land in ch 4/5/9 — the WIRING is
+  this chapter's deliverable; the suite grows into it. Ch-3's own tests:
+  kit self-tests + emit-lib tests.
+- Root bridges: `v3:lint`, `v3:test`, `v3:coverage` (beside the existing
+  `v3:typecheck`, `v3:adr-check`).
+- **CI, concretely (ratification finding):** `scripts/ci-local.sh`'s
+  install step gains `pnpm --dir v3 install --frozen-lockfile`; its quality
+  suite gains a v3 child (v3 lint + typecheck + test + adr-check + coverage
+  validation). The GitHub validate path (`release.yml` validate job, which
+  `ci-github-local` mirrors) gains the same steps.
+
+### 3.5 The emit-lib (IC-A3) + ADR-004 (= `ADR-A3-IDSCHEME`)
+
+One audited implementation in `src/emit/`, consumed by the scripted actor
+now and the operator CLI in ch 6. ADR-004 records the scheme per operation
+family (ratified):
+
+- **actor-emit family: content-addressed** — `op_id` derived from
+  (instance id, context-packet identity, op type, payload digest). Refresh
+  after `Stale` yields a new `op_id` BY CONSTRUCTION (new packet identity);
+  resend-without-ack reproduces the same hash. `CT-A3-RETRANS` /
+  `CT-A3-EMITLIB-REFRESH` prove the kernel-facing halves in ch 5.
+- **operator/CLI verb family: request-scoped nonce** — one nonce per
+  logical invocation, reused across retries within it (two identical
+  cancels may be two legitimate operations; content-addressing would
+  collapse them). The nonce source is INJECTED — deterministic in tests,
+  crypto in production.
+
+Ch-3-local tests: derivation determinism, packet-identity sensitivity (the
+refresh guarantee's lib-side half), payload-digest sensitivity, family
+separation. Kernel-dependent behavior (`Duplicate` / `Stale` answers) stays
+ch 5.
+
+### 3.6 The coverage-accounting script (PI-11's mechanical half)
+
+Home: `tools/v3-plan/check_coverage.py` — beside `tools/v3-model/`,
+**stdlib only** (the `report_ledger.py` culture). Root bridge:
+`v3:coverage`.
+
+- **Inventory sources:** the `model-src/units/` tree (158 files =
+  `<section>/<UnitName>` ids), ledger §2 (116 invariants,
+  `<section>/<slug>`), ledger §3 (85 rejection names), the 20 unit
+  sections (= the chapter-trace inventory), scoped by the §1.4 rules.
+- **Packet source:** `docs/v3/implementation/packets/` (the convention this
+  script fixes; empty until ch 4). It parses the packet's MACHINE slice
+  block — a fenced ` ```json ` block with a `ledger_slice` top-level key
+  (ratification finding: canonical parseable form, not prose; JSON over
+  YAML keeps the checker stdlib-only). The template carries the schema
+  (`task-packet-template.md` §1).
+- **Dispositions are exact machine tokens** — the fixed enums of §1.4
+  (unit dispositions) and the invariant dispositions; free-form variants
+  are errors.
+- **Two modes (ratified):** *validation* always runs in CI — parse errors,
+  unknown ids, enum violations, undeclared double owners are hard failures
+  even with zero packets; *closure* (`--assert-closed`: union = inventory,
+  no orphans) is the gated §5.4 chaining criterion, asserted when a chapter
+  claims packet-complete coverage — not a standing failure on an empty set.
+
+### 3.7 Execution note (ratified)
+
+Chapter 3 runs the build loop DIRECTLY (README §4, manual, calibration) —
+no task packets: the ledger slices here are thin (infra + emit-lib). The
+packet convention's first live use is chapter 4, where the kernel slices
+are dense. Recorded as a decision, not drift.
+
+### 3.8 Deliverables and DoD
+
+Shipped: this section; the machine-slice template block; ADR-004 + ADR-005;
+the `ports/` content of §3.1; the test kit (clock, fake egress, scripted
+actor, fixtures + README); the v3 lint layer + vitest wiring; the emit-lib;
+the coverage script; root bridges + CI wiring.
+
+DoD: all v3 bridges green (`v3:typecheck`, `v3:lint`, `v3:test`,
+`v3:adr-check`, `v3:coverage`); every lint check negative-tested; ADR-004 /
+ADR-005 `accepted` with the integrity check green; the seven ch-3 intake
+rows + the ch-3 map row flipped to `realized` (PI-1 + the PI-11 script);
+process-log review held at the boundary.

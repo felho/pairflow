@@ -23,20 +23,49 @@ starts.
 
 ## 1. The template
 
-```markdown
+````markdown
 # Task Packet: <packet-id> — <title>
 
 Plan step: <plan.md chapter/step reference>
 Autonomy stage: calibration | measurement | chaining
 
 ## Ledger slice (declared — feeds the coverage accounting)
-- Units: <unit id + owner disposition, one of:
-  implement | type/schema | test-only | generated/mapped |
-  alias/inherited | review-only>
-- Rejections: <the EXACT rejection strings realized or exercised>
-- Invariants: <ids + disposition: checker | type/schema | test | review>
-- Traces: <chapter-trace refs / rejection-branch-trace refs>
-- Shared ownership: <none | explicit declaration of the co-owner packet>
+
+The slice is declared ONCE, in the machine block below — the coverage
+script (`tools/v3-plan/check_coverage.py`, plan §3.6) parses it. No prose
+duplicate beside it (prose drifts; the block is the declaration).
+
+```json
+{
+  "ledger_slice": {
+    "units": [
+      { "id": "<section>/<UnitName>", "disposition": "<unit-disposition>" }
+    ],
+    "rejections": ["<exact rejection string from ledger §3>"],
+    "invariants": [
+      { "id": "<section>/<slug>", "disposition": "<invariant-disposition>" }
+    ],
+    "traces": ["<section>"],
+    "shared_ownership": [
+      { "item": "<unit or invariant id>", "co_owner": "<packet-id>" }
+    ]
+  }
+}
+```
+
+Syntax (machine tokens, no free-form variants — the script rejects them):
+- unit `id` = `<section>/<UnitName>` ↔ the file
+  `model-src/units/<section>/<UnitName>.txt`; `<unit-disposition>` one of
+  `implement` | `type/schema` | `test-only` | `generated/mapped` |
+  `alias/inherited` | `review-only`;
+- `rejections` = exact names from ledger §3;
+- invariant `id` = `<section>/<slug>` from ledger §2;
+  `<invariant-disposition>` one of `checker` | `type/schema` | `test` |
+  `review`;
+- `traces` = unit-section names (chapter traces); rejection-branch trace
+  refs join the syntax when the scoped extension starts;
+- `shared_ownership` = `[]` when none — an absent declaration with an
+  overlapping slice is a coverage error, not an implicit share.
 
 ## Operative material (full text — projection, not invention)
 <The unit pseudocode VERBATIM. The exact rejection strings — never
@@ -58,7 +87,7 @@ and the "can it become data?" tests.>
 - Checks: <CHK-* ids in force>
 - Drift tests green (standing, unconditional — PI-3)
 - Standing review rules in force: <REV-* ids from §3 applicable here>
-```
+````
 
 ## 2. The projection checklist (compiling a packet)
 
