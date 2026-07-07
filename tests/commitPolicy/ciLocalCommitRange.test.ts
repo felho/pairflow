@@ -88,6 +88,7 @@ describe("ci-local commit range integration", () => {
     );
     expect(commands).toContain("install --frozen-lockfile");
     expect(commands).toContain("--dir ui install --frozen-lockfile");
+    expect(commands).toContain("--dir v3 install --frozen-lockfile");
     expect(commands).toContain("codegen:reviewer-ontology");
     expect(commands).toContain(ciLintCommand);
     expect(commands).toContain("exec tsc --noEmit");
@@ -168,7 +169,8 @@ describe("ci-local commit range integration", () => {
     const commands = (await readFile(commandLog, "utf8")).trim().split("\n");
     expect(commands[0]).toBe("install --frozen-lockfile");
     expect(commands[1]).toBe("--dir ui install --frozen-lockfile");
-    expect(commands[2]).toBe("codegen:reviewer-ontology");
+    expect(commands[2]).toBe("--dir v3 install --frozen-lockfile");
+    expect(commands[3]).toBe("codegen:reviewer-ontology");
     expect(commands).toContain(ciLintCommand);
     expect(commands).toContain("exec tsc --noEmit");
     expect(commands).toContain("exec vitest run --maxWorkers=8");
