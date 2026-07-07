@@ -1,7 +1,7 @@
 # Open: V1 operability — testing, debugging, and the visibility floor
 
-Status: **open (2026-07-07)** — decision round in progress. **Q1 settled
-(2026-07-07, ratified)**; Q2–Q4 pending. A fifth section reserves
+Status: **open (2026-07-07)** — decision round in progress. **Q1 and Q2
+settled (2026-07-07, ratified)**; Q3–Q4 pending. A fifth section reserves
 implementation-plan chapters that need no design decision now.
 
 ## Why this memo exists
@@ -107,31 +107,31 @@ new kernel behavior); the cost of not having it is paid daily.
 
 ## Q2 — The test kit: scripted actor, fake adapter, fixtures
 
-**The question.** Do the IC-* acceptance tests get their required tooling as
-a named deliverable, and is "drivable by a scripted actor" a stated kernel
-requirement?
-
-**Why it should be answered now.** Every IC test needs a deterministic
-performer: something that plays an actor's role by emitting a pre-scripted
-sequence of ops (with controllable op_ids, versions, and timing) so races,
-crash windows, and duplicate deliveries can be staged on demand. If the
-kernel's ingress is only reachable through a real ActorAdapter, the tests
-can't be written. This is a cheap requirement to state now and an expensive
-retrofit.
-
-**Proposed direction.** The implementation plan gets a "test kit" chapter as
-a peer of the IC chapter, with three named pieces:
+**Settled direction (2026-07-07, ratified).** The implementation plan gets a
+**"test kit" chapter as a peer of the IC chapter**, with three named
+deliverables:
 
 - a **scripted actor** — a trivial ActorAdapter implementation that replays a
-  declared op sequence (the deterministic performer for all IC tests);
+  declared op sequence with controllable op_ids, versions, and timing (the
+  deterministic performer for all IC tests: races, crash windows, and
+  duplicate deliveries staged on demand);
 - a **fake egress adapter** — records intents instead of performing effects,
   for confirmed-effect and crash-window tests;
 - a **fixture convention** — how a test declares its starting state
   (template + instance + transcript prefix) without hand-writing store rows.
 
-The kernel-side requirement is only: nothing in the ingress path may assume a
-particular adapter implementation (which the model already implies — this
-makes it a stated, testable contract line).
+And one kernel-side contract line, stated rather than implied: **nothing in
+the ingress path may assume a particular adapter implementation.** The model
+already implies this; the decision makes it an explicit, testable line (the
+scripted actor and fake egress are its cheapest implementations, which is
+exactly why the kit is cheap to build).
+
+**The original question and rationale (kept as record).** Do the IC-*
+acceptance tests get their required tooling as a named deliverable, and is
+"drivable by a scripted actor" a stated kernel requirement? Every IC test
+needs a deterministic performer; if the kernel's ingress is only reachable
+through a real ActorAdapter, the tests can't be written. A cheap requirement
+to state now, an expensive retrofit later.
 
 ## Q3 — Time as an injected dependency
 
