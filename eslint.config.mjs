@@ -7,6 +7,7 @@ export default tseslint.config(
     ignores: [
       "dist/**",
       "ui/dist/**",
+      "v3/**",
       "node_modules/**",
       "eslint.config.mjs",
       "ui/postcss.config.js",

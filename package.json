@@ -65,6 +65,7 @@
     "dev:ui": "lsof -ti :4173 | xargs kill 2>/dev/null; pnpm build && pairflow ui",
     "browser:install": "playwright install chromium",
     "v3:typecheck": "pnpm --dir v3 typecheck",
+    "v3:lint": "pnpm --dir v3 lint",
     "v3:test": "pnpm --dir v3 test",
     "v3:adr-check": "bash ./v3/adr/check.sh"
   },
