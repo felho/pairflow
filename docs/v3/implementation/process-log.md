@@ -10,4 +10,5 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
 
 ## Log
 
-(empty — the plan's chapter 1 is the first work this log covers)
+- 2026-07-07 · ch 2 boundary · review held — no friction entries accumulated
+  during chapters 1–2 → no action

@@ -63,7 +63,9 @@
     "ui:restart": "bash ./scripts/ui-server.sh restart",
     "ui:status": "bash ./scripts/ui-server.sh status",
     "dev:ui": "lsof -ti :4173 | xargs kill 2>/dev/null; pnpm build && pairflow ui",
-    "browser:install": "playwright install chromium"
+    "browser:install": "playwright install chromium",
+    "v3:typecheck": "pnpm --dir v3 typecheck",
+    "v3:adr-check": "bash ./v3/adr/check.sh"
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",

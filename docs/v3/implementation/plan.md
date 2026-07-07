@@ -1,7 +1,7 @@
 # V3 Implementation Plan
 
 Written chapter by chapter, each chapter proposed → ratified → committed
-(process: [`README.md`](README.md) §3). Chapters present: 1.
+(process: [`README.md`](README.md) §3). Chapters present: 1–2.
 
 **Genre note.** This is the implementation **master plan** — it is NOT a
 directly `ExecutePairflowPlan`-executable task list, and it carries no
@@ -76,7 +76,7 @@ definition of done, README §6):
 | IC-D | controlled clock — named test-kit deliverable (PI-1) | ch 3 | planned(ch 3) |
 | IC-E | `CHK-E-SUITE-ON-KIT` — CI wiring: the entire `CT-*` suite runs against scripted actor + fake egress + deterministic gate/process fixtures; the suite passing IS the proof | ch 3 | planned(ch 3) |
 | IC-E | `REV-E-NO-ADAPTER-BRANCH` — no kernel code path special-cases a concrete adapter type | review rubric | realized |
-| IC-N | ADR gate — the ADR template carries a mandatory IC-N screen field, and the compliance-review step checks diffs against the banned shapes; a banned shape enters only via an `accepted` ADR that cites and overturns IC-N explicitly | ch 2 | planned(ch 2) |
+| IC-N | ADR gate — the ADR template carries a mandatory IC-N screen field, and the compliance-review step checks diffs against the banned shapes; a banned shape enters only via an `accepted` ADR that cites and overturns IC-N explicitly | ch 2 | realized |
 
 **IC-A1 digest scope note.** The `payload_digest` / `op_id_collision` branch
 is scoped to the **actor-emit path** in this round (the EC memo's scope
@@ -94,7 +94,7 @@ convention is itself a chapter-1 rule.
 | Ch | Content | PI | Status |
 |---|---|---|---|
 | 1 | Intake: these tables, the in-scope inventory (§1.4), the task-packet template + projection checklist (§1.5), the ramp-marking convention | PI-11 (convention + template + ramp) | realized |
-| 2 | Architecture skeleton: repo layout, module boundaries, language/tooling picks, storage substrate + migration stance, the ADR machinery (home dir, template with IC-N screen, flat index, integrity check, compliance-review step) + first ADRs | PI-7, PI-10 | planned(ch 2) |
+| 2 | Architecture skeleton: repo layout, module boundaries, language/tooling picks, storage substrate + migration stance, the ADR machinery (home dir, template with IC-N screen, flat index, integrity check, compliance-review step) + first ADRs | PI-7, PI-10 | realized |
 | 3 | Test kit: scripted actor, fake egress adapter, fixture convention, deterministic gate/process fixtures, controlled clock (IC-D), emit-lib (IC-A3), **coverage-accounting script** (check.sh culture — PI-11's mechanical half) | PI-1 (+ PI-11 script) | planned(ch 3) |
 | 4 | Walking skeleton / bootstrap: minimal ingress→commit, minimal floor read, injected clock, bootstrap in one thin slice | PI-6 | planned(ch 4) |
 | 5 | Ledger→test transfer: the three unconditional drift tests, the chapter-trace golden harness, the invariant post-condition suite + the invariant disposition map (§1.4) | PI-3 | planned(ch 5) |
@@ -191,3 +191,154 @@ realization (`CT`/`CHK`/`ADR`) with a named home or a declared trigger; every
 `PI-*` item has a chapter or named deliverable. No unmapped items remain.
 Status flips happen at each owning chapter's definition of done and are part
 of that chapter's DoD (README §6).
+
+---
+
+## Chapter 2 — Architecture skeleton (ratified 2026-07-07)
+
+Autonomy stage: **calibration** (README §5.5).
+
+This chapter fixes the implementation-side architecture decisions (PI-7,
+PI-10) and builds the ADR machinery. It ships decisions and machinery, not
+runtime code — the first runtime slice is the chapter-4 walking skeleton.
+Every decision below is recorded in a born ADR (§2.6): this section is the
+plan-side summary; the ADR is the decision record.
+
+### 2.1 Code home and package topology (ADR-001)
+
+The v3 kernel lives in this repo, in a top-level `v3/` directory, as a
+**standalone package**: own `package.json`, own lockfile, own `tsconfig`,
+reached from the root via `pnpm --dir v3 ...` script bridges — the existing
+`ui/` pattern, stated explicitly. The repo does NOT become a pnpm workspace;
+switching to a workspace would be a separate tooling decision (a new ADR),
+never a silent drift.
+
+- **Not a separate repo:** the PI-3 drift tests read
+  `docs/v3/convergence/model-src/ledger.md` — the model↔code contract
+  surface and the code must share a repo, or the divergence stop (README §6)
+  degrades into a cross-repo sync problem. The build loop's execution
+  vehicle (the v1 machinery) also lives here.
+- **Not inside the v1 `src/`:** the v1 CLI's build/test/release pipeline
+  (tsconfig.build → dist → npm publish) is a different lifecycle; mixing
+  would make every v3 commit touch the published package.
+
+### 2.2 Module boundaries (ADR-001)
+
+Under `v3/src/`, the dependency direction IS the rule:
+
+| Module | Role |
+|---|---|
+| `domain/` | the type layer targeted by ledger §4 (51 aggregates / 121 entities) + the 85-name rejection type |
+| `kernel/` | the **port-parametric kernel**: apply/commit logic and invariants, parameterized over the `ports/` interfaces; imports `domain/` and `ports/` ONLY |
+| `ports/` | injected dependency interfaces: `StorePort`, `ActorAdapter`, `EgressAdapter`, `GateRunner`, `TimeSource` (IC-D / IC-E as types) |
+| `store/` | the SQLite `StorePort` implementation + schema (IC-A1 uniqueness, IC-C commit-boundary timestamps) |
+| `ingress/` | op-envelope validation → kernel; adapter-independent (IC-E) |
+| `emit/` | the emit-lib (`op_id` derivation) — content lands in ch 3 |
+| `floor/` | the read-only visibility floor — content lands in ch 6 |
+| `diag/` | the non-authoritative diagnostic channel — content lands in ch 7 |
+
+The boundary rule, stated now and mechanized later: **`kernel/` never
+imports `store/`, an adapter, or the clock — everything arrives through
+`ports/`.** Chapter 3 (the constraint sink) turns this into lint enforcement
+(an import-boundary check beside `CHK-D-NOCLOCK`); until then it is a review
+surface (`REV-E-NO-ADAPTER-BRANCH`, `REV-B-LOCAL-NOT-AUTHORITY`).
+
+### 2.3 Language and tooling (ADR-002)
+
+TypeScript strict / Node ≥22 / pnpm / vitest / eslint — the repo's existing
+culture, with isolated v3 configs (the v3 tsconfig mirrors the root's strict
+flags). Root gains bridge scripts (`v3:typecheck`, `v3:adr-check`). Vitest
+wiring lands with its first consumer (the ch-3 test kit); the scaffold ships
+typecheck only.
+
+### 2.4 Storage substrate and migration stance (PI-7, ADR-003)
+
+**Substrate.** The T1 canonical run store's first substrate is **SQLite**
+(WAL mode); evidence/artifacts live on the filesystem by reference (T3); all
+access goes through the `StorePort`. Block A is a local, single-operator v1
+— Postgres is an external dependency a local-first tool does not need first.
+SQLite gives real transactions, so IC-A1's core (op-record insert + instance
+CAS under ONE transaction, `UNIQUE(instance_id, op_id)`) holds natively.
+
+IC-B compatibility: `SKIP LOCKED`-style claiming is a Postgres idiom, but
+IC-B itself says claiming is scheduling, never semantics — correctness comes
+from uniqueness + CAS, which SQLite enforces the same way. `CT-B-TWOWORKER`
+runs on WAL + immediate transactions. A Postgres swap is later adapter work
+behind the port, not a model decision (this closes the storage memo's open
+question #1 for this round; the memo stays on the model plane, the ADR
+records the pick).
+
+**Authority guardrail (ADR-003, binding).** The SQLite T1 store is
+**kernel-owned, host-local authority**. Actors, runtimes, and worktrees get
+NO direct database access — they reach state only through the ingress, the
+floor, and the adapter surfaces. The DB file is never an agent-touchable
+working file, and it never sits on a shared/synced mount as a coordination
+surface (the storage memo's mount-boundary fragility warning).
+
+**Migration stance (storage memo #8; PI-7 requires it stated).**
+**Wipe-and-recreate — fenced:**
+
+- applies to **development/prototype stores only**, identified by an
+  explicit schema marker (schema version + prototype flag) written at store
+  init;
+- a store with an unknown, missing, or non-prototype marker → **fail
+  closed**: refuse to open, never silently wipe;
+- no migration framework until the schema stops moving fast.
+
+### 2.5 ADR machinery (PI-10 + the IC-N gate; ADR-000)
+
+Home: **`v3/adr/`** — per playbook §8 ("near the code, not in the model
+corpus"). This MOVES the README §1 default (`docs/v3/implementation/adr/`),
+recorded here.
+
+- **Template** ([`../../../v3/adr/_template.md`](../../../v3/adr/_template.md)):
+  the playbook minimum template + lifecycle (`proposed → accepted →
+  deprecated | superseded by ADR-XXX`) + relationship links (`supersedes` /
+  `amends` / `depends-on` / `related`) + a mandatory **IC-N screen** field:
+  the author declares whether the decision touches any of the four banned
+  kernel shapes; a banned shape enters only via an `accepted` ADR that cites
+  and overturns IC-N by name. The screen also states: an ADR touching the
+  kernel-shape guardrail is necessary but does NOT bypass the model↔code
+  divergence stop — a decision that changes model meaning goes back to the
+  model plane (README §6); an ADR records only deviations the model contract
+  itself permits.
+- **Flat index** (`v3/adr/README.md`): id · title · status · date table,
+  plus a **trigger watch** section for the dormant ADR triggers
+  (`ADR-A2-EXT`, `ADR-B-FENCE`) — `deferred(trigger)` items get a visible
+  home beyond their intake-table rows.
+- **Integrity check** (`v3/adr/check.sh`, check.sh culture): dangling ADR
+  references, supersede reciprocity + cycles, status values, index↔file
+  consistency. Root bridge: `pnpm v3:adr-check`.
+- **Compliance review** (build-loop step 6's ADR half; playbook §8): diff vs
+  accepted ADRs, references-to-superseded flagged, the unlinked-change
+  prompt. The definition lives in the playbook; this chapter binds it into
+  the loop.
+
+This realizes the intake row "IC-N ADR gate (ch 2)".
+
+### 2.6 Born ADRs
+
+| ADR | Title | Status |
+|---|---|---|
+| ADR-000 | Record implementation decisions as ADRs | accepted (2026-07-07) |
+| ADR-001 | Code home, package topology, module boundaries | accepted (2026-07-07) |
+| ADR-002 | Language and tooling | accepted (2026-07-07) |
+| ADR-003 | Storage substrate and migration stance | accepted (2026-07-07) |
+
+(`ADR-A3-IDSCHEME` is born in chapter 3 with the emit-lib, per the intake
+table.)
+
+### 2.7 Deliverables and DoD closure
+
+Shipped: this section; the `v3/` scaffold (package.json, tsconfig, module
+directories — typechecks, no runtime code); `v3/adr/` (template, index with
+trigger watch, ADR-000..003, integrity check); the root bridge scripts.
+
+Deliberately NOT this chapter: runtime code and the domain type layer
+(ch 3/4), the `CHK-*` lint/schema checks (ch 3/4 per the intake table), the
+emit-lib content (ch 3).
+
+DoD: integrity check green; the four ADRs `accepted`; chapter-1 statuses
+flipped (the IC-N gate row, the ch-2 map row → realized, covering PI-7 and
+PI-10); process-log review held at this boundary (log empty — recorded in
+the log).
