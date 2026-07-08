@@ -7,6 +7,7 @@ import type {
   WorkflowTemplate,
 } from "../domain/index.js";
 import type { DefinitionStore } from "../ports/definition.js";
+import type { DiagnosticEventBody, DiagnosticsSink } from "../ports/diagnostics.js";
 import type { DigestSource } from "../ports/digest.js";
 import type { StorePort } from "../ports/store.js";
 import type { TimeSource } from "../ports/time.js";
@@ -24,6 +25,14 @@ import type { StartInstanceInput } from "./start.js";
  *
  * `time` is plumbed per PI-6 (the injected-clock seam); its first real
  * consumer is the ch-5 gate timeout. CHK-D-NOCLOCK stands regardless.
+ *
+ * Diagnostics (packet ch7-P1): emission lives in `handle`'s OUTER
+ * loop, never in `handleOnce` — one classified event per non-success
+ * return, one `cas_restart` per restart, NOTHING on a committed
+ * return. The digest is THREADED from the attempt (never recomputed
+ * at emit — the emit path performs no fallible work); the fail-open
+ * contract lives on the DiagnosticsSink PORT, so every `diag.emit`
+ * below is deliberately BARE.
  */
 export interface KernelDeps {
   readonly store: StorePort;
@@ -31,6 +40,8 @@ export interface KernelDeps {
   readonly time: TimeSource;
   /** The transcript/collision digest seam (ch5-P4; production: emit-lib). */
   readonly digest: DigestSource;
+  /** The non-authoritative diagnostic channel (ch7-P1; REQUIRED). */
+  readonly diag: DiagnosticsSink;
 }
 
 export interface Kernel {
@@ -54,20 +65,49 @@ async function loadTemplate(
   return template;
 }
 
-export function createKernel(deps: KernelDeps): Kernel {
-  const { store, definitions, digest } = deps;
+/** Per-call mutable holder: the digest THREADED from the attempt. */
+interface AttemptContext {
+  payloadDigest?: string;
+}
 
-  async function handleOnce(envelope: EventEnvelope): Promise<Outcome | "restart"> {
+function errorFields(error: unknown): { readonly name: string; readonly message: string } {
+  return error instanceof Error
+    ? { name: error.name, message: error.message }
+    : { name: "unknown", message: String(error) };
+}
+
+function envelopeAttribution(
+  envelope: EventEnvelope,
+  ctx: AttemptContext,
+): Pick<DiagnosticEventBody, "instanceId" | "opId" | "actorId" | "type" | "payloadDigest"> {
+  return {
+    instanceId: envelope.instanceId,
+    opId: envelope.opId,
+    actorId: envelope.actorId,
+    type: envelope.type,
+    ...(ctx.payloadDigest !== undefined ? { payloadDigest: ctx.payloadDigest } : {}),
+  };
+}
+
+export function createKernel(deps: KernelDeps): Kernel {
+  const { store, definitions, digest, diag } = deps;
+
+  async function handleOnce(
+    envelope: EventEnvelope,
+    ctx: AttemptContext,
+  ): Promise<Outcome | "restart"> {
     const instance = await store.loadInstance(envelope.instanceId);
     if (instance === null) {
       return { kind: "rejected", reason: "unknown_instance" };
     }
     const template = await loadTemplate(definitions, instance);
 
-    // Computed ONCE (the model's HANDLE: the rung compares it, the
-    // commit records it). Ingress admission == canonicalizable, so the
-    // derivation cannot throw on an admitted envelope (ch-4 aftermath).
+    // Computed ONCE per attempt (the model's HANDLE: the rung compares
+    // it, the commit records it) and threaded into ctx for the diag
+    // emit. Ingress admission == canonicalizable, so the derivation
+    // cannot throw on an admitted envelope (ch-4 aftermath).
     const payloadDigest = digest(envelope);
+    ctx.payloadDigest = payloadDigest;
 
     // Idempotency first (fast path; the commit txn is the mechanism),
     // digest-aware since ch5-P4: same digest = retransmission, a
@@ -133,15 +173,75 @@ export function createKernel(deps: KernelDeps): Kernel {
     }
   }
 
+  /** One classified event per non-success final outcome; committed → nothing. */
+  function emitOutcome(envelope: EventEnvelope, outcome: Outcome, ctx: AttemptContext): void {
+    switch (outcome.kind) {
+      case "committed":
+        return;
+      case "duplicate":
+        diag.emit({ source: "kernel", kind: "duplicate", ...envelopeAttribution(envelope, ctx) });
+        return;
+      case "stale":
+        diag.emit({
+          source: "kernel",
+          kind: "stale",
+          ...envelopeAttribution(envelope, ctx),
+          ...(envelope.expectedVersion !== undefined
+            ? { expectedVersion: envelope.expectedVersion }
+            : {}),
+          currentVersion: outcome.currentVersion,
+        });
+        return;
+      case "rejected":
+        diag.emit({
+          source: "kernel",
+          kind: "rejected",
+          reason: outcome.reason,
+          ...envelopeAttribution(envelope, ctx),
+        });
+        return;
+    }
+  }
+
   return {
     async handle(envelope: EventEnvelope): Promise<Outcome> {
-      for (;;) {
-        const outcome = await handleOnce(envelope);
-        if (outcome !== "restart") {
+      const ctx: AttemptContext = {};
+      try {
+        for (;;) {
+          const outcome = await handleOnce(envelope, ctx);
+          if (outcome === "restart") {
+            diag.emit({
+              source: "kernel",
+              kind: "cas_restart",
+              ...envelopeAttribution(envelope, ctx),
+            });
+            continue;
+          }
+          emitOutcome(envelope, outcome, ctx);
           return outcome;
         }
+      } catch (error) {
+        diag.emit({
+          source: "kernel",
+          kind: "internal_failure",
+          ...envelopeAttribution(envelope, ctx),
+          error: errorFields(error),
+        });
+        throw error;
       }
     },
-    startInstance: (input) => startInstance({ store, definitions }, input),
+    startInstance: async (input) => {
+      try {
+        return await startInstance({ store, definitions }, input);
+      } catch (error) {
+        diag.emit({
+          source: "kernel",
+          kind: "internal_failure",
+          instanceId: input.instanceId,
+          error: errorFields(error),
+        });
+        throw error;
+      }
+    },
   };
 }

@@ -1,8 +1,15 @@
 import { describe, expect, it } from "vitest";
 
+import { noopDiagnosticsSink } from "../diag/index.js";
 import type { EventEnvelope, Outcome } from "../domain/index.js";
 import type { Kernel } from "../kernel/index.js";
+import type { IngressDetailToken } from "../ports/diagnostics.js";
+import { createRecordingDiagnosticsSink } from "../testkit/index.js";
 import { createIngress } from "./ingress.js";
+
+function ingressOf(kernel: Kernel) {
+  return createIngress({ kernel, diag: noopDiagnosticsSink });
+}
 
 function capturingKernel(): { kernel: Kernel; seen: EventEnvelope[] } {
   const seen: EventEnvelope[] = [];
@@ -31,7 +38,7 @@ describe("ingress — valid_shape (Rejected(invalid_shape) family)", () => {
     "non-object input %p → invalid_shape",
     async (raw) => {
       const { kernel } = capturingKernel();
-      expect(await createIngress(kernel).submit(raw)).toEqual({
+      expect(await ingressOf(kernel).submit(raw)).toEqual({
         kind: "rejected",
         reason: "invalid_shape",
       });
@@ -42,7 +49,7 @@ describe("ingress — valid_shape (Rejected(invalid_shape) family)", () => {
     "missing or empty required field %s → invalid_shape",
     async (field) => {
       const { kernel } = capturingKernel();
-      const ingress = createIngress(kernel);
+      const ingress = ingressOf(kernel);
       const missing: Record<string, unknown> = { ...validRaw };
       delete missing[field];
       expect(await ingress.submit(missing)).toEqual({
@@ -64,7 +71,7 @@ describe("ingress — valid_shape (Rejected(invalid_shape) family)", () => {
     "expectedVersion present but not a non-negative integer (%p) → invalid_shape",
     async (bad) => {
       const { kernel } = capturingKernel();
-      expect(await createIngress(kernel).submit({ ...validRaw, expectedVersion: bad })).toEqual({
+      expect(await ingressOf(kernel).submit({ ...validRaw, expectedVersion: bad })).toEqual({
         kind: "rejected",
         reason: "invalid_shape",
       });
@@ -76,13 +83,13 @@ describe("ingress — valid_shape (Rejected(invalid_shape) family)", () => {
     const negativeZero = JSON.parse("-0") as number;
     expect(Object.is(negativeZero, -0)).toBe(true);
     expect(
-      await createIngress(kernel).submit({ ...validRaw, expectedVersion: negativeZero }),
+      await ingressOf(kernel).submit({ ...validRaw, expectedVersion: negativeZero }),
     ).toEqual({ kind: "rejected", reason: "invalid_shape" });
   });
 
   it("a non-string eventId → invalid_shape", async () => {
     const { kernel } = capturingKernel();
-    expect(await createIngress(kernel).submit({ ...validRaw, eventId: 9 })).toEqual({
+    expect(await ingressOf(kernel).submit({ ...validRaw, eventId: 9 })).toEqual({
       kind: "rejected",
       reason: "invalid_shape",
     });
@@ -90,7 +97,7 @@ describe("ingress — valid_shape (Rejected(invalid_shape) family)", () => {
 
   it("unknown top-level keys → invalid_shape (strict, fail-closed)", async () => {
     const { kernel } = capturingKernel();
-    expect(await createIngress(kernel).submit({ ...validRaw, committedAt: 123 })).toEqual({
+    expect(await ingressOf(kernel).submit({ ...validRaw, committedAt: 123 })).toEqual({
       kind: "rejected",
       reason: "invalid_shape",
     });
@@ -98,8 +105,8 @@ describe("ingress — valid_shape (Rejected(invalid_shape) family)", () => {
 
   it("never reaches the kernel on a shape rejection", async () => {
     const { kernel, seen } = capturingKernel();
-    await createIngress(kernel).submit(null);
-    await createIngress(kernel).submit({ ...validRaw, extra: true });
+    await ingressOf(kernel).submit(null);
+    await ingressOf(kernel).submit({ ...validRaw, extra: true });
     expect(seen).toHaveLength(0);
   });
 });
@@ -107,7 +114,7 @@ describe("ingress — valid_shape (Rejected(invalid_shape) family)", () => {
 describe("ingress — the payload must survive the JSON round-trip (the transcript stores what ingress admitted)", () => {
   async function expectPayloadRejected(payload: unknown): Promise<void> {
     const { kernel, seen } = capturingKernel();
-    expect(await createIngress(kernel).submit({ ...validRaw, payload })).toEqual({
+    expect(await ingressOf(kernel).submit({ ...validRaw, payload })).toEqual({
       kind: "rejected",
       reason: "invalid_shape",
     });
@@ -151,7 +158,7 @@ describe("ingress — the payload must survive the JSON round-trip (the transcri
   it("accepts a deeply nested plain-JSON payload", async () => {
     const { kernel, seen } = capturingKernel();
     const payload = { refs: ["a", "b"], meta: { depth: 2, ok: true, note: null } };
-    await createIngress(kernel).submit({ ...validRaw, payload });
+    await ingressOf(kernel).submit({ ...validRaw, payload });
     expect(seen[0]?.payload).toEqual(payload);
   });
 });
@@ -159,7 +166,7 @@ describe("ingress — the payload must survive the JSON round-trip (the transcri
 describe("ingress — the strict claim's full surface", () => {
   it("a symbol-keyed top-level property is an unknown key → invalid_shape", async () => {
     const { kernel } = capturingKernel();
-    expect(await createIngress(kernel).submit({ ...validRaw, [Symbol("s")]: 1 })).toEqual({
+    expect(await ingressOf(kernel).submit({ ...validRaw, [Symbol("s")]: 1 })).toEqual({
       kind: "rejected",
       reason: "invalid_shape",
     });
@@ -169,7 +176,7 @@ describe("ingress — the strict claim's full surface", () => {
     const { kernel } = capturingKernel();
     const raw: Record<string, unknown> = { ...validRaw };
     Object.defineProperty(raw, "committedAt", { value: 123, enumerable: false });
-    expect(await createIngress(kernel).submit(raw)).toEqual({
+    expect(await ingressOf(kernel).submit(raw)).toEqual({
       kind: "rejected",
       reason: "invalid_shape",
     });
@@ -179,7 +186,7 @@ describe("ingress — the strict claim's full surface", () => {
     const { kernel } = capturingKernel();
     const payload: Record<string, unknown> = { a: 1 };
     Object.defineProperty(payload, "toJSON", { value: () => ({ b: 2 }), enumerable: false });
-    expect(await createIngress(kernel).submit({ ...validRaw, payload })).toEqual({
+    expect(await ingressOf(kernel).submit({ ...validRaw, payload })).toEqual({
       kind: "rejected",
       reason: "invalid_shape",
     });
@@ -191,7 +198,7 @@ describe("ingress — the strict claim's full surface", () => {
     Object.defineProperty(proto, "toJSON", { value: () => ["rewritten"], enumerable: true });
     const arr = [1];
     Object.setPrototypeOf(arr, proto);
-    expect(await createIngress(kernel).submit({ ...validRaw, payload: { refs: arr } })).toEqual({
+    expect(await ingressOf(kernel).submit({ ...validRaw, payload: { refs: arr } })).toEqual({
       kind: "rejected",
       reason: "invalid_shape",
     });
@@ -206,7 +213,7 @@ describe("ingress — the strict claim's full surface", () => {
       expectedVersion = 1;
     }
     const { kernel } = capturingKernel();
-    expect(await createIngress(kernel).submit(new Env())).toEqual({
+    expect(await ingressOf(kernel).submit(new Env())).toEqual({
       kind: "rejected",
       reason: "invalid_shape",
     });
@@ -216,7 +223,7 @@ describe("ingress — the strict claim's full surface", () => {
 describe("ingress — pass-through of a valid envelope", () => {
   it("delivers a typed envelope with exactly the known fields", async () => {
     const { kernel, seen } = capturingKernel();
-    const outcome = await createIngress(kernel).submit({ ...validRaw, eventId: "evt-1" });
+    const outcome = await ingressOf(kernel).submit({ ...validRaw, eventId: "evt-1" });
     expect(outcome.kind).toBe("committed");
     expect(seen).toEqual([
       {
@@ -236,7 +243,7 @@ describe("ingress — pass-through of a valid envelope", () => {
     const { expectedVersion, payload, ...minimal } = validRaw;
     void expectedVersion;
     void payload;
-    await createIngress(kernel).submit(minimal);
+    await ingressOf(kernel).submit(minimal);
     expect(seen[0]).toEqual({
       instanceId: "inst-1",
       opId: "a1",
@@ -244,5 +251,75 @@ describe("ingress — pass-through of a valid envelope", () => {
       actorId: "codex",
     });
     expect(Object.keys(seen[0] ?? {})).not.toContain("expectedVersion");
+  });
+});
+
+describe("ingress diagnostics — the six detail tokens + attribution (packet ch7-P1)", () => {
+  function recordingIngress() {
+    const { kernel } = capturingKernel();
+    const rec = createRecordingDiagnosticsSink();
+    return { ingress: createIngress({ kernel, diag: rec.sink }), rec };
+  }
+
+  const tokenLanes: readonly [IngressDetailToken, unknown][] = [
+    ["not_plain_object", null],
+    ["unknown_key", { ...validRaw, extra: true }],
+    ["invalid_required_string", { ...validRaw, opId: "" }],
+    ["invalid_expected_version", { ...validRaw, expectedVersion: -1 }],
+    ["invalid_event_id", { ...validRaw, eventId: 9 }],
+    ["payload_not_canonicalizable", { ...validRaw, payload: 9n }],
+  ];
+
+  it.each(tokenLanes)("token %s is driven", async (token, raw) => {
+    const { ingress, rec } = recordingIngress();
+    const outcome = await ingress.submit(raw);
+    expect(outcome).toEqual({ kind: "rejected", reason: "invalid_shape" });
+    expect(rec.events).toHaveLength(1);
+    expect(rec.events[0]).toMatchObject({
+      source: "ingress",
+      kind: "rejected",
+      reason: "invalid_shape",
+      detail: token,
+    });
+  });
+
+  it("not_plain_object carries NO attribution fields", async () => {
+    const { ingress, rec } = recordingIngress();
+    await ingress.submit(null);
+    expect(rec.events[0]).toEqual({
+      source: "ingress",
+      kind: "rejected",
+      reason: "invalid_shape",
+      detail: "not_plain_object",
+    });
+  });
+
+  it("best-effort attribution: valid string fields are carried, the invalid one is not", async () => {
+    const { ingress, rec } = recordingIngress();
+    await ingress.submit({ ...validRaw, opId: "" });
+    expect(rec.events[0]).toEqual({
+      source: "ingress",
+      kind: "rejected",
+      reason: "invalid_shape",
+      detail: "invalid_required_string",
+      instanceId: "inst-1",
+      actorId: "codex",
+      type: "PASS",
+    });
+  });
+
+  it("an admitted envelope emits NOTHING from ingress; exactly one event per rejected submit", async () => {
+    const { ingress, rec } = recordingIngress();
+    await ingress.submit(validRaw);
+    expect(rec.events).toEqual([]);
+    await ingress.submit({ ...validRaw, extra: 1 });
+    await ingress.submit(null);
+    expect(rec.events).toHaveLength(2);
+  });
+
+  it("no fingerprint on ingress events (no digest authority in ingress)", async () => {
+    const { ingress, rec } = recordingIngress();
+    await ingress.submit({ ...validRaw, extra: 1 });
+    expect(rec.events[0]?.payloadDigest).toBeUndefined();
   });
 });

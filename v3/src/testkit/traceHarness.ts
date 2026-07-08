@@ -31,7 +31,7 @@ export interface HarnessStartInput {
 }
 
 export interface TraceSeams {
-  /** The wired ingress entry — createIngress(kernel).submit. */
+  /** The wired ingress entry — the ingress submit bound to the kernel under test. */
   readonly submit: (raw: unknown) => Promise<Outcome>;
   /** startInstance, bound to the kernel under test. */
   readonly start: (input: HarnessStartInput) => Promise<Started>;

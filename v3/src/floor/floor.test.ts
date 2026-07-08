@@ -11,6 +11,7 @@ import type { DefinitionStore } from "../ports/definition.js";
 import { openStore } from "../store/index.js";
 import { createControlledClock } from "../testkit/index.js";
 import { createFloor } from "./floor.js";
+import { noopDiagnosticsSink } from "../diag/index.js";
 
 const instance: WorkflowInstance = {
   instanceId: "inst-1",
@@ -107,6 +108,7 @@ describe("floor.getTimeline — the §6.2 cursor read (packet ch6-P1)", () => {
       definitions,
       time: createControlledClock(0),
       digest: deriveEmitDigest,
+      diag: noopDiagnosticsSink,
     });
     const floor = createFloor(handle.store);
 

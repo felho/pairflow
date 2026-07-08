@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { noopDiagnosticsSink } from "../diag/index.js";
 import type { EventEnvelope, WorkflowInstance } from "../domain/index.js";
 import { deriveEmitDigest } from "../emit/index.js";
 import { createKernel } from "../kernel/index.js";
@@ -65,6 +66,7 @@ async function seeded(): Promise<{ store: StorePort; close: () => void }> {
     definitions,
     time: createControlledClock(0),
     digest: deriveEmitDigest,
+    diag: noopDiagnosticsSink,
   });
   await committed(kernel, env("a1", "PASS", 1, { ref: MARKER_A, nested: { deep: MARKER_B } }));
   await committed(kernel, { ...env("b2", "PASS", 2, { note: MARKER_C }), eventId: "evt-42" });

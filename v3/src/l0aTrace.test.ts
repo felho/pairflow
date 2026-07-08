@@ -12,6 +12,7 @@ import {
   replayTrace,
 } from "./testkit/index.js";
 import type { TraceFixture, TraceSeams } from "./testkit/index.js";
+import { noopDiagnosticsSink } from "./diag/index.js";
 
 /**
  * The l0a chapter trace as a golden test (packet ch5-P3, traces 2/20):
@@ -29,8 +30,9 @@ function wire(): { seams: TraceSeams; handle: StoreHandle } {
     definitions: fixtureDefinitionStore(fixtureTemplate()),
     time: createControlledClock(1_000),
     digest: deriveEmitDigest,
+    diag: noopDiagnosticsSink,
   });
-  const ingress = createIngress(kernel);
+  const ingress = createIngress({ kernel, diag: noopDiagnosticsSink });
   return {
     seams: {
       submit: (raw) => ingress.submit(raw),

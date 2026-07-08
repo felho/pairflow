@@ -8,6 +8,7 @@ import {
   fixtureTemplate,
 } from "../testkit/index.js";
 import { createKernel } from "./kernel.js";
+import { noopDiagnosticsSink } from "../diag/index.js";
 
 function setup(template = fixtureTemplate()) {
   const handle = openStore(":memory:", createControlledClock(0));
@@ -16,6 +17,7 @@ function setup(template = fixtureTemplate()) {
     definitions: fixtureDefinitionStore(template),
     time: createControlledClock(0),
     digest: deriveEmitDigest,
+    diag: noopDiagnosticsSink,
   });
   return { kernel, store: handle.store };
 }

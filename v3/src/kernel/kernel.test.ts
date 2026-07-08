@@ -12,6 +12,7 @@ import type { StorePort } from "../ports/store.js";
 import { openStore } from "../store/index.js";
 import { createControlledClock } from "../testkit/index.js";
 import { createKernel } from "./kernel.js";
+import { noopDiagnosticsSink } from "../diag/index.js";
 
 // Test-local fixtures: the testkit MD-1 template builder is ch4-P4's
 // deliverable; P3 wires the kernel against hand-built shapes.
@@ -70,6 +71,7 @@ async function setup() {
     definitions,
     time: createControlledClock(0),
     digest: deriveEmitDigest,
+    diag: noopDiagnosticsSink,
   });
   return { kernel, store: handle.store };
 }
@@ -77,7 +79,7 @@ async function setup() {
 describe("CT-A1-DUP — op_id idempotency (IC-A1)", () => {
   it("two racing deliveries of the same (instance_id, op_id) through ingress: exactly one commit, one Duplicate", async () => {
     const { kernel, store } = await setup();
-    const ingress = createIngress(kernel);
+    const ingress = createIngress({ kernel, diag: noopDiagnosticsSink });
     const raw = {
       instanceId: "inst-1",
       opId: "a1",
@@ -148,6 +150,7 @@ describe("CAS restart — never re-commit a target computed from stale state", (
       definitions,
       time: createControlledClock(0),
       digest: deriveEmitDigest,
+      diag: noopDiagnosticsSink,
     });
     const outcome = await kernel.handle(envelope("a1", "PASS", 1));
     expect(outcome).toEqual({ kind: "duplicate" });
@@ -175,6 +178,7 @@ describe("CAS restart — never re-commit a target computed from stale state", (
       definitions,
       time: createControlledClock(0),
       digest: deriveEmitDigest,
+      diag: noopDiagnosticsSink,
     });
     const outcome = await kernel.handle(envelope("a1", "PASS", 1));
     expect(outcome).toEqual({ kind: "stale", currentVersion: 2 });

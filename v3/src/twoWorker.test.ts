@@ -4,6 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { noopDiagnosticsSink } from "./diag/index.js";
 import type { Outcome } from "./domain/index.js";
 import { deriveEmitDigest } from "./emit/index.js";
 import { createIngress } from "./ingress/index.js";
@@ -54,8 +55,9 @@ function wireWorker(path: string): Worker {
     definitions: fixtureDefinitionStore(fixtureTemplate()),
     time: createControlledClock(1_000),
     digest: deriveEmitDigest,
+    diag: noopDiagnosticsSink,
   });
-  const ingress = createIngress(kernel);
+  const ingress = createIngress({ kernel, diag: noopDiagnosticsSink });
   return {
     handle,
     submit: (raw) => ingress.submit(raw),

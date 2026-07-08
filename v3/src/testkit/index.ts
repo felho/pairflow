@@ -12,6 +12,8 @@ export type { ScriptedGateRunner, ScriptedProcessRunner } from "./fixtures.js";
 export { createScriptedTailWait } from "./tailWait.js";
 export type { ScriptedTailWait } from "./tailWait.js";
 export { devPassthroughRedactionPolicy } from "./redaction.js";
+export { createRecordingDiagnosticsSink } from "./diagnostics.js";
+export type { RecordingDiagnostics } from "./diagnostics.js";
 export { fixtureDefinitionStore, fixtureTemplate } from "./templateFixture.js";
 export {
   checkEndStateConsistency,

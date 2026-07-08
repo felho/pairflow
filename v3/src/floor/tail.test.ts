@@ -22,6 +22,7 @@ import {
   fixtureTemplate,
 } from "../testkit/index.js";
 import { createTail, TailIntegrityError, TailUnknownInstanceError } from "./tail.js";
+import { noopDiagnosticsSink } from "../diag/index.js";
 
 const definitions = fixtureDefinitionStore(fixtureTemplate());
 
@@ -58,6 +59,7 @@ function makeKernel(store: StorePort): Kernel {
     definitions,
     time: createControlledClock(0),
     digest: deriveEmitDigest,
+    diag: noopDiagnosticsSink,
   });
 }
 

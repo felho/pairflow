@@ -24,6 +24,7 @@ import { CliError, EXIT } from "../contract.js";
 import type { CliDeps } from "../runtime.js";
 import { productionDeps } from "../runtime.js";
 import { builtinDefinitionStore, builtinTemplate } from "../templates.js";
+import { noopDiagnosticsSink } from "../../diag/index.js";
 
 /**
  * The DEV entrypoint (plan §6.5, packet ch6-P4b; ADR-009 dev CLI
@@ -202,8 +203,9 @@ async function verbInject(ctx: VerbContext): Promise<number> {
       definitions: builtinDefinitionStore(),
       time: ctx.deps.time,
       digest: deriveEmitDigest,
+      diag: noopDiagnosticsSink,
     });
-    const ingress = createIngress(kernel);
+    const ingress = createIngress({ kernel, diag: noopDiagnosticsSink });
     for (const step of steps) {
       const opId =
         step.opId ??
@@ -408,8 +410,9 @@ async function verbReplay(ctx: VerbContext): Promise<number> {
       definitions: builtinDefinitionStore(),
       time: ctx.deps.time,
       digest: deriveEmitDigest,
+      diag: noopDiagnosticsSink,
     });
-    const ingress = createIngress(kernel);
+    const ingress = createIngress({ kernel, diag: noopDiagnosticsSink });
     const result = await replayTrace(fixture, {
       submit: (raw) => ingress.submit(raw),
       start: (input) => kernel.startInstance(input),

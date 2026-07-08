@@ -20,3 +20,11 @@ export type { DefinitionStore } from "./definition.js";
 export type { DigestSource } from "./digest.js";
 export type { TailWait } from "./tail.js";
 export type { RedactionPolicy } from "./redaction.js";
+export type {
+  DiagnosticEvent,
+  DiagnosticEventBody,
+  DiagnosticKind,
+  DiagnosticSource,
+  DiagnosticsSink,
+  IngressDetailToken,
+} from "./diagnostics.js";

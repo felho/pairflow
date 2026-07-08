@@ -1276,16 +1276,35 @@ CLI surface (§7.5).
   `rejected` | `stale` | `duplicate` | `cas_restart` |
   `internal_failure`; `instanceId` OPTIONAL (an `invalid_shape` input
   may carry no parseable id); `opId`/`actorId`/`type` when parseable;
-  payload **fingerprint ONLY when canonicalizable — the raw payload
-  NEVER enters an event**; `detail` on ingress rejections: an
+  payload boundary (**aligned at ch7-P1 pre-approval** — the earlier
+  "raw payload NEVER enters an event" was too strong): events never
+  carry a structured/raw payload FIELD; `payloadDigest` is the ONLY
+  payload derivative; `error.message` is UNTRUSTED diagnostic free
+  text (a thrown error may embed payload/env/path fragments) confined
+  to the diag channel's store and LOCAL read surfaces — the
+  marker-scan negative binds the default-BUNDLE path (P3, §7.4), not
+  the raw event; ingress-source events never carry a fingerprint (no
+  digest authority in ingress — kept dep-minimal); kernel-source
+  events carry `payloadDigest` DIGEST-POINT-based (aligned at ch7-P1
+  pre-approval; distinct from the STATE phase — the never-committed
+  vs persisted axis): present on every post-digest lane — absent
+  payload included, the ch-5 digest is type-inclusive (ADR-008) —
+  absent on pre-digest lanes and the digest-throw lane; the emit path
+  never invokes `DigestSource` itself; `detail` on ingress rejections: an
   ENUMERATED token naming the failed admission gate (the token list is
   a declared claim — every token driven); `error` (`{name, message}`)
   on `internal_failure` — the free-text boundary is §7.4's.
 - **`DiagnosticsSink` port:** `emit(body): void`. **The fail-open
   contract lives ON THE PORT** (ratification finding — one canonical
-  owner): emit never throws and never blocks; implementations swallow
-  their OWN failures; call sites call it BARE — a defensive wrapper
-  would blur the owner. P1 proves the emission LANES with the testkit
+  owner): emit never THROWS; implementations swallow their OWN
+  failures; an emit never changes an `Outcome` and never touches the
+  main commit path. **Aligned at ch7-P1 pre-approval:** the contract
+  does NOT claim non-blocking — the current SQLite path is a sync
+  driver, so an inline write may briefly occupy the caller; a true
+  non-blocking queue/async-drain contract would be a NEW contract
+  class and is deliberately not promised (P2 may propose it as its own
+  decision). Call sites call it BARE — a defensive wrapper would blur
+  the owner. P1 proves the emission LANES with the testkit
   recording sink; the fail-open proof belongs to P2 (failing backing
   store). **`REV-DIAG-FAILOPEN`** is born as a standing review rule for
   custom sink implementations (the REV-BUNDLE-DEFAULT-POLICY pattern: a
@@ -1296,18 +1315,24 @@ CLI surface (§7.5).
 
 | Lane | Emit |
 |---|---|
-| `handle` → committed | **NO emit** — separation, driven by a negative |
+| `handle` → committed | **no outcome-classified event** — separation, driven by a negative (prior `cas_restart` events from the same call are their own lane; total zero only on a restart-free call — aligned at ch7-P1 pre-approval) |
 | `handle` → duplicate / stale / rejected (every reason, `op_id_collision` included) | emit (`kind` = the outcome class; rejected carries the exact rejection name) |
 | `handle` → CAS restart | emit `cas_restart` (kernel-log; the first real internal visibility) |
-| `handle` → integrity throw (pinned template missing; store throw) | catch → emit `internal_failure` (`error.name` + `error.message`) → **rethrow unchanged** |
-| `handle` → digest throw | stated lane: cannot occur on an admitted envelope (ch-4 aftermath — admission == canonicalizable); the wrapper covers it regardless |
-| `startInstance` → any throw (binding-coverage failure AND colliding minted id / store integrity) | catch → emit `internal_failure` → **rethrow unchanged** |
+| `handle` → any never-committed throw — port-call sublanes listed, each driven (aligned at ch7-P1 pre-approval: an awaited port call is a throw source with no visible `throw` site, and a collapsed "store rejection" is not an inventory): `store.loadInstance`, `definitions.load`, pinned-template integrity, `store.findOp`, `store.commitTransition` (txn did not land — never-committed) | catch → emit `internal_failure` (`error.name` + `error.message`) → **rethrow unchanged** |
+| BOTH entry points → post-success `deriveDispatchIntent` throw (aligned at ch7-P1 pre-approval: the shared derive site — missing step definition / unbound role — is called post-commit by `handle` and post-create by `startInstance`; template well-formedness is ch-8 debt, so the lane is REACHABLE and driven with corrupted-template fakes; the transition/instance is already persisted when the call fails) | catch → emit `internal_failure` → **rethrow unchanged** |
+| `handle` → digest throw | catch → emit `internal_failure` → **rethrow unchanged** — driven with a contract-violating throwing `DigestSource` fake (aligned at ch7-P1 pre-approval: unreachable via ingress — the ch-4 admission pin stands; the lane proves the WRAPPER, not reachability) |
+| `startInstance` → started | **NO emit** — the birth-side separation negative (aligned at ch7-P1 pre-approval: the channel must not become a birth/audit substitute, for the same reason `handle` → committed carries a negative) |
+| `startInstance` → any PRE/AT-create throw — code-path inventory, port boundaries included (aligned at ch7-P1 pre-approval; a list, not a count): `definitions.load` rejection (port failure ≠ the null lane), unknown template (`definitions.load` → null), binding-coverage failure, `store.createInstance` rejection (the colliding minted id integrity throw is its known in-repo instance); the post-create derive throw is the shared row above | catch → emit `internal_failure` → **rethrow unchanged** |
 | ingress → `invalid_shape` | emit `rejected` with the enumerated `detail` token; attribution fields only when parseable |
 | runner/adapter lanes | **named absent** → ch 9 |
 
 - `KernelDeps.diag` is REQUIRED (explicit wiring; the testkit provides
-  the recording sink). Wide claim, driven from both sides: a committed
-  outcome emits nothing, and no diagnostic write can change an Outcome.
+  the recording sink). Wide claim, driven from both sides (aligned at
+  ch7-P1 pre-approval — the earlier "a committed outcome emits
+  nothing" over-claimed under CAS restarts): a committed/`Started`
+  FINAL outcome emits no outcome-classified event — a call's total is
+  zero only when no CAS restart occurred — and no diagnostic write can
+  change an `Outcome`.
 
 ### 7.3 The diag store (P2)
 

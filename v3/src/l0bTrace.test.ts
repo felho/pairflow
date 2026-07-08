@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { noopDiagnosticsSink } from "./diag/index.js";
 import type { Outcome, Started } from "./domain/index.js";
 import { deriveEmitDigest } from "./emit/index.js";
 import { createFloor } from "./floor/index.js";
@@ -58,8 +59,9 @@ describe("l0b golden trace — the walking skeleton end-to-end (on the harness)"
       definitions: fixtureDefinitionStore(fixtureTemplate()),
       time: createControlledClock(1_000),
       digest: deriveEmitDigest,
+      diag: noopDiagnosticsSink,
     });
-    const ingress = createIngress(kernel);
+    const ingress = createIngress({ kernel, diag: noopDiagnosticsSink });
     const floor = createFloor(handle.store);
 
     const result = await replayTrace(l0bFixture, {

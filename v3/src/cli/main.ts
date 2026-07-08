@@ -1,5 +1,6 @@
 import { pathToFileURL } from "node:url";
 
+import { noopDiagnosticsSink } from "../diag/index.js";
 import type { EventEnvelope, Outcome, WorkflowTemplate } from "../domain/index.js";
 import { deriveEmitDigest, deriveOperatorOpId } from "../emit/index.js";
 import {
@@ -196,6 +197,7 @@ async function verbStart(ctx: VerbContext): Promise<number> {
       definitions,
       time: ctx.deps.time,
       digest: deriveEmitDigest,
+      diag: noopDiagnosticsSink,
     });
     try {
       const started = await kernel.startInstance({
@@ -253,8 +255,9 @@ async function verbSubmit(ctx: VerbContext): Promise<number> {
       definitions: builtinDefinitionStore(),
       time: ctx.deps.time,
       digest: deriveEmitDigest,
+      diag: noopDiagnosticsSink,
     });
-    const outcome = await createIngress(kernel).submit(envelope);
+    const outcome = await createIngress({ kernel, diag: noopDiagnosticsSink }).submit(envelope);
     // The outcome IS the surface's answer — DATA on stdout, always;
     // the exit code classifies it (duplicate = idempotent success).
     ctx.sinks.out(JSON.stringify(outcome));
