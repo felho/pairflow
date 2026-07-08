@@ -534,3 +534,15 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   guard) — a plan_contract_challenge from a fresh session with zero
   conversation history. The 0a rule landed hours before this run and
   was the difference between self-correction and a wrong packet
+- 2026-07-08 · ch 7 (P2 fresh-session, timing follow-up) · the user
+  perceived "finding the packet" as slow — the timeline says the
+  OPPOSITE: derivation completed in ~60s (prompt→Skill 17s; the 0a
+  chain git-log→packets→map by +51s; reading §7 headers by +60s; the
+  stale prior caused ZERO wrong tool calls), but the FIRST visible
+  text arrived at +18.5 min — the session worked silently through
+  source loading, 2–3-minute reasoning blocks, the packet Write and
+  the write-back loop, because 0a step 4 required stating the
+  derivation only IN THE SUMMARY. Communication-cadence gap, not
+  derivation cost → 0a step 4 now requires announcing the derivation
+  IMMEDIATELY as the first status line ("silent derivation is
+  indistinguishable from a lost agent")

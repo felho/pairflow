@@ -32,8 +32,13 @@ Deterministic, from repo surfaces ONLY — no session memory:
 3. **All packet files present** → the next step is the chapter CLOSE
    (README §6 DoD: full `ci:local`, map-row + PI flip, boundary
    review), not a new packet.
-4. State the derivation in one line in the pre-approval summary
-   ("derived: <chapter> open, <built list> built → <PACKET_ID>").
+4. **Announce the derivation IMMEDIATELY** — one visible status line
+   the moment it is derived ("derived: <chapter> open, <built list>
+   built → <PACKET_ID>; drafting now"), BEFORE the source-loading and
+   drafting work begins, and repeat it in the pre-approval summary.
+   The first fresh-session run derived in ~60s but stayed silent for
+   18 minutes — from the outside, silent derivation is
+   indistinguishable from a lost agent.
 
 ## Workflow
 
