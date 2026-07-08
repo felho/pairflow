@@ -97,9 +97,12 @@ claims [R-CLAIM-NEGATIVES applied to the review itself]:
    judgment** (the ch7-P1 crossover lesson, both arms). Two mandatory
    inventories:
    - **Code-path inventory** for *any/all/never/only* lanes: walk the
-     seam's ACTUAL code paths (throw sites, branches) — the Matrix
-     Symmetry Gate's enumeration mechanic (claim half, step 3) is the
-     tool; example lists are not proof.
+     seam's ACTUAL code paths (throw sites, branches) INCLUDING the
+     transitive call graph — helpers the entry point calls carry their
+     own throw sites (the ch7-P1 second-round lesson: a file-scoped
+     inventory missed the shared `deriveDispatchIntent` throws); the
+     Matrix Symmetry Gate's enumeration mechanic (claim half, step 3)
+     is the tool; example lists are not proof.
    - **Free-text boundary inventory**: wherever a *never / redaction /
      secret / payload-never* claim coexists with ANY free-text-capable
      field (`message`, `details`, `reason`, paths, env values), an

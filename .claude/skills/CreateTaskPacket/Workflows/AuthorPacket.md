@@ -81,8 +81,10 @@ For kernel-semantic packets:
    never from the implemented rule list [R-CLAIM-NEGATIVES]. Two
    exhaustiveness disciplines at WRITE time (cheaper than at review):
    - a collapsed lane ("any throw", "all failures") enumerates its
-     members FROM THE CODE (grep the seam's actual throw/branch sites)
-     — each named and driven, or explicitly ruled out;
+     members FROM THE CODE — the seam's actual throw/branch sites
+     INCLUDING its transitive call graph (helpers carry their own
+     throw sites; a file-scoped grep is not an inventory) — each named
+     and driven, or explicitly ruled out;
    - every free-text-capable field (`message`, `details`, `reason`,
      paths) is CLASSIFIED against the packet's payload/redaction
      claims: sanitized-by-contract or untrusted-confined, stated in

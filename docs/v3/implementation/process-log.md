@@ -247,3 +247,17 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   authoring time too (AuthorPacket step 4) — prevention beats
   detection. Candidate LearnedRules entry at the ch-7 boundary:
   "exhaustiveness discipline — strong-word claims are inventory-proven"
+- 2026-07-08 · ch 7 (P1 refine, round 3) · the inventory discipline's
+  FIRST application was itself incomplete: the throw inventory was
+  FILE-scoped (start.ts / kernel.ts) and missed the shared
+  `deriveDispatchIntent` throw site one call deeper — BOTH review arms
+  independently caught it this round (convergence, unlike the prior
+  disjoint rounds: the defect pool is narrowing to what both lenses
+  see). The lane matters doubly: it is POST-commit/POST-create — a
+  diag event coexisting with a persisted transition — so it reshaped
+  the claim to success-return form (zero emit for committed/Started
+  RETURNS; one emit for any non-success including post-commit throws)
+  → skill wording sharpened same day: the inventory covers the
+  TRANSITIVE call graph, a file-scoped grep is not an inventory. Same
+  recurring class, one level deeper: "inventory proves less than its
+  scope"
