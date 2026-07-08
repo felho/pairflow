@@ -153,6 +153,17 @@ For kernel-semantic packets:
 4. If any validation contract splits malformed-input from
    semantic-failure handling, draw the structure-vs-semantics line in ONE
    place in the packet [R-STRUCTURE-SEMANTICS].
+5. **Delegation closure at WRITE time:** a claim that delegates its
+   definition to another artifact (*"P1-declared"*, *"per ledger §X"*,
+   *"the ch-N culture"*) is expanded HERE — pull the delegated
+   source's FULL rule set (field lists, presence conditions/iffs, enum
+   domains) into the packet's canonical rows (the R-FIELD-LISTS
+   discipline extended to cross-artifact references), and state the
+   PROOF BOUNDARY for any pulled rule the packet's own surface cannot
+   decide. A delegating claim left as a pointer is a self-containment
+   defect the review finds LATE (the ch7-P2 round-8 class: the
+   presence iffs behind "P1-declared projection" stayed unexpanded
+   for six rounds).
 
 ### 5) Constraint transformation + in-context budget (checklist §2 steps 5–7)
 
@@ -167,6 +178,15 @@ Target files, entrypoints, mutation boundary — verified against the
 **current codebase** (run `ls`/`grep`; the corpus describes target
 semantics, not the growing tree). Include type-ripple targets: fakes,
 stubs, and test files that structurally break when a port changes.
+
+**Substrate claims are PROBED, not presumed:** any matrix/lane cell
+resting on driver/OS/filesystem behavior (journal modes, readonly
+semantics, internal tables, DDL write points, open-sequence ordering)
+carries an in-session probe result (a scratchpad script against the
+real driver — the ch7-P2 `walcheck.mjs` pattern) or a concrete cited
+source AT AUTHORING TIME; a contested probe (two environments
+disagree) removes the premise from the claim — re-design the
+lane/fixture so no claim stands on it (ch7-P2 rounds 2–4).
 
 ### 7) Plan alignment
 

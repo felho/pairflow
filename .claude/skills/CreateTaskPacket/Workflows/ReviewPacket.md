@@ -123,7 +123,7 @@ claims [R-CLAIM-NEGATIVES applied to the review itself]:
    downstream proof — sync vs async driver reality, lock/ownership
    boundaries, read/write failure behavior, projection/redaction
    surfaces? **Proof means SOURCE-SIDE INVENTORY, not a plausibility
-   judgment** (the ch7-P1 crossover lesson, both arms). Two mandatory
+   judgment** (the ch7-P1 crossover lesson, both arms). Four mandatory
    inventories:
    - **Code-path inventory** for *any/all/never/only* lanes: walk the
      seam's ACTUAL code paths (throw sites, branches) INCLUDING the
@@ -143,6 +143,35 @@ claims [R-CLAIM-NEGATIVES applied to the review itself]:
      untrusted diagnostic free text with a stated confinement boundary
      and the negative bound to the right surface. An unclassified
      free-text field beside a "never" claim is a finding.
+   - **Projection/Delegation Closure** for every claim that DELEGATES
+     its definition to another artifact (*"P1-declared"*, *"per
+     ledger §X"*, *"the ch-N culture"*, *"canonical body"*,
+     *"allowlist-projected"*): pull the delegated source's FULL rule
+     set into the review — field lists AND presence conditions
+     (iff-clauses) AND enum domains — then derive
+     invalid-but-conforming-at-first-glance counterexamples (valid at
+     the key/type level, invalid at the presence/enum level) and check
+     each against the packet's driven lanes. A delegating claim
+     validated only at the key/type level proves less than its wording
+     (the ch7-P2 round-8 lesson: "P1-declared projection" survived six
+     rounds with the presence iffs unexpanded — both review arms
+     converged on the same leak). This is R-FIELD-LISTS' cross-artifact
+     sibling.
+   - **Substrate Reality Probe** for any lane/matrix cell whose truth
+     depends on SUBSTRATE behavior (driver/OS/filesystem: journal
+     modes, readonly semantics, internal tables, DDL write points,
+     open-sequence ordering): the claim is admissible ONLY with an
+     in-session probe (a scratchpad script against the real driver —
+     the ch7-P2 `walcheck.mjs` pattern) or a concrete cited source;
+     plausibility is NOT admissible (ch7-P2 rounds 2–4:
+     WAL-PRAGMA-as-write, readonly-empty `CREATE`, `sqlite_sequence`
+     all fell to probes after passing plausible review). Corollary —
+     CONTESTED probes: when two probes disagree
+     (environment-sensitive behavior), NO claim may stand on the
+     contested premise — remove the premise from the claim (re-design
+     the lane/fixture) or drive both environments; adopting the
+     locally-observed result is not admissible (the already-WAL
+     case).
    **Plan-consistency is not a defense:** a claim the ratified
    plan also states can still be unprovable — that is a
    `plan_contract_challenge` finding routed to the user, never silently
@@ -189,6 +218,7 @@ Verdict:
 Self-review / Review: <PACKET_PATH>
 Scope of this review: self_review | pre_approval
 Skill source: installed registry | repo-local file read @ <path, commit, dirty?>
+Packet basis: sha256(<packet file>) = <hash> @ HEAD <commit>, worktree: clean | dirty (<what>)
 Content half:    <pass | findings…>
 Claim half:      <pass | findings…>
 Ergonomics half: <pass | findings…>
@@ -204,3 +234,17 @@ freshness are separable: a runner may read this file from the repo
 without the registry's (possibly stale, restart-gated) trigger layer —
 the report must make visible WHICH version of this workflow actually
 acted, or a discovery bug hides behind a manual file read.
+
+The `Packet basis` line exists because a packet under refine rounds is
+a MOVING target (ch7-P2: untracked and edited across eight rounds —
+mid-stream approvals bound nothing identifiable): a verdict binds ONLY
+the exact bytes the hash names; any later edit voids it, and the next
+round re-hashes.
+
+**Report validity gate (STOP-shaped):** the report is INVALID without
+its `Skill source`, `Packet basis`, and `Mirror/propagation` lines —
+each either filled or carrying an explicit one-line reason why it
+cannot be. A verdict delivered in commentary without the report block,
+or a report missing a mandatory line, is a workflow defect to fix
+BEFORE handing back — not a style choice (the ch7-P2 retro: format
+adherence was arm-dependent exactly where it was treated as style).

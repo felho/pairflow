@@ -546,3 +546,64 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   derivation cost → 0a step 4 now requires announcing the derivation
   IMMEDIATELY as the first status line ("silent derivation is
   indistinguishable from a lost agent")
+- 2026-07-08 · ch 7 (P2 pre-approval, rounds 1–8 retro) · the packet
+  took EIGHT refine rounds across two parallel review sessions — not
+  churn: P2 is simultaneously a SQLite substrate contract, a fail-open
+  write / fail-loud read pair, a P1 event-shape persistence boundary,
+  and an ADR/registry/plan mirror surface, and most folds MINTED new
+  obligations (O8→O9/O10, R2→R3, driven→covered, table set→application
+  table set). The two arms ran COMPLEMENTARY lenses (one strong on
+  substrate-reality/registry/serialization, the other on
+  mirror/propagation/text-sweep) and converged on the SAME final gap —
+  evidence the skill's gates are real but not depth-deterministic:
+  "the skill ran" does not prove every gate ran at full depth; the
+  answer is gate-mechanization plus mandatory visible
+  execution-proof outputs, not prompt exhortation
+- 2026-07-08 · ch 7 (P2 rounds 2–4, substrate class) · three substrate
+  claims fell to LIVE probes after passing plausible review
+  (`PRAGMA journal_mode=WAL` is itself a write on non-WAL files; a
+  readonly EMPTY db passes the probe and throws on the init `CREATE`;
+  AUTOINCREMENT mints `sqlite_sequence`), and one probe PAIR disagreed
+  (readonly already-WAL readability — sidecar/close-state sensitive) →
+  **Substrate Reality Probe** gate added to ReviewPacket (four
+  mandatory inventories now) + AuthorPacket step 6: probe-or-source,
+  never plausibility; corollary: a CONTESTED probe premise cannot
+  carry a claim — remove the premise (the fold that produced
+  fence-first/WAL-last + the NON-WAL fixture family) or drive both
+  environments
+- 2026-07-08 · ch 7 (P2 round 8, delegation class) · "P1-declared
+  projection" is a DELEGATING claim — its definition lives in another
+  packet's type matrix — and six rounds validated it at key/type level
+  only; the presence iffs and enum domains stayed unexpanded until
+  BOTH review arms converged on the leak (`{source:"kernel",
+  kind:"duplicate", reason:…}` passes key/type, fails P1) →
+  **Projection/Delegation Closure** gate added to ReviewPacket (pull
+  the delegated source's FULL rule set — field lists + presence iffs +
+  enum domains — and derive invalid-but-conforming counterexamples) +
+  AuthorPacket step 4.5 write-time closure with a stated proof
+  boundary; rule candidate for the boundary review (R-FIELD-LISTS'
+  cross-artifact sibling)
+- 2026-07-08 · ch 7 (P2 rounds 3+6, two rule candidates for the
+  boundary) · (a) a rule change MINTS lanes, not just moves them —
+  after the open-order change the re-derivation had to ask "what fires
+  FIRST now" PER FILE STATE, not sweep the old members (O9 was born
+  exactly there); (b) an inventory that legitimately carries stated
+  residues/non-lanes cannot be summarized "driven per its table" —
+  COVERED = driven lanes executed + residues standing as stated
+  (R-EXECUTION's precision half)
+- 2026-07-08 · ch 7 (P2 retro, verdict validity) · the packet was
+  untracked and continuously edited across rounds, so mid-stream
+  approvals bound NOTHING identifiable → the ReviewPacket report gains
+  a mandatory `Packet basis` line (sha256 + HEAD + dirty state); a
+  verdict binds only the hashed bytes, any later edit voids it. Same
+  retro: report-format adherence was arm-dependent (the Skill source
+  line sometimes commentary-only) → the report's mandatory lines
+  (`Skill source`, `Packet basis`, `Mirror/propagation`) are now a
+  STOP-shaped validity gate, not style
+- 2026-07-08 · ch 7 (P2 retro, skill maintenance) · the four gate
+  edits landed in the WORKFLOW files now (procedure is
+  mid-stream-editable — the ch7-P1 precedent of per-round skill
+  growth); the LearnedRules registry rows wait for the ch-7 boundary
+  review per the registry's own "chapter boundaries only / never
+  invents a rule the log does not carry" discipline — this log entry
+  block is their provenance
