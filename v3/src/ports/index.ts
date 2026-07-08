@@ -25,6 +25,8 @@ export type {
   DiagnosticEventBody,
   DiagnosticKind,
   DiagnosticSource,
+  DiagnosticsReader,
   DiagnosticsSink,
+  DiagUnavailableReason,
   IngressDetailToken,
 } from "./diagnostics.js";

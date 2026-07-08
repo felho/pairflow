@@ -77,3 +77,35 @@ export type DiagnosticEvent = DiagnosticEventBody & {
 export interface DiagnosticsSink {
   emit(body: DiagnosticEventBody): void;
 }
+
+/**
+ * The enumerated unavailability reason (packet ch7-P2, plan §7.4). This
+ * is a DECLARED claim — every token is test-driven. The token (never the
+ * raw underlying error text) is what P3's bundle serializes as
+ * `unavailable(reason)`. `open_failed` / `read_failed` are I/O-shaped;
+ * `refused_marker` is the fail-open transpose of the main store's
+ * fail-closed marker refusal (ADR-003 → ADR-010).
+ */
+export type DiagUnavailableReason = "open_failed" | "refused_marker" | "read_failed";
+
+/**
+ * The read-side face of the diag channel (packet ch7-P2, store impl in
+ * `diag/`). FAIL-LOUD, the transpose of the committed floor's null/`[]`
+ * duality (§6.2): an unavailable or corrupt store is a typed error
+ * carrying a `DiagUnavailableReason` — NEVER `[]` — while known-empty is
+ * `[]`. There is NO null lane: the diag store has no instance-existence
+ * authority (unknown instance ≡ known-empty ≡ `[]`). Rows are
+ * SHAPE-VALIDATED on read (the emit allowlist reused): a stored row that
+ * is not a P1-declared projection fails the WHOLE read, never leaks out
+ * the typed surface. Promise-based (StorePort parity) while `emit` is
+ * sync void — a deliberate asymmetry.
+ */
+export interface DiagnosticsReader {
+  /** The instance's ATTRIBUTED rows, ordinal-ascending, `ordinal > afterOrdinal`. */
+  getDiagnostics(
+    instanceId: InstanceId,
+    afterOrdinal: number,
+  ): Promise<readonly DiagnosticEvent[]>;
+  /** ALL rows (unattributed included), same cursor semantics. */
+  getGlobalDiagnostics(afterOrdinal: number): Promise<readonly DiagnosticEvent[]>;
+}

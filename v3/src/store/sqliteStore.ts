@@ -316,7 +316,10 @@ export function openStore(path: string, time: TimeSource): StoreHandle {
       // Watchpoint (ch6-P1): validate BEFORE any SQL — an invalid
       // cursor never opens a transaction. Integrity-style throw, not a
       // kernel rejection; the ch-6 CLI maps it to its usage class.
-      if (!Number.isSafeInteger(afterSeq) || afterSeq < 0) {
+      // `-0` rung (flag 1(b), ch7-P2): Number.isSafeInteger(-0) is true
+      // and -0 < 0 is false, so the numeric-identity guard is explicit —
+      // making plan §7.3's "inherits §6.2 (… `-0` rejected)" true here.
+      if (!Number.isSafeInteger(afterSeq) || afterSeq < 0 || Object.is(afterSeq, -0)) {
         return Promise.reject(
           new RangeError(
             `getTimeline cursor must be a nonnegative safe integer, got ${String(afterSeq)}`,

@@ -153,6 +153,11 @@ IC item by itself (plan §1.1).
   missing decision record.
 - **REV-E-NO-ADAPTER-BRANCH** — kernel code never branches on a concrete
   adapter type; adapters arrive as injected interfaces.
+- **REV-DIAG-FAILOPEN** — the diagnostic channel swallows its OWN failures
+  and NEVER throws out of `emit`; no diag-store state or failure can change
+  an `Outcome`, a committed row, or a committed read surface. Call sites
+  call the sink BARE — a defensive wrapper would blur the owner (born at
+  ch7-P1, plan §7.2; first review subject is the ch7-P2 store-backed sink).
 
 This registry is rubric input for the third QA axis alongside the ADR
 compliance review (PI-10) and the drift tests (PI-3).

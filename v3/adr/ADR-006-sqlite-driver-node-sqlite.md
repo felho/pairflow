@@ -2,7 +2,7 @@
 
 Status: accepted
 Date: 2026-07-07
-Links: supersedes — · amends ADR-002 · depends-on ADR-003 · related —
+Links: supersedes — · amends ADR-002 · amended-by ADR-010 · depends-on ADR-003 · related —
 
 ## Context
 
@@ -49,8 +49,9 @@ transcript, CAS, no event-sourcing source of truth) is fixed by ADR-003.
 - Positive: zero-dependency store; real synchronous transactions for the
   IC-A1 commit shape.
 - Negative: Node ≥ 24 required for v3 development and the validate path.
-- Neutral: the driver is invisible outside `store/` — swapping it never
-  touches the kernel.
+- Neutral: the driver is invisible outside the SQLite-backed substrate
+  homes (`store/` + `diag/` — widened by ADR-010, which adds the diag
+  store under `diag/`) — swapping it never touches the kernel.
 
 ## Verification
 

@@ -455,6 +455,16 @@ describe("getTimeline — the ch6-P1 cursor read", () => {
     handle.close();
   });
 
+  it("flag 1(b) — `-0` is rejected via Object.is, though `0` is a valid full replay", async () => {
+    const handle = await seeded();
+    // 0 is the full-replay cursor and MUST be accepted.
+    expect((await handle.store.getTimeline("inst-1", 0))?.map((r) => r.seq)).toEqual([1, 2, 3]);
+    // -0 is observationally 0 to <, and Number.isSafeInteger(-0) is true,
+    // so only the Object.is rung rejects it (the ch7-P2 inherited guard).
+    await expect(handle.store.getTimeline("inst-1", -0)).rejects.toThrow(RangeError);
+    handle.close();
+  });
+
   it("watchpoint — a rejected invalid cursor opened no transaction", async () => {
     const handle = await seeded();
     await expect(handle.store.getTimeline("inst-1", -1)).rejects.toThrow(RangeError);
