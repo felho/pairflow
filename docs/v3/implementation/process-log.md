@@ -170,3 +170,18 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
 - 2026-07-08 · ch 6 boundary · the chapter DoD's full-`ci:local` gate
   (adopted at the ch-5 boundary) runs for the FIRST time at this
   close — root suite included; result recorded in the close commit
+- 2026-07-08 · ch 6 aftermath 2 (post-close) · review caught two P4b
+  lanes the suite had not driven: (1) `expectedVersion: -0` passed the
+  inject schema (Number.isSafeInteger(-0) true, -0 < 0 false — the
+  ch-4 numeric-identity dimension RECURRING in a brand-new validator;
+  the ingress caught it downstream, but the packet claims PRE-submit
+  validation) → -0 guard added, raw-text negative pinned; (2) the
+  replay boundary validator was shallow — `finalState: {}` slipped
+  through and surfaced as a state MISMATCH (exit 1) where the packet
+  says malformed = usage 2 → the validator now covers the FULL
+  structural shape (kinds, keysets, tuple forms, primitive types);
+  the line is structure (= 2) vs semantics (= the harness's mismatch,
+  1), drawn in one place. Both fixed same day, 219 tests. Standing
+  lesson sharpened: the ch-4 dimension ladder (value → descriptor →
+  prototype → numeric identity) applies to EVERY new validator over a
+  numeric domain, not just the one gate that learned it

@@ -67,6 +67,27 @@ interface InjectStep {
   readonly opId?: string;
 }
 
+/** The numeric-domain check with the -0 guard (the ch-4 dimension:
+ * Number.isSafeInteger(-0) is true and -0 < 0 is false — JSON.parse
+ * CAN produce -0; the ingress rejects it, the dev schemas must too,
+ * pre-submit — post-close aftermath finding 1). */
+function isNonNegSafeInt(value: unknown): value is number {
+  return (
+    typeof value === "number" &&
+    Number.isSafeInteger(value) &&
+    value >= 0 &&
+    !Object.is(value, -0)
+  );
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value !== "";
+}
+
 const INJECT_STEP_KEYS = ["type", "expectedVersion", "payload", "actorId", "opId"];
 
 /** The canonical inject schema (packet ch6-P4b) — validated in FULL
@@ -110,12 +131,7 @@ function validateInjectFile(parsed: unknown): InjectStep[] {
       throw usage("InvalidInjectStep", `${label}.opId must be a non-empty string when present`);
     }
     const expectedVersion = record["expectedVersion"];
-    if (
-      expectedVersion !== undefined &&
-      (typeof expectedVersion !== "number" ||
-        !Number.isSafeInteger(expectedVersion) ||
-        expectedVersion < 0)
-    ) {
+    if (expectedVersion !== undefined && !isNonNegSafeInt(expectedVersion)) {
       throw usage(
         "InvalidInjectStep",
         `${label}.expectedVersion must be a nonnegative safe integer JSON number`,
@@ -220,34 +236,164 @@ async function verbInject(ctx: VerbContext): Promise<number> {
 
 const FIXTURE_KEYS = ["name", "lift", "steps", "finalTranscript", "finalState"];
 
-function validateFixtureShape(parsed: unknown): TraceFixture {
-  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-    throw usage("InvalidFixture", "the fixture file must be a JSON object");
+/**
+ * FULL STRUCTURAL validation at the boundary (post-close aftermath
+ * finding 2): a fixture whose SHAPE is wrong — keys, kinds, primitive
+ * types, tuple forms — is usage 2; a structurally valid fixture whose
+ * CONTENT does not hold is the harness's verdict (TraceMismatchError
+ * → internal 1). The line is structure vs semantics, and it is drawn
+ * HERE, not smeared across the two exit classes.
+ */
+function fixtureError(message: string, details?: Readonly<Record<string, unknown>>): never {
+  throw usage("InvalidFixture", message, details);
+}
+
+function assertExactKeys(record: Record<string, unknown>, keys: readonly string[], label: string): void {
+  const actual = Object.keys(record).sort();
+  const expected = [...keys].sort();
+  if (actual.length !== expected.length || actual.some((k, i) => k !== expected[i])) {
+    fixtureError(`${label} must have exactly the fields ${JSON.stringify(expected)}`, {
+      got: actual,
+    });
   }
-  const record = parsed as Record<string, unknown>;
-  for (const key of Object.keys(record)) {
+}
+
+function validateExpect(raw: unknown, label: string): void {
+  if (!isPlainObject(raw)) {
+    fixtureError(`${label} must be an outcome object`);
+  }
+  const kind = raw["kind"];
+  switch (kind) {
+    case "committed":
+      assertExactKeys(raw, ["kind", "version"], label);
+      if (!isNonNegSafeInt(raw["version"])) {
+        fixtureError(`${label}.version must be a nonnegative safe integer`);
+      }
+      return;
+    case "duplicate":
+      assertExactKeys(raw, ["kind"], label);
+      return;
+    case "stale":
+      assertExactKeys(raw, ["kind", "currentVersion"], label);
+      if (!isNonNegSafeInt(raw["currentVersion"])) {
+        fixtureError(`${label}.currentVersion must be a nonnegative safe integer`);
+      }
+      return;
+    case "rejected":
+      assertExactKeys(raw, ["kind", "reason"], label);
+      if (!isNonEmptyString(raw["reason"])) {
+        fixtureError(`${label}.reason must be a non-empty string`);
+      }
+      return;
+    default:
+      fixtureError(`${label}.kind must be committed | duplicate | stale | rejected`);
+  }
+}
+
+function validateStep(raw: unknown, index: number): void {
+  const label = `steps[${String(index)}]`;
+  if (!isPlainObject(raw)) {
+    fixtureError(`${label} must be an object`);
+  }
+  if (raw["kind"] === "start") {
+    assertExactKeys(raw, ["kind", "instanceId", "task", "expect"], label);
+    if (!isNonEmptyString(raw["instanceId"]) || typeof raw["task"] !== "string") {
+      fixtureError(`${label} requires instanceId (non-empty string) and task (string)`);
+    }
+    const expect = raw["expect"];
+    if (!isPlainObject(expect)) {
+      fixtureError(`${label}.expect must be an object`);
+    }
+    assertExactKeys(expect, ["currentStep", "version"], `${label}.expect`);
+    if (!isNonEmptyString(expect["currentStep"]) || expect["version"] !== 1) {
+      fixtureError(`${label}.expect requires currentStep (non-empty string) and version === 1`);
+    }
+    return;
+  }
+  if (raw["kind"] === "emit") {
+    const allowed = ["kind", "opId", "type", "actorId", "payload", "expectedVersion", "expect"];
+    for (const key of Object.keys(raw)) {
+      if (!allowed.includes(key)) {
+        fixtureError(`${label} has unknown field '${key}'`, { allowedFields: allowed });
+      }
+    }
+    if (
+      !isNonEmptyString(raw["opId"]) ||
+      !isNonEmptyString(raw["type"]) ||
+      !isNonEmptyString(raw["actorId"])
+    ) {
+      fixtureError(`${label} requires opId, type, actorId (non-empty strings)`);
+    }
+    if (raw["expectedVersion"] !== undefined && !isNonNegSafeInt(raw["expectedVersion"])) {
+      fixtureError(`${label}.expectedVersion must be a nonnegative safe integer`);
+    }
+    validateExpect(raw["expect"], `${label}.expect`);
+    return;
+  }
+  fixtureError(`${label}.kind must be 'start' or 'emit'`);
+}
+
+function validateFixtureShape(parsed: unknown): TraceFixture {
+  if (!isPlainObject(parsed)) {
+    fixtureError("the fixture file must be a JSON object");
+  }
+  for (const key of Object.keys(parsed)) {
     if (!FIXTURE_KEYS.includes(key)) {
-      throw usage("InvalidFixture", `unknown fixture field '${key}'`, {
-        allowedFields: FIXTURE_KEYS,
-      });
+      fixtureError(`unknown fixture field '${key}'`, { allowedFields: FIXTURE_KEYS });
     }
   }
+  if (!isNonEmptyString(parsed["name"])) {
+    fixtureError("name must be a non-empty string");
+  }
+  const lift = parsed["lift"];
+  if (lift !== undefined) {
+    if (!isPlainObject(lift)) {
+      fixtureError("lift must be an object");
+    }
+    assertExactKeys(lift, ["expectedVersion"], "lift");
+    if (lift["expectedVersion"] !== "track-running-version") {
+      fixtureError('lift.expectedVersion must be "track-running-version"');
+    }
+  }
+  const steps = parsed["steps"];
+  if (!Array.isArray(steps) || steps.length === 0) {
+    fixtureError("steps must be a non-empty array");
+  }
+  steps.forEach((step, index) => {
+    validateStep(step, index);
+  });
+  const finalTranscript = parsed["finalTranscript"];
+  if (!Array.isArray(finalTranscript)) {
+    fixtureError("finalTranscript must be an array");
+  }
+  finalTranscript.forEach((row, index) => {
+    if (
+      !Array.isArray(row) ||
+      row.length !== 2 ||
+      !isNonNegSafeInt(row[0]) ||
+      !isNonEmptyString(row[1])
+    ) {
+      fixtureError(
+        `finalTranscript[${String(index)}] must be a [seq (nonnegative safe integer), opId (non-empty string)] pair`,
+      );
+    }
+  });
+  const finalState = parsed["finalState"];
+  if (!isPlainObject(finalState)) {
+    fixtureError("finalState must be an object");
+  }
+  assertExactKeys(finalState, ["currentStep", "round", "status", "version"], "finalState");
   if (
-    typeof record["name"] !== "string" ||
-    !Array.isArray(record["steps"]) ||
-    record["steps"].length === 0 ||
-    !Array.isArray(record["finalTranscript"]) ||
-    typeof record["finalState"] !== "object" ||
-    record["finalState"] === null
+    !isNonEmptyString(finalState["currentStep"]) ||
+    !isNonNegSafeInt(finalState["round"]) ||
+    !isNonEmptyString(finalState["status"]) ||
+    !isNonNegSafeInt(finalState["version"])
   ) {
-    throw usage(
-      "InvalidFixture",
-      "a fixture requires: name (string), steps (non-empty array), finalTranscript (array), finalState (object)",
+    fixtureError(
+      "finalState requires currentStep/status (non-empty strings) and round/version (nonnegative safe integers)",
     );
   }
-  // Structural gate at the boundary; the harness itself fails closed on
-  // anything deeper (lift-less versions, emit-before-start, ...).
-  return parsed as TraceFixture;
+  return parsed as unknown as TraceFixture;
 }
 
 async function verbReplay(ctx: VerbContext): Promise<number> {

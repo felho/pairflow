@@ -113,3 +113,18 @@ fixtures via `JSON.stringify`, which flattens `-0` to `0` — the very
 class under test; the two `-0` lanes are RAW text files now
 (`JSON.parse("-0")` restores the value, stringify never emits it).
 Two lint rounds (unused import, unnecessary assertion).
+
+**Aftermath (2026-07-08, post-close review — fixed same day, 219
+tests):** (1) `expectedVersion: -0` passed the inject schema and
+reached the ingress, violating the "validated in full before any
+submit" claim — the ch-4 numeric-identity dimension recurring in a
+new validator; `Object.is(-0)` guard added, raw-text negative pinned
+(stdout stays empty: nothing was submitted). (2) The replay boundary
+validator was shallow — `finalState: {}` surfaced as a state mismatch
+(exit 1) against the matrix's malformed = 2 row; the validator now
+covers the full structural shape (root/lift/step/expect keysets,
+kinds, tuple forms, primitive types with the -0 guard), and the
+structure-vs-semantics line is explicit: structural malformedness =
+usage 2, a structurally valid fixture that does not HOLD = the
+harness's `TraceMismatchError` = internal 1. Five structural lanes
+driven + the -0 version lane.

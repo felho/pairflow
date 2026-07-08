@@ -214,6 +214,22 @@ describe("dev cli — inject schema + derived/override paths", () => {
     expect(kinds).toEqual(["rejected", "rejected"]);
   });
 
+  it("post-close aftermath F1 — expectedVersion:-0 fails the schema at usage 2, BEFORE any submit", async () => {
+    const { db, id } = await seedDb();
+    // RAW text: stringify would flatten -0 (the WATCH lesson); the
+    // ingress rejects -0 too, but the packet claims PRE-submit
+    // validation — the schema must catch it first.
+    const file = join(tempDir(), "negzero-version.json");
+    writeFileSync(
+      file,
+      '{"steps":[{"type":"PASS","expectedVersion":-0,"payload":{},"opId":"x1"}]}',
+      "utf8",
+    );
+    const result = await runDev(["inject", "--instance", id, "--file", file, "--db", db], testDeps());
+    assertError(result, "usage", EXIT.usage);
+    expect(result.stdout).toEqual([]);
+  });
+
   it("schema fail-closed lanes: unknown field / bad version type / malformed / missing file / empty steps", async () => {
     const { db, id } = await seedDb();
     const unknown = writeJson("unknown.json", {
@@ -313,6 +329,34 @@ describe("dev cli — replay (hermetic golden-trace diagnostics)", () => {
     assertError(await runDev(["replay", "--file", missing], testDeps()), "usage", EXIT.usage);
     const extra = writeJson("extra.json", { ...greenFixture, extra: 1 });
     assertError(await runDev(["replay", "--file", extra], testDeps()), "usage", EXIT.usage);
+  });
+
+  it("post-close aftermath F2 — STRUCTURAL malformedness is usage 2, never mismatch/internal", async () => {
+    // The reported repro: finalState {} slipped the shallow validator
+    // and came back as a state MISMATCH (exit 1) — structure vs
+    // semantics smeared. Now every structural lane is 2:
+    const lanes: unknown[] = [
+      { ...greenFixture, finalState: {} },
+      { ...greenFixture, finalTranscript: [["1", "a1"]] },
+      { ...greenFixture, steps: [{ ...greenFixture.steps[0], kind: "weird" }] },
+      {
+        ...greenFixture,
+        steps: [
+          greenFixture.steps[0],
+          { ...greenFixture.steps[1], expect: { kind: "committed" } },
+        ],
+      },
+      { ...greenFixture, lift: { expectedVersion: "something-else" } },
+    ];
+    for (const [index, fixture] of lanes.entries()) {
+      const file = writeJson(`structural-${String(index)}.json`, fixture);
+      const result = await runDev(["replay", "--file", file], testDeps());
+      const error = assertError(result, "usage", EXIT.usage);
+      expect(error.name).toBe("InvalidFixture");
+    }
+    // And the boundary from the other side: a structurally VALID
+    // fixture whose content fails is STILL the harness's mismatch
+    // (the existing mismatch test pins exit 1 + TraceMismatchError).
   });
 });
 
