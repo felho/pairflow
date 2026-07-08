@@ -502,3 +502,14 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   shape). Standing convention from here: memory may ACCELERATE, never
   CARRY — an operative fact found memory-only is a defect. The
   fresh-session P2 experiment now genuinely measures skill + repo
+- 2026-07-08 · ch 7 (P2 window, next-step tracking) · follow-up user
+  probe: is "which packet comes next" TRACKED, or does it need the
+  session? Audit: fully DERIVABLE from three repo surfaces (intake-map
+  row statuses; the chapter's §N.7 packet table + order line; packet
+  files under packets/ — the one-commit rule makes file-in-git =
+  built), but the derivation RULE was unwritten judgment → encoded as
+  AuthorPacket step 0a (PACKET_ID optional; deterministic derivation
+  incl. the close-vs-packet and in-flight-dirty-worktree edges, with
+  the derivation stated in the summary) + a next-step discovery
+  trigger in the SKILL description. "Jöhet a terv következő lépése" is
+  now a sufficient prompt for a memory-less agent

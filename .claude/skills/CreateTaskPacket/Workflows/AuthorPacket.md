@@ -8,9 +8,32 @@ material the model corpus already resolved; it never re-derives semantics.
 
 - `PACKET_ID`: `ch<N>-p<M>[a-z]?-<slug>` — the split suffix is optional
   (precedent: `ch6-p4a-*` / `ch6-p4b-*` from the ratified P4 split);
-  matches the file name under `docs/v3/implementation/packets/`
+  matches the file name under `docs/v3/implementation/packets/`.
+  OPTIONAL: when the ask is just "the plan's next step", DERIVE it —
+  see step 0a.
 - `PLAN_SECTION`: the plan.md section this packet realizes (e.g. `§7.2`)
 - `PRIOR_FINDINGS`: optional — findings from an earlier refine round to fold
+
+### 0a) Next-step derivation (when no PACKET_ID is given)
+
+Deterministic, from repo surfaces ONLY — no session memory:
+
+1. **The open chapter** = the plan intake map's (plan.md §1.3) first
+   row whose Status is not `realized` AND whose chapter section exists
+   (the header's "Chapters present" range). No such row → the next
+   step is proposing the NEXT chapter's ratification (a user verdict
+   gates it) — STOP after presenting the proposal.
+2. **The next packet** = the first row of the open chapter's packet
+   table (§N.7) with NO packet file under
+   `docs/v3/implementation/packets/` — a packet file lands in git only
+   WITH its build commit (the one-commit rule), so absence = not
+   built. EDGE: an UNCOMMITTED packet file in a dirty worktree is a
+   packet IN FLIGHT (pre-approval) — resume it, do not skip it.
+3. **All packet files present** → the next step is the chapter CLOSE
+   (README §6 DoD: full `ci:local`, map-row + PI flip, boundary
+   review), not a new packet.
+4. State the derivation in one line in the pre-approval summary
+   ("derived: <chapter> open, <built list> built → <PACKET_ID>").
 
 ## Workflow
 
