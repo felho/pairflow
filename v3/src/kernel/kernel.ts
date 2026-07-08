@@ -65,7 +65,9 @@ async function loadTemplate(
   return template;
 }
 
-/** Per-call mutable holder: the digest THREADED from the attempt. */
+/** Per-ATTEMPT mutable holder: the digest THREADED from the current
+ * attempt only — reset at the top of every attempt (the digest-point
+ * contract is attempt-scoped; see the post-build regression lanes). */
 interface AttemptContext {
   payloadDigest?: string;
 }
