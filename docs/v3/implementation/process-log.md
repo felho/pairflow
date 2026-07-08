@@ -222,3 +222,18 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   "flags live IN the packet" rule. LearnedRules untouched mid-chapter
   (its own boundary-only rule) — the anchoring lesson is a candidate
   registry entry at the ch-7 boundary review
+- 2026-07-08 · ch 7 (P1 refine, crossover round) · the twin-review
+  experiment CROSSED OVER on the folded packet (arms swapped: the
+  fresh session got the free prompt, the veteran got the workflow —
+  now the dual-mode version): the workflow arm caught a
+  `plan_contract_challenge` — the exact class the old single-mode
+  workflow missed ("raw payload NEVER" vs verbatim `error.message`),
+  reported WITH the new taxonomy and a Cleared section, 23 tool calls
+  (deepest run yet) → the dual-mode fix validated live, one round
+  after adoption. The free arm found a different, also-real gap: the
+  collapsed `startInstance → any throw` lane's driven examples came
+  from memory and missed `start.ts`'s third throw site → Matrix
+  Symmetry Gate extended same day (collapsed lanes enumerate members
+  FROM THE CODE). Counts converged 1–1; the finding TYPES stayed
+  disjoint across arms → the twin setup keeps paying for itself
+  independent of skill quality; keep it

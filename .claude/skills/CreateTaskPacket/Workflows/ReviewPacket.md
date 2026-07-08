@@ -45,8 +45,12 @@ checklist's rows and nothing outside them).
 3. **Matrix Symmetry Gate:** if a matrix pulls an entrypoint in on any
    error/failure lane, its SUCCESS lane must appear as an explicit
    no-emit / no-effect negative — or carry a stated out-of-scope
-   decision. A matrix that enumerates only the lanes the author thought
-   of proves less than its claim.
+   decision. And a collapsed lane ("any throw", "any failure")
+   enumerates its members FROM THE CODE (grep the actual throw/branch
+   sites of the seam) — each member driven or explicitly ruled out; a
+   collapsed lane whose driven examples came from the author's memory
+   proves less than its claim (the ch7-P1 crossover lesson: `start.ts`
+   had a third throw site the examples missed).
 4. Any new validator over a numeric domain states the full ladder,
    including `-0` via `Object.is` [R-NUMERIC-LADDER].
 5. Structure-vs-semantics: if the packet splits malformed input from
