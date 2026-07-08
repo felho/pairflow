@@ -432,3 +432,15 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   comment-only ripple target. Fresh-eyes 4th run: all four deltas
   PASS incl. the reversal's plan consistency. Zero skill changes,
   third round running
+- 2026-07-08 · ch 7 (P1 refine, round 13) · three cell-completeness
+  findings folded (table-level provenance DEFAULTS — rows carry only
+  deviations; keysets declared event-specific with source/kind
+  structural per lane; the plan §7.2 event-fields clause added to the
+  event-shape mirror row) + one self-caught stale intro ("Per lane
+  group" survived the round-12 per-member split — the map's own
+  section is not exempt from the rule-change sweep). Fresh-eyes 5th
+  run on HAIKU (the mechanical-check tier discussed with the user):
+  all four axes PASS at ~40% of the Opus token cost and ~1/4 the
+  wall-clock — the model-tiering principle holds for bounded
+  mechanical diffs; semantic propagation checks stay on the strong
+  tier. Zero skill changes, fourth round running
