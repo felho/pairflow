@@ -1,7 +1,7 @@
 # V3 Implementation Plan
 
 Written chapter by chapter, each chapter proposed → ratified → committed
-(process: [`README.md`](README.md) §3). Chapters present: 1–6.
+(process: [`README.md`](README.md) §3). Chapters present: 1–7.
 
 **Genre note.** This is the implementation **master plan** — it is NOT a
 directly `ExecutePairflowPlan`-executable task list, and it carries no
@@ -1207,3 +1207,239 @@ all v3 bridges green; **the FULL local CI gate (`pnpm ci:local`) green —
 the first chapter under the README §6 rule (root suite included)**;
 ADR-009 `accepted`, integrity check green; the ch-6 map row + PI-2
 flipped to `realized`; process-log review held at the boundary.
+
+---
+
+## Chapter 7 — Kernel diagnostics & structured logging (ratified 2026-07-08)
+
+Autonomy stage: **calibration** (README §5.5). The standing chapter rules
+bind (README §4 step 2 carries all three now): enumerate a claim's
+DIMENSIONS before deriving its tests; a logged instruction is not
+execution; a canonical contract matrix is a declared claim — every lane
+driven. Ratified after one refine round (four findings: ingress
+time/diag deps; the birth-seam emission gap; the fail-open/fail-closed
+boundary; tail cross-lane order+stop) plus two follow-up findings (the
+free-text redaction boundary; the fail-open contract owner) — all six
+folded below.
+
+This chapter realizes PI-4 — the **named non-authoritative diagnostic
+channel** (`_closed-v1-operability.md` Addendum 2 B1): a structured
+kernel log plus rejection-audit stream, explicitly non-authoritative,
+separate from the transcript, best-effort. Its legal basis is IC-A1's
+own allowance ("if rejected attempts need audit, model that as audit,
+not as the committed operation ledger"). Governing principle: **chapter
+7 adds ZERO kernel semantics** — every Outcome is unchanged; the chapter
+adds visibility. The ch-6 wide claim binds from the other side: no
+diagnostic or non-committed data can EVER enter a committed read
+surface — the channel is separate BY CONSTRUCTION, and this chapter
+must prove the separation in BOTH directions. REV-C boundary restated:
+the diag channel is telemetry — it never stands in for a missing
+decision record (`REV-C-PROJECTIONS-READONLY`).
+
+### 7.1 Scope and boundaries
+
+**In:** the diagnostic event types + the `DiagnosticsSink` port with the
+fail-open contract (§7.2), the canonical emission matrix over ingress
+AND both kernel entry points (§7.2), the persistent diag store as a
+separate SQLite file with its availability matrix and read surface
+(§7.3), the two ch-6-named consumer seams resolved — the tail's
+diagnostic layer and the bundle's `rejectedInputs` flip (§7.4), and the
+CLI surface (§7.5).
+
+**Out, stated (not silently absent):**
+
+- **Runner/adapter-side emission** (stuck adapter, runner crash, crashed
+  ingress process) → ch 9: the event TYPE is ready here; those emission
+  points land with the runner. Named-absent in the emission matrix.
+- **The observe seam's full form** — unchanged from §6.3 (live push,
+  addressed streams, backpressure, typed terminal/gap markers).
+- **Retention/rotation** — v1 stance: the diag stream is unbounded,
+  stated. NO dev wipe verb (ratification decision): a new destructive
+  dev affordance while retention is out of scope; the P2 fenced-wipe
+  negative covers the schema lane.
+- **Metrics/analytics layer** — the channel is not a metrics substrate.
+- **Watchdog/retry** — L9 (unchanged).
+
+### 7.2 The channel core (P1)
+
+- **Two event faces:** emitters produce a `DiagnosticEventBody` (no
+  timestamp, no ordinal); the read side is `DiagnosticEvent` (`at` +
+  `ordinal`). **Timestamp authority: the SINK stamps `at` from its own
+  injected `TimeSource`** — the CHK-C-TS-SOURCE precedent (the store
+  stamps `committedAt`), one stamping authority, no clock in any
+  emitter. Consequence (ratification finding): the ingress factory
+  becomes `createIngress({ kernel, diag })` — a diag dep, NO time dep,
+  no hidden wall-clock. The signature change is a mechanical ripple
+  (CLI wiring + ingress/kernel call sites + tests) carried in the P1
+  embedding gates.
+- **Event fields:** `source` (`ingress` | `kernel`), `kind` enum:
+  `rejected` | `stale` | `duplicate` | `cas_restart` |
+  `internal_failure`; `instanceId` OPTIONAL (an `invalid_shape` input
+  may carry no parseable id); `opId`/`actorId`/`type` when parseable;
+  payload **fingerprint ONLY when canonicalizable — the raw payload
+  NEVER enters an event**; `detail` on ingress rejections: an
+  ENUMERATED token naming the failed admission gate (the token list is
+  a declared claim — every token driven); `error` (`{name, message}`)
+  on `internal_failure` — the free-text boundary is §7.4's.
+- **`DiagnosticsSink` port:** `emit(body): void`. **The fail-open
+  contract lives ON THE PORT** (ratification finding — one canonical
+  owner): emit never throws and never blocks; implementations swallow
+  their OWN failures; call sites call it BARE — a defensive wrapper
+  would blur the owner. P1 proves the emission LANES with the testkit
+  recording sink; the fail-open proof belongs to P2 (failing backing
+  store). **`REV-DIAG-FAILOPEN`** is born as a standing review rule for
+  custom sink implementations (the REV-BUNDLE-DEFAULT-POLICY pattern: a
+  public seam's obligation is review-owned).
+- **The canonical emission matrix** (a declared claim — every lane
+  driven; the "only home of kernel-internal never-committed failures"
+  claim closes THROUGH this matrix, both kernel entry points included):
+
+| Lane | Emit |
+|---|---|
+| `handle` → committed | **NO emit** — separation, driven by a negative |
+| `handle` → duplicate / stale / rejected (every reason, `op_id_collision` included) | emit (`kind` = the outcome class; rejected carries the exact rejection name) |
+| `handle` → CAS restart | emit `cas_restart` (kernel-log; the first real internal visibility) |
+| `handle` → integrity throw (pinned template missing; store throw) | catch → emit `internal_failure` (`error.name` + `error.message`) → **rethrow unchanged** |
+| `handle` → digest throw | stated lane: cannot occur on an admitted envelope (ch-4 aftermath — admission == canonicalizable); the wrapper covers it regardless |
+| `startInstance` → any throw (binding-coverage failure AND colliding minted id / store integrity) | catch → emit `internal_failure` → **rethrow unchanged** |
+| ingress → `invalid_shape` | emit `rejected` with the enumerated `detail` token; attribution fields only when parseable |
+| runner/adapter lanes | **named absent** → ch 9 |
+
+- `KernelDeps.diag` is REQUIRED (explicit wiring; the testkit provides
+  the recording sink). Wide claim, driven from both sides: a committed
+  outcome emits nothing, and no diagnostic write can change an Outcome.
+
+### 7.3 The diag store (P2)
+
+- **Substrate: a SEPARATE SQLite file** — `<main-db>.diag.sqlite`, WAL
+  mode (ADR-010). Rationale: the separation claim becomes PHYSICAL (a
+  diag row cannot enter a committed surface by construction); no
+  write-lock contention — SQLite is single-writer per database, and a
+  best-effort layer must not steal locks from the authoritative commit
+  path; failure isolation (a corrupt diag DB never touches the main
+  path); the authoritative store's `SCHEMA_VERSION` "2" is untouched.
+  Own schema marker + fenced wipe-and-recreate (the ADR-003 culture
+  inherited).
+- `ordinal` = AUTOINCREMENT; **no CAS, no uniqueness contract** — the
+  stream is non-authoritative by type. The sink stamps `at` from its
+  injected `TimeSource`.
+- The store-backed sink swallows write failures per the port contract —
+  proven with a **failing backing store**: start/submit outcomes are
+  UNCHANGED while the diag DB is corrupt or unavailable (the
+  availability matrix's write row; this is P2's half of the fail-open
+  proof).
+- **Read surface:** `getDiagnostics(instanceId, afterOrdinal)` +
+  a global cursor read (unattributed rows are reachable ONLY there).
+  Reads are **fail-LOUD**: an unavailable/corrupt diag DB is a typed
+  error, never `[]` — known-empty = `[]` (the §6.2 duality transposed:
+  unavailable ≠ known-empty). Cursor domain inherits §6.2 (nonnegative
+  safe integer, `RangeError` before any SQL, `-0` rejected).
+- **The diag availability matrix** (canonical — every lane driven):
+
+| Surface | Diag DB unavailable / corrupt |
+|---|---|
+| normal start/submit (write path, emit) | Outcome UNCHANGED — the sink swallows by contract (stated + tested, not an accidental silent failure) |
+| `getDiagnostics` / global read | typed error, LOUD — never an empty list |
+| `tail --diag` | one stderr error doc, internal / exit 1 |
+| `bundle` `rejectedInputs` | section = `unavailable(reason)` — the bundle itself SUCCEEDS (the committed half is authoritative; the stated-gap culture) |
+| dev `diag` dump | one stderr error doc, internal / exit 1 |
+
+### 7.4 Consumers (P3)
+
+- **Tail diagnostic layer:** the ch-6 seed is EXTENDED, not rewritten
+  (the seam was named for exactly this): rows become a discriminated
+  union (committed row | diag event), two cursors. **No cross-lane
+  total order claim** — each lane in its OWN cursor order (`seq`;
+  `ordinal`), the interleave is polling-incidental, rows carry their
+  own cursors; ordering across two databases by `(at, ordinal)` would
+  be false precision. The committed lane's no-skip/no-duplicate
+  guarantee is UNCHANGED, and the diag lane's presence cannot weaken
+  it (wide claim, driven).
+- **Stop semantics:** the `--diag` tail closes at the COMMITTED
+  terminal — after terminal is observed, a final drain of BOTH lanes,
+  then complete. Post-close diag events (e.g. a rejected submit against
+  a DONE instance) are NOT streamed; the query surface
+  (`getDiagnostics` / dump / bundle) is the recourse — driven by a test
+  (a post-close rejected submit is visible in the dump). Rationale:
+  completion anchors to the authoritative lifecycle's terminal-sink
+  invariant; the diag lane has no terminal marker of its own (a stray
+  submit can mint events forever); a default-eternal tail is the worse
+  operator default.
+- **Bundle flip:** `RejectedInputsSection` becomes three-state:
+  `present(rows)` | `unavailable(reason)` — never a silent empty;
+  `present` with zero rows = known-empty. Only ATTRIBUTED rows (the
+  bundle's instance) enter; unattributed rows are the global read's
+  territory. The bundle succeeds under diag unavailability (§7.3
+  matrix).
+- **The free-text boundary (ratification finding):** the FULL
+  `error.message` lives in the diag store and its LOCAL read surfaces
+  (`getDiagnostics`, dev dump, `tail --diag`) — the ch-6 split
+  transposed (the store holds payloads; the bundle redacts). The BUNDLE
+  projection carries ONLY enumerated or derived fields — `kind`,
+  `source`, `at`, `ordinal`, the rejection name / `error.name`, the
+  fingerprint, the enumerated ingress `detail`; **`error.message` does
+  not appear at all** (not even as a redacted string), and
+  `unavailable(reason)` is an enumerated constant, never the raw
+  underlying error text. Wide claim: **no free text sourced from
+  runtime errors or payloads appears ANYWHERE in the default bundle's
+  full serialization** — the ch6-P3 marker-scan extends to the
+  `internal_failure.message` path (a payload marker embedded in an
+  error message) and the `unavailable` lane.
+
+### 7.5 The CLI surface (P4)
+
+- Operator `tail --diag`: NDJSON rows gain a lane discriminator; the
+  stdout=data / one-stderr-error-doc rule stands; a diag-lane failure
+  is internal / exit 1 (§7.3 matrix).
+- `bundle`: carries the three-state section — no new flag; the default
+  redaction policy and REV-BUNDLE-DEFAULT-POLICY unchanged.
+- Dev CLI: **`diag` verb** — the global cursor dump (the only surface
+  for unattributed rows). NO wipe verb (§7.1).
+- Config: the diag DB path DERIVES from the resolved main DB path
+  (`<db>.diag.sqlite`) — no separate flag; the P4a config matrix is
+  untouched. `replay` stays hermetic with NO diag surface.
+- Exit/parse matrices per the ch-6 culture — every lane driven.
+
+### 7.6 Coverage and intake impact
+
+- **Ledger slices: EMPTY** (the ch-6 precedent) — the diagnostic
+  channel is memo-born operability (PI-4 / Addendum 2 B1), not model
+  pseudocode; the ledger carries no diagnostic units (verified at
+  ratification: zero hits). Units 5/158, invariants 8/116, traces 2/20
+  unchanged on ownership axes.
+- At close: the ch-7 map row + **PI-4 → realized**. The two ch-6-named
+  seams (tail rejection visibility; bundle `rejectedInputs`) RESOLVE
+  here; the observe seam and the runner lanes stay named-deferred.
+
+### 7.7 Packets and flow mode
+
+All four packets are pre-approve (each introduces a first-of-a-kind
+class). Process note: **ch7-P1 is the first live run of the
+`CreateTaskPacket` skill** (README §8); the skill-run verdict is part of
+the boundary review.
+
+| Packet | Content | Mode |
+|---|---|---|
+| ch7-P1 | channel core: event types + `DiagnosticsSink` (fail-open on the port) + the emission matrix over ingress/kernel + testkit recording sink + `createIngress({kernel, diag})` ripple | pre-approve (first-of-a-kind: the diagnostic seam; first skill run) |
+| ch7-P2 | diag store: separate-file SQLite sink + fenced wipe + availability matrix + read surface + ADR-010 | pre-approve (first-of-a-kind: second store substrate; the fail-open proof) |
+| ch7-P3 | consumers: tail diag layer (order + stop semantics) + bundle three-state flip + the free-text boundary | pre-approve (first-of-a-kind: cross-lane streaming; export-boundary extension) |
+| ch7-P4 | CLI: `tail --diag`, bundle section pass-through, dev `diag` dump, derived diag-DB config | pre-approve (matrix extensions on both entrypoints) |
+
+Order: P1 → P2 (the store implements the port) → P3 (consumers read the
+store) → P4 (the CLI activates the consumers). One packet = packet file
++ code + tests in ONE commit.
+
+### 7.8 Deliverables and DoD
+
+Shipped: this section; the event types + sink port + emission matrix;
+the separate-file diag store + availability matrix + read surface; the
+tail diag layer + the bundle flip with the free-text boundary; the CLI
+surface; ADR-010; `REV-DIAG-FAILOPEN`.
+
+DoD: the four packets' contract tests green with claim-derived
+negatives EXECUTED; the emission AND availability matrices fully
+driven; drift suite green; coverage unchanged on ownership axes and
+validation green; all v3 bridges + the FULL `pnpm ci:local` gate green;
+ADR-010 `accepted`, integrity check green; the ch-7 map row + PI-4
+flipped to `realized`; process-log review held at the boundary,
+including the CreateTaskPacket first-run verdict.
