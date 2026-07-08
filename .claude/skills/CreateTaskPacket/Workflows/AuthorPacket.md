@@ -128,10 +128,17 @@ ch7-P1 dangling-"flagged below" lesson).
    (the pre-approval CHALLENGE review is the human round's engine, not
    this step's — Contract Reality issues spotted here become
    pre-approval flags, never silent acceptance).
-2. Present the pre-approval summary in the session's chat language: the
+2. **Flag write-back loop:** if the self-review yields ANY flag,
+   watchpoint, or contract-reality issue not already carried in the
+   packet's `## Pre-approval flags` section, write it INTO the section
+   (amend the packet) and RERUN the self-review — repeat until a pass
+   adds nothing new. A flag born in the review and living only in chat
+   is exactly the dangling-flag class this rule exists for.
+3. Present the pre-approval summary in the session's chat language: the
    slice (or its declared emptiness), the claim + dimensions, the matrices,
-   the embedding gates, open risks.
-3. **STOP.** The user's findings round decides: approve / refine / split.
+   the embedding gates, open risks — flags REFERENCED from the packet
+   section, never introduced summary-only.
+4. **STOP.** The user's findings round decides: approve / refine / split.
    This workflow never proceeds to build, never commits the packet on its
    own, and never marks a packet approved.
 

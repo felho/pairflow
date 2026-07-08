@@ -1,6 +1,6 @@
 ---
 name: CreateTaskPacket
-description: Author and self-review pairflow v3 implementation task packets — projection from the model ledger, not invention. USE WHEN authoring a v3 task packet OR chN-pM packet (split forms chN-pMa/chN-pMb included) OR running the projection checklist OR preparing a packet for pre-approval OR self-reviewing a packet draft.
+description: Author, self-review, and pre-approval-review pairflow v3 implementation task packets — projection from the model ledger, not invention. USE WHEN authoring a v3 task packet OR chN-pM packet (split forms chN-pMa/chN-pMb included) OR running the projection checklist OR preparing a packet for pre-approval OR self-reviewing a packet draft OR reviewing a task packet ("review pls") OR preparing an approve/refine/split verdict on a packet.
 ---
 
 # CreateTaskPacket
