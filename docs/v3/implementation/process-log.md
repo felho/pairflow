@@ -185,3 +185,13 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   lesson sharpened: the ch-4 dimension ladder (value → descriptor →
   prototype → numeric identity) applies to EVERY new validator over a
   numeric domain, not just the one gate that learned it
+- 2026-07-08 · ch 6→7 boundary · README §8 skill-ification EXECUTED: the
+  task-packet flow became the repo-local `CreateTaskPacket` skill
+  (AuthorPacket + ReviewPacket workflows + the LearnedRules failure-class
+  registry, provenance-linked to this log). The §8 criterion was long
+  satisfied — 14 packets across ch 4–6, the template unchanged since the
+  ch-4 close. Authority boundary kept: template/checklist/REV registry
+  stay canonical in this directory, the skill carries procedure; human
+  checkpoints untouched; the registry is amended at chapter boundaries
+  only. First live run: the ch-7 packets → validation deferred to the
+  ch-7 boundary review

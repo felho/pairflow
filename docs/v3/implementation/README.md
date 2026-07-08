@@ -262,7 +262,7 @@ loop — pre-defined **capture**, deferred **structure**:
 - **No pre-defined metrics or retro template** — what is worth measuring is
   itself an empirical question; let the first chapters' log answer it.
 
-## 8. Deferred: skill-ification
+## 8. Skill-ification (executed 2026-07-08)
 
 The v3-mode task-packet flow starts as a **template + projection checklist**
 in this directory (a named deliverable of plan chapter 1), executed manually
@@ -271,3 +271,15 @@ does it become a repo-local skill (`.claude/skills/` in this repo — NOT the
 global skill set; the corpus pattern has a sample size of one, so nothing is
 generalized yet). The global `CreatePairflowSpec` stays untouched; its
 ergonomics layer is inherited as rubric content, not by forking the skill.
+
+**Executed 2026-07-08, at the ch6→ch7 boundary.** The criterion was
+satisfied several times over: 14 live packets across chapters 4–6, the last
+10 on a structurally unchanged template. The flow is now the repo-local
+**`CreateTaskPacket`** skill (`.claude/skills/CreateTaskPacket/` —
+`AuthorPacket` + `ReviewPacket` workflows + the learned-rules registry).
+Boundary of authority: the template, the projection checklist, and the
+`REV-*` registry stay canonical in THIS directory; the skill carries
+procedure plus the failure-class registry distilled from the process log,
+and is amended at chapter boundaries only (§7's rhythm). The human
+checkpoints (§5.5) are untouched — the skill stops at "ready for
+pre-approval".

@@ -5,10 +5,12 @@ Process context: [`README.md`](README.md) §5.2–5.3 (the two-layer principle
 and the constraint-transformation discipline);
 [`plan.md`](plan.md) §1.4 (the inventory the slice declaration feeds).
 
-Executed **manually** during the calibration stage. Skill-ification is
-deferred until 2–3 real tasks validate the shape (README §8); the global
-`CreatePairflowSpec` stays untouched — its ergonomics layer is inherited
-below as rubric content, not by forking the skill.
+Executed **manually** during the calibration stage; since 2026-07-08 the
+flow runs through the repo-local `CreateTaskPacket` skill (README §8 —
+this file stays the canonical template/checklist/registry source; the
+skill carries procedure only). The global `CreatePairflowSpec` stays
+untouched — its ergonomics layer is inherited below as rubric content,
+not by forking the skill.
 
 **Pairflow metadata rule.** The packet is the executable unit (plan genre
 note), but this template does not itself satisfy the v1 Pairflow task
