@@ -136,7 +136,12 @@ lanes it summarizes — stale scalars are the recurring low-weight drift
 class ("three aligned edits" after a fourth landed; "exactly one" vs
 the committed-zero lane; "ALL THREE" the day a fourth appears). Prefer
 converting counts to lists; a surviving count must be re-derived at
-read time.
+read time. The same sweep covers **conditional presence clauses**
+(*iff / only when / present when*): when a presence RULE changes,
+every row stating the OLD condition is stale text — a rule change
+sweeps every statement of the rule, exactly like a status flip sweeps
+every file stating the old status (ch7-P1 round 7: two keysets kept
+"iff the envelope carries a payload" after the rule went phase-based).
 
 ### 6) Verdict + taxonomy
 

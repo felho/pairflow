@@ -314,3 +314,16 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   member; (3) the CAS qualifier had not propagated to every canonical
   spot (dimension 1, plan committed row) — the scalar/quantifier
   sweep now exists for exactly this and ran clean after the fold
+- 2026-07-08 · ch 7 (P1 refine, round 7) · both arms converged again:
+  the round-6 presence-rule change (payload-key → phase-based) left
+  TWO keysets stating the OLD "iff the envelope carries a payload"
+  condition — false post-digest, since the ch-5 digest is
+  type-inclusive with arity encoding (ADR-008: absent payload still
+  digests; verified at emit/opId.ts) — and the cas_restart row was
+  missing the field entirely (post-digest, value in hand). The class
+  is the skill-ification round's status-flip lesson INSIDE one
+  artifact: a rule change sweeps every statement of the rule → the
+  scalar/quantifier sweep extended to conditional presence clauses
+  (iff / only-when). Note: the non-skill arm and the skill arm found
+  the same core defect; the skill arm added the cas_restart impact
+  and reported with the new provenance line — the A/B continues
