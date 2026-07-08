@@ -1,7 +1,7 @@
 # Packet Flow v2 — Process + Skill Design
 
-Status: **draft — rounds 1–4 of the two-arm review folded (§6); awaiting
-final approve/ratification.** No skill/process file changes land before
+Status: **draft — rounds 1–5 folded (§6; rounds 4–5 single-arm); awaiting
+both arms' approve on the same commit (the §6 terminal condition).** No skill/process file changes land before
 this document is ratified. On ratification the Status flips to
 ratified and §5 becomes the change plan's authority; once Phase 0/1 land,
 the REALIZED files (README/template/skill/AGENTS.md) are the authority and
@@ -203,7 +203,7 @@ friction-log line. The authoring-time discovery is always the authority.
   lives in the DraftContract workflow (§5 item 5). The draft loop's
   verdict set is the packet loop's minus `split` — a draft that wants
   splitting is a chapter-structure question and therefore a STOP on the
-  plan-boundary family (`2:draft-split` in the D7 member convention),
+  plan-boundary family (`2:draft-split` in the D3 token registry),
   not an autonomous act — and the same watchdog discipline applies (cap 8,
   exhaustion → STOP with diagnosis; the "expected 2–3 rounds" prediction
   is an expectation, not the cap).
@@ -270,13 +270,16 @@ STOP (human), four cases:
    the same case's special form); a fold would require a genuinely open
    behavioral/performance choice (contested-probe resolutions that mint
    new-decision rows arrive here too).
-2. **Plan-boundary conflict** — three members, one family: an alignment
-   that would ALTER ratified semantics rather than propagate them; a
-   split that would change chapter scope, sequencing, or dependencies
-   (the matrix row below); and a **contested ratified-surface↔reality
-   mismatch** (the ReviewPacket `plan_contract_challenge` class) — a
-   ratified surface (plan text OR a ratified draft row) and live
-   behavior disagree AND more than one resolution direction exists. The precedent is ch7-P2 flag 1: plan §7.3 claimed "-0
+2. **Plan-boundary conflict** — one family; its members are a LIST (the
+   doc's own counts-to-lists rule), canonical tokens in the registry
+   below: an alignment that would ALTER ratified semantics rather than
+   propagate them; a split that would change chapter scope, sequencing,
+   or dependencies (the matrix row below); a **contested
+   ratified-surface↔reality mismatch** (the ReviewPacket
+   `plan_contract_challenge` class) — a ratified surface (plan text OR a
+   ratified draft row) and live behavior disagree AND more than one
+   resolution direction exists; and a **draft split** — a draft that
+   wants splitting is a chapter-structure question (D2). The precedent is ch7-P2 flag 1: plan §7.3 claimed "-0
    rejected" while the live `getTimeline` accepted it — the row was
    ANCHORED to plan text (not STOP 1) and aligning code to plan reads
    as propagation (not an alteration), yet the (a)/(b) choice — clarify
@@ -289,6 +292,13 @@ STOP (human), four cases:
 4. **Approve of a packet carrying new-decision flags** — the approve's
    substantive content is ratifying those flags. Flag-free approve is
    ceremony and delegable later (D6).
+
+**Canonical STOP member tokens** — the registry D7's `stops[].type`
+records; tokens are minted HERE, never ad hoc:
+`1:late-b-signal` · `1:divergence` · `1:open-choice` |
+`2:meaning-changing-alignment` · `2:scope-changing-split` ·
+`2:contested-ratified-vs-reality` · `2:draft-split` |
+`3:watchdog` | `4:flagged-approve`.
 
 **Verdict-action matrix** (this is the authority-surface change the design
 requires — Phase 1 rewrites all THREE live surfaces in ONE commit, see §5
@@ -652,16 +662,28 @@ calibration data points.
 — its packet file is untracked per the one-commit rule) builds under the
 OLD regime BEFORE Phase 0 lands; the flip's no-packet-work window
 applies to post-Phase-0 work only. P2's build record fills its
-`packet_metrics` block retroactively (the data exists —
-`rounds.review: 8`, the stops and detector-miss material in the flags
-ledger), marked as the pre-v2 BASELINE data point — the v2 pilot's
-numbers get their comparison for free.
+`packet_metrics` block retroactively AS A PARTIAL BASELINE — only the
+fields with real pre-v2 data: `rounds.review: 8` marked
+`old-regime-human-rounds` (a UNIT note: v2's `rounds.review` counts
+MACHINE panel rounds; the comparable v2 dimension for P2's eight human
+rounds is human touches ≈ stops + approve), plus the stops and
+detector-miss material from the flags ledger. `prediction` stays EMPTY
+with the reason stated in the block — retro-filling it would be exactly
+the boundary-time retro-annotation item 7 prohibits — and `provenance`
+counts stay empty (P2's rows are unmarked; a post-hoc estimate is not a
+measurement). A caveated baseline, not a free comparison.
 
 ## 6. Review of this document
 
 Per its own rules: this design doc receives the two-arm (cross-model)
 review before any Phase 0/1 file changes; findings fold under the fix-all
 default; the ratified version is the change plan's authority.
+
+**Terminal condition (the packet-basis discipline at document level):
+ratification = BOTH arms approve THE SAME COMMIT — the commit SHA is the
+hash; an approve given to an earlier revision is void once further folds
+land, and the per-round records below state each round's arm coverage so
+the bookkeeping is auditable.**
 
 **Round 1 (2026-07-08): both arms returned refine; all findings folded.**
 The fold classes: provenance/attribution precision (verifiability-class
@@ -730,8 +752,10 @@ that act, outside the list); the taxonomy map completed
 set (packet's minus `split` — a draft split is a chapter-structure STOP)
 and the same watchdog cap.
 
-**Round 4 (2026-07-08): refine (very small round); all five findings
-folded.** The hash narrowing had itself minted an unhashed normative
+**Round 4 (2026-07-08): ONE arm ran, returned refine (very small round);
+the other arm's verdict on the folded state is pending — per the
+terminal condition, ratification needs both arms' approve on the same
+commit. All five findings folded.** The hash narrowing had itself minted an unhashed normative
 surface — closed by declaring that in a draft EVERY normative statement
 is a canonical row (prose-contract extraction applies at draft time;
 non-row prose is non-normative by declaration, so a post-ratification
@@ -742,3 +766,16 @@ becomes the pre-v2 baseline data point). Text-level: the unknown rule's
 route list now defers to D5 (mirror discipline); item 7 rides in the
 flip commit; item 8 says "item 5 in full"; the draft-split STOP names
 its family (`2:draft-split`).
+
+**Round 5 (2026-07-08): ONE arm ran, returned refine (three findings);
+all folded.** The P2 baseline became a PARTIAL baseline with field-level
+rules (`prediction` empty — retro-filling it would violate item 7's own
+argument; `provenance` empty — a post-hoc estimate is not a measurement;
+the eight rounds unit-marked `old-regime-human-rounds`, with human
+touches ≈ stops + approve as the comparable v2 dimension — "comparison
+for free" was over-claimed and is withdrawn). The STOP 2 family's stale
+"three members" count became a LIST with the draft split as its fourth
+member, and D3 gained the **canonical STOP member-token registry**
+(tokens minted once, never ad hoc — what D7's `stops[].type` records).
+§6 gained the terminal ratification condition (both arms approve the
+same commit SHA) and the per-round arm-coverage bookkeeping.
