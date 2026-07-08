@@ -1,21 +1,47 @@
 # Packet Flow v2 — Process + Skill Design
 
 Status: **draft** (awaiting the two-arm review; no skill/process file changes
-land before this document is ratified).
+land before this document is ratified). On ratification the Status flips to
+ratified and §5 becomes the change plan's authority; once Phase 0/1 land,
+the REALIZED files (README/template/skill/AGENTS.md) are the authority and
+this document is a historical record — its own D2 rule ("never a third
+permanent authority"), applied to itself.
 Date: 2026-07-08.
-Provenance: the ch7-P2 eight-round pre-approval retro (process-log, flags
-1–13 of `packets/ch7-p2-diag-store.md`), the full `CreatePairflowSpec`
-analysis (v1's task/gate/workflow machinery, two-project track record), and
-the seven-question decision round (this session). Decision authority: the
-user settled every decision below explicitly; this document compiles, it
-does not invent.
+
+Provenance, by verifiability class:
+
+- **Tracked:** the ch7-P2 eight-round retro — the process-log P2-retro
+  block (landed with the `9e223c2b` skill-gates commit) and the two
+  P2-window skill commits. The packet's own flags ledger
+  (`packets/ch7-p2-diag-store.md`) is supporting detail only: it lands
+  WITH its build commit (one-commit rule), so the tracked process-log
+  lines are the citable evidence until then.
+- **Repo-verifiable:** every §4 claim about v1 machinery names its source
+  file (`.claude/skills/CreatePairflowSpec/…`,
+  `docs/reviewer-severity-ontology.md`) — verified against those files
+  during the round-1 review.
+- **Operator-reported (session-ephemeral):** the v1 operating experience —
+  the round counts (1–3 skill-review rounds, 1–4 refinement rounds), the
+  ~9-round safety cap of the ExecutePairflowPlan-era autonomous loop
+  (present in NO repo file — checked), the mechanical verdict-following
+  practice, and the "whether delivery is 5 packets or 7, I don't care"
+  sizing stance. These exist nowhere in the repo except here; they are
+  marked `(operator-reported)` at their use sites and this document is
+  their durable record.
+
+Decision authority: the user settled every decision below explicitly in a
+seven-question decision round; **D1–D7 map 1:1 to those seven questions**
+(classification / draft artifact / autonomy envelope / review pipeline and
+phases / finding policy / trust rollout / metrics). This document compiles
+those decisions.
 
 ## 1. Problem
 
 The packet pre-approval loop converges too slowly, and its cost lands in
 the wrong place. Evidence: ch7-P1 took 15 refine rounds, ch7-P2 took 8 —
 against v1's 1–3 skill-review rounds plus 1–4 pairflow refinement rounds
-for comparable task documents. Diagnosis (all three confirmed):
+for comparable task documents (operator-reported). Diagnosis (all three
+confirmed):
 
 1. **Altitude gap.** ch5 packets converged fast because they PROJECTED from
    a months-converged, row-granular source (the ledger). ch7 packets are
@@ -28,12 +54,15 @@ for comparable task documents. Diagnosis (all three confirmed):
    traffic was derivation (sweeps, propagation, re-derivation) and
    probe-able substrate facts, transported manually between sessions.
 3. **Missing v1 convergence machinery.** v1's task flow had: sizing gates
-   BEFORE drafting (its Complexity-Risk gate retro-scored on P2 fires a
-   hard stop: split), an autonomous verdict loop (split/refine/approve,
-   mechanically followed), fresh-context re-review, a 4-perspective
-   sub-agent review, and a phase split (skill loop optimizes for QUICK
-   DOWNSTREAM CONVERGENCE; pairflow's document-refinement finds the rest
-   adversarially). None of these existed in the v3 packet flow.
+   BEFORE drafting (its Complexity-Risk gate retro-scored on P2 trips one
+   of its own hard-stop rules — the scope is split-required), an
+   autonomous verdict loop (`approve_task` / `refine_task` /
+   `route_back_to_plan`, mechanically followed — operator-reported; v2's
+   split/refine/approve is D4's adaptation of this set), fresh-context
+   re-review, a 4-perspective sub-agent review, and a phase split (skill
+   loop optimizes for QUICK DOWNSTREAM CONVERGENCE; pairflow's
+   document-refinement finds the rest adversarially). None of these
+   existed in the v3 packet flow.
 
 Total convergence work is roughly conserved (pre-approval rounds traded
 against build/aftermath rounds — ch4: 4 aftermath rounds; ch7-P1: 15
@@ -122,6 +151,24 @@ friction-log line. The authoring-time discovery is always the authority.
   at chapter close the boundary review marks it **realized** with pointers
   to where each row landed. Nothing lives only in the draft afterwards —
   it never becomes a third permanent authority.
+- **Artifact contract (the anti-third-authority machinery, and what a
+  machine can check):** rows carry stable IDs (`C1…Cn`, unique per draft;
+  packets anchor as `anchored(chN-<surface>-contract §C7)`). The draft
+  header carries `status: draft | ratified | realized` plus a
+  ratification block (date, reviewing arms, sha256 of the ratified bytes —
+  the packet-basis discipline applied to drafts; a packet may only anchor
+  to a RATIFIED draft). At chapter close the boundary review fills a
+  **realized map** (row ID → landing site: packet § / code / test) and
+  flips the status IN PLACE — the file never moves and row IDs never
+  change, so `anchored(…)` references stay resolvable forever (archival is
+  a status transition, not a relocation). Draft-lint checks (Phase 0):
+  row-ID uniqueness; packet anchors resolve to existing ratified row IDs;
+  status transitions monotonic (draft→ratified→realized); `realized`
+  requires a complete landing map.
+- **Draft metrics (one line each, at ratification and at close):** rounds
+  to ratify, new-decision row count, post-ratification reopenings (rows a
+  packet had to reopen) — D2's own "expected 2–3 rounds" prediction is
+  testable only if measured.
 - **ADR relation (four rules):** (1) draft rows may anchor to ADRs as
   provenance; (2) decision-class new-decision rows mint their ADR at DRAFT
   ratification (earlier than today's build-time authoring); (3) shape never
@@ -150,10 +197,14 @@ routing, and the autonomy boundary.
 
 Autonomous (no human):
 
-- **split within the chapter** — sizing, not scope (v1: "whether delivery
-  is 5 packets or 7, I don't care"); the coverage script guards the union
-  mechanically; the §N.7 repartition is applied directly with a visible
-  report; each part gets a fresh watchdog budget;
+- **split within the chapter** — sizing, not scope ("whether delivery is
+  5 packets or 7, I don't care" — operator-reported); the coverage script
+  guards the union mechanically; the §N.7 repartition is applied directly
+  with a visible report; split parts INHERIT the parent row's mode,
+  predicted class, and watchpoints, and each part gets a fresh watchdog
+  budget; **autonomous split depth is 1** — a split part wanting a further
+  split is a STOP (the diagnosis is then a wrong cut or a missing draft,
+  not sizing);
 - **propagation-class plan edits** — terminology/consistency sweeps of
   already-decided semantics, applied and visibly reported;
 - **ADR recording** of already-ratified decisions;
@@ -176,18 +227,54 @@ STOP (human), four cases:
    substantive content is ratifying those flags. Flag-free approve is
    ceremony and delegable later (D6).
 
+**Verdict-action matrix** (this is the authority-surface change the design
+requires — Phase 1 rewrites both surfaces in one commit, see §5, because
+they may never disagree with the running process. What they say TODAY,
+verified: `AGENTS.md`'s v3 section states verbatim that "packet
+pre-approval verdicts (approve / refine / split) come from the USER";
+README §5.5's standing-checkpoint list is narrower but still conflicts —
+"refine/split verdicts when a mechanical gate fails" is a human
+checkpoint, and "ADR proposed → accepted" is listed as never automated,
+both of which v2 changes: refine and in-chapter split are the loop's in
+every case, and ADR acceptance of already-ratified content rides with the
+approve, with genuinely new ADR-class decisions arriving as STOP 1):
+
+| Loop event | v2 action |
+|---|---|
+| `refine` (any fold-now finding) | autonomous: fold + re-run panel |
+| `split`, within chapter (coverage union preserved) | autonomous: apply the §N.7 repartition, visible report; inheritance + depth-1 rule above |
+| `split` that would change chapter scope, sequencing, or dependencies | STOP 2 |
+| `approve`, flag-free | human in calibration; delegable per D6 |
+| `approve`, with new-decision flags | human (STOP 4) — ratifies the flags AND the parked routes in one act |
+| STOP 1–3 events | human, always |
+
 ### D4 — The review pipeline (phase 1 internals)
 
-- **Tier 0 — mechanical gates, zero LLM, every fold:** packet-lint
-  (id/cross-ref/lane-range/scalar consistency — mechanizes the fresh-eyes
-  sweep class), coverage, drift, adr-check, substrate-probe scripts.
+- **Tier 0 — mechanical gates, zero LLM:** packet-lint at FOLD TIME (id
+  registry, cross-ref resolution, lane-range/scalar consistency,
+  provenance-mark presence, mutation-boundary block syntax, the D2
+  draft-lint checks — mechanizes the fresh-eyes sweep class) and at
+  POST-BUILD (the `git diff --name-only` mutation-boundary check — the
+  one packet-lint check that cannot run at fold time); plus coverage,
+  drift, adr-check, and the substrate-probe scripts. §5 item 1 is the
+  single home of every packet-lint check.
 - **Tier 1 — the lens panel (the v1 "ReviewSpec with 4 sub-agent
   perspectives" analog), fresh-context sub-agents, single model family is
   FINE here** (model diversity is deliberately phase 2's job). Lenses map
   to v3's observed finding classes:
   1. substrate / contract-reality (probe obligations, strong-word proofs)
   2. projection / delegation-closure (anchors pulled, invalid-but-
-     conforming counterexamples)
+     conforming counterexamples) — additionally OWNS two provenance
+     duties: (a) the **derived-row entailment attack**: for each
+     `derived(refs)` row, attempt to construct an ALTERNATIVE row equally
+     consistent with the cited anchors — if one exists, the row was a
+     decision, not a derivation → reclassify `new-decision` (the
+     misdeclaration risk lives exactly here: `anchored` is
+     machine-checkable, `new-decision` stops — `derived` is the soft
+     spot); (b) the **draft→packet semantic drift check**: a packet row
+     anchored to a draft row must preserve its MEANING, not just resolve
+     the reference — the mechanized drift tests cover model↔code, not
+     this surface
   3. claim-negatives / matrix-symmetry (every lane driven, collapsed-lane
      inventories, wide-claim coverage)
   4. mirror / propagation (the semantic remainder after packet-lint)
@@ -195,11 +282,22 @@ STOP (human), four cases:
      Remaining-Task Viability check)
   The panel reconciles through a **Gate Coverage Matrix** (`missing`
   blocks) and collapses to ONE verdict: `split` / `refine` / `approve`
-  (+ STOP per D3).
+  (+ STOP per D3). The verdict set is an ADAPTATION of v1's, renamed along
+  the operator's actual usage — the v1 originals (`ReviewSpec` task-mode):
+  `approve_task` / `refine_task` / `route_back_to_plan` /
+  `block_not_ready`, with split as the within-plan-scope refine qualifier
+  (`split_task_within_same_plan_scope`) and `split_plan` existing only in
+  plan-mode; v2's `split` maps to the refine qualifier, v2's STOP absorbs
+  `route_back_to_plan`/`block_not_ready`.
 - **Approve =** all tier-0 green + one full clean panel round (no fold-now
   findings) + complete coverage matrix. No severity taxonomy and no
   two-clean at this phase — those are phase-2 (pairflow) configuration.
-- **Watchdog: 8 rounds** (v1 used ~9; pure safety cap, not a tuning lever).
+- **Watchdog: 8 rounds** — a pure safety cap, not a tuning lever. (The
+  v1-era ExecutePairflowPlan autonomous loop ran with a similar ~9-round
+  cap — operator-reported, documented in no repo file; `CreatePairflowSpec`
+  itself carried only the "max 2 L1 hardening rounds" discipline, which is
+  a different mechanism and deliberately NOT adopted — it belongs to the
+  severity-routing world that D5's fix-all replaces.)
 - **Phase 2 (out of scope here):** the pairflow document-refinement bubble
   with the canonical severity ontology (`docs/reviewer-severity-ontology.md`),
   blocking-threshold config, adversarial cross-model agents and the
@@ -221,14 +319,16 @@ build-time implementer**: what was ambiguous to one LLM in a clean context
 will be ambiguous to the next. This principle goes into the skill text.
 
 Routes exist ONLY for ownership misfit, never for effort deferral — each
-with a tracked home and a guaranteed revisit point (what v1's
-later-hardening backlog lacked):
+with a tracked home. The two DEFERRAL routes carry a guaranteed revisit
+point (what v1's later-hardening backlog lacked); `declined` deliberately
+does not, because it is not a deferral — it is a DECISION, human-ratified
+at approve as part of the flags:
 
 | Route | Home | Revisit |
 |---|---|---|
 | `boundary-review` | process-log line | chapter DoD's mandatory log review |
 | `later-chapter` | proposed plan-map row | ratified by the human at approve/boundary |
-| `declined` | packet flag | visible standing non-decision |
+| `declined` | packet flag (with the stated reason) | none BY DESIGN — a human-ratified standing decision, not a parked item |
 
 ### D6 — Trust rollout (what remains of "the ramp")
 
@@ -289,42 +389,93 @@ packet's Build record (the `ledger_slice` precedent):
 
 ## 4. What we take from CreatePairflowSpec (v1) — and what we prove out
 
-Adopt/adapt (with their landing spot): Complexity-Risk + Bounded-Task-Shape
-→ authoring-time sizing heuristics feeding the split verdict (v3 axes:
-substrate novelty, claim-family/matrix-family/dimension counts,
-sibling-packet fanout); Control-Model Readiness → the contract-draft
-round-0 checklist (D2); 4-lane sub-agent review + Gate Coverage Matrix +
-fresh-context re-review loop → D4; Remaining-Task Viability → the
-downstream-viability lens; autonomous-split policy → D3; Capability-Closure
-VOCABULARY only (`end_to_end/…/deferred_activation`, one line per packet);
-Gate Detail Budget → proportionality principle ("mandatory ≠ maximal");
-`target_files` as machine-validatable frontmatter → mutation-boundary
-machine block (packet-lint checks the built commit against it);
-Review-Scope-Fence's routing half → absorbed into D5's routes; severity
-ontology → phase-2 shared language (already canonical in pairflow), skill
-side only keeps the mapping obligation.
+Source files: `.claude/skills/CreatePairflowSpec/SKILL.md` (gate policy
+blocks), its `references/` gates, `Templates/task-template.md`,
+`Workflows/ReviewSpec.md` + `CreateTask.md`, and
+`docs/reviewer-severity-ontology.md` — every line below was verified
+against these during the round-1 review.
 
-Reject, with burden of proof: Scoped-Invariant SLICING half (frontally
-conflicts with the wide-claim + claim-derived-negatives doctrine — v3's
-most expensively learned lesson); Closed-Contract Drift Check (v3's
-mechanized drift tests + R-ALIGNED-UP + delegation closure are strictly
-stronger); execution metadata / Spec Lock (bubble-machinery — chaining-era
-work); Module Depth / Refactoring gate (no refactor-class packet exists
-yet; AGENTS.md v1 guidance covers the eventuality); literal authority
-fan-out bucket list (v3's fanout is sibling-packet consumption; the
-"discovery-first, unknown ≠ absent, unknown blocks" rule is kept);
-Capability-Closure full field table (chapter DoD carries the proof side).
+**Adopt/adapt, with landing spot:**
+
+- Complexity-Risk Gate (`references/Complexity-Risk-Gate.md`) +
+  Bounded-Task-Shape Gate → authoring-time sizing heuristics feeding the
+  split verdict (v3 axes: substrate novelty, claim-family/matrix-family/
+  dimension counts, sibling-packet fanout).
+- **Closure-Budget Gate** (SKILL.md `## Closure-Budget Gate`) → its two
+  live rules adopted: the discovery rule ("present/absent/unknown with
+  evidence; `unknown` BLOCKS approve") into the panel's lens discipline,
+  and its bucket-coincidence split trigger adapted into the same sizing
+  heuristics (v3 buckets: claim families, matrix families, sibling-packet
+  consumers).
+- Control-Model Readiness Gate → the contract-draft round-0 checklist (D2).
+- 4-lane sub-agent review + Gate Coverage Matrix + fresh-context re-review
+  loop (`Workflows/ReviewSpec.md`) → D4.
+- Remaining-Task Viability check → the downstream-viability lens.
+- Autonomous-split policy (SKILL.md `## High-Risk Autonomous Split
+  Policy`) → D3.
+- **Contract-Dense Task Gate → ALREADY ADOPTED pre-v2** (the packet
+  template's Mirrored Surface Map and prose-contract extraction carry its
+  provenance explicitly — the ch7-P1-era inheritance); listed so this
+  inventory is complete.
+- Capability-Closure VOCABULARY only
+  (`end_to_end/…/deferred_activation`, one line per packet).
+- Gate Detail Budget → the proportionality principle ("mandatory ≠
+  maximal").
+- `target_files` frontmatter → the mutation-boundary machine block. NOTE:
+  v1's Target-File Reality Check was LLM/manual inspection — the MACHINE
+  validation is new to v2 (packet-lint runs a post-build
+  `git diff --name-only` of the packet commit against the declared
+  boundary).
+- Review-Scope-Fence's ROUTING half → absorbed into D5's ownership routes.
+- **Scoped-Invariant Gate → SPLIT verdict:** the slicing doctrine
+  (`applies_to`/`does_not_apply_to`) stays REJECTED — it frontally
+  conflicts with the wide-claim + claim-derived-negatives doctrine, v3's
+  most expensively learned lesson; but its proof-surface demand survives
+  as the proof-boundary convention (live practice since ch7-P2's shape
+  gate), and its fence half is the D5 routing above.
+- **Closed-Contract Drift Check → ADAPT NARROW:** as a prose apparatus for
+  the model↔code surface it stays rejected (the mechanized drift tests +
+  R-ALIGNED-UP + delegation closure are strictly stronger there); but the
+  draft→packet row relationship (D2) creates a NEW drift surface the
+  machine tests do NOT cover — that check is lens 2's explicit duty (D4).
+- Severity ontology (`docs/reviewer-severity-ontology.md`) AND v1's
+  skill-side severity apparatus (`references/Reviewer-Guidelines.md`:
+  P0–P3 + timing + layer + evidence, referenced by ReviewSpec — it DID
+  exist in the task-creation phase): **deliberately dropped from phase 1
+  BECAUSE of D5** — severity is a routing tool, and fix-all removes
+  routing-by-severity; it remains phase 2's canonical language, with the
+  phase-1 obligation that flags/routes stay expressible in it.
+
+**Reject, with burden of proof:**
+
+- Execution metadata / Spec Lock (bubble machinery — chaining-era work;
+  the template itself defers the choice to "when chaining starts").
+- Module Depth / Refactoring gate (no refactor-class packet exists yet;
+  AGENTS.md v1 guidance covers the eventuality).
+- **Baseline Preservation gate** (same reasoning: no
+  existing-behavior-refinement packet class yet; when it appears, its
+  must-preserve rows are `anchored` rows by construction and the drift
+  suite owns the regression surface).
+- Literal authority fan-out bucket list (v3's fanout is sibling-packet
+  consumption; the discovery rule is kept via Closure-Budget above).
+- Capability-Closure full field table (the chapter DoD carries the proof
+  side).
 
 ## 5. Change plan (ordered; nothing lands before this doc is ratified)
 
 **Phase 0 — mechanical substrate:**
 1. `tools/v3-plan/check_packet.py` (packet-lint: id registry, cross-ref
    resolution, lane-range/scalar consistency, provenance-mark presence,
-   mutation-boundary block syntax) + `pnpm v3:packet-lint` bridge +
-   negative self-tests (the check.sh culture).
+   mutation-boundary block syntax, **post-build mutation-boundary check**
+   — `git diff --name-only` of the packet commit vs the declared boundary
+   — and the D2 **draft-lint** checks: row-ID uniqueness, anchor
+   resolution to ratified rows, monotonic status, complete realized map)
+   + `pnpm v3:packet-lint` bridge + negative self-tests (the check.sh
+   culture).
 2. `task-packet-template.md`: provenance marks on canonical rows; route
-   field in the flags section; `packet_metrics` block in the build-record
-   convention; mutation-boundary machine block.
+   field in the flags section; the **Build record section formalized into
+   template §1** (today it exists by practice only) carrying the
+   `packet_metrics` block; mutation-boundary machine block.
 
 **Phase 1 — skill + process authority:**
 3. `CreateTaskPacket/Workflows/AuthorPacket.md`: provenance discipline +
@@ -334,6 +485,13 @@ Capability-Closure full field table (chapter DoD carries the proof side).
    pre-approval engine into the 5-lens panel with Gate Coverage Matrix;
    verdict set split/refine/approve + STOP; approve definition; fix-all
    policy + ambiguity-transfer rationale; route taxonomy; watchdog 8.
+   **PRESERVED SURFACES** (the restructure must not drop the
+   ch7-P2-retro gates that landed in this same file days ago — our own
+   propagation lesson applied to skill files): the Substrate Reality
+   Probe + contested-probe corollary → lens 1; Projection/Delegation
+   Closure → lens 2; the Packet-basis hash binding and the report
+   validity gate → the panel's report contract. Each must be traceable
+   to a named lens or report element in the new structure.
 5. NEW `CreateTaskPacket/Workflows/DraftContract.md`: the contract-draft
    authoring + ratification workflow (D2), incl. the Control-Model
    checklist and tree-independence bar.
@@ -341,21 +499,56 @@ Capability-Closure full field table (chapter DoD carries the proof side).
    list as process authority; the draft phase in the build loop; the
    routing rule's third row (shape → draft); metrics convention.
 7. `docs/v3/implementation/plan.md` §1.3: the predicted-class column
-   convention for future ratifications (applies from ch8; ch7's remaining
-   rows annotated at the boundary).
+   convention for future ratifications; ch7's remaining rows (P3/P4) are
+   annotated IN THIS SAME COMMIT — before P3 authoring starts — so the
+   pilot's `prediction` fields carry real pre-registered predictions (a
+   boundary-time retro-annotation would make them worthless).
+8. `AGENTS.md` (v3 section) + `docs/v3/implementation/README.md` §5.5, in
+   ONE commit: AGENTS.md's verbatim sentence ("packet pre-approval
+   verdicts (approve / refine / split) come from the USER") AND README
+   §5.5's standing-checkpoint list (its "refine/split verdicts when a
+   mechanical gate fails" clause and its unconditional "ADR proposed →
+   accepted" entry) are rewritten to the D3 verdict-action matrix (STOPs
+   and flag-bearing approves are the user's; refine and in-chapter split
+   are the loop's; ADR acceptance of already-ratified content rides with
+   the approve, new ADR-class decisions are STOP 1). The surviving §5.5
+   checkpoints — chapter ratification, divergence stop, draft
+   ratification (new) — stay never-automated. The two authority surfaces
+   may never disagree with the running process.
 
 **Phase 2 — deferred (explicitly NOT now):** pairflow doc-bubble
 integration (metadata contract), auto-approve machinery + thresholds,
 severity mapping table realization, aggregation tooling.
 
-**Pilot:** ch7-P3/P4 run under the phase-0/1 machinery (both are
-precedented/near-projection classes — P3 consumes P1/P2 contracts + plan
-§7.4; P4 is the 6-precedent CLI class). The first full contract-draft
-exercise is ch8 (template file format — predicted invention). The pilot's
-`packet_metrics` are the first calibration data points.
+**Pilot:** ch7-P3/P4 run under the phase-0/1 machinery. The class
+predictions — pre-registered into plan §7.7 by item 7 above, BEFORE P3
+authoring: P3 `projection` (sources: the P1/P2 packet contracts + plan
+§7.4), P4 `projection` (the six-precedent CLI class + plan §7.5). The
+first full contract-draft exercise is ch8 (template file format —
+predicted `invention`). The pilot's `packet_metrics` are the first
+calibration data points.
 
 ## 6. Review of this document
 
 Per its own rules: this design doc receives the two-arm (cross-model)
 review before any Phase 0/1 file changes; findings fold under the fix-all
 default; the ratified version is the change plan's authority.
+
+**Round 1 (2026-07-08): both arms returned refine; all findings folded.**
+The fold classes: provenance/attribution precision (verifiability-class
+header, operator-reported markers, the watchdog attribution corrected to
+the ExecutePairflowPlan-era operator experience, the v1 verdict-set named
+as an adaptation), §4 inventory completeness (Closure-Budget,
+Contract-Dense-already-adopted, skill-side severity, Baseline
+Preservation), design completions (the D2 artifact contract + draft
+metrics + in-place archival, the D3 verdict-action matrix + split
+inheritance/depth-1, the lens-2 derived-entailment attack and
+draft→packet drift duty, the D5 declined-route reframing, the Phase-0
+post-build boundary check + draft-lint, the Build-record formalization,
+the AGENTS.md/README §5.5 authority alignment item, the pre-registered
+pilot predictions, the ReviewPacket preserved-surfaces list). Three
+findings were consciously narrowed rather than adopted whole: the
+declined route carries no revisit BY DESIGN (it is a ratified decision,
+not a deferral); the Scoped-Invariant slicing doctrine stays rejected
+(the fence/proof-boundary halves adopted); the Closed-Contract Drift
+Check is adapted narrowly to the new draft→packet surface only.
