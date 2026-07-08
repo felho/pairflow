@@ -1,7 +1,8 @@
 # Packet Flow v2 — Process + Skill Design
 
-Status: **draft — rounds 1–5 folded (§6; rounds 4–5 single-arm); awaiting
-both arms' approve on the same commit (the §6 terminal condition).** No skill/process file changes land before
+Status: **draft — rounds 1–6 folded (§6; rounds 4–6 single-arm, Arm 2);
+awaiting both arms' approve on the same commit (the §6 terminal
+condition).** No skill/process file changes land before
 this document is ratified. On ratification the Status flips to
 ratified and §5 becomes the change plan's authority; once Phase 0/1 land,
 the REALIZED files (README/template/skill/AGENTS.md) are the authority and
@@ -465,7 +466,8 @@ packet's Build record (the `ledger_slice` precedent):
       { "found_at": "approve|code-review|architecture-review|refinement|implementation",
         "what": "…", "why_missed": "…" }
     ],
-    "learned": "<one-line session assessment — hook, not a process-log substitute>"
+    "learned": "<one-line session assessment — hook, not a process-log substitute>",
+    "baseline_note": "<OPTIONAL — unit/regime qualifiers for baseline or transitional blocks (e.g. rounds.review counted as old-regime-human-rounds); the ONLY home for such qualifiers — never ad hoc keys>"
   }
 }
 ```
@@ -664,7 +666,8 @@ OLD regime BEFORE Phase 0 lands; the flip's no-packet-work window
 applies to post-Phase-0 work only. P2's build record fills its
 `packet_metrics` block retroactively AS A PARTIAL BASELINE — only the
 fields with real pre-v2 data: `rounds.review: 8` marked
-`old-regime-human-rounds` (a UNIT note: v2's `rounds.review` counts
+`old-regime-human-rounds` in the schema's `baseline_note` field — the
+designated home for such qualifiers (a UNIT note: v2's `rounds.review` counts
 MACHINE panel rounds; the comparable v2 dimension for P2's eight human
 rounds is human touches ≈ stops + approve), plus the stops and
 detector-miss material from the flags ledger. `prediction` stays EMPTY
@@ -752,8 +755,8 @@ that act, outside the list); the taxonomy map completed
 set (packet's minus `split` — a draft split is a chapter-structure STOP)
 and the same watchdog cap.
 
-**Round 4 (2026-07-08): ONE arm ran, returned refine (very small round);
-the other arm's verdict on the folded state is pending — per the
+**Round 4 (2026-07-08): ONE arm ran — Arm 2 — and returned refine (very
+small round); Arm 1's verdict on the folded state is pending — per the
 terminal condition, ratification needs both arms' approve on the same
 commit. All five findings folded.** The hash narrowing had itself minted an unhashed normative
 surface — closed by declaring that in a draft EVERY normative statement
@@ -767,8 +770,8 @@ route list now defers to D5 (mirror discipline); item 7 rides in the
 flip commit; item 8 says "item 5 in full"; the draft-split STOP names
 its family (`2:draft-split`).
 
-**Round 5 (2026-07-08): ONE arm ran, returned refine (three findings);
-all folded.** The P2 baseline became a PARTIAL baseline with field-level
+**Round 5 (2026-07-08): ONE arm ran — Arm 2 — and returned refine (three
+findings); all folded.** The P2 baseline became a PARTIAL baseline with field-level
 rules (`prediction` empty — retro-filling it would violate item 7's own
 argument; `provenance` empty — a post-hoc estimate is not a measurement;
 the eight rounds unit-marked `old-regime-human-rounds`, with human
@@ -779,3 +782,11 @@ member, and D3 gained the **canonical STOP member-token registry**
 (tokens minted once, never ad hoc — what D7's `stops[].type` records).
 §6 gained the terminal ratification condition (both arms approve the
 same commit SHA) and the per-round arm-coverage bookkeeping.
+
+**Round 6 (2026-07-08): ONE arm ran — Arm 2 — and returned refine (two
+micro findings); both folded.** The `old-regime-human-rounds` unit
+marker got its schema home (the optional `baseline_note` field — the
+only home for such qualifiers, never ad hoc keys: the registry principle
+applied to the metrics schema itself); the round-4/5 records now name
+WHICH arm ran (Arm 2 — the R-numbered reviewer), completing the
+arm-coverage bookkeeping the terminal condition requires.
