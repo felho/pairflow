@@ -76,7 +76,11 @@ Every plan step runs the same cycle:
    discipline applies with a twist: its negative test derives from the
    check's DECLARED claim, never from the list of implemented rules — a
    blocklist passing an unlisted violation is the recurring failure class
-   (process log, 2026-07-07, twice).
+   (process log, 2026-07-07, twice). The same rule covers **canonical
+   contract matrices** (exit codes, parse rules, config resolution): the
+   matrix IS a declared claim — every lane it declares is DRIVEN by a
+   test, never merely documented (adopted at the ch-6 boundary; the P4a
+   aftermath is the precedent).
 3. **Implement.**
 4. **Drift tests green** — the three unconditional name-space tests (85
    rejection names / domain registry / unit→code mapping; PI-3).

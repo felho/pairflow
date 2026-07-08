@@ -153,4 +153,20 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   fixtures are RAW text now (JSON.parse("-0") restores what stringify
   never emits). Lesson: a negative test's FIXTURE PATH can silently
   erase the very dimension under test — stage hostile values through
-  a channel that provably preserves them
+  a channel that provably preserves them → boundary verdict:
+  acknowledged lesson with WATCH status (one occurrence; becomes a
+  rule if a second fixture path erases its dimension)
+- 2026-07-08 · ch 6 boundary · review held. Shape of the chapter:
+  every packet took 1–2 pre-approval refine rounds (P4 took two AND a
+  split), ONE post-commit aftermath round (P4a: exit-class collapse +
+  lax lexing + a channel-test gap) against ch 4's four and ch 5's
+  zero — the aftermath's class was new (contract MATRIX lanes, not
+  gate claims) → the P4a aftermath line's lesson is ADOPTED into
+  README §4 step 2: a canonical matrix is a declared claim; every
+  declared lane is driven by a test. The dev/prod boundary held
+  structurally (executed probes both directions); the
+  "aligned at PX pre-approval" convention carried five blocks this
+  chapter without a single silent divergence
+- 2026-07-08 · ch 6 boundary · the chapter DoD's full-`ci:local` gate
+  (adopted at the ch-5 boundary) runs for the FIRST time at this
+  close — root suite included; result recorded in the close commit
