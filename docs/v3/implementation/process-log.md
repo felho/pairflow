@@ -195,3 +195,13 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   checkpoints untouched; the registry is amended at chapter boundaries
   only. First live run: the ch-7 packets → validation deferred to the
   ch-7 boundary review
+- 2026-07-08 · ch 6→7 boundary (skill-ification review) · three findings,
+  fixed same day: plan §1.5 still said "skill-ification deferred" — the
+  exact silent-source-drift class the flow bans, in a file the skill
+  itself reads as canonical; the packet-id format omitted the ratified
+  split suffix (ch6-p4a/b precedent); and the workflows applied
+  R-RAW-FIXTURES (WATCH) as a blocking rule — WATCH items are
+  watchpoints (flag, not block) until a second occurrence promotes them.
+  Lesson: a status flip must sweep EVERY file that states the old
+  status, and a registry entry's applied strength must match its
+  declared status

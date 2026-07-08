@@ -189,7 +189,9 @@ are exact machine tokens — the script parses them as a fixed enum
 convention (content layer = ledger projection; LLM-ergonomics layer =
 inherited v1 gates), the projection checklist with the
 constraint-transformation pass, and the standing `REV-*` registry. Executed
-manually during calibration; skill-ification deferred per README §8.
+manually during calibration; skill-ified 2026-07-08 per README §8 (the
+repo-local `CreateTaskPacket` skill — this template stays the canonical
+source; the skill carries procedure only).
 
 ### 1.6 Gap closure
 

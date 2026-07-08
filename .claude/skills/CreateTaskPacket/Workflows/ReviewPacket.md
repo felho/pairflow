@@ -38,8 +38,11 @@ not mechanics. It never replaces the pre-approval verdict.
 4. Structure-vs-semantics: if the packet splits malformed input from
    semantic failure, the line is drawn in exactly ONE place
    [R-STRUCTURE-SEMANTICS].
-5. Hostile fixture values are staged through provably preserving channels
-   (raw text, not `JSON.stringify`) [R-RAW-FIXTURES].
+5. **Watchpoint, not a blocking check** (R-RAW-FIXTURES is WATCH): hostile
+   fixture values staged through provably preserving channels (raw text,
+   not `JSON.stringify`). A stringify-built hostile fixture is FLAGGED in
+   the report — a second occurrence is the promotion trigger at the
+   chapter boundary, per the log's own verdict.
 6. Test obligations are phrased as EXECUTION, not intention — "driven by
    test X", never "should be tested" [R-EXECUTION].
 

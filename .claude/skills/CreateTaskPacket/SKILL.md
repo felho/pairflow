@@ -1,6 +1,6 @@
 ---
 name: CreateTaskPacket
-description: Author and self-review pairflow v3 implementation task packets — projection from the model ledger, not invention. USE WHEN authoring a v3 task packet OR chN-pM packet OR running the projection checklist OR preparing a packet for pre-approval OR self-reviewing a packet draft.
+description: Author and self-review pairflow v3 implementation task packets — projection from the model ledger, not invention. USE WHEN authoring a v3 task packet OR chN-pM packet (split forms chN-pMa/chN-pMb included) OR running the projection checklist OR preparing a packet for pre-approval OR self-reviewing a packet draft.
 ---
 
 # CreateTaskPacket
@@ -57,6 +57,7 @@ invocable standalone (e.g. re-checking a packet after a refine round).
 ```
 User: "jöhet a ch7 P1 packet" (chapter 7 already ratified)
 → Invokes AuthorPacket with PACKET_ID=ch7-p1-<slug>, PLAN_SECTION=§7.x
+  (a ratified split gets the optional suffix: ch7-p1a-<slug>/ch7-p1b-<slug>)
 → Projects the slice from the ledger, writes the packet file,
   runs ReviewPacket, presents the pre-approval summary
 → STOPS for the user's findings round

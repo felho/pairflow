@@ -6,8 +6,9 @@ material the model corpus already resolved; it never re-derives semantics.
 
 ## Input
 
-- `PACKET_ID`: `ch<N>-p<M>-<slug>` (matches the file name under
-  `docs/v3/implementation/packets/`)
+- `PACKET_ID`: `ch<N>-p<M>[a-z]?-<slug>` — the split suffix is optional
+  (precedent: `ch6-p4a-*` / `ch6-p4b-*` from the ratified P4 split);
+  matches the file name under `docs/v3/implementation/packets/`
 - `PLAN_SECTION`: the plan.md section this packet realizes (e.g. `§7.2`)
 - `PRIOR_FINDINGS`: optional — findings from an earlier refine round to fold
 
@@ -109,9 +110,11 @@ deferred edit.
 exactly: header (plan step + autonomy stage), the machine `ledger_slice`
 block (empty or full — always present), Claim + dimensions, operative
 material, canonical matrices, in-context notes, embedding gates,
-acceptance (CT-*/CHK-*/REV-* ids). English only. Fixture guidance: hostile
-values (e.g. `-0`) must be staged through channels that provably preserve
-them — raw text, not `JSON.stringify` [R-RAW-FIXTURES].
+acceptance (CT-*/CHK-*/REV-* ids). English only. Fixture **watchpoint**
+(R-RAW-FIXTURES is WATCH status, not yet a rule): prefer staging hostile
+values (e.g. `-0`) through channels that provably preserve them — raw
+text, not `JSON.stringify`; a stringify-built hostile fixture is flagged
+in the pre-approval summary, not a blocker.
 
 ### 9) Self-review, then STOP
 
