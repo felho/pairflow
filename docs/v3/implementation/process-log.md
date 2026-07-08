@@ -261,3 +261,12 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   TRANSITIVE call graph, a file-scoped grep is not an inventory. Same
   recurring class, one level deeper: "inventory proves less than its
   scope"
+- 2026-07-08 · ch 7 (P1 refine, round 4) · the round-3 fold itself
+  skipped the write-back loop's re-run: the newly folded shared
+  derive-throw row landed WITHOUT the packet's own dimension-2 keyset
+  discipline (per-entrypoint attribution unstated — the lane could
+  have been driven while silently losing attribution); the review
+  caught it → keysets closed in the row. Execution lesson, not a
+  rubric gap: a refine fold IS authoring — the write-back re-run
+  applies after EVERY round, and a new matrix row must pass the
+  packet's own dimensions before presenting
