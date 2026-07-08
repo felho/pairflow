@@ -513,3 +513,24 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   the derivation stated in the summary) + a next-step discovery
   trigger in the SKILL description. "Jöhet a terv következő lépése" is
   now a sufficient prompt for a memory-less agent
+- 2026-07-08 · ch 7 (P2 fresh-session experiment, round 1) · the first
+  fresh-session packet run PASSED on all four designed axes: (1)
+  discovery — the bare Hungarian prompt fired the Skill tool via USE
+  WHEN (the layer the Codex A/B could never test); (2) AGENTS.md
+  routed the v3 plane (read early — the same-day lift paid off); (3)
+  the 0a derivation ran, was STATED in the summary, and — the round's
+  best datapoint — OVERRODE a WRONG prior: the session started
+  believing "ch5 closed, next ch6" because the assistant's MEMORY.md
+  index hook was written at the ch-5 close and never updated (stale
+  memory MISDIRECTS, it does not merely underinform); repo surfaces
+  won, exactly per the memory-accelerates-never-carries convention →
+  the index rewritten to STATUS-FREE pointer hooks same day; (4) full
+  AuthorPacket execution: green-baseline run, write-back loop (4
+  self-review findings folded pre-presentation), fresh-eyes CLEAN on
+  round 1, provenance line, STOP at the verdict with decision points
+  routed to the user. Substantive quality: the Contract Reality Gate
+  caught a REAL live-code gap (plan §7.3 claims cursor "-0 rejected"
+  inheritance while the live getTimeline validator has no Object.is
+  guard) — a plan_contract_challenge from a fresh session with zero
+  conversation history. The 0a rule landed hours before this run and
+  was the difference between self-correction and a wrong packet
