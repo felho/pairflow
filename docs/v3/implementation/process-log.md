@@ -444,3 +444,17 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   wall-clock — the model-tiering principle holds for bounded
   mechanical diffs; semantic propagation checks stay on the strong
   tier. Zero skill changes, fourth round running
+- 2026-07-08 · ch 7 (P1 refine, round 14) · the inventory's Phase
+  column had CONFLATED two axes — STATE phase (never-committed vs
+  persisted: P1's core distinction) and DIGEST point (what gates
+  payloadDigest) — so the canonical shape table was quietly working
+  as a digest-presence axis while the state distinction lived in
+  mixed cells → split into two columns, the two mixed rows split into
+  four (post-digest port throws ≠ post-commit derive; pre/at-create ≠
+  post-create), every live "phase-based" mention renamed
+  digest-point-based (rule-change sweep). The haiku-tier fresh-eyes
+  (6th run) caught the ONE leftover the author sweep missed ("by
+  PHASE" in a matrix cell — an uppercase variant that escaped the
+  grep): the cheap tier catches exactly the class it was hired for.
+  Fifth consecutive zero-skill-change round; lesson: when a column
+  serves two masters, the drift hides in the mixed cells
