@@ -205,9 +205,14 @@ export function createKernel(deps: KernelDeps): Kernel {
 
   return {
     async handle(envelope: EventEnvelope): Promise<Outcome> {
-      const ctx: AttemptContext = {};
+      // Reset PER ATTEMPT (post-build finding): the digest-point
+      // contract is attempt-scoped — after a CAS restart a pre-digest
+      // failure must not inherit the prior attempt's digest. The catch
+      // below reads the CURRENT attempt's context.
+      let ctx: AttemptContext = {};
       try {
         for (;;) {
+          ctx = {};
           const outcome = await handleOnce(envelope, ctx);
           if (outcome === "restart") {
             diag.emit({

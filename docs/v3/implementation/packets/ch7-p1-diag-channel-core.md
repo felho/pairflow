@@ -401,3 +401,17 @@ annotation). Emission placement exactly per the in-context notes:
 outer-loop emits, ctx-threaded digest, bare `diag.emit` call sites
 (REV-DIAG-FAILOPEN eyeballed across the diff), rethrow-identity
 asserted with `rejects.toBe` on the SAME error instances.
+
+**Aftermath (2026-07-08, post-build review — fixed same day, 257
+tests):** the threading context was CALL-scoped while the digest-point
+contract is ATTEMPT-scoped — after a CAS restart, a pre-digest failure
+(unknown_instance, `loadInstance` rejection, digest-throw) inherited
+the PRIOR attempt's `payloadDigest`. The suite had driven
+restart→commit and first-attempt pre-digest lanes separately, never
+their COMBINATION across the restart boundary. Fix: `ctx` resets per
+attempt (the catch reads the current attempt's context); two
+regression lanes driven RED-first (restart→unknown_instance,
+restart→pre-digest throw — both assert NO digest). Lesson: when a
+contract's unit is "per attempt", every mechanism THREADING data
+across attempts is a lane-combination surface — drive the product,
+not just the factors.

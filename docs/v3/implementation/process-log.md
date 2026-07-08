@@ -470,3 +470,20 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   the distinct-from-state-phase note; both artifacts grep-swept clean
   — for a single-token delta the deterministic grep IS the complete
   propagation check. Sixth consecutive zero-skill-change round
+- 2026-07-08 · ch 7 (P1 post-build aftermath) · after 15 pre-approval
+  rounds and a first-run-green build, the post-build review still
+  found a REAL bug the text-plane could not: the digest-threading
+  context was CALL-scoped while the digest-point contract is
+  ATTEMPT-scoped — after a CAS restart a pre-digest failure inherited
+  the prior attempt's payloadDigest. The suite had driven
+  restart→commit and first-attempt pre-digest lanes separately, never
+  their COMBINATION across the restart boundary → ctx now resets per
+  attempt; two regression lanes driven RED-first (observed red, then
+  green — 257 tests). Class for the boundary review: a contract whose
+  unit is "per attempt" makes every cross-attempt data-threading
+  mechanism a COMBINATION surface — the lane inventory enumerates
+  factors, but products across a loop boundary need their own row.
+  Also honest scope note: this is what the 15 text rounds could NOT
+  see — implementation-scoping bugs live below the packet's
+  abstraction floor; the review split (text pre-approval + post-build
+  code review) is complementary, not redundant

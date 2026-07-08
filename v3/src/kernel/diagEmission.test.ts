@@ -242,6 +242,77 @@ describe("cas_restart — count discipline", () => {
     expect(diag.events.filter((e) => e.kind === "cas_restart")).toHaveLength(2);
     expect(diag.events.filter((e) => e.kind !== "cas_restart")).toHaveLength(0);
   });
+
+  it("restart then unknown_instance: the pre-digest lane must NOT inherit the prior attempt's digest", async () => {
+    const handle = openStore(":memory:", createControlledClock(0));
+    await handle.store.createInstance(baseInstance);
+    let loads = 0;
+    const store: StorePort = {
+      ...handle.store,
+      loadInstance: (id) => {
+        loads += 1;
+        return loads === 1 ? handle.store.loadInstance(id) : Promise.resolve(null);
+      },
+      commitTransition: () => Promise.resolve({ kind: "cas_conflict" as const }),
+    };
+    const diag = createRecordingDiagnosticsSink();
+    const kernel = createKernel({
+      store,
+      definitions,
+      time: createControlledClock(0),
+      digest: deriveEmitDigest,
+      diag: diag.sink,
+    });
+    const env = envelope("x1", "PASS", 1, { r: 1 });
+    const outcome = await kernel.handle(env);
+    expect(outcome).toEqual({ kind: "rejected", reason: "unknown_instance" });
+    expect(diag.events).toEqual([
+      {
+        source: "kernel",
+        kind: "cas_restart",
+        ...attribution,
+        opId: "x1",
+        type: "PASS",
+        payloadDigest: deriveEmitDigest(env),
+      },
+      {
+        source: "kernel",
+        kind: "rejected",
+        reason: "unknown_instance",
+        ...attribution,
+        opId: "x1",
+        type: "PASS",
+      },
+    ]);
+  });
+
+  it("restart then a pre-digest throw: internal_failure must NOT inherit the prior attempt's digest", async () => {
+    const handle = openStore(":memory:", createControlledClock(0));
+    await handle.store.createInstance(baseInstance);
+    const boom = new Error("store down");
+    let loads = 0;
+    const store: StorePort = {
+      ...handle.store,
+      loadInstance: (id) => {
+        loads += 1;
+        return loads === 1 ? handle.store.loadInstance(id) : Promise.reject(boom);
+      },
+      commitTransition: () => Promise.resolve({ kind: "cas_conflict" as const }),
+    };
+    const diag = createRecordingDiagnosticsSink();
+    const kernel = createKernel({
+      store,
+      definitions,
+      time: createControlledClock(0),
+      digest: deriveEmitDigest,
+      diag: diag.sink,
+    });
+    await expect(kernel.handle(envelope("x2", "PASS", 1, { r: 1 }))).rejects.toBe(boom);
+    const failure = diag.events.find((e) => e.kind === "internal_failure");
+    expect(failure).toBeDefined();
+    expect(failure?.payloadDigest).toBeUndefined();
+    expect(failure?.error).toEqual({ name: "Error", message: "store down" });
+  });
 });
 
 describe("handle internal_failure lanes — emit + rethrow unchanged", () => {
