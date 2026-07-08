@@ -458,3 +458,15 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   grep): the cheap tier catches exactly the class it was hired for.
   Fifth consecutive zero-skill-change round; lesson: when a column
   serves two masters, the drift hides in the mixed cells
+- 2026-07-08 · ch 7 (P1 refine, round 15) · both arms converged on
+  the round-14 rename's CROSS-ARTIFACT leftover: the plan §7.2
+  payload-boundary clause (a live mirror per the map) still said
+  PHASE-based — because the round-14 sweep AND its fresh-eyes run
+  were scoped to the packet FILE, while the rule's mirror list spans
+  artifacts. The "proves less than its scope" class, now on the sweep
+  itself: a rule-change sweep's scope IS the mirror map's list, never
+  a file (the fresh-eyes instruction already says "map + boundary
+  files" — execution miss, not rule gap). Plan clause renamed with
+  the distinct-from-state-phase note; both artifacts grep-swept clean
+  — for a single-token delta the deterministic grep IS the complete
+  propagation check. Sixth consecutive zero-skill-change round
