@@ -1,6 +1,6 @@
 # Packet Flow v2 — Process + Skill Design
 
-Status: **draft — rounds 1–3 of the two-arm review folded (§6); awaiting
+Status: **draft — rounds 1–4 of the two-arm review folded (§6); awaiting
 final approve/ratification.** No skill/process file changes land before
 this document is ratified. On ratification the Status flips to
 ratified and §5 becomes the change plan's authority; once Phase 0/1 land,
@@ -181,6 +181,15 @@ friction-log line. The authoring-time discovery is always the authority.
   `ratified` AND `realized` status (a silently edited
   post-ratification row is a lint failure, not a quiet
   reinterpretation); `realized` requires a complete landing map.
+- **In a draft, every NORMATIVE statement is a canonical row.** The
+  packet's prose-contract-extraction discipline applies at draft time
+  too ("would an implementer need this sentence to write a test?" → it
+  is a row, not prose); non-row prose (header text, the Control-Model
+  answers as context, surrounding paragraphs) is NON-normative by
+  declaration. This is exactly what makes the canonical-row-payload hash
+  sufficient: a post-ratification prose edit cannot change the contract,
+  and an iff-clause discovered in prose is a REVIEW FINDING (a rule
+  hiding outside the hashed surface), never a legal edit path.
 - **The form's durable authority is docs-side, not this document and not
   the skill:** `docs/v3/implementation/contract-draft-template.md` (§5)
   is the canonical template/format authority, exactly on the
@@ -193,8 +202,9 @@ friction-log line. The authoring-time discovery is always the authority.
   transitional cross-model arms, as with packets; the detailed procedure
   lives in the DraftContract workflow (§5 item 5). The draft loop's
   verdict set is the packet loop's minus `split` — a draft that wants
-  splitting is a chapter-structure question and therefore a STOP, not an
-  autonomous act — and the same watchdog discipline applies (cap 8,
+  splitting is a chapter-structure question and therefore a STOP on the
+  plan-boundary family (`2:draft-split` in the D7 member convention),
+  not an autonomous act — and the same watchdog discipline applies (cap 8,
   exhaustion → STOP with diagnosis; the "expected 2–3 rounds" prediction
   is an expectation, not the cap).
 - **Draft metrics (one line each, at ratification and at close):** rounds
@@ -353,10 +363,9 @@ genuinely new ADR-class decisions arriving as STOP 1):
   `unknown`** (the adopted Closure-Budget discovery rule lands exactly
   here: an `unknown` discovery state blocks approve until INSPECTED —
   inspection converts it to a known present/absent-with-evidence state,
-  which may THEN be routed (out-of-scope / later-chapter /
-  boundary-review) or split away; an uninspected `unknown` is never
-  routable, because routing an unknown would launder ignorance into a
-  decision; it is neither a fold-now finding nor a `missing` matrix cell
+  which may THEN be routed per D5 or split away; an uninspected
+  `unknown` is never routable, because routing an unknown would launder
+  ignorance into a decision; it is neither a fold-now finding nor a `missing` matrix cell
   — it is its own blocker class). No severity taxonomy and no
   two-clean at this phase — those are phase-2 (pairflow) configuration.
 - **The panel report keeps the ReviewPacket finding taxonomy**
@@ -596,20 +605,23 @@ authority-bearing piece lands together in item 8's single flip commit):
    only, it is not a separate commit): the D3 autonomy envelope + STOP
    list as process authority; the draft phase in the build loop; the
    routing rule's third row (shape → draft); metrics convention.
-7. `docs/v3/implementation/plan.md` — TWO sections: §1.3 gains the
-   predicted-class column convention for future ratifications, and the
-   ch7 §7.7 packet-table rows (P3/P4) are annotated IN THIS SAME COMMIT
-   — before P3 authoring starts — so the pilot's `prediction` fields
-   carry real pre-registered predictions (a boundary-time
-   retro-annotation would make them worthless).
+7. `docs/v3/implementation/plan.md` — TWO sections, and this item RIDES
+   IN ITEM 8'S FLIP COMMIT (a plan edit is authority-bearing, and the
+   predictions must exist before P3 authoring, which begins only after
+   the flip): §1.3 gains the predicted-class column convention for
+   future ratifications, and the ch7 §7.7 packet-table rows (P3/P4) are
+   annotated so the pilot's `prediction` fields carry real
+   pre-registered predictions (a boundary-time retro-annotation would
+   make them worthless).
 8. **The authority-flip commit — EVERY authority-bearing edit of Phase 1
    lands as ONE commit.** The class regenerates at every level (round-2
    caught README-vs-itself; round-3 caught SKILL.md-vs-its-own-Workflows
    in the window between items 3–4 and a later item 8): any partial
    landing leaves one authority surface contradicting another. The ONE
    commit therefore carries: items 3–4 (the two workflow rewrites), item
-   5's workflow half (DraftContract + the docs-side template), item 6's
-   README content, item 2's §2 checklist rewrite, `AGENTS.md`'s verbatim
+   5 in full (both files are new and inert until referenced), item 6's
+   README content, item 7's plan edits, item 2's §2 checklist rewrite,
+   `AGENTS.md`'s verbatim
    sentence ("packet pre-approval verdicts (approve / refine / split)
    come from the USER"), `CreateTaskPacket/SKILL.md`'s Hard boundaries
    section (the third live authority surface — it directs the agent at
@@ -635,6 +647,15 @@ authoring: P3 `projection` (sources: the P1/P2 packet contracts + plan
 first full contract-draft exercise is ch8 (template file format —
 predicted `invention`). The pilot's `packet_metrics` are the first
 calibration data points.
+
+**Regime boundary for the in-flight packet:** ch7-P2 (approved, unbuilt
+— its packet file is untracked per the one-commit rule) builds under the
+OLD regime BEFORE Phase 0 lands; the flip's no-packet-work window
+applies to post-Phase-0 work only. P2's build record fills its
+`packet_metrics` block retroactively (the data exists —
+`rounds.review: 8`, the stops and detector-miss material in the flags
+ledger), marked as the pre-v2 BASELINE data point — the v2 pilot's
+numbers get their comparison for free.
 
 ## 6. Review of this document
 
@@ -708,3 +729,16 @@ that act, outside the list); the taxonomy map completed
 (`packet_plan_drift` bifurcates per D3); the draft loop got its verdict
 set (packet's minus `split` — a draft split is a chapter-structure STOP)
 and the same watchdog cap.
+
+**Round 4 (2026-07-08): refine (very small round); all five findings
+folded.** The hash narrowing had itself minted an unhashed normative
+surface — closed by declaring that in a draft EVERY normative statement
+is a canonical row (prose-contract extraction applies at draft time;
+non-row prose is non-normative by declaration, so a post-ratification
+prose edit cannot change the contract and an iff-clause in prose is a
+review finding). The in-flight ch7-P2's regime boundary stated (builds
+under the OLD regime before Phase 0; its retroactive `packet_metrics`
+becomes the pre-v2 baseline data point). Text-level: the unknown rule's
+route list now defers to D5 (mirror discipline); item 7 rides in the
+flip commit; item 8 says "item 5 in full"; the draft-split STOP names
+its family (`2:draft-split`).
