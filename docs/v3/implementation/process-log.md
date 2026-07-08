@@ -487,3 +487,18 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   see — implementation-scoping bugs live below the packet's
   abstraction floor; the review split (text pre-approval + post-build
   code review) is complementary, not redundant
+- 2026-07-08 · ch 7 (P2 window, memory-dependency audit) · the user
+  called the structural point: the process must converge to agents
+  WITHOUT session/file memory (chained executors, non-Claude runners)
+  — any operative fact whose only home is the assistant's memory is a
+  hidden dependency, the README §5.3 table's worst tier with memory as
+  the context. Audit result: the P2 contract handoffs, conventions,
+  and commit rules all had repo homes (memory = cache); TWO items were
+  memory-only — the never-git-push collaboration rule and the v3
+  ROUTING itself (AGENTS.md was pure v1: an agent following it would
+  never find the v3 process) → both lifted into AGENTS.md (Safety
+  bullet + a "V3 Implementation Plane" section: process authority,
+  skill pointer with docs-win rule, human checkpoints, bridges, commit
+  shape). Standing convention from here: memory may ACCELERATE, never
+  CARRY — an operative fact found memory-only is a defect. The
+  fresh-session P2 experiment now genuinely measures skill + repo
