@@ -78,6 +78,13 @@ checklist's rows and nothing outside them).
    flag, narrowing, or decision point the pre-approval summary will raise
    EXISTS as a packet section — a summary-only flag is a finding (the
    dangling-"flagged below" class).
+1b. **Mirror discipline (the v1 Contract-Dense gate, inherited):** a
+   contract-dense packet (a rule mirrored in ≥2 places, plan aligned
+   blocks included) carries a Mirrored Surface Map naming its
+   canonical row and every mirror; a rule RESTATED independently in
+   two places with no named canonical source is a finding — each
+   restatement is a future drift site (the ch7-P1 rounds 6–7 class).
+   The step-5 sweep indexes off this map.
 2. **Density:** every in-context note line has failed both the
    "environment?" and "data?" tests; an overflowing budget means the cut is
    wrong → recommend split along constraint cohesion.

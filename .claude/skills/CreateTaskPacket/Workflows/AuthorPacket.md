@@ -92,6 +92,17 @@ For kernel-semantic packets:
      record five fields per member: `source_site`, `phase` (pre-state
      | pre-commit | post-commit | post-create), `event_keyset` (exact
      per-entrypoint shape), `test_obligation` or `ruled_out_reason`;
+   - **Mirrored Surface Map** (inherited from the v1
+     `CreatePairflowSpec/references/Contract-Dense-Task-Gate.md` — the
+     README §5.2 ergonomics inheritance, realized): when a rule or
+     contract appears in MORE than one place (type matrix, matrix
+     rows, in-context notes, dimensions, the plan's aligned blocks —
+     cross-artifact mirrors count), the packet states it ONCE in its
+     canonical row and NAMES the mirrors in a small map; every other
+     mention summarizes/defers, never restates independently. Fold
+     policy: a change to a canonical row updates EVERY named mirror
+     before handing back; a mirror discovered during review is ADDED
+     to the map, never re-discovered next round.
    - every free-text-capable field (`message`, `details`, `reason`,
      paths) is CLASSIFIED against the packet's payload/redaction
      claims: sanitized-by-contract or untrusted-confined, stated in
@@ -158,11 +169,25 @@ ch7-P1 dangling-"flagged below" lesson).
    lesson: the port-boundary rule was applied to `definitions.load`
    only, and the next round found `loadInstance`/`findOp`/
    `commitTransition` still collapsed).
-3. Present the pre-approval summary in the session's chat language: the
+3. **Fresh-eyes propagation check (after every fold round):** the
+   author's post-fold context carries "I already fixed it" bias — a
+   single LLM pass rarely lands ALL consequences of a logical change.
+   Before presenting: (a) state each fold as a one-line DELTA ("the
+   presence rule is now phase-based", "the lane set gained X"); (b)
+   hand ONLY the delta list + the mutation-boundary files + the
+   Mirrored Surface Map to a FRESH-context sub-agent/reviewer pass
+   with no fold history; its sole task: find every statement
+   inconsistent with the deltas (old conditions, un-updated mirrors,
+   contradicted scalars/keysets); (c) fold its hits and repeat until
+   it returns clean. This is the self-healing half of the pair: the
+   mirror map SHRINKS the propagation surface, the fresh pass VERIFIES
+   the remainder (ch7-P1 rounds 4/6b/7 are the driving evidence —
+   each was a propagation miss a fresh reader caught one round later).
+4. Present the pre-approval summary in the session's chat language: the
    slice (or its declared emptiness), the claim + dimensions, the matrices,
    the embedding gates, open risks — flags REFERENCED from the packet
    section, never introduced summary-only.
-4. **STOP.** The user's findings round decides: approve / refine / split.
+5. **STOP.** The user's findings round decides: approve / refine / split.
    This workflow never proceeds to build, never commits the packet on its
    own, and never marks a packet approved.
 

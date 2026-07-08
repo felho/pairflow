@@ -327,3 +327,21 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   (iff / only-when). Note: the non-skill arm and the skill arm found
   the same core defect; the skill arm added the cas_restart impact
   and reported with the new provenance line — the A/B continues
+- 2026-07-08 · ch 7 (P1 window, round-count retrospective) · asked why
+  ONE packet drew 7+ refine rounds: half domain-essential (the packet
+  is the first observer-of-everything — its matrix is a census of the
+  whole kernel's control flow, it converts the kernel's IMPLICIT
+  operation order into public contract, its strong-word density is
+  structural, and its consistency surface is ~800 lines of existing
+  code), half fold-execution (propagation misses: rounds 4/6b/7). Two
+  adoptions close the second half: (1) the v1
+  Contract-Dense-Task-Gate's missing inheritance realized — canonical
+  row + MIRRORED SURFACE MAP + update-every-named-mirror fold policy
+  (README §5.2's ergonomics inheritance, finally executed for this
+  gate); (2) a FRESH-EYES propagation check in the write-back loop —
+  each fold stated as a one-line delta, a fresh-context sub-agent
+  hunts un-propagated consequences before presenting (the author's
+  post-fold context carries "already fixed it" bias). Synergy: the
+  map shrinks the propagation surface, the fresh pass verifies the
+  remainder. Prediction stands: P2–P4 should be materially cheaper;
+  the observer-role hardness was P1-specific
