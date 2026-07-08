@@ -69,7 +69,8 @@
     "v3:test": "pnpm --dir v3 test",
     "v3:adr-check": "bash ./v3/adr/check.sh",
     "v3:coverage": "python3 ./tools/v3-plan/check_coverage.py --selftest && python3 ./tools/v3-plan/check_coverage.py",
-    "v3:cli": "tsx ./v3/src/cli/main.ts"
+    "v3:cli": "tsx ./v3/src/cli/main.ts",
+    "v3:cli:dev": "tsx ./v3/src/cli/dev/main.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",

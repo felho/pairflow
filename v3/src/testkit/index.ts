@@ -21,7 +21,7 @@ export {
   checkVersionArithmetic,
   runAllCheckers,
 } from "./storeCheckers.js";
-export { replayTrace } from "./traceHarness.js";
+export { replayTrace, TraceMismatchError } from "./traceHarness.js";
 export type {
   ExpectedOutcome,
   HarnessStartInput,

@@ -1135,6 +1135,28 @@ behind a separate entrypoint (§6.5).
     entrypoint via the root-side `tsx` (zero new deps; native Node
     type-stripping cannot resolve `.js`-specifier TS imports); proven
     by a last-mile smoke on the real entrypoint.
+- **Aligned at ch6-P4b pre-approval (two refine rounds):**
+  - **Dev runtime config:** `bundle` and `inject` inherit the P4a
+    config contract in full; **`replay` is HERMETIC** — an ephemeral
+    in-memory store per invocation, `--db` not an accepted flag (a
+    user DB is neither read nor polluted).
+  - **Replay mismatch is TYPE-discriminated:** the testkit harness
+    gains `TraceMismatchError` (lane: outcome / state / transcript /
+    checker + stepIndex/expected/actual); the dev CLI maps it to
+    exit 1 with a `TraceMismatchError`-named error doc carrying those
+    details — wiring errors keep their own names. No message-text
+    matching anywhere.
+  - **Inject = the actor-emit family's staging tool**, schema strict
+    and validated in FULL before any submit: the DERIVED path (no
+    opId) requires a present, canonicalizable payload AND
+    expectedVersion (the emit-lib's content-addressed contract —
+    ratification finding); the OVERRIDE path (explicit opId) may
+    stage absent / null / non-admissible payloads, whose ingress
+    answers are outcome DATA rows at exit 0.
+  - Activation: the ROOT `v3:cli:dev` bridge; the dev entrypoint
+    shares the dispatch shell + error contract via `cli/common.ts`
+    (mechanically extracted; the P4a suite is the no-behavior-change
+    guard).
 
 ### 6.6 Coverage and intake impact
 

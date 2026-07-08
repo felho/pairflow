@@ -1,5 +1,4 @@
 import { pathToFileURL } from "node:url";
-import { parseArgs } from "node:util";
 
 import type { EventEnvelope, Outcome, WorkflowTemplate } from "../domain/index.js";
 import { deriveEmitDigest, deriveOperatorOpId } from "../emit/index.js";
@@ -13,8 +12,17 @@ import {
 } from "../floor/index.js";
 import { createIngress } from "../ingress/index.js";
 import { createKernel } from "../kernel/index.js";
-import type { StoreHandle } from "../store/index.js";
-import { CliError, EXIT, exitCodeFor, toErrorDoc } from "./contract.js";
+import type { VerbContext, VerbHandler, VerbOptions } from "./common.js";
+import {
+  dispatch,
+  flagString,
+  notFound,
+  parseNonNegativeSafeInt,
+  requireInstanceId,
+  usage,
+  withStore,
+} from "./common.js";
+import { CliError, EXIT } from "./contract.js";
 import type { CliDeps } from "./runtime.js";
 import { productionDeps } from "./runtime.js";
 import { builtinDefinitionStore } from "./templates.js";
@@ -28,55 +36,7 @@ import { builtinDefinitionStore } from "./templates.js";
  * writes). Dev verbs live behind the SEPARATE cli/dev entrypoint
  * (P4b; ADR-009 boundary).
  */
-export interface CliSinks {
-  out(line: string): void;
-  err(line: string): void;
-}
-
-function usage(name: string, message: string, details?: Readonly<Record<string, unknown>>): CliError {
-  return new CliError("usage", name, message, details);
-}
-
-function notFound(name: string, message: string): CliError {
-  return new CliError("not_found", name, message);
-}
-
-/** Runtime config matrix (packet ch6-P4a): --db > PAIRFLOW_V3_DB env;
- * missing/empty = usage (exit 2). Store-OPEN failures are NOT config
- * errors — they map to internal (exit 1) so the ADR-003 fail-closed
- * character stays loud. */
-function resolveDbPath(dbFlag: string | undefined, deps: CliDeps): string {
-  const path = dbFlag ?? deps.env["PAIRFLOW_V3_DB"];
-  if (path === undefined || path === "") {
-    throw usage(
-      "MissingDbPath",
-      "no database path: pass --db <path> or set PAIRFLOW_V3_DB",
-    );
-  }
-  return path;
-}
-
-function openStoreOrInternal(path: string, deps: CliDeps): StoreHandle {
-  try {
-    return deps.openStore(path, deps.time);
-  } catch (error) {
-    throw new CliError(
-      "internal",
-      "StoreOpenFailed",
-      `store open failed (fail closed): ${error instanceof Error ? error.message : String(error)}`,
-    );
-  }
-}
-
-function parseNonNegativeSafeInt(raw: string, flag: string): number {
-  // Lexical check FIRST: Number() would coerce "", whitespace, "1e2"
-  // and "0x10" — the contract is a plain decimal integer string
-  // (P4a aftermath finding 2).
-  if (!/^\d+$/.test(raw) || !Number.isSafeInteger(Number(raw))) {
-    throw usage("InvalidFlagValue", `${flag} must be a nonnegative safe integer, got '${raw}'`);
-  }
-  return Number(raw);
-}
+export type { CliSinks } from "./common.js";
 
 function parseTemplateRef(raw: string): { id: string; version: number } {
   const at = raw.lastIndexOf("@");
@@ -133,34 +93,6 @@ function outcomeExitCode(outcome: Outcome): number {
     case "rejected":
       return EXIT.notFound;
   }
-}
-
-interface VerbContext {
-  readonly positionals: readonly string[];
-  readonly values: Record<string, string | boolean | (string | boolean)[] | undefined>;
-  readonly deps: CliDeps;
-  readonly sinks: CliSinks;
-}
-
-function requireInstanceId(ctx: VerbContext): string {
-  const id = ctx.positionals[0];
-  if (id === undefined || id === "") {
-    throw usage("MissingInstanceId", "an <instanceId> positional argument is required");
-  }
-  return id;
-}
-
-function flagString(ctx: VerbContext, name: string): string | undefined {
-  const value = ctx.values[name];
-  return typeof value === "string" ? value : undefined;
-}
-
-function withStore<T>(ctx: VerbContext, run: (handle: StoreHandle) => Promise<T>): Promise<T> {
-  const path = resolveDbPath(flagString(ctx, "db"), ctx.deps);
-  const handle = openStoreOrInternal(path, ctx.deps);
-  return run(handle).finally(() => {
-    handle.close();
-  });
 }
 
 async function verbList(ctx: VerbContext): Promise<number> {
@@ -330,7 +262,7 @@ async function verbSubmit(ctx: VerbContext): Promise<number> {
   });
 }
 
-const VERB_OPTIONS: Record<string, NonNullable<Parameters<typeof parseArgs>[0]>["options"]> = {
+const VERB_OPTIONS: Record<string, VerbOptions> = {
   list: { db: { type: "string" } },
   detail: { db: { type: "string" } },
   timeline: { db: { type: "string" }, after: { type: "string" } },
@@ -352,7 +284,7 @@ const VERB_OPTIONS: Record<string, NonNullable<Parameters<typeof parseArgs>[0]>[
   },
 };
 
-const VERBS: Record<string, (ctx: VerbContext) => Promise<number>> = {
+const VERBS: Record<string, VerbHandler> = {
   list: verbList,
   detail: verbDetail,
   timeline: verbTimeline,
@@ -365,41 +297,9 @@ const VERBS: Record<string, (ctx: VerbContext) => Promise<number>> = {
 export async function runCli(
   argv: readonly string[],
   deps: CliDeps,
-  sinks: CliSinks,
+  sinks: { out(line: string): void; err(line: string): void },
 ): Promise<number> {
-  try {
-    const verb = argv[0];
-    if (verb === undefined || VERBS[verb] === undefined) {
-      throw usage(
-        "UnknownVerb",
-        `unknown verb '${verb ?? ""}' — expected one of: ${Object.keys(VERBS).join(", ")}`,
-      );
-    }
-    let parsed: { values: VerbContext["values"]; positionals: string[] };
-    try {
-      parsed = parseArgs({
-        args: [...argv.slice(1)],
-        options: VERB_OPTIONS[verb],
-        allowPositionals: true,
-        strict: true,
-      });
-    } catch (error) {
-      throw usage("InvalidArguments", error instanceof Error ? error.message : String(error));
-    }
-    const handler = VERBS[verb];
-    return await handler({ positionals: parsed.positionals, values: parsed.values, deps, sinks });
-  } catch (error) {
-    const cliError =
-      error instanceof CliError
-        ? error
-        : new CliError(
-            "internal",
-            error instanceof Error ? error.name : "UnknownError",
-            error instanceof Error ? error.message : String(error),
-          );
-    sinks.err(JSON.stringify(toErrorDoc(cliError)));
-    return exitCodeFor(cliError.errorClass);
-  }
+  return dispatch(VERBS, VERB_OPTIONS, argv, deps, sinks);
 }
 
 // Shipped entrypoint (root bridge: `pnpm v3:cli -- <verb> ...`).

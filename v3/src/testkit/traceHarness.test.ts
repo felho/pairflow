@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { EventEnvelope, Outcome, Started, WorkflowInstance } from "../domain/index.js";
 import type { InstanceDetail, StorePort } from "../ports/store.js";
 import { fixtureTemplate } from "./templateFixture.js";
-import { replayTrace } from "./traceHarness.js";
+import { replayTrace, TraceMismatchError } from "./traceHarness.js";
 import type { TraceFixture, TraceSeams } from "./traceHarness.js";
 
 /**
@@ -138,5 +138,69 @@ describe("trace harness — fake-seam negatives (packet ch5-P3)", () => {
     await expect(replayTrace(fixture, fakeSeams(irrelevant, [2]))).rejects.toThrow(
       /no expectedVersion and no lift/,
     );
+  });
+});
+
+describe("trace harness — the typed mismatch contract (packet ch6-P4b)", () => {
+  const detail: InstanceDetail = {
+    instance: {
+      instanceId: "i1",
+      templateRef: template.ref,
+      task: "t",
+      binding: { implementer: "codex", reviewer: "claude" },
+      currentStep: "review",
+      round: 1,
+      status: "RUNNING",
+      version: 2,
+    },
+    transcript: [
+      { seq: 1, envelope: envelope("a1", "PASS"), payloadDigest: "d-a1", committedAt: 1_001 },
+    ],
+  };
+
+  it("an outcome mismatch throws TraceMismatchError with lane + stepIndex (TYPE-discriminated, not message text)", async () => {
+    const fixture: TraceFixture = {
+      name: "outcome mismatch probe",
+      steps: [
+        {
+          kind: "start",
+          instanceId: "i1",
+          task: "t",
+          expect: { currentStep: "implement", version: 1 },
+        },
+        // The fake seam commits version 2; the fixture demands 3.
+        { kind: "emit", opId: "a1", type: "PASS", actorId: "codex", expectedVersion: 1, expect: { kind: "committed", version: 3 } },
+      ],
+      finalTranscript: [[1, "a1"]],
+      finalState: { currentStep: "review", round: 1, status: "RUNNING", version: 2 },
+    };
+    const failure = await replayTrace(fixture, fakeSeams(detail, [2])).then(
+      () => null,
+      (error: unknown) => error,
+    );
+    expect(failure).toBeInstanceOf(TraceMismatchError);
+    if (failure instanceof TraceMismatchError) {
+      expect(failure.lane).toBe("outcome");
+      expect(failure.stepIndex).toBe(1);
+      expect(failure.expected).toBe(3);
+      expect(failure.actual).toBe(2);
+    }
+  });
+
+  it("a wiring/fixture problem stays a PLAIN Error (emit before start)", async () => {
+    const fixture: TraceFixture = {
+      name: "wiring probe",
+      steps: [
+        { kind: "emit", opId: "a1", type: "PASS", actorId: "codex", expectedVersion: 1, expect: { kind: "committed", version: 2 } },
+      ],
+      finalTranscript: [],
+      finalState: { currentStep: "implement", round: 1, status: "RUNNING", version: 1 },
+    };
+    const failure = await replayTrace(fixture, fakeSeams(detail, [2])).then(
+      () => null,
+      (error: unknown) => error,
+    );
+    expect(failure).toBeInstanceOf(Error);
+    expect(failure).not.toBeInstanceOf(TraceMismatchError);
   });
 });

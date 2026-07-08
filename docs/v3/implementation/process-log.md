@@ -146,3 +146,11 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   matrix needs its lanes DRIVEN, not just declared (the ch-5
   chapter rules held for gates; this extends the same discipline to
   contract matrices)
+- 2026-07-08 · ch 6 (P4b build) · the -0 test lanes initially passed
+  VACUOUSLY: the fixture helper wrote files via JSON.stringify, which
+  flattens -0 to 0 — the exact numeric-identity class the ch-4 ladder
+  closed; the red tests caught the helper, not the CLI → the -0
+  fixtures are RAW text now (JSON.parse("-0") restores what stringify
+  never emits). Lesson: a negative test's FIXTURE PATH can silently
+  erase the very dimension under test — stage hostile values through
+  a channel that provably preserves them

@@ -90,29 +90,80 @@ export interface ReplayResult {
   readonly finalDetail: InstanceDetail;
 }
 
-function fail(label: string, expected: unknown, got: unknown): never {
-  throw new Error(
+export type TraceMismatchLane = "outcome" | "state" | "transcript" | "checker";
+
+/**
+ * The ASSERTION lanes throw this typed error (packet ch6-P4b): the
+ * trace did not hold — outcome/state/transcript expectation or a
+ * post-condition checker. Wiring/fixture problems (emit before start,
+ * lift-less version, vanished instance) stay plain Errors: consumers
+ * (the dev CLI's replay verb) discriminate mismatch from internal on
+ * the TYPE, never on message text.
+ */
+export class TraceMismatchError extends Error {
+  readonly lane: TraceMismatchLane;
+  readonly stepIndex?: number;
+  readonly expected?: unknown;
+  readonly actual?: unknown;
+
+  constructor(
+    lane: TraceMismatchLane,
+    message: string,
+    context: { stepIndex?: number; expected?: unknown; actual?: unknown } = {},
+  ) {
+    super(message);
+    this.name = "TraceMismatchError";
+    this.lane = lane;
+    if (context.stepIndex !== undefined) {
+      this.stepIndex = context.stepIndex;
+    }
+    this.expected = context.expected;
+    this.actual = context.actual;
+  }
+}
+
+function fail(
+  lane: TraceMismatchLane,
+  stepIndex: number | undefined,
+  label: string,
+  expected: unknown,
+  got: unknown,
+): never {
+  throw new TraceMismatchError(
+    lane,
     `${label}: expected ${JSON.stringify(expected)}, got ${JSON.stringify(got)}`,
+    { ...(stepIndex !== undefined ? { stepIndex } : {}), expected, actual: got },
   );
 }
 
-function assertOutcome(label: string, expect: ExpectedOutcome, outcome: Outcome): void {
+function assertOutcome(
+  label: string,
+  stepIndex: number,
+  expect: ExpectedOutcome,
+  outcome: Outcome,
+): void {
   if (outcome.kind !== expect.kind) {
-    fail(`${label} (outcome kind)`, expect.kind, outcome.kind);
+    fail("outcome", stepIndex, `${label} (outcome kind)`, expect.kind, outcome.kind);
   }
   if (expect.kind === "committed" && outcome.kind === "committed") {
     if (outcome.version !== expect.version) {
-      fail(`${label} (committed version)`, expect.version, outcome.version);
+      fail("outcome", stepIndex, `${label} (committed version)`, expect.version, outcome.version);
     }
   }
   if (expect.kind === "stale" && outcome.kind === "stale") {
     if (outcome.currentVersion !== expect.currentVersion) {
-      fail(`${label} (stale currentVersion)`, expect.currentVersion, outcome.currentVersion);
+      fail(
+        "outcome",
+        stepIndex,
+        `${label} (stale currentVersion)`,
+        expect.currentVersion,
+        outcome.currentVersion,
+      );
     }
   }
   if (expect.kind === "rejected" && outcome.kind === "rejected") {
     if (outcome.reason !== expect.reason) {
-      fail(`${label} (rejection reason)`, expect.reason, outcome.reason);
+      fail("outcome", stepIndex, `${label} (rejection reason)`, expect.reason, outcome.reason);
     }
   }
 }
@@ -135,11 +186,17 @@ export async function replayTrace(
       });
       outcomes.push(started);
       if (started.version !== step.expect.version) {
-        fail(`${label} (start version)`, step.expect.version, started.version);
+        fail("outcome", index, `${label} (start version)`, step.expect.version, started.version);
       }
       const created = await seams.store.loadInstance(step.instanceId);
       if (created === null || created.currentStep !== step.expect.currentStep) {
-        fail(`${label} (start currentStep)`, step.expect.currentStep, created?.currentStep);
+        fail(
+          "outcome",
+          index,
+          `${label} (start currentStep)`,
+          step.expect.currentStep,
+          created?.currentStep,
+        );
       }
       instanceId = step.instanceId;
       runningVersion = started.version;
@@ -169,7 +226,7 @@ export async function replayTrace(
     };
     const outcome = await seams.submit(raw);
     outcomes.push(outcome);
-    assertOutcome(label, step.expect, outcome);
+    assertOutcome(label, index, step.expect, outcome);
     if (outcome.kind === "committed") {
       runningVersion = outcome.version;
     }
@@ -193,7 +250,7 @@ export async function replayTrace(
       (row, i) => row[0] === expectedRows[i]?.[0] && row[1] === expectedRows[i]?.[1],
     );
   if (!rowsMatch) {
-    fail(`${fixture.name} (final transcript)`, expectedRows, rows);
+    fail("transcript", undefined, `${fixture.name} (final transcript)`, expectedRows, rows);
   }
 
   const { currentStep, round, status, version } = finalDetail.instance;
@@ -205,13 +262,15 @@ export async function replayTrace(
     actualState.status !== expectedState.status ||
     actualState.version !== expectedState.version
   ) {
-    fail(`${fixture.name} (final state)`, expectedState, actualState);
+    fail("state", undefined, `${fixture.name} (final state)`, expectedState, actualState);
   }
 
   const violations = runAllCheckers(finalDetail, seams.template);
   if (violations.length > 0) {
-    throw new Error(
+    throw new TraceMismatchError(
+      "checker",
       `${fixture.name}: post-condition checkers rejected the replay:\n${violations.join("\n")}`,
+      { actual: violations },
     );
   }
 
