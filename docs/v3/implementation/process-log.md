@@ -405,3 +405,15 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   deferrals. Convergence signal: reviewer findings narrowed from
   contract substance (rounds 1–7) to index completeness (9–10), and
   the propagation loop now closes pre-presentation
+- 2026-07-08 · ch 7 (P1 refine, round 11) · the field_provenance
+  schema landed in the packet as a compact LANE-INVENTORY table — and
+  it became the CANONICAL home for per-lane event shapes + per-field
+  provenance (condition → value source), demoting the emission-matrix
+  inline keysets to named mirrors: one authority for SHAPES, one for
+  lane BEHAVIOR — the alternative (keysets canonical in two tables)
+  would have rebuilt the drift class the map exists to kill. The
+  cas_restart minimal keyset recorded as a DECLARED choice. Fresh-eyes
+  3rd run: all four axes PASS (keyset agreement, bijective lane
+  coverage, type-matrix conditions, plan consistency) — a canonical
+  RELOCATION verified clean pre-presentation, the operation class
+  that used to take a round-trip. Again zero skill changes
