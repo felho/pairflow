@@ -345,3 +345,19 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   map shrinks the propagation surface, the fresh pass verifies the
   remainder. Prediction stands: P2–P4 should be materially cheaper;
   the observer-role hardness was P1-specific
+- 2026-07-08 · ch 7 (P1 window, inheritance completed) · the user
+  caught that the v1 Contract-Dense gate port was HALF an inheritance:
+  the gate's DETECTION half — scan prose for contract-bearing
+  sentences and force them into canonical rows (v1 Policy #1: no
+  "valid/parseable"-class prose where deterministic behavior is
+  needed) — had not been ported; only the canonical-matrix convention
+  (ch 4) and the mirror checklist (today) had. Adopted both sides now:
+  AuthorPacket prose-contract extraction at write time ("would an
+  implementer need this sentence to write a test?" → it is contract,
+  not prose; the §5.3 in-context budget is the stated exception) +
+  ReviewPacket prose-contract scan as a claim-half check. Evidence
+  from our own packet: the payloadDigest presence rule part-lived in
+  cell prose and a note — that placement is WHY it could drift in
+  rounds 6–7. Full v1-gate inheritance now: detect+extract, canonical
+  row, mirror map; the v3-native additions on top: five-field lane
+  inventory, sweeps, fresh-eyes propagation pass

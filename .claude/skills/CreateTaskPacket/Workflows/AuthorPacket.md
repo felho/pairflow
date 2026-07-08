@@ -92,9 +92,20 @@ For kernel-semantic packets:
      record five fields per member: `source_site`, `phase` (pre-state
      | pre-commit | post-commit | post-create), `event_keyset` (exact
      per-entrypoint shape), `test_obligation` or `ruled_out_reason`;
-   - **Mirrored Surface Map** (inherited from the v1
-     `CreatePairflowSpec/references/Contract-Dense-Task-Gate.md` — the
-     README §5.2 ergonomics inheritance, realized): when a rule or
+   - **Prose-contract extraction** (the v1 Contract-Dense gate's
+     DETECTION half, Policy #1): scan every prose surface of the draft
+     — claim text, in-context notes, flag entries, matrix CELL prose —
+     for sentences carrying a DETERMINISTIC obligation (presence
+     conditions / iff-clauses, orderings, counts, error mappings,
+     ownership, retention). Each hit MOVES into a canonical
+     matrix/table row (a small dedicated table is fine — e.g. a
+     per-lane presence matrix), leaving a reference behind. The test:
+     "would an implementer need this sentence to write a test?" → it
+     is contract, not prose. What legitimately STAYS prose is the §5.3
+     in-context budget: intent notes, embedding knowledge, non-lintable
+     idiom — never a testable rule.
+   - **Mirrored Surface Map** (the same v1 gate's Required Output #4 —
+     the README §5.2 ergonomics inheritance, realized): when a rule or
      contract appears in MORE than one place (type matrix, matrix
      rows, in-context notes, dimensions, the plan's aligned blocks —
      cross-artifact mirrors count), the packet states it ONCE in its

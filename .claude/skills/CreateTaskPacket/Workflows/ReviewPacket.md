@@ -58,17 +58,27 @@ checklist's rows and nothing outside them).
    per-entrypoint shape — attribution must not silently vanish),
    `test_obligation` (the driving test) OR `ruled_out_reason` (the
    explicit prior-contract proof).
-4. Any new validator over a numeric domain states the full ladder,
+4. **Prose-contract scan (the v1 Contract-Dense gate's detection
+   half):** prose that carries a deterministic obligation — presence
+   conditions / iff-clauses, orderings, counts, error mappings,
+   ownership, retention — outside a canonical matrix/table row is a
+   finding: contracts live in rows, prose summarizes ("would an
+   implementer need this sentence to write a test?" → it is a
+   contract). The §5.3 in-context budget (intent, embedding, idiom) is
+   the stated exception — a note that smuggles a testable rule is not
+   an intent note (the ch7-P1 presence rule drifted precisely because
+   it part-lived in cell prose and a note).
+5. Any new validator over a numeric domain states the full ladder,
    including `-0` via `Object.is` [R-NUMERIC-LADDER].
-5. Structure-vs-semantics: if the packet splits malformed input from
+6. Structure-vs-semantics: if the packet splits malformed input from
    semantic failure, the line is drawn in exactly ONE place
    [R-STRUCTURE-SEMANTICS].
-6. **Watchpoint, not a blocking check** (R-RAW-FIXTURES is WATCH): hostile
+7. **Watchpoint, not a blocking check** (R-RAW-FIXTURES is WATCH): hostile
    fixture values staged through provably preserving channels (raw text,
    not `JSON.stringify`). A stringify-built hostile fixture is FLAGGED in
    the report — a second occurrence is the promotion trigger at the
    chapter boundary, per the log's own verdict.
-7. Test obligations are phrased as EXECUTION, not intention — "driven by
+8. Test obligations are phrased as EXECUTION, not intention — "driven by
    test X", never "should be tested" [R-EXECUTION].
 
 ### 3) Ergonomics half — the v1-inherited rubric (both modes)
