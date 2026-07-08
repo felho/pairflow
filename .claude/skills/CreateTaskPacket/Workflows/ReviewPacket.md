@@ -100,9 +100,13 @@ claims [R-CLAIM-NEGATIVES applied to the review itself]:
      seam's ACTUAL code paths (throw sites, branches) INCLUDING the
      transitive call graph — helpers the entry point calls carry their
      own throw sites (the ch7-P1 second-round lesson: a file-scoped
-     inventory missed the shared `deriveDispatchIntent` throws); the
-     Matrix Symmetry Gate's enumeration mechanic (claim half, step 3)
-     is the tool; example lists are not proof.
+     inventory missed the shared `deriveDispatchIntent` throws) — AND
+     the awaited PORT/boundary calls: every `await` on an injected
+     dependency is a throw source with ZERO visible `throw` statements
+     in repo code (third-round lesson: a rejecting `definitions.load`
+     is a distinct lane from its null return); the Matrix Symmetry
+     Gate's enumeration mechanic (claim half, step 3) is the tool;
+     example lists are not proof.
    - **Free-text boundary inventory**: wherever a *never / redaction /
      secret / payload-never* claim coexists with ANY free-text-capable
      field (`message`, `details`, `reason`, paths, env values), an

@@ -83,8 +83,12 @@ For kernel-semantic packets:
    - a collapsed lane ("any throw", "all failures") enumerates its
      members FROM THE CODE — the seam's actual throw/branch sites
      INCLUDING its transitive call graph (helpers carry their own
-     throw sites; a file-scoped grep is not an inventory) — each named
-     and driven, or explicitly ruled out;
+     throw sites; a file-scoped grep is not an inventory) AND its
+     awaited port/boundary calls (every `await` on an injected
+     dependency can reject with zero visible `throw` sites; a port's
+     failure lane is distinct from its null/empty return lane) — each
+     named and driven, or explicitly ruled out; enumerate as a LIST,
+     never a count ("all three" goes stale the day a fourth appears);
    - every free-text-capable field (`message`, `details`, `reason`,
      paths) is CLASSIFIED against the packet's payload/redaction
      claims: sanitized-by-contract or untrusted-confined, stated in

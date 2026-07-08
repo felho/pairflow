@@ -270,3 +270,16 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   rubric gap: a refine fold IS authoring — the write-back re-run
   applies after EVERY round, and a new matrix row must pass the
   packet's own dimensions before presenting
+- 2026-07-08 · ch 7 (P1 refine, round 5) · two lessons: (1) the
+  round-3 fix itself minted a fresh overclaim — "ZERO events for a
+  committed return" is false under CAS restarts (N cas_restart events,
+  committed final) → the ch-4 pattern "a fix scoped to the finding
+  just caught repeats the loop" now observed on WORDING, not just
+  gates; narrowed to "no outcome-classified event; total zero only
+  restart-free", combination lane driven. (2) The throw-inventory
+  class deepened a THIRD level: explicit throw sites → transitive call
+  graph → awaited PORT boundaries (a rejecting definitions.load has no
+  visible throw statement; the rejection lane ≠ the null lane) →
+  skill inventory wording extended (port awaits; enumerate as LIST
+  never count). The ladder is now: file → call graph → port boundary;
+  candidate single LearnedRules entry at the boundary covers all three
