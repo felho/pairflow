@@ -361,3 +361,12 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   rounds 6–7. Full v1-gate inheritance now: detect+extract, canonical
   row, mirror map; the v3-native additions on top: five-field lane
   inventory, sweeps, fresh-eyes propagation pass
+- 2026-07-08 · ch 7 (P1 refine, round 8) · one Low remnant: the
+  count-discipline rule's MIRROR in an in-context note still said
+  "final outcome → one classified emit" — the round-7 sweep, executed
+  by the AUTHOR, passed over a count statement of the old rule while
+  checking iff-clauses: the sweep's first execution itself proved less
+  than its claim, which is precisely the author-bias case the
+  fresh-eyes propagation pass (adopted after that round) exists for →
+  note fixed, marked as a mirror of dimension 6; no new rule — the
+  existing pair (mirror map + fresh eyes) covers the class from here
