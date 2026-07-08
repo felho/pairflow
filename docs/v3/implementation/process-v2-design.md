@@ -1,7 +1,8 @@
 # Packet Flow v2 — Process + Skill Design
 
-Status: **draft** (awaiting the two-arm review; no skill/process file changes
-land before this document is ratified). On ratification the Status flips to
+Status: **draft — rounds 1–2 of the two-arm review folded (§6); awaiting
+final approve/ratification.** No skill/process file changes land before
+this document is ratified. On ratification the Status flips to
 ratified and §5 becomes the change plan's authority; once Phase 0/1 land,
 the REALIZED files (README/template/skill/AGENTS.md) are the authority and
 this document is a historical record — its own D2 rule ("never a third
@@ -106,7 +107,7 @@ inventory member) carries a provenance class:
 
 | Class | Meaning |
 |---|---|
-| `anchored(ref)` | pulled from a ratified source (ledger §, unit file, plan §, prior packet row, contract-draft §, ADR) |
+| `anchored(ref)` | pulled from a ratified source (ledger §, unit file, plan §, prior packet row, contract-draft § — ratified-or-later per D2, ADR) |
 | `derived(refs)` | no literal source, but entailed by anchored decisions — carries a one-line derivation note |
 | `new-decision` | new semantics nothing prior determines |
 
@@ -157,25 +158,51 @@ friction-log line. The authoring-time discovery is always the authority.
   header carries `status: draft | ratified | realized` plus a
   ratification block (date, reviewing arms, sha256 of the ratified bytes —
   the packet-basis discipline applied to drafts; a packet may only anchor
-  to a RATIFIED draft). At chapter close the boundary review fills a
-  **realized map** (row ID → landing site: packet § / code / test) and
-  flips the status IN PLACE — the file never moves and row IDs never
-  change, so `anchored(…)` references stay resolvable forever (archival is
-  a status transition, not a relocation). Draft-lint checks (Phase 0):
-  row-ID uniqueness; packet anchors resolve to existing ratified row IDs;
-  status transitions monotonic (draft→ratified→realized); `realized`
+  to a ratified-or-later draft). **Reopening a ratified row is a NEW
+  ratification block** (re-hash + human re-ratification — the D6 rule
+  that draft ratification never delegates applies to re-ratification
+  too); the status machine stays monotonic at the STATUS level
+  (draft→ratified→realized) while ratification blocks may accumulate. At
+  chapter close the boundary review fills a **realized map** (row ID →
+  landing site: packet § / code / test) and flips the status IN PLACE —
+  the file never moves and row IDs never change, so `anchored(…)`
+  references stay resolvable forever (archival is a status transition,
+  not a relocation). Draft-lint checks (Phase 0): row-ID uniqueness;
+  packet anchors resolve to existing row IDs in a **ratified-or-later**
+  draft (a `realized` flip must not break old anchors); status
+  transitions monotonic; a `ratified`-status draft's bytes MATCH its
+  latest ratification block's hash (a silently edited post-ratification
+  draft is a lint failure, not a quiet reinterpretation); `realized`
   requires a complete landing map.
+- **The form's durable authority is docs-side, not this document and not
+  the skill:** `docs/v3/implementation/contract-draft-template.md` (§5)
+  is the canonical template/format authority, exactly on the
+  task-packet-template pattern — the DraftContract workflow carries
+  procedure only, and if they disagree, the docs win.
+- **Pre-ratification review:** the draft runs the same tier-0
+  (draft-lint) + tier-1 panel machinery scoped to its tree-independent
+  content (the substrate lens fully applies — probes are
+  tree-independent; embedding-class checks are n/a), then the
+  transitional cross-model arms, as with packets; the detailed procedure
+  lives in the DraftContract workflow (§5 item 5).
 - **Draft metrics (one line each, at ratification and at close):** rounds
   to ratify, new-decision row count, post-ratification reopenings (rows a
-  packet had to reopen) — D2's own "expected 2–3 rounds" prediction is
-  testable only if measured.
+  packet had to reopen — measured as ratification blocks beyond the
+  first) — D2's own "expected 2–3 rounds" prediction is testable only if
+  measured.
 - **ADR relation (four rules):** (1) draft rows may anchor to ADRs as
   provenance; (2) decision-class new-decision rows mint their ADR at DRAFT
-  ratification (earlier than today's build-time authoring); (3) shape never
-  goes into an ADR — the ADR records decision+rationale and references the
-  draft; the draft cites the ADR for decision provenance; (4) after chapter
-  close: decisions persist in ADRs, shapes persist in packets/code/tests,
-  the draft archives. The routing rule gains its missing third row: *model
+  ratification, and that ADR lands **`accepted` WITH the draft
+  ratification** — the ratification IS the human acceptance act (this is
+  one of exactly three ADR lanes, stated once here: draft-ratified
+  content → accepted at draft ratification; plan-ratified content whose
+  ADR is authored during packet work → acceptance rides with the packet
+  approve, per D3; a genuinely new ADR-class decision mid-loop → STOP 1,
+  and its ADR follows whichever ratification act resolves it); (3) shape
+  never goes into an ADR — the ADR records decision+rationale and
+  references the draft; the draft cites the ADR for decision provenance;
+  (4) after chapter close: decisions persist in ADRs, shapes persist in
+  packets/code/tests, the draft archives. The routing rule gains its missing third row: *model
   decisions → corpus+memos; implementation decisions → ADRs;
   implementation-plane contract SHAPE → contract-draft.*
 - **Ratification: lightweight and permanently HUMAN** — this is the intent
@@ -218,8 +245,19 @@ STOP (human), four cases:
    the same case's special form); a fold would require a genuinely open
    behavioral/performance choice (contested-probe resolutions that mint
    new-decision rows arrive here too).
-2. **Meaning-changing plan conflict** — an alignment that would ALTER
-   ratified semantics rather than propagate them.
+2. **Plan-boundary conflict** — three members, one family: an alignment
+   that would ALTER ratified semantics rather than propagate them; a
+   split that would change chapter scope, sequencing, or dependencies
+   (the matrix row below); and a **contested plan↔reality mismatch**
+   (the ReviewPacket `plan_contract_challenge` class) — ratified text
+   and live behavior disagree AND more than one resolution direction
+   exists. The precedent is ch7-P2 flag 1: plan §7.3 claimed "-0
+   rejected" while the live `getTimeline` accepted it — the row was
+   ANCHORED to plan text (not STOP 1) and aligning code to plan reads
+   as propagation (not an alteration), yet the (a)/(b) choice — clarify
+   the plan text vs harden the ch-6 surface — was a genuine human
+   decision. Without this member, that lane would run through the loop
+   as an autonomous fold.
 3. **Watchdog exhaustion** — round cap reached without approve: STOP with a
    diagnosis (churn composition → size problem: split proposal; undecided
    semantics: draft proposal). Auto-split-remedy delegable later.
@@ -228,16 +266,22 @@ STOP (human), four cases:
    ceremony and delegable later (D6).
 
 **Verdict-action matrix** (this is the authority-surface change the design
-requires — Phase 1 rewrites both surfaces in one commit, see §5, because
-they may never disagree with the running process. What they say TODAY,
-verified: `AGENTS.md`'s v3 section states verbatim that "packet
-pre-approval verdicts (approve / refine / split) come from the USER";
-README §5.5's standing-checkpoint list is narrower but still conflicts —
-"refine/split verdicts when a mechanical gate fails" is a human
-checkpoint, and "ADR proposed → accepted" is listed as never automated,
-both of which v2 changes: refine and in-chapter split are the loop's in
-every case, and ADR acceptance of already-ratified content rides with the
-approve, with genuinely new ADR-class decisions arriving as STOP 1):
+requires — Phase 1 rewrites all THREE live surfaces in ONE commit, see §5
+item 8, because they may never disagree with the running process or with
+each other. What they say TODAY, verified: `AGENTS.md`'s v3 section
+states verbatim that "packet pre-approval verdicts (approve / refine /
+split) come from the USER"; `CreateTaskPacket/SKILL.md`'s Hard boundaries
+section carries the same checkpoint set (packet pre-approval verdict, ADR
+proposed→accepted) as never-automated — the skill's own entry rules would
+contradict its workflows if left; README §5.5's standing-checkpoint list
+is narrower but still conflicts — "refine/split verdicts when a
+mechanical gate fails" is a human checkpoint, and "ADR proposed →
+accepted" is listed as never automated, all of which v2 changes: refine
+and in-chapter split are the loop's in every case, and ADR acceptance of
+PLAN-ratified content authored during packet work rides with the approve
+(the three ADR lanes are stated once, in D2's ADR-relation rule 2 —
+draft-ratified content is accepted AT draft ratification, not here), with
+genuinely new ADR-class decisions arriving as STOP 1):
 
 | Loop event | v2 action |
 |---|---|
@@ -290,8 +334,18 @@ approve, with genuinely new ADR-class decisions arriving as STOP 1):
   plan-mode; v2's `split` maps to the refine qualifier, v2's STOP absorbs
   `route_back_to_plan`/`block_not_ready`.
 - **Approve =** all tier-0 green + one full clean panel round (no fold-now
-  findings) + complete coverage matrix. No severity taxonomy and no
+  findings) + complete coverage matrix — **no `missing` AND no unresolved
+  `unknown`** (the adopted Closure-Budget discovery rule lands exactly
+  here: an `unknown` discovery state blocks approve until inspected,
+  routed, or split away; it is neither a fold-now finding nor a `missing`
+  matrix cell — it is its own blocker class). No severity taxonomy and no
   two-clean at this phase — those are phase-2 (pairflow) configuration.
+- **The panel report keeps the ReviewPacket finding taxonomy**
+  (`packet_defect` / `packet_plan_drift` / `plan_contract_challenge` /
+  `watchpoint` / `considered_not_finding`) and its "nothing is dropped
+  silently" discipline — every considered issue is classified;
+  `plan_contract_challenge` routes to STOP 2 (never silently accepted,
+  never silently "fixed"), `watchpoint` maps to the D5 routes.
 - **Watchdog: 8 rounds** — a pure safety cap, not a tuning lever. (The
   v1-era ExecutePairflowPlan autonomous loop ran with a similar ~9-round
   cap — operator-reported, documented in no repo file; `CreatePairflowSpec`
@@ -403,9 +457,10 @@ against these during the round-1 review.
   dimension counts, sibling-packet fanout).
 - **Closure-Budget Gate** (SKILL.md `## Closure-Budget Gate`) → its two
   live rules adopted: the discovery rule ("present/absent/unknown with
-  evidence; `unknown` BLOCKS approve") into the panel's lens discipline,
-  and its bucket-coincidence split trigger adapted into the same sizing
-  heuristics (v3 buckets: claim families, matrix families, sibling-packet
+  evidence; `unknown` BLOCKS approve") into the D4 approve definition —
+  an unresolved `unknown` is its own blocker class there — and its
+  bucket-coincidence split trigger adapted into the sizing heuristics
+  (v3 buckets: claim families, matrix families, sibling-packet
   consumers).
 - Control-Model Readiness Gate → the contract-draft round-0 checklist (D2).
 - 4-lane sub-agent review + Gate Coverage Matrix + fresh-context re-review
@@ -469,7 +524,9 @@ against these during the round-1 review.
    mutation-boundary block syntax, **post-build mutation-boundary check**
    — `git diff --name-only` of the packet commit vs the declared boundary
    — and the D2 **draft-lint** checks: row-ID uniqueness, anchor
-   resolution to ratified rows, monotonic status, complete realized map)
+   resolution to row IDs in a ratified-or-later draft, monotonic status,
+   ratified-bytes match the latest ratification block's hash, complete
+   realized map)
    + `pnpm v3:packet-lint` bridge + negative self-tests (the check.sh
    culture).
 2. `task-packet-template.md`: provenance marks on canonical rows; route
@@ -490,31 +547,48 @@ against these during the round-1 review.
    propagation lesson applied to skill files): the Substrate Reality
    Probe + contested-probe corollary → lens 1; Projection/Delegation
    Closure → lens 2; the Packet-basis hash binding and the report
-   validity gate → the panel's report contract. Each must be traceable
-   to a named lens or report element in the new structure.
-5. NEW `CreateTaskPacket/Workflows/DraftContract.md`: the contract-draft
-   authoring + ratification workflow (D2), incl. the Control-Model
-   checklist and tree-independence bar.
+   validity gate → the panel's report contract; **the finding taxonomy
+   + the "nothing is dropped silently" discipline → the panel report
+   (D4), with `plan_contract_challenge` wired to STOP 2**. Each must be
+   traceable to a named lens or report element in the new structure.
+5. NEW `docs/v3/implementation/contract-draft-template.md` — the
+   canonical FORM authority for drafts (row-ID scheme, status field,
+   ratification block, realized map — the task-packet-template pattern:
+   docs win, the skill carries procedure) — plus NEW
+   `CreateTaskPacket/Workflows/DraftContract.md`: the authoring +
+   review + ratification PROCEDURE (D2), incl. the Control-Model
+   checklist and tree-independence bar. Without the docs-side template,
+   the form's authority would default to this historical design doc or
+   the skill — both wrong per D2's own rule.
 6. `docs/v3/implementation/README.md`: the D3 autonomy envelope + STOP
    list as process authority; the draft phase in the build loop; the
-   routing rule's third row (shape → draft); metrics convention.
-7. `docs/v3/implementation/plan.md` §1.3: the predicted-class column
-   convention for future ratifications; ch7's remaining rows (P3/P4) are
-   annotated IN THIS SAME COMMIT — before P3 authoring starts — so the
-   pilot's `prediction` fields carry real pre-registered predictions (a
-   boundary-time retro-annotation would make them worthless).
-8. `AGENTS.md` (v3 section) + `docs/v3/implementation/README.md` §5.5, in
-   ONE commit: AGENTS.md's verbatim sentence ("packet pre-approval
-   verdicts (approve / refine / split) come from the USER") AND README
-   §5.5's standing-checkpoint list (its "refine/split verdicts when a
-   mechanical gate fails" clause and its unconditional "ADR proposed →
-   accepted" entry) are rewritten to the D3 verdict-action matrix (STOPs
-   and flag-bearing approves are the user's; refine and in-chapter split
-   are the loop's; ADR acceptance of already-ratified content rides with
-   the approve, new ADR-class decisions are STOP 1). The surviving §5.5
+   routing rule's third row (shape → draft); metrics convention. NOTE:
+   these README edits land in item 8's authority-alignment commit — a
+   README that carried the new autonomy sections while still holding the
+   old §5.5 checkpoints would contradict itself between two commits.
+7. `docs/v3/implementation/plan.md` — TWO sections: §1.3 gains the
+   predicted-class column convention for future ratifications, and the
+   ch7 §7.7 packet-table rows (P3/P4) are annotated IN THIS SAME COMMIT
+   — before P3 authoring starts — so the pilot's `prediction` fields
+   carry real pre-registered predictions (a boundary-time
+   retro-annotation would make them worthless).
+8. **The authority-alignment commit — all of these land as ONE commit**
+   (a two-commit split would leave the README contradicting ITSELF
+   between item 6's new autonomy sections and the old §5.5, exactly the
+   disagreement this item exists to prevent; item 6's README edits
+   therefore land here too): `AGENTS.md`'s verbatim sentence ("packet
+   pre-approval verdicts (approve / refine / split) come from the
+   USER"); `CreateTaskPacket/SKILL.md`'s Hard boundaries section (the
+   third live authority surface — it directs the agent at skill entry
+   and today carries the same pre-approval-verdict + ADR
+   proposed→accepted checkpoints); and README §5.5's standing-checkpoint
+   list (its "refine/split verdicts when a mechanical gate fails" clause
+   and its unconditional "ADR proposed → accepted" entry). All three are
+   rewritten to the D3 verdict-action matrix (STOPs and flag-bearing
+   approves are the user's; refine and in-chapter split are the loop's;
+   the three ADR lanes per D2 rule 2). The surviving never-automated
    checkpoints — chapter ratification, divergence stop, draft
-   ratification (new) — stay never-automated. The two authority surfaces
-   may never disagree with the running process.
+   ratification (new) — are restated identically on all three surfaces.
 
 **Phase 2 — deferred (explicitly NOT now):** pairflow doc-bubble
 integration (metadata contract), auto-approve machinery + thresholds,
@@ -552,3 +626,29 @@ declined route carries no revisit BY DESIGN (it is a ratified decision,
 not a deferral); the Scoped-Invariant slicing doctrine stays rejected
 (the fence/proof-boundary halves adopted); the Closed-Contract Drift
 Check is adapted narrowly to the new draft→packet surface only.
+
+**Round 2 (2026-07-08): both arms returned refine (small round); all
+findings folded.** Arm 1: the third live authority surface
+(`CreateTaskPacket/SKILL.md` Hard boundaries) joined item 8; the
+contract-draft gained its durable docs-side form authority
+(`contract-draft-template.md`, item 5 — the task-packet-template
+pattern); the ADR lifecycle disambiguated into three lanes stated once
+in D2 rule 2 (draft-ratified → accepted AT draft ratification;
+plan-ratified authored in packet work → acceptance rides with approve;
+new mid-loop → STOP 1); the status header now tracks the review rounds.
+Arm 2 (hunting rifts the round-1 folds themselves minted — the "rule
+change MINTS lanes" lesson applied to the doc): items 6+8 collapse into
+ONE authority-alignment commit (a two-commit split would have made the
+README contradict itself); the Closure-Budget `unknown` rule landed in
+the approve definition ("no missing AND no unresolved unknown" — its own
+blocker class); STOP 2 widened into the plan-boundary conflict family
+whose third member is the contested plan↔reality mismatch
+(`plan_contract_challenge` — the ch7-P2 flag-1 precedent would otherwise
+run through the loop as an autonomous fold), and the ReviewPacket
+finding taxonomy + "nothing dropped silently" joined the preserved
+surfaces; draft reopening defined (a new ratification block, human
+re-ratified, with the lint checking ratified bytes against the latest
+block's hash); the anchor predicate corrected to ratified-or-later; item
+7 names both plan sections (§1.3 + §7.7); the draft's pre-ratification
+reviewer stated (tier-0/tier-1 scoped to tree-independent content, then
+the transitional arms; procedure in DraftContract).
