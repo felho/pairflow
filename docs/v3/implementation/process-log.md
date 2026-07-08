@@ -370,3 +370,26 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   fresh-eyes propagation pass (adopted after that round) exists for →
   note fixed, marked as a mirror of dimension 6; no new rule — the
   existing pair (mirror map + fresh eyes) covers the class from here
+- 2026-07-08 · ch 7 (P1 refine, round 9 + first fresh-eyes run) · the
+  reviewers applied the skill's OWN new rules to the packet that
+  spawned them (reflexive validation): the Mirrored Surface Map was
+  missing (added — plus the flags ledger declared a HISTORICAL
+  snapshot set, deliberately outside the live mirrors: history is not
+  rewritten on canonical change), and the prose-contract scan caught
+  a testable-looking obligation in a note ("per-restart recompute /
+  do not cache") → DE-CLAIMED: the digest is deterministic, a cache
+  is observationally identical — explicitly not a lane. Then the
+  FRESH-EYES propagation pass ran LIVE for the first time on the
+  fold and immediately earned its place: it found a PHANTOM mirror
+  (the map listed an in-context bare-call note that does not exist)
+  and unlisted mirrors (dimension 1 and the acceptance list restate
+  count/presence rules) — the map itself is reviewable content, and
+  an uncontaminated reader catches what the map's author cannot.
+  Process feedback absorbed the same day: `field_provenance` joins
+  the lane-inventory schema first-class (presence condition + value
+  source + no-new-fallible-work — would have caught the
+  digest-recompute class deterministically), the report templates
+  gain visible "Mirror/propagation" and "Propagation" lines (proof it
+  RAN, the Skill-source pattern), and the schema wording dropped its
+  own "five fields" count — the list-never-count rule applied to the
+  skill's own text

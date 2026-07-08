@@ -50,12 +50,17 @@ checklist's rows and nothing outside them).
    sites of the seam) — each member driven or explicitly ruled out; a
    collapsed lane whose driven examples came from the author's memory
    proves less than its claim (the ch7-P1 crossover lesson: `start.ts`
-   had a third throw site the examples missed). The inventory records
-   FIVE fields per member — a lane's existence is not its contract:
+   had a third throw site the examples missed). The inventory records,
+   per member — a lane's existence is not its contract:
    `source_site` (file/call), `phase` (pre-state | pre-commit |
    post-commit | post-create — a post-success failure is NOT the same
    lane class as a never-committed one), `event_keyset` (exact
    per-entrypoint shape — attribution must not silently vanish),
+   `field_provenance` (for every optional/derived field: its presence
+   CONDITION and its value SOURCE — already-in-hand at the emit point
+   vs newly computed; the observer/diagnostic path performs NO new
+   fallible work, so "newly computed at emit" is itself a finding —
+   the payloadDigest-recompute-vs-digest-throw class), and
    `test_obligation` (the driving test) OR `ruled_out_reason` (the
    explicit prior-contract proof).
 4. **Prose-contract scan (the v1 Contract-Dense gate's detection
@@ -189,6 +194,7 @@ Claim half:      <pass | findings…>
 Ergonomics half: <pass | findings…>
 Contract reality: <pass | findings…>          (pre_approval; flags in self_review)
 Text sweep:      <pass | stale scalars…>
+Mirror/propagation: <pass | stale mirrors…>   (the map checked, mirror by mirror — visible proof it RAN)
 Findings by type: <taxonomy-tagged list, considered_not_finding included>
 Verdict: ready-for-pre-approval | approve | refine | split
 ```

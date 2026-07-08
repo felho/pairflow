@@ -89,9 +89,13 @@ For kernel-semantic packets:
      failure lane is distinct from its null/empty return lane) — each
      named and driven, or explicitly ruled out; enumerate as a LIST,
      never a count ("all three" goes stale the day a fourth appears);
-     record five fields per member: `source_site`, `phase` (pre-state
-     | pre-commit | post-commit | post-create), `event_keyset` (exact
-     per-entrypoint shape), `test_obligation` or `ruled_out_reason`;
+     record per member (a list, not a count — this schema itself may
+     grow): `source_site`, `phase` (pre-state | pre-commit |
+     post-commit | post-create), `event_keyset` (exact per-entrypoint
+     shape), `field_provenance` (per optional/derived field: presence
+     condition + value source — already-in-hand vs newly computed;
+     the observer path does NO new fallible work), `test_obligation`
+     or `ruled_out_reason`;
    - **Prose-contract extraction** (the v1 Contract-Dense gate's
      DETECTION half, Policy #1): scan every prose surface of the draft
      — claim text, in-context notes, flag entries, matrix CELL prose —
@@ -209,6 +213,7 @@ Packet drafted: docs/v3/implementation/packets/<PACKET_ID>.md
 Class: kernel-semantic | operability   First-of-a-kind: yes/no
 Slice: <n units / n rejections / n invariants / n traces | EMPTY (declared)>
 Self-review: <ReviewPacket verdict + any flagged items>
+Propagation: <fresh-eyes pass result: clean | hits folded (list)>
 Plan alignment: <none | prepared edit for §X, same-commit>
 → awaiting pre-approval verdict (approve / refine / split)
 ```
