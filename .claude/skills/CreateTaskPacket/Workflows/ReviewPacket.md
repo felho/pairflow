@@ -88,12 +88,26 @@ The checklist above is a FLOOR. Now derive checks from the packet's OWN
 claims [R-CLAIM-NEGATIVES applied to the review itself]:
 
 1. Collect every STRONG contract word in the packet: *never, always,
-   only, exactly once, fail-open, non-blocking, single owner, source of
-   truth, by construction*.
+   only, any, all, exactly once, fail-open, non-blocking, single owner,
+   source of truth, by construction*.
 2. For each: is it PROVABLE on the actual substrate and by the named
    downstream proof — sync vs async driver reality, lock/ownership
    boundaries, read/write failure behavior, projection/redaction
-   surfaces? **Plan-consistency is not a defense:** a claim the ratified
+   surfaces? **Proof means SOURCE-SIDE INVENTORY, not a plausibility
+   judgment** (the ch7-P1 crossover lesson, both arms). Two mandatory
+   inventories:
+   - **Code-path inventory** for *any/all/never/only* lanes: walk the
+     seam's ACTUAL code paths (throw sites, branches) — the Matrix
+     Symmetry Gate's enumeration mechanic (claim half, step 3) is the
+     tool; example lists are not proof.
+   - **Free-text boundary inventory**: wherever a *never / redaction /
+     secret / payload-never* claim coexists with ANY free-text-capable
+     field (`message`, `details`, `reason`, paths, env values), an
+     explicit classification is REQUIRED: sanitized-by-contract OR
+     untrusted diagnostic free text with a stated confinement boundary
+     and the negative bound to the right surface. An unclassified
+     free-text field beside a "never" claim is a finding.
+   **Plan-consistency is not a defense:** a claim the ratified
    plan also states can still be unprovable — that is a
    `plan_contract_challenge` finding routed to the user, never silently
    accepted (and never silently "fixed" — the divergence/alignment

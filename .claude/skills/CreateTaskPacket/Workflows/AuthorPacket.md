@@ -78,7 +78,15 @@ For kernel-semantic packets:
    config resolution, error-doc schemas), write it as a **canonical
    contract matrix** — and remember every lane must be DRIVEN by a test at
    build time [R-MATRIX-LANES]. Negative tests derive from the claim/matrix,
-   never from the implemented rule list [R-CLAIM-NEGATIVES].
+   never from the implemented rule list [R-CLAIM-NEGATIVES]. Two
+   exhaustiveness disciplines at WRITE time (cheaper than at review):
+   - a collapsed lane ("any throw", "all failures") enumerates its
+     members FROM THE CODE (grep the seam's actual throw/branch sites)
+     — each named and driven, or explicitly ruled out;
+   - every free-text-capable field (`message`, `details`, `reason`,
+     paths) is CLASSIFIED against the packet's payload/redaction
+     claims: sanitized-by-contract or untrusted-confined, stated in
+     the field's own row.
 4. If any validation contract splits malformed-input from
    semantic-failure handling, draw the structure-vs-semantics line in ONE
    place in the packet [R-STRUCTURE-SEMANTICS].

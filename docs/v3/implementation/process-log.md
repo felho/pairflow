@@ -237,3 +237,13 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   FROM THE CODE). Counts converged 1–1; the finding TYPES stayed
   disjoint across arms → the twin setup keeps paying for itself
   independent of skill quality; keep it
+- 2026-07-08 · ch 7 (P1 refine, crossover absorption) · the reviewer's
+  meta-analysis sharpened the same lesson into a DISCIPLINE: strong
+  words (any/all/never/only) are proven by source-side INVENTORY, not
+  plausibility or example lists → Contract Reality Gate gains two
+  mandatory inventories (code-path walk for collapsed/strong lanes;
+  free-text boundary classification wherever a never/redaction claim
+  coexists with message/details/reason-class fields), and BOTH land at
+  authoring time too (AuthorPacket step 4) — prevention beats
+  detection. Candidate LearnedRules entry at the ch-7 boundary:
+  "exhaustiveness discipline — strong-word claims are inventory-proven"
