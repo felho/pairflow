@@ -89,6 +89,9 @@ For kernel-semantic packets:
      failure lane is distinct from its null/empty return lane) — each
      named and driven, or explicitly ruled out; enumerate as a LIST,
      never a count ("all three" goes stale the day a fourth appears);
+     record five fields per member: `source_site`, `phase` (pre-state
+     | pre-commit | post-commit | post-create), `event_keyset` (exact
+     per-entrypoint shape), `test_obligation` or `ruled_out_reason`;
    - every free-text-capable field (`message`, `details`, `reason`,
      paths) is CLASSIFIED against the packet's payload/redaction
      claims: sanitized-by-contract or untrusted-confined, stated in

@@ -50,7 +50,14 @@ checklist's rows and nothing outside them).
    sites of the seam) — each member driven or explicitly ruled out; a
    collapsed lane whose driven examples came from the author's memory
    proves less than its claim (the ch7-P1 crossover lesson: `start.ts`
-   had a third throw site the examples missed).
+   had a third throw site the examples missed). The inventory records
+   FIVE fields per member — a lane's existence is not its contract:
+   `source_site` (file/call), `phase` (pre-state | pre-commit |
+   post-commit | post-create — a post-success failure is NOT the same
+   lane class as a never-committed one), `event_keyset` (exact
+   per-entrypoint shape — attribution must not silently vanish),
+   `test_obligation` (the driving test) OR `ruled_out_reason` (the
+   explicit prior-contract proof).
 4. Any new validator over a numeric domain states the full ladder,
    including `-0` via `Object.is` [R-NUMERIC-LADDER].
 5. Structure-vs-semantics: if the packet splits malformed input from
@@ -120,7 +127,18 @@ claims [R-CLAIM-NEGATIVES applied to the review itself]:
    accepted (and never silently "fixed" — the divergence/alignment
    machinery owns the resolution).
 
-### 5) Verdict + taxonomy
+### 5) Final text sweep (both modes — after any fold)
+
+**Scalar/quantifier sweep:** collect every count and quantifier in the
+packet text (*one, both, two/three/four…, all, exactly, zero, any,
+every, never, only*) and verify each against the CURRENT lists and
+lanes it summarizes — stale scalars are the recurring low-weight drift
+class ("three aligned edits" after a fourth landed; "exactly one" vs
+the committed-zero lane; "ALL THREE" the day a fourth appears). Prefer
+converting counts to lists; a surviving count must be re-derived at
+read time.
+
+### 6) Verdict + taxonomy
 
 Classify EVERY issue considered — nothing is dropped silently:
 
@@ -143,10 +161,18 @@ Verdict:
 ```
 Self-review / Review: <PACKET_PATH>
 Scope of this review: self_review | pre_approval
+Skill source: installed registry | repo-local file read @ <path, commit, dirty?>
 Content half:    <pass | findings…>
 Claim half:      <pass | findings…>
 Ergonomics half: <pass | findings…>
 Contract reality: <pass | findings…>          (pre_approval; flags in self_review)
+Text sweep:      <pass | stale scalars…>
 Findings by type: <taxonomy-tagged list, considered_not_finding included>
 Verdict: ready-for-pre-approval | approve | refine | split
 ```
+
+The `Skill source` line exists because activation path and text
+freshness are separable: a runner may read this file from the repo
+without the registry's (possibly stale, restart-gated) trigger layer —
+the report must make visible WHICH version of this workflow actually
+acted, or a discovery bug hides behind a manual file read.

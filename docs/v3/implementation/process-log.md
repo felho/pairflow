@@ -283,3 +283,18 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   skill inventory wording extended (port awaits; enumerate as LIST
   never count). The ladder is now: file → call graph → port boundary;
   candidate single LearnedRules entry at the boundary covers all three
+- 2026-07-08 · ch 7 (P1 window, process feedback) · epistemic
+  correction to this log's own "dual-mode fix validated live" line:
+  what validated was the workflow's CONTENT (the reviewer read the
+  repo-local file and its behavior changed accordingly); the
+  DISCOVERY layer (registry/frontmatter triggers, restart-gated on
+  the reviewer's side) remains UNVALIDATED — activation path and text
+  freshness are separable, and a manual file read can mask a
+  discovery bug. Three refinements adopted into the skill same day:
+  the collapsed-lane inventory records five fields per member
+  (source_site / phase pre-state|pre-commit|post-commit|post-create /
+  event_keyset / test_obligation / ruled_out_reason — lane existence
+  is not lane contract); a final scalar/quantifier text sweep after
+  any fold (the stale-count class, third occurrence); the review
+  report carries a "Skill source" provenance line (registry vs
+  repo-local file read @ commit/dirty)
