@@ -298,3 +298,19 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   any fold (the stale-count class, third occurrence); the review
   report carries a "Skill source" provenance line (registry vs
   repo-local file read @ commit/dirty)
+- 2026-07-08 · ch 7 (P1 refine, round 6) · three findings, two
+  classes: (1) NEW class — the OBSERVER must not do fallible work:
+  the emit path re-calling `digest(envelope)` for attribution would
+  fail exactly on the digest-throw lane it observes; resolved as a
+  design rule — attribution uses values ALREADY IN HAND, threaded to
+  the emit, never recomputed (unknown_instance/pre-digest throws
+  therefore lack the fingerprint, driven); (2) the round-5 inventory
+  fix had been applied ONLY to the flagged member — "store-port
+  rejection" stayed collapsed while the rule demanded per-call
+  sublanes (loadInstance/findOp/commitTransition; createInstance) —
+  the "fix scoped to the finding just caught" loop, now on inventory
+  APPLICATION → AuthorPacket write-back loop extended: a deepened
+  inventory rule re-derives the ENTIRE inventory, not the named
+  member; (3) the CAS qualifier had not propagated to every canonical
+  spot (dimension 1, plan committed row) — the scalar/quantifier
+  sweep now exists for exactly this and ran clean after the fold

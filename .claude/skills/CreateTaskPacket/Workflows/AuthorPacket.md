@@ -150,7 +150,14 @@ ch7-P1 dangling-"flagged below" lesson).
    packet's `## Pre-approval flags` section, write it INTO the section
    (amend the packet) and RERUN the self-review — repeat until a pass
    adds nothing new. A flag born in the review and living only in chat
-   is exactly the dangling-flag class this rule exists for.
+   is exactly the dangling-flag class this rule exists for. And when a
+   fold DEEPENS an inventory rule (a new throw-source class, a new
+   dimension), RE-DERIVE the ENTIRE inventory under the deepened rule
+   — applying it only to the member the finding named is the "fix
+   scoped to the finding just caught" loop (the ch7-P1 rounds 5→6
+   lesson: the port-boundary rule was applied to `definitions.load`
+   only, and the next round found `loadInstance`/`findOp`/
+   `commitTransition` still collapsed).
 3. Present the pre-approval summary in the session's chat language: the
    slice (or its declared emptiness), the claim + dimensions, the matrices,
    the embedding gates, open risks — flags REFERENCED from the packet
