@@ -205,3 +205,20 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   Lesson: a status flip must sweep EVERY file that states the old
   status, and a registry entry's applied strength must match its
   declared status
+- 2026-07-08 · ch 7 (P1 pre-approval window) · the CreateTaskPacket
+  skill's FIRST live run produced a controlled twin-review experiment:
+  two mirror reviewer sessions (identical history, same model+effort)
+  reviewed the same ch7-P1 packet — the one told to EXECUTE the
+  ReviewPacket workflow found 2 findings (exactly the rubric's rows),
+  the free one found 4 (incl. two real out-of-rubric classes: an
+  unprovable "never blocks" contract word plan-consistent with §7.2,
+  and a missing startInstance success no-emit lane); the author-side
+  self-review had found 0. Gradient: author 0 < rubric-executed 2 <
+  free 4 — a checklist executed as the review's DEFINITION anchors it;
+  the missing piece was a MODE, not diligence → fixed same day (before
+  the P1 fold): ReviewPacket dual-mode (self_review floor /
+  pre_approval challenge with Contract Reality Gate + Matrix Symmetry
+  Gate + finding taxonomy incl. considered_not_finding), AuthorPacket
+  "flags live IN the packet" rule. LearnedRules untouched mid-chapter
+  (its own boundary-only rule) — the anchoring lesson is a candidate
+  registry entry at the ch-7 boundary review

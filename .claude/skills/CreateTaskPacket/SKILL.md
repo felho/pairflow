@@ -32,10 +32,14 @@ win — and the disagreement becomes a friction-log line.
 | Workflow | Trigger | File |
 |----------|---------|------|
 | **AuthorPacket** | "author packet", "create task packet", "chN-pM packet", "projection checklist" | `Workflows/AuthorPacket.md` |
-| **ReviewPacket** | "self-review packet", "packet self-review", "pre-approval prep" | `Workflows/ReviewPacket.md` |
+| **ReviewPacket** | "self-review packet" / "pre-approval prep" (→ `self_review` mode); "review pls" / verdict preparation / reviewing someone else's packet (→ `pre_approval` mode) | `Workflows/ReviewPacket.md` |
 
-AuthorPacket runs ReviewPacket as its final step; ReviewPacket is also
-invocable standalone (e.g. re-checking a packet after a refine round).
+AuthorPacket runs ReviewPacket (`self_review` mode) as its final step;
+ReviewPacket is also invocable standalone. **The two modes are different
+jobs** — `self_review` is the authoring-side checklist floor;
+`pre_approval` adds the Contract Reality Gate and the finding taxonomy,
+and treats the checklist as a floor, never the review's definition (the
+ch7-P1 twin-session lesson).
 
 ## Hard boundaries (never automated away — README §5.5)
 

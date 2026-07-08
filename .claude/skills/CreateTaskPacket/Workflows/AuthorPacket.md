@@ -116,9 +116,18 @@ values (e.g. `-0`) through channels that provably preserve them — raw
 text, not `JSON.stringify`; a stringify-built hostile fixture is flagged
 in the pre-approval summary, not a blocker.
 
+**Pre-approval flags live IN the packet:** if the summary will raise ANY
+flag, narrowing, or decision point, the packet gets a `## Pre-approval
+flags` section carrying them in full — the summary may only REFERENCE
+it. A flag that exists only in chat is a self-containment defect (the
+ch7-P1 dangling-"flagged below" lesson).
+
 ### 9) Self-review, then STOP
 
-1. Run the **ReviewPacket** workflow on the draft.
+1. Run the **ReviewPacket** workflow on the draft in `self_review` mode
+   (the pre-approval CHALLENGE review is the human round's engine, not
+   this step's — Contract Reality issues spotted here become
+   pre-approval flags, never silent acceptance).
 2. Present the pre-approval summary in the session's chat language: the
    slice (or its declared emptiness), the claim + dimensions, the matrices,
    the embedding gates, open risks.
