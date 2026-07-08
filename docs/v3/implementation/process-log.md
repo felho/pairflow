@@ -393,3 +393,15 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   RAN, the Skill-source pattern), and the schema wording dropped its
   own "five fields" count — the list-never-count rule applied to the
   skill's own text
+- 2026-07-08 · ch 7 (P1 refine, round 10) · three mirror-completeness
+  findings (handle internal-failure sublanes got exact phase-split
+  keysets — generic "attribution" could have let a build drop
+  envelope fields the kernel provably has in hand; the map gained its
+  two missing rows: IngressDetailToken list, rethrow transparency) —
+  and the FIRST round requiring ZERO skill changes: the gates were
+  already right, only their application converged. The fresh-eyes
+  pass (2nd live run) came back CLEAN on both deltas — one loose
+  map-label refreshed, two rethrow mentions confirmed as permitted
+  deferrals. Convergence signal: reviewer findings narrowed from
+  contract substance (rounds 1–7) to index completeness (9–10), and
+  the propagation loop now closes pre-presentation
