@@ -417,3 +417,18 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   coverage, type-matrix conditions, plan consistency) — a canonical
   RELOCATION verified clean pre-presentation, the operation class
   that used to take a round-trip. Again zero skill changes
+- 2026-07-08 · ch 7 (P1 refine, round 12) · four findings folded: the
+  inventory went PER-MEMBER with a source-site column — duplicate and
+  op_id_collision each have TWO code origins (findOp fast-path ·
+  commitTransition result), both now driven (a build could have
+  silently served one); the stale keyset made explicit (a
+  back-reference through a row with an optional field is ambiguous);
+  the round-11 cas_restart minimal-keyset choice REVERSED after one
+  round — full envelope attribution, because the uniform rule
+  ("attribution wherever an envelope exists") beats an aesthetic
+  minimalism that would have needed a plan carve-out (lesson: a
+  declared choice that forces an exception clause in a WIDER rule is
+  usually the wrong choice); the trace-harness doc comment added as a
+  comment-only ripple target. Fresh-eyes 4th run: all four deltas
+  PASS incl. the reversal's plan consistency. Zero skill changes,
+  third round running
