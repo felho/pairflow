@@ -378,7 +378,12 @@ of these is itself a finding.
   keyset {date, arms, commit}: YYYY-MM-DD date, nonempty string-list
   arms, 7–40 LOWERCASE-hex commit — shape-checked on EVERY block,
   while the COMMIT-object resolution and the equality check run on
-  the LATEST block only, in ratified/realized; dates non-decreasing;
+  the LATEST block only, in ratified/realized; an unresolvable
+  recorded commit or an out-of-repo draft is a LOUD error, never a
+  skip (fold round 10: the D5 loudness clause was the one member the
+  FULL-registry row did not carry — under the mirror rule a
+  letter-faithful template would have flipped authority against the
+  correctly-loud lint); dates non-decreasing;
   latest = last in document order); the two-commit ratification and
   reopen choreography; the state-consistency status rules SPELLED OUT
   (ratification blocks present ⇔ status ∈ {ratified, reopened,
@@ -450,9 +455,15 @@ of these is itself a finding.
   applied to the packet-form authority itself):* the flip EDITS
   template §1/§1a in place — live form text not named by FC-E2/E3/X3
   (the Pairflow-metadata rule, the ledger-slice syntax rules, the
-  flags Route enum line, the 16-file grandfather set with its
-  never-retroactively clause, the machine-block skeletons) survives
-  unchanged unless it contradicts the new carrier; the named items
+  16-file grandfather set with its never-retroactively clause, the
+  machine-block skeletons) survives unchanged unless it contradicts
+  the new carrier; the flags Route enum line survives EXCEPT for its
+  declined-reason completion (fold round 10, the FC-G1 formula: the
+  D5 reason rule lived in README/workflows while the FORM authority's
+  Route line — `declined` without a reason slot — was pinned as a
+  plain survivor, so a hostile implementer could cite the pin to skip
+  the reason; the §1 Route line's declined form becomes
+  `declined — <reason>`); the named items
   are insertions and sweeps, not a whitelist — and under FC-E3 a
   silently dropped rule flips authority AGAINST the still-correct
   lint, so the edit-mode clause is what keeps the mirror sound.
@@ -506,7 +517,14 @@ of these is itself a finding.
   `reopened` lifecycle's gate rule (zero reopened drafts at packet
   approve / chapter close / the flip), the TIER-0 GATE INVENTORY WITH
   A GATE-POINT PER MEMBER (approve-time: packet-lint fold-time + the
-  zero-reopened gate form, coverage VALIDATION [parse/ids/enums],
+  zero-reopened gate form, coverage VALIDATION [parse/ids/enums —
+  runnable ONLY once Phase 0.2's gate-point mode exists; the live
+  script's validation and unit-map lock are inseparable today, so
+  until that mode lands coverage is WHOLLY build-close and
+  approve-time slice syntax is the panel's duty (fold round 10: the
+  member stood in the column without its executable form — the
+  round-8 class one level down; membership and form now bind at the
+  point of reading, the zero-reopened member's pattern)],
   drift, adr-check, substrate-probe scripts; build-close: the P8
   audit AND coverage's owned==realized three-way lock, which is
   NECESSARILY red on an approved-but-unbuilt packet's declaration —
@@ -626,7 +644,14 @@ of these is itself a finding.
   enumerating surface) — and so does §1's "what lives here" INVENTORY
   at the top of the file (fold round 5: a README-only reader must see
   the `contracts/` home and the new form authority in the first list
-  they meet, not first at §8). And §6's chapter-DoD enumeration gains the
+  they meet, not first at §8); the SAME §1 edit rewrites the list's
+  two provably stale neighbours to the landed state (fold round 10,
+  the §6-pointer precedent — the flip edits §1 anyway): the "task
+  packets … once Phase 2 starts" line (packets have existed since
+  ch4; the `packets/` home is named, present tense) and the adr/
+  line's "confirms or moves it" conditional (resolved long ago: the
+  home IS `v3/adr` — the lint resolves against it, and
+  docs/v3/implementation/adr does not exist). And §6's chapter-DoD enumeration gains the
   three draft-close conditions (fold round 4, both arms: the DoD is
   exactly what a closing agent executes — without these a chapter
   closes green by the DoD's letter with a reopened or unrealized
@@ -1126,3 +1151,31 @@ State: awaiting the arms' round-9 run on these bytes.
   definition.
 
 State: awaiting the arms' round-10 run on these bytes.
+
+**Fold round 10 (2026-07-09): one arm, four findings; all folded —
+every one a residue of an earlier fold's own text (the composition
+that triggered the watchdog assessment):**
+
+- FC-F1's approve-time coverage member now binds membership and
+  executable form AT THE POINT OF READING (runnable only once Phase
+  0.2's gate-point mode exists; until then coverage is wholly
+  build-close and slice syntax is panel duty) — the round-8 fix's
+  residue one level down: the live script's validation and lock are
+  inseparable, so the column named a member with no mechanical form.
+- FC-E2: the flags Route enum line was PINNED as a plain survivor
+  while the D5 declined-reason rule lived only in README/workflows —
+  the round-7 FC-G1 formula applied (survives EXCEPT for the
+  declined-reason completion; the §1 declined form becomes
+  `declined — <reason>`), closing the round-4 reasonless-declined
+  hole on the form authority.
+- FC-D2: the D5 "LOUD error, never a skip" clause joined the
+  ratification item — the one member the FULL-registry row did not
+  carry; a letter-faithful template would have flipped authority
+  against the correctly-loud lint.
+- FC-F4: the §1 inventory's two provably stale neighbours ("once
+  Phase 2 starts"; the adr/ "confirms or moves" conditional) rewrite
+  to the landed state in the same edit — the §6-pointer precedent.
+
+State: awaiting the user's watchdog decision (round 11 vs
+STOP-and-flip); the enumeration is past the packet-loop's own 8-round
+cap, and rounds 7–10 folded ONLY fold-residue classes.
