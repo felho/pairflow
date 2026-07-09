@@ -160,7 +160,11 @@ friction-log line. The authoring-time discovery is always the authority.
   to where each row landed. Nothing lives only in the draft afterwards —
   it never becomes a third permanent authority.
 - **Artifact contract (the anti-third-authority machinery, and what a
-  machine can check):** rows carry stable IDs (`C1…Cn`, unique per draft;
+  machine can check):** *(Amendment 1: §7.3 supersedes the
+  hash / append-only / history mechanics in this bullet once ratified
+  — row IDs, ratified-or-later anchoring, human (re-)ratification,
+  and the in-place lifecycle stand; the text below is the original
+  carrier, retained as history.)* rows carry stable IDs (`C1…Cn`, unique per draft;
   packets anchor as `anchored(chN-<surface>-contract §C7)`). The draft
   header carries `status: draft | ratified | realized` plus a
   ratification block (date, reviewing arms, and a sha256 over the
@@ -188,7 +192,10 @@ friction-log line. The authoring-time discovery is always the authority.
   `ratified` AND `realized` status (a silently edited
   post-ratification row is a lint failure, not a quiet
   reinterpretation); `realized` requires a complete landing map.
-- **In a draft, every NORMATIVE statement is a canonical row.** The
+- **In a draft, every NORMATIVE statement is a canonical row.**
+  *(Amendment 1: once ratified, the hash justification below is
+  replaced by §7.3's equality-check justification; the rule itself
+  stands.)* The
   packet's prose-contract-extraction discipline applies at draft time
   too ("would an implementer need this sentence to write a test?" → it
   is a row, not prose); non-row prose (header text, the Control-Model
@@ -336,7 +343,10 @@ genuinely new ADR-class decisions arriving as STOP 1):
 
 ### D4 — The review pipeline (phase 1 internals)
 
-- **Tier 0 — mechanical gates, zero LLM:** packet-lint at FOLD TIME (id
+- **Tier 0 — mechanical gates, zero LLM:** *(Amendment 1: §7.5
+  supersedes this check list once ratified — lane-range/scalar prose
+  consistency and inline provenance marks retire with the carrier;
+  §7.4's tier-0 scoping principle governs.)* packet-lint at FOLD TIME (id
   registry, cross-ref resolution, lane-range/scalar consistency,
   provenance-mark presence, mutation-boundary block syntax, the D2
   draft-lint checks — mechanizes the fresh-eyes sweep class) and at
@@ -577,7 +587,8 @@ against these during the round-1 review.
    canonical row payload matches the latest ratification block's hash,
    complete realized map)
    + `pnpm v3:packet-lint` bridge + negative self-tests (the check.sh
-   culture).
+   culture). *(Amendment 1: §7.5 supersedes this check list once
+   ratified.)*
 2. `task-packet-template.md`, split by authority weight: the ADDITIVE
    machine blocks are Phase-0-safe (provenance marks on canonical rows;
    route field in the flags section; the **Build record section
@@ -591,6 +602,8 @@ against these during the round-1 review.
    classification step, the sizing heuristics, the draft-routing STOP,
    and step 10's review description rewritten from the
    content-half/ergonomic-half rubric to the lens-panel form.
+   *(Amendment 1: the provenance-marks layer is replaced by the
+   `packet_rows` manifest per §7.2 once ratified.)*
 
 **Phase 1 — skill + process authority** (items 3–8 define CONTENT; every
 authority-bearing piece lands together in item 8's single flip commit):
@@ -811,7 +824,11 @@ Status: **proposed — awaiting the user's ratification** (the D6 rule —
 ratification never delegates — applied to this document's own reopen;
 the trigger is a live STOP `2:contested-ratified-vs-reality`, raised by
 the USER against the ratified §5 mechanics: the first exercise of that
-STOP member on the process artifacts themselves).
+STOP member on the process artifacts themselves). Review: fold round 1
+(2026-07-09) — two arms, both refine; per-finding dispositions in
+§7.7. The ratification act itself follows Carrier B (finding F
+adopted): the status flip records this amendment's final content
+commit in a follow-up commit.
 
 ### 7.1 The finding
 
@@ -868,15 +885,32 @@ residue was exactly the part encoded in prose):
 ```
 
 Rules (all tier-0): row ids unique; `class` in the D1 enum;
-`anchored`/`derived` carry ≥1 ref, `new-decision` carries none; the
-strict ref forms (`draft:chN-<surface>#Cn` → ratified-or-later draft
-row; `ADR-NNN` → file exists) machine-resolve, other ref strings pass
-through as prose provenance; **bidirectional completeness** — every
+`anchored`/`derived` carry ≥1 ref, `new-decision` carries none; every
+ref either parses EXACTLY as a strict form (`draft:chN-<surface>#Cn` →
+ratified-or-later draft row; `ADR-NNN` → file exists) and
+machine-resolves, or carries the explicit `prose:` prefix declaring it
+unverified provenance (`"prose:plan §7.2"`) — anything else is RED
+(fold round 1: silent pass-through admitted typo-bypass, `ADR006`
+degrading to opaque prose; in declared machine data a near-miss is
+loud, never reinterpreted); **bidirectional completeness** — every
 manifest id exists as a lane id defined in the document's tables, and
-every table-defined lane id appears in the manifest (the one remaining
-document scan is the structural table-row id extraction, the simplest
-kind); `packet_metrics.provenance` counts must equal the manifest
-tally.
+every table-defined lane id appears in the manifest;
+`packet_metrics`'s close-time `provenance` counts must equal the
+manifest tally (the duplicate home is deliberate: D7's aggregation
+surface reads the metrics block, and the tier-0 equality check closes
+the drift).
+
+The one remaining document scan is pinned (fold round 1): the
+id-bearing surface is a markdown TABLE ROW whose FIRST cell is the id
+— grammar `^\|\s*<FAM><n>\s*\|`, FAM one or two uppercase letters, n
+an integer (the existing lane grammar), scanned with fenced code
+excluded (the round-7 lint lesson, retained) and the excluded-families
+constant mirrored from the template. Finer D1 elements (token-list
+members, inventory members) TRAVEL WITH THEIR HOST ROW — the manifest
+id set is the table-row id set, never the element set. The manifest is
+the AUTHORITATIVE registry; the table scan is intentionally narrow —
+it checks id existence in both directions and reads nothing else from
+the document.
 
 The inline `[P:*]` marks are **retired, not made optional** — two homes
 for the same fact is itself the drift class this process hunts. The
@@ -892,21 +926,54 @@ The draft ratification block becomes `{date, arms, commit}` — `commit`
 is the sha of the CONTENT commit whose version of the C-rows the human
 ratified. Because a commit's sha cannot be known before it exists, the
 ratification block lands in a follow-up commit: **the recorded sha
-binds content, not the record.**
+binds content, not the record.** "Latest block" = the LAST block in
+document order (fold round 1), and block dates must be non-decreasing
+in that order — declared data, cheap, catches a mis-placed append.
 
 The single machine check that replaces the payload hash, the
 fingerprint-prefix property, and the history walk: the C-row set and
-bytes at HEAD must equal the C-row set and bytes at the LATEST
+bytes at HEAD must equal the C-row set and bytes at the latest
 ratification block's recorded commit (`git show <commit>:<file>`).
-A reopen appends a new block with the new content commit — the D2
-re-ratification rule (permanently human) is unchanged.
+
+**The status machine gains a `reopened` state so every commit of the
+two-commit choreography is GREEN** (fold round 1 — both arms found the
+red window independently: without this state, every reopen's content
+commit fails the equality check, the new carrier reproducing its own
+"unparseable intermediate version" class. The accepted-transient-red
+alternative was declined: a red that means "mid-reopen, fine" trains
+the operator to ignore red):
+
+- **First ratification:** the draft sits at `draft` (no blocks —
+  green); the ratifying commit appends the block recording the last
+  content commit AND flips the status to `ratified` in one act (that
+  commit changes no C-rows, so equality holds — green).
+- **Reopen** (from `ratified` only; a `realized` draft is
+  chapter-closed, and a post-close change is a STOP, not a
+  lifecycle): commit 1 edits the C-rows and flips the status to
+  `reopened` (equality suspended — green); commit 2 appends the new
+  block recording commit 1 and flips back to `ratified` (equality
+  holds — green). The D2 re-ratification rule (permanently human) is
+  unchanged.
 
 Status-machine monotonicity moves from history-walking to
 **state-consistency rules** (all decidable from HEAD alone):
-ratification block(s) present ⇔ status ratified-or-later; status
-`draft` ⇒ no blocks; complete realized map ⇔ status `realized` (the
-boundary review fills the map and flips the status in ONE act — a
-complete map on a `ratified` draft is an inconsistent state, red).
+ratification block(s) present ⇔ status ∈ {ratified, reopened,
+realized}; status `draft` ⇒ no blocks (R1's draft-status conflict
+dissolves: reopen history never meets `draft`); the equality check
+binds `ratified` and `realized` and is suspended ONLY at `reopened`;
+`reopened` is NOT ratified-or-later — packet refs into a reopened
+draft go red for the window's duration, deliberately loud (the
+contract is contested and the human is present by construction); ANY
+realized-map row present ⇔ status `realized` AND the map is complete
+(the boundary review fills the map and flips the status in ONE act —
+a partial map, on any status, is red; fold round 1 closed the
+partial-map-on-ratified hole).
+
+A FULL downgrade (blocks deleted + status reset to `draft`) is
+state-consistent by construction and machine-caught exactly where it
+matters: any packet anchored to the draft fails ref resolution. A
+consumer-less downgrade is a diff-review-visible act, out of the
+machine's threat model (§7.4).
 
 Earlier ratification blocks remain human-readable history and are
 machine-UNVERIFIED by design: rewriting an old block is visible in any
@@ -927,6 +994,14 @@ still cannot change the contract.
   `declined: out of threat model` is a live route. Evidence for the
   rule: 18 lint findings, zero declined, zero threat-model judgments —
   the judgment was skipped, not decided.
+  **Fix-all is a default about EFFORT routing, never about truth**
+  (user-stated, fold round 1): a finding the folder disagrees with is
+  answered in the round record with its reason (folded / narrowed /
+  declined per finding — the §6 round-1 "consciously narrowed"
+  practice, now named); when feedback SOURCES conflict, the fold
+  reconciles explicitly (which side, why); a genuinely open choice
+  escalates as a STOP instead of being silently folded into one
+  arm's preference.
 - **Tier-0 scoping principle.** Tier 0 checks hard deterministic facts
   over DECLARED data: schema shape, existence, reference resolution,
   equality-at-commit, subset-of-boundary. It never extracts semantics
@@ -964,9 +1039,11 @@ sha256 (`draft_payload_hash`), the ratification fingerprint-prefix
 property, and the full-history walk (`draft_history` + its git
 selftest fixtures); the `sha256` ratification key.
 
-**Add/replace:** the `packet_rows` manifest checks (§7.2); the
-`{date, arms, commit}` ratification block + the single git-show
-equality check (§7.3); the status state-consistency rules (§7.3).
+**Add/replace:** the `packet_rows` manifest checks incl. the
+strict-or-`prose:`-prefixed ref rule and the pinned narrow table-row
+id scan (§7.2); the `{date, arms, commit}` ratification block + the
+single git-show equality check + block-date monotonicity (§7.3); the
+status state-consistency rules incl. the `reopened` state (§7.3).
 
 Estimated result: the ~1330-line lint drops to roughly 700–800 lines,
 with the retired selftest dimensions replaced by a smaller claim-derived
@@ -978,8 +1055,8 @@ description updated. Zero v2 packets exist, so this is a block swap,
 not a migration. The §2 checklist rewrite stays flip-bound, unchanged.
 
 **Contract-draft template (§5 item 5):** documents the new ratification
-block shape + the follow-up-commit rule; lands with the flip as
-planned.
+block shape, the `reopened` state, and the two-commit reopen
+choreography; lands with the flip as planned.
 
 **flip-claims.md:** gets a revision pass BEFORE its arm review — at
 minimum FC-B1 (marks → manifest), FC-D2 (hash/append-only →
@@ -989,10 +1066,49 @@ revised file.
 
 ### 7.6 Sequencing
 
-1. This amendment is ratified (human act — resolves the STOP).
+1. This amendment is ratified (human act — resolves the STOP; the
+   flip to ratified records the final content commit per Carrier B).
 2. **Phase 0.1, one commit:** lint rewrite per §7.5 + template §1/§1a
    block swap.
 3. flip-claims revision → arm review → the Phase-1 flip, as planned.
 
 The ch7-P2 aftermath thread (code findings + retroactive partial
 baseline) is independent of this amendment and proceeds in parallel.
+
+### 7.7 Amendment review record
+
+**Fold round 1 (2026-07-09): two arms, both refine; every finding
+answered — dispositions per the §7.4 fix-all rule (folded / narrowed /
+declined, source conflicts reconciled explicitly):**
+
+- **Reopen red-window** (BOTH arms independently — the blocker):
+  FOLDED as the `reopened` status (§7.3). The arms' remedies
+  diverged: accepted-transient-red (arm 2) vs an explicit protocol or
+  pending state (arm 1) — the pending-state family won because
+  red-as-lifecycle trains the operator to ignore red, and a one-commit
+  reopen is structurally impossible (a block cannot record its own
+  commit's sha). Side effect made deliberate: packet refs into a
+  reopened draft go loud-red for the window.
+- **Ref typo-bypass** (both arms): FOLDED, NARROWED to a third
+  mechanism — strict-or-`prose:`-prefixed, anything else red (§7.2).
+  Arm 1's typed ref objects declined (same loudness, more ceremony);
+  arm 2's case-insensitive near-miss heuristic declined (subsumed:
+  with no silent pass-through there is nothing left to heuristically
+  catch).
+- **Table-scan grammar under-specified** (both arms): FOLDED — pinned
+  grammar, fence exclusion, host-row rule for finer D1 elements,
+  manifest-authoritative narrow scan (§7.2).
+- **Body unswept** (arm 2): FOLDED as supersede markers at D2
+  (artifact contract; normative-prose bullet), D4 (tier 0), §5 items
+  1–2 — arm 2's weaker alternative (one precedence sentence) declined
+  in favor of its own preferred marker variant; the Phase-0.1
+  executing agent reads those sections directly.
+- **"Latest block" undefined + partial-map hole** (arm 2, micro):
+  FOLDED (document order + date monotonicity; ANY-map-row ⇔ realized
+  + complete — §7.3).
+- **Dogfood the ratification act** (arm 2, non-blocking): ADOPTED —
+  the status flip records the amendment's final content commit
+  (status line + §7.6).
+- **Considered, not folded:** the `packet_metrics.provenance`
+  duplicate home stays (both arms concurring it is defensible), now
+  justified in place (§7.2).
