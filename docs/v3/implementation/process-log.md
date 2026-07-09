@@ -723,3 +723,20 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   each claim buying one cheap declared-data dim. Lesson: size
   estimates for gate code should predict the fragile-surface delta,
   not the line count
+- 2026-07-09 · process-v2 Phase 0.1 (lint review round 1, three
+  findings, all IN threat model per the §7.4 mandatory judgment) ·
+  (1) the draft selftest fixtures re-used the SHARED fixture's green
+  text in FRESH git repos — the recorded sha resolved nowhere, so
+  many draft dims went red for the WRONG reason (an unresolvable-
+  commit error could mask a dead D3/D7 check: the selftest's
+  evidentiary value was the hole, squarely in-model); fixed
+  stronger than filed — every dim now asserts ITS OWN error-message
+  substring (`assert_red`), and draft mutations apply to the
+  fixture's own green text, so exit-code-masking is closed as a
+  CLASS; (2)+(3) two crash-not-red holes (stops[].type set-membership
+  hashed an unhashable; --post-build called .get on a non-object
+  boundary) — malformed machine data must be a red lint error, never
+  a Python traceback (the gate contract itself), both fixed + two
+  new red dims. Selftest 58→60 dims, all claim-pinned. The round-1
+  lesson echoes the claim-derivation rule: a dim that is red for an
+  unrelated reason proves nothing — red-for-its-claim is the assertion

@@ -679,7 +679,11 @@ def check_packet_metrics(
                 if not isinstance(stop, dict) or set(stop.keys()) != {"type", "what", "resolution"}:
                     type_err("stops[]", "objects with exactly type/what/resolution")
                     continue
-                if stop["type"] not in STOP_TOKEN_REGISTRY:
+                if not isinstance(stop["type"], str):
+                    # membership in a SET hashes — a list here must be a
+                    # red lint error, never a Python crash
+                    type_err("stops[].type", "a string")
+                elif stop["type"] not in STOP_TOKEN_REGISTRY:
                     checker.error(
                         f"{name}: stops[].type '{stop['type']}' not in the canonical "
                         f"STOP member-token registry"
@@ -724,7 +728,11 @@ def check_post_build(packet_path: Path, commit: str, checker: Checker) -> None:
     text = shown.stdout
     blocks = json_blocks(text, packet_path.name, checker)
     boundaries = block_by_key(blocks, "mutation_boundary")
-    if len(boundaries) != 1 or not isinstance(boundaries[0].get("files"), list):
+    if (
+        len(boundaries) != 1
+        or not isinstance(boundaries[0], dict)  # a non-object value must be red, not a crash
+        or not isinstance(boundaries[0].get("files"), list)
+    ):
         checker.error(f"{packet_path.name}: --post-build needs exactly one valid mutation_boundary block")
         return
     allowed = set(boundaries[0]["files"])
@@ -781,12 +789,14 @@ def collect_drafts(contracts_dir: Path, checker: Checker) -> tuple[dict[str, dic
     return drafts, reopened
 
 
-def run_lint(
+def lint(
     packets_dir: Path,
     contracts_dir: Path,
     adr_dir: Path,
     forbid_reopened: bool = False,
-) -> int:
+) -> tuple[list[str], dict[str, int]]:
+    """The full lint pass as data — the selftest asserts on the error
+    LIST (per-dim message substrings), run_lint wraps it for the CLI."""
     checker = Checker()
     drafts, reopened = collect_drafts(contracts_dir, checker)
     if forbid_reopened and reopened:
@@ -802,14 +812,31 @@ def run_lint(
             v2 += 1
         else:
             grandfathered += 1
-    for msg in checker.errors:
+    stats = {
+        "v2": v2,
+        "grandfathered": grandfathered,
+        "drafts": len(drafts),
+        "reopened": len(reopened),
+    }
+    return checker.errors, stats
+
+
+def run_lint(
+    packets_dir: Path,
+    contracts_dir: Path,
+    adr_dir: Path,
+    forbid_reopened: bool = False,
+) -> int:
+    errors, stats = lint(packets_dir, contracts_dir, adr_dir, forbid_reopened=forbid_reopened)
+    for msg in errors:
         print(f"packet-lint FAIL: {msg}", file=sys.stderr)
     print(
-        f"packet-lint: {v2} v2 packet(s) linted, {grandfathered} pre-v2 grandfathered, "
-        f"{len(drafts)} draft(s) linted ({len(reopened)} reopened), "
-        f"{len(checker.errors)} error(s)"
+        f"packet-lint: {stats['v2']} v2 packet(s) linted, "
+        f"{stats['grandfathered']} pre-v2 grandfathered, "
+        f"{stats['drafts']} draft(s) linted ({stats['reopened']} reopened), "
+        f"{len(errors)} error(s)"
     )
-    return 1 if checker.errors else 0
+    return 1 if errors else 0
 
 
 # ---------------------------------------------------------------- selftest
@@ -908,33 +935,41 @@ def run_selftest() -> int:
         return 1
     shared_tmp, shared_root, shared_draft, shared_packet, green_draft = shared
 
-    def lint_shared(forbid_reopened: bool = False) -> int:
-        return run_lint(
-            shared_root / "packets", shared_root / "contracts", ADR_DIR, forbid_reopened=forbid_reopened
-        )
-
-    def expect_red_packet(name: str, packet_text: str) -> None:
+    def assert_red(name: str, errors: list[str], substr: str) -> None:
+        """A dim is red for ITS OWN claim, or it proves nothing — the
+        exit code alone let an unrelated error (e.g. a broken fixture
+        sha) mask a dead check."""
         red_dims.append(name)
+        if not any(substr in e for e in errors):
+            failures.append(f"selftest dim NOT red for its claim: {name} (no error containing '{substr}')")
+
+    def expect_red_packet(name: str, packet_text: str, substr: str) -> None:
         shared_packet.write_text(packet_text, encoding="utf-8")
-        if lint_shared() == 0:
-            failures.append(f"selftest dim NOT red: {name}")
+        errors, _ = lint(shared_root / "packets", shared_root / "contracts", ADR_DIR)
+        assert_red(name, errors, substr)
         shared_packet.write_text(GREEN_PACKET, encoding="utf-8")
 
-    def expect_red_draft(name: str, draft_text: str, commit: bool = False) -> None:
-        """Fresh fixture per dim — draft dims mutate the draft."""
-        red_dims.append(name)
+    def expect_red_draft(name: str, mutate, substr: str, commit: bool = False) -> None:
+        """Fresh fixture per dim; the mutation applies to THIS fixture's
+        OWN green text — its recorded commit sha stays valid, so the
+        red can only come from the mutated aspect (and the substring
+        assertion pins it)."""
         fixture = build_green_fixture()
         if fixture is None:
             failures.append(f"selftest fixture setup failed: {name}")
             return
-        tmp, root, draft, _packet, _green = fixture
-        draft.write_text(draft_text, encoding="utf-8")
+        tmp, root, draft, _packet, green = fixture
+        draft.write_text(mutate(green), encoding="utf-8")
         if commit:
             _git_ok(root, "add", "-A")
             _git_ok(root, "commit", "-q", "-m", name)
-        if run_lint(root / "packets", root / "contracts", ADR_DIR) == 0:
-            failures.append(f"selftest dim NOT red: {name}")
+        errors, _ = lint(root / "packets", root / "contracts", ADR_DIR)
+        assert_red(name, errors, substr)
         tmp.cleanup()
+
+    def expect_green(name: str, errors: list[str]) -> None:
+        if errors:
+            failures.append(f"selftest green NOT green: {name} ({errors[0]})")
 
     # ---- P1 marker + grandfathering (no drafts needed)
     with tempfile.TemporaryDirectory() as tmp:
@@ -942,16 +977,15 @@ def run_selftest() -> int:
         (root / "packets").mkdir()
         (root / "contracts").mkdir()
         (root / "packets" / "ch9-p9-future.md").write_text("# unmarked future packet\n", encoding="utf-8")
-        red_dims.append("post-v2-unmarked-packet")
-        if run_lint(root / "packets", root / "contracts", ADR_DIR) == 0:
-            failures.append("selftest dim NOT red: post-v2-unmarked-packet")
+        errors, _ = lint(root / "packets", root / "contracts", ADR_DIR)
+        assert_red("post-v2-unmarked-packet", errors, "grandfathering is closed")
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         (root / "packets").mkdir()
         (root / "contracts").mkdir()
         (root / "packets" / "ch4-p1-domain-and-ports.md").write_text("# old unmarked packet\n", encoding="utf-8")
-        if run_lint(root / "packets", root / "contracts", ADR_DIR) != 0:
-            failures.append("selftest green NOT green: whitelisted unmarked packet failed")
+        errors, _ = lint(root / "packets", root / "contracts", ADR_DIR)
+        expect_green("whitelisted unmarked packet", errors)
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         (root / "packets").mkdir()
@@ -959,15 +993,24 @@ def run_selftest() -> int:
         (root / "packets" / "ch4-p2-sqlite-store.md").write_text(
             "# old packet\n\n```json\n{broken\n```\n", encoding="utf-8"
         )
-        if run_lint(root / "packets", root / "contracts", ADR_DIR) != 0:
-            failures.append("selftest green NOT green: pre-v2 packet with bad fence failed")
-    expect_red_packet("malformed-boundary-fence", '# p\n\n```json\n{"mutation_boundary": {broken\n```\n')
-    expect_red_packet("malformed-boundary-fence-unquoted", "# p\n\n```json\n{mutation_boundary: {broken\n```\n")
+        errors, _ = lint(root / "packets", root / "contracts", ADR_DIR)
+        expect_green("pre-v2 packet with bad fence", errors)
+    expect_red_packet(
+        "malformed-boundary-fence",
+        '# p\n\n```json\n{"mutation_boundary": {broken\n```\n',
+        "no parseable",
+    )
+    expect_red_packet(
+        "malformed-boundary-fence-unquoted",
+        "# p\n\n```json\n{mutation_boundary: {broken\n```\n",
+        "no parseable",
+    )
 
     # ---- P2 mutation_boundary shape
     expect_red_packet(
         "boundary-malformed",
         GREEN_PACKET.replace('"files": ["v3/src/x.ts", "v3/src/x.test.ts"]', '"files": "x"'),
+        "nonempty list of",
     )
     expect_red_packet(
         "boundary-extra-key",
@@ -975,6 +1018,7 @@ def run_selftest() -> int:
             '{"mutation_boundary": {"files": ["v3/src/x.ts", "v3/src/x.test.ts"]}}',
             '{"mutation_boundary": {"files": ["v3/src/x.ts", "v3/src/x.test.ts"], "extra": 1}}',
         ),
+        "mutation_boundary must be an object with exactly keys",
     )
 
     # ---- P3 manifest shape
@@ -983,10 +1027,12 @@ def run_selftest() -> int:
         GREEN_PACKET.replace('{"packet_rows": {"rows": [', '{"packet_rows_gone": {"rows": [').replace(
             "| O1 | a |\n| O2 | b |\n| O3 | c |\n", ""
         ),
+        "exactly one packet_rows block",
     )
     expect_red_packet(
         "manifest-extra-key",
         GREEN_PACKET.replace('{"packet_rows": {"rows": [', '{"packet_rows": {"extra": 1, "rows": ['),
+        "packet_rows must be an object with exactly keys",
     )
     expect_red_packet(
         "row-extra-key",
@@ -994,6 +1040,7 @@ def run_selftest() -> int:
             '{"id": "O3", "class": "new-decision", "refs": []}',
             '{"id": "O3", "class": "new-decision", "refs": [], "note": "x"}',
         ),
+        "every packet_rows row must be an object",
     )
     expect_red_packet(
         "row-duplicate-id",
@@ -1001,18 +1048,22 @@ def run_selftest() -> int:
             '{"id": "O3", "class": "new-decision", "refs": []}',
             '{"id": "O3", "class": "new-decision", "refs": []},\n  {"id": "O3", "class": "new-decision", "refs": []}',
         ),
+        "duplicate packet_rows ids",
     )
     expect_red_packet(
         "row-class-invalid",
         GREEN_PACKET.replace('"class": "new-decision"', '"class": "vibes"'),
+        "class 'vibes' not in",
     )
     expect_red_packet(
         "row-reserved-family",
         GREEN_PACKET.replace('{"id": "O3"', '{"id": "P3"'),
+        "reserved lane family",
     )
     expect_red_packet(
         "anchored-without-ref",
         GREEN_PACKET.replace('"refs": ["contract:ch9-test-surface#C1"]', '"refs": []'),
+        "carries no ref",
     )
     expect_red_packet(
         "new-decision-with-ref",
@@ -1020,28 +1071,34 @@ def run_selftest() -> int:
             '{"id": "O3", "class": "new-decision", "refs": []}',
             '{"id": "O3", "class": "new-decision", "refs": ["prose:oops"]}',
         ),
+        "ref-less by definition",
     )
 
     # ---- P4 ref strictness
     expect_red_packet(
         "ref-unprefixed-passthrough",
         GREEN_PACKET.replace('"prose:plan §7.2"', '"plan §7.2"'),
+        "never reinterpreted",
     )
     expect_red_packet(
         "ref-near-miss-adr",
         GREEN_PACKET.replace('"prose:plan §7.2"', '"ADR006"'),
+        "never reinterpreted",
     )
     expect_red_packet(
         "ref-prose-empty",
         GREEN_PACKET.replace('"prose:plan §7.2"', '"prose:"'),
+        "empty remainder",
     )
     expect_red_packet(
         "ref-adr-unresolved",
         GREEN_PACKET.replace('"prose:plan §7.2"', '"ADR-999"'),
+        "no such file in",
     )
     expect_red_packet(
         "ref-row-missing",
         GREEN_PACKET.replace("contract:ch9-test-surface#C2", "contract:ch9-test-surface#C7"),
+        "not in draft",
     )
     # contract ref with NO draft file at all: fresh empty-contracts fixture
     with tempfile.TemporaryDirectory() as tmp:
@@ -1049,65 +1106,85 @@ def run_selftest() -> int:
         (root / "packets").mkdir()
         (root / "contracts").mkdir()
         (root / "packets" / "ch9-p1-test.md").write_text(GREEN_PACKET, encoding="utf-8")
-        red_dims.append("ref-draft-missing")
-        if run_lint(root / "packets", root / "contracts", ADR_DIR) == 0:
-            failures.append("selftest dim NOT red: ref-draft-missing")
+        errors, _ = lint(root / "packets", root / "contracts", ADR_DIR)
+        assert_red("ref-draft-missing", errors, "no such contract-draft")
     expect_red_draft(
         "ref-target-draft-status",
-        DRAFT_V1,  # back to status draft, no blocks — draft itself consistent, packet ref red
+        lambda g: DRAFT_V1,  # status draft, no blocks — draft consistent, packet ref red
+        "anchors need ratified-or-later",
     )
 
     # ---- P5 bidirectional lane ids
     expect_red_packet(
         "manifest-id-not-in-tables",
         GREEN_PACKET.replace("| O3 | c |\n", ""),
+        "not defined as a table row",
     )
     expect_red_packet(
         "table-id-not-in-manifest",
         GREEN_PACKET.replace("| O3 | c |", "| O3 | c |\n| O4 | d |"),
+        "missing from the",
     )
     expect_red_packet(
         "fenced-only-definition",
-        GREEN_PACKET.replace("| O3 | c |", "| O3fake |")  # break the real O3 table row…
-        .replace("| O3fake |", "| O3x | c |")  # (keep a syntactically harmless line)
+        GREEN_PACKET.replace("| O3 | c |", "| O3x | c |")  # the real O3 row goes away
         + "\n```\n| O3 | only inside a fence |\n```\n",
+        "not defined as a table row",
     )
     # fenced noise must stay green: unresolvable refs/marks inside fences
     shared_packet.write_text(
         GREEN_PACKET + "\n```\nADR-999 and contract:ch9-test-surface#C9 and [P:new-decision]\n```\n",
         encoding="utf-8",
     )
-    if lint_shared() != 0:
-        failures.append("selftest green NOT green: fenced noise resolved or counted")
+    errors, _ = lint(shared_root / "packets", shared_root / "contracts", ADR_DIR)
+    expect_green("fenced noise", errors)
     shared_packet.write_text(GREEN_PACKET, encoding="utf-8")
 
     # ---- P6 retired carrier
     expect_red_packet(
         "retired-inline-mark",
         GREEN_PACKET.replace("| O3 | c |", "| O3 | c [P:new-decision] |"),
+        "retired by Amendment 1",
     )
     expect_red_packet(
         "retired-provenance-block",
         GREEN_PACKET + '\n```json\n{"provenance": {"anchored": 1, "derived": 1, "new_decision": 1}}\n```\n',
+        "standalone provenance block",
     )
 
     # ---- P7 metrics
-    expect_red_packet("metrics-missing-key", GREEN_PACKET.replace(', "learned": "l"', ""))
+    expect_red_packet(
+        "metrics-missing-key",
+        GREEN_PACKET.replace(', "learned": "l"', ""),
+        "packet_metrics missing keys",
+    )
     expect_red_packet(
         "metrics-nested-wrong-type",
         GREEN_PACKET.replace(
             '"prediction": {"predicted": "projection", "reasoning": "r", "discovered": "projection"}',
             '"prediction": "projection"',
         ),
+        "packet_metrics.prediction must be an object",
     )
     expect_red_packet(
         "metrics-nested-extra-key",
         GREEN_PACKET.replace('"discovered": "projection"}', '"discovered": "projection", "extra": 1}'),
+        "prediction must be an object with exactly keys",
     )
-    expect_red_packet("metrics-bad-stop-token", GREEN_PACKET.replace("3:watchdog", "9:made-up"))
+    expect_red_packet(
+        "metrics-bad-stop-token",
+        GREEN_PACKET.replace("3:watchdog", "9:made-up"),
+        "not in the canonical",
+    )
+    expect_red_packet(
+        "metrics-stop-type-not-string",
+        GREEN_PACKET.replace('"type": "3:watchdog"', '"type": []'),
+        "stops[].type must be a string",
+    )
     expect_red_packet(
         "metrics-prediction-enum",
         GREEN_PACKET.replace('"predicted": "projection"', '"predicted": "vibes"'),
+        "prediction.predicted must be one of",
     )
     expect_red_packet(
         "metrics-found-at-enum",
@@ -1115,41 +1192,65 @@ def run_selftest() -> int:
             '"detector_misses": []',
             '"detector_misses": [{"found_at": "someday", "what": "w", "why_missed": "y"}]',
         ),
+        "found_at must be one of",
     )
-    expect_red_packet("metrics-rounds-negative", GREEN_PACKET.replace('"review": 1', '"review": -1'))
+    expect_red_packet(
+        "metrics-rounds-negative",
+        GREEN_PACKET.replace('"review": 1', '"review": -1'),
+        "these are counters",
+    )
     expect_red_packet(
         "metrics-provenance-vs-manifest",
         GREEN_PACKET.replace(
             '"provenance": {"anchored": 1, "derived": 1, "new_decision": 1}',
             '"provenance": {"anchored": 999, "derived": 1, "new_decision": 1}',
         ),
+        "manifest tallies",
     )
     metrics_block = GREEN_PACKET[GREEN_PACKET.index('```json\n{"packet_metrics"'):]
-    expect_red_packet("metrics-multiple-blocks", GREEN_PACKET + "\n" + metrics_block)
+    expect_red_packet(
+        "metrics-multiple-blocks",
+        GREEN_PACKET + "\n" + metrics_block,
+        "at most one (D7)",
+    )
 
     # ---- D1 draft meta
     expect_red_draft(
         "draft-meta-extra-key",
-        green_draft.replace('"status": "ratified"}', '"status": "ratified", "extra": 1}'),
+        lambda g: g.replace('"status": "ratified"}', '"status": "ratified", "extra": 1}'),
+        "contract_draft must be an object with exactly keys",
     )
     expect_red_draft(
         "draft-status-invalid",
-        green_draft.replace('"status": "ratified"', '"status": "shipped"'),
+        lambda g: g.replace('"status": "ratified"', '"status": "shipped"'),
+        "contract_draft.status",
     )
 
     # ---- D2 C-rows
     expect_red_draft(
         "draft-duplicate-c-id",
-        green_draft.replace("| C2 | the other row |", "| C2 | the other row |\n| C2 | dup |"),
+        lambda g: g.replace("| C2 | the other row |", "| C2 | the other row |\n| C2 | dup |"),
+        "duplicate C-row ids",
     )
 
     # ---- D3 ratification shape + dates
-    expect_red_draft("ratification-bad-date", green_draft.replace('"date": "2026-07-09"', '"date": 20260709'))
-    expect_red_draft("ratification-bad-commit", green_draft.replace('"commit": "', '"commit": "ZZZ-not-hex-'))
-    expect_red_draft("ratification-empty-arms", green_draft.replace('"arms": ["a", "b"]', '"arms": []'))
+    expect_red_draft(
+        "ratification-bad-date",
+        lambda g: g.replace('"date": "2026-07-09"', '"date": 20260709'),
+        "YYYY-MM-DD",
+    )
+    expect_red_draft(
+        "ratification-bad-commit",
+        lambda g: g.replace('"commit": "', '"commit": "ZZZ-not-hex-'),
+        "lowercase-hex commit sha",
+    )
+    expect_red_draft(
+        "ratification-empty-arms",
+        lambda g: g.replace('"arms": ["a", "b"]', '"arms": []'),
+        "nonempty list of nonempty strings",
+    )
 
     def _dates_decreasing_fixture() -> None:
-        red_dims.append("ratification-dates-decreasing")
         fixture = build_green_fixture()
         if fixture is None:
             failures.append("selftest fixture setup failed: ratification-dates-decreasing")
@@ -1162,8 +1263,8 @@ def run_selftest() -> int:
         draft.write_text(green + second, encoding="utf-8")
         _git_ok(root, "add", "-A")
         _git_ok(root, "commit", "-q", "-m", "second-block")
-        if run_lint(root / "packets", root / "contracts", ADR_DIR) == 0:
-            failures.append("selftest dim NOT red: ratification-dates-decreasing")
+        errors, _ = lint(root / "packets", root / "contracts", ADR_DIR)
+        assert_red("ratification-dates-decreasing", errors, "dates decrease in document order")
         tmp.cleanup()
 
     _dates_decreasing_fixture()
@@ -1171,45 +1272,54 @@ def run_selftest() -> int:
     # ---- D4 state consistency
     expect_red_draft(
         "draft-status-with-block",
-        green_draft.replace('"status": "ratified"', '"status": "draft"'),
+        lambda g: g.replace('"status": "ratified"', '"status": "draft"'),
+        "draft implies no blocks",
     )
     expect_red_draft(
         "ratified-without-block",
-        DRAFT_V1.replace('"status": "draft"', '"status": "ratified"'),
+        lambda g: DRAFT_V1.replace('"status": "draft"', '"status": "ratified"'),
+        "requires a ratification block",
     )
     expect_red_draft(
         "reopened-without-block",
-        DRAFT_V1.replace('"status": "draft"', '"status": "reopened"'),
+        lambda g: DRAFT_V1.replace('"status": "draft"', '"status": "reopened"'),
+        "requires a ratification block",
     )
     expect_red_draft(
         "ratified-without-rows",
-        green_draft.replace("| C1 | the row |\n", "").replace("| C2 | the other row |\n", ""),
+        lambda g: g.replace("| C1 | the row |\n", "").replace("| C2 | the other row |\n", ""),
+        "but no C-rows",
     )
 
     # ---- D5 recorded-commit equality
     expect_red_draft(
         "row-edited-after-ratification",
-        green_draft.replace("| C1 | the row |", "| C1 | the row, silently edited |"),
+        lambda g: g.replace("| C1 | the row |", "| C1 | the row, silently edited |"),
+        "needs re-ratification",
     )
     expect_red_draft(
         "row-edited-and-committed",
-        green_draft.replace("| C1 | the row |", "| C1 | the row, silently edited |"),
+        lambda g: g.replace("| C1 | the row |", "| C1 | the row, silently edited |"),
+        "needs re-ratification",
         commit=True,
     )
     expect_red_draft(
         "recorded-commit-unresolvable",
-        re.sub(r'"commit": "[0-9a-f]+"', '"commit": "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"', green_draft),
+        lambda g: re.sub(
+            r'"commit": "[0-9a-f]+"', '"commit": "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"', g
+        ),
+        "ratification record is broken",
     )
     # out-of-repo ratified draft: the equality check must be a LOUD
-    # error, never a skip
+    # error, never a skip (any syntactically valid recorded sha will do
+    # — the error precedes resolution)
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         (root / "packets").mkdir()
         (root / "contracts").mkdir()
         (root / "contracts" / "ch9-test-surface-contract.md").write_text(green_draft, encoding="utf-8")
-        red_dims.append("ratified-draft-outside-git")
-        if run_lint(root / "packets", root / "contracts", ADR_DIR) == 0:
-            failures.append("selftest dim NOT red: ratified-draft-outside-git")
+        errors, _ = lint(root / "packets", root / "contracts", ADR_DIR)
+        assert_red("ratified-draft-outside-git", errors, "not inside a git repository")
     # the reopen choreography must be GREEN at every step, and the
     # re-ratification must be GREEN afterwards
     fixture = build_green_fixture()
@@ -1224,45 +1334,47 @@ def run_selftest() -> int:
         _git_ok(root, "add", "-A")
         _git_ok(root, "commit", "-q", "-m", "reopen-content")
         # a packet anchored to a REOPENED draft is red — the loud window
-        red_dims.append("ref-target-reopened-draft")
-        if run_lint(root / "packets", root / "contracts", ADR_DIR) == 0:
-            failures.append("selftest dim NOT red: ref-target-reopened-draft")
+        errors, _ = lint(root / "packets", root / "contracts", ADR_DIR)
+        assert_red("ref-target-reopened-draft", errors, "contested during a reopen")
         # …but the DRAFT itself is green at every choreography step
         packet2.unlink()
-        if run_lint(root / "packets", root / "contracts", ADR_DIR) != 0:
-            failures.append("selftest green NOT green: reopened intermediate state failed")
+        errors, _ = lint(root / "packets", root / "contracts", ADR_DIR)
+        expect_green("reopened intermediate state", errors)
         # D6: the gate form turns the same state red
-        red_dims.append("forbid-reopened-gate")
-        if run_lint(root / "packets", root / "contracts", ADR_DIR, forbid_reopened=True) == 0:
-            failures.append("selftest dim NOT red: forbid-reopened-gate")
+        errors, _ = lint(root / "packets", root / "contracts", ADR_DIR, forbid_reopened=True)
+        assert_red("forbid-reopened-gate", errors, "zero-reopened gate")
         new_sha = _git_out(root, "rev-parse", "HEAD")
         reratified = reopened_text.replace('"status": "reopened"', '"status": "ratified"') + RATIFICATION_TMPL.replace(
             "%DATE%", "2026-07-10"
         ).replace("%COMMIT%", new_sha)
         draft.write_text(reratified, encoding="utf-8")
         packet2.write_text(GREEN_PACKET, encoding="utf-8")
-        if run_lint(root / "packets", root / "contracts", ADR_DIR) != 0:
-            failures.append("selftest green NOT green: re-ratification failed")
+        errors, _ = lint(root / "packets", root / "contracts", ADR_DIR)
+        expect_green("re-ratification", errors)
         tmp.cleanup()
 
     # ---- D7 realized map
     expect_red_draft(
         "realized-incomplete-map",
-        green_draft.replace('"status": "ratified"', '"status": "realized"')
+        lambda g: g.replace('"status": "ratified"', '"status": "realized"')
         + '\n```json\n{"realized_map": {"C1": "landed"}}\n```\n',
+        "does not cover the C-row set",
     )
     expect_red_draft(
         "realized-map-bad-value",
-        green_draft.replace('"status": "ratified"', '"status": "realized"')
+        lambda g: g.replace('"status": "ratified"', '"status": "realized"')
         + '\n```json\n{"realized_map": {"C1": "landed", "C2": 7}}\n```\n',
+        "landing-site string",
     )
     expect_red_draft(
         "map-on-ratified-status",
-        green_draft + '\n```json\n{"realized_map": {"C1": "landed", "C2": "landed"}}\n```\n',
+        lambda g: g + '\n```json\n{"realized_map": {"C1": "landed", "C2": "landed"}}\n```\n',
+        "in ONE act",
     )
     expect_red_draft(
         "realized-without-map",
-        green_draft.replace('"status": "ratified"', '"status": "realized"'),
+        lambda g: g.replace('"status": "ratified"', '"status": "realized"'),
+        "exactly one realized_map block",
     )
 
     # ---- P8 post-build (pinned bytes + merge rejection)
@@ -1285,9 +1397,7 @@ def run_selftest() -> int:
             _git_ok(root, "commit", "-q", "-m", "outside")
             checker = Checker()
             check_post_build(packet, "HEAD", checker)
-            red_dims.append("post-build-outside-boundary")
-            if not any("OUTSIDE" in e for e in checker.errors):
-                failures.append("selftest dim NOT red: post-build-outside-boundary")
+            assert_red("post-build-outside-boundary", checker.errors, "OUTSIDE")
             # widen the WORKING-TREE boundary; the old commit must stay red
             packet.write_text(
                 packet.read_text(encoding="utf-8").replace('["x.txt"]', '["x.txt", "y.txt"]'),
@@ -1295,9 +1405,7 @@ def run_selftest() -> int:
             )
             checker = Checker()
             check_post_build(packet, "HEAD", checker)
-            red_dims.append("post-build-not-pinned")
-            if not any("OUTSIDE" in e for e in checker.errors):
-                failures.append("selftest dim NOT red: post-build-not-pinned")
+            assert_red("post-build-not-pinned", checker.errors, "OUTSIDE")
             branch = _git_out(root, "rev-parse", "--abbrev-ref", "HEAD")
             ok = _git_ok(root, "checkout", "-q", "--", ".")
             ok = ok and _git_ok(root, "checkout", "-q", "-b", "side", "HEAD~1")
@@ -1309,18 +1417,36 @@ def run_selftest() -> int:
                 and _git_ok(root, "checkout", "-q", branch)
                 and _git_ok(root, "merge", "-q", "--no-ff", "-m", "merge", "side")
             )
-            red_dims.append("post-build-merge-commit")
             if not ok:
                 failures.append("selftest git fixture setup failed (merge)")
             else:
                 checker = Checker()
                 check_post_build(packet, "HEAD", checker)
-                if not any("merge commit" in e for e in checker.errors):
-                    failures.append("selftest dim NOT red: post-build-merge-commit")
+                assert_red("post-build-merge-commit", checker.errors, "merge commit")
+
+    # a MALFORMED boundary at the audited commit is a red error, never
+    # a Python crash (the schema-check principle holds on the audit
+    # path too)
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        pdir = root / "packets"
+        pdir.mkdir()
+        packet = pdir / "ch9-p1-test.md"
+        packet.write_text('# p\n\n```json\n{"mutation_boundary": "x"}\n```\n', encoding="utf-8")
+        if not (_git_ok(root, "init", "-q") and _git_ok(root, "add", "-A") and _git_ok(root, "commit", "-q", "-m", "base")):
+            failures.append("selftest git fixture setup failed (post-build-malformed)")
+        else:
+            checker = Checker()
+            check_post_build(packet, "HEAD", checker)
+            assert_red(
+                "post-build-malformed-boundary",
+                checker.errors,
+                "needs exactly one valid mutation_boundary block",
+            )
 
     # ---- the green pair must pass
-    if lint_shared() != 0:
-        failures.append("selftest GREEN fixture failed")
+    errors, _ = lint(shared_root / "packets", shared_root / "contracts", ADR_DIR)
+    expect_green("GREEN fixture pair", errors)
     shared_tmp.cleanup()
 
     for f in failures:
