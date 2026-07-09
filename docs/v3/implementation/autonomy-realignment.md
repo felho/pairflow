@@ -130,3 +130,48 @@ risk gate may be dropped without a stated reason.
   "calibration-permissive" threshold name drops its stage prefix; the
   matrix wording aligns literally to AL-1 ("new-decision MANIFEST
   rows", "approve-time TIER-0 gate").
+
+## Addendum — round 3 (2026-07-10, two arm reviews on round 2)
+
+- **AL-10 — the "only element not carried" claim is corrected by
+  CARRYING the rest:** round 2 overstated — the v1 gate's tail was
+  not fully carried. Now it is: the milestone-gated rule lands as a
+  normative step-0 bullet (future milestone-gated behavior → document
+  the contract now, keep activation in a later packet, keep current
+  runtime behavior fail-closed); the RECORD gains the v1 conditional
+  annexes, each triggered by its own material — closure-budget
+  triage (buckets touched; adjacent closures intentionally collapsed
+  and why that collapse is safe; closures explicitly deferred),
+  proof-boundary triage (current and target canonical proof source;
+  final status/event surfaces affected; mixed-truth check;
+  proof-parity required HERE vs explicitly deferred), and the
+  mutable-flow record (zero side effects on precondition failure;
+  rollback/retry/preservation in the same slice; coordination
+  primitives introduced or explicitly split out). After AL-10 the
+  round-2 sentence is TRUE: the numeric scoring wrapper is the only
+  v1 element not carried.
+- **AL-11 — the testkit surface rule is NARROWED (a v3 adaptation
+  decision, stated for the user's veto):** testkit counts as a
+  surface — and toward the hard-stop family counts — ONLY when the
+  testkit CONTRACT changes (a new fake/seam, a fixture type, a
+  recording-sink shape); tests merely exercising the change never
+  count. Reason: v1 counted production surfaces only; counting the
+  drive trips hard stop 2 on routine kernel packets — the ch7-P1
+  retro-check: a ratified-good single packet would have been
+  split-REQUIRED. The rejected alternative (intentional tightening:
+  every routine packet continues only with closure proof) contradicts
+  the restored intent — that is ceremony, not convergence protection.
+- **AL-12 — consequence fixes from the round-2 reviews:** the
+  escalation combos restated in COUNTS (the dropped 0|1|2 scale is
+  not the referent; the two combos overlapping hard stop 2 carried
+  for self-containment and marked as such; the third named as the
+  one firing below it); the Mandatory Output Audit split per TARGET
+  KIND (packet outputs are not demanded of drafts — the draft list
+  audits the semantic remainder above the tier-0 form lint:
+  Control-Model answers, probe-or-source on substrate-resting rows,
+  seed-row disposition); the Gate Coverage Matrix renumbered §2a so
+  2a/2b pair; the CANONICAL template's threshold name aligned to the
+  AL-9 rename ("permissive" — the mirror had outrun the canon); the
+  "(the Phase-2 pairflow integration)" parenthetical DELETED (it was
+  a bridge to the retired name, reintroducing the collision AL-9
+  removed).
