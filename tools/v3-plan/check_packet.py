@@ -16,9 +16,10 @@ declared data (the reader and the tool could disagree on which value
 holds), so a duplicated key anywhere in a machine block is red.
 Fences are scanned LINE-ORIENTED with the CommonMark closing rule (a
 fence closes only on a line of the opener's character with at least
-the opener's length): a ````markdown outer fence QUOTES inner ```json
-/ ```text blocks as material — quoted machine blocks are never
-declarations, and quoted rows/marks never reach the prose scans.
+the opener's length; openers and closers may be indented 0-3 spaces):
+a ````markdown outer fence QUOTES inner ```json / ```text blocks as
+material — quoted machine blocks are never declarations, and quoted
+rows/marks never reach the prose scans.
 
 Packets (docs/v3/implementation/packets/*.md, README.md excluded):
   P1. A packet is v2 iff it carries the mutation_boundary machine
@@ -78,7 +79,8 @@ missing directory means zero drafts):
       status in draft|ratified|reopened|realized; filename
       ch<N>-<surface>-contract.md matches chapter/surface.
   D2. C-row registry: table rows whose first cell is C<n> (fenced code
-      excluded); unique ids; ratified-or-later requires >=1 row.
+      excluded); unique ids, no leading zeros (ids are exact strings —
+      C01 is never C1); ratified-or-later requires >=1 row.
   D3. ratification = {date, arms, commit}: exact keyset; YYYY-MM-DD
       string date; nonempty string-list arms; 7-40 lowercase-hex
       commit. Dates non-decreasing in document order; "latest block" =
@@ -162,7 +164,9 @@ PROSE_PREFIX = "prose:"
 # material (the template itself quotes this way). The old
 # pair-matching regexes leaked quoted content into the prose scans and
 # could read a quoted json block as a machine block.
-FENCE_OPEN_RE = re.compile(r"^(`{3,}|~{3,})(.*)$")
+# Openers and closers may be indented 0-3 spaces (CommonMark); 4+ is
+# an indented code block, out of the FENCED-code claim's scope.
+FENCE_OPEN_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})(.*)$")
 LANE_DEF_RE = re.compile(r"^\|\s*([A-Z]{1,2})(\d+)\s*\|")
 # No leading zeros, and ids compare as EXACT strings everywhere —
 # int() normalization made O01 == O1, a silent reinterpretation of
@@ -268,8 +272,7 @@ def _scan_fences(text: str) -> tuple[str, list[str]]:
     buf: list[str] = []
     for line in text.splitlines():
         if in_fence:
-            stripped = line.strip()
-            if re.fullmatch(rf"{re.escape(char)}{{{length},}}", stripped):
+            if re.fullmatch(rf" {{0,3}}{re.escape(char)}{{{length},}}\s*", line):
                 if is_json:
                     jsons.append("\n".join(buf))
                 in_fence = False
@@ -434,6 +437,15 @@ def check_draft(path: Path, checker: Checker) -> dict | None:
     dupes = {r for r in rows_list if rows_list.count(r) > 1}
     if dupes:
         checker.error(f"{path.name}: duplicate C-row ids {sorted(dupes)}")
+    # The lane-id no-leading-zeros rule's sibling surface (the round-5
+    # family, swept): detection stays broad (a demoted C01 row would
+    # silently escape the equality guard), validation is explicit.
+    zero_ids = sorted({r for r in rows_list if r.startswith("C0")})
+    if zero_ids:
+        checker.error(
+            f"{path.name}: leading-zero C-row ids {zero_ids} — ids are exact "
+            f"strings (C01 is never C1), so leading-zero forms are forbidden"
+        )
     rows = set(rows_list)
 
     ratifications = block_by_key(blocks, "ratification")
@@ -1301,12 +1313,21 @@ def run_selftest() -> int:
         + "\n```\nADR-999 and contract:ch9-test-surface#C9 and [P:new-decision]\n```\n"
         + "\n~~~\nADR-999 and contract:ch9-test-surface#C9 and [P:new-decision]\n~~~\n"
         + "\n````markdown\n```text\n| O9 | quoted row | [P:typo]\n```\n"
-        + '```json\n{"packet_rows": {"rows": []}}\n```\n````\n',
+        + '```json\n{"packet_rows": {"rows": []}}\n```\n````\n'
+        + "\n   ```\n| O8 | indented-fence quoted | [P:typo]\n   ```\n"
+        + "\n  ~~~\n| O7 | indented tilde quoted | [P:typo]\n  ~~~\n",
         encoding="utf-8",
     )
     errors, _ = lint(shared_root / "packets", shared_root / "contracts", ADR_DIR)
-    expect_green("fenced noise (backtick + tilde + quoted fences)", errors)
+    expect_green("fenced noise (backtick + tilde + quoted + indented fences)", errors)
     shared_packet.write_text(GREEN_PACKET, encoding="utf-8")
+    # an INDENTED (0-3 spaces, CommonMark-valid) ```json fence is a
+    # real declaration — proven by tripping the exactly-one rule
+    expect_red_packet(
+        "indented-json-block-parsed",
+        GREEN_PACKET + '\n  ```json\n  {"packet_rows": {"rows": []}}\n  ```\n',
+        "exactly one packet_rows block",
+    )
     # …and a machine block that exists ONLY inside a quoted fence does
     # NOT satisfy the exactly-one requirement
     expect_red_packet(
@@ -1413,6 +1434,11 @@ def run_selftest() -> int:
         "draft-duplicate-c-id",
         lambda g: g.replace("| C2 | the other row |", "| C2 | the other row |\n| C2 | dup |"),
         "duplicate C-row ids",
+    )
+    expect_red_draft(
+        "draft-c-row-leading-zero",
+        lambda g: g.replace("| C2 | the other row |", "| C2 | the other row |\n| C03 | zero |"),
+        "leading-zero C-row ids",
     )
 
     # ---- D3 ratification shape + dates

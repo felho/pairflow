@@ -857,3 +857,22 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   a fenced block (check_coverage, 16 live packets) — two carriers
   forever. The structured-data goal is already delivered by JSON;
   the defect was the fence SCANNER, not the carrier
+- 2026-07-09 · process-v2 Phase 0.1 (lint review round 8: one Medium
+  folded, one Low narrowed, one author-run family sweep) · (1) the
+  round-7 scanner recognized only column-0 fence openers while
+  CommonMark allows 0–3 leading spaces — indented quoted content
+  leaked into the prose scans and an indented ```json declaration
+  did not parse; fixed on both opener and closer (4+ spaces = an
+  indented code block, out of the FENCED-code claim's scope), with
+  an indented-noise green and an indented-declaration red dim.
+  (2) NARROWED, not folded: §7.2's ratified text says "integer"
+  while the tightened no-leading-zeros grammar lives in the lint +
+  template — the design doc's §7 body is the Carrier-B-bound payload
+  (recorded commit ae1e362e) and is NOT edited without the user's
+  re-ratification act; the grammar's canonical home is template §1
+  under docs-win (round 6), and the delta rides into the flip-claims
+  revision. (3) The round-5 family lesson executed by the AUTHOR
+  this time: the lane-id no-leading-zeros rule's sibling surface is
+  the draft C-row ids — C01 now red (detection stays broad so a
+  demoted C01 row cannot silently escape the equality guard;
+  validation is explicit). Selftest 70→72
