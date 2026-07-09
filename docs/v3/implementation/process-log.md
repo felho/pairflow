@@ -740,3 +740,19 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   new red dims. Selftest 58→60 dims, all claim-pinned. The round-1
   lesson echoes the claim-derivation rule: a dim that is red for an
   unrelated reason proves nothing — red-for-its-claim is the assertion
+- 2026-07-09 · process-v2 Phase 0.1 (lint review round 2, two
+  findings, both IN threat model) · (1) the --post-build audit
+  enforced only "files is a list" while fold time enforced the full
+  P2 shape — a committed boundary with an absolute path and a
+  non-string element passed the audit clean (reproduced by the
+  reviewer); the audit is the LAST line of defense and reads the
+  commit's bytes, so it must carry the same schema — fixed by
+  extracting ONE shared check_boundary_files helper (the fix removes
+  the duplication that bred the divergence, not just the symptom);
+  (2) the retired-mark scan matched only the three known kinds while
+  the P6 claim says [P:*] — `[P:typo]` outside a fence stayed green;
+  the regex now matches the FAMILY prefix, exactly the claim's
+  wording. Selftest 60→62 dims. Both findings are the same class the
+  gate culture hunts: the code proving less than its stated claim —
+  on the new carrier the claim registry (docstring) made the gap
+  DECIDABLE by reading, which is how the reviewer found it

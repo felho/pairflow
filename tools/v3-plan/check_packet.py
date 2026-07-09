@@ -48,6 +48,8 @@ Packets (docs/v3/implementation/packets/*.md, README.md excluded):
   P8. --post-build <commit>: the commit's changed files must be a
       subset of the boundary read from the PACKET'S BYTES AT THAT
       COMMIT plus the packet file itself (audit reruns are pinned);
+      the boundary must satisfy the FULL P2 shape rules on this path
+      too (a subset check over a malformed boundary proves nothing);
       merge commits are rejected outright (empty diff-tree list is a
       false-green audit).
 
@@ -137,7 +139,10 @@ LANE_DEF_RE = re.compile(r"^\|\s*([A-Z]{1,2})(\d+)\s*\|")
 MANIFEST_ID_RE = re.compile(r"^([A-Z]{1,2})(\d+)$")
 CONTRACT_REF_RE = re.compile(r"^contract:(ch\d+-[a-z0-9-]+)#(C\d+)$")
 ADR_STRICT_RE = re.compile(r"^ADR-(\d{3})$")
-RETIRED_MARK_RE = re.compile(r"\[P:(anchored|derived|new-decision)")
+# The WHOLE [P: family is retired (P6) — not just the three known
+# kinds: [P:typo] outside a fence is as much a lingering carrier as
+# [P:anchored …].
+RETIRED_MARK_RE = re.compile(r"\[P:")
 C_ROW_RE = re.compile(r"^\|\s*(C\d+)\s*\|")
 DRAFT_NAME_RE = re.compile(r"^(ch\d+)-([a-z0-9-]+)-contract\.md$")
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -397,6 +402,33 @@ def check_draft(path: Path, checker: Checker) -> dict | None:
 # ---------------------------------------------------------------- packets
 
 
+def check_boundary_files(name: str, boundary: object, checker: Checker) -> list[str] | None:
+    """P2's full shape rules — ONE implementation shared by the
+    fold-time check and the --post-build audit (the audit reads the
+    commit's bytes, so it must enforce the same schema itself; a
+    subset check over a malformed boundary proves nothing). Returns
+    the files list only when fully valid."""
+    if not isinstance(boundary, dict) or set(boundary.keys()) != MUTATION_BOUNDARY_KEYS:
+        checker.error(
+            f"{name}: mutation_boundary must be an object with exactly keys "
+            f"{sorted(MUTATION_BOUNDARY_KEYS)}"
+        )
+        return None
+    files = boundary.get("files")
+    if not isinstance(files, list) or not files or not all(
+        isinstance(f, str) and f and not f.startswith("/") and ".." not in f for f in files
+    ):
+        checker.error(
+            f"{name}: mutation_boundary.files must be a nonempty list of "
+            f"repo-relative paths"
+        )
+        return None
+    if len(set(files)) != len(files):
+        checker.error(f"{name}: mutation_boundary.files has duplicates")
+        return None
+    return files
+
+
 def check_ref(name: str, row_id: str, ref: object, drafts: dict[str, dict], adr_dir: Path, checker: Checker) -> None:
     """P4: strict-or-prose-prefixed; anything else is loud."""
     label = f"{name}: rows['{row_id}'] ref"
@@ -557,22 +589,7 @@ def check_packet(
     if len(boundaries) > 1:
         checker.error(f"{path.name}: {len(boundaries)} mutation_boundary blocks; exactly one allowed")
 
-    boundary = boundaries[0]
-    if not isinstance(boundary, dict) or set(boundary.keys()) != MUTATION_BOUNDARY_KEYS:
-        checker.error(
-            f"{path.name}: mutation_boundary must be an object with exactly keys "
-            f"{sorted(MUTATION_BOUNDARY_KEYS)}"
-        )
-    files = boundary.get("files") if isinstance(boundary, dict) else None
-    if not isinstance(files, list) or not files or not all(
-        isinstance(f, str) and f and not f.startswith("/") and ".." not in f for f in files
-    ):
-        checker.error(
-            f"{path.name}: mutation_boundary.files must be a nonempty list of "
-            f"repo-relative paths"
-        )
-    elif len(set(files)) != len(files):
-        checker.error(f"{path.name}: mutation_boundary.files has duplicates")
+    check_boundary_files(path.name, boundaries[0], checker)
 
     prose = strip_fences(text)
 
@@ -728,14 +745,16 @@ def check_post_build(packet_path: Path, commit: str, checker: Checker) -> None:
     text = shown.stdout
     blocks = json_blocks(text, packet_path.name, checker)
     boundaries = block_by_key(blocks, "mutation_boundary")
-    if (
-        len(boundaries) != 1
-        or not isinstance(boundaries[0], dict)  # a non-object value must be red, not a crash
-        or not isinstance(boundaries[0].get("files"), list)
-    ):
-        checker.error(f"{packet_path.name}: --post-build needs exactly one valid mutation_boundary block")
+    if len(boundaries) != 1:
+        checker.error(
+            f"{packet_path.name}: --post-build needs exactly one mutation_boundary "
+            f"block, found {len(boundaries)}"
+        )
         return
-    allowed = set(boundaries[0]["files"])
+    files = check_boundary_files(packet_path.name, boundaries[0], checker)
+    if files is None:
+        return
+    allowed = set(files)
     allowed.add(rel)
     # Merge commits yield an EMPTY diff-tree change list — a false-green
     # audit; reject them outright (build commits are single-parent by
@@ -1151,6 +1170,11 @@ def run_selftest() -> int:
         GREEN_PACKET + '\n```json\n{"provenance": {"anchored": 1, "derived": 1, "new_decision": 1}}\n```\n',
         "standalone provenance block",
     )
+    expect_red_packet(
+        "retired-mark-unknown-kind",
+        GREEN_PACKET.replace("| O3 | c |", "| O3 | c [P:typo] |"),
+        "retired by Amendment 1",
+    )
 
     # ---- P7 metrics
     expect_red_packet(
@@ -1425,8 +1449,8 @@ def run_selftest() -> int:
                 assert_red("post-build-merge-commit", checker.errors, "merge commit")
 
     # a MALFORMED boundary at the audited commit is a red error, never
-    # a Python crash (the schema-check principle holds on the audit
-    # path too)
+    # a Python crash or a silent pass — the FULL P2 shape rules hold on
+    # the audit path too
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         pdir = root / "packets"
@@ -1441,7 +1465,29 @@ def run_selftest() -> int:
             assert_red(
                 "post-build-malformed-boundary",
                 checker.errors,
-                "needs exactly one valid mutation_boundary block",
+                "mutation_boundary must be an object with exactly keys",
+            )
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        pdir = root / "packets"
+        pdir.mkdir()
+        packet = pdir / "ch9-p1-test.md"
+        # the reproduced hole: an absolute path and a non-string element
+        # rode through while the changed file happened to be listed
+        packet.write_text(
+            '# p\n\n```json\n{"mutation_boundary": {"files": ["/abs", 7, "x.txt"]}}\n```\n',
+            encoding="utf-8",
+        )
+        (root / "x.txt").write_text("x", encoding="utf-8")
+        if not (_git_ok(root, "init", "-q") and _git_ok(root, "add", "-A") and _git_ok(root, "commit", "-q", "-m", "base")):
+            failures.append("selftest git fixture setup failed (post-build-shape)")
+        else:
+            checker = Checker()
+            check_post_build(packet, "HEAD", checker)
+            assert_red(
+                "post-build-boundary-shape-rules",
+                checker.errors,
+                "nonempty list of repo-relative paths",
             )
 
     # ---- the green pair must pass
