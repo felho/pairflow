@@ -585,10 +585,13 @@ of these is itself a finding.
   exactly what a closing agent executes — without these a chapter
   closes green by the DoD's letter with a reopened or unrealized
   draft): ZERO reopened drafts (§7.3's gate point; unconditional —
-  naturally vacuous when no draft exists), the chapter's
-  contract-draft IF ONE EXISTS flipped `realized` — map filled +
-  status flipped in ONE act (FC-C5) — and the draft-metrics close
-  line (FC-C6), both scoped to the chapter's draft IF ANY (fold
+  naturally vacuous when no draft exists), EVERY chapter-referenced
+  contract-draft flipped `realized` — map filled + status flipped in
+  ONE act (FC-C5); plural on purpose (fold round 7: the naming scheme
+  and the lint admit several `chN-<surface>-contract.md` per chapter,
+  and D2's singular "surface" does not forbid a chapter having more
+  than one memo-born surface) — and the draft-metrics close
+  line (FC-C6), both scoped to the chapter's drafts IF ANY (fold
   round 6: D2's scope is the chapter's MEMO-BORN surface and §5's
   first full draft exercise is ch8 — ch7, the first post-flip close,
   is draftless by design; written unconditioned, the DoD's letter
@@ -639,10 +642,14 @@ of these is itself a finding.
   mode, stated (fold round 6, both arms — with FC-E2's clause the
   last rewritten surface without one): the flip EDITS the v3 section
   in place — bullets not named by FC-G1/FC-F2 (the no-session-memory
-  intro, the process-authority pointer, the docs-win packet-authoring
-  bullet, the verification bridges, the one-packet-one-commit shape)
-  survive unchanged unless they contradict the matrix or the new
-  carrier.
+  intro, the process-authority pointer, the one-packet-one-commit
+  shape) survive unchanged unless they contradict the matrix or the
+  new carrier; the docs-win packet-authoring bullet and the
+  verification-bridges bullet survive EXCEPT for their FC-G1 named
+  additions above (fold round 7: listing them as plain survivors
+  contradicted this row's own "gains" clauses — a hostile implementer
+  could skip exactly the round-6 additions while citing the edit-mode
+  sentence).
 
 ## FC-H — CreateTaskPacket/SKILL.md Hard boundaries
 
@@ -999,3 +1006,20 @@ count corrected against live grep):**
   DraftContract defers; the FC-X3 entry added.
 
 State: awaiting the arms' round-7 run on these bytes.
+
+**Fold round 7 (2026-07-09): one arm — one P1 + one open question;
+both folded:**
+
+- FC-G1's edit-mode list contradicted its own "gains" clauses (P1):
+  the docs-win and verification-bridges bullets were listed as plain
+  survivors while FC-G1 names additions to both — a hostile
+  implementer could skip exactly the round-6 additions citing the
+  edit-mode sentence; the two bullets now survive EXCEPT for their
+  named additions.
+- The open question resolved as PLURAL: the DoD's draft-close
+  condition binds EVERY chapter-referenced contract-draft — the
+  naming scheme and the lint admit several per chapter, and D2's
+  singular "surface" does not forbid a chapter having more than one
+  memo-born surface.
+
+State: awaiting the arms' round-8 run on these bytes.
