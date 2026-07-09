@@ -240,9 +240,25 @@ Spec-writing is projection, not invention. In order:
 0. **Classify + size, BEFORE any drafting (process-v2, README §5.5):**
    read the chapter's predicted class (plan §1.3 convention); run the
    sizing heuristics — substrate novelty, claim families, matrix
-   families, dimension count, sibling-packet fanout — whose outcome
-   feeds the split decision (an in-chapter split executes autonomously
-   per the verdict-action matrix). **Draft-routing STOP:** a memo-born
+   families, dimension count, sibling-packet fanout — AND the
+   v1-inherited RISK AXES as split triggers (axes, not a scoring
+   apparatus; source: the v1 Complexity-Risk gate):
+   - **authority movement** — the packet introduces or MOVES a
+     canonical source of truth;
+   - **surface spread** — how many distinct surfaces must change for
+     one concept (kernel / store / CLI / testkit / docs);
+   - **foundation + activation coupling** — build-the-base and
+     turn-it-on in ONE packet (the ch8/MD-1 migrate-and-activate
+     shape);
+   - **prerequisite coupling** — depends on unfinished sibling work;
+   - **acceptance multiplicity** — distinct success classes proven at
+     once.
+   **Hard-stop shape (v1-inherited — these combinations are
+   split-REQUIRED):** authority movement combined with activation; one
+   concept across 3+ surfaces; activation depending on an unfinished
+   prerequisite. The outcome feeds the split decision (an in-chapter
+   split executes autonomously per the verdict-action matrix; a
+   scope-changing one is STOP 2). **Draft-routing STOP:** a memo-born
    surface whose chapter contract-draft is not ratified-or-later
    routes to the DraftContract round first; mid-authoring, a Case-B
    signal (new-decision mass over the calibration-permissive

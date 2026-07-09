@@ -91,7 +91,11 @@ Read, in this order (current state, never from memory):
    sizing heuristics: substrate novelty, claim families, matrix
    families, dimension count, sibling-packet fanout (the adopted
    Closure-Budget bucket-coincidence trigger is subsumed by these
-   axes). Their outcome feeds the split decision: an IN-CHAPTER split
+   axes) — PLUS the v1-inherited risk axes as split triggers
+   (authority movement, surface spread, foundation+activation
+   coupling, prerequisite coupling, acceptance multiplicity; the
+   hard-stop combinations are split-REQUIRED — canonical statement:
+   template §2 step 0). Their outcome feeds the split decision: an IN-CHAPTER split
    executes autonomously per the README §5.5 verdict-action matrix —
    split parts inherit mode, predicted class, and watchpoints; each
    part gets a fresh watchdog budget; autonomous split depth is 1
@@ -294,15 +298,18 @@ ch7-P1 dangling-"flagged below" lesson).
    the matrices, the embedding gates, open risks — flags REFERENCED
    from the packet section, never introduced summary-only.
 5. **The loop stops exactly at the human decision points (the README
-   §5.5 verdict-action matrix):** at every STOP, always; and at the
-   approve — in calibration the human's for every packet (flag-free
-   approve delegation is DEFERRED per the README's D6 clause; a
-   FLAG-BEARING approve is STOP `4:flagged-approve`, the human's at
-   every trust stage). **Entry mode is the trust dial:** the user
-   chooses per work item — prompt-by-prompt in the loop, or delegating
-   a whole packet/chapter; no formal mechanism needed. This workflow
-   never proceeds to build, never commits the packet on its own, and
-   never marks a packet approved.
+   §5.5 verdict-action matrix):** at every STOP, always; at every
+   FLAG-BEARING approve (STOP `4:flagged-approve`, the human's at
+   every stage); and at the ch7 pilot / first-of-a-kind approves.
+   From ch8 on, a FLAG-FREE approve (zero new-decision rows, zero
+   approve-ratified routes, every approve-time gate green, one full
+   clean panel round) is AUTONOMOUS: the loop proceeds to build
+   (README §4 — one packet, one commit, post-build audit at close).
+   **Entry mode is the trust dial:** the user chooses per work item —
+   prompt-by-prompt in the loop, or delegating a whole
+   packet/chapter; no formal mechanism needed. On the HUMAN-GATED
+   paths this workflow never proceeds to build and never marks a
+   packet approved.
 
 ## Report
 
@@ -314,5 +321,5 @@ Slice: <n units / n rejections / n invariants / n traces | EMPTY (declared)>
 Panel: <rounds run, last verdict + Gate Coverage Matrix state>
 Propagation: <lens-4 pass result: clean | hits folded (list)>
 Plan alignment: <none | prepared edit for §X, same-commit>
-→ at a human decision point: approve | STOP <member token>
+→ autonomous flag-free approve — proceeding to build | at a human decision point: approve | STOP <member token>
 ```

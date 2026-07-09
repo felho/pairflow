@@ -48,13 +48,16 @@ lens duties).
 
 - **Human decision points (the README §5.5 verdict-action matrix):**
   STOPs and flag-bearing approves are the USER's; flag-free approves
-  are the USER's in calibration (delegation deferred per README §5.5);
-  refine and in-chapter split are the loop's. Standing checkpoints,
-  never automated: chapter ratification, the model↔code divergence
-  stop, and contract-draft ratification and re-ratification (never
-  delegated, never inferred — an explicit act on named bytes). The authoring
-  loop iterates refine and in-chapter split autonomously and stops at
-  the approve and at every STOP — it never proceeds to build.
+  are AUTONOMOUS from ch8 on (the ch7 pilot packets stay
+  human-approved, first-of-a-kind); refine and in-chapter split are
+  the loop's. Standing checkpoints, never automated: chapter
+  ratification, the model↔code divergence stop, and contract-draft
+  ratification and re-ratification (never delegated, never inferred —
+  an explicit act on named bytes). The authoring loop stops at every
+  STOP and at every human-gated approve; an autonomous flag-free
+  approve proceeds to build (one packet = one commit) — never build
+  before an approve, and a new chapter starts only on the user's
+  explicit go.
 - **First-of-a-kind stop** (canonical statement: README §5.5): the
   first packet of a new task class is human-approved regardless of
   trust stage.

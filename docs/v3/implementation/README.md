@@ -85,7 +85,8 @@ human (§5.5), and packets then anchor to the ratified rows
 0. **Author the packet** — the `CreateTaskPacket` skill's AuthorPacket
    loop: projection with the `packet_rows` provenance manifest, the
    panel review rounds, and the human decision points per the §5.5
-   verdict-action matrix. No build before the approve.
+   verdict-action matrix. No build before an approve; on an AUTONOMOUS
+   flag-free approve (§5.5) the loop proceeds to build directly.
 1. **Read the spec** — the plan step plus its ledger slice (units, rejection
    names, invariants, traces). The ledger is the *what*; it is not
    re-interpreted at build time.
@@ -250,8 +251,13 @@ the D1 provenance machinery: every canonical packet row is classed
 one mechanism drives classification, draft routing, and this boundary.
 
 **Autonomous (no human):** in-chapter `split` — sizing, not scope
-(coverage union guarded mechanically; parts inherit mode, predicted
-class, watchpoints; fresh watchdog per part; depth 1 — deeper → STOP);
+(the sizing/split triggers: substrate novelty, claim/matrix families,
+dimension count, sibling fanout, plus the v1-inherited RISK AXES —
+authority movement, surface spread, foundation+activation coupling,
+prerequisite coupling, acceptance multiplicity; canonical statement +
+the hard-stop combinations: template §2 step 0; coverage union guarded
+mechanically; parts inherit mode, predicted class, watchpoints; fresh
+watchdog per part; depth 1 — deeper → STOP);
 propagation-class plan edits (terminology/consistency sweeps of
 already-decided semantics, applied with a visible report); ADR
 recording of already-ratified decisions; parking proposals onto the
@@ -288,7 +294,7 @@ records them):**
 | `refine` (any fold-now finding) | autonomous: fold + re-run panel |
 | `split`, within chapter (coverage union preserved) | autonomous, visible report |
 | `split` changing chapter scope/sequencing/dependencies | STOP 2 |
-| `approve`, flag-free | human in calibration; delegation DEFERRED — per-work-type, evidence-based, thresholds only when the metrics data exists |
+| `approve`, flag-free (zero new-decision rows, zero approve-ratified routes, every approve-time gate green, one full clean panel round) | AUTONOMOUS from ch8 on — the loop proceeds to build (§4); the ch7 pilot packets (P3/P4) stay human-approved (first-of-a-kind), the last per-packet manual rounds |
 | `approve`, flag-bearing | human (STOP 4), at every trust stage |
 | STOP 1–3 events | human, always |
 
@@ -354,28 +360,25 @@ ratification and RE-ratification (the intent-injection point — never
 delegated at any trust level, and never inferred from an intent
 statement: the act is explicit, on named bytes). The **first-of-a-kind
 rule**: the first packet of a new task class is human-approved
-regardless of trust stage. The **calibration measurement rule**: each
-human approve asks "did the human find new-decision content the
-detector did not flag?" — a miss is a DETECTOR bug: fix the rule, do
+regardless of trust stage. The **measurement rule**: "did a human catch
+new-decision content the detector did not flag?" is asked at the ch7
+pilot's approves and, from ch8 on, POST-HOC at the chapter boundary —
+the boundary review AUDITS the autonomously-approved packets
+(manifests, flags, `detector_misses`), and the build/aftermath stream
+feeds `detector_misses`; a miss is a DETECTOR bug: fix the rule, do
 not add process. **Entry mode is the trust dial:** the user chooses
 per work item — prompt-by-prompt or delegating a packet/chapter.
 
-The three-stage ramp (calibration → measurement → chaining) survives
-as ROLLOUT context: chaining through `ExecutePairflowPlan` opens per
-task class when its gates are fully mechanical, its coverage
-accounting closes, AND a v3-adapted RISK assessment exists. That last
-precondition is a recorded deferral (post-flip audit, user-found): the
-v1 Complexity-Risk gate's RISK half — the scored axes (authority /
-surface spread / identity fragility / activation coupling /
-prerequisite / acceptance multiplicity) and its hard-stop registry —
-was NOT adopted; only its sizing half became the authoring heuristics.
-During calibration this is deliberate (every approve is human, so risk
-gates AUTONOMY, not correctness — partial live cover: the D1
-authority/separation/availability trigger and the first-of-a-kind
-rule), but auto-approve/chaining may not open without adapting it —
-the boundary review owns the adaptation
-(`.claude/skills/CreatePairflowSpec/references/Complexity-Risk-Gate.md`
-is the source).
+**The trajectory (realigned 2026-07-10 —
+[`autonomy-realignment.md`](autonomy-realignment.md)):** packet-level
+autonomy opens at ch8 (the matrix's flag-free row; the ch7 pilot
+validates the machinery with the LAST per-packet manual rounds), and
+the v1 risk axes are ADOPTED as write-time sizing/split triggers
+(template §2 step 0 — source:
+`.claude/skills/CreatePairflowSpec/references/Complexity-Risk-Gate.md`).
+What remains Phase 2: chapter-level chaining through
+`ExecutePairflowPlan` — pairflow doc-bubbles carrying refinement and
+implementation.
 
 **The transitional cross-model arms:** until pairflow doc-bubbles
 arrive, the USER's manual cross-model arms play phase 2 (the

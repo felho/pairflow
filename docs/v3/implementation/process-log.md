@@ -1035,3 +1035,24 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   auto-approve/chaining — the boundary review owns the adaptation,
   and delegation cannot open without it (the v1 later-hardening
   lesson: a deferral without a guaranteed revisit point is a drop)
+- 2026-07-10 · AUTONOMY REALIGNMENT (the user's course correction;
+  anchor: autonomy-realignment.md, landed against its AL rows) · the
+  built system had inverted the original trajectory: v1 delivered
+  whole plans autonomously and v3's mission was the missing CONTRACT
+  layer, yet "calibration" had become an open-ended
+  human-approves-everything stage with GROWING delegation
+  preconditions, and the v1 risk axes were misframed as autonomy
+  gates when they are write-time SIZING guards. Realigned: flag-free
+  approves (zero new-decision rows, zero approve-ratified routes,
+  gates green, clean full round) are AUTONOMOUS from ch8 and proceed
+  to build — the human sits at chapter ratification, draft
+  ratification, STOPs, flag-bearing approves, first-of-a-kind, and
+  the ch7 pilot (the last per-packet manual rounds); the v1 risk
+  axes + hard-stop combinations are adopted NOW as split triggers
+  (template §2 step 0 canonical); measurement moves post-hoc to the
+  chapter boundary; chapter-level chaining stays Phase 2. Meta-lesson
+  logged with the user's own words: the process-on-process fix-all
+  dynamic re-inverted the goal one clause at a time — each
+  precondition locally justified, cumulatively moving autonomy from
+  DEFAULT to distant privilege. Process work STOPS here; the next
+  act is the P3 pilot
