@@ -40,8 +40,12 @@ of these is itself a finding.
   text (the mapping note stays as history).
 - **FC-A2** Approve requires ALL of: every tier-0 gate green — incl.
   the zero-reopened gate (the `--forbid-reopened` form); ONE FULL
-  clean panel round — full = all five lenses ran, ON THE FINAL BYTES
-  (packet-basis hash cited by each lens report); coverage matrix
+  clean panel round — full = all five lenses ran AS FRESH-CONTEXT
+  SUB-AGENTS (D4; single model family is fine — the author's context
+  NEVER scores its own bytes clean), ON THE FINAL BYTES (packet-basis
+  hash cited by each lens report); clean = ZERO fold-now findings
+  (routed and watchpoint findings ride as flags/routes without
+  voiding the round); coverage matrix
   complete with no `missing` AND no unresolved `unknown`, where an
   uninspected `unknown` is NEVER routable — inspection first converts
   it to a known present/absent-with-evidence state, and only THEN may
@@ -81,7 +85,10 @@ of these is itself a finding.
   (boundary-review → process-log line + the chapter DoD's mandatory
   log review; later-chapter → proposed plan-map row, ratified by the
   human at approve/boundary), and `declined` carries none BY DESIGN —
-  a human-ratified standing decision, not a parked item.
+  a human-ratified standing decision, not a parked item. The phase-2
+  obligation is preserved: findings/flags/routes stay EXPRESSIBLE in
+  the severity ontology's language (timing/layer) for when packets
+  flow through doc-bubbles.
 - **FC-A5** The report contract is a validity gate: `Packet basis`
   (sha256 + HEAD + dirty state), `Skill source`, the Gate Coverage
   Matrix, and the verdict are mandatory lines; a report missing one is
@@ -93,6 +100,16 @@ of these is itself a finding.
 - **FC-A7** The panel never RESOLVES a STOP — it detects, classifies
   (member token from the registry), and reports; resolution is the
   human's.
+- **FC-A8** ReviewPacket's pre-v2 dual-mode split (`self_review` /
+  `pre_approval`) RETIRES into the single panel procedure — D4
+  defines ONE engine with ONE verdict set; the loop invokes that
+  panel every round (what `self_review` used to floor), and a
+  standalone invocation runs the same engine. The
+  "ready for pre-approval" state name disappears with the modes; the
+  SKILL.md routing table, the two-modes paragraph, and the Examples
+  block are rewritten accordingly (the skill-side edit rides FC-H1).
+  Entailed, not new semantics: two modes cannot coexist with one
+  engine — disposition open to the arms' challenge.
 
 ## FC-B — AuthorPacket.md
 
@@ -100,15 +117,18 @@ of these is itself a finding.
   manifest — id, class, refs (Amendment 1; the inline-mark convention
   was withdrawn at design time, never live, and the lint rejects a
   reappearance); refs are strict (`contract:chN-<surface>#Cn`,
-  `ADR-NNN`) or `prose:`-prefixed; the machine blocks
-  (mutation_boundary, packet_rows, flags routes) are written at
-  authoring; the case verdict (projection/invention) is computed from
-  the manifest tally and stated in the packet header with a one-line
-  derivation. The machine blocks are mutation_boundary and
-  packet_rows; the flags section's Route field is a labeled line, not
-  a machine block (fold round 1). Form details (id grammar, keysets)
-  defer to task-packet-template.md §1 — the workflow never restates
-  them.
+  `ADR-NNN`) or `prose:`-prefixed. Authoring writes THREE machine
+  blocks — `ledger_slice` (the check_coverage contract),
+  `mutation_boundary`, `packet_rows` — plus the flags section's
+  labeled Route lines (prose fields, not a machine block);
+  `packet_metrics` is the CLOSE-time machine block (fold round 2: the
+  fold-1 wording both contradicted itself and reproduced the
+  under-enumeration class it was fixing). The case verdict
+  (projection/invention) is computed from the manifest tally and
+  stated in the packet header with a one-line derivation (form home:
+  the template §1 header line, FC-E2). Form details (id grammar,
+  keysets) defer to task-packet-template.md §1 — the workflow never
+  restates them.
 - **FC-B2** A B-case verdict (new-decision mass over the calibration
   threshold, or ANY new-decision row touching authority / separation /
   availability-class semantics — the D1 list in FULL, fold round 1:
@@ -116,9 +136,13 @@ of these is itself a finding.
   expensive classes) STOPS authoring
   BEFORE drafting continues and routes to DraftContract; the
   new-decision row set is handed over as the draft's seed content.
+  The threshold is CALIBRATION-PERMISSIVE, and tightening it is a
+  config change, not a redesign (D1).
 - **FC-B3** The sizing heuristics (substrate novelty, claim families,
   matrix families, dimension count, sibling-packet fanout — the §4
-  adaptation's axes in full) run BEFORE drafting; their
+  adaptation's axes in full; the adopted Closure-Budget
+  bucket-coincidence split trigger is SUBSUMED by these axes, stated
+  so the rule reads as carried, not lost) run BEFORE drafting; their
   outcome feeds the split decision, and an in-chapter split is executed
   autonomously per the verdict-action matrix (inheritance: mode,
   predicted class, watchpoints; fresh watchdog per part; depth 1 —
@@ -136,23 +160,40 @@ of these is itself a finding.
   user chooses per work item — prompt-by-prompt in the loop, or
   delegating a whole packet/chapter — with no formal mechanism; the
   AuthorPacket text states it.
+- **FC-B7** Edit mode, stated (fold round 2): the flip EDITS
+  AuthorPacket in place — live text not named by FC-B1–B6 (the step-0
+  ratified-chapter gate, the operability/empty-slice classification,
+  the write-time inventory disciplines, the embedding gates +
+  type-ripple + probe rules) survives UNCHANGED unless it contradicts
+  the verdict-action matrix or the new carrier; FC-B4/B5 name the
+  surfaces the restructure is most likely to disturb, not an
+  exhaustive whitelist.
 
 ## FC-C — DraftContract.md (new workflow)
 
 - **FC-C1** Scope: one chapter's memo-born surface; content bar =
   tree-independence (decidable without `v3/src`; substrate probes ARE
   draft-time work); the Control-Model checklist is the round-0
-  skeleton.
+  skeleton. The bar is OPERATIONALIZED, not just named: the D2 litmus
+  ("if v3/src were deleted and rewritten from the packets, would this
+  row still be true and decidable?") and the In/Out boundary lists
+  ride into the DraftContract/contract-draft-template texts.
 - **FC-C2** The artifact follows contract-draft-template.md exactly
   (docs win); every normative statement is a C-row — prose is
   non-normative by declaration, and an iff-clause found in prose is a
   review finding, never a legal edit path.
 - **FC-C3** The draft loop = the packet loop minus `split` (a draft
   split is STOP `2:draft-split`); watchdog 8; tier 0 = draft-lint.
+  The lens scope for drafts is stated: the substrate lens FULLY
+  applies (probes are tree-independent), embedding-class checks are
+  n/a — without this, FC-A2's "all five lenses" is uninstantiable on
+  a draft.
 - **FC-C4** Ratification and RE-ratification are permanently human.
   The record is `{date, arms, commit}` — the recorded sha binds
   CONTENT, not the record (the block lands in a follow-up commit); a
-  reopen runs the two-commit choreography through the transient
+  reopen departs from `ratified` ONLY (a `realized` draft is
+  chapter-closed — a post-close change is a STOP, not a lifecycle,
+  §7.3) and runs the two-commit choreography through the transient
   `reopened` status (equality suspended ONLY there; packet refs into
   a reopened draft go loud-red for the window; ZERO reopened drafts
   at packet approve, chapter close, and the flip — tier-0 reportable,
@@ -165,6 +206,11 @@ of these is itself a finding.
 - **FC-C5** At chapter close the boundary review fills the realized map
   and flips status in place, in ONE act (ANY map row on a non-realized
   status is red); the file never moves; row IDs never change.
+- **FC-C6** The draft metrics one-liners (rounds to ratify;
+  new-decision row count; post-ratification reopenings = ratification
+  blocks beyond the first) are recorded at ratification and at close
+  — form home: contract-draft-template; procedure: DraftContract (D2:
+  the "expected 2–3 rounds" prediction is testable only if measured).
 
 ## FC-D — contract-draft-template.md (new, the form authority)
 
@@ -177,8 +223,9 @@ of these is itself a finding.
   exactly ONE contract_draft meta block ({chapter, surface, status}
   exact keyset; status draft|ratified|reopened|realized; filename
   ch<N>-<surface>-contract.md MATCHES chapter/surface); C-rows
-  (unique ids, NO leading zeros — ids are exact strings;
-  ratified-or-later requires ≥1 row); ratification blocks (exact
+  (DISCOVERED as table rows whose FIRST cell is C<n>, fenced code
+  excluded — the lint's stated claim; unique ids, NO leading zeros —
+  ids are exact strings; ratified-or-later requires ≥1 row); ratification blocks (exact
   keyset {date, arms, commit}: YYYY-MM-DD date, nonempty string-list
   arms, 7–40 LOWERCASE-hex commit — shape-checked on EVERY block,
   while the COMMIT-object resolution and the equality check run on
@@ -192,8 +239,12 @@ of these is itself a finding.
   line-oriented CommonMark scanner (quoted fences are material).
   *Hostile:* nothing in the template may describe a field the lint
   cannot see, without marking it panel-owned — and the mirror rule
-  cuts both ways: a lint check the template does not document makes
-  the LINT the bug (FC-D1).
+  cuts both ways FOR THE DRAFT-ARTIFACT FORM CHECKS: a form check the
+  template does not document makes the LINT the bug (FC-D1). The
+  lint's non-form checks (the reopened gate form, the post-build
+  audit) sit OUTSIDE this mirror — their homes are named in FC-X3
+  (fold round 2: the unscoped clause would have made them "the lint
+  is the bug" by definition).
 
 ## FC-E — task-packet-template.md §2 rewrite
 
@@ -203,6 +254,13 @@ of these is itself a finding.
   panel/verdict form — so the docs-win rule can never resurrect the
   old rubric. *Hostile:* an agent reading ONLY §2 (never the
   workflows) must reach the same process.
+- **FC-E2** Template §1/§1a's self-obsoleting sentences flip IN THE
+  SAME COMMIT (the adopted status-flip sweep rule: every file stating
+  the old status): the `stops[].type` registry pointer turns to
+  README; the two "lands with the Phase-1 flip" sentences rewrite to
+  the landed state; and §1 gains the packet-header classification
+  line's form definition (case verdict + one-line derivation —
+  FC-B1's form home).
 
 ## FC-F — README §4–§6 + §5.5
 
@@ -214,10 +272,17 @@ of these is itself a finding.
   header comment, an addition to the §5 item-8 file list discovered by
   this enumeration), the draft phase in the build loop incl. the
   `reopened` lifecycle's gate rule (zero reopened drafts at packet
-  approve / chapter close / the flip), the post-build audit's
+  approve / chapter close / the flip), the TIER-0 GATE INVENTORY
+  (packet-lint fold-time + the zero-reopened gate form, coverage,
+  drift, adr-check, substrate-probe scripts — D4's list, so FC-A2's
+  "every tier-0 gate green" is enumerable), the post-build audit's
   INVOCATION point (after the build commit lands, the loop runs
-  `--post-build` with that commit's sha — CI cannot run it, it has no
-  sha; without a process home the audit is orphaned), the routing
+  `--post-build` with that commit's sha — NO CI surface runs this
+  mode today, CI runs the plain lint [fold round 2: "CI cannot" was
+  too strong]; without a process home the audit is orphaned), the
+  transitional cross-model-arms convention (the user's manual arms
+  play phase 2 until pairflow doc-bubbles arrive; no formal stop
+  criterion, retires as trust builds), the routing
   rule's third row (shape → contract-draft), the Amendment-1 §7.4
   process rules WITH the stated threat model (fix-all scope, tier-0
   scoping, effort/truth; one operator + review-gated agents — the
@@ -239,12 +304,21 @@ of these is itself a finding.
 - **FC-F3** *Hostile:* an agent reading ONLY ONE of the three authority
   surfaces must reach the same rules — no surface carries a rule the
   others contradict or omit in a direction-changing way.
+- **FC-F4** README §8 (the skill section) sweeps in the same commit:
+  its "the skill stops at 'ready for pre-approval'" sentence rewrites
+  to the loop form — the §5 item-8 round-2 class (README-vs-itself)
+  regenerated one section past FC-F's §4–§6 scope; the status-flip
+  sweep rule binds EVERY README section stating the old flow.
 
 ## FC-G — AGENTS.md v3 section
 
 - **FC-G1** The verdict sentence is replaced by the matrix summary
   (STOPs + flag-bearing approves are the user's; refine + in-chapter
-  split are the loop's); "never build before approve" and "chapters
+  split are the loop's); AGENTS.md's "authoring STOPS at 'ready for
+  pre-approval'" clause rewrites to the loop form IN THE SAME WORDS
+  as FC-H1's skill-side sentence (FC-F3's identical-restatement test
+  binds the pair — fold round 2: the asymmetry was the exact gap that
+  test exists for); "never build before approve" and "chapters
   start on the user's go" SURVIVE unchanged; never-git-push survives
   (Safety section untouched).
 
@@ -255,6 +329,11 @@ of these is itself a finding.
   the loop form (iterates refine/split; stops at approve/STOPs);
   first-of-a-kind stop survives as a calibration-stage rule (its
   canonical statement moves to README per FC-F1; the skill mirrors).
+- **FC-H2** The skill's LearnedRules registry is deliberately NOT
+  touched by the flip — the registry changes at chapter boundaries
+  only (its own discipline); its v1-vocabulary rows (e.g.
+  R-FIRST-STOP's "pre-approve" / "flow mode") are boundary work,
+  stated here so a single-surface hostile read does not trip on them.
 
 ## FC-I — plan.md
 
@@ -262,7 +341,9 @@ of these is itself a finding.
   from ch8 ratifications); §7.7's P3/P4 rows gain pre-registered
   predictions: P3 `projection` (sources: P1/P2 packet contracts + plan
   §7.4), P4 `projection` (the six-precedent CLI class + §7.5) — BEFORE
-  P3 authoring starts.
+  P3 authoring starts. A prediction/discovery mismatch is itself a
+  signal and routes to a friction-log line (D1); the authoring-time
+  discovery is always the authority.
 
 ## FC-X — cross-cutting
 
@@ -324,3 +405,45 @@ per the §7.4 effort/truth rule:**
   source class: preserved live text).
 
 State: awaiting the arms' re-run on these bytes.
+
+**Fold round 2 (2026-07-09): two arms — 3 + 14 findings, overlapping;
+all folded (two narrowed with reasons):**
+
+- FC-B1 rewritten coherently (arm 1 High + arm 2 #7 — the fold-1 fix
+  both contradicted itself and reproduced the under-enumeration
+  class): THREE authoring-time machine blocks incl. `ledger_slice`;
+  Route lines are prose; `packet_metrics` is close-time; the header
+  classification line got its form home (FC-E2).
+- The status-flip sweep completed (arm 2 #1–2): FC-E2 (template
+  §1/§1a self-obsoleting sentences + registry pointer), FC-F4
+  (README §8's old-flow sentence — the round-2 README-vs-itself
+  class one section past FC-F's scope), FC-G1 (the AGENTS.md
+  authoring-stops clause, bound to FC-H1's wording by FC-F3's test).
+- FC-A2: fresh-context sub-agents joined the "full" definition (the
+  panel's anti-self-review mechanism — the author's context never
+  scores its own bytes clean) and "clean" is defined (zero fold-now;
+  routed/watchpoint findings ride without voiding).
+- FC-A8 (new): the ReviewPacket dual-mode split RETIRES into the
+  single panel engine — entailed by D4's one-engine/one-verdict-set,
+  disposition open to challenge.
+- FC-B7 (new): the AuthorPacket edit-mode declaration (unlisted live
+  text survives unless it contradicts the matrix or the carrier).
+- Unclaimed ratified rules homed: reopen-from-ratified-only (FC-C4),
+  the tree-independence litmus + In/Out lists (FC-C1), draft metrics
+  (new FC-C6), draft lens scope (FC-C3), phase-2 expressibility
+  (FC-A4), transitional arms + tier-0 gate inventory + CI-wording
+  correction ("no CI surface runs this mode today" — arm 1's
+  precision) (FC-F1), calibration-permissive threshold (FC-B2),
+  prediction-mismatch routing (FC-I1), bucket-coincidence subsumption
+  stated (FC-B3).
+- FC-D2: the C-row DISCOVERY rule added (first-cell, fences
+  excluded); the "mirror cuts both ways" clause SCOPED to the
+  draft-artifact form checks (unscoped, the lint's gate/audit checks
+  would be "the lint is the bug" by definition — arm 2 #11).
+- FC-H2 (new): the LearnedRules registry's deliberate non-touch
+  stated (v1-vocabulary rows are boundary work).
+- NARROWED: plan §7.7's "pre-approve" column and FC-A5's absorbed
+  mirror-duty stay as-is (both arms' considered-not-finding lists
+  concur).
+
+State: awaiting the arms' round-3 run on these bytes.
