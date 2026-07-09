@@ -201,8 +201,14 @@ of these is itself a finding.
   manifest rows present, OR any D5-routed flags entry whose
   ratification point IS the approve — `declined` always (D5: a
   human-ratified standing decision with NO revisit fallback) and
-  parked proposals batch-ratified at approve (D3); watchpoints do not
-  flag-bear (FC-A2's clean rule untouched). Fold round 8: the
+  parked proposals batch-ratified at approve (D3); watchpoint STATUS
+  ALONE does not flag-bear (an unrouted observation riding as a note
+  — FC-A2's clean rule untouched), but the ROUTE decides, never the
+  finding's original taxonomy class: a watchpoint routed `declined`
+  flag-bears like any declined (fold round 9: D4 maps watchpoints to
+  D5 routes, so "watchpoints do not flag-bear" unqualified reopened
+  the round-8 hole for a zero-new-decision packet carrying a declined
+  flag). Fold round 8: the
   manifest-only definition let a zero-new-decision packet carrying a
   `declined` flag read as flag-FREE — in the deferred auto-approve
   era its ONLY ratification act would have delegated, silently
@@ -238,8 +244,9 @@ of these is itself a finding.
   deeper → STOP).
 - **FC-B4** The loop iterates refine/split autonomously; it stops at
   approve — flag-free: human in calibration, delegation deferred per
-  the D6 clause FC-F1 inlines; flag-BEARING (manifest-defined,
-  FC-B1): STOP 4, human ALWAYS,
+  the D6 clause FC-F1 inlines; flag-BEARING (per FC-B1's definition —
+  fold round 9: "manifest-defined" was stale after round 8 widened
+  the definition to approve-ratified D5 routes): STOP 4, human ALWAYS,
   at every trust stage (fold round 4: the compressed "human in
   calibration" licensed reading ALL approves as delegable with trust)
   — and at every STOP. *Temporal:* the 0a next-step derivation + its
@@ -507,7 +514,19 @@ of these is itself a finding.
   unpointed inventory made a strict reader's approve unreachable and
   let a loose reader pick their own set — D4's list, so FC-A2's
   "every approval-time tier-0 gate green" resolves against the
-  approve-time column, membership NAMED, never reader-chosen), the post-build audit's
+  approve-time column, membership NAMED, never reader-chosen. Fold
+  round 9 — the split needs an EXECUTABLE surface, no such
+  approve-time coverage mode exists today: check_coverage.py's
+  default run hard-fails on the unit-map lock and `pnpm v3:coverage`
+  runs only that default, so the coverage split lands as a small
+  PRE-FLIP mechanical-substrate change, "Phase 0.2" — a gate-point
+  mode that skips the owned==realized lock (flag name is
+  implementation detail; the CLAIM is that the approve-time column's
+  coverage entry is runnable), with the README naming which mode runs
+  at which point; UNTIL that mode lands, coverage as a whole sits
+  build-close and the fold-time slice-declaration validation is the
+  panel's duty — the inventory names runnable gates, never
+  aspirations), the post-build audit's
   INVOCATION point (after the build commit lands, the loop runs
   `--post-build` with that commit's sha — NO CI surface runs this
   mode today, CI runs the plain lint [fold round 2: "CI cannot" was
@@ -1085,3 +1104,25 @@ State: awaiting the arms' round-8 run on these bytes.
   FC-G1 way (survive EXCEPT for the named additions/sweeps).
 
 State: awaiting the arms' round-9 run on these bytes.
+
+**Fold round 9 (2026-07-09): one arm, two findings; both folded:**
+
+- The round-8 coverage gate-point split claimed an approve-time
+  coverage mode that DOES NOT EXIST as an executable surface (the
+  default run hard-fails on the unit-map lock; the bridge runs only
+  the default). Folded as: the split lands as a small pre-flip
+  mechanical-substrate change ("Phase 0.2" — a gate-point mode
+  skipping the owned==realized lock), the README names which mode
+  runs where, and UNTIL it lands coverage as a whole sits build-close
+  — the inventory names runnable gates, never aspirations. The
+  drop-the-claim alternative was declined: it would remove the
+  slice-declaration's fold-time validation from the approve gate
+  permanently instead of temporarily.
+- The flag-bearing wording ambiguity closed: watchpoint STATUS ALONE
+  does not flag-bear, but the ROUTE decides — a watchpoint routed
+  `declined` flag-bears like any declined (D4 maps watchpoints to D5
+  routes; unqualified, the sentence reopened the round-8 hole); and
+  FC-B4's stale "manifest-defined" now defers to FC-B1's widened
+  definition.
+
+State: awaiting the arms' round-10 run on these bytes.
