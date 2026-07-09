@@ -877,7 +877,7 @@ residue was exactly the part encoded in prose):
 {
   "packet_rows": {
     "rows": [
-      { "id": "O1", "class": "anchored", "refs": ["draft:ch7-diag#C3"] },
+      { "id": "O1", "class": "anchored", "refs": ["contract:ch7-diag#C3"] },
       { "id": "O2", "class": "derived", "refs": ["ADR-006", "prose:plan §7.2"] },
       { "id": "O3", "class": "new-decision", "refs": [] }
     ]
@@ -887,8 +887,8 @@ residue was exactly the part encoded in prose):
 
 Rules (all tier-0): row ids unique; `class` in the D1 enum;
 `anchored`/`derived` carry ≥1 ref, `new-decision` carries none; every
-ref either parses EXACTLY as a strict form (`draft:chN-<surface>#Cn` →
-ratified-or-later draft row; `ADR-NNN` → file exists) and
+ref either parses EXACTLY as a strict form (`contract:chN-<surface>#Cn`
+→ ratified-or-later contract-draft row; `ADR-NNN` → file exists) and
 machine-resolves, or carries the explicit `prose:` prefix declaring it
 unverified provenance (`"prose:plan §7.2"`) — anything else is RED
 (fold round 1: silent pass-through admitted typo-bypass, `ADR006`
@@ -1167,3 +1167,17 @@ token + one watchpoint), arm 1 refine (two findings); all folded:**
   this fold commit is therefore the content commit the ratification
   act records (§7.6 step 1's self-maintaining definition: this
   record itself is the last §7-body change).
+
+**Fold round 4 (2026-07-09): USER-raised, one finding; folded:**
+
+- **`draft:` ref-prefix collides with the status enum** (the user,
+  reading the ratified-form text): the token named the ref TYPE while
+  `draft` is also the status value the target must NOT have — the
+  legal reading was "a `draft:` ref may only point at a non-`draft`
+  file". FOLDED as a rename, semantics unchanged: the strict form is
+  **`contract:chN-<surface>#Cn`** — "contract" is the artifact's
+  durable identity across its whole lifecycle, carrying no status
+  connotation. The rename supersedes the arms' clean verdict on the
+  prior bytes by the user's own authority (their ratification was
+  pre-declared conditional on this fold), and this commit becomes the
+  recorded content commit.
