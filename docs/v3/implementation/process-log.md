@@ -666,3 +666,20 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   1330-line/45-dim lint guarded a gate with ZERO traffic — armor
   preceded use because the fix-all reflex ran where a threat-model
   judgment belonged
+- 2026-07-09 · process-v2 Amendment 1 (fold rounds 1–2) · both arms
+  reviewed the proposed amendment; the round-1 blocker — found by
+  BOTH independently — was the reopen red-window: the new carrier
+  reproducing its own "unparseable intermediate version" class,
+  closed by the `reopened` status (every choreography commit green;
+  accepted-transient-red declined: red-as-lifecycle trains the
+  operator to ignore red; round 2 added the transience rule — zero
+  reopened drafts at approve/chapter-close/flip gates). A THIRD RULE
+  joined §7.4, USER-stated: **fix-all routes effort, never truth** —
+  per-finding dispositions (folded / narrowed / declined with
+  reasons), explicit reconciliation when feedback sources conflict,
+  genuinely open choices escalate as STOPs; first exercised in the
+  §7.7 record itself (the arms' remedies diverged twice; the chosen
+  sides carry their reasons). Round-2 micro-lesson: the §7.2
+  canonical EXAMPLE went red under the rule minted two paragraphs
+  below it — the rule-change-sweeps-every-statement discipline
+  includes examples

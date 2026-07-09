@@ -826,9 +826,10 @@ the trigger is a live STOP `2:contested-ratified-vs-reality`, raised by
 the USER against the ratified §5 mechanics: the first exercise of that
 STOP member on the process artifacts themselves). Review: fold round 1
 (2026-07-09) — two arms, both refine; per-finding dispositions in
-§7.7. The ratification act itself follows Carrier B (finding F
-adopted): the status flip records this amendment's final content
-commit in a follow-up commit.
+§7.7. The ratification act itself follows Carrier B in FORM (finding
+F adopted; the payload is defined narrowly in §7.6 step 1): the
+status flip records this amendment's final content commit in a
+follow-up commit.
 
 ### 7.1 The finding
 
@@ -877,7 +878,7 @@ residue was exactly the part encoded in prose):
   "packet_rows": {
     "rows": [
       { "id": "O1", "class": "anchored", "refs": ["draft:ch7-diag#C3"] },
-      { "id": "O2", "class": "derived", "refs": ["ADR-006", "plan §7.2"] },
+      { "id": "O2", "class": "derived", "refs": ["ADR-006", "prose:plan §7.2"] },
       { "id": "O3", "class": "new-decision", "refs": [] }
     ]
   }
@@ -968,6 +969,16 @@ realized-map row present ⇔ status `realized` AND the map is complete
 (the boundary review fills the map and flips the status in ONE act —
 a partial map, on any status, is red; fold round 1 closed the
 partial-map-on-ratified hole).
+
+**`reopened` is a transient STOP-artifact, never a resting state**
+(fold round 2): it exists only while its triggering STOP 2 is being
+resolved — the human is in the loop by construction. Because
+HEAD-only rules cannot see duration, the guard is a GATE condition,
+not a lint error: packet approve, chapter close, and the Phase-1 flip
+each require ZERO reopened drafts (tier-0 reportable — the lint lists
+reopened drafts; those gates require the list empty). A reopened
+draft parked with no active resolution is a process defect the next
+gate surfaces.
 
 A FULL downgrade (blocks deleted + status reset to `draft`) is
 state-consistent by construction and machine-caught exactly where it
@@ -1066,8 +1077,14 @@ revised file.
 
 ### 7.6 Sequencing
 
-1. This amendment is ratified (human act — resolves the STOP; the
-   flip to ratified records the final content commit per Carrier B).
+1. This amendment is ratified (human act — resolves the STOP). The
+   act follows Carrier B in FORM, defined narrowly for a design doc
+   (fold round 2 — no C-row payload exists here): the bound surface
+   is §7's text as of the recorded commit (the last commit that
+   changed §7's body), the ratifying commit touches ONLY the status
+   lines, and verification is the human's diff review, not tier-0 —
+   the design doc is not a lint surface and becomes history at the
+   flip anyway.
 2. **Phase 0.1, one commit:** lint rewrite per §7.5 + template §1/§1a
    block swap.
 3. flip-claims revision → arm review → the Phase-1 flip, as planned.
@@ -1112,3 +1129,28 @@ declined, source conflicts reconciled explicitly):**
 - **Considered, not folded:** the `packet_metrics.provenance`
   duplicate home stays (both arms concurring it is defensible), now
   justified in place (§7.2).
+
+**Fold round 2 (2026-07-09): arm 2 conditional-approve (one fold-now
+token + one watchpoint), arm 1 refine (two findings); all folded:**
+
+- **§7.2 example red under its own rule** (arm 2, G): FOLDED verbatim
+  — `"prose:plan §7.2"`; the sweep-every-statement rule includes the
+  canonical EXAMPLE.
+- **The amendment's own ratification payload under-defined** (arm 1):
+  FOLDED — Carrier B in FORM, defined narrowly in §7.6 step 1 (bound
+  surface = §7's body at the recorded commit; the ratifying commit
+  touches only the status lines; verification is human diff review,
+  not tier-0). Without this, the "final content" wording would have
+  re-imported the self-reference ambiguity in words instead of
+  hashes.
+- **`reopened` as a potential resting state** (arm 1): FOLDED — the
+  transience rule + the zero-reopened GATE condition at packet
+  approve, chapter close, and the flip (§7.3).
+- **Process-log staleness** (arm 2, H, watchpoint): FOLDED now rather
+  than riding the ratification commit — the provenance bullet
+  appended to the log.
+- Arm 2's conditional approve ("G alone → approve on the new bytes")
+  LAPSES by its own hash discipline: arm 1's two folds also changed
+  the bytes. State: all round-2 findings folded; awaiting a
+  confirming round or the user's direct ratification act (the base
+  document's own ratification precedent).
