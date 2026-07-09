@@ -918,3 +918,25 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   and hit a red they were not told about. Both Lows are maintenance
   of earlier folds' own consequences — the round's shape suggests
   the finding stream is converging to mirror-upkeep
+- 2026-07-09 · flip-claims review CLOSED by watchdog STOP (the
+  user's decision after fold round 10) · the claim enumeration ran
+  TEN fold rounds — past the packet-loop's own 8-round cap, which
+  this meta-artifact's review never formally carried; the file grew
+  189 → ~1180 lines THROUGH the review meant to close it, because
+  every fold added claim surface and rounds 7–10 found ONLY
+  fold-residue (the folds' own text defects). RULE MINTED: a
+  meta-artifact's adversarial review gets a WATCHDOG like any loop —
+  termination comes from a rule, never from adversarial reviewers
+  "running dry" (they do not: generating a plausible finding is
+  cheap; the signal is the CLASS composition of the round, not the
+  count). Realness grading over the ~90-finding arc (the user's
+  question): ~15–20% reproducible would-have-bitten defects carrying
+  most of the value (reopen red-window, coverage owned==realized
+  lock at approve, selftest fixture invalidity, wrong-commit audit,
+  the FC-B2 trigger list), ~30% code-vs-claim gaps at the threat
+  model's edge, ~30–40% map-internal fold-residue concentrated late,
+  ~10–15% wording. Catch-point economics: the residual real findings
+  surface at the same cost on the LANDED texts (post-flip audit,
+  FC-X1) — stopping is not a claim that findings are unreal.
+  Sequence from here: Phase 0.2 (coverage gate-point mode) → the
+  flip commit → the post-flip audit

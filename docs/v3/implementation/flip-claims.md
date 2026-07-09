@@ -1,6 +1,10 @@
 # Phase-1 Authority-Flip — Claim Enumeration
 
-Status: **draft — for the two-arm review BEFORE the flip commit lands.**
+Status: **review CLOSED (watchdog STOP, 2026-07-09, the user's
+decision after fold round 10)** — the flip is written to satisfy
+exactly these rows; after landing, this file is the flip's audit
+record. Residual findings land on the post-flip audit (FC-X1) against
+the REAL texts — the cheaper catch-point.
 Date: 2026-07-09.
 Revision 1 (2026-07-09): aligned to **Amendment 1** (process-v2-design.md
 §7, ratified — manifest + git-native ratification) and the Phase-0.1
@@ -1176,6 +1180,11 @@ that triggered the watchdog assessment):**
   Phase 2 starts"; the adr/ "confirms or moves" conditional) rewrite
   to the landed state in the same edit — the §6-pointer precedent.
 
-State: awaiting the user's watchdog decision (round 11 vs
-STOP-and-flip); the enumeration is past the packet-loop's own 8-round
-cap, and rounds 7–10 folded ONLY fold-residue classes.
+State: **REVIEW CLOSED — watchdog STOP by the user's decision
+(2026-07-09).** The enumeration ran past the packet-loop's own 8-round
+cap; rounds 7–10 folded only fold-residue classes; the realness
+grading (the user's question, answered in-session) showed the
+remaining catch-point economics favour the landed texts. Sequence
+from here: Phase 0.2 (the coverage gate-point mode) → the flip commit
+written to these rows → the post-flip audit (FC-X1: the arms or the
+user, landed-texts-vs-claims, before any packet work).
