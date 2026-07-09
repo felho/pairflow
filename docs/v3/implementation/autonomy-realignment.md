@@ -175,3 +175,39 @@ risk gate may be dropped without a stated reason.
   "(the Phase-2 pairflow integration)" parenthetical DELETED (it was
   a bridge to the retired name, reintroducing the collision AL-9
   removed).
+
+## Addendum — round 4 (2026-07-10, one arm review on round 3)
+
+- **AL-13 — AL-11's retro-example was wrong under its OWN rule, and
+  the template line said the opposite of the rule's letter:** ch7-P1
+  itself INTRODUCED the recording sink
+  (`v3/src/testkit/diagnostics.ts`, a new file — a testkit-contract
+  change), so under the narrowed rule P1's testkit involvement
+  COUNTS: three surfaces, hard stop 2 trips. P1 is not the case the
+  narrowing saves; it is the TRIPS-WITH-CLOSURE-PROOF case — the
+  gate working as intended (natural closure, ratified good as one
+  packet). The narrowing stands on the general argument ALONE: every
+  packet has tests, so counting the mere drive makes three surfaces
+  trivial. The template line is reframed to say exactly this, with
+  P1 as the example of the OTHER branch.
+- **AL-14 — the completeness claim, falsified a second time, changes
+  FORM: a universal negative becomes a CLOSED exclusion list with
+  reasons.** The two elements round 3 still missed: (a) the v1
+  scan's external/integration role — NOT empty in v3 (the kernel's
+  dispatch/egress surface: `deriveDispatchIntent`,
+  `ports/egress.ts`, the fake egress adapter) — is CARRIED into the
+  scan role list; the v1 workflow/orchestration role stays out WITH
+  its reason: the v3 kernel IS the orchestrator — that consumption
+  is already the execution-consumer role; a separate role would
+  double-count it. (b) The v1 "For Plans" tail is carried as one
+  sentence: the same gate informs the CHAPTER's packet cut at
+  ratification (the plan §N.7 table), and no numeric score is
+  persisted anywhere — the record is always the resulting
+  split/dependency shape. The exclusion list, CLOSED: the numeric
+  scoring wrapper (reason in AL-7) and the workflow/orchestration
+  scan role (reason above). A future gap falsifies THIS LIST, not a
+  prose adverb.
+- **AL-15 — the "substrate-resting row" coinage gets its definition
+  pointer** (DraftContract §1.2 — a row resting on
+  driver/OS/filesystem behavior carries an in-session probe result
+  or a concrete cited source).
