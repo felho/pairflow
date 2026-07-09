@@ -84,12 +84,92 @@ and the "can it become data?" tests.>
 - Entrypoints: <...>
 - Mutation boundary: <the files this task may change; extend-don't-fork notes>
 
+The machine face of the mutation boundary (v2 — its presence is what
+marks a packet as v2 for the lint; the post-build check compares the
+packet commit's changed files against it):
+
+```json
+{
+  "mutation_boundary": {
+    "files": ["<repo-relative path>", "..."]
+  }
+}
+```
+
+## Provenance (v2 — the D1 classification's machine face)
+
+Every canonical row carries an inline mark: `[P:anchored <ref>]` /
+`[P:derived <ref[, ref…]>]` / `[P:new-decision]`. Strictly resolved ref
+forms: `draft:ch<N>-<surface>#C<n>` (a ratified-or-later contract-draft
+row) and `ADR-<NNN>`; other forms (ledger §, plan §, packet §) are
+pass-through. The counts below must equal the inline marks (lint-locked):
+
+```json
+{
+  "provenance": {
+    "anchored": 0,
+    "derived": 0,
+    "new_decision": 0
+  }
+}
+```
+
+## Pre-approval flags
+
+<Every flag, narrowing, or decision point the summary will raise lives
+HERE in full — the summary may only reference it. Each flag carries a
+route:> `Route: fold-now | boundary-review | later-chapter | declined`
+
 ## Acceptance
 - Contract tests: <CT-* ids this packet must turn green>
 - Checks: <CHK-* ids in force>
 - Drift tests green (standing, unconditional — PI-3)
 - Standing review rules in force: <REV-* ids from §3 applicable here>
+
+## Build record
+
+<Filled at build close: rounds, test delta, surprises — prose; plus the
+machine block. `stops[].type` comes from the canonical STOP member-token
+registry (process-v2-design.md D3, until the Phase-1 flip moves it into
+README). `baseline_note` (optional) is the ONLY home for unit/regime
+qualifiers — never ad hoc keys.>
+
+```json
+{
+  "packet_metrics": {
+    "class": "<packet class>",
+    "prediction": { "predicted": "projection", "reasoning": "<why, from ratification>", "discovered": "projection" },
+    "provenance": { "anchored": 0, "derived": 0, "new_decision": 0 },
+    "rounds": { "review": 0, "doc_refinement": 0, "implementation": 0 },
+    "stops": [],
+    "detector_misses": [],
+    "learned": "<one-line hook — the process-log carries the detail>"
+  }
+}
+```
 ````
+
+## 1a. The v2 machine blocks (process-v2-design.md §5, Phase 0)
+
+Additive layer, landed 2026-07-09 — the §2 checklist itself is rewritten
+only by the Phase-1 authority-flip commit:
+
+- **A packet is v2 iff it carries the `mutation_boundary` machine
+  block.** The 16 pre-v2 packets (ch4–ch7-P2) are GRANDFATHERED: the
+  lint reports and skips them; v2 obligations bind from the ch7-P3
+  pilot onward, never retroactively.
+- **Lint:** `pnpm v3:packet-lint` (selftest + live; wired into the CI
+  surfaces). Fold-time checks: machine-block syntax, provenance
+  bookkeeping, strict cross-refs (draft rows ratified-or-later,
+  ADR files), lane id registry + range/scalar consistency.
+  Post-build check: `check_packet.py --post-build <commit>
+  --packet <path>` — the commit's changed files must stay inside the
+  declared mutation boundary (plus the packet file itself).
+- **Contract-drafts** (`docs/v3/implementation/contracts/`) are linted
+  by the same tool per the D2 artifact contract (meta block, C-row
+  registry, canonical-row-payload hash against the latest ratification
+  block, realized-map completeness). The docs-side
+  `contract-draft-template.md` lands with the Phase-1 flip.
 
 ## 2. The projection checklist (compiling a packet)
 
