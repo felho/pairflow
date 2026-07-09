@@ -9,11 +9,14 @@ culture).
 
 Packet source: docs/v3/implementation/packets/*.md (README.md excluded).
 A packet is V2 iff it carries a fenced ```json block whose top-level key
-is "mutation_boundary" — pre-v2 packets are GRANDFATHERED (reported and
-SKIPPED entirely, parse noise included); a packet that NAMES
-mutation_boundary in its raw text stays v2 even when that fence is
-malformed (no silent demotion). The v2 obligations bind from the ch7-P3
-pilot onward, never retroactively.
+is "mutation_boundary". Grandfathering is a CLOSED set: only the 16
+packets that existed before the v2 flip (hardcoded by filename in
+GRANDFATHERED_PACKETS, never extended) may lack the marker — those are
+SKIPPED entirely (parse noise included); ANY other packet without the
+marker is red, because the v2 obligations bind from the ch7-P3 pilot
+onward (task-packet-template.md §1a) — never retroactively, never
+optionally. A packet that NAMES mutation_boundary in its raw text stays
+v2 even when that fence is malformed (no silent demotion).
 
 V2 packet checks:
   - mutation_boundary block: {"mutation_boundary": {"files": [...]}} —
@@ -43,7 +46,10 @@ V2 packet checks:
     of the mutation boundary read from the PACKET'S BYTES AT THAT
     COMMIT plus the packet file itself — audit reruns are pinned; a
     later working-tree boundary edit cannot change an old verdict (the
-    one packet-lint check that cannot run at fold time).
+    one packet-lint check that cannot run at fold time). Merge commits
+    are rejected outright: their diff-tree change list is empty (a
+    false-green audit) and packet build commits are single-parent by
+    the one-commit rule anyway.
 
 Draft source: docs/v3/implementation/contracts/*.md (README.md
 excluded; a missing directory means zero drafts, which is fine).
@@ -130,6 +136,31 @@ DRAFT_NAME_RE = re.compile(r"^(ch\d+)-([a-z0-9-]+)-contract\.md$")
 
 # Family "P" collides with packet names (ch7-P2); never a lane family.
 EXCLUDED_LANE_FAMILIES = {"P"}
+
+# The 16 packets that existed BEFORE the v2 flip. The v2 obligations
+# bind from the ch7-P3 pilot onward (task-packet-template.md §1a), so
+# this is a CLOSED historical set — it is NEVER extended; every later
+# packet must carry the mutation_boundary machine block or go red.
+GRANDFATHERED_PACKETS = frozenset(
+    {
+        "ch4-p1-domain-and-ports.md",
+        "ch4-p2-sqlite-store.md",
+        "ch4-p3-kernel-handle-ingress.md",
+        "ch4-p4-bootstrap-floor-trace.md",
+        "ch5-p1-drift-suite.md",
+        "ch5-p2-invariant-disposition-map.md",
+        "ch5-p3-trace-harness.md",
+        "ch5-p4-digest-slice.md",
+        "ch5-p5-contract-tests.md",
+        "ch6-p1-timeline-read.md",
+        "ch6-p2-tail-seed.md",
+        "ch6-p3-debug-bundle.md",
+        "ch6-p4a-operator-cli.md",
+        "ch6-p4b-dev-cli.md",
+        "ch7-p1-diag-channel-core.md",
+        "ch7-p2-diag-store.md",
+    }
+)
 
 PACKET_METRICS_KEYS = {
     "class",
@@ -413,16 +444,25 @@ def check_packet(
     """Returns True iff the packet is v2 (and was linted)."""
     text = path.read_text(encoding="utf-8")
     # Grandfathering must be decided BEFORE any error is reported: a
-    # pre-v2 packet with an unrelated malformed fence is SKIPPED, not
-    # failed. The reverse hole is closed textually — a packet whose
-    # mutation_boundary fence itself is malformed still counts as v2
-    # (the raw text names the marker), so it cannot silently demote
-    # itself to grandfathered.
+    # WHITELISTED pre-v2 packet with an unrelated malformed fence is
+    # SKIPPED, not failed. The reverse hole is closed textually — a
+    # packet whose mutation_boundary fence itself is malformed still
+    # counts as v2 (the raw text names the marker), so it cannot
+    # silently demote itself to grandfathered. And grandfathering is a
+    # CLOSED set: an unmarked packet OUTSIDE the whitelist is red, not
+    # skipped — a future packet cannot dodge its v2 obligations.
     probe = Checker()
     blocks = json_blocks(text, path.name, probe)
     boundaries = block_by_key(blocks, "mutation_boundary")
     if not boundaries and "mutation_boundary" not in text:
-        return False  # pre-v2: grandfathered, parse noise suppressed
+        if path.name in GRANDFATHERED_PACKETS:
+            return False  # pre-v2: grandfathered, parse noise suppressed
+        checker.error(
+            f"{path.name}: post-v2 packet without the mutation_boundary "
+            f"machine block — v2 obligations bind from ch7-P3 onward; "
+            f"grandfathering is closed"
+        )
+        return True
     checker.errors.extend(probe.errors)
     if not boundaries:
         checker.error(
@@ -676,6 +716,20 @@ def check_post_build(packet_path: Path, commit: str, checker: Checker) -> None:
         return
     allowed = set(boundaries[0]["files"])
     allowed.add(rel)
+    # Merge commits yield an EMPTY diff-tree change list — a false-green
+    # audit; reject them outright (build commits are single-parent by
+    # the one-commit rule).
+    parents = subprocess.run(
+        ["git", "-C", str(root), "rev-list", "--parents", "-n", "1", commit],
+        capture_output=True,
+        text=True,
+    )
+    if parents.returncode == 0 and len(parents.stdout.split()) > 2:
+        checker.error(
+            f"--post-build: '{commit}' is a merge commit — audit the packet's "
+            f"own single-parent build commit (one-commit rule)"
+        )
+        return
     out = subprocess.run(
         ["git", "-C", str(root), "diff-tree", "--no-commit-id", "--name-only", "-r", commit],
         capture_output=True,
@@ -804,8 +858,9 @@ def git_rewrite_and_postbuild_selftest(green_draft: str, failures: list[str]) ->
         if not any("APPEND-ONLY" in e for e in checker.errors):
             failures.append("selftest dim NOT red: ratification-block-rewrite")
 
-    # 34-35: post-build — an out-of-boundary commit is red, and a LATER
-    # working-tree boundary edit must NOT rescue it (pinned bytes).
+    # 34-35, 41: post-build — an out-of-boundary commit is red, a LATER
+    # working-tree boundary edit must NOT rescue it (pinned bytes), and
+    # a MERGE commit must be rejected outright (empty diff-tree list).
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         pdir = root / "packets"
@@ -836,6 +891,34 @@ def git_rewrite_and_postbuild_selftest(green_draft: str, failures: list[str]) ->
         check_post_build(packet, "HEAD", checker)
         if not any("OUTSIDE" in e for e in checker.errors):
             failures.append("selftest dim NOT red: post-build-not-pinned")
+        # 41: a MERGE commit's diff-tree change list is empty, so an
+        # out-of-boundary change riding in on a merge would pass — the
+        # audit must reject merge commits outright.
+        branch = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            cwd=root,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        ok = run([["git", "checkout", "-q", "--", "."]], root)
+        ok = ok and run([["git", "checkout", "-q", "-b", "side", "HEAD~1"]], root)
+        (root / "z.txt").write_text("z", encoding="utf-8")
+        ok = ok and run(
+            [
+                git_base + ["add", "-A"],
+                git_base + ["commit", "-q", "-m", "side-outside"],
+                ["git", "checkout", "-q", branch],
+                git_base + ["merge", "-q", "--no-ff", "-m", "merge", "side"],
+            ],
+            root,
+        )
+        if not ok:
+            failures.append("selftest git fixture setup failed (merge)")
+            return
+        checker = Checker()
+        check_post_build(packet, "HEAD", checker)
+        if not any("merge commit" in e for e in checker.errors):
+            failures.append("selftest dim NOT red: post-build-merge-commit")
 
 
 def git_downgrade_selftest(green_draft: str, failures: list[str]) -> None:
@@ -1033,12 +1116,13 @@ def run_selftest() -> int:
         + '\n```json\n{"realized_map": {"C1": "landed", "C2": 7}}\n```\n',
     )
     # 31 pre-v2 packet with an unrelated malformed fence must PASS
-    # (grandfathered means SKIPPED, not failed)
+    # (grandfathered means SKIPPED, not failed — the fixture name must
+    # sit in the closed whitelist for grandfathering to apply)
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         (root / "packets").mkdir()
         (root / "contracts").mkdir()
-        (root / "packets" / "ch4-p1-old.md").write_text(
+        (root / "packets" / "ch4-p2-sqlite-store.md").write_text(
             "# old packet\n\n```json\n{broken\n```\n", encoding="utf-8"
         )
         if run_lint(root / "packets", root / "contracts", ADR_DIR) != 0:
@@ -1066,12 +1150,35 @@ def run_selftest() -> int:
     # 38 more than one packet_metrics block (D7: written once)
     metrics_block = green_packet[green_packet.index('```json\n{"packet_metrics"'):]
     expect_red("multiple-metrics-blocks", green_packet + "\n" + metrics_block, green_draft)
+    # 39 an unmarked packet whose name is NOT in the closed grandfather
+    # whitelist must go red — v2 obligations bind from ch7-P3 onward
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / "packets").mkdir()
+        (root / "contracts").mkdir()
+        (root / "packets" / "ch9-p9-future.md").write_text(
+            "# future packet without the mutation boundary marker\n", encoding="utf-8"
+        )
+        if run_lint(root / "packets", root / "contracts", ADR_DIR) == 0:
+            failures.append("selftest dim NOT red: post-v2-unmarked-packet")
+    # 40 an unmarked packet named EXACTLY like a whitelisted pre-v2
+    # packet must still PASS — the historical 16 stay grandfathered
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / "packets").mkdir()
+        (root / "contracts").mkdir()
+        (root / "packets" / "ch4-p1-domain-and-ports.md").write_text(
+            "# old packet without the mutation boundary marker\n", encoding="utf-8"
+        )
+        if run_lint(root / "packets", root / "contracts", ADR_DIR) != 0:
+            failures.append("selftest green NOT green: whitelisted unmarked packet failed")
     # 23-25 git integration: an UNCOMMITTED, a COMMITTED, and a MULTI-STEP
     # (ratified -> draft -> ratified) downgrade must all go red (the
     # HEAD-only form passed the committed case; the latest-edge form
     # passed the multi-step history).
     git_downgrade_selftest(green_draft, failures)
-    # 33-35 append-only ratification history + post-build pinning
+    # 33-35, 41 append-only ratification history + post-build pinning
+    # + merge-commit rejection
     git_rewrite_and_postbuild_selftest(green_draft, failures)
 
     # green must pass
@@ -1086,7 +1193,7 @@ def run_selftest() -> int:
 
     for f in failures:
         print(f"selftest FAIL: {f}", file=sys.stderr)
-    print(f"selftest: 38 red dims exercised, green fixture pass, {len(failures)} failure(s)")
+    print(f"selftest: 41 red dims exercised, green fixture pass, {len(failures)} failure(s)")
     return 1 if failures else 0
 
 
