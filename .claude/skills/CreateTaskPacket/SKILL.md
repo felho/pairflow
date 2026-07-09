@@ -55,9 +55,9 @@ lens duties).
   delegated, never inferred — an explicit act on named bytes). The authoring
   loop iterates refine and in-chapter split autonomously and stops at
   the approve and at every STOP — it never proceeds to build.
-- **First-of-a-kind stop** (a calibration-stage rule; canonical
-  statement: README §5.5): the first packet of a new task class is
-  human-approved regardless of trust stage.
+- **First-of-a-kind stop** (canonical statement: README §5.5): the
+  first packet of a new task class is human-approved regardless of
+  trust stage.
 - **Plan alignment is explicit:** a packet decision that contradicts ratified
   plan text flows UP into the plan in the SAME commit, marked
   "aligned at <packet-id> pre-approval" — never a silent divergence.

@@ -180,7 +180,13 @@ unit/regime qualifiers — never ad hoc keys.>
 
 Carrier per process-v2-design.md §7 (Amendment 1, ratified 2026-07-09
 — manifest + git-native ratification); the §2 checklist carries the
-process-v2 steps since the Phase-1 flip (2026-07-09). This section is
+process-v2 steps since the Phase-1 flip (2026-07-09). **Mirror rule
+(packet side):** §1 + this section are the canonical PACKET-form
+authority and the lint's packet form checks are their mechanical
+mirror — on a mismatch the TEMPLATE wins and the lint is the bug,
+scoped to form checks over declared data (the lint's gate/audit
+checks have their own homes: README §5.5 and the audit contract
+below). This section is
 the CANONICAL statement of the cross-cutting machine-block rules —
 duplicate JSON keys are parse errors, and fences follow the
 line-oriented CommonMark scanner (openers/closers may be indented 0–3

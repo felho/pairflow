@@ -295,7 +295,10 @@ records them):**
 **Flag-bearing, defined:** new-decision manifest rows present, OR any
 routed flags entry whose ratification point IS the approve —
 `declined` always, and parked proposals batch-ratified at approve.
-Watchpoint STATUS alone does not flag-bear; the ROUTE decides.
+Watchpoint STATUS alone does not flag-bear; the ROUTE decides. The
+manifest class ENTAILS the flags entry: a new-decision manifest row
+with no corresponding pre-approval flag is a packet defect (the rows
+RIDE as pre-approval flags).
 
 **Finding policy (fix-all):** every panel finding is fixed by default
 — Bayes (a fresh-context re-review re-finds unaddressed issues) and
@@ -313,11 +316,24 @@ live route. Routes exist ONLY for ownership misfit:
 | `later-chapter` | proposed plan-map row | ratified by the human at approve/boundary |
 | `declined` | packet flag, `declined — <reason>` | none BY DESIGN — a human-ratified standing decision |
 
+**Phase-2 obligation:** findings, flags, and routes stay EXPRESSIBLE
+in the severity ontology's language
+(`docs/reviewer-severity-ontology.md`: timing/layer) for when packets
+flow through pairflow doc-bubbles.
+
 **Threat model, stated once:** one operator plus review-gated agents
 on a single repo. The machine gates defend against agent drift and
 sloppiness (silent edit of ratified text, unresolved reference,
 boundary escape) — never against adversarial history forgery; git
 history plus the operator's diff review own that layer.
+
+**Tier-0 scoping principle:** tier 0 checks hard deterministic facts
+over DECLARED data — schema shape, existence, reference resolution,
+equality-at-commit, subset-of-boundary; it never extracts semantics
+from prose (prose obligations are tier-1 lens duties). Corollary:
+selftest armor scales with the declared surface — shrinking the
+surface shrinks the armor without shrinking confidence. This
+principle decides every future "should the lint check this?" dispute.
 
 **Tier-0 gate inventory, with a gate point per member:**
 
@@ -349,13 +365,24 @@ as ROLLOUT context: chaining through `ExecutePairflowPlan` opens per
 task class when its gates are fully mechanical and its coverage
 accounting closes.
 
+**The transitional cross-model arms:** until pairflow doc-bubbles
+arrive, the USER's manual cross-model arms play phase 2 (the
+adversarial, cross-model review) — explicitly a TRANSITIONAL
+skill-validation scaffold with no formal stop criterion; it retires as
+skill trust builds. The ratification blocks' `arms` lists name exactly
+these reviewers.
+
 **Metrics convention:** one `packet_metrics` machine block per packet,
 written once at build close (schema FORM: template §1). `stops[].type`
-uses the registry above; `rounds.review` counts panel rounds;
-`prediction` is pre-registered at chapter ratification (plan §1.3
-convention) and never retro-filled; late discoveries add a process-log
-line AND increment the block; `baseline_note` is the only home for
-unit/regime qualifiers. The block answers three questions — is the
+uses the registry above; `rounds.review` counts panel rounds, while
+`rounds.doc_refinement` and `rounds.implementation` count the pairflow
+runs' rounds (until pairflow carries implementation, `implementation`
+≈ build + post-build fix rounds); `prediction.reasoning` and
+`detector_misses[].why_missed` are the pattern-mining surfaces (why we
+mispredict; which lens/rule is weak); `prediction` is pre-registered
+at chapter ratification (plan §1.3 convention) and never retro-filled;
+late discoveries add a process-log line AND increment the block;
+`baseline_note` is the only home for unit/regime qualifiers. The block answers three questions — is the
 packet good (downstream rounds)? is the detector reliable (misses)?
 where is the bottleneck (round/lens distribution)? — and NO
 aggregation tooling is built until packet count justifies it.

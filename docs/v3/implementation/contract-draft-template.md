@@ -101,7 +101,8 @@ own rules. The lifecycle acts APPEND:
   their host row.
 - **Ratification blocks:** exact keyset `{date, arms, commit}`;
   `date` a `YYYY-MM-DD` string, non-decreasing in document order;
-  `arms` a nonempty list of nonempty strings; `commit` 7–40
+  `arms` a nonempty list of nonempty strings (naming the transitional
+  cross-model arms that reviewed — README §5.5); `commit` 7–40
   LOWERCASE-hex — shape-checked on EVERY block, while the
   COMMIT-object resolution (`git cat-file -t == commit`; a tree/blob/
   tag is not an auditable ratification point) and the equality check

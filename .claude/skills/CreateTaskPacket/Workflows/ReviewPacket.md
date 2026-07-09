@@ -55,7 +55,11 @@ scores its own bytes clean. Every lens report cites the target's
 packet-basis hash; a lens that did not run is `missing` in the matrix
 and blocks approve — silence is never coverage. The LearnedRules
 registry (`references/LearnedRules.md`) is CONSUMED at the lens named
-per rule below.
+per rule below. **The duty lists below are a FLOOR, never the
+review's definition** (the ch7-P1 twin-session lesson: a checklist
+executed as the review's definition found exactly the checklist's
+rows and nothing outside them) — each lens ALSO derives checks from
+the target's OWN claims beyond its enumerated duties.
 
 **Lens 1 — substrate / contract reality** *(owns: Substrate Reality
 Probe + contested-probe corollary; the strong-word inventories)*
@@ -233,7 +237,9 @@ canonical table): `boundary-review` (process-log line; revisit = the
 chapter DoD's log review), `later-chapter` (proposed plan-map row;
 revisit = human ratification at approve/boundary), `declined` (NO
 revisit BY DESIGN — a human-ratified standing decision whose home is
-the target's flags section: `declined — <reason>`).
+the target's flags section: `declined — <reason>`). Findings, flags,
+and routes stay EXPRESSIBLE in the severity ontology's language — the
+phase-2 obligation (README §5.5).
 
 ### 4) Verdict
 

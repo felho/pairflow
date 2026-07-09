@@ -991,3 +991,26 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   restatements — mirror restored; (5) trailing whitespace. Classes:
   the two P1s are the NEW surfaces' first contact with their own
   rules — the audit-on-landed-texts catch-point works
+- 2026-07-09 · post-flip audit round 2 (FC-X1, landed-texts-vs-claims:
+  9 mismatches — 8 folded, 1 already folded in round 1) · the audit's
+  verdict: the machinery landed on the rows, the mismatches sat in two
+  clusters. Cluster 1, the FC-X2 class (ratified rule content alive
+  only in the historical doc): the transitional cross-model-arms
+  convention was ENTIRELY absent from every landed surface (the arms
+  field had no live referent — now in README §5.5 + DraftContract +
+  the draft template's arms line); the tier-0 scoping principle, the
+  D7 field semantics' second half (doc_refinement/implementation
+  units; the pattern-mining surfaces), and the phase-2 expressibility
+  obligation joined README §5.5 (the last mirrored in ReviewPacket).
+  Cluster 2, preservation/sweep gaps: the checklist-is-a-FLOOR
+  meta-rule is now stated at PANEL level (each lens derives checks
+  from the target's own claims beyond its duties — without it the
+  twin-session class reproduces at panel level); the Case-A
+  entailment clause (a new-decision row with no corresponding flag is
+  a defect) joined the README flag-bearing paragraph; the packet-side
+  mirror direction is stated in template §1a (who wins on a
+  PACKET-form mismatch); the SKILL first-of-a-kind label's
+  self-contradictory "calibration-stage rule" parenthetical dropped
+  (the rule's own text says "regardless"). The SKILL intro (M8) was
+  already folded in audit round 1 — the auditor ran against the flip
+  commit's bytes

@@ -72,7 +72,9 @@ never an autonomous act.
    the final rows (status `draft`); the ratifying commit appends
    `{date, arms, commit: <content sha>}` and flips status to
    `ratified` in one act. The recorded sha binds content, not the
-   record.
+   record. The `arms` list names the transitional cross-model arms
+   that reviewed (README §5.5 — the user's manual arms playing
+   phase 2).
 3. **Reopen** (from `ratified` only; trigger arrives on the STOP-2
    family — a ratified row vs reality conflict): commit 1 = row edits
    + status `reopened` (transient, loud — packet refs into the draft
