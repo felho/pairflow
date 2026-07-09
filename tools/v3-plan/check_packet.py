@@ -10,6 +10,11 @@ tier-0 scoping principle). Stdlib only (the check_coverage.py culture).
 Claims — the selftest derives from THIS list; each claim proves itself
 red on a fixture before it may gate (chapter rule):
 
+Cross-cutting: fenced ```json machine blocks parse with duplicate-key
+REJECTION — json.loads' silent last-wins is a reinterpretation of
+declared data (the reader and the tool could disagree on which value
+holds), so a duplicated key anywhere in a machine block is red.
+
 Packets (docs/v3/implementation/packets/*.md, README.md excluded):
   P1. A packet is v2 iff it carries the mutation_boundary machine
       block. Grandfathering is the CLOSED 16-file set below:
@@ -53,10 +58,12 @@ Packets (docs/v3/implementation/packets/*.md, README.md excluded):
       subset of the boundary read from the PACKET'S BYTES AT THAT
       COMMIT plus the packet file itself (audit reruns are pinned);
       the boundary must satisfy the FULL P2 shape rules on this path
-      too (a subset check over a malformed boundary proves nothing);
-      merge commits are rejected outright and root commits are diffed
-      against the empty tree (an EMPTY diff-tree change list in either
-      form is a false-green audit).
+      too (a subset check over a malformed boundary proves nothing).
+      The vacuous-audit family is closed at the SINK: merge commits
+      are rejected outright, root commits are diffed against the
+      empty tree, and an EMPTY change list is red regardless of cause
+      (--allow-empty, wrong sha — a build commit lands at least the
+      packet file itself, one-commit rule).
 
 Drafts (docs/v3/implementation/contracts/*.md, README.md excluded; a
 missing directory means zero drafts):
@@ -217,12 +224,24 @@ class Checker:
         self.notes.append(msg)
 
 
+def _reject_duplicate_keys(pairs: list[tuple[str, object]]) -> dict:
+    """json.loads silently keeps the LAST duplicate key — in declared
+    machine data that is a silent reinterpretation (the reader and the
+    tool may disagree on which value holds), so it is a parse error."""
+    seen: dict = {}
+    for key, value in pairs:
+        if key in seen:
+            raise ValueError(f"duplicate key '{key}'")
+        seen[key] = value
+    return seen
+
+
 def json_blocks(text: str, path_name: str, checker: Checker) -> list[dict]:
     blocks: list[dict] = []
     for match in FENCED_JSON_RE.finditer(text):
         try:
-            data = json.loads(match.group(1))
-        except json.JSONDecodeError as exc:
+            data = json.loads(match.group(1), object_pairs_hook=_reject_duplicate_keys)
+        except (json.JSONDecodeError, ValueError) as exc:
             checker.error(f"{path_name}: unparseable json block ({exc})")
             continue
         if isinstance(data, dict):
@@ -795,6 +814,17 @@ def check_post_build(packet_path: Path, commit: str, checker: Checker) -> None:
         checker.error(f"--post-build: git diff-tree failed for '{commit}': {out.stderr.strip()}")
         return
     changed = {line.strip() for line in out.stdout.splitlines() if line.strip()}
+    # The vacuous-audit family, closed at the SINK: whatever produced an
+    # empty change list (--allow-empty, a wrong sha, a git surprise),
+    # a packet build commit lands at least the packet file itself
+    # (one-commit rule), so an empty audit proves nothing.
+    if not changed:
+        checker.error(
+            f"--post-build: commit {commit} has an EMPTY change list — a packet "
+            f"build commit lands at least the packet file itself, so this audit "
+            f"proves nothing (wrong sha or empty commit)"
+        )
+        return
     outside = sorted(changed - allowed)
     if outside:
         checker.error(
@@ -1054,6 +1084,14 @@ def run_selftest() -> int:
             '{"mutation_boundary": {"files": ["v3/src/x.ts", "v3/src/x.test.ts"], "extra": 1}}',
         ),
         "mutation_boundary must be an object with exactly keys",
+    )
+    expect_red_packet(
+        "json-duplicate-key",
+        GREEN_PACKET.replace(
+            '{"mutation_boundary": {"files": ["v3/src/x.ts", "v3/src/x.test.ts"]}}',
+            '{"mutation_boundary": {"files": ["v3/src/x.ts"], "files": ["v3/src/x.ts", "v3/src/x.test.ts"]}}',
+        ),
+        "duplicate key",
     )
 
     # ---- P3 manifest shape
@@ -1534,6 +1572,14 @@ def run_selftest() -> int:
             checker = Checker()
             check_post_build(packet, "HEAD", checker)
             assert_red("post-build-root-commit", checker.errors, "OUTSIDE")
+            # the family's third member: an --allow-empty commit's
+            # change list is empty — red at the sink, not enumerated
+            if not _git_ok(root, "commit", "-q", "--allow-empty", "-m", "empty"):
+                failures.append("selftest git fixture setup failed (post-build-empty)")
+            else:
+                checker = Checker()
+                check_post_build(packet, "HEAD", checker)
+                assert_red("post-build-empty-commit", checker.errors, "EMPTY change list")
 
     # ---- the green pair must pass
     errors, _ = lint(shared_root / "packets", shared_root / "contracts", ADR_DIR)

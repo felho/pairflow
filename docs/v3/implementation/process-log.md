@@ -790,3 +790,21 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   false-green is found in ONE branch of an enumerable family (merge/
   root; backtick/tilde), sweep the family — the sibling hole is the
   cheapest prediction available
+- 2026-07-09 · process-v2 Phase 0.1 (lint review round 4, two
+  findings, both IN threat model) · (1) the vacuous-audit family's
+  THIRD member: an --allow-empty commit's change list is empty and
+  the audit passed (reproduced) — the round-3 family-sweep lesson was
+  minted and then UNDER-EXECUTED by the author (merge/root
+  enumerated, empty-by-flag missed; the reviewer swept it instead);
+  fixed at the SINK, the durable form: an empty change list is red
+  regardless of cause, because a build commit lands at least the
+  packet file itself (one-commit rule) — enumeration of causes ends
+  here by construction; (2) json.loads silently keeps the LAST
+  duplicate key, so "exact keyset" was not exact — a duplicated
+  "files" key rode through while reader and tool could disagree on
+  which value holds; fixed with an object_pairs_hook that makes ANY
+  duplicated key in a machine block a red parse error. Selftest
+  64→66. Sharpened family lesson: a family sweep that ENUMERATES
+  members stays open (the next member is a miss); when a SINK
+  invariant exists ("changed set is never empty"), close the family
+  there
