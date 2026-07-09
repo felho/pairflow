@@ -39,8 +39,9 @@ of these is itself a finding.
   plus STOP-reporting; the v1 verdict names disappear from the live
   text (the mapping note stays as history).
 - **FC-A2** Approve requires ALL of: every APPROVAL-TIME tier-0 gate
-  green — the pre-build set, incl. the zero-reopened gate (the
-  `--forbid-reopened` form); the P8 post-build audit is a BUILD-CLOSE
+  green — the FC-F1 inventory's approve-time column (fold round 8:
+  "the pre-build set" had no membership), incl. the zero-reopened
+  gate (the `--forbid-reopened` form); the P8 post-build audit is a BUILD-CLOSE
   tier-0 audit, NOT an approve-readiness gate (fold round 3: a strict
   reader could otherwise block approve forever waiting for it, or
   silently demote it out of tier 0); ONE FULL
@@ -196,9 +197,20 @@ of these is itself a finding.
   flag-FREE approve under every row's letter and STOP 4 would never
   fire): the manifest class ENTAILS the flags-section entry — a
   new-decision manifest row with no corresponding flag is a defect —
-  and "flag-bearing" in the approve sense is DEFINED from the
-  manifest: new-decision rows present ⇒ the approve is flag-bearing
-  (FC-B4). The D1 derived-row DERIVATION
+  and "flag-bearing" in the approve sense is DEFINED as: new-decision
+  manifest rows present, OR any D5-routed flags entry whose
+  ratification point IS the approve — `declined` always (D5: a
+  human-ratified standing decision with NO revisit fallback) and
+  parked proposals batch-ratified at approve (D3); watchpoints do not
+  flag-bear (FC-A2's clean rule untouched). Fold round 8: the
+  manifest-only definition let a zero-new-decision packet carrying a
+  `declined` flag read as flag-FREE — in the deferred auto-approve
+  era its ONLY ratification act would have delegated, silently
+  breaking D5's human-ratified property (later-chapter has the
+  boundary fallback; declined has none); the pure-manifest
+  alternative (inheriting the risk to the D6 auto-approve decision
+  point) was DECLINED because D5's own words make a
+  declined-carrying approve substantive, never ceremony (FC-B4). The D1 derived-row DERIVATION
   NOTE (one line per derived row) lives in the row's own table text —
   lens-2 material for the entailment attack, NOT manifest data: the
   exact keyset stays {id, class, refs} (fold round 3 — the ratified
@@ -233,9 +245,10 @@ of these is itself a finding.
   — and at every STOP. *Temporal:* the 0a next-step derivation + its
   immediate announcement survive, and the derivation GAINS the
   draft-phase branch (fold round 4: "unchanged" contradicted FC-F1's
-  draft phase in the build loop): an open chapter whose §N.7 names a
-  contract-draft not yet ratified-or-later derives the DraftContract
-  round as the next step, not packet authoring — the FC-B2 late-B
+  draft phase in the build loop): an open chapter ANY of whose
+  §N.7-referenced contract-drafts is not yet ratified-or-later
+  derives the DraftContract round (for that draft) as the next step,
+  not packet authoring (plural per fold round 8) — the FC-B2 late-B
   STOP remains the entry for the unpredicted case; the flag
   write-back loop and fresh-eyes pass survive as the loop's internal
   discipline (now largely mechanized by tier 0, with the semantic
@@ -413,7 +426,10 @@ of these is itself a finding.
   requirement (the lint's claim, one word today missing); §1
   documents the derived-row derivation-note carrier (in-row text, not
   manifest data — FC-B1); and §1a's audit contract completes to the
-  P8 claim set (pinned sha, packet-file-in-changed, boundary read
+  P8 claim set (pinned sha — hex shape AND resolving to a COMMIT
+  object, a tag object is not the build commit: the twin of FC-C4's
+  draft-side guard (fold round 8: the same under-enumeration class
+  round 4 fixed in this row) —, packet-file-in-changed, boundary read
   from the packet's bytes AT the audited commit, the boundary
   re-validated against the FULL mutation-boundary shape rules on the
   audit path — a subset check over a malformed boundary proves
@@ -466,8 +482,12 @@ of these is itself a finding.
   coverage-union guard; propagation-class plan edits, visibly
   reported; ADR recording of already-ratified decisions; parking
   proposals onto D5 routes, batch-ratified at approve; probes, panel
-  orchestration, tier-0 scripts, prepared edits), the 4-STOP list,
-  and the verdict-action matrix (fold round 4: STOPs+matrix alone
+  orchestration, tier-0 scripts, prepared edits), the 4-STOP list
+  (the STOP-3 member carries its "auto-split-remedy delegable later"
+  deferral clause — fold round 8: the same deferred-delegation family
+  as the D6 auto-approve deferral, inlined for the same reason: a
+  bare pointer would aim at the historical doc), and the
+  verdict-action matrix (fold round 4: STOPs+matrix alone
   define the autonomous side by omission — "ADR recording" and
   "parking proposals" would live only in the historical doc, and a
   cautious agent STOPs on ratified-autonomous acts), the
@@ -477,10 +497,17 @@ of these is itself a finding.
   header comment, an addition to the §5 item-8 file list discovered by
   this enumeration), the draft phase in the build loop incl. the
   `reopened` lifecycle's gate rule (zero reopened drafts at packet
-  approve / chapter close / the flip), the TIER-0 GATE INVENTORY
-  (packet-lint fold-time + the zero-reopened gate form, coverage,
-  drift, adr-check, substrate-probe scripts — D4's list, so FC-A2's
-  "every tier-0 gate green" is enumerable), the post-build audit's
+  approve / chapter close / the flip), the TIER-0 GATE INVENTORY WITH
+  A GATE-POINT PER MEMBER (approve-time: packet-lint fold-time + the
+  zero-reopened gate form, coverage VALIDATION [parse/ids/enums],
+  drift, adr-check, substrate-probe scripts; build-close: the P8
+  audit AND coverage's owned==realized three-way lock, which is
+  NECESSARILY red on an approved-but-unbuilt packet's declaration —
+  the ch5 boundary precedent, "working-as-designed"; fold round 8: an
+  unpointed inventory made a strict reader's approve unreachable and
+  let a loose reader pick their own set — D4's list, so FC-A2's
+  "every approval-time tier-0 gate green" resolves against the
+  approve-time column, membership NAMED, never reader-chosen), the post-build audit's
   INVOCATION point (after the build commit lands, the loop runs
   `--post-build` with that commit's sha — NO CI surface runs this
   mode today, CI runs the plain lint [fold round 2: "CI cannot" was
@@ -603,11 +630,13 @@ of these is itself a finding.
   folded here instead because the flip edits §6 anyway).
 - **FC-F5** Edit mode, stated (fold round 4 — FC-B7's logic applied
   to the process authority itself): the flip EDITS README in place —
-  live §1–§8 text not named by FC-F1/F2/F4 (the §4 build-loop steps,
-  §5.1–§5.4's autonomy principle / packet two-layer / constraint
-  budget / coverage accounting, §6's divergence protocol and
-  full-`ci:local` DoD core, §7's reflection loop) survives UNCHANGED
-  unless it contradicts the verdict-action matrix or the new carrier;
+  live §1–§8 text not named by FC-F1/F2/F4 (§5.1–§5.4's autonomy
+  principle / packet two-layer / constraint budget / coverage
+  accounting, §6's divergence protocol and full-`ci:local` DoD core,
+  §7's reflection loop) survives UNCHANGED unless it contradicts the
+  verdict-action matrix or the new carrier; the §4 build-loop steps
+  survive EXCEPT for the FC-F1/F4 named additions and sweeps (fold
+  round 8: the round-7 FC-G1 weak-survivor class, one row over);
   FC-F1/F2/F4 name additions and sweeps, not an exhaustive whitelist.
 
 ## FC-G — AGENTS.md v3 section
@@ -692,8 +721,11 @@ of these is itself a finding.
   P3 authoring starts. A prediction/discovery mismatch is itself a
   signal and routes to a friction-log line (D1); the authoring-time
   discovery is always the authority. And the §N.7 chapter
-  packet-tables reference their chapter's draft with the
-  "draft: …, ratified <date>" convention (the D2 Home bullet), alive
+  packet-tables reference EVERY chapter draft with the
+  "draft: …, ratified <date>" convention (the D2 Home bullet; the ref
+  is REPEATABLE — fold round 8: the chapter's draft SET is defined as
+  the §N.7-referenced drafts, with the `contracts/chN-*-contract.md`
+  glob as the mechanical mirror of completeness), alive
   from ch8 ratifications exactly like the §1.3 column.
 
 ## FC-X — cross-cutting
@@ -1023,3 +1055,33 @@ both folded:**
   memo-born surface.
 
 State: awaiting the arms' round-8 run on these bytes.
+
+**Fold round 8 (2026-07-09): two arms — 4 + 2 findings; all folded
+(one with a stated disposition):**
+
+- FC-F1's tier-0 inventory gained a GATE-POINT per member and FC-A2's
+  "pre-build set" now resolves against the approve-time column (arm
+  A's strongest: coverage's owned==realized lock is necessarily red
+  on an approved-but-unbuilt packet — a strict reader's approve was
+  unreachable, a loose reader picked their own set).
+- FC-B1's flag-bearing definition extended: new-decision rows OR any
+  D5-routed flags entry whose ratification point IS the approve
+  (declined always; parked proposals) — DISPOSITION: the
+  pure-manifest alternative was declined because D5's own words make
+  a declined-carrying approve substantive; in the deferred
+  auto-approve era the declined's only ratification act would have
+  silently delegated.
+- FC-E2's "pinned sha" completed with the COMMIT-object half (FC-C4's
+  twin — the same under-enumeration class round 4 fixed in this row).
+- FC-F1's 4-STOP list carries STOP-3's auto-split-remedy deferral
+  clause (the D6-deferral family; a bare pointer would aim at the
+  historical doc).
+- The round-7 plural decision propagated to the remaining singular
+  surfaces (arm B): FC-B4's 0a derivation branch (ANY §N.7-referenced
+  draft not ratified-or-later), FC-I1's §N.7 convention (repeatable
+  refs; the chapter draft SET = §N.7-referenced drafts with the
+  `contracts/chN-*-contract.md` glob as the completeness mirror).
+- FC-F5's "§4 build-loop steps" weak-survivor reading fixed the
+  FC-G1 way (survive EXCEPT for the named additions/sweeps).
+
+State: awaiting the arms' round-9 run on these bytes.
