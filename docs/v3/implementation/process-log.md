@@ -940,3 +940,15 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   FC-X1) — stopping is not a claim that findings are unreal.
   Sequence from here: Phase 0.2 (coverage gate-point mode) → the
   flip commit → the post-flip audit
+- 2026-07-09 · process-v2 Phase 0.2 (the coverage gate-point mode) ·
+  check_coverage.py gains `--fold-time`, the APPROVE-TIME gate point
+  the flip-claims round-9/10 folds contracted: identical validation
+  except the unit-map lock's owned-but-pending direction is skipped
+  (an approved-but-unbuilt packet's units are necessarily pending —
+  the ch5 boundary precedent), while disposition drift on realized
+  entries and realized-without-owner still fire; the default run is
+  the BUILD-CLOSE gate point. Three selftest proofs: the exact
+  fixture that is red in default mode is green in fold-time, and
+  both surviving check directions stay red in fold-time. The FC-F1
+  approve-time coverage entry is now RUNNABLE — the last
+  precondition before the flip commit

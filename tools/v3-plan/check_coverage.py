@@ -18,6 +18,15 @@ Modes:
   - default: VALIDATION (always-on CI gate) + coverage report. Parse
     errors, unknown ids, bad enum tokens, undeclared double owners, and
     unit-map lock violations are hard failures even with zero packets.
+    This is the BUILD-CLOSE gate point (process-v2 Amendment 1).
+  - --fold-time: the APPROVE-TIME gate point (flip-claims FC-F1, the
+    tier-0 inventory's coverage entry): identical validation EXCEPT the
+    unit-map lock's owned-but-pending direction is skipped — an
+    approved-but-unbuilt packet's owned units are NECESSARILY pending
+    (the ch5 boundary precedent, "working-as-designed"), so requiring
+    realized at fold time would make a strict approve unreachable.
+    Disposition drift on already-realized entries and
+    realized-without-owner still fail in this mode.
   - --assert-closed: additionally require closure — the plan-is-concrete-
     enough-for-chaining criterion (README par.5.4).
   - --selftest: prove each unit-map cross-check dimension fails red on
@@ -386,19 +395,24 @@ def check_unit_map_lock(
     unit_map: dict[str, dict],
     unit_dispositions: dict[str, dict[str, str]],
     checker: Checker,
+    fold_time: bool = False,
 ) -> None:
     """The three-way lock, both directions (packet ch5-P1): every
     packet-owned unit is realized in the manifest with the SAME disposition
-    token; every realized manifest row has a packet owner."""
+    token; every realized manifest row has a packet owner. In --fold-time
+    mode the owned-but-pending direction is skipped (an approved-but-unbuilt
+    packet's units are necessarily pending); drift on realized entries and
+    realized-without-owner still fire."""
     for unit_id, by_packet in sorted(unit_dispositions.items()):
         entry = unit_map.get(unit_id)
         if entry is None:
             continue  # the key-set check already reported it
         if entry.get("status") != "realized":
-            checker.error(
-                f"unit map lock: '{unit_id}' is packet-owned "
-                f"({', '.join(sorted(by_packet))}) but the manifest says pending"
-            )
+            if not fold_time:
+                checker.error(
+                    f"unit map lock: '{unit_id}' is packet-owned "
+                    f"({', '.join(sorted(by_packet))}) but the manifest says pending"
+                )
             continue
         for packet, disposition in sorted(by_packet.items()):
             if disposition != entry.get("disposition"):
@@ -415,7 +429,10 @@ def check_unit_map_lock(
 
 
 def run_validation(
-    packets_dir: Path, unit_map_path: Path, disposition_map_path: Path
+    packets_dir: Path,
+    unit_map_path: Path,
+    disposition_map_path: Path,
+    fold_time: bool = False,
 ) -> tuple[Checker, dict[str, set[str]], dict[str, dict[str, list[str]]], list[Path]]:
     checker = Checker()
     inventory = load_inventory()
@@ -461,7 +478,7 @@ def run_validation(
     check_share_references(
         shares, declared_by, {p.name for p in packet_files}, inventory, checker
     )
-    check_unit_map_lock(unit_map, unit_dispositions, checker)
+    check_unit_map_lock(unit_map, unit_dispositions, checker, fold_time=fold_time)
     check_disposition_lock(disposition_map, invariant_dispositions, checker)
     return checker, inventory, owners, packet_files
 
@@ -511,6 +528,7 @@ def run_selftest() -> int:
         with_packet: bool,
         dispo_map: dict | None = None,
         dispo_blocks: int = 1,
+        fold_time: bool = False,
     ) -> Checker:
         if dispo_map is None:
             dispo_map = base_dispo
@@ -531,7 +549,7 @@ def run_selftest() -> int:
                     + "\n```\n"
                 )
                 dispo_path.write_text("# selftest map\n\n" + block * dispo_blocks, encoding="utf-8")
-            checker, _, _, _ = run_validation(packets, map_path, dispo_path)
+            checker, _, _, _ = run_validation(packets, map_path, dispo_path, fold_time=fold_time)
             return checker
 
     def expect_red(
@@ -624,6 +642,43 @@ def run_selftest() -> int:
         dispo_blocks=2,
     )
 
+    # --fold-time (the approve-time gate point, Phase 0.2): the
+    # owned-but-pending direction is SKIPPED — the exact fixture that is
+    # red in default mode must be green here…
+    fold = run_fixture(dict(base_map), with_packet=True, fold_time=True)
+    if fold.errors:
+        failures.append("fold-time: owned-but-pending green")
+        print(
+            f"selftest FAIL: fold-time owned-but-pending expected green, got {fold.errors!r}",
+            file=sys.stderr,
+        )
+    else:
+        print("selftest OK: fold-time mode passes the owned-but-pending state")
+    # …while everything else still fires in fold-time mode: an unknown
+    # unit id, and the realized-without-owner direction of the SAME lock
+    variant = dict(base_map)
+    variant["not-a-section/NotAUnit"] = {"status": "pending"}
+    fold = run_fixture(variant, with_packet=True, fold_time=True)
+    if any("unknown unit id" in message for message in fold.errors):
+        print("selftest OK: fold-time mode still fails on unknown unit id")
+    else:
+        failures.append("fold-time: unknown unit id still red")
+        print(
+            f"selftest FAIL: fold-time expected 'unknown unit id', got {fold.errors!r}",
+            file=sys.stderr,
+        )
+    variant = dict(base_map)
+    variant[owned_id] = realized
+    fold = run_fixture(variant, with_packet=False, fold_time=True)
+    if any("no packet owns it" in message for message in fold.errors):
+        print("selftest OK: fold-time mode still fails on realized-without-owner")
+    else:
+        failures.append("fold-time: realized-without-owner still red")
+        print(
+            f"selftest FAIL: fold-time expected 'no packet owns it', got {fold.errors!r}",
+            file=sys.stderr,
+        )
+
     green = run_fixture(good_units, with_packet=True)
     if green.errors:
         failures.append("green control")
@@ -641,6 +696,13 @@ def run_selftest() -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--assert-closed", action="store_true", help="require full closure")
+    parser.add_argument(
+        "--fold-time",
+        action="store_true",
+        help="the approve-time gate point: skip the unit-map lock's "
+        "owned-but-pending direction (an approved-but-unbuilt packet's "
+        "units are necessarily pending)",
+    )
     parser.add_argument("--packets-dir", type=Path, default=DEFAULT_PACKETS_DIR)
     parser.add_argument("--unit-map", type=Path, default=DEFAULT_UNIT_MAP)
     parser.add_argument("--disposition-map", type=Path, default=DEFAULT_DISPOSITION_MAP)
@@ -655,7 +717,7 @@ def main() -> int:
         return run_selftest()
 
     checker, inventory, owners, packet_files = run_validation(
-        args.packets_dir, args.unit_map, args.disposition_map
+        args.packets_dir, args.unit_map, args.disposition_map, fold_time=args.fold_time
     )
 
     if checker.errors:
@@ -676,7 +738,8 @@ def main() -> int:
     if args.assert_closed and orphaned:
         print("COVERAGE FAIL: closure asserted but orphans remain (README par.5.4)", file=sys.stderr)
         return 1
-    print("coverage check OK" + (" (closed)" if args.assert_closed else " (validation)"))
+    mode = " (closed)" if args.assert_closed else (" (fold-time)" if args.fold_time else " (validation)")
+    print("coverage check OK" + mode)
     return 0
 
 
