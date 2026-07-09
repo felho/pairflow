@@ -37,7 +37,10 @@ V2 packet checks:
     type-matrix rows remain the panel's duty); textual refs resolve, and
     ranges (O4–O10) resolve over EVERY member, not just endpoints; family
     "P" is excluded (packet names collide). Fenced blocks are excluded
-    from the ref scan.
+    from the ref AND mark scans (draft refs, ADR refs, lane refs, and
+    the global provenance-mark counting — a fenced fixture quoting
+    ADR-999 is material, not an anchor); the v2 textual probe
+    deliberately stays raw (it catches malformed fences).
   - packet_metrics block (when present): DEEP schema (types per field,
     D7 enums: prediction classes, found_at values, stops[].type against
     the canonical STOP member-token registry), and its provenance counts
@@ -122,6 +125,8 @@ STOP_TOKEN_REGISTRY = {
 DRAFT_STATUSES = ("draft", "ratified", "realized")
 RATIFIED_OR_LATER = ("ratified", "realized")
 STATUS_ORDER = {"draft": 0, "ratified": 1, "realized": 2}
+CONTRACT_DRAFT_KEYS = {"chapter", "surface", "status"}
+MUTATION_BOUNDARY_KEYS = {"files"}
 
 FENCED_JSON_RE = re.compile(r"```json\s*\n(.*?)```", re.DOTALL)
 FENCED_ANY_RE = re.compile(r"```.*?```", re.DOTALL)
@@ -268,8 +273,8 @@ def _ratification_fingerprints(text: str, name: str) -> list[str]:
     ]
 
 
-def draft_history(path: Path) -> list[dict]:
-    """Every parseable version of the draft across its FULL git history
+def draft_history(path: Path, name: str, checker: Checker) -> list[dict]:
+    """Every valid version of the draft across its FULL git history
     (oldest -> newest): {"status", "ratifications"} per version. Empty
     for untracked/out-of-repo files.
 
@@ -279,7 +284,17 @@ def draft_history(path: Path) -> list[dict]:
     — rewriting the sole block's sha256 after editing a row would
     otherwise pass with a matching hash. The repo root derives from the
     file's own directory so the git integration stays selftestable in a
-    throwaway repo."""
+    throwaway repo.
+
+    Two failure modes at a touching commit are NOT the same thing:
+    only versions whose bytes are UNREADABLE (`git show` fails — e.g.
+    the file was deleted in that commit) are skipped, because there is
+    nothing to evaluate. A version that IS readable but carries an
+    unparseable or invalid contract_draft (json blocks unparseable, or
+    the meta missing / not-exactly-one / status invalid) is a HARD
+    error on `checker`: silently skipping it let a committed
+    ratified -> malformed -> ratified sequence pass both the
+    monotonic-status and append-only gates."""
     located = git_root_and_rel(path)
     if located is None:
         return []
@@ -299,15 +314,21 @@ def draft_history(path: Path) -> list[dict]:
             text=True,
         )
         if out.returncode != 0:
-            continue
-        status = _parse_status(out.stdout, path.name)
-        if status is not None:
-            versions.append(
-                {
-                    "status": status,
-                    "ratifications": _ratification_fingerprints(out.stdout, path.name),
-                }
+            continue  # unreadable at this commit (e.g. deleted) — nothing to evaluate
+        status = _parse_status(out.stdout, name)
+        if status is None:
+            checker.error(
+                f"{name}: history version {commit[:12]} has an unparseable or "
+                f"invalid contract_draft — the history gates cannot be "
+                f"evaluated over it"
             )
+            continue
+        versions.append(
+            {
+                "status": status,
+                "ratifications": _ratification_fingerprints(out.stdout, name),
+            }
+        )
     return versions
 
 
@@ -345,13 +366,18 @@ def check_draft(path: Path, checker: Checker) -> dict | None:
     if not isinstance(meta, dict):
         checker.error(f"{path.name}: contract_draft is not an object")
         return None
+    if set(meta.keys()) != CONTRACT_DRAFT_KEYS:
+        checker.error(
+            f"{path.name}: contract_draft must be an object with exactly keys "
+            f"{sorted(CONTRACT_DRAFT_KEYS)}"
+        )
     status = meta.get("status")
     chapter = meta.get("chapter")
     surface = meta.get("surface")
     if status not in DRAFT_STATUSES:
         checker.error(f"{path.name}: contract_draft.status '{status}' not in {DRAFT_STATUSES}")
         return None
-    history = draft_history(path)
+    history = draft_history(path, path.name, checker)
     chain = [v["status"] for v in history]
     chain.append(status)  # adjacent equals pass — a duplicate tail is harmless
     for prev, current in zip(chain, chain[1:]):
@@ -474,6 +500,11 @@ def check_packet(
         checker.error(f"{path.name}: {len(boundaries)} mutation_boundary blocks; exactly one allowed")
 
     boundary = boundaries[0]
+    if not isinstance(boundary, dict) or set(boundary.keys()) != MUTATION_BOUNDARY_KEYS:
+        checker.error(
+            f"{path.name}: mutation_boundary must be an object with exactly keys "
+            f"{sorted(MUTATION_BOUNDARY_KEYS)}"
+        )
     files = boundary.get("files") if isinstance(boundary, dict) else None
     if not isinstance(files, list) or not files or not all(
         isinstance(f, str) and f and not f.startswith("/") and ".." not in f for f in files
@@ -485,9 +516,16 @@ def check_packet(
     elif len(set(files)) != len(files):
         checker.error(f"{path.name}: mutation_boundary.files has duplicates")
 
-    # Provenance bookkeeping: marks vs machine block.
+    # Provenance bookkeeping: marks vs machine block. ALL ref/mark scans
+    # below (global mark counting, draft refs, ADR refs, lane refs) run
+    # over FENCE-STRIPPED text — a fenced fixture quoting ADR-999 or a
+    # draft ref is material, not an anchor. The per-lane-row mark check
+    # stays on raw table-row lines (table rows are not fenced, so they
+    # survive stripping and the two counts agree); the v2 textual probe
+    # above deliberately stays raw (it catches malformed fences).
+    prose = strip_fences(text)
     marks = {"anchored": 0, "derived": 0, "new_decision": 0}
-    for m in PROV_MARK_RE.finditer(text):
+    for m in PROV_MARK_RE.finditer(prose):
         kind = m.group(1).replace("-", "_")
         ref = m.group(2).strip()
         marks[kind] += 1
@@ -513,8 +551,8 @@ def check_packet(
                         f"{marks[key]} inline marks counted"
                     )
 
-    # Strict cross-refs: draft rows + ADR files.
-    for m in DRAFT_REF_RE.finditer(text):
+    # Strict cross-refs: draft rows + ADR files (fence-stripped).
+    for m in DRAFT_REF_RE.finditer(prose):
         slug, row = m.group(1), m.group(2)
         draft = drafts.get(slug)
         if draft is None:
@@ -526,7 +564,7 @@ def check_packet(
             )
         elif row not in draft["rows"]:
             checker.error(f"{path.name}: draft ref '{m.group(0)}' — row {row} not in draft")
-    for m in ADR_REF_RE.finditer(text):
+    for m in ADR_REF_RE.finditer(prose):
         if not list(adr_dir.glob(f"ADR-{m.group(1)}-*.md")):
             checker.error(f"{path.name}: ADR ref 'ADR-{m.group(1)}' — no such file in {adr_dir.name}/")
 
@@ -556,7 +594,6 @@ def check_packet(
     dupes = {i for i in seen_ids if seen_ids.count(i) > 1}
     if dupes:
         checker.error(f"{path.name}: duplicate lane id definitions {sorted(dupes)}")
-    prose = strip_fences(text)
     for m in LANE_RANGE_RE.finditer(prose):
         fam, a, b = m.group(1), int(m.group(2)), int(m.group(3))
         if fam in EXCLUDED_LANE_FAMILIES or fam not in defined:
@@ -921,6 +958,38 @@ def git_rewrite_and_postbuild_selftest(green_draft: str, failures: list[str]) ->
             failures.append("selftest dim NOT red: post-build-merge-commit")
 
 
+def git_history_parse_selftest(green_draft: str, failures: list[str]) -> None:
+    git_base = ["git", "-c", "user.email=lint@selftest", "-c", "user.name=lint-selftest"]
+    # 42: a readable-but-MALFORMED intermediate commit must be a HARD
+    # error naming the commit — silently skipping it let a committed
+    # ratified -> malformed -> ratified sequence pass both the
+    # monotonic-status and append-only gates.
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        cdir = root / "contracts"
+        cdir.mkdir()
+        path = cdir / "ch9-test-surface-contract.md"
+        path.write_text(green_draft, encoding="utf-8")
+        for cmd in (["git", "init", "-q"], git_base + ["add", "-A"], git_base + ["commit", "-q", "-m", "ratified"]):
+            if subprocess.run(cmd, cwd=root, capture_output=True).returncode != 0:
+                failures.append("selftest git fixture setup failed (history-parse)")
+                return
+        malformed = green_draft.replace(
+            '{"contract_draft": {"chapter": "ch9", "surface": "test-surface", "status": "ratified"}}',
+            "{broken",
+        )
+        path.write_text(malformed, encoding="utf-8")
+        for cmd in (git_base + ["add", "-A"], git_base + ["commit", "-q", "-m", "malformed"]):
+            subprocess.run(cmd, cwd=root, capture_output=True)
+        path.write_text(green_draft, encoding="utf-8")
+        for cmd in (git_base + ["add", "-A"], git_base + ["commit", "-q", "-m", "re-ratified"]):
+            subprocess.run(cmd, cwd=root, capture_output=True)
+        checker = Checker()
+        check_draft(path, checker)
+        if not any("history version" in e for e in checker.errors):
+            failures.append("selftest dim NOT red: git-history-unparseable-version")
+
+
 def git_downgrade_selftest(green_draft: str, failures: list[str]) -> None:
     git_base = ["git", "-c", "user.email=lint@selftest", "-c", "user.name=lint-selftest"]
     with tempfile.TemporaryDirectory() as tmp:
@@ -1172,6 +1241,22 @@ def run_selftest() -> int:
         )
         if run_lint(root / "packets", root / "contracts", ADR_DIR) != 0:
             failures.append("selftest green NOT green: whitelisted unmarked packet failed")
+    # 44 mutation_boundary with an extra key — exact keyset, not
+    # presence-of-files (extra keys were silently ignored)
+    expect_red(
+        "boundary-extra-key",
+        green_packet.replace(
+            '{"mutation_boundary": {"files": ["v3/src/x.ts", "v3/src/x.test.ts"]}}',
+            '{"mutation_boundary": {"files": ["v3/src/x.ts", "v3/src/x.test.ts"], "extra": 1}}',
+        ),
+        green_draft,
+    )
+    # 45 contract_draft meta with an extra key — exact keyset
+    expect_red(
+        "contract-draft-extra-key",
+        green_packet,
+        green_draft.replace('"status": "ratified"}', '"status": "ratified", "extra": 1}'),
+    )
     # 23-25 git integration: an UNCOMMITTED, a COMMITTED, and a MULTI-STEP
     # (ratified -> draft -> ratified) downgrade must all go red (the
     # HEAD-only form passed the committed case; the latest-edge form
@@ -1180,6 +1265,25 @@ def run_selftest() -> int:
     # 33-35, 41 append-only ratification history + post-build pinning
     # + merge-commit rejection
     git_rewrite_and_postbuild_selftest(green_draft, failures)
+    # 42 loud history parse failure: a committed malformed intermediate
+    # version is a hard error, not a silent skip
+    git_history_parse_selftest(green_draft, failures)
+    # 43 (GREEN): refs and marks inside FENCED code are neither resolved
+    # nor counted — a fenced fixture quoting ADR-999, a draft ref, and a
+    # [P:new-decision] mark must not fail the packet or drift its
+    # provenance counts
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / "packets").mkdir()
+        (root / "contracts").mkdir()
+        (root / "contracts" / "ch9-test-surface-contract.md").write_text(green_draft, encoding="utf-8")
+        (root / "packets" / "ch9-p1-test.md").write_text(
+            green_packet
+            + "\n```\nADR-999 and draft:ch9-test-surface#C9 and [P:new-decision]\n```\n",
+            encoding="utf-8",
+        )
+        if run_lint(root / "packets", root / "contracts", ADR_DIR) != 0:
+            failures.append("selftest green NOT green: fenced refs/marks resolved or counted")
 
     # green must pass
     with tempfile.TemporaryDirectory() as tmp:
@@ -1193,7 +1297,7 @@ def run_selftest() -> int:
 
     for f in failures:
         print(f"selftest FAIL: {f}", file=sys.stderr)
-    print(f"selftest: 41 red dims exercised, green fixture pass, {len(failures)} failure(s)")
+    print(f"selftest: 45 red dims exercised, green fixture pass, {len(failures)} failure(s)")
     return 1 if failures else 0
 
 
