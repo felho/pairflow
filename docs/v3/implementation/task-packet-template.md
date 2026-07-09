@@ -250,7 +250,12 @@ Spec-writing is projection, not invention. In order:
      canonical source of truth;
    - **surface spread** — how many distinct surfaces must change for
      ONE concept (kernel logic / store schema / ingress-write seam /
-     read projection (floor) / CLI-human payload / testkit);
+     read projection (floor) / CLI-human payload / testkit — testkit
+     counts ONLY when its CONTRACT changes: a new fake/seam, a
+     fixture type, a recording-sink shape; tests merely EXERCISING
+     the change never count, or every routine packet trips hard
+     stop 2 — the ch7-P1 retro-check; v1 counted production surfaces
+     only);
    - **identity/join fragility** — consumer correctness depends on
      cross-seam identity matching (e.g. diag rows correlated to
      instances/timeline across two stores; multiple id forms that
@@ -268,6 +273,9 @@ Spec-writing is projection, not invention. In order:
    (floor + CLI), recovery/cleanup, testkit — record `present`,
    `absent`, or `unknown`, from the tree, not from the packet's own
    list. `unknown` is not a pass state (the panel's unknown rule).
+   Testkit records in the scan as a role; it COUNTS toward the
+   family-count stops (6, 7) only under the surface rule above (its
+   contract changes).
    **Hard stops (these combinations are split-REQUIRED — split is not
    advisory):**
    1. authority movement + new runtime behavior turned on, in one
@@ -292,10 +300,15 @@ Spec-writing is projection, not invention. In order:
       cleanup or final status/event truth surfaces;
    11. reusing an existing proof contract (matrix/test suite) without
       explicit proof-parity or an explicitly narrowed reuse.
-   **Escalation below hard-stop (default to split):** high surface
-   spread + acceptance multiplicity ≥ 2; high identity fragility +
-   surface spread ≥ 2; authority movement + identity fragility + a
-   CLI/human-payload change together.
+   **Escalation below hard-stop (default to split, in COUNTS — the
+   uncarried 0|1|2 scale is never the referent):** 4+ surfaces for
+   one concept AND 3+ success classes proven at once; multiple
+   competing identity forms that must align AND 3+ surfaces (these
+   two overlap hard stop 2 at 3+ surfaces — carried for
+   self-containment); ANY authority change (a clarification that
+   moves nothing still counts) AND a consumer-relied cross-seam
+   mapping AND a CLI/human-payload change in one packet — the one
+   combo that fires BELOW hard stop 2.
    **A single packet may continue past a trip ONLY with
    implementation-closure proof:** one build closes it without
    separate sequencing; the same bounded code change closes the
@@ -309,17 +322,35 @@ Spec-writing is projection, not invention. In order:
    **Split shapes:** default `foundation → delivery → activation`;
    with 3+ consume families: `persisted authority → producer →
    consumer-family alignment → activation → read-model → cleanup`.
+   **Milestone-gated behavior:** when the scope includes behavior
+   gated on a FUTURE milestone — document the contract now, keep
+   activation in a later packet, keep current runtime behavior
+   fail-closed.
    **RECORD (materialized, not implied):** the packet carries the
    assessment — axes touched, the consume-family scan when run,
    `single-packet allowed: yes|no`, and the closure proof or the
    split shape — as a `## Sizing/risk` section (or an explicit
-   one-line `N/A — no axis triggered` with evidence). The outcome
+   one-line `N/A — no axis triggered` with evidence). Conditional
+   annexes, each triggered by its own material: **closure-budget
+   triage** (authority/runtime/read-projection/shared-contract
+   buckets in scope → which buckets are touched, which adjacent
+   closures are intentionally collapsed and why that collapse is
+   safe, which are explicitly deferred); **proof-boundary triage**
+   (success/completion proof semantics changing → current and target
+   canonical proof source, the final status/event surfaces affected,
+   whether any surface goes mixed-truth across phases, whether a
+   reused proof contract needs full proof-parity HERE or is
+   explicitly deferred); **mutable-flow record** (hard-stop-9
+   material near → does precondition failure produce ZERO side
+   effects, is rollback/retry/preservation in this same slice, are
+   coordination primitives introduced, or are those explicitly split
+   out of the producer slice). The outcome
    feeds the split decision (an in-chapter split executes
    autonomously per the verdict-action matrix; a scope-changing one
    is STOP 2). **Draft-routing STOP:** a memo-born
    surface whose chapter contract-draft is not ratified-or-later
    routes to the DraftContract round first; mid-authoring, a Case-B
-   signal (new-decision mass over the calibration-permissive
+   signal (new-decision mass over the permissive
    threshold, or ANY new-decision row touching authority / separation
    / availability-class semantics) STOPS the same way, handing the
    new-decision row set over as the draft's seed. Every canonical row

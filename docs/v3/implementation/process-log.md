@@ -1078,3 +1078,29 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   pairflow stage — plan §1.3 and the template header enum stay
   meaningful), the rollout "Phase 2" renamed the chaining stage, the
   threshold name de-staged, the matrix wording aligned literally
+- 2026-07-10 · realignment round 3 (two arm reviews on round 2;
+  anchor addendum AL-10..AL-12) · the round-2 "only element not
+  carried" claim was an overstatement — the v1 gate's TAIL had
+  silently stayed behind; corrected by carrying it: the
+  milestone-gated rule (document now / activate later / fail-closed
+  meanwhile) and the three conditional RECORD annexes
+  (closure-budget triage, proof-boundary triage, mutable-flow
+  record) land in template §2 step 0, making the round-2 sentence
+  true. One v3 adaptation DECISION recorded for veto: testkit counts
+  as a surface (and toward family-count stops 6/7) only when its
+  CONTRACT changes — tests exercising a change never count, or hard
+  stop 2 trips on every routine kernel packet (the ch7-P1
+  retro-check falsified the unqualified rule against a ratified-good
+  packet). The escalation combos restated in COUNTS (the uncarried
+  0|1|2 scale is never the referent; the two hard-stop-2 overlaps
+  marked as carried-for-self-containment). The Mandatory Output
+  Audit split per target kind — packet outputs were a false
+  refine-blocker on draft reviews; drafts audit their own semantic
+  remainder (Control-Model answers, probe-or-source rows, seed-row
+  disposition). Small sweeps: Gate Coverage Matrix renumbered §2a;
+  the canon's threshold name caught up with its mirror
+  ("permissive"); the "(the Phase-2 pairflow integration)" bridge
+  parenthetical deleted. Lesson: a completeness CLAIM ("only X not
+  carried") is itself an auditable output — round 2 shipped it
+  unaudited; the arms' tail-diff is the check that should precede
+  the claim, not follow it.

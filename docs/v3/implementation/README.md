@@ -381,9 +381,8 @@ header field: **calibration** = through the ch7 pilot (closed with
 it); **measurement** = ch8 on — autonomous flag-free packets with the
 post-hoc boundary audit; **chaining** = the CHAINING STAGE:
 chapter-level delivery through `ExecutePairflowPlan`, pairflow
-doc-bubbles carrying refinement and implementation (the Phase-2
-pairflow integration). Chapter headers from ch8 declare
-`measurement`.
+doc-bubbles carrying refinement and implementation. Chapter headers
+from ch8 declare `measurement`.
 
 **The transitional cross-model arms:** until pairflow doc-bubbles
 arrive, the USER's manual cross-model arms play phase 2 (the

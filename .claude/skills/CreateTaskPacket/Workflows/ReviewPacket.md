@@ -196,7 +196,7 @@ consistency; the ergonomics floor)*
    verified against the live tree, type-ripple targets included, the
    mutation boundary exact — n/a for drafts).
 
-### 2) The Gate Coverage Matrix
+### 2a) The Gate Coverage Matrix
 
 One row per lens duty, one column per target surface it applies to;
 every cell is `pass | finding | n/a (reason) | missing | unknown`.
@@ -210,13 +210,26 @@ D5 routes or split away; an uninspected `unknown` is NEVER routable
 §2a rhythm)
 
 Audit that every TRIGGERED mandatory output is MATERIALIZED in the
-target — separate from whether the prose reads coherent: the machine
-blocks (template §1); the header classification line; the
-`## Sizing/risk` record whenever authority / runtime / read-surface /
-shared-contract work is in scope (template §2 step 0's gate — its
-axes, scan, and single-packet decision with proof or split shape);
-the collapsed-lane member inventories; the Mirrored Surface Map when
-contract-dense. Detail budget: not-triggered → one-line `N/A` WITH
+target — separate from whether the prose reads coherent. The list is
+per TARGET KIND:
+
+- **Packets:** the machine blocks (template §1); the header
+  classification line; the `## Sizing/risk` record whenever
+  authority / runtime / read-surface / shared-contract work is in
+  scope (template §2 step 0's gate — its axes, scan, and
+  single-packet decision with proof or split shape, PLUS that gate's
+  conditional annexes when their material is present); the
+  collapsed-lane member inventories; the Mirrored Surface Map when
+  contract-dense.
+- **Drafts:** the form registry is tier-0-enforced
+  (contract-draft-template §3) — this audit owns the SEMANTIC
+  remainder: the Control-Model checklist answered in Context; a
+  probe result or cited source on EVERY substrate-resting row;
+  seed-row disposition (each `SEED_ROWS` item landed as a C-row or
+  carries a recorded reason). The packet-side outputs above are
+  NEVER demanded of drafts.
+
+Detail budget: not-triggered → one-line `N/A` WITH
 evidence; triggered low-risk → a compact decision record; triggered
 split-or-contract-risk → the full fields/tables. A missing, generic,
 or prose-implied output is a `refine` finding that ADDS the record —
