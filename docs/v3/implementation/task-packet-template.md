@@ -104,11 +104,13 @@ inline-mark convention (`[P:*]`) was withdrawn at DESIGN TIME
 mark or standalone counts block, because a second provenance home a
 reader might trust is the drift class. Rules (lint-enforced):
 
-- row ids unique, lane-grammar shaped, and **bidirectionally
-  table-defined**: every manifest id is the FIRST cell of a table row
-  and every table-defined lane id is in the manifest (fenced code is
-  excluded; reserved non-lane families: `P`). Finer elements
-  (token-list members, inventory members) travel with their host row;
+- row ids unique, lane-grammar shaped — one or two uppercase letters +
+  an integer with NO leading zeros (`O01` is red), compared as EXACT
+  strings — and **bidirectionally table-defined**: every manifest id
+  is the FIRST cell of a table row and every table-defined lane id is
+  in the manifest (fenced code is excluded; reserved non-lane
+  families: `P`). Finer elements (token-list members, inventory
+  members) travel with their host row;
 - `class` ∈ `anchored` / `derived` / `new-decision`; anchored/derived
   carry ≥1 ref, new-decision carries none;
 - every ref either parses EXACTLY as a strict form —

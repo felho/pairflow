@@ -825,3 +825,13 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   Selftest 66→69. Class lesson named: LOOSE-ACCEPT — validate the
   declared FORM, then verify the resolved OBJECT is the claimed KIND;
   hex-shape or regex-shape alone proves neither
+- 2026-07-09 · process-v2 Phase 0.1 (lint review round 6 — one Low,
+  otherwise CLEAN) · the round-5 no-leading-zeros rule was minted in
+  the lint without sweeping the author-facing template §1 rules block
+  (docs-win: the template is the FORM authority, a rule living only
+  in the enforcer is contract drift toward authors) — swept. The
+  reviewer found NO blocking issues at 753577c6 and confirmed the
+  typical hole classes closed (unified boundary schema, full [P:*]
+  family, root/empty diff-tree, duplicate JSON keys, exact lane ids,
+  commit-object guard) — the first clean-ish round on the new
+  carrier, six rounds in
