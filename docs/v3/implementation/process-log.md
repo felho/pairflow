@@ -1056,3 +1056,25 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   precondition locally justified, cumulatively moving autonomy from
   DEFAULT to distant privilege. Process work STOPS here; the next
   act is the P3 pilot
+- 2026-07-10 · realignment round 2 (the user's instruction + two arm
+  reviews; anchor addendum AL-7..AL-9) · the v1 risk gate now lands
+  SELF-CONTAINED in template §2 step 0 — all SIX axes (identity/join
+  fragility restored: v3 has cross-store joins), all ELEVEN hard
+  stops translated, the escalation combos, the consume-family scan,
+  the implementation-closure proof ("shared invariant coherence is
+  NOT sufficient"), the split shapes, and the MATERIALIZED
+  `## Sizing/risk` record; the only v1 element not carried is the
+  numeric scoring wrapper (reason recorded in the anchor). The v1
+  ReviewSpec §2a rhythm returns in ReviewPacket: the Mandatory Output
+  Audit (missing output → refine ADDS it; round 1 materializes, the
+  next round assesses; detail budget N/A/compact/full) and the
+  split-is-NOT-advisory rule (a hard-stop combination defaults the
+  verdict to split — "somewhat ambitious but fine" is not a legal
+  assessment, the v1 LLM-bias this rule existed for). Round-1 arm
+  consequences swept: the two P1 approve-owner surfaces (ReviewPacket
+  verdict text, template step 10), README §8's tail, the ramp-stage
+  definitions restored to §5.5 (calibration closed with ch7;
+  measurement = ch8+ autonomy with post-hoc audit; chaining = the
+  pairflow stage — plan §1.3 and the template header enum stay
+  meaningful), the rollout "Phase 2" renamed the chaining stage, the
+  threshold name de-staged, the matrix wording aligned literally

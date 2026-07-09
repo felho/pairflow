@@ -252,10 +252,11 @@ one mechanism drives classification, draft routing, and this boundary.
 
 **Autonomous (no human):** in-chapter `split` — sizing, not scope
 (the sizing/split triggers: substrate novelty, claim/matrix families,
-dimension count, sibling fanout, plus the v1-inherited RISK AXES —
-authority movement, surface spread, foundation+activation coupling,
-prerequisite coupling, acceptance multiplicity; canonical statement +
-the hard-stop combinations: template §2 step 0; coverage union guarded
+dimension count, sibling fanout, plus the v1-inherited SIX RISK AXES —
+authority movement, surface spread, identity/join fragility,
+foundation+activation coupling, prerequisite coupling, acceptance
+multiplicity; canonical statement + the hard-stop combinations +
+the materialized `## Sizing/risk` record: template §2 step 0; coverage union guarded
 mechanically; parts inherit mode, predicted class, watchpoints; fresh
 watchdog per part; depth 1 — deeper → STOP);
 propagation-class plan edits (terminology/consistency sweeps of
@@ -294,7 +295,7 @@ records them):**
 | `refine` (any fold-now finding) | autonomous: fold + re-run panel |
 | `split`, within chapter (coverage union preserved) | autonomous, visible report |
 | `split` changing chapter scope/sequencing/dependencies | STOP 2 |
-| `approve`, flag-free (zero new-decision rows, zero approve-ratified routes, every approve-time gate green, one full clean panel round) | AUTONOMOUS from ch8 on — the loop proceeds to build (§4); the ch7 pilot packets (P3/P4) stay human-approved (first-of-a-kind), the last per-packet manual rounds |
+| `approve`, flag-free (zero new-decision manifest rows, zero approve-ratified routes, every approve-time tier-0 gate green, one full clean panel round) | AUTONOMOUS from ch8 on — the loop proceeds to build (§4); the ch7 pilot packets (P3/P4) stay human-approved (first-of-a-kind), the last per-packet manual rounds |
 | `approve`, flag-bearing | human (STOP 4), at every trust stage |
 | STOP 1–3 events | human, always |
 
@@ -373,12 +374,16 @@ per work item — prompt-by-prompt or delegating a packet/chapter.
 [`autonomy-realignment.md`](autonomy-realignment.md)):** packet-level
 autonomy opens at ch8 (the matrix's flag-free row; the ch7 pilot
 validates the machinery with the LAST per-packet manual rounds), and
-the v1 risk axes are ADOPTED as write-time sizing/split triggers
-(template §2 step 0 — source:
-`.claude/skills/CreatePairflowSpec/references/Complexity-Risk-Gate.md`).
-What remains Phase 2: chapter-level chaining through
-`ExecutePairflowPlan` — pairflow doc-bubbles carrying refinement and
-implementation.
+the full v1 risk gate is ADOPTED as the write-time sizing/split gate
+(template §2 step 0, self-contained). The stage names keep their
+meaning for the plan's ramp-marking convention (§1.3) and the packet
+header field: **calibration** = through the ch7 pilot (closed with
+it); **measurement** = ch8 on — autonomous flag-free packets with the
+post-hoc boundary audit; **chaining** = the CHAINING STAGE:
+chapter-level delivery through `ExecutePairflowPlan`, pairflow
+doc-bubbles carrying refinement and implementation (the Phase-2
+pairflow integration). Chapter headers from ch8 declare
+`measurement`.
 
 **The transitional cross-model arms:** until pairflow doc-bubbles
 arrive, the USER's manual cross-model arms play phase 2 (the
@@ -466,5 +471,5 @@ Boundary of authority: the template, the projection checklist, the
 skill carries procedure plus the failure-class registry distilled from
 the process log, and is amended at chapter boundaries only (§7's
 rhythm). The human checkpoints (§5.5) are untouched — the authoring
-loop iterates refine and in-chapter split autonomously and stops at
-the approve and at every STOP (the §5.5 matrix).
+loop stops at every STOP and at every human-gated approve; an
+autonomous flag-free approve proceeds to build (the §5.5 matrix).

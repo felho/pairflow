@@ -206,6 +206,26 @@ present/absent-with-evidence state, which may THEN be routed per the
 D5 routes or split away; an uninspected `unknown` is NEVER routable
 (routing an unknown launders ignorance into a decision).
 
+### 2b) Mandatory Output Audit (before any approve — the v1 ReviewSpec
+§2a rhythm)
+
+Audit that every TRIGGERED mandatory output is MATERIALIZED in the
+target — separate from whether the prose reads coherent: the machine
+blocks (template §1); the header classification line; the
+`## Sizing/risk` record whenever authority / runtime / read-surface /
+shared-contract work is in scope (template §2 step 0's gate — its
+axes, scan, and single-packet decision with proof or split shape);
+the collapsed-lane member inventories; the Mirrored Surface Map when
+contract-dense. Detail budget: not-triggered → one-line `N/A` WITH
+evidence; triggered low-risk → a compact decision record; triggered
+split-or-contract-risk → the full fields/tables. A missing, generic,
+or prose-implied output is a `refine` finding that ADDS the record —
+the first round MATERIALIZES, the next round ASSESSES; adjacent prose
+may not substitute unless it carries the exact decision fields,
+auditable without inference. Do not turn template availability into a
+detail demand: escalating from compact to full names the concrete
+risk trigger.
+
 ### 3) Findings — taxonomy, fix-all, routes
 
 Classify EVERY issue considered — nothing is dropped silently:
@@ -249,7 +269,12 @@ phase-2 obligation (README §5.5).
   repartition with a visible report (inheritance: mode, predicted
   class, watchpoints; fresh watchdog per part; depth 1 — deeper is a
   STOP). A scope/sequencing-changing split is STOP
-  `2:scope-changing-split`.
+  `2:scope-changing-split`. **Split is NOT advisory:** when a
+  risk-gate hard-stop combination is present (template §2 step 0),
+  the DEFAULT verdict is `split` — a single packet may continue only
+  with the implementation-closure proof; "somewhat ambitious but it
+  will be fine" is not a legal assessment (the v1 bias this rule
+  exists for).
 - **`approve`** — requires ALL of: every APPROVAL-TIME tier-0 gate
   green (step 0); ONE FULL clean panel round — **full** = all five
   lenses ran as fresh-context sub-agents ON THE FINAL BYTES (each
@@ -261,9 +286,14 @@ phase-2 obligation (README §5.5).
   clean round binds to its hash; approve-readiness is never assembled
   from lens results of different revisions. *Hostile:* a narrow-delta
   re-check does NOT count — the LAST round before approve is
-  full-panel on the final bytes. The approve itself is the HUMAN'S in
-  calibration (flag-bearing approves ALWAYS — STOP
-  `4:flagged-approve`; "flag-bearing" per the README §5.5 definition).
+  full-panel on the final bytes. The approve's OWNER follows the
+  README §5.5 matrix: a flag-free approve (zero new-decision manifest
+  rows, zero approve-ratified routes, every approve-time tier-0 gate
+  green, one clean full round) is AUTONOMOUS from ch8 on and proceeds
+  to build; a flag-bearing approve is the human's ALWAYS (STOP
+  `4:flagged-approve`; "flag-bearing" per the README §5.5
+  definition); the ch7 pilot and first-of-a-kind packets are
+  human-approved.
 - **STOP-reporting** — the panel never RESOLVES a STOP: it detects,
   classifies with a member token from the README §5.5 registry, and
   reports; resolution is the human's.

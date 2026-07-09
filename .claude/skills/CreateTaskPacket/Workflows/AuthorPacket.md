@@ -91,11 +91,12 @@ Read, in this order (current state, never from memory):
    sizing heuristics: substrate novelty, claim families, matrix
    families, dimension count, sibling-packet fanout (the adopted
    Closure-Budget bucket-coincidence trigger is subsumed by these
-   axes) — PLUS the v1-inherited risk axes as split triggers
-   (authority movement, surface spread, foundation+activation
-   coupling, prerequisite coupling, acceptance multiplicity; the
-   hard-stop combinations are split-REQUIRED — canonical statement:
-   template §2 step 0). Their outcome feeds the split decision: an IN-CHAPTER split
+   axes) — PLUS the v1-inherited SIX risk axes as split triggers
+   (authority movement, surface spread, identity/join fragility,
+   foundation+activation coupling, prerequisite coupling, acceptance
+   multiplicity; the hard-stop combinations are split-REQUIRED and
+   the packet MATERIALIZES the assessment as its `## Sizing/risk`
+   record — canonical statement: template §2 step 0). Their outcome feeds the split decision: an IN-CHAPTER split
    executes autonomously per the README §5.5 verdict-action matrix —
    split parts inherit mode, predicted class, and watchpoints; each
    part gets a fresh watchdog budget; autonomous split depth is 1
@@ -107,7 +108,7 @@ Read, in this order (current state, never from memory):
    `prose:`-prefixed), `derived` (its one-line DERIVATION NOTE lives
    in the row's own table text — review material for the entailment
    attack, never manifest data), or `new-decision`. **Case B fires**
-   on new-decision mass over the calibration-permissive threshold OR
+   on new-decision mass over the permissive threshold OR
    ANY new-decision row touching authority / separation /
    availability-class semantics (tightening the threshold is a config
    change, not a redesign): STOP authoring BEFORE drafting continues
@@ -301,9 +302,9 @@ ch7-P1 dangling-"flagged below" lesson).
    §5.5 verdict-action matrix):** at every STOP, always; at every
    FLAG-BEARING approve (STOP `4:flagged-approve`, the human's at
    every stage); and at the ch7 pilot / first-of-a-kind approves.
-   From ch8 on, a FLAG-FREE approve (zero new-decision rows, zero
-   approve-ratified routes, every approve-time gate green, one full
-   clean panel round) is AUTONOMOUS: the loop proceeds to build
+   From ch8 on, a FLAG-FREE approve (zero new-decision manifest rows,
+   zero approve-ratified routes, every approve-time tier-0 gate
+   green, one full clean panel round) is AUTONOMOUS: the loop proceeds to build
    (README §4 — one packet, one commit, post-build audit at close).
    **Entry mode is the trust dial:** the user chooses per work item —
    prompt-by-prompt in the loop, or delegating a whole

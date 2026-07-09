@@ -240,25 +240,83 @@ Spec-writing is projection, not invention. In order:
 0. **Classify + size, BEFORE any drafting (process-v2, README §5.5):**
    read the chapter's predicted class (plan §1.3 convention); run the
    sizing heuristics — substrate novelty, claim families, matrix
-   families, dimension count, sibling-packet fanout — AND the
-   v1-inherited RISK AXES as split triggers (axes, not a scoring
-   apparatus; source: the v1 Complexity-Risk gate):
+   families, dimension count, sibling-packet fanout — and the RISK
+   GATE below. The gate is SELF-CONTAINED (the v1 Complexity-Risk
+   gate carried in full; the one element not carried is the numeric
+   0|1|2 scoring wrapper — the axes and combinations below carry the
+   same decisions). Do not estimate risk from file count; estimate it
+   from boundary spread, on SIX axes:
    - **authority movement** — the packet introduces or MOVES a
      canonical source of truth;
    - **surface spread** — how many distinct surfaces must change for
-     one concept (kernel / store / CLI / testkit / docs);
+     ONE concept (kernel logic / store schema / ingress-write seam /
+     read projection (floor) / CLI-human payload / testkit);
+   - **identity/join fragility** — consumer correctness depends on
+     cross-seam identity matching (e.g. diag rows correlated to
+     instances/timeline across two stores; multiple id forms that
+     must align);
    - **foundation + activation coupling** — build-the-base and
      turn-it-on in ONE packet (the ch8/MD-1 migrate-and-activate
      shape);
    - **prerequisite coupling** — depends on unfinished sibling work;
    - **acceptance multiplicity** — distinct success classes proven at
-     once.
-   **Hard-stop shape (v1-inherited — these combinations are
-   split-REQUIRED):** authority movement combined with activation; one
-   concept across 3+ surfaces; activation depending on an unfinished
-   prerequisite. The outcome feeds the split decision (an in-chapter
-   split executes autonomously per the verdict-action matrix; a
-   scope-changing one is STOP 2). **Draft-routing STOP:** a memo-born
+     once (schema / write path / read projection / CLI behavior /
+     migration).
+   **Consume-family scan (authority-heavy packets, discovery-first):**
+   for every plausibly relevant role — producer, validator/gate,
+   persistence/replay, execution consumer, read/presentation
+   (floor + CLI), recovery/cleanup, testkit — record `present`,
+   `absent`, or `unknown`, from the tree, not from the packet's own
+   list. `unknown` is not a pass state (the panel's unknown rule).
+   **Hard stops (these combinations are split-REQUIRED — split is not
+   advisory):**
+   1. authority movement + new runtime behavior turned on, in one
+      packet;
+   2. one concept across 3+ surfaces;
+   3. activation depending on an unfinished prerequisite;
+   4. correctness relying on multiple COMPETING authority paths for
+      the same decision;
+   5. a contract cutover mixed with its consumer cutover while the
+      join is fragile (identity axis);
+   6. the authority touches 3+ consume families — then the split is
+      producer-first + consumer-family, not the generic shape;
+   7. one packet changes the authority producer + a shared
+      contract/result shape + any two fallout families;
+   8. a persisted authority/schema change + shared-contract migration
+      + read-projection/CLI fallout in one packet;
+   9. producer behavior changed together with rollback/retry/cleanup/
+      preservation semantics, or lock/lease/idempotency/serialization
+      semantics, or precondition ordering that decides whether side
+      effects precede validation;
+   10. changing WHERE success/completion is proven while also changing
+      cleanup or final status/event truth surfaces;
+   11. reusing an existing proof contract (matrix/test suite) without
+      explicit proof-parity or an explicitly narrowed reuse.
+   **Escalation below hard-stop (default to split):** high surface
+   spread + acceptance multiplicity ≥ 2; high identity fragility +
+   surface spread ≥ 2; authority movement + identity fragility + a
+   CLI/human-payload change together.
+   **A single packet may continue past a trip ONLY with
+   implementation-closure proof:** one build closes it without
+   separate sequencing; the same bounded code change closes the
+   touched buckets; the same consumers own the fallout; the same
+   proof surface validates it; no per-consumer-family review loop is
+   expected; no separate compatibility/diagnostics/read-projection/
+   recovery/ordering risk is introduced. **Shared invariant coherence
+   is NOT sufficient proof** — most broad features serve one
+   invariant; the question is whether one implementation closure
+   actually closes the work.
+   **Split shapes:** default `foundation → delivery → activation`;
+   with 3+ consume families: `persisted authority → producer →
+   consumer-family alignment → activation → read-model → cleanup`.
+   **RECORD (materialized, not implied):** the packet carries the
+   assessment — axes touched, the consume-family scan when run,
+   `single-packet allowed: yes|no`, and the closure proof or the
+   split shape — as a `## Sizing/risk` section (or an explicit
+   one-line `N/A — no axis triggered` with evidence). The outcome
+   feeds the split decision (an in-chapter split executes
+   autonomously per the verdict-action matrix; a scope-changing one
+   is STOP 2). **Draft-routing STOP:** a memo-born
    surface whose chapter contract-draft is not ratified-or-later
    routes to the DraftContract round first; mid-authoring, a Case-B
    signal (new-decision mass over the calibration-permissive
@@ -305,8 +363,10 @@ Spec-writing is projection, not invention. In order:
     (fresh-context sub-agents; Gate Coverage Matrix; approve-time
     tier-0 gates first). Verdicts: `split` / `refine` / `approve` +
     STOP reporting, per the README §5.5 verdict-action matrix —
-    refine and in-chapter split iterate AUTONOMOUSLY; the approve and
-    every STOP are the human's decision points. The old
+    refine and in-chapter split iterate AUTONOMOUSLY; every STOP,
+    every flag-bearing approve, and the ch7-pilot/first-of-a-kind
+    approves are the human's; a flag-free approve is AUTONOMOUS from
+    ch8 on and proceeds to build. The old
     content-half/ergonomic-half rubric is retired: its content checks
     live in lens 2, its ergonomics in lenses 4–5.
 
