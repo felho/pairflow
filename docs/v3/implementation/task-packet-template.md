@@ -253,9 +253,13 @@ Spec-writing is projection, not invention. In order:
      read projection (floor) / CLI-human payload / testkit — testkit
      counts ONLY when its CONTRACT changes: a new fake/seam, a
      fixture type, a recording-sink shape; tests merely EXERCISING
-     the change never count, or every routine packet trips hard
-     stop 2 — the ch7-P1 retro-check; v1 counted production surfaces
-     only);
+     the change never count — every packet has tests, so counting
+     the drive makes three surfaces trivial (v1 counted production
+     surfaces only). A packet that CHANGES the testkit contract
+     counts it and, on a trip, continues only with closure proof —
+     the ch7-P1 retro-check lands on THIS branch: it introduced the
+     recording sink, trips hard stop 2, and closes — the gate's
+     intended shape, not an exemption);
    - **identity/join fragility** — consumer correctness depends on
      cross-seam identity matching (e.g. diag rows correlated to
      instances/timeline across two stores; multiple id forms that
@@ -270,7 +274,8 @@ Spec-writing is projection, not invention. In order:
    **Consume-family scan (authority-heavy packets, discovery-first):**
    for every plausibly relevant role — producer, validator/gate,
    persistence/replay, execution consumer, read/presentation
-   (floor + CLI), recovery/cleanup, testkit — record `present`,
+   (floor + CLI), recovery/cleanup, external/integration (the
+   dispatch/egress surface), testkit — record `present`,
    `absent`, or `unknown`, from the tree, not from the packet's own
    list. `unknown` is not a pass state (the panel's unknown rule).
    Testkit records in the scan as a role; it COUNTS toward the
@@ -347,7 +352,11 @@ Spec-writing is projection, not invention. In order:
    out of the producer slice). The outcome
    feeds the split decision (an in-chapter split executes
    autonomously per the verdict-action matrix; a scope-changing one
-   is STOP 2). **Draft-routing STOP:** a memo-born
+   is STOP 2). **Chapter-level use (the v1 "For Plans" tail):** the
+   same gate informs the CHAPTER's packet cut at ratification (the
+   plan §N.7 table); no numeric score is persisted anywhere — the
+   record is always the resulting split/dependency shape.
+   **Draft-routing STOP:** a memo-born
    surface whose chapter contract-draft is not ratified-or-later
    routes to the DraftContract round first; mid-authoring, a Case-B
    signal (new-decision mass over the permissive

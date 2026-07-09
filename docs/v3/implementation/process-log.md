@@ -1104,3 +1104,23 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   carried") is itself an auditable output — round 2 shipped it
   unaudited; the arms' tail-diff is the check that should precede
   the claim, not follow it.
+- 2026-07-10 · realignment round 4 (one arm review on round 3;
+  anchor addendum AL-13..AL-15) · the completeness lesson RECURSED:
+  round 3's own "only element" claim missed two v1 elements — the
+  external/integration scan role (not empty in v3: the kernel's
+  dispatch/egress surface — deriveDispatchIntent, ports/egress, the
+  fake egress adapter) is now carried; the workflow/orchestration
+  role stays out WITH its reason (the v3 kernel IS the orchestrator;
+  a separate role would double-count the execution-consumer role);
+  the v1 "For Plans" tail carried as the chapter-cut sentence (the
+  gate informs the plan §N.7 packet cut; no numeric score persisted
+  — only the split/dependency shape). Structural fix: the
+  completeness claim changes FORM — a universal negative becomes a
+  CLOSED exclusion list with reasons; a future gap falsifies the
+  list, not an adverb. AL-11's retro-example corrected on
+  verification: ch7-P1 itself INTRODUCED the recording sink, so
+  under the narrowed rule it TRIPS hard stop 2 and continues with
+  closure proof — the template line now shows P1 on that branch
+  (the gate's intended shape) instead of implying an exemption the
+  rule's letter contradicts. The "substrate-resting row" coinage got
+  its definition pointer (DraftContract §1.2).

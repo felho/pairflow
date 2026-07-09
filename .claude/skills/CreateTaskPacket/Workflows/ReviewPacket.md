@@ -224,7 +224,9 @@ per TARGET KIND:
 - **Drafts:** the form registry is tier-0-enforced
   (contract-draft-template §3) — this audit owns the SEMANTIC
   remainder: the Control-Model checklist answered in Context; a
-  probe result or cited source on EVERY substrate-resting row;
+  probe result or cited source on EVERY substrate-resting row
+  (DraftContract §1.2 — a row resting on driver/OS/filesystem
+  behavior);
   seed-row disposition (each `SEED_ROWS` item landed as a C-row or
   carries a recorded reason). The packet-side outputs above are
   NEVER demanded of drafts.
