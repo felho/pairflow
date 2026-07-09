@@ -996,7 +996,7 @@ justification: the machine-guarded surface is the C-row set, so prose
 stays non-normative by declaration and a post-ratification prose edit
 still cannot change the contract.
 
-### 7.4 Two process rules minted
+### 7.4 Process rules minted
 
 - **Fix-all scope (D5 clarification).** The fix-all default binds
   CONTENT findings — packets, drafts, authority text — where the
@@ -1154,3 +1154,16 @@ token + one watchpoint), arm 1 refine (two findings); all folded:**
   the bytes. State: all round-2 findings folded; awaiting a
   confirming round or the user's direct ratification act (the base
   document's own ratification precedent).
+
+**Fold round 3 (2026-07-09): arm 1 clean (no findings), arm 2 refine
+(one one-word finding); folded:**
+
+- **Stale scalar in the §7.4 heading** (arm 2, I): FOLDED — retitled
+  count-free ("Process rules minted") per the doc's own
+  counts-to-lists rule; the log's original "TWO RULES MINTED" stays
+  frozen as point-in-time history. Per arm 2's pre-declared
+  condition, its verdict flips to approve on these bytes without a
+  further round (the change is the reviewed remedy, one token) — and
+  this fold commit is therefore the content commit the ratification
+  act records (§7.6 step 1's self-maintaining definition: this
+  record itself is the last §7-body change).
