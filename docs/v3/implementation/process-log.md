@@ -772,3 +772,21 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   never-live constructs get design-time wording, and a reappearance
   guard names the REAL threat (generation drift), never a fictional
   decommission
+- 2026-07-09 · process-v2 Phase 0.1 (lint review round 3, two
+  findings, both IN threat model) · (1) a ROOT commit's diff-tree
+  change list is empty without --root, so the --post-build audit
+  passed vacuously (reproduced by the reviewer: out-of-boundary
+  files rode in on a repo's first commit) — the SECOND member of the
+  empty-diff-tree false-green family whose first member (merge
+  commits) was guarded in the original build; fixed with --root
+  (diff against the empty tree) + a red dim, and the P8 claim now
+  names the family ("an empty change list in either form is a
+  false-green audit"); (2) fence exclusion stripped only backtick
+  fences while the P5/P6 claims say "fenced code excluded" — a tilde
+  fence hid nothing; the code widened to the claim (both markdown
+  fence forms; machine blocks stay ```json by the template's
+  declared form) rather than the claim narrowed to the code, + a red
+  dim and a both-forms green. Selftest 62→64. Family lesson: when a
+  false-green is found in ONE branch of an enumerable family (merge/
+  root; backtick/tilde), sweep the family — the sibling hole is the
+  cheapest prediction available

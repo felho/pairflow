@@ -32,10 +32,11 @@ Packets (docs/v3/implementation/packets/*.md, README.md excluded):
       Anything else is red: no silent pass-through, a near-miss is
       loud, never reinterpreted.
   P5. Bidirectional lane-id completeness: every manifest id is defined
-      as the FIRST cell of a table row (fenced code excluded), and
-      every table-defined lane id (reserved families excluded) is in
-      the manifest. The table scan is intentionally narrow — it checks
-      id existence in both directions and reads NOTHING else.
+      as the FIRST cell of a table row (fenced code excluded — the
+      backtick AND tilde fence forms both hide code), and every
+      table-defined lane id (reserved families excluded) is in the
+      manifest. The table scan is intentionally narrow — it checks id
+      existence in both directions and reads NOTHING else.
   P6. The withdrawn carrier may not REAPPEAR: an inline [P:*]
       provenance mark (outside fences) or a standalone
       {"provenance": ...} block in a v2 packet is red. The convention
@@ -53,8 +54,9 @@ Packets (docs/v3/implementation/packets/*.md, README.md excluded):
       COMMIT plus the packet file itself (audit reruns are pinned);
       the boundary must satisfy the FULL P2 shape rules on this path
       too (a subset check over a malformed boundary proves nothing);
-      merge commits are rejected outright (empty diff-tree list is a
-      false-green audit).
+      merge commits are rejected outright and root commits are diffed
+      against the empty tree (an EMPTY diff-tree change list in either
+      form is a false-green audit).
 
 Drafts (docs/v3/implementation/contracts/*.md, README.md excluded; a
 missing directory means zero drafts):
@@ -137,7 +139,10 @@ RATIFICATION_KEYS = {"date", "arms", "commit"}
 PROSE_PREFIX = "prose:"
 
 FENCED_JSON_RE = re.compile(r"```json\s*\n(.*?)```", re.DOTALL)
-FENCED_ANY_RE = re.compile(r"```.*?```", re.DOTALL)
+# BOTH markdown fence forms — the P5/P6 claims say "fenced code
+# excluded", and a tilde fence hides code exactly like a backtick one.
+# Machine blocks stay ```json only (the template's declared form).
+FENCED_ANY_RE = re.compile(r"```.*?```|~~~.*?~~~", re.DOTALL)
 LANE_DEF_RE = re.compile(r"^\|\s*([A-Z]{1,2})(\d+)\s*\|")
 MANIFEST_ID_RE = re.compile(r"^([A-Z]{1,2})(\d+)$")
 CONTRACT_REF_RE = re.compile(r"^contract:(ch\d+-[a-z0-9-]+)#(C\d+)$")
@@ -778,8 +783,11 @@ def check_post_build(packet_path: Path, commit: str, checker: Checker) -> None:
             f"own single-parent build commit (one-commit rule)"
         )
         return
+    # --root: a ROOT commit otherwise yields an EMPTY change list — the
+    # same vacuous-audit class as the merge-commit hole above; with
+    # --root it diffs against the empty tree and lists every file.
     out = subprocess.run(
-        ["git", "-C", str(root), "diff-tree", "--no-commit-id", "--name-only", "-r", commit],
+        ["git", "-C", str(root), "diff-tree", "--root", "--no-commit-id", "--name-only", "-r", commit],
         capture_output=True,
         text=True,
     )
@@ -1158,13 +1166,22 @@ def run_selftest() -> int:
         + "\n```\n| O3 | only inside a fence |\n```\n",
         "not defined as a table row",
     )
-    # fenced noise must stay green: unresolvable refs/marks inside fences
+    expect_red_packet(
+        "tilde-fenced-only-definition",
+        GREEN_PACKET.replace("| O3 | c |", "| O3x | c |")
+        + "\n~~~\n| O3 | only inside a tilde fence |\n~~~\n",
+        "not defined as a table row",
+    )
+    # fenced noise must stay green: unresolvable refs/marks inside
+    # fences of EITHER form
     shared_packet.write_text(
-        GREEN_PACKET + "\n```\nADR-999 and contract:ch9-test-surface#C9 and [P:new-decision]\n```\n",
+        GREEN_PACKET
+        + "\n```\nADR-999 and contract:ch9-test-surface#C9 and [P:new-decision]\n```\n"
+        + "\n~~~\nADR-999 and contract:ch9-test-surface#C9 and [P:new-decision]\n~~~\n",
         encoding="utf-8",
     )
     errors, _ = lint(shared_root / "packets", shared_root / "contracts", ADR_DIR)
-    expect_green("fenced noise", errors)
+    expect_green("fenced noise (backtick + tilde)", errors)
     shared_packet.write_text(GREEN_PACKET, encoding="utf-8")
 
     # ---- P6 withdrawn carrier
@@ -1497,6 +1514,26 @@ def run_selftest() -> int:
                 checker.errors,
                 "nonempty list of repo-relative paths",
             )
+    # a ROOT commit's diff-tree list is empty without --root — the
+    # reproduced vacuous-audit hole: out-of-boundary files rode in on
+    # the repo's first commit
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        pdir = root / "packets"
+        pdir.mkdir()
+        packet = pdir / "ch9-p1-test.md"
+        packet.write_text(
+            '# p\n\n```json\n{"mutation_boundary": {"files": ["x.txt"]}}\n```\n',
+            encoding="utf-8",
+        )
+        (root / "x.txt").write_text("x", encoding="utf-8")
+        (root / "y.txt").write_text("y", encoding="utf-8")
+        if not (_git_ok(root, "init", "-q") and _git_ok(root, "add", "-A") and _git_ok(root, "commit", "-q", "-m", "root")):
+            failures.append("selftest git fixture setup failed (post-build-root)")
+        else:
+            checker = Checker()
+            check_post_build(packet, "HEAD", checker)
+            assert_red("post-build-root-commit", checker.errors, "OUTSIDE")
 
     # ---- the green pair must pass
     errors, _ = lint(shared_root / "packets", shared_root / "contracts", ADR_DIR)
