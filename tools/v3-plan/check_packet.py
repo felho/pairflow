@@ -1689,6 +1689,21 @@ def run_selftest() -> int:
             checker = Checker()
             check_post_build(packet, _git_out(root, "rev-parse", "vtest"), checker)
             assert_red("post-build-tag-object", checker.errors, "does not resolve to a COMMIT")
+            # a VALID build-shaped audit is GREEN — without this, a
+            # false-red regression on a correct commit would slip
+            # through a red-only dim set
+            (root / "x.txt").write_text("x-valid", encoding="utf-8")
+            packet.write_text(
+                packet.read_text(encoding="utf-8") + "\nvalid build\n", encoding="utf-8"
+            )
+            _git_ok(root, "add", "-A")
+            _git_ok(root, "commit", "-q", "-m", "valid-build")
+            checker = Checker()
+            check_post_build(packet, _git_out(root, "rev-parse", "HEAD"), checker)
+            if checker.errors:
+                failures.append(
+                    f"selftest green NOT green: valid post-build audit ({checker.errors[0]})"
+                )
             # a build-shaped commit (packet included) with an
             # out-of-boundary file
             (root / "x.txt").write_text("x2", encoding="utf-8")

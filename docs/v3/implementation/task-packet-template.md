@@ -186,9 +186,13 @@ commit:
   (strict-or-`prose:`-prefixed refs, bidirectional table-defined lane
   ids), withdrawn-carrier rejection, and the `packet_metrics` deep
   schema + manifest-tally cross-lock. Post-build check:
-  `check_packet.py --post-build <commit> --packet <path>` — the
-  commit's changed files must stay inside the declared mutation
-  boundary (plus the packet file itself).
+  `check_packet.py --post-build <commit-sha> --packet <path>` — the
+  audited ref must be a PINNED commit sha (HEAD, branch, and tag
+  names are rejected: they move), the commit must change the packet
+  file itself (the one-commit rule, enforced positively — a code-only
+  or follow-up commit is the wrong audit target), and its changed
+  files must stay inside the declared mutation boundary (plus the
+  packet file).
 - **Contract-drafts** (`docs/v3/implementation/contracts/`) are linted
   by the same tool per the D2 artifact contract on the Amendment-1
   carrier: meta block, C-row registry, `{date, arms, commit}`

@@ -906,3 +906,15 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   mirroring the guard (hex shape + cat-file -t == commit before git
   show); the selftest's own audits now pass rev-parse'd shas, with
   HEAD and tag-object red dims. Selftest 74→76
+- 2026-07-09 · process-v2 Phase 0.1 (lint review round 11, two Lows)
+  · (1) the P8 audit had RED-ONLY selftest coverage — a false-red
+  regression on a VALID build commit would have slipped through; a
+  green assertion now audits a correct packet+boundary commit (the
+  claim-derivation rule cuts both ways: a gate's selftest proves it
+  fires AND that it does not fire on the legal case); (2) template
+  §1a described --post-build looser than the code enforces after
+  rounds 9–10 (pinned sha, packet-file-in-changed) — the docs-drift
+  swept: the next user would have tried HEAD or a follow-up commit
+  and hit a red they were not told about. Both Lows are maintenance
+  of earlier folds' own consequences — the round's shape suggests
+  the finding stream is converging to mirror-upkeep
