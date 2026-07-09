@@ -40,7 +40,9 @@ V2 packet checks:
     the canonical STOP member-token registry), and its provenance counts
     cross-checked against the SAME inline marks as the provenance block.
   - --post-build <commit>: the commit's changed files must be a subset
-    of the declared mutation boundary plus the packet file itself (the
+    of the mutation boundary read from the PACKET'S BYTES AT THAT
+    COMMIT plus the packet file itself — audit reruns are pinned; a
+    later working-tree boundary edit cannot change an old verdict (the
     one packet-lint check that cannot run at fold time).
 
 Draft source: docs/v3/implementation/contracts/*.md (README.md
@@ -52,7 +54,10 @@ Draft checks (the D2 artifact contract):
     draft|ratified|realized, and MONOTONIC across the FULL committed
     history plus the working tree (a ratified -> draft -> ratified
     history is red even though its final edge is clean; a reopen is a
-    new ratification block, never a step back).
+    new ratification block, never a step back), and the ratification
+    block history is APPEND-ONLY across the same walk (rewriting the
+    sole block's sha256 after a row edit is red even with a matching
+    hash).
   - C-row registry: table rows whose first cell is C<n>; unique ids;
     ratified-or-later requires at least one row.
   - canonical row payload hash: sha256 over the raw C-row lines
@@ -208,27 +213,46 @@ def _parse_status(text: str, name: str) -> str | None:
     return None
 
 
-def draft_status_history(path: Path) -> list[str]:
-    """Every parseable status value of the draft across its FULL git
-    history (oldest -> newest). Empty for untracked/out-of-repo files.
-
-    The full chain matters: checking only the latest edge was a false
-    gate — a committed ratified -> draft -> ratified history has a clean
-    final edge while the status machine stepped back in between. The
-    repo root derives from the file's own directory so the git
-    integration stays selftestable in a throwaway repo."""
+def git_root_and_rel(path: Path) -> tuple[Path, str] | None:
     top = subprocess.run(
         ["git", "-C", str(path.parent), "rev-parse", "--show-toplevel"],
         capture_output=True,
         text=True,
     )
     if top.returncode != 0:
-        return []
+        return None
     root = Path(top.stdout.strip())
     try:
-        rel = path.resolve().relative_to(root).as_posix()
+        return root, path.resolve().relative_to(root).as_posix()
     except ValueError:
+        return None
+
+
+def _ratification_fingerprints(text: str, name: str) -> list[str]:
+    silent = Checker()
+    return [
+        json.dumps(b, sort_keys=True)
+        for b in block_by_key(json_blocks(text, name, silent), "ratification")
+        if isinstance(b, dict)
+    ]
+
+
+def draft_history(path: Path) -> list[dict]:
+    """Every parseable version of the draft across its FULL git history
+    (oldest -> newest): {"status", "ratifications"} per version. Empty
+    for untracked/out-of-repo files.
+
+    The full chain matters twice over: (a) checking only the latest
+    status edge was a false gate — ratified -> draft -> ratified has a
+    clean final edge; (b) the ratification-block history is APPEND-ONLY
+    — rewriting the sole block's sha256 after editing a row would
+    otherwise pass with a matching hash. The repo root derives from the
+    file's own directory so the git integration stays selftestable in a
+    throwaway repo."""
+    located = git_root_and_rel(path)
+    if located is None:
         return []
+    root, rel = located
     rl = subprocess.run(
         ["git", "-C", str(root), "rev-list", "--reverse", "HEAD", "--", rel],
         capture_output=True,
@@ -236,7 +260,7 @@ def draft_status_history(path: Path) -> list[str]:
     )
     if rl.returncode != 0:
         return []
-    statuses: list[str] = []
+    versions: list[dict] = []
     for commit in (line.strip() for line in rl.stdout.splitlines() if line.strip()):
         out = subprocess.run(
             ["git", "-C", str(root), "show", f"{commit}:{rel}"],
@@ -247,8 +271,13 @@ def draft_status_history(path: Path) -> list[str]:
             continue
         status = _parse_status(out.stdout, path.name)
         if status is not None:
-            statuses.append(status)
-    return statuses
+            versions.append(
+                {
+                    "status": status,
+                    "ratifications": _ratification_fingerprints(out.stdout, path.name),
+                }
+            )
+    return versions
 
 
 RATIFICATION_KEYS = {"date", "arms", "sha256"}
@@ -291,10 +320,25 @@ def check_draft(path: Path, checker: Checker) -> dict | None:
     if status not in DRAFT_STATUSES:
         checker.error(f"{path.name}: contract_draft.status '{status}' not in {DRAFT_STATUSES}")
         return None
-    chain = draft_status_history(path)
+    history = draft_history(path)
+    chain = [v["status"] for v in history]
     chain.append(status)  # adjacent equals pass — a duplicate tail is harmless
     for prev, current in zip(chain, chain[1:]):
         check_status_monotonic(path.name, prev, current, checker)
+    # Append-only ratification history: every committed version's block
+    # list must be a PREFIX of the next version's (and of the working
+    # tree's) — a rewritten or removed block is a silent
+    # re-ratification, never a legal edit.
+    block_lists = [v["ratifications"] for v in history]
+    block_lists.append(_ratification_fingerprints(text, path.name))
+    for prev_blocks, cur_blocks in zip(block_lists, block_lists[1:]):
+        if cur_blocks[: len(prev_blocks)] != prev_blocks:
+            checker.error(
+                f"{path.name}: ratification blocks were rewritten or removed — "
+                f"the block history is APPEND-ONLY (a reopen appends a new "
+                f"ratification block; it never edits an existing one)"
+            )
+            break
     name_match = DRAFT_NAME_RE.match(path.name)
     if not name_match:
         checker.error(f"{path.name}: filename must be ch<N>-<surface>-contract.md")
@@ -377,7 +421,7 @@ def check_packet(
     probe = Checker()
     blocks = json_blocks(text, path.name, probe)
     boundaries = block_by_key(blocks, "mutation_boundary")
-    if not boundaries and '"mutation_boundary"' not in text:
+    if not boundaries and "mutation_boundary" not in text:
         return False  # pre-v2: grandfathered, parse noise suppressed
     checker.errors.extend(probe.errors)
     if not boundaries:
@@ -409,6 +453,11 @@ def check_packet(
         marks[kind] += 1
         if kind in ("anchored", "derived") and not ref:
             checker.error(f"{path.name}: [P:{m.group(1)}] mark without a ref")
+        elif kind == "new_decision" and ref:
+            checker.error(
+                f"{path.name}: [P:new-decision] carries a payload ('{ref}') — "
+                f"the class is ref-less by definition (nothing prior determines it)"
+            )
     prov_blocks = block_by_key(blocks, "provenance")
     if len(prov_blocks) != 1 or not isinstance(prov_blocks[0], dict):
         checker.error(f"{path.name}: v2 packet requires exactly one provenance block")
@@ -488,11 +537,16 @@ def check_packet(
         if num not in defined[fam]:
             checker.error(f"{path.name}: lane ref '{fam}{num}' undefined in this packet")
 
-    # packet_metrics (optional block; DEEP schema check when present —
-    # a shallow "if it happens to be a dict" check is a false gate).
-    # The metrics' provenance counts are cross-checked against the SAME
-    # inline marks the provenance block is locked to.
-    for metrics in block_by_key(blocks, "packet_metrics"):
+    # packet_metrics (optional block, AT MOST ONE — D7: one compact
+    # machine block per packet, written once at close; DEEP schema when
+    # present). The metrics' provenance counts are cross-checked against
+    # the SAME inline marks the provenance block is locked to.
+    metrics_blocks = block_by_key(blocks, "packet_metrics")
+    if len(metrics_blocks) > 1:
+        checker.error(
+            f"{path.name}: {len(metrics_blocks)} packet_metrics blocks; at most one (D7)"
+        )
+    for metrics in metrics_blocks:
         check_packet_metrics(path.name, metrics, checker, marks=marks)
     return True
 
@@ -598,16 +652,32 @@ def check_packet_metrics(
 
 
 def check_post_build(packet_path: Path, commit: str, checker: Checker) -> None:
-    text = packet_path.read_text(encoding="utf-8")
+    """The boundary is read from the PACKET'S BYTES AT THE COMMIT, never
+    the working tree — an audit rerun must be stable: a later boundary
+    edit may not change an older commit's verdict."""
+    located = git_root_and_rel(packet_path)
+    if located is None:
+        checker.error(f"--post-build: {packet_path} is not inside a git repository")
+        return
+    root, rel = located
+    shown = subprocess.run(
+        ["git", "-C", str(root), "show", f"{commit}:{rel}"],
+        capture_output=True,
+        text=True,
+    )
+    if shown.returncode != 0:
+        checker.error(f"--post-build: packet '{rel}' not found in commit '{commit}'")
+        return
+    text = shown.stdout
     blocks = json_blocks(text, packet_path.name, checker)
     boundaries = block_by_key(blocks, "mutation_boundary")
     if len(boundaries) != 1 or not isinstance(boundaries[0].get("files"), list):
         checker.error(f"{packet_path.name}: --post-build needs exactly one valid mutation_boundary block")
         return
     allowed = set(boundaries[0]["files"])
-    allowed.add(str(packet_path.resolve().relative_to(REPO_ROOT)))
+    allowed.add(rel)
     out = subprocess.run(
-        ["git", "-C", str(REPO_ROOT), "diff-tree", "--no-commit-id", "--name-only", "-r", commit],
+        ["git", "-C", str(root), "diff-tree", "--no-commit-id", "--name-only", "-r", commit],
         capture_output=True,
         text=True,
     )
@@ -701,6 +771,71 @@ Ranges O1–O3 hold; O2 alone too.
 {"packet_metrics": {"class": "t", "prediction": {"predicted": "projection", "reasoning": "r", "discovered": "projection"}, "provenance": {"anchored": 1, "derived": 1, "new_decision": 1}, "rounds": {"review": 1, "doc_refinement": 0, "implementation": 0}, "stops": [{"type": "3:watchdog", "what": "w", "resolution": "r"}], "detector_misses": [], "learned": "l"}}
 ```
 """
+
+
+def git_rewrite_and_postbuild_selftest(green_draft: str, failures: list[str]) -> None:
+    git_base = ["git", "-c", "user.email=lint@selftest", "-c", "user.name=lint-selftest"]
+
+    def run(cmds: list[list[str]], cwd: Path) -> bool:
+        return all(subprocess.run(c, cwd=cwd, capture_output=True).returncode == 0 for c in cmds)
+
+    # 33: rewriting the SOLE ratification block (edited row + replaced
+    # sha, matching hash) must go red — append-only history.
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        cdir = root / "contracts"
+        cdir.mkdir()
+        path = cdir / "ch9-test-surface-contract.md"
+        path.write_text(green_draft, encoding="utf-8")
+        if not run([["git", "init", "-q"], git_base + ["add", "-A"], git_base + ["commit", "-q", "-m", "one"]], root):
+            failures.append("selftest git fixture setup failed (rewrite)")
+            return
+        edited = green_draft.replace("| C1 | the row |", "| C1 | the row, silently edited |")
+        with tempfile.TemporaryDirectory() as probe_tmp:
+            probe = Path(probe_tmp) / "p.md"
+            probe.write_text(edited, encoding="utf-8")
+            new_hash = draft_payload_hash(edited)
+        old_hash = draft_payload_hash(green_draft)
+        edited = edited.replace(old_hash, new_hash)
+        path.write_text(edited, encoding="utf-8")
+        run([git_base + ["add", "-A"], git_base + ["commit", "-q", "-m", "rewrite"]], root)
+        checker = Checker()
+        check_draft(path, checker)
+        if not any("APPEND-ONLY" in e for e in checker.errors):
+            failures.append("selftest dim NOT red: ratification-block-rewrite")
+
+    # 34-35: post-build — an out-of-boundary commit is red, and a LATER
+    # working-tree boundary edit must NOT rescue it (pinned bytes).
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        pdir = root / "packets"
+        pdir.mkdir()
+        packet = pdir / "ch9-p1-test.md"
+        packet.write_text(
+            '# p\n\n```json\n{"mutation_boundary": {"files": ["x.txt"]}}\n```\n\n'
+            '```json\n{"provenance": {"anchored": 0, "derived": 0, "new_decision": 0}}\n```\n',
+            encoding="utf-8",
+        )
+        (root / "x.txt").write_text("x", encoding="utf-8")
+        if not run([["git", "init", "-q"], git_base + ["add", "-A"], git_base + ["commit", "-q", "-m", "base"]], root):
+            failures.append("selftest git fixture setup failed (post-build)")
+            return
+        (root / "x.txt").write_text("x2", encoding="utf-8")
+        (root / "y.txt").write_text("y", encoding="utf-8")
+        run([git_base + ["add", "-A"], git_base + ["commit", "-q", "-m", "outside"]], root)
+        checker = Checker()
+        check_post_build(packet, "HEAD", checker)
+        if not any("OUTSIDE" in e for e in checker.errors):
+            failures.append("selftest dim NOT red: post-build-outside-boundary")
+        # widen the WORKING-TREE boundary; the old commit must stay red
+        packet.write_text(
+            packet.read_text(encoding="utf-8").replace('["x.txt"]', '["x.txt", "y.txt"]'),
+            encoding="utf-8",
+        )
+        checker = Checker()
+        check_post_build(packet, "HEAD", checker)
+        if not any("OUTSIDE" in e for e in checker.errors):
+            failures.append("selftest dim NOT red: post-build-not-pinned")
 
 
 def git_downgrade_selftest(green_draft: str, failures: list[str]) -> None:
@@ -915,11 +1050,29 @@ def run_selftest() -> int:
         '# packet\n\n```json\n{"mutation_boundary": {broken\n```\n',
         green_draft,
     )
+    # 36 malformed boundary fence with an UNQUOTED key must stay v2 and
+    # go red (the quoted-string probe was a silent-demotion hole)
+    expect_red(
+        "malformed-boundary-fence-unquoted",
+        "# packet\n\n```json\n{mutation_boundary: {broken\n```\n",
+        green_draft,
+    )
+    # 37 [P:new-decision] with a payload — the class is ref-less
+    expect_red(
+        "new-decision-with-ref",
+        green_packet.replace("[P:new-decision]", "[P:new-decision oops]"),
+        green_draft,
+    )
+    # 38 more than one packet_metrics block (D7: written once)
+    metrics_block = green_packet[green_packet.index('```json\n{"packet_metrics"'):]
+    expect_red("multiple-metrics-blocks", green_packet + "\n" + metrics_block, green_draft)
     # 23-25 git integration: an UNCOMMITTED, a COMMITTED, and a MULTI-STEP
     # (ratified -> draft -> ratified) downgrade must all go red (the
     # HEAD-only form passed the committed case; the latest-edge form
     # passed the multi-step history).
     git_downgrade_selftest(green_draft, failures)
+    # 33-35 append-only ratification history + post-build pinning
+    git_rewrite_and_postbuild_selftest(green_draft, failures)
 
     # green must pass
     with tempfile.TemporaryDirectory() as tmp:
@@ -933,7 +1086,7 @@ def run_selftest() -> int:
 
     for f in failures:
         print(f"selftest FAIL: {f}", file=sys.stderr)
-    print(f"selftest: 32 red dims exercised, green fixture pass, {len(failures)} failure(s)")
+    print(f"selftest: 38 red dims exercised, green fixture pass, {len(failures)} failure(s)")
     return 1 if failures else 0
 
 
