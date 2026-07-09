@@ -32,8 +32,10 @@ V2 packet checks:
     ranges (O4–O10) resolve over EVERY member, not just endpoints; family
     "P" is excluded (packet names collide). Fenced blocks are excluded
     from the ref scan.
-  - packet_metrics block (when present): schema keys + stops[].type
-    tokens against the canonical STOP member-token registry.
+  - packet_metrics block (when present): DEEP schema (types per field,
+    D7 enums: prediction classes, found_at values, stops[].type against
+    the canonical STOP member-token registry), and its provenance counts
+    cross-checked against the SAME inline marks as the provenance block.
   - --post-build <commit>: the commit's changed files must be a subset
     of the declared mutation boundary plus the packet file itself (the
     one packet-lint check that cannot run at fold time).
@@ -130,6 +132,8 @@ PACKET_METRICS_KEYS = {
 PACKET_METRICS_OPTIONAL = {"baseline_note"}
 ROUNDS_KEYS = {"review", "doc_refinement", "implementation"}
 PREDICTION_KEYS = {"predicted", "reasoning", "discovered"}
+PREDICTION_CLASSES = {"projection", "invention"}
+FOUND_AT_VALUES = {"approve", "code-review", "architecture-review", "refinement", "implementation"}
 PROVENANCE_KEYS = {"anchored", "derived", "new_decision"}
 
 
@@ -190,21 +194,56 @@ def check_status_monotonic(name: str, prev: str | None, current: str, checker: C
 
 
 def head_status(path: Path) -> str | None:
-    """The draft's status in the last committed version (HEAD), or None
-    for new/untracked/out-of-repo files."""
-    try:
-        rel = path.resolve().relative_to(REPO_ROOT)
-    except ValueError:
-        return None
-    out = subprocess.run(
-        ["git", "-C", str(REPO_ROOT), "show", f"HEAD:{rel}"],
+    """The draft's status in its most recent committed PREDECESSOR
+    state, or None for new/untracked/out-of-repo files.
+
+    Two cases (the HEAD-only form was a false gate: in a clean CI
+    checkout the committed downgrade IS HEAD, so comparing against HEAD
+    compared the bad version with itself):
+      - working tree differs from HEAD -> the predecessor is HEAD;
+      - working tree equals HEAD (committed state) -> the predecessor
+        is the file's version at the touching commit BEFORE the last
+        one, so a COMMITTED downgrade stays red until corrected.
+    The repo root derives from the file's own directory so the git
+    integration is selftestable in a throwaway repo."""
+    top = subprocess.run(
+        ["git", "-C", str(path.parent), "rev-parse", "--show-toplevel"],
         capture_output=True,
         text=True,
     )
-    if out.returncode != 0:
+    if top.returncode != 0:
         return None
+    root = Path(top.stdout.strip())
+    try:
+        rel = path.resolve().relative_to(root).as_posix()
+    except ValueError:
+        return None
+
+    def show(rev: str) -> str | None:
+        out = subprocess.run(
+            ["git", "-C", str(root), "show", f"{rev}:{rel}"],
+            capture_output=True,
+            text=True,
+        )
+        return out.stdout if out.returncode == 0 else None
+
+    baseline = show("HEAD")
+    if baseline is None:
+        return None  # new/untracked
+    if baseline == path.read_text(encoding="utf-8"):
+        rl = subprocess.run(
+            ["git", "-C", str(root), "rev-list", "--skip=1", "-n", "1", "HEAD", "--", rel],
+            capture_output=True,
+            text=True,
+        )
+        prev_commit = rl.stdout.strip()
+        if not prev_commit:
+            return None  # first committed version ever
+        baseline = show(prev_commit)
+        if baseline is None:
+            return None
     silent = Checker()
-    metas = block_by_key(json_blocks(out.stdout, path.name, silent), "contract_draft")
+    metas = block_by_key(json_blocks(baseline, path.name, silent), "contract_draft")
     if len(metas) == 1 and isinstance(metas[0], dict):
         status = metas[0].get("status")
         return status if status in DRAFT_STATUSES else None
@@ -399,8 +438,10 @@ def check_packet(
 
     # packet_metrics (optional block; DEEP schema check when present —
     # a shallow "if it happens to be a dict" check is a false gate).
+    # The metrics' provenance counts are cross-checked against the SAME
+    # inline marks the provenance block is locked to.
     for metrics in block_by_key(blocks, "packet_metrics"):
-        check_packet_metrics(path.name, metrics, checker)
+        check_packet_metrics(path.name, metrics, checker, marks=marks)
     return True
 
 
@@ -408,7 +449,9 @@ def _is_int(value: object) -> bool:
     return type(value) is int  # bool is an int subclass; excluded on purpose
 
 
-def check_packet_metrics(name: str, metrics: object, checker: Checker) -> None:
+def check_packet_metrics(
+    name: str, metrics: object, checker: Checker, marks: dict[str, int] | None = None
+) -> None:
     if not isinstance(metrics, dict):
         checker.error(f"{name}: packet_metrics is not an object")
         return
@@ -440,6 +483,10 @@ def check_packet_metrics(name: str, metrics: object, checker: Checker) -> None:
             for key in PREDICTION_KEYS & set(prediction.keys()):
                 if not isinstance(prediction[key], str):
                     type_err(f"prediction.{key}", "a string")
+            for key in ("predicted", "discovered"):
+                value = prediction.get(key)
+                if isinstance(value, str) and value not in PREDICTION_CLASSES:
+                    type_err(f"prediction.{key}", f"one of {sorted(PREDICTION_CLASSES)}")
 
     provenance = metrics.get("provenance")
     if "provenance" in metrics:
@@ -449,6 +496,11 @@ def check_packet_metrics(name: str, metrics: object, checker: Checker) -> None:
             for key, value in provenance.items():
                 if not _is_int(value):
                     type_err(f"provenance.{key}", "an integer")
+                elif marks is not None and value != marks[key]:
+                    checker.error(
+                        f"{name}: packet_metrics.provenance.{key} = {value} but "
+                        f"{marks[key]} inline marks counted"
+                    )
 
     rounds = metrics.get("rounds")
     if "rounds" in metrics:
@@ -489,6 +541,8 @@ def check_packet_metrics(name: str, metrics: object, checker: Checker) -> None:
                 for key in ("found_at", "what", "why_missed"):
                     if not isinstance(miss[key], str):
                         type_err(f"detector_misses[].{key}", "a string")
+                if isinstance(miss["found_at"], str) and miss["found_at"] not in FOUND_AT_VALUES:
+                    type_err("detector_misses[].found_at", f"one of {sorted(FOUND_AT_VALUES)}")
 
 
 def check_post_build(packet_path: Path, commit: str, checker: Checker) -> None:
@@ -597,6 +651,34 @@ Ranges O1–O3 hold; O2 alone too.
 """
 
 
+def git_downgrade_selftest(green_draft: str, failures: list[str]) -> None:
+    git_base = ["git", "-c", "user.email=lint@selftest", "-c", "user.name=lint-selftest"]
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        cdir = root / "contracts"
+        cdir.mkdir()
+        path = cdir / "ch9-test-surface-contract.md"
+        path.write_text(green_draft, encoding="utf-8")
+        for cmd in (["git", "init", "-q"], git_base + ["add", "-A"], git_base + ["commit", "-q", "-m", "ratified"]):
+            if subprocess.run(cmd, cwd=root, capture_output=True).returncode != 0:
+                failures.append("selftest git fixture setup failed")
+                return
+        downgraded = green_draft.replace('"status": "ratified"', '"status": "draft"')
+        # uncommitted downgrade
+        path.write_text(downgraded, encoding="utf-8")
+        checker = Checker()
+        check_draft(path, checker)
+        if not any("downgrade" in e for e in checker.errors):
+            failures.append("selftest dim NOT red: git-uncommitted-downgrade")
+        # committed downgrade (a clean checkout: working tree == HEAD)
+        for cmd in (git_base + ["add", "-A"], git_base + ["commit", "-q", "-m", "downgrade"]):
+            subprocess.run(cmd, cwd=root, capture_output=True)
+        checker = Checker()
+        check_draft(path, checker)
+        if not any("downgrade" in e for e in checker.errors):
+            failures.append("selftest dim NOT red: git-committed-downgrade")
+
+
 def run_selftest() -> int:
     failures: list[str] = []
 
@@ -699,6 +781,34 @@ def run_selftest() -> int:
     check_status_monotonic("fixture.md", "ratified", "realized", mono_ok)
     if mono_ok.errors:
         failures.append("selftest green NOT green: status-upgrade flagged")
+    # 20 prediction.predicted outside the D7 enum
+    expect_red(
+        "prediction-enum-invalid",
+        green_packet.replace('"predicted": "projection"', '"predicted": "vibes"'),
+        green_draft,
+    )
+    # 21 detector_misses[].found_at outside the D7 enum
+    expect_red(
+        "found-at-enum-invalid",
+        green_packet.replace(
+            '"detector_misses": []',
+            '"detector_misses": [{"found_at": "someday", "what": "w", "why_missed": "y"}]',
+        ),
+        green_draft,
+    )
+    # 22 packet_metrics.provenance disagrees with the counted inline marks
+    expect_red(
+        "metrics-provenance-mismatch",
+        green_packet.replace(
+            '"provenance": {"anchored": 1, "derived": 1, "new_decision": 1}, "rounds"',
+            '"provenance": {"anchored": 999, "derived": 1, "new_decision": 1}, "rounds"',
+        ),
+        green_draft,
+    )
+    # 23-24 head_status git integration: an UNCOMMITTED and a COMMITTED
+    # downgrade must both go red (the HEAD-only form passed the committed
+    # case — it compared the bad version with itself).
+    git_downgrade_selftest(green_draft, failures)
 
     # green must pass
     with tempfile.TemporaryDirectory() as tmp:
@@ -712,7 +822,7 @@ def run_selftest() -> int:
 
     for f in failures:
         print(f"selftest FAIL: {f}", file=sys.stderr)
-    print(f"selftest: 19 red dims exercised, green fixture pass, {len(failures)} failure(s)")
+    print(f"selftest: 24 red dims exercised, green fixture pass, {len(failures)} failure(s)")
     return 1 if failures else 0
 
 
