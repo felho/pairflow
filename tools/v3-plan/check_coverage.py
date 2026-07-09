@@ -11,8 +11,10 @@ Inventory sources (the ledger's machine face):
   - the unit sections                        -> chapter-trace inventory
 
 Packet source: docs/v3/implementation/packets/*.md (README.md excluded) —
-each packet carries exactly ONE fenced ```json block whose top-level key is
-"ledger_slice" (task-packet-template.md par.1). Prose is not parsed.
+each packet carries exactly ONE "ledger_slice" block AMONG its machine
+blocks (a v2 packet also carries mutation_boundary, packet_rows, and at
+close packet_metrics — task-packet-template.md par.1). Prose is not
+parsed.
 
 Modes:
   - default: VALIDATION (always-on CI gate) + coverage report. Parse

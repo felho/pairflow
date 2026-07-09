@@ -952,3 +952,26 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   both surviving check directions stay red in fold-time. The FC-F1
   approve-time coverage entry is now RUNNABLE — the last
   precondition before the flip commit
+- 2026-07-09 · THE PHASE-1 AUTHORITY FLIP (one commit, §5 item 8) ·
+  every authority-bearing edit landed together: ReviewPacket
+  restructured into the five-lens panel engine (the pre-v2 dual-mode
+  split retired; the preservation contract honored — every pre-flip
+  check has a named lens home, the LearnedRules registry is consumed
+  per lens); AuthorPacket gained the draft-phase branch, the D1
+  classification + sizing steps, the packet_rows discipline, and the
+  autonomous loop form; NEW DraftContract workflow +
+  contract-draft-template.md (the draft form authority); template §2
+  rewritten as an ALIGNMENT (new step 0, panel step 10; steps 1–9
+  survive) with §1/§1a completed to the lint claim set; README §5.5
+  is now the CANONICAL process authority (autonomy envelope, STOP
+  member-token registry, verdict-action matrix, flag-bearing
+  definition, finding policy + threat model, tier-0 inventory with
+  gate points, standing checkpoints, metrics convention) with
+  §1/§4/§5.2/§6/§8 swept to the landed state; AGENTS.md + SKILL.md
+  aligned with identical restatements; plan §1.3 predicted-class +
+  draft-ref conventions and the §7.7 pre-registered P3/P4
+  predictions; the lint and coverage docstring pointers flipped;
+  flip-claims.md flipped to its audit-record form. Nothing in flight
+  at flip time: P2 built, P3 not started. NEXT: the post-flip audit
+  (landed-texts-vs-claims, the arms or the user) BEFORE any packet
+  work

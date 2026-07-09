@@ -1,250 +1,285 @@
-# ReviewPacket Workflow
+# ReviewPacket Workflow — the panel engine
 
-Review a task packet in one of TWO modes — they are different jobs, and
-conflating them narrows the review (the ch7-P1 twin-session lesson: a
-checklist executed as the review's DEFINITION found exactly the
-checklist's rows and nothing outside them).
+ONE review engine (process-v2 D4): a five-lens, fresh-context panel
+with a Gate Coverage Matrix and a single verdict set. The pre-v2
+dual-mode split (`self_review` / `pre_approval`) is retired — the loop
+invokes this same panel every round, and a standalone "review pls"
+invocation runs the same engine; there is no lighter mode. *(History:
+v2's `split` / `refine` / `approve` adapts v1 ReviewSpec's
+`approve_task` / `refine_task` / `route_back_to_plan` /
+`block_not_ready`; the pre-v2 "ready for pre-approval" state name
+retired with the modes.)*
+
+Process authority: `docs/v3/implementation/README.md` §5.5 (the
+autonomy envelope, the STOP registry, the finding policy — this file
+is the procedure mirror; if they disagree, the README wins). Form
+authorities: `task-packet-template.md` (packets),
+`contract-draft-template.md` (drafts).
 
 ## Input
 
-- `PACKET_PATH`: the packet file under `docs/v3/implementation/packets/`
-- `REVIEW_MODE`: `self_review` | `pre_approval` — resolve from the ask:
-  - "self-review", "pre-approval prep", AuthorPacket's final step →
-    `self_review` (authoring-side: catch what a checklist can catch, so
-    the human round spends its findings on judgment, not mechanics)
-  - "review pls", "verdikt", approve/refine/split preparation, any
-    review of someone ELSE's packet → `pre_approval` (challenge review:
-    the checklist is the FLOOR, not the definition)
+- `TARGET_PATH`: a packet under `docs/v3/implementation/packets/` or a
+  contract-draft under `docs/v3/implementation/contracts/`.
+- Target kind is derived from the path. For DRAFTS the panel is scoped:
+  the substrate lens FULLY applies (probes are tree-independent);
+  embedding-class checks are `n/a (draft)` in the matrix — a resolved
+  state, never `missing`; the draft loop's verdict set has no `split`
+  (a draft split is STOP `2:draft-split`).
 
 ## Workflow
 
-### 1) Content half — ledger consistency (both modes)
+### 0) Tier-0 gates (approve-time column)
 
-1. The `ledger_slice` machine block parses and uses only the template §1
-   machine tokens (dispositions, id syntax). An operability packet declares
-   `[]` on every axis EXPLICITLY [R-EMPTY-SLICE].
-2. Every declared unit id resolves to a file under
-   `docs/v3/convergence/model-src/units/` (spot-check by `ls`, not memory).
-3. Rejection strings match ledger §3 EXACTLY (grep the ledger).
-4. Operative material is verbatim (spot-check one unit against its source);
-   contract/type rows carry registry **field lists**, not entity names
-   [R-FIELD-LISTS].
-5. The trace is an executable expectation, not narrated behavior.
-6. Rejection branches of the slice are covered or explicitly deferred; the
-   drift-test surface is named in acceptance.
+Run the APPROVE-TIME tier-0 set — the inventory with gate points lives
+in README §5.5; today's column: `pnpm v3:packet-lint` (fold-time packet
++ draft form checks) **with `--forbid-reopened`** (the zero-reopened
+gate), `python3 tools/v3-plan/check_coverage.py --fold-time` (coverage
+validation; the owned==realized lock is BUILD-CLOSE — an
+approved-but-unbuilt packet's units are necessarily pending), the
+drift tests, `pnpm v3:adr-check`, and any substrate-probe scripts the
+target names. Every approval-time gate green is an approve
+PRECONDITION; the P8 post-build audit is a build-close gate, not an
+approve gate.
 
-### 2) Claim half — the learned failure classes (both modes)
+### 1) The five lenses — fresh-context sub-agents, on the final bytes
 
-1. The Claim is stated WIDE and its dimensions are enumerated BEFORE any
-   derived test rows [R-WIDE-CLAIM, R-DIMENSIONS].
-2. Every canonical matrix lane maps to a named test obligation — a lane
-   with no driving test is a finding NOW, not at aftermath [R-MATRIX-LANES,
-   R-CLAIM-NEGATIVES]. A lane declared "cannot occur" is not exempt: it
-   either leaves the matrix for an explicitly-marked non-lane note (with
-   the prior-contract proof cited), or it gets driven.
-3. **Matrix Symmetry Gate:** if a matrix pulls an entrypoint in on any
-   error/failure lane, its SUCCESS lane must appear as an explicit
-   no-emit / no-effect negative — or carry a stated out-of-scope
-   decision. And a collapsed lane ("any throw", "any failure")
-   enumerates its members FROM THE CODE (grep the actual throw/branch
-   sites of the seam) — each member driven or explicitly ruled out; a
-   collapsed lane whose driven examples came from the author's memory
-   proves less than its claim (the ch7-P1 crossover lesson: `start.ts`
-   had a third throw site the examples missed). The inventory records,
-   per member — a lane's existence is not its contract:
-   `source_site` (file/call), `phase` (pre-state | pre-commit |
-   post-commit | post-create — a post-success failure is NOT the same
-   lane class as a never-committed one), `event_keyset` (exact
-   per-entrypoint shape — attribution must not silently vanish),
-   `field_provenance` (for every optional/derived field: its presence
-   CONDITION and its value SOURCE — already-in-hand at the emit point
-   vs newly computed; the observer/diagnostic path performs NO new
-   fallible work, so "newly computed at emit" is itself a finding —
-   the payloadDigest-recompute-vs-digest-throw class), and
-   `test_obligation` (the driving test) OR `ruled_out_reason` (the
-   explicit prior-contract proof).
-4. **Prose-contract scan (the v1 Contract-Dense gate's detection
-   half):** prose that carries a deterministic obligation — presence
-   conditions / iff-clauses, orderings, counts, error mappings,
-   ownership, retention — outside a canonical matrix/table row is a
-   finding: contracts live in rows, prose summarizes ("would an
-   implementer need this sentence to write a test?" → it is a
-   contract). The §5.3 in-context budget (intent, embedding, idiom) is
-   the stated exception — a note that smuggles a testable rule is not
-   an intent note (the ch7-P1 presence rule drifted precisely because
-   it part-lived in cell prose and a note).
-5. Any new validator over a numeric domain states the full ladder,
-   including `-0` via `Object.is` [R-NUMERIC-LADDER].
-6. Structure-vs-semantics: if the packet splits malformed input from
-   semantic failure, the line is drawn in exactly ONE place
-   [R-STRUCTURE-SEMANTICS].
-7. **Watchpoint, not a blocking check** (R-RAW-FIXTURES is WATCH): hostile
-   fixture values staged through provably preserving channels (raw text,
-   not `JSON.stringify`). A stringify-built hostile fixture is FLAGGED in
-   the report — a second occurrence is the promotion trigger at the
-   chapter boundary, per the log's own verdict.
-8. Test obligations are phrased as EXECUTION, not intention — "driven by
-   test X", never "should be tested" [R-EXECUTION].
+Each lens runs as a FRESH-CONTEXT sub-agent (single model family is
+fine — model diversity is phase 2's job): the author's context NEVER
+scores its own bytes clean. Every lens report cites the target's
+packet-basis hash; a lens that did not run is `missing` in the matrix
+and blocks approve — silence is never coverage. The LearnedRules
+registry (`references/LearnedRules.md`) is CONSUMED at the lens named
+per rule below.
 
-### 3) Ergonomics half — the v1-inherited rubric (both modes)
+**Lens 1 — substrate / contract reality** *(owns: Substrate Reality
+Probe + contested-probe corollary; the strong-word inventories)*
 
-1. **Self-containment:** the operative set is in full text; nothing the
-   task needs is a pointer ("see file X for the rules" = finding). Every
-   flag, narrowing, or decision point the pre-approval summary will raise
-   EXISTS as a packet section — a summary-only flag is a finding (the
-   dangling-"flagged below" class).
-1b. **Mirror discipline (the v1 Contract-Dense gate, inherited):** a
-   contract-dense packet (a rule mirrored in ≥2 places, plan aligned
-   blocks included) carries a Mirrored Surface Map naming its
-   canonical row and every mirror; a rule RESTATED independently in
-   two places with no named canonical source is a finding — each
-   restatement is a future drift site (the ch7-P1 rounds 6–7 class).
-   The step-5 sweep indexes off this map.
-2. **Density:** every in-context note line has failed both the
-   "environment?" and "data?" tests; an overflowing budget means the cut is
-   wrong → recommend split along constraint cohesion.
-3. **Embedding gates current:** target files/entrypoints verified against
-   the live tree (`ls`/`grep`), type-ripple targets (fakes, stubs, test
-   files) included; the mutation boundary is exact.
-4. **Plan consistency:** no packet decision silently contradicts ratified
-   plan text — any contradiction has its prepared same-commit plan edit
-   [R-ALIGNED-UP].
+1. Collect every STRONG contract word in the target: *never, always,
+   only, any, all, exactly once, fail-open, non-blocking, single
+   owner, source of truth, by construction*. For each: is it PROVABLE
+   on the actual substrate and by the named downstream proof? **Proof
+   means SOURCE-SIDE INVENTORY, not a plausibility judgment.**
+2. **Code-path inventory** for *any/all/never/only* lanes: walk the
+   seam's ACTUAL code paths (throw sites, branches) INCLUDING the
+   transitive call graph — helpers carry their own throw sites — AND
+   the awaited PORT/boundary calls: every `await` on an injected
+   dependency is a throw source with ZERO visible `throw` statements
+   in repo code (a rejecting port is a distinct lane from its null
+   return). Example lists are not proof.
+3. **Free-text boundary inventory**: wherever a *never / redaction /
+   secret / payload-never* claim coexists with ANY free-text-capable
+   field (`message`, `details`, `reason`, paths, env values), an
+   explicit classification is REQUIRED: sanitized-by-contract OR
+   untrusted diagnostic free text with a stated confinement boundary
+   and the negative bound to the right surface.
+4. **Substrate Reality Probe**: any lane/matrix cell whose truth
+   depends on SUBSTRATE behavior (driver/OS/filesystem: journal modes,
+   readonly semantics, internal tables, DDL write points,
+   open-sequence ordering) is admissible ONLY with an in-session probe
+   (a scratchpad script against the real driver — the ch7-P2
+   `walcheck.mjs` pattern) or a concrete cited source; plausibility is
+   NOT admissible. Corollary — CONTESTED probes: when two probes
+   disagree, NO claim may stand on the contested premise — remove the
+   premise (re-design the lane/fixture) or drive both environments.
 
-### 4) Contract Reality Gate (`pre_approval` mode; in `self_review` it
-downgrades to a flag, never silent acceptance)
+**Lens 2 — projection / delegation closure** *(owns: the content
+floor; the derived-row entailment attack; draft→packet semantic
+drift)*
 
-The checklist above is a FLOOR. Now derive checks from the packet's OWN
-claims [R-CLAIM-NEGATIVES applied to the review itself]:
+1. Content floor (kernel-semantic targets): the `ledger_slice` block
+   parses with the template §1 machine tokens; an operability packet
+   declares `[]` on every axis EXPLICITLY [R-EMPTY-SLICE]; every unit
+   id resolves to a file under `model-src/units/` (spot-check by `ls`,
+   never memory); rejection strings match ledger §3 EXACTLY (grep);
+   operative material is verbatim (spot-check one unit); contract/type
+   rows carry registry **field lists**, not entity names
+   [R-FIELD-LISTS]; the trace is an executable expectation; rejection
+   branches covered or explicitly deferred, drift-test surface named.
+2. **Projection/Delegation Closure**: every claim that DELEGATES its
+   definition (*"P1-declared"*, *"per ledger §X"*, *"canonical body"*)
+   — pull the delegated source's FULL rule set (field lists AND
+   presence conditions/iffs AND enum domains), derive
+   invalid-but-conforming-at-first-glance counterexamples, check each
+   against the driven lanes. Key/type-level validation alone proves
+   less than the wording (the ch7-P2 round-8 lesson).
+3. **Derived-row entailment attack**: for each `derived` manifest row,
+   attempt an ALTERNATIVE row equally consistent with the cited
+   anchors (the row's in-row derivation note is the input) — if one
+   exists, the row was a decision: reclassify `new-decision`
+   (`anchored` is machine-checkable, `new-decision` stops — `derived`
+   is the soft spot).
+4. **Draft→packet semantic drift**: a packet row anchored
+   `contract:chN-<surface>#Cn` must preserve the draft row's MEANING,
+   not just resolve the reference — the mechanized drift tests cover
+   model↔code, not this surface.
 
-1. Collect every STRONG contract word in the packet: *never, always,
-   only, any, all, exactly once, fail-open, non-blocking, single owner,
-   source of truth, by construction*.
-2. For each: is it PROVABLE on the actual substrate and by the named
-   downstream proof — sync vs async driver reality, lock/ownership
-   boundaries, read/write failure behavior, projection/redaction
-   surfaces? **Proof means SOURCE-SIDE INVENTORY, not a plausibility
-   judgment** (the ch7-P1 crossover lesson, both arms). Four mandatory
-   inventories:
-   - **Code-path inventory** for *any/all/never/only* lanes: walk the
-     seam's ACTUAL code paths (throw sites, branches) INCLUDING the
-     transitive call graph — helpers the entry point calls carry their
-     own throw sites (the ch7-P1 second-round lesson: a file-scoped
-     inventory missed the shared `deriveDispatchIntent` throws) — AND
-     the awaited PORT/boundary calls: every `await` on an injected
-     dependency is a throw source with ZERO visible `throw` statements
-     in repo code (third-round lesson: a rejecting `definitions.load`
-     is a distinct lane from its null return); the Matrix Symmetry
-     Gate's enumeration mechanic (claim half, step 3) is the tool;
-     example lists are not proof.
-   - **Free-text boundary inventory**: wherever a *never / redaction /
-     secret / payload-never* claim coexists with ANY free-text-capable
-     field (`message`, `details`, `reason`, paths, env values), an
-     explicit classification is REQUIRED: sanitized-by-contract OR
-     untrusted diagnostic free text with a stated confinement boundary
-     and the negative bound to the right surface. An unclassified
-     free-text field beside a "never" claim is a finding.
-   - **Projection/Delegation Closure** for every claim that DELEGATES
-     its definition to another artifact (*"P1-declared"*, *"per
-     ledger §X"*, *"the ch-N culture"*, *"canonical body"*,
-     *"allowlist-projected"*): pull the delegated source's FULL rule
-     set into the review — field lists AND presence conditions
-     (iff-clauses) AND enum domains — then derive
-     invalid-but-conforming-at-first-glance counterexamples (valid at
-     the key/type level, invalid at the presence/enum level) and check
-     each against the packet's driven lanes. A delegating claim
-     validated only at the key/type level proves less than its wording
-     (the ch7-P2 round-8 lesson: "P1-declared projection" survived six
-     rounds with the presence iffs unexpanded — both review arms
-     converged on the same leak). This is R-FIELD-LISTS' cross-artifact
-     sibling.
-   - **Substrate Reality Probe** for any lane/matrix cell whose truth
-     depends on SUBSTRATE behavior (driver/OS/filesystem: journal
-     modes, readonly semantics, internal tables, DDL write points,
-     open-sequence ordering): the claim is admissible ONLY with an
-     in-session probe (a scratchpad script against the real driver —
-     the ch7-P2 `walcheck.mjs` pattern) or a concrete cited source;
-     plausibility is NOT admissible (ch7-P2 rounds 2–4:
-     WAL-PRAGMA-as-write, readonly-empty `CREATE`, `sqlite_sequence`
-     all fell to probes after passing plausible review). Corollary —
-     CONTESTED probes: when two probes disagree
-     (environment-sensitive behavior), NO claim may stand on the
-     contested premise — remove the premise from the claim (re-design
-     the lane/fixture) or drive both environments; adopting the
-     locally-observed result is not admissible (the already-WAL
-     case).
-   **Plan-consistency is not a defense:** a claim the ratified
-   plan also states can still be unprovable — that is a
-   `plan_contract_challenge` finding routed to the user, never silently
-   accepted (and never silently "fixed" — the divergence/alignment
-   machinery owns the resolution).
+**Lens 3 — claim negatives / matrix symmetry** *(owns: every lane
+driven; wide-claim coverage; the prose-obligation pair; the text
+sweep)*
 
-### 5) Final text sweep (both modes — after any fold)
+1. The Claim is WIDE and its dimensions enumerated BEFORE derived test
+   rows [R-WIDE-CLAIM, R-DIMENSIONS]; negatives derive from the
+   claim/matrix, never the implemented rule list [R-CLAIM-NEGATIVES].
+2. **Every canonical matrix lane is DRIVEN** by a named test
+   obligation [R-MATRIX-LANES]. A lane declared "cannot occur" either
+   leaves the matrix for an explicitly-marked non-lane note (with the
+   prior-contract proof cited) or gets driven.
+3. **Matrix Symmetry Gate**: an entrypoint pulled in on any
+   error/failure lane needs its SUCCESS lane as an explicit
+   no-emit/no-effect negative — or a stated out-of-scope decision. A
+   collapsed lane ("any throw") enumerates its members FROM THE CODE;
+   the per-member record: `source_site`, `phase` (pre-state |
+   pre-commit | post-commit | post-create), `event_keyset`,
+   `field_provenance` (presence condition + value source —
+   already-in-hand vs newly computed; the observer path does NO new
+   fallible work), and `test_obligation` OR `ruled_out_reason`.
+4. **Prose-obligation pair** (both withdrawn from tier 0 to review —
+   lens material, not machine data): the **prose-contract scan** —
+   prose carrying a deterministic obligation (presence
+   conditions/iffs, orderings, counts, error mappings, ownership,
+   retention) outside a canonical row is a finding ("would an
+   implementer need this sentence to write a test?" → contract; the
+   §5.3 in-context budget is the stated exception); and **prose
+   range/scalar consistency** — lane ranges and counts stated in prose
+   verified against the actual lane set.
+5. Numeric-domain validators state the full ladder incl. `-0` via
+   `Object.is` [R-NUMERIC-LADDER]; structure-vs-semantics drawn in ONE
+   place [R-STRUCTURE-SEMANTICS]; test obligations phrased as
+   EXECUTION [R-EXECUTION]; hostile fixtures staged through preserving
+   channels — a stringify-built hostile fixture is a WATCHPOINT
+   [R-RAW-FIXTURES, watch status].
+6. **Final text sweep** (after any fold): every count/quantifier
+   (*one, both, all, exactly, zero, any, every, never, only*) verified
+   against the CURRENT lists it summarizes — prefer converting counts
+   to lists; the same sweep covers conditional presence clauses (*iff
+   / only when / present when*): a rule change sweeps every statement
+   of the rule.
 
-**Scalar/quantifier sweep:** collect every count and quantifier in the
-packet text (*one, both, two/three/four…, all, exactly, zero, any,
-every, never, only*) and verify each against the CURRENT lists and
-lanes it summarizes — stale scalars are the recurring low-weight drift
-class ("three aligned edits" after a fourth landed; "exactly one" vs
-the committed-zero lane; "ALL THREE" the day a fourth appears). Prefer
-converting counts to lists; a surviving count must be re-derived at
-read time. The same sweep covers **conditional presence clauses**
-(*iff / only when / present when*): when a presence RULE changes,
-every row stating the OLD condition is stale text — a rule change
-sweeps every statement of the rule, exactly like a status flip sweeps
-every file stating the old status (ch7-P1 round 7: two keysets kept
-"iff the envelope carries a payload" after the rule went phase-based).
+**Lens 4 — mirror / propagation** *(owns: the post-lint semantic
+remainder; the fresh-eyes function)*
 
-### 6) Verdict + taxonomy
+1. The **Mirrored Surface Map** is checked mirror by mirror — a
+   contract-dense target states each rule ONCE in its canonical row
+   and NAMES the mirrors; an independent restatement with no named
+   canonical source is a finding; a mirror discovered here is ADDED to
+   the map, never re-discovered next round.
+2. After any fold: the delta list + mutation-boundary files + the map
+   go to THIS lens with no fold history; its sole task is finding
+   every statement inconsistent with the deltas (old conditions,
+   un-updated mirrors, contradicted scalars/keysets) — the machine
+   lint catches the declared-data mirrors; this lens owns the SEMANTIC
+   remainder.
+
+**Lens 5 — downstream viability** *(owns: sibling impact; plan
+consistency; the ergonomics floor)*
+
+1. Sibling-packet impact + PLAN CONSISTENCY: no target decision
+   silently contradicts ratified plan text — a contradiction has its
+   prepared same-commit plan edit [R-ALIGNED-UP] or routes per the
+   taxonomy below.
+2. Ergonomics floor: **self-containment** (the operative set in full
+   text; a pointer-shaped constraint dump or a summary-only flag is a
+   finding — flags live IN the target's flags section); **density**
+   (every in-context note line failed both the "environment?" and
+   "data?" tests; overflow ⇒ recommend split along constraint
+   cohesion); **embedding freshness** (target files/entrypoints
+   verified against the live tree, type-ripple targets included, the
+   mutation boundary exact — n/a for drafts).
+
+### 2) The Gate Coverage Matrix
+
+One row per lens duty, one column per target surface it applies to;
+every cell is `pass | finding | n/a (reason) | missing | unknown`.
+`missing` blocks approve. An `unknown` (a discovery state) blocks
+approve until INSPECTED — inspection converts it to a known
+present/absent-with-evidence state, which may THEN be routed per the
+D5 routes or split away; an uninspected `unknown` is NEVER routable
+(routing an unknown launders ignorance into a decision).
+
+### 3) Findings — taxonomy, fix-all, routes
 
 Classify EVERY issue considered — nothing is dropped silently:
 
-- `packet_defect` — the packet itself is wrong/incomplete
-- `packet_plan_drift` — packet contradicts ratified plan text [R-ALIGNED-UP]
-- `plan_contract_challenge` — packet and plan agree, but the claim is
-  challenged against reality (user's call)
-- `watchpoint` — flagged, non-blocking (e.g. R-RAW-FIXTURES lanes)
-- `considered_not_finding` — examined and cleared, with one line why
+- `packet_defect` — the target itself is wrong/incomplete → FOLD NOW
+- `packet_plan_drift` — contradicts ratified plan text; BIFURCATES:
+  propagation-class resolution → autonomous plan edit (visible,
+  same-commit); meaning-changing → STOP `2:meaning-changing-alignment`
+- `plan_contract_challenge` — target and plan agree but the claim is
+  challenged against reality → STOP `2:contested-ratified-vs-reality`;
+  never silently accepted, never silently "fixed"
+- `watchpoint` — flagged, non-blocking as a STATUS; its ROUTE decides
+  flag-bearing (a watchpoint routed `declined` flag-bears)
+- `considered_not_finding` — examined and cleared, one line why
 
-Verdict:
-- **ready-for-pre-approval** (self_review) / **approve** (pre_approval)
-- **refine** — findings listed, fold and re-run this workflow
-- **split** — the density/size gates fired; propose the cut along
-  constraint cohesion (split packets re-declare slices; the coverage union
-  must still close).
+**Fix-all is the default** — two grounds: Bayes (a fresh-context
+re-review will re-find an unaddressed issue, deferral saves nothing)
+and **ambiguity transfer** (the fresh-context reviewer is a proxy for
+the build-time implementer: what was ambiguous to one LLM in a clean
+context will be ambiguous to the next). Fix-all binds CONTENT findings
+and routes EFFORT, never truth: per-finding dispositions
+(folded / narrowed / declined, with reasons), conflicting feedback
+sources reconciled explicitly, genuinely open choices escalate as
+STOPs. TOOLING findings get a mandatory threat-model judgment —
+`declined: out of threat model` is a live route.
+
+Routes exist ONLY for ownership misfit (README §5.5 carries the
+canonical table): `boundary-review` (process-log line; revisit = the
+chapter DoD's log review), `later-chapter` (proposed plan-map row;
+revisit = human ratification at approve/boundary), `declined` (NO
+revisit BY DESIGN — a human-ratified standing decision whose home is
+the target's flags section: `declined — <reason>`).
+
+### 4) Verdict
+
+- **`refine`** — any fold-now finding: fold + re-run the panel
+  (autonomous).
+- **`split`** — packets only, within the chapter: apply the §N.7
+  repartition with a visible report (inheritance: mode, predicted
+  class, watchpoints; fresh watchdog per part; depth 1 — deeper is a
+  STOP). A scope/sequencing-changing split is STOP
+  `2:scope-changing-split`.
+- **`approve`** — requires ALL of: every APPROVAL-TIME tier-0 gate
+  green (step 0); ONE FULL clean panel round — **full** = all five
+  lenses ran as fresh-context sub-agents ON THE FINAL BYTES (each
+  report cites the packet-basis hash); **clean** = ZERO fold-now
+  findings AND ZERO STOP-class findings (non-STOP routed and
+  watchpoint items ride as flags/routes without voiding the round);
+  the coverage matrix complete with no `missing` and no unresolved
+  `unknown`. *Temporal:* any fold voids all prior clean rounds — a
+  clean round binds to its hash; approve-readiness is never assembled
+  from lens results of different revisions. *Hostile:* a narrow-delta
+  re-check does NOT count — the LAST round before approve is
+  full-panel on the final bytes. The approve itself is the HUMAN'S in
+  calibration (flag-bearing approves ALWAYS — STOP
+  `4:flagged-approve`; "flag-bearing" per the README §5.5 definition).
+- **STOP-reporting** — the panel never RESOLVES a STOP: it detects,
+  classifies with a member token from the README §5.5 registry, and
+  reports; resolution is the human's.
+- **Watchdog: 8 panel rounds** — a safety cap, not a tuning lever;
+  exhaustion → STOP `3:watchdog` with a diagnosis (churn composition →
+  split proposal vs draft proposal), never silent continuation.
 
 ## Report
 
 ```
-Self-review / Review: <PACKET_PATH>
-Scope of this review: self_review | pre_approval
+Panel review: <TARGET_PATH>   (packet | draft)
 Skill source: installed registry | repo-local file read @ <path, commit, dirty?>
-Packet basis: sha256(<packet file>) = <hash> @ HEAD <commit>, worktree: clean | dirty (<what>)
-Content half:    <pass | findings…>
-Claim half:      <pass | findings…>
-Ergonomics half: <pass | findings…>
-Contract reality: <pass | findings…>          (pre_approval; flags in self_review)
-Text sweep:      <pass | stale scalars…>
-Mirror/propagation: <pass | stale mirrors…>   (the map checked, mirror by mirror — visible proof it RAN)
-Findings by type: <taxonomy-tagged list, considered_not_finding included>
-Verdict: ready-for-pre-approval | approve | refine | split
+Packet basis: sha256(<target file>) = <hash> @ HEAD <commit>, worktree: clean | dirty (<what>)
+Tier 0 (approve-time): <green | failures>
+Gate Coverage Matrix: <complete | missing/unknown cells listed>
+Lens reports: 1 substrate | 2 projection | 3 negatives | 4 mirror | 5 downstream — each: pass | findings
+Findings by type: <taxonomy-tagged list, considered_not_finding included, dispositions + routes>
+Verdict: approve | refine | split | STOP <member token>
 ```
 
 The `Skill source` line exists because activation path and text
-freshness are separable: a runner may read this file from the repo
-without the registry's (possibly stale, restart-gated) trigger layer —
-the report must make visible WHICH version of this workflow actually
-acted, or a discovery bug hides behind a manual file read.
+freshness are separable — the report must make visible WHICH version
+of this workflow acted. The `Packet basis` line exists because a
+target under refine rounds is a MOVING target: a verdict binds ONLY
+the exact bytes the hash names; any later edit voids it.
 
-The `Packet basis` line exists because a packet under refine rounds is
-a MOVING target (ch7-P2: untracked and edited across eight rounds —
-mid-stream approvals bound nothing identifiable): a verdict binds ONLY
-the exact bytes the hash names; any later edit voids it, and the next
-round re-hashes.
-
-**Report validity gate (STOP-shaped):** the report is INVALID without
-its `Skill source`, `Packet basis`, and `Mirror/propagation` lines —
-each either filled or carrying an explicit one-line reason why it
-cannot be. A verdict delivered in commentary without the report block,
-or a report missing a mandatory line, is a workflow defect to fix
-BEFORE handing back — not a style choice (the ch7-P2 retro: format
-adherence was arm-dependent exactly where it was treated as style).
+**Report validity gate:** the report is INVALID without its
+`Skill source`, `Packet basis`, `Gate Coverage Matrix`, and verdict
+lines — each filled or carrying an explicit one-line reason. A verdict
+delivered in commentary without the report block is a workflow defect
+to fix BEFORE handing back.

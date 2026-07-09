@@ -1,10 +1,13 @@
 # Phase-1 Authority-Flip — Claim Enumeration
 
-Status: **review CLOSED (watchdog STOP, 2026-07-09, the user's
-decision after fold round 10)** — the flip is written to satisfy
-exactly these rows; after landing, this file is the flip's audit
-record. Residual findings land on the post-flip audit (FC-X1) against
-the REAL texts — the cheaper catch-point.
+Status: **AUDIT RECORD — the Phase-1 flip landed 2026-07-09; the
+landed texts are the authority** (README = process,
+task-packet-template + contract-draft-template = form, the skill
+workflows = procedure; this file and the design doc are history,
+FC-X2). The post-flip audit (FC-X1: the arms or the user,
+landed-texts-vs-claims, BEFORE any packet work) runs against this
+record. Review history: 10 fold rounds, closed by the user's watchdog
+STOP.
 Date: 2026-07-09.
 Revision 1 (2026-07-09): aligned to **Amendment 1** (process-v2-design.md
 §7, ratified — manifest + git-native ratification) and the Phase-0.1

@@ -30,6 +30,8 @@ starts.
 
 Plan step: <plan.md chapter/step reference>
 Autonomy stage: calibration | measurement | chaining
+Classification: projection | invention — <one-line derivation from the
+manifest tally + the semantic trigger (README §5.5 D1)>
 
 ## Ledger slice (declared — feeds the coverage accounting)
 
@@ -116,8 +118,11 @@ reader might trust is the drift class. Rules (lint-enforced):
 - every ref either parses EXACTLY as a strict form —
   `contract:ch<N>-<surface>#C<n>` (a ratified-or-later contract-draft
   row) or `ADR-<NNN>` (file exists) — or carries the `prose:` prefix
-  (unverified, human-facing provenance: ledger §, plan §, packet §);
-  anything else is red;
+  with a NONEMPTY remainder (unverified, human-facing provenance:
+  ledger §, plan §, packet §); anything else is red;
+- a `derived` row's one-line DERIVATION NOTE lives in the row's own
+  table text — review material for the lens-2 entailment attack,
+  never manifest data (the manifest keyset stays {id, class, refs});
 - close-time counts live in `packet_metrics.provenance` and must equal
   the manifest tally (lint-locked; the duplicate home is deliberate —
   D7's aggregation surface reads the metrics block).
@@ -138,7 +143,10 @@ reader might trust is the drift class. Rules (lint-enforced):
 
 <Every flag, narrowing, or decision point the summary will raise lives
 HERE in full — the summary may only reference it. Each flag carries a
-route:> `Route: fold-now | boundary-review | later-chapter | declined`
+route:> `Route: fold-now | boundary-review | later-chapter |
+declined — <reason>` <(a `declined` route ALWAYS carries its stated
+reason: it is a human-ratified standing decision with no revisit by
+design — README §5.5)>
 
 ## Acceptance
 - Contract tests: <CT-* ids this packet must turn green>
@@ -150,9 +158,8 @@ route:> `Route: fold-now | boundary-review | later-chapter | declined`
 
 <Filled at build close: rounds, test delta, surprises — prose; plus the
 machine block. `stops[].type` comes from the canonical STOP member-token
-registry (process-v2-design.md D3, until the Phase-1 flip moves it into
-README). `baseline_note` (optional) is the ONLY home for unit/regime
-qualifiers — never ad hoc keys.>
+registry (README §5.5). `baseline_note` (optional) is the ONLY home for
+unit/regime qualifiers — never ad hoc keys.>
 
 ```json
 {
@@ -171,15 +178,21 @@ qualifiers — never ad hoc keys.>
 
 ## 1a. The v2 machine blocks (process-v2-design.md §5, Phase 0)
 
-Additive layer, landed 2026-07-09; carrier per process-v2-design.md §7
-(Amendment 1, ratified 2026-07-09 — manifest + git-native ratification).
-The §2 checklist itself is rewritten only by the Phase-1 authority-flip
-commit:
+Carrier per process-v2-design.md §7 (Amendment 1, ratified 2026-07-09
+— manifest + git-native ratification); the §2 checklist carries the
+process-v2 steps since the Phase-1 flip (2026-07-09). This section is
+the CANONICAL statement of the cross-cutting machine-block rules —
+duplicate JSON keys are parse errors, and fences follow the
+line-oriented CommonMark scanner (openers/closers may be indented 0–3
+spaces; a longer outer fence QUOTES inner fences as material) — the
+contract-draft template defers to it:
 
 - **A packet is v2 iff it carries the `mutation_boundary` machine
   block.** The 16 pre-v2 packets (ch4–ch7-P2) are GRANDFATHERED: the
   lint reports and skips them; v2 obligations bind from the ch7-P3
-  pilot onward, never retroactively.
+  pilot onward, never retroactively. No silent demotion: a packet
+  NAMING `mutation_boundary` in raw text stays v2 even when that
+  fence is malformed.
 - **Lint:** `pnpm v3:packet-lint` (selftest + live; wired into the CI
   surfaces). Fold-time checks (Amendment-1 carrier): machine-block
   syntax with exact keysets, the `packet_rows` manifest rules
@@ -187,12 +200,19 @@ commit:
   ids), withdrawn-carrier rejection, and the `packet_metrics` deep
   schema + manifest-tally cross-lock. Post-build check:
   `check_packet.py --post-build <commit-sha> --packet <path>` — the
-  audited ref must be a PINNED commit sha (HEAD, branch, and tag
-  names are rejected: they move), the commit must change the packet
-  file itself (the one-commit rule, enforced positively — a code-only
-  or follow-up commit is the wrong audit target), and its changed
-  files must stay inside the declared mutation boundary (plus the
-  packet file).
+  audited ref must be a PINNED commit sha (hex shape AND resolving to
+  a COMMIT object: HEAD, branch, and tag names are rejected — they
+  move — and a tag OBJECT is not the build commit), the commit must
+  change the packet file itself (the one-commit rule, enforced
+  positively — a code-only or follow-up commit is the wrong audit
+  target), the boundary is read from the PACKET'S BYTES AT the
+  audited commit and re-validated against the full shape rules on the
+  audit path, and its changed files must stay inside the declared
+  boundary (plus the packet file). The vacuous-audit family is closed
+  at the sink: merge commits rejected, root commits diffed against
+  the EMPTY TREE, an empty change list red regardless of cause.
+  Invocation: README §4 step 8 (build-close; no CI surface runs this
+  mode).
 - **Contract-drafts** (`docs/v3/implementation/contracts/`) are linted
   by the same tool per the D2 artifact contract on the Amendment-1
   carrier: meta block, C-row registry, `{date, arms, commit}`
@@ -204,13 +224,27 @@ commit:
   (any map row ⇔ `realized` + complete). `reopened` is a transient
   STOP-artifact: the lint lists reopened drafts and
   `--forbid-reopened` is the zero-reopened gate form (packet approve /
-  chapter close / flip). The docs-side `contract-draft-template.md`
-  lands with the Phase-1 flip.
+  chapter close / process flips). Form authority:
+  [`contract-draft-template.md`](contract-draft-template.md).
 
 ## 2. The projection checklist (compiling a packet)
 
 Spec-writing is projection, not invention. In order:
 
+0. **Classify + size, BEFORE any drafting (process-v2, README §5.5):**
+   read the chapter's predicted class (plan §1.3 convention); run the
+   sizing heuristics — substrate novelty, claim families, matrix
+   families, dimension count, sibling-packet fanout — whose outcome
+   feeds the split decision (an in-chapter split executes autonomously
+   per the verdict-action matrix). **Draft-routing STOP:** a memo-born
+   surface whose chapter contract-draft is not ratified-or-later
+   routes to the DraftContract round first; mid-authoring, a Case-B
+   signal (new-decision mass over the calibration-permissive
+   threshold, or ANY new-decision row touching authority / separation
+   / availability-class semantics) STOPS the same way, handing the
+   new-decision row set over as the draft's seed. Every canonical row
+   is declared in the `packet_rows` manifest AS IT IS WRITTEN (§1),
+   and the classification verdict goes in the header.
 1. **Select the slice** from the plan step: which units, rejection names,
    invariants, and traces this task realizes. Cut along **constraint
    cohesion** (rules that cling to the same ledger block stay together),
@@ -245,11 +279,14 @@ Spec-writing is projection, not invention. In order:
    packet-local and must be current.
 9. **Declare the slice** into the coverage accounting (plan §1.4 inventory;
    the ch-3 script asserts the union).
-10. **Review** — verdicts: approve / refine / split.
-    - *Content half (new):* ledger-consistency — declared slice coherent,
-      rejection branches covered or explicitly deferred to the scoped
-      extension, drift-test surface named.
-    - *Ergonomic half (v1 rubric, unchanged):* size, density, embedding.
+10. **The panel loop** — the `ReviewPacket` five-lens engine
+    (fresh-context sub-agents; Gate Coverage Matrix; approve-time
+    tier-0 gates first). Verdicts: `split` / `refine` / `approve` +
+    STOP reporting, per the README §5.5 verdict-action matrix —
+    refine and in-chapter split iterate AUTONOMOUSLY; the approve and
+    every STOP are the human's decision points. The old
+    content-half/ergonomic-half rubric is retired: its content checks
+    live in lens 2, its ergonomics in lenses 4–5.
 
 ## 3. Standing review rules (the `REV-*` registry)
 

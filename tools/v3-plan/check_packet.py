@@ -113,9 +113,9 @@ missing directory means zero drafts):
       red).
 
 The canonical STOP member-token registry is mirrored here from
-process-v2-design.md D3 (authority moves to README at the Phase-1
-flip; this constant is the mechanical mirror and changes only with
-it). The reserved lane families are mirrored from
+docs/v3/implementation/README.md §5.5 (the canonical home since the
+Phase-1 flip; this constant is the mechanical mirror and changes only
+with it). The reserved lane families are mirrored from
 task-packet-template.md §1.
 
 Modes: default lints everything; --selftest proves the claims red on

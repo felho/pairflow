@@ -7,17 +7,25 @@ is used as the execution vehicle.
 
 This directory is the **implementation plane**. The model plane
 (`../convergence/`, `../topics/`) stays untouched by anything that happens
-here; the boundary rule is in the design-method playbook §8 (model decisions →
-corpus + memos; implementation decisions → ADRs).
+here; the routing rule (three rows): model decisions → corpus + memos
+(playbook §8); implementation decisions → ADRs; implementation-plane
+contract SHAPE → the chapter's contract-draft (§5.5 — decision and
+rationale go to the ADR, the shape stays in the draft; they
+cross-reference).
 
 ## 1. What lives here
 
 - `README.md` — this process definition.
 - `plan.md` — the implementation plan (Phase 1 output; chapter by chapter).
-- `adr/` — implementation ADRs (default home; the plan's architecture chapter
-  confirms or moves it when the code home exists). Convention: playbook §8
-  ADR-activation addendum + `implementation-contract.md` PI-10.
-- Task packets and the task-packet template, once Phase 2 starts.
+- `adr/` — the ADR convention: playbook §8 ADR-activation addendum +
+  `implementation-contract.md` PI-10. The implementation ADRs' HOME is
+  `v3/adr/` (the code-side home confirmed by the architecture chapter;
+  the checks resolve against it).
+- `packets/` — the task packets; their form authority is
+  `task-packet-template.md` (template §1, projection checklist §2,
+  `REV-*` registry §3).
+- `contracts/` — the chapter contract-drafts (the memo-born surfaces'
+  decision home); their form authority is `contract-draft-template.md`.
 
 ## 2. Binding inputs
 
@@ -66,8 +74,18 @@ proposed → ratified → committed.** No monolithic draft.
 
 ## 4. Phase 2 — the build loop
 
-Every plan step runs the same cycle:
+Every plan step runs the same cycle. **Draft phase (before packet
+authoring, when the chapter carries a memo-born surface):** if ANY
+contract-draft the chapter's plan §N.7 table references is not yet
+ratified-or-later, the DraftContract round runs FIRST — the chapter's
+undecided row-level contracts are decided once and ratified by the
+human (§5.5), and packets then anchor to the ratified rows
+(`contract:chN-<surface>#Cn`). Then:
 
+0. **Author the packet** — the `CreateTaskPacket` skill's AuthorPacket
+   loop: projection with the `packet_rows` provenance manifest, the
+   panel review rounds, and the human decision points per the §5.5
+   verdict-action matrix. No build before the approve.
 1. **Read the spec** — the plan step plus its ledger slice (units, rejection
    names, invariants, traces). The ledger is the *what*; it is not
    re-interpreted at build time.
@@ -85,10 +103,25 @@ Every plan step runs the same cycle:
 4. **Drift tests green** — the three unconditional name-space tests (85
    rejection names / domain registry / unit→code mapping; PI-3).
 5. **ADR if a trigger fires** (IC-A2, IC-A3, IC-B, IC-N, tooling picks) —
-   born `proposed`, ratified to `accepted` at a human checkpoint.
+   born `proposed`; acceptance follows the packet flow's THREE ADR
+   lanes (canonical statement, others defer): draft-ratified content →
+   `accepted` WITH the draft ratification (the ratification IS the
+   human acceptance act); plan-ratified content whose ADR is authored
+   during packet work → acceptance rides with the packet approve; a
+   genuinely new ADR-class decision mid-loop → STOP `1:open-choice`,
+   its ADR follows whichever ratification act resolves it. (A
+   chapter-ratification-born ADR sits outside the packet flow and is
+   accepted by that ratification act itself.)
 6. **Review** — code review plus the ADR compliance review (the third QA
    axis; playbook §8).
 7. **Commit** — one step, one commit; plan status updated.
+8. **Post-build audit (build-close tier-0):** after the build commit
+   lands, run `check_packet.py --post-build <commit-sha> --packet
+   <path>` with that commit's sha (no CI surface runs this mode — CI
+   runs the plain lint) and `check_coverage.py` in its DEFAULT
+   (build-close) mode. The audit's green is part of the build being
+   DONE: a red audit is a defect fixed before any further packet work,
+   never advisory.
 
 ## 5. Execution model — running the loop on Pairflow v1
 
@@ -129,10 +162,12 @@ A task packet (the v3-mode task spec) separates two concerns:
   problems stem from how LLMs behave, not from where the content comes
   from; they carry over.
 
-The review rubric splits the same way: its content half checks
-ledger-consistency (declared slice coherent, rejection branches covered,
-drift-test surface named); its ergonomic half (size, density, embedding)
-stays the v1 rubric.
+The review runs as the five-lens PANEL (the `ReviewPacket` engine —
+fresh-context sub-agents, Gate Coverage Matrix, one verdict set:
+`split` / `refine` / `approve` + STOP reporting; §5.5 carries the
+envelope). The old content-half/ergonomic-half rubric is retired: its
+content checks live in lens 2 (projection floor), its ergonomics in
+lenses 4–5.
 
 ### 5.3 Constraint handling — the in-context budget
 
@@ -205,25 +240,125 @@ degrades into an unbounded cover-everything-now demand.
 `ExecutePairflowPlan`": when the accounting closes.** Splits stay honest under
 it — split tasks re-declare their slices and the union must still close.
 
-### 5.5 The autonomy ramp and human checkpoints
+### 5.5 The autonomy envelope and human checkpoints (process-v2)
 
-Hands-off vs. supervised is not decided upfront; it is a per-task property
-derived from contract density, ramped in three stages:
+**Principle: the loop stops exactly where a NEW SEMANTIC DECISION is
+needed** — a functionality/behavior/performance choice not derivable
+from ratified sources. Everything else is mechanical. The detector is
+the D1 provenance machinery: every canonical packet row is classed
+`anchored` / `derived` / `new-decision` in the `packet_rows` manifest;
+one mechanism drives classification, draft routing, and this boundary.
 
-1. **Calibration** — the first chapters (intake, skeleton, test kit) run
-   task-by-task with manual approve; the packets are built by checklist (see
-   §8). Partly necessity: the mechanical gates are themselves being built
-   here.
-2. **Measurement** — anything the operator's hand catches that no gate did
-   becomes either a new gate or a new checkpoint rule.
-3. **Chaining** — a task class whose gates are fully mechanical and whose
-   coverage accounting closes may be chained through `ExecutePairflowPlan`.
+**Autonomous (no human):** in-chapter `split` — sizing, not scope
+(coverage union guarded mechanically; parts inherit mode, predicted
+class, watchpoints; fresh watchdog per part; depth 1 — deeper → STOP);
+propagation-class plan edits (terminology/consistency sweeps of
+already-decided semantics, applied with a visible report); ADR
+recording of already-ratified decisions; parking proposals onto the
+finding routes (batch-ratified at approve); probes, panel
+orchestration, all tier-0 scripts, prepared edits.
 
-Standing human checkpoints (never automated away): plan-chapter ratification,
-ADR `proposed → accepted`, the model↔code divergence stop (§6), and
-refine/split verdicts when a mechanical gate fails. This is v3's own design
-thesis applied to building v3: attention placed by design where the wait must
-survive the performer, not spread uniformly or removed uniformly.
+**STOP (human), four cases — the canonical member-token registry
+(tokens minted HERE, never ad hoc; `packet_metrics.stops[].type`
+records them):**
+
+1. **Undecided semantics surfaces** — `1:late-b-signal` (new-decision
+   rows exceed the threshold mid-loop) · `1:divergence` (model-plane
+   bug — §6) · `1:open-choice` (a fold needs a genuinely open
+   behavioral/performance choice; contested-probe resolutions minting
+   new-decision rows arrive here).
+2. **Plan-boundary conflict** — `2:meaning-changing-alignment` (an
+   alignment that would ALTER ratified semantics, not propagate) ·
+   `2:scope-changing-split` (chapter scope/sequencing/dependencies) ·
+   `2:contested-ratified-vs-reality` (a ratified surface — plan text
+   OR a ratified draft row — and live behavior disagree AND more than
+   one resolution direction exists) · `2:draft-split` (a draft that
+   wants splitting is a chapter-structure question).
+3. **Watchdog exhaustion** — `3:watchdog`: 8 rounds without approve →
+   STOP with a diagnosis (churn composition → split vs draft
+   proposal). Auto-split-remedy is delegable LATER — a deferred,
+   evidence-based step, not a live delegation.
+4. **Flag-bearing approve** — `4:flagged-approve`: the approve's
+   substantive content is ratifying the flags.
+
+**Verdict-action matrix:**
+
+| Loop event | Action |
+|---|---|
+| `refine` (any fold-now finding) | autonomous: fold + re-run panel |
+| `split`, within chapter (coverage union preserved) | autonomous, visible report |
+| `split` changing chapter scope/sequencing/dependencies | STOP 2 |
+| `approve`, flag-free | human in calibration; delegation DEFERRED — per-work-type, evidence-based, thresholds only when the metrics data exists |
+| `approve`, flag-bearing | human (STOP 4), at every trust stage |
+| STOP 1–3 events | human, always |
+
+**Flag-bearing, defined:** new-decision manifest rows present, OR any
+routed flags entry whose ratification point IS the approve —
+`declined` always, and parked proposals batch-ratified at approve.
+Watchpoint STATUS alone does not flag-bear; the ROUTE decides.
+
+**Finding policy (fix-all):** every panel finding is fixed by default
+— Bayes (a fresh-context re-review re-finds unaddressed issues) and
+ambiguity transfer (the fresh reviewer is a proxy for the build-time
+implementer). Fix-all binds CONTENT findings and routes EFFORT, never
+truth: per-finding dispositions (folded / narrowed / declined, with
+reasons), conflicting feedback sources reconciled explicitly,
+genuinely open choices escalate as STOPs. TOOLING findings get a
+mandatory threat-model judgment; `declined: out of threat model` is a
+live route. Routes exist ONLY for ownership misfit:
+
+| Route | Home | Revisit |
+|---|---|---|
+| `boundary-review` | process-log line | the chapter DoD's mandatory log review |
+| `later-chapter` | proposed plan-map row | ratified by the human at approve/boundary |
+| `declined` | packet flag, `declined — <reason>` | none BY DESIGN — a human-ratified standing decision |
+
+**Threat model, stated once:** one operator plus review-gated agents
+on a single repo. The machine gates defend against agent drift and
+sloppiness (silent edit of ratified text, unresolved reference,
+boundary escape) — never against adversarial history forgery; git
+history plus the operator's diff review own that layer.
+
+**Tier-0 gate inventory, with a gate point per member:**
+
+- **Approve-time:** `pnpm v3:packet-lint` (fold-time packet + draft
+  form checks) with `--forbid-reopened` (the zero-reopened gate:
+  packet approve, chapter close, and process flips require ZERO
+  reopened drafts); `check_coverage.py --fold-time` (validation; the
+  owned==realized lock is excluded — necessarily red on an
+  approved-but-unbuilt packet); the drift tests; `v3:adr-check`;
+  substrate-probe scripts.
+- **Build-close:** the `--post-build` audit (§4 step 8) and coverage's
+  DEFAULT mode (the owned==realized three-way lock).
+
+**Standing human checkpoints (never automated away, never inferred —
+restated identically on AGENTS.md and the skill):** plan-chapter
+ratification; the model↔code divergence stop (§6); contract-draft
+ratification and RE-ratification (the intent-injection point — never
+delegated at any trust level, and never inferred from an intent
+statement: the act is explicit, on named bytes). The **first-of-a-kind
+rule**: the first packet of a new task class is human-approved
+regardless of trust stage. The **calibration measurement rule**: each
+human approve asks "did the human find new-decision content the
+detector did not flag?" — a miss is a DETECTOR bug: fix the rule, do
+not add process. **Entry mode is the trust dial:** the user chooses
+per work item — prompt-by-prompt or delegating a packet/chapter.
+
+The three-stage ramp (calibration → measurement → chaining) survives
+as ROLLOUT context: chaining through `ExecutePairflowPlan` opens per
+task class when its gates are fully mechanical and its coverage
+accounting closes.
+
+**Metrics convention:** one `packet_metrics` machine block per packet,
+written once at build close (schema FORM: template §1). `stops[].type`
+uses the registry above; `rounds.review` counts panel rounds;
+`prediction` is pre-registered at chapter ratification (plan §1.3
+convention) and never retro-filled; late discoveries add a process-log
+line AND increment the block; `baseline_note` is the only home for
+unit/regime qualifiers. The block answers three questions — is the
+packet good (downstream rounds)? is the detector reliable (misses)?
+where is the bottleneck (round/lens distribution)? — and NO
+aggregation tooling is built until packet count justifies it.
 
 ## 6. Cross-cutting protocols
 
@@ -234,12 +369,17 @@ survive the performer, not spread uniformly or removed uniformly.
   planes cannot shear.
 - **Chapter definition of done:** contract tests green + drift tests green +
   the chapter-1 intake tables updated (status flipped) + any born ADRs in
-  `accepted` state + the process-log review (§8) held + **the full local
+  `accepted` state + the process-log review (§7) held + **the full local
   CI gate (`pnpm ci:local`) green** — the ROOT suite included, not just
   the v3 bridges (adopted at the ch-5 boundary, effective from chapter
   6: v3-only bridge runs let a stale root-side CI test sleep until the
-  next push). A chapter without these is not done regardless of code
-  state.
+  next push) — **plus the three draft-close conditions:** ZERO
+  reopened drafts (`check_packet.py --forbid-reopened`; unconditional
+  — naturally vacuous when no draft exists); EVERY chapter-referenced
+  contract-draft flipped `realized` (map filled + status flipped in
+  ONE act, per `contract-draft-template.md` §4); and the draft-metrics
+  close line recorded — both scoped to the chapter's drafts IF ANY.
+  A chapter without these is not done regardless of code state.
 
 ## 7. Process reflection
 
@@ -276,10 +416,13 @@ ergonomics layer is inherited as rubric content, not by forking the skill.
 satisfied several times over: 14 live packets across chapters 4–6, the last
 10 on a structurally unchanged template. The flow is now the repo-local
 **`CreateTaskPacket`** skill (`.claude/skills/CreateTaskPacket/` —
-`AuthorPacket` + `ReviewPacket` workflows + the learned-rules registry).
-Boundary of authority: the template, the projection checklist, and the
-`REV-*` registry stay canonical in THIS directory; the skill carries
-procedure plus the failure-class registry distilled from the process log,
-and is amended at chapter boundaries only (§7's rhythm). The human
-checkpoints (§5.5) are untouched — the skill stops at "ready for
-pre-approval".
+`AuthorPacket` + `ReviewPacket` + `DraftContract` workflows + the
+learned-rules registry).
+Boundary of authority: the template, the projection checklist, the
+`REV-*` registry, and the contract-draft template
+(`contract-draft-template.md`) stay canonical in THIS directory; the
+skill carries procedure plus the failure-class registry distilled from
+the process log, and is amended at chapter boundaries only (§7's
+rhythm). The human checkpoints (§5.5) are untouched — the authoring
+loop iterates refine and in-chapter split autonomously and stops at
+the approve and at every STOP (the §5.5 matrix).

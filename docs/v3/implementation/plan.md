@@ -104,6 +104,17 @@ convention is itself a chapter-1 rule.
 | 9 | Runner MVP: local worktree provider, one real actor adapter, process-gate runner, attach channel (tmux observe/takeover); sub-decision: local-worktree only vs headless/cloud | PI-8 | planned(ch 9) |
 | 10 | Operator recourse card: one page (query via the floor, cancel, deleteRequested; no watchdog/retry until L9) | PI-9 | planned(ch 10) |
 
+**Predicted-class convention (process-v2, added at the Phase-1 flip;
+applies from ch8 ratifications).** Each chapter's §N.7 packet-table
+rows carry a one-word PREDICTED class — `projection (source: …)` /
+`invention (memo-born)` — recorded AT ratification (a boundary-time
+retro-annotation is worthless); the authoring-time discovery is always
+the authority, and a prediction/discovery mismatch routes to a
+friction-log line. The same §N.7 tables reference every chapter
+contract-draft with the `draft: …, ratified <date>` convention (the
+refs are REPEATABLE — the chapter's draft set is what its §N.7
+references, mirrored by the `contracts/chN-*-contract.md` glob).
+
 **Map extension note (added at ch-5 ratification, §5.6).** The 10-chapter
 map is the Block A core sequence, not a closed list: semantic surfaces the
 model ladder carries beyond it enter as APPENDED chapters when their
@@ -1447,8 +1458,12 @@ the boundary review.
 |---|---|---|
 | ch7-P1 | channel core: event types + `DiagnosticsSink` (fail-open on the port) + the emission matrix over ingress/kernel + testkit recording sink + `createIngress({kernel, diag})` ripple | pre-approve (first-of-a-kind: the diagnostic seam; first skill run) |
 | ch7-P2 | diag store: separate-file SQLite sink + fenced wipe + availability matrix + read surface + ADR-010 | pre-approve (first-of-a-kind: second store substrate; the fail-open proof) |
-| ch7-P3 | consumers: tail diag layer (order + stop semantics) + bundle three-state flip + the free-text boundary | pre-approve (first-of-a-kind: cross-lane streaming; export-boundary extension) |
-| ch7-P4 | CLI: `tail --diag`, bundle section pass-through, dev `diag` dump, derived diag-DB config | pre-approve (matrix extensions on both entrypoints) |
+| ch7-P3 | consumers: tail diag layer (order + stop semantics) + bundle three-state flip + the free-text boundary | pre-approve (first-of-a-kind: cross-lane streaming; export-boundary extension); predicted: projection (sources: the P1/P2 packet contracts + §7.4) |
+| ch7-P4 | CLI: `tail --diag`, bundle section pass-through, dev `diag` dump, derived diag-DB config | pre-approve (matrix extensions on both entrypoints); predicted: projection (the six-precedent CLI class + §7.5) |
+
+Prediction provenance: the P3/P4 predicted classes were PRE-REGISTERED
+at the Phase-1 flip (2026-07-09), BEFORE P3 authoring started — the
+§1.3 convention's first data points (ch7 itself was ratified pre-v2).
 
 Order: P1 → P2 (the store implements the port) → P3 (consumers read the
 store) → P4 (the CLI activates the consumers). One packet = packet file

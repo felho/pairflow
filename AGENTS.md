@@ -30,20 +30,31 @@ bubble workflow below. Everything an agent needs lives on repo surfaces
   §4, execution model §5, chapter DoD §6, friction log §7). The plan
   (`docs/v3/implementation/plan.md`) is ratified chapter by chapter;
   task packets live in `docs/v3/implementation/packets/`.
-- **Packet authoring and review** run through the repo-local
-  `CreateTaskPacket` skill (`.claude/skills/CreateTaskPacket/`); the
-  canonical template / projection checklist / `REV-*` registry stay in
-  `docs/v3/implementation/task-packet-template.md` — if the skill and
-  the docs disagree, the docs win.
-- **Human checkpoints (never automated):** chapter ratification and
-  packet pre-approval verdicts (approve / refine / split) come from the
-  USER; authoring STOPS at "ready for pre-approval" — never build
-  before an explicit approve; a new chapter starts only on the user's
-  explicit go.
+- **Packet authoring, review, and contract-drafts** run through the
+  repo-local `CreateTaskPacket` skill
+  (`.claude/skills/CreateTaskPacket/`); the canonical template /
+  projection checklist / `REV-*` registry stay in
+  `docs/v3/implementation/task-packet-template.md`, and the
+  contract-draft form authority in
+  `docs/v3/implementation/contract-draft-template.md` — if the skill
+  and the docs disagree, the docs win.
+- **Contract-drafts exist:** a chapter's memo-born surface is decided
+  as C-rows in `docs/v3/implementation/contracts/` and RATIFIED by the
+  human before any packet anchors to it (`contract:chN-<surface>#Cn`).
+- **Human decision points (the README §5.5 verdict-action matrix):**
+  STOPs and flag-bearing approves are the USER's; flag-free approves
+  are the USER's in calibration (delegation deferred per README §5.5);
+  refine and in-chapter split are the loop's. Standing checkpoints,
+  never automated: chapter ratification, the model↔code divergence
+  stop, and contract-draft ratification/re-ratification. The authoring
+  loop iterates refine and in-chapter split autonomously and stops at
+  the approve and at every STOP — never build before an explicit
+  approve; a new chapter starts only on the user's explicit go.
 - **Verification bridges (run from repo root):** `pnpm v3:typecheck`,
-  `v3:lint`, `v3:test`, `v3:coverage`, `v3:adr-check`; the chapter DoD
-  additionally requires full `pnpm ci:local`. The v1 "Local Change
-  Verification" order below does not apply to v3-only changes.
+  `v3:lint`, `v3:test`, `v3:coverage`, `v3:packet-lint`,
+  `v3:adr-check`; the chapter DoD additionally requires full
+  `pnpm ci:local`. The v1 "Local Change Verification" order below does
+  not apply to v3-only changes.
 - **Commit shape:** one packet = packet file + code + tests (+ any
   "aligned at <packet-id> pre-approval" plan edits) in ONE commit;
   commit types per `docs/commit-message-guidance.md` (process-plane

@@ -29,6 +29,12 @@ Deterministic, from repo surfaces ONLY — no session memory:
    WITH its build commit (the one-commit rule), so absence = not
    built. EDGE: an UNCOMMITTED packet file in a dirty worktree is a
    packet IN FLIGHT (pre-approval) — resume it, do not skip it.
+2b. **Draft-phase branch:** if ANY contract-draft the open chapter's
+   §N.7 table references is not yet ratified-or-later (file absent,
+   status `draft`, or `reopened`), the next step is the
+   **DraftContract** round for THAT draft, not packet authoring —
+   packets anchor only to ratified rows (README §4). The late-B STOP
+   (below) remains the entry for the unpredicted case.
 3. **All packet files present** → the next step is the chapter CLOSE
    (README §6 DoD: full `ci:local`, map-row + PI flip, boundary
    review), not a new packet.
@@ -74,9 +80,37 @@ Read, in this order (current state, never from memory):
 2. **Operability** (CLI / floor / tooling — adds ZERO kernel semantics) →
    declare the **empty** ledger slice explicitly [R-EMPTY-SLICE]; the
    packet's claim surface is its canonical contract matrices instead.
-3. **First-of-a-kind?** If this packet class has no precedent →
-   autonomy stage `calibration`, verdict path pre-approve [R-FIRST-STOP].
-   Otherwise inherit the chapter's declared stage.
+3. **First-of-a-kind?** If this packet class has no precedent → the
+   approve is the human's regardless of trust stage [R-FIRST-STOP;
+   canonical statement: README §5.5]. Otherwise inherit the chapter's
+   declared stage.
+4. **Predicted class + sizing (BEFORE drafting):** read the chapter's
+   predicted class for this packet (plan §1.3 convention, from ch8
+   ratifications on; the authoring-time DISCOVERY below is always the
+   authority — a mismatch routes to a friction-log line). Run the
+   sizing heuristics: substrate novelty, claim families, matrix
+   families, dimension count, sibling-packet fanout (the adopted
+   Closure-Budget bucket-coincidence trigger is subsumed by these
+   axes). Their outcome feeds the split decision: an IN-CHAPTER split
+   executes autonomously per the README §5.5 verdict-action matrix —
+   split parts inherit mode, predicted class, and watchpoints; each
+   part gets a fresh watchdog budget; autonomous split depth is 1
+   (deeper → STOP).
+5. **Provenance classification (the D1 detector — discovered during
+   authoring, declared as written):** every canonical row enters the
+   `packet_rows` manifest with its class — `anchored` (strict ref:
+   `contract:chN-<surface>#Cn` or `ADR-NNN`; other provenance is
+   `prose:`-prefixed), `derived` (its one-line DERIVATION NOTE lives
+   in the row's own table text — review material for the entailment
+   attack, never manifest data), or `new-decision`. **Case B fires**
+   on new-decision mass over the calibration-permissive threshold OR
+   ANY new-decision row touching authority / separation /
+   availability-class semantics (tightening the threshold is a config
+   change, not a redesign): STOP authoring BEFORE drafting continues
+   and route to **DraftContract** — the new-decision row set is the
+   draft's seed content. The case verdict (projection/invention),
+   computed from the manifest tally plus the semantic trigger, goes
+   in the packet header with a one-line derivation (template §1).
 
 ### 3) Project the slice (checklist §2 steps 1–4)
 
@@ -198,8 +232,14 @@ deferred edit.
 ### 8) Write the packet file
 
 `docs/v3/implementation/packets/<PACKET_ID>.md`, following template §1
-exactly: header (plan step + autonomy stage), the machine `ledger_slice`
-block (empty or full — always present), Claim + dimensions, operative
+exactly: header (plan step + autonomy stage + the classification line:
+case verdict with its one-line derivation), the THREE authoring-time
+machine blocks — `ledger_slice` (empty or full — always present),
+`mutation_boundary`, `packet_rows` (the manifest; form rules in
+template §1) — plus the flags section's labeled Route lines (prose
+fields, not a machine block; a `declined` route is
+`declined — <reason>`); `packet_metrics` is the CLOSE-time machine
+block, filled at build close. Then Claim + dimensions, operative
 material, canonical matrices, in-context notes, embedding gates,
 acceptance (CT-*/CHK-*/REV-* ids). English only. Fixture **watchpoint**
 (R-RAW-FIXTURES is WATCH status, not yet a rule): prefer staging hostile
@@ -213,12 +253,14 @@ flags` section carrying them in full — the summary may only REFERENCE
 it. A flag that exists only in chat is a self-containment defect (the
 ch7-P1 dangling-"flagged below" lesson).
 
-### 9) Self-review, then STOP
+### 9) The panel loop, then the human decision points
 
-1. Run the **ReviewPacket** workflow on the draft in `self_review` mode
-   (the pre-approval CHALLENGE review is the human round's engine, not
-   this step's — Contract Reality issues spotted here become
-   pre-approval flags, never silent acceptance).
+1. Run the **ReviewPacket** panel on the draft — the SINGLE engine;
+   there is no lighter authoring-side mode. The loop is AUTONOMOUS:
+   `refine` verdicts fold and re-run the panel; in-chapter `split`
+   verdicts apply the §N.7 repartition per step 2's inheritance and
+   depth-1 rules; watchdog 8 per target. Contract-reality issues
+   become pre-approval flags, never silent acceptance.
 2. **Flag write-back loop:** if the self-review yields ANY flag,
    watchpoint, or contract-reality issue not already carried in the
    packet's `## Pre-approval flags` section, write it INTO the section
@@ -246,22 +288,31 @@ ch7-P1 dangling-"flagged below" lesson).
    mirror map SHRINKS the propagation surface, the fresh pass VERIFIES
    the remainder (ch7-P1 rounds 4/6b/7 are the driving evidence —
    each was a propagation miss a fresh reader caught one round later).
-4. Present the pre-approval summary in the session's chat language: the
-   slice (or its declared emptiness), the claim + dimensions, the matrices,
-   the embedding gates, open risks — flags REFERENCED from the packet
-   section, never introduced summary-only.
-5. **STOP.** The user's findings round decides: approve / refine / split.
-   This workflow never proceeds to build, never commits the packet on its
-   own, and never marks a packet approved.
+4. Present the summary in the session's chat language: the derivation
+   announcement (0a), the slice (or its declared emptiness), the
+   classification verdict + manifest tally, the claim + dimensions,
+   the matrices, the embedding gates, open risks — flags REFERENCED
+   from the packet section, never introduced summary-only.
+5. **The loop stops exactly at the human decision points (the README
+   §5.5 verdict-action matrix):** at every STOP, always; and at the
+   approve — in calibration the human's for every packet (flag-free
+   approve delegation is DEFERRED per the README's D6 clause; a
+   FLAG-BEARING approve is STOP `4:flagged-approve`, the human's at
+   every trust stage). **Entry mode is the trust dial:** the user
+   chooses per work item — prompt-by-prompt in the loop, or delegating
+   a whole packet/chapter; no formal mechanism needed. This workflow
+   never proceeds to build, never commits the packet on its own, and
+   never marks a packet approved.
 
 ## Report
 
 ```
 Packet drafted: docs/v3/implementation/packets/<PACKET_ID>.md
 Class: kernel-semantic | operability   First-of-a-kind: yes/no
+Classification: projection | invention (manifest tally: a/d/n) — B-case: routed to DraftContract? 
 Slice: <n units / n rejections / n invariants / n traces | EMPTY (declared)>
-Self-review: <ReviewPacket verdict + any flagged items>
-Propagation: <fresh-eyes pass result: clean | hits folded (list)>
+Panel: <rounds run, last verdict + Gate Coverage Matrix state>
+Propagation: <lens-4 pass result: clean | hits folded (list)>
 Plan alignment: <none | prepared edit for §X, same-commit>
-→ awaiting pre-approval verdict (approve / refine / split)
+→ at a human decision point: approve | STOP <member token>
 ```
