@@ -876,3 +876,18 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   the draft C-row ids — C01 now red (detection stays broad so a
   demoted C01 row cannot silently escape the equality guard;
   validation is explicit). Selftest 70→72
+- 2026-07-09 · process-v2 Phase 0.1 (lint review round 9, three
+  findings, all folded) · (1) the audit's own empty-check RATIONALE
+  stated "a build commit lands at least the packet file itself" but
+  the code only checked emptiness — a code-only or follow-up commit
+  green-lit --post-build (reproduced); the invariant is now enforced
+  POSITIVELY (the audited commit must change the packet file), a
+  stated-rationale-vs-checked-invariant gap: when a comment NAMES an
+  invariant, the checker must test it, not just its negation's
+  easiest case; (2) doc-side lane ids were collected into a SET, so
+  two `| O1 |` table rows collapsed and passed against one manifest
+  row — a count-blind data-structure choice; duplicates are now red
+  (restores symmetry with the draft C-dup check); (3) D6 says the
+  summary LISTS reopened drafts but lint() reduced them to a count —
+  names now ride the stats and the summary prints them, with a
+  structural selftest assertion. Selftest 72→74

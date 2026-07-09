@@ -70,8 +70,10 @@ Packets (docs/v3/implementation/packets/*.md, README.md excluded):
       The vacuous-audit family is closed at the SINK: merge commits
       are rejected outright, root commits are diffed against the
       empty tree, and an EMPTY change list is red regardless of cause
-      (--allow-empty, wrong sha — a build commit lands at least the
-      packet file itself, one-commit rule).
+      (--allow-empty, wrong sha). The one-commit rule is enforced
+      POSITIVELY too: the audited commit must change the packet file
+      itself — a code-only or follow-up commit is the wrong audit
+      target.
 
 Drafts (docs/v3/implementation/contracts/*.md, README.md excluded; a
 missing directory means zero drafts):
@@ -99,9 +101,9 @@ missing directory means zero drafts):
       (content+status commit, then record commit) stays green at every
       step.
   D6. reopened is a transient STOP-artifact: the summary lists
-      reopened drafts, and --forbid-reopened turns any into an error
-      (the zero-reopened gate at packet approve / chapter close /
-      flip).
+      reopened drafts BY NAME, and --forbid-reopened turns any into
+      an error (the zero-reopened gate at packet approve / chapter
+      close / flip).
   D7. Realized map: ANY realized_map block present <=> status realized
       AND exactly one map covering exactly the C-row id set, every
       landing site a nonempty string (a partial map, on any status, is
@@ -646,11 +648,19 @@ def check_packet_rows(
 
     # P5 bidirectional completeness — the ONLY document scan, and it
     # reads nothing but first-cell lane ids outside fences.
-    doc_ids: set[str] = set()
+    doc_id_list: list[str] = []
     for line in prose.splitlines():
         m = LANE_DEF_RE.match(line)
         if m and m.group(1) not in EXCLUDED_LANE_FAMILIES:
-            doc_ids.add(f"{m.group(1)}{m.group(2)}")  # exact string — O01 is never O1
+            doc_id_list.append(f"{m.group(1)}{m.group(2)}")  # exact string — O01 is never O1
+    doc_dupes = sorted({i for i in doc_id_list if doc_id_list.count(i) > 1})
+    if doc_dupes:
+        checker.error(
+            f"{name}: table-defined lane ids {doc_dupes} appear more than once — "
+            f"canonical row ids are unique, and a duplicate makes every ref to "
+            f"them ambiguous"
+        )
+    doc_ids = set(doc_id_list)
     manifest_set = set(manifest_ids)
     for missing in sorted(manifest_set - doc_ids):
         checker.error(
@@ -909,6 +919,16 @@ def check_post_build(packet_path: Path, commit: str, checker: Checker) -> None:
             f"proves nothing (wrong sha or empty commit)"
         )
         return
+    # …and the same invariant POSITIVELY: the empty-check rationale
+    # already stated it, but only checking emptiness let a code-only or
+    # follow-up commit green-light the audit (round 9, reproduced).
+    if rel not in changed:
+        checker.error(
+            f"--post-build: commit {commit} does not change the packet file "
+            f"'{rel}' — the build commit lands the packet WITH the build "
+            f"(one-commit rule), so this is the wrong commit to audit"
+        )
+        return
     outside = sorted(changed - allowed)
     if outside:
         checker.error(
@@ -965,7 +985,7 @@ def lint(
         "v2": v2,
         "grandfathered": grandfathered,
         "drafts": len(drafts),
-        "reopened": len(reopened),
+        "reopened": reopened,  # the NAMES — D6 says the summary lists them
     }
     return checker.errors, stats
 
@@ -979,10 +999,12 @@ def run_lint(
     errors, stats = lint(packets_dir, contracts_dir, adr_dir, forbid_reopened=forbid_reopened)
     for msg in errors:
         print(f"packet-lint FAIL: {msg}", file=sys.stderr)
+    reopened = stats["reopened"]
+    reopened_note = f"{len(reopened)} reopened" + (f": {', '.join(reopened)}" if reopened else "")
     print(
         f"packet-lint: {stats['v2']} v2 packet(s) linted, "
         f"{stats['grandfathered']} pre-v2 grandfathered, "
-        f"{stats['drafts']} draft(s) linted ({stats['reopened']} reopened), "
+        f"{stats['drafts']} draft(s) linted ({reopened_note}), "
         f"{len(errors)} error(s)"
     )
     return 1 if errors else 0
@@ -1293,6 +1315,11 @@ def run_selftest() -> int:
         "missing from the",
     )
     expect_red_packet(
+        "table-duplicate-lane-id",
+        GREEN_PACKET.replace("| O3 | c |", "| O3 | c |\n| O3 | again |"),
+        "appear more than once",
+    )
+    expect_red_packet(
         "fenced-only-definition",
         GREEN_PACKET.replace("| O3 | c |", "| O3x | c |")  # the real O3 row goes away
         + "\n```\n| O3 | only inside a fence |\n```\n",
@@ -1564,8 +1591,11 @@ def run_selftest() -> int:
         assert_red("ref-target-reopened-draft", errors, "contested during a reopen")
         # …but the DRAFT itself is green at every choreography step
         packet2.unlink()
-        errors, _ = lint(root / "packets", root / "contracts", ADR_DIR)
+        errors, stats = lint(root / "packets", root / "contracts", ADR_DIR)
         expect_green("reopened intermediate state", errors)
+        # D6: the summary carries the reopened drafts BY NAME
+        if stats["reopened"] != ["ch9-test-surface-contract.md"]:
+            failures.append("selftest claim NOT held: reopened drafts not listed by name")
         # D6: the gate form turns the same state red
         errors, _ = lint(root / "packets", root / "contracts", ADR_DIR, forbid_reopened=True)
         assert_red("forbid-reopened-gate", errors, "zero-reopened gate")
@@ -1617,8 +1647,21 @@ def run_selftest() -> int:
         if not (_git_ok(root, "init", "-q") and _git_ok(root, "add", "-A") and _git_ok(root, "commit", "-q", "-m", "base")):
             failures.append("selftest git fixture setup failed (post-build)")
         else:
+            # the reproduced round-9 hole: a code-only commit (packet
+            # file untouched) green-lit the audit — the wrong commit
+            (root / "x.txt").write_text("x1b", encoding="utf-8")
+            _git_ok(root, "add", "-A")
+            _git_ok(root, "commit", "-q", "-m", "code-only")
+            checker = Checker()
+            check_post_build(packet, "HEAD", checker)
+            assert_red("post-build-wrong-commit", checker.errors, "wrong commit to audit")
+            # a build-shaped commit (packet included) with an
+            # out-of-boundary file
             (root / "x.txt").write_text("x2", encoding="utf-8")
             (root / "y.txt").write_text("y", encoding="utf-8")
+            packet.write_text(
+                packet.read_text(encoding="utf-8") + "\nbuild note\n", encoding="utf-8"
+            )
             _git_ok(root, "add", "-A")
             _git_ok(root, "commit", "-q", "-m", "outside")
             checker = Checker()
