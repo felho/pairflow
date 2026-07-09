@@ -326,9 +326,10 @@ of these is itself a finding.
   realized}; status draft ⇒ no blocks — fold round 3: every
   neighbouring item is written letter by letter, compressing these
   two was the row's own weak-reading gap); the
-  realized map (exactly one block, keys exactly the C-row id set,
-  every landing site a nonempty string, ANY map presence ⇔
-  realized). The cross-cutting machine-block rules ride along:
+  `realized_map` block — the exact top-level key, named like
+  `contract_draft` (fold round 5) — exactly one, keys exactly the
+  C-row id set, every landing site a nonempty string, ANY map
+  presence ⇔ realized. The cross-cutting machine-block rules ride along:
   duplicate JSON keys are parse errors, and fences follow the
   line-oriented CommonMark scanner (quoted fences are material) —
   their canonical statement lives in task-packet-template §1a
@@ -398,6 +399,15 @@ of these is itself a finding.
   the v2-marker's no-silent-demotion clause (a packet NAMING
   mutation_boundary in raw text stays v2 even when that fence is
   malformed).
+- **FC-E4** The two remaining packet-form mirror surfaces sweep in
+  the same commit (fold round 5): `check_coverage.py`'s docstring and
+  `packets/README.md` both read as if `ledger_slice` were THE packet
+  machine block ("exactly one fenced json block whose top-level key
+  is ledger_slice") — post-flip a v2 packet carries THREE
+  authoring-time machine blocks (FC-B1), so both texts rewrite to
+  "exactly one `ledger_slice` block AMONG the packet's machine
+  blocks"; the flip's file list grows by these two (the FC-F1
+  lint-docstring class on the coverage side).
 
 ## FC-F — README §4–§6 + §5.5
 
@@ -505,7 +515,10 @@ of these is itself a finding.
   pre-approval'" sentence (→ the loop form); and §8's workflow
   enumeration gains DraftContract + the contract-draft-template (a
   new workflow and a new form authority must appear on EVERY
-  enumerating surface). And §6's chapter-DoD enumeration gains the
+  enumerating surface) — and so does §1's "what lives here" INVENTORY
+  at the top of the file (fold round 5: a README-only reader must see
+  the `contracts/` home and the new form authority in the first list
+  they meet, not first at §8). And §6's chapter-DoD enumeration gains the
   three draft-close conditions (fold round 4, both arms: the DoD is
   exactly what a closing agent executes — without these a chapter
   closes green by the DoD's letter with a reopened or unrealized
@@ -821,3 +834,20 @@ preservation:**
   audited-clean and never-audited would read identically).
 
 State: awaiting the arms' round-5 run on these bytes.
+
+**Fold round 5 (2026-07-09): one arm, three findings; all folded:**
+
+- FC-E4 (new): the two remaining packet-form mirror surfaces claimed
+  — `check_coverage.py`'s docstring and `packets/README.md` still
+  read as if `ledger_slice` were THE packet machine block; both
+  rewrite to "among the packet's machine blocks", and the flip's file
+  list grows by the two (the FC-F1 lint-docstring class on the
+  coverage side).
+- FC-F4: README §1's "what lives here" inventory joins the
+  whole-surface sweep — a README-only reader meets the `contracts/`
+  home and the new form authority in the FIRST list, not first at §8.
+- FC-D2: the realized map named by its exact top-level key
+  (`realized_map`), like `contract_draft` — the form authority names
+  keys, not prose paraphrases.
+
+State: awaiting the arms' round-6 run on these bytes.
