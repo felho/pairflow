@@ -1,13 +1,15 @@
 # Packet Flow v2 — Process + Skill Design
 
-Status: **draft — rounds 1–6 folded (§6; rounds 4–6 single-arm, Arm 2);
-awaiting both arms' approve on the same commit (the §6 terminal
-condition).** No skill/process file changes land before
-this document is ratified. On ratification the Status flips to
-ratified and §5 becomes the change plan's authority; once Phase 0/1 land,
-the REALIZED files (README/template/skill/AGENTS.md) are the authority and
-this document is a historical record — its own D2 rule ("never a third
-permanent authority"), applied to itself.
+Status: **ratified 2026-07-09** — by the user's direct act: ch7-P2 was
+built under the old regime per the §5 regime sequence, then the explicit
+Phase-0 start order was given; the decision authority's own ratification
+closes the §6 two-arm terminal condition (the arms are that same
+authority's advisory instruments). Review history: rounds 1–6 folded
+(§6; rounds 4–6 single-arm, Arm 2). §5 is now the change plan's
+authority; once Phase 0/1 land, the REALIZED files
+(README/template/skill/AGENTS.md) are the authority and this document is
+a historical record — its own D2 rule ("never a third permanent
+authority"), applied to itself.
 Date: 2026-07-08.
 
 Provenance, by verifiability class:
@@ -790,3 +792,11 @@ only home for such qualifiers, never ad hoc keys: the registry principle
 applied to the metrics schema itself); the round-4/5 records now name
 WHICH arm ran (Arm 2 — the R-numbered reviewer), completing the
 arm-coverage bookkeeping the terminal condition requires.
+
+**Ratification (2026-07-09):** by the user's direct act — ch7-P2 built
+under the old regime per the §5 regime sequence (commits `62020f1a` +
+aftermath `9b63d0c5`, 323 tests green), then the explicit Phase-0 start
+order. This closes the two-arm terminal condition by the decision
+authority it served: the arms are advisory instruments of the same
+authority, and the direct order supersedes their proxy role. Phase 0
+execution begins from this state.
