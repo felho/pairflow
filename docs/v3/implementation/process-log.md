@@ -683,3 +683,23 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   canonical EXAMPLE went red under the rule minted two paragraphs
   below it — the rule-change-sweeps-every-statement discipline
   includes examples
+- 2026-07-09 · process-v2 Amendment 1 ratified (+ user watchpoint for
+  a future boundary) · ratified by the user's explicit post-fold act;
+  content commit ae1e362e, the flip commit carries the Carrier-B
+  record — the amendment's own ratification is the recorded-commit
+  mechanism's first live use. Fold rounds 3–4 en route: the §7.4
+  heading went count-free (the doc's counts-to-lists rule applied to
+  itself), and the user caught the `draft:` ref-prefix colliding with
+  the status enum → renamed `contract:` (the artifact's durable
+  identity; a type token must not share a name with a status value).
+  A mis-executed flip (inferred from an intent statement) was
+  withdrawn by reset pre-push — lesson folded into the §7.7 record:
+  ratification never delegates AND never INFERS. USER WATCHPOINT
+  logged at ratification: the ledger is built around the KERNEL plane
+  — as the system grows, other parts may want corpus residence; the
+  D2 routing rule already splits by plane (model-plane content →
+  corpus even when memo-born; a draft never becomes permanent
+  authority), but whether the ledger's STRUCTURE scales to non-kernel
+  surfaces is deliberately deferred to when it first bites — no
+  pre-building; the STOP family catches the first live case
+  (mid-chapter corpus extension has no workflow yet, by design)
