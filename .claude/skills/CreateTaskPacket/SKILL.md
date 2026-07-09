@@ -84,13 +84,6 @@ User: "folded the findings — run the panel again"
 → Reports tier-0 + Gate Coverage Matrix + per-lens results + verdict
 ```
 
-**Example 4: A memo-born surface needs its chapter contract**
-```
-User: "jöhet a ch8 draft" (or AuthorPacket hits a B-case STOP)
-→ Invokes DraftContract with CHAPTER=ch8, SURFACE=<surface>
-→ Writes the C-rows, runs the panel (draft-scoped), STOPS for the
-  human ratification act (permanently human)
-```
 
 **Example 3: Operability packet (empty ledger slice)**
 ```
@@ -98,4 +91,12 @@ User: "author the CLI packet for this chapter"
 → AuthorPacket classifies it as an operability packet
 → Declares the EMPTY ledger slice explicitly (an assertion, not an omission)
 → Canonical contract matrices become the packet's claim surface
+```
+
+**Example 4: A memo-born surface needs its chapter contract**
+```
+User: "jöhet a ch8 draft" (or AuthorPacket hits a B-case STOP)
+→ Invokes DraftContract with CHAPTER=ch8, SURFACE=<surface>
+→ Writes the C-rows, runs the panel (draft-scoped), STOPS for the
+  human ratification act (permanently human)
 ```

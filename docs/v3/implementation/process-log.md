@@ -1014,3 +1014,24 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   (the rule's own text says "regardless"). The SKILL intro (M8) was
   already folded in audit round 1 — the auditor ran against the flip
   commit's bytes
+- 2026-07-10 · post-flip audit round 3 (USER, two findings) · (1) the
+  SKILL.md Examples ran 1, 2, 4, 3 — the flip's insertion landed
+  before the surviving Example 3; reordered. (2) THE SUBSTANTIVE
+  CATCH: the v1 Complexity-Risk gate's RISK half (the six scored
+  axes — authority / surface spread / identity fragility /
+  activation coupling / prerequisite / acceptance multiplicity — the
+  numeric thresholds, and the 11-item hard-stop registry) was never
+  adopted: the design doc §4 compressed the whole gate into "sizing
+  heuristics" with NO recorded disposition for the risk half — a
+  silent narrowing of exactly the class this process hunts, found by
+  the user reading the v1 sources against the landed texts.
+  DISPOSITION (deferred WITH a live revisit anchor, per the process's
+  own deferral rule): during calibration every approve is human, so
+  the risk half gates AUTONOMY, not correctness (partial live cover:
+  the D1 authority/separation/availability trigger + the
+  first-of-a-kind rule); pre-building the scoring apparatus now would
+  repeat the armor-before-traffic lesson. The anchor: README §5.5 now
+  makes a v3-adapted risk assessment a PRECONDITION of
+  auto-approve/chaining — the boundary review owns the adaptation,
+  and delegation cannot open without it (the v1 later-hardening
+  lesson: a deferral without a guaranteed revisit point is a drop)

@@ -362,8 +362,20 @@ per work item — prompt-by-prompt or delegating a packet/chapter.
 
 The three-stage ramp (calibration → measurement → chaining) survives
 as ROLLOUT context: chaining through `ExecutePairflowPlan` opens per
-task class when its gates are fully mechanical and its coverage
-accounting closes.
+task class when its gates are fully mechanical, its coverage
+accounting closes, AND a v3-adapted RISK assessment exists. That last
+precondition is a recorded deferral (post-flip audit, user-found): the
+v1 Complexity-Risk gate's RISK half — the scored axes (authority /
+surface spread / identity fragility / activation coupling /
+prerequisite / acceptance multiplicity) and its hard-stop registry —
+was NOT adopted; only its sizing half became the authoring heuristics.
+During calibration this is deliberate (every approve is human, so risk
+gates AUTONOMY, not correctness — partial live cover: the D1
+authority/separation/availability trigger and the first-of-a-kind
+rule), but auto-approve/chaining may not open without adapting it —
+the boundary review owns the adaptation
+(`.claude/skills/CreatePairflowSpec/references/Complexity-Risk-Gate.md`
+is the source).
 
 **The transitional cross-model arms:** until pairflow doc-bubbles
 arrive, the USER's manual cross-model arms play phase 2 (the
