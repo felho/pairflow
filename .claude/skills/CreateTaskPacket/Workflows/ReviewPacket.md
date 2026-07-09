@@ -28,18 +28,24 @@ authorities: `task-packet-template.md` (packets),
 
 ## Workflow
 
-### 0) Tier-0 gates (approve-time column)
+### 0) Tier-0 gates (by target kind)
 
-Run the APPROVE-TIME tier-0 set — the inventory with gate points lives
-in README §5.5; today's column: `pnpm v3:packet-lint` (fold-time packet
-+ draft form checks) **with `--forbid-reopened`** (the zero-reopened
-gate), `python3 tools/v3-plan/check_coverage.py --fold-time` (coverage
-validation; the owned==realized lock is BUILD-CLOSE — an
-approved-but-unbuilt packet's units are necessarily pending), the
-drift tests, `pnpm v3:adr-check`, and any substrate-probe scripts the
-target names. Every approval-time gate green is an approve
-PRECONDITION; the P8 post-build audit is a build-close gate, not an
-approve gate.
+- **Packets — the APPROVE-TIME column** (the inventory with gate
+  points lives in README §5.5): `pnpm v3:packet-lint` **with
+  `--forbid-reopened`** (the zero-reopened gate), `python3
+  tools/v3-plan/check_coverage.py --fold-time` (coverage validation;
+  the owned==realized lock is BUILD-CLOSE — an approved-but-unbuilt
+  packet's units are necessarily pending), the drift tests,
+  `pnpm v3:adr-check`, and any substrate-probe scripts the target
+  names. Every approve-time gate green is an approve PRECONDITION;
+  the P8 post-build audit is a build-close gate, not an approve gate.
+- **Drafts — tier 0 = the draft-lint only** (`pnpm v3:packet-lint`
+  covers the contracts dir; the form registry is
+  contract-draft-template §3), WITHOUT `--forbid-reopened`: a
+  `reopened` draft under its own re-ratification review is the
+  legitimate transient state — the zero-reopened gate binds at packet
+  approve / chapter close / process flips, never at the draft's own
+  review. The coverage/drift/ADR gates are packet-side (n/a here).
 
 ### 1) The five lenses — fresh-context sub-agents, on the final bytes
 

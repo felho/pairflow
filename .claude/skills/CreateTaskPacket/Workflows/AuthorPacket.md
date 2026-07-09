@@ -309,7 +309,7 @@ ch7-P1 dangling-"flagged below" lesson).
 ```
 Packet drafted: docs/v3/implementation/packets/<PACKET_ID>.md
 Class: kernel-semantic | operability   First-of-a-kind: yes/no
-Classification: projection | invention (manifest tally: a/d/n) — B-case: routed to DraftContract? 
+Classification: projection | invention (manifest tally: a/d/n) — B-case: routed to DraftContract?
 Slice: <n units / n rejections / n invariants / n traces | EMPTY (declared)>
 Panel: <rounds run, last verdict + Gate Coverage Matrix state>
 Propagation: <lens-4 pass result: clean | hits folded (list)>

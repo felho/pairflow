@@ -46,7 +46,8 @@ bubble workflow below. Everything an agent needs lives on repo surfaces
   are the USER's in calibration (delegation deferred per README §5.5);
   refine and in-chapter split are the loop's. Standing checkpoints,
   never automated: chapter ratification, the model↔code divergence
-  stop, and contract-draft ratification/re-ratification. The authoring
+  stop, and contract-draft ratification and re-ratification (never
+  delegated, never inferred — an explicit act on named bytes). The authoring
   loop iterates refine and in-chapter split autonomously and stops at
   the approve and at every STOP — never build before an explicit
   approve; a new chapter starts only on the user's explicit go.

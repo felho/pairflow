@@ -63,18 +63,30 @@ prose is a review finding, never a legal edit path.>
 | C1 | <one normative statement per row> |
 | C2 | … |
 
-## Ratification history (append-only in practice; the LATEST block binds)
+## Ratification history (empty at `draft` — blocks are appended by the lifecycle acts)
 
-```json
-{"ratification": {"date": "YYYY-MM-DD", "arms": ["<arm>", "…"], "commit": "<content-commit sha>"}}
-```
-
-## Realized map (filled at chapter close, in ONE act with the status flip)
-
-```json
-{"realized_map": {"C1": "<landing: packet § / code / test>", "C2": "…"}}
-```
+## Realized map (empty until chapter close)
 ````
+
+The skeleton above IS the legal `draft` state: status `draft` carries
+NO ratification block and NO map (§3 state consistency) — a copyable
+one-document form showing every stage at once would be red under its
+own rules. The lifecycle acts APPEND:
+
+- **At ratification** (the ratifying commit — which also flips status
+  to `ratified`):
+
+  ```json
+  {"ratification": {"date": "YYYY-MM-DD", "arms": ["<arm>", "…"], "commit": "<content-commit sha>"}}
+  ```
+
+- **At chapter close** (the boundary review — which also flips status
+  to `realized`, in the SAME act; ANY map presence requires
+  `realized`):
+
+  ```json
+  {"realized_map": {"C1": "<landing: packet § / code / test>", "C2": "…"}}
+  ```
 
 ## 3. The machine form (what the lint enforces — the full registry)
 

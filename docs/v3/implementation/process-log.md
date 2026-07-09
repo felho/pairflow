@@ -975,3 +975,19 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   at flip time: P2 built, P3 not started. NEXT: the post-flip audit
   (landed-texts-vs-claims, the arms or the user) BEFORE any packet
   work
+- 2026-07-09 · post-flip audit round 1 (five findings, all folded
+  same-day) · the audit did exactly what the watchdog decision
+  predicted — residuals landed on the REAL texts at fold cost: (1)
+  the contract-draft template's skeleton was INVALID under its own
+  lint rules (a one-document form showed draft status WITH
+  ratification + realized_map blocks — the lifecycle acts now APPEND
+  them, the skeleton is the legal draft state); (2) ReviewPacket's
+  tier-0 step ran the packet approve-time set on DRAFTS too —
+  --forbid-reopened would have redded the legitimate transient state
+  during a re-ratification review; the gates now split by target
+  kind; (3) the SKILL.md intro kept pre-flip "self-reviews" language
+  on the surface FC-H1 named; (4) the never-inferred ratification
+  safeguard was compressed out of the AGENTS/SKILL identical
+  restatements — mirror restored; (5) trailing whitespace. Classes:
+  the two P1s are the NEW surfaces' first contact with their own
+  rules — the audit-on-landed-texts catch-point works

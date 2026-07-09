@@ -8,9 +8,10 @@ description: Author and panel-review pairflow v3 implementation task packets and
 Repo-local skill — the README §8 skill-ification of the v3 task-packet flow
 (executed 2026-07-08 at the ch6→ch7 boundary, after 14 live packets across
 chapters 4–6 validated the shape on an unchanged template). Turns a ratified
-plan-chapter step into a task packet by **projection** from the model ledger,
-then self-reviews the draft against the accumulated failure-class registry
-before the human pre-approval round.
+plan-chapter step into a task packet by **projection** from the model ledger
+and the chapter's ratified contract-drafts, then iterates the five-lens
+fresh-context panel autonomously until the human decision points (the
+README §5.5 verdict-action matrix).
 
 ## Canonical sources (never forked into this skill)
 
@@ -50,7 +51,8 @@ lens duties).
   are the USER's in calibration (delegation deferred per README §5.5);
   refine and in-chapter split are the loop's. Standing checkpoints,
   never automated: chapter ratification, the model↔code divergence
-  stop, and contract-draft ratification/re-ratification. The authoring
+  stop, and contract-draft ratification and re-ratification (never
+  delegated, never inferred — an explicit act on named bytes). The authoring
   loop iterates refine and in-chapter split autonomously and stops at
   the approve and at every STOP — it never proceeds to build.
 - **First-of-a-kind stop** (a calibration-stage rule; canonical
