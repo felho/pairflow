@@ -46,8 +46,9 @@ excluded; a missing directory means zero drafts, which is fine).
 Draft checks (the D2 artifact contract):
   - {"contract_draft": {"chapter", "surface", "status"}} meta block;
     filename equals ch<N>-<surface>-contract.md; status in
-    draft|ratified|realized, and MONOTONIC against the last committed
-    version (git show HEAD: — a status downgrade fails; a reopen is a
+    draft|ratified|realized, and MONOTONIC across the FULL committed
+    history plus the working tree (a ratified -> draft -> ratified
+    history is red even though its final edge is clean; a reopen is a
     new ratification block, never a step back).
   - C-row registry: table rows whose first cell is C<n>; unique ids;
     ratified-or-later requires at least one row.
@@ -193,61 +194,56 @@ def check_status_monotonic(name: str, prev: str | None, current: str, checker: C
         )
 
 
-def head_status(path: Path) -> str | None:
-    """The draft's status in its most recent committed PREDECESSOR
-    state, or None for new/untracked/out-of-repo files.
+def _parse_status(text: str, name: str) -> str | None:
+    silent = Checker()
+    metas = block_by_key(json_blocks(text, name, silent), "contract_draft")
+    if len(metas) == 1 and isinstance(metas[0], dict):
+        status = metas[0].get("status")
+        return status if status in DRAFT_STATUSES else None
+    return None
 
-    Two cases (the HEAD-only form was a false gate: in a clean CI
-    checkout the committed downgrade IS HEAD, so comparing against HEAD
-    compared the bad version with itself):
-      - working tree differs from HEAD -> the predecessor is HEAD;
-      - working tree equals HEAD (committed state) -> the predecessor
-        is the file's version at the touching commit BEFORE the last
-        one, so a COMMITTED downgrade stays red until corrected.
-    The repo root derives from the file's own directory so the git
-    integration is selftestable in a throwaway repo."""
+
+def draft_status_history(path: Path) -> list[str]:
+    """Every parseable status value of the draft across its FULL git
+    history (oldest -> newest). Empty for untracked/out-of-repo files.
+
+    The full chain matters: checking only the latest edge was a false
+    gate — a committed ratified -> draft -> ratified history has a clean
+    final edge while the status machine stepped back in between. The
+    repo root derives from the file's own directory so the git
+    integration stays selftestable in a throwaway repo."""
     top = subprocess.run(
         ["git", "-C", str(path.parent), "rev-parse", "--show-toplevel"],
         capture_output=True,
         text=True,
     )
     if top.returncode != 0:
-        return None
+        return []
     root = Path(top.stdout.strip())
     try:
         rel = path.resolve().relative_to(root).as_posix()
     except ValueError:
-        return None
-
-    def show(rev: str) -> str | None:
+        return []
+    rl = subprocess.run(
+        ["git", "-C", str(root), "rev-list", "--reverse", "HEAD", "--", rel],
+        capture_output=True,
+        text=True,
+    )
+    if rl.returncode != 0:
+        return []
+    statuses: list[str] = []
+    for commit in (line.strip() for line in rl.stdout.splitlines() if line.strip()):
         out = subprocess.run(
-            ["git", "-C", str(root), "show", f"{rev}:{rel}"],
+            ["git", "-C", str(root), "show", f"{commit}:{rel}"],
             capture_output=True,
             text=True,
         )
-        return out.stdout if out.returncode == 0 else None
-
-    baseline = show("HEAD")
-    if baseline is None:
-        return None  # new/untracked
-    if baseline == path.read_text(encoding="utf-8"):
-        rl = subprocess.run(
-            ["git", "-C", str(root), "rev-list", "--skip=1", "-n", "1", "HEAD", "--", rel],
-            capture_output=True,
-            text=True,
-        )
-        prev_commit = rl.stdout.strip()
-        if not prev_commit:
-            return None  # first committed version ever
-        baseline = show(prev_commit)
-        if baseline is None:
-            return None
-    silent = Checker()
-    metas = block_by_key(json_blocks(baseline, path.name, silent), "contract_draft")
-    if len(metas) == 1 and isinstance(metas[0], dict):
-        status = metas[0].get("status")
-        return status if status in DRAFT_STATUSES else None
-    return None
+        if out.returncode != 0:
+            continue
+        status = _parse_status(out.stdout, path.name)
+        if status is not None:
+            statuses.append(status)
+    return statuses
 
 
 def check_draft(path: Path, checker: Checker) -> dict | None:
@@ -269,7 +265,10 @@ def check_draft(path: Path, checker: Checker) -> dict | None:
     if status not in DRAFT_STATUSES:
         checker.error(f"{path.name}: contract_draft.status '{status}' not in {DRAFT_STATUSES}")
         return None
-    check_status_monotonic(path.name, head_status(path), status, checker)
+    chain = draft_status_history(path)
+    chain.append(status)  # adjacent equals pass — a duplicate tail is harmless
+    for prev, current in zip(chain, chain[1:]):
+        check_status_monotonic(path.name, prev, current, checker)
     name_match = DRAFT_NAME_RE.match(path.name)
     if not name_match:
         checker.error(f"{path.name}: filename must be ch<N>-<surface>-contract.md")
@@ -478,8 +477,8 @@ def check_packet_metrics(
         if not isinstance(prediction, dict):
             type_err("prediction", "an object")
         else:
-            if not PREDICTION_KEYS <= set(prediction.keys()):
-                type_err("prediction", f"an object with keys {sorted(PREDICTION_KEYS)}")
+            if set(prediction.keys()) != PREDICTION_KEYS:
+                type_err("prediction", f"an object with exactly keys {sorted(PREDICTION_KEYS)}")
             for key in PREDICTION_KEYS & set(prediction.keys()):
                 if not isinstance(prediction[key], str):
                     type_err(f"prediction.{key}", "a string")
@@ -494,8 +493,8 @@ def check_packet_metrics(
             type_err("provenance", f"an object with exactly keys {sorted(PROVENANCE_KEYS)}")
         else:
             for key, value in provenance.items():
-                if not _is_int(value):
-                    type_err(f"provenance.{key}", "an integer")
+                if not _is_int(value) or value < 0:
+                    type_err(f"provenance.{key}", "a nonnegative integer")
                 elif marks is not None and value != marks[key]:
                     checker.error(
                         f"{name}: packet_metrics.provenance.{key} = {value} but "
@@ -508,8 +507,8 @@ def check_packet_metrics(
             type_err("rounds", f"an object with exactly keys {sorted(ROUNDS_KEYS)}")
         else:
             for key, value in rounds.items():
-                if not _is_int(value):
-                    type_err(f"rounds.{key}", "an integer")
+                if not _is_int(value) or value < 0:
+                    type_err(f"rounds.{key}", "a nonnegative integer — these are counters")
 
     stops = metrics.get("stops")
     if "stops" in metrics:
@@ -517,8 +516,8 @@ def check_packet_metrics(
             type_err("stops", "a list")
         else:
             for stop in stops:
-                if not isinstance(stop, dict) or not {"type", "what", "resolution"} <= set(stop.keys()):
-                    type_err("stops[]", "objects with type/what/resolution")
+                if not isinstance(stop, dict) or set(stop.keys()) != {"type", "what", "resolution"}:
+                    type_err("stops[]", "objects with exactly type/what/resolution")
                     continue
                 if stop["type"] not in STOP_TOKEN_REGISTRY:
                     checker.error(
@@ -535,8 +534,8 @@ def check_packet_metrics(
             type_err("detector_misses", "a list")
         else:
             for miss in misses:
-                if not isinstance(miss, dict) or not {"found_at", "what", "why_missed"} <= set(miss.keys()):
-                    type_err("detector_misses[]", "objects with found_at/what/why_missed")
+                if not isinstance(miss, dict) or set(miss.keys()) != {"found_at", "what", "why_missed"}:
+                    type_err("detector_misses[]", "objects with exactly found_at/what/why_missed")
                     continue
                 for key in ("found_at", "what", "why_missed"):
                     if not isinstance(miss[key], str):
@@ -677,6 +676,15 @@ def git_downgrade_selftest(green_draft: str, failures: list[str]) -> None:
         check_draft(path, checker)
         if not any("downgrade" in e for e in checker.errors):
             failures.append("selftest dim NOT red: git-committed-downgrade")
+        # 25: MULTI-STEP history — ratified -> draft -> ratified has a clean
+        # final edge; the FULL-chain scan must still go red.
+        path.write_text(green_draft, encoding="utf-8")
+        for cmd in (git_base + ["add", "-A"], git_base + ["commit", "-q", "-m", "re-ratify"]):
+            subprocess.run(cmd, cwd=root, capture_output=True)
+        checker = Checker()
+        check_draft(path, checker)
+        if not any("downgrade" in e for e in checker.errors):
+            failures.append("selftest dim NOT red: git-history-multistep-downgrade")
 
 
 def run_selftest() -> int:
@@ -805,9 +813,22 @@ def run_selftest() -> int:
         ),
         green_draft,
     )
-    # 23-24 head_status git integration: an UNCOMMITTED and a COMMITTED
-    # downgrade must both go red (the HEAD-only form passed the committed
-    # case — it compared the bad version with itself).
+    # 26 rounds counter negative
+    expect_red(
+        "rounds-negative",
+        green_packet.replace('"review": 1', '"review": -1'),
+        green_draft,
+    )
+    # 27 nested extra key (the DEEP-schema claim covers keysets, not just types)
+    expect_red(
+        "nested-extra-key",
+        green_packet.replace('"discovered": "projection"}', '"discovered": "projection", "extra": 1}'),
+        green_draft,
+    )
+    # 23-25 git integration: an UNCOMMITTED, a COMMITTED, and a MULTI-STEP
+    # (ratified -> draft -> ratified) downgrade must all go red (the
+    # HEAD-only form passed the committed case; the latest-edge form
+    # passed the multi-step history).
     git_downgrade_selftest(green_draft, failures)
 
     # green must pass
@@ -822,7 +843,7 @@ def run_selftest() -> int:
 
     for f in failures:
         print(f"selftest FAIL: {f}", file=sys.stderr)
-    print(f"selftest: 24 red dims exercised, green fixture pass, {len(failures)} failure(s)")
+    print(f"selftest: 27 red dims exercised, green fixture pass, {len(failures)} failure(s)")
     return 1 if failures else 0
 
 
