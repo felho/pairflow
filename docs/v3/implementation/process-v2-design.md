@@ -10,10 +10,10 @@ authority; once Phase 0/1 land, the REALIZED files
 (README/template/skill/AGENTS.md) are the authority and this document is
 a historical record — its own D2 rule ("never a third permanent
 authority"), applied to itself.
-**Amendment 1 (2026-07-09, §7): carrier simplification — PROPOSED,
-awaiting ratification.** Until ratified, §5 stands as written; once
-ratified, §7 supersedes the mechanics it names (D1–D7 semantics
-unchanged).
+**Amendment 1 (2026-07-09, §7): carrier simplification — RATIFIED
+2026-07-09** (by the user's explicit act on the final bytes; content
+commit `ae1e362e`). §7 supersedes the mechanics it names (D1–D7
+semantics unchanged).
 Date: 2026-07-08.
 
 Provenance, by verifiability class:
@@ -820,16 +820,17 @@ execution begins from this state.
 
 ## 7. Amendment 1 (2026-07-09) — carrier simplification: manifest + git-native ratification
 
-Status: **proposed — awaiting the user's ratification** (the D6 rule —
-ratification never delegates — applied to this document's own reopen;
-the trigger is a live STOP `2:contested-ratified-vs-reality`, raised by
-the USER against the ratified §5 mechanics: the first exercise of that
-STOP member on the process artifacts themselves). Review: fold round 1
-(2026-07-09) — two arms, both refine; per-finding dispositions in
-§7.7. The ratification act itself follows Carrier B in FORM (finding
-F adopted; the payload is defined narrowly in §7.6 step 1): the
-status flip records this amendment's final content commit in a
-follow-up commit.
+Status: **ratified 2026-07-09** — by the user's explicit post-fold
+act on the final bytes. Carrier-B record per §7.6 step 1:
+`{date: 2026-07-09, act: user explicit ratification, commit: ae1e362e}`
+— the bound surface is §7's body at that commit; this status flip
+touches only the status lines. (Trigger history: a live STOP
+`2:contested-ratified-vs-reality`, raised by the USER against the
+ratified §5 mechanics — the first exercise of that STOP member on the
+process artifacts themselves; the D6 rule — ratification never
+delegates, and per the round-4 lesson never INFERS — applied to this
+document's own reopen. Review: fold rounds 1–4, per-finding
+dispositions in §7.7.)
 
 ### 7.1 The finding
 
