@@ -9,9 +9,11 @@ culture).
 
 Packet source: docs/v3/implementation/packets/*.md (README.md excluded).
 A packet is V2 iff it carries a fenced ```json block whose top-level key
-is "mutation_boundary" — pre-v2 packets are GRANDFATHERED (reported,
-skipped): the v2 obligations bind from the ch7-P3 pilot onward, never
-retroactively.
+is "mutation_boundary" — pre-v2 packets are GRANDFATHERED (reported and
+SKIPPED entirely, parse noise included); a packet that NAMES
+mutation_boundary in its raw text stays v2 even when that fence is
+malformed (no silent demotion). The v2 obligations bind from the ch7-P3
+pilot onward, never retroactively.
 
 V2 packet checks:
   - mutation_boundary block: {"mutation_boundary": {"files": [...]}} —
@@ -26,7 +28,8 @@ V2 packet checks:
     `ADR-\\d{3}` refs resolve to a file under v3/adr/. Other ref forms
     (plan §, ledger §, packet §) are pass-through in v0.
   - lane id registry + range/scalar consistency: table-defined lane ids
-    (e.g. O1, R3) are unique AND each lane row carries a [P:*] mark (the
+    (e.g. O1, R3) are unique AND each lane row carries EXACTLY ONE [P:*]
+    mark (the
     mechanically detectable canonical-row set v0 = lane-id table rows;
     type-matrix rows remain the panel's duty); textual refs resolve, and
     ranges (O4–O10) resolve over EVERY member, not just endpoints; family
@@ -57,10 +60,12 @@ Draft checks (the D2 artifact contract):
     status field, the ratification blocks, or the realized map (no
     self-reference; prose is non-normative by declaration). Status
     ratified-or-later requires at least one
-    {"ratification": {"date", "arms", "sha256"}} block, and the LATEST
-    block's sha256 must match the computed payload hash.
+    {"ratification": {"date", "arms", "sha256"}} block — every block
+    strictly shaped (YYYY-MM-DD string date, nonempty string-list arms,
+    64-hex sha256; exact keyset) — and the LATEST block's sha256 must
+    match the computed payload hash.
   - realized additionally requires a {"realized_map": {...}} covering
-    exactly the C-row id set.
+    exactly the C-row id set, every landing site a nonempty string.
 
 Modes:
   - default: lint all packets + drafts; hard failure on any violation.
@@ -246,6 +251,27 @@ def draft_status_history(path: Path) -> list[str]:
     return statuses
 
 
+RATIFICATION_KEYS = {"date", "arms", "sha256"}
+DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+
+
+def check_ratification_shape(name: str, index: int, block: object, checker: Checker) -> None:
+    """Strict shape for EVERY ratification block — presence-of-keys
+    alone let `date: 20260709` and `arms: "not-a-list"` ride through."""
+    label = f"{name}: ratification[{index}]"
+    if not isinstance(block, dict) or set(block.keys()) != RATIFICATION_KEYS:
+        checker.error(f"{label} must be an object with exactly keys {sorted(RATIFICATION_KEYS)}")
+        return
+    if not isinstance(block["date"], str) or not DATE_RE.match(block["date"]):
+        checker.error(f"{label}.date must be a YYYY-MM-DD string")
+    arms = block["arms"]
+    if not isinstance(arms, list) or not arms or not all(isinstance(a, str) and a.strip() for a in arms):
+        checker.error(f"{label}.arms must be a nonempty list of nonempty strings")
+    if not isinstance(block["sha256"], str) or not SHA256_RE.match(block["sha256"]):
+        checker.error(f"{label}.sha256 must be a 64-hex string")
+
+
 def check_draft(path: Path, checker: Checker) -> dict | None:
     """Returns {"status": str, "rows": set[str]} for cross-ref use, or None."""
     text = path.read_text(encoding="utf-8")
@@ -289,6 +315,8 @@ def check_draft(path: Path, checker: Checker) -> dict | None:
     rows = set(row_ids)
 
     ratifications = block_by_key(blocks, "ratification")
+    for index, block in enumerate(ratifications):
+        check_ratification_shape(path.name, index, block, checker)
     if status in RATIFIED_OR_LATER:
         if not rows:
             checker.error(f"{path.name}: status {status} but no C-rows")
@@ -296,14 +324,13 @@ def check_draft(path: Path, checker: Checker) -> dict | None:
             checker.error(f"{path.name}: status {status} requires a ratification block")
         else:
             latest = ratifications[-1]
-            declared = latest.get("sha256", "") if isinstance(latest, dict) else ""
-            if not isinstance(latest, dict) or not {"date", "arms", "sha256"} <= latest.keys():
-                checker.error(f"{path.name}: ratification block missing date/arms/sha256")
+            declared = latest.get("sha256") if isinstance(latest, dict) else None
             actual = draft_payload_hash(text)
             if declared != actual:
+                shown = declared[:12] if isinstance(declared, str) else declared
                 checker.error(
                     f"{path.name}: canonical row payload hash mismatch — "
-                    f"ratified {declared[:12]}…, actual {actual[:12]}… "
+                    f"ratified {shown}…, actual {actual[:12]}… "
                     f"(a post-ratification row edit needs re-ratification)"
                 )
 
@@ -320,6 +347,12 @@ def check_draft(path: Path, checker: Checker) -> dict | None:
                     f"{path.name}: realized_map does not cover the C-row set "
                     f"(missing {missing}, unknown {extra})"
                 )
+            for row_id, landing in maps[0].items():
+                if not isinstance(landing, str) or not landing.strip():
+                    checker.error(
+                        f"{path.name}: realized_map['{row_id}'] must be a nonempty "
+                        f"landing-site string"
+                    )
 
     return {"status": status, "rows": rows}
 
@@ -335,11 +368,24 @@ def check_packet(
 ) -> bool:
     """Returns True iff the packet is v2 (and was linted)."""
     text = path.read_text(encoding="utf-8")
-    blocks = json_blocks(text, path.name, checker)
-
+    # Grandfathering must be decided BEFORE any error is reported: a
+    # pre-v2 packet with an unrelated malformed fence is SKIPPED, not
+    # failed. The reverse hole is closed textually — a packet whose
+    # mutation_boundary fence itself is malformed still counts as v2
+    # (the raw text names the marker), so it cannot silently demote
+    # itself to grandfathered.
+    probe = Checker()
+    blocks = json_blocks(text, path.name, probe)
     boundaries = block_by_key(blocks, "mutation_boundary")
+    if not boundaries and '"mutation_boundary"' not in text:
+        return False  # pre-v2: grandfathered, parse noise suppressed
+    checker.errors.extend(probe.errors)
     if not boundaries:
-        return False  # pre-v2: grandfathered
+        checker.error(
+            f"{path.name}: names mutation_boundary but no parseable "
+            f"mutation_boundary block found"
+        )
+        return True
     if len(boundaries) > 1:
         checker.error(f"{path.name}: {len(boundaries)} mutation_boundary blocks; exactly one allowed")
 
@@ -404,12 +450,19 @@ def check_packet(
             fam, num = m.group(1), int(m.group(2))
             defined.setdefault(fam, set()).add(num)
             seen_ids.append(f"{fam}{num}")
-            # D1: every canonical row carries a provenance class. The
-            # mechanically detectable canonical-row set v0 = lane-id
-            # table rows; type-matrix rows remain the panel's duty.
-            if not PROV_MARK_RE.search(line):
+            # D1: every canonical row carries EXACTLY ONE provenance
+            # class. The mechanically detectable canonical-row set v0 =
+            # lane-id table rows; type-matrix rows remain the panel's
+            # duty.
+            row_marks = PROV_MARK_RE.findall(line)
+            if not row_marks:
                 checker.error(
                     f"{path.name}: canonical row {fam}{num} carries no [P:*] provenance mark"
+                )
+            elif len(row_marks) > 1:
+                checker.error(
+                    f"{path.name}: canonical row {fam}{num} carries {len(row_marks)} "
+                    f"provenance marks — one row, one class (D1)"
                 )
     dupes = {i for i in seen_ids if seen_ids.count(i) > 1}
     if dupes:
@@ -825,6 +878,43 @@ def run_selftest() -> int:
         green_packet.replace('"discovered": "projection"}', '"discovered": "projection", "extra": 1}'),
         green_draft,
     )
+    # 28 a canonical row with TWO provenance marks (one row, one class)
+    expect_red(
+        "row-multiple-marks",
+        green_packet.replace(
+            "| O1 | a [P:anchored draft:ch9-test-surface#C1] |",
+            "| O1 | a [P:anchored draft:ch9-test-surface#C1] [P:new-decision] |",
+        ).replace('"anchored": 1, "derived": 1, "new_decision": 1', '"anchored": 1, "derived": 1, "new_decision": 2'),
+        green_draft,
+    )
+    # 29 ratification block shape (date as a number rides through a
+    # presence-only check)
+    expect_red("ratification-bad-shape", green_packet, green_draft.replace('"date": "2026-07-09"', '"date": 20260709')),
+    # 30 realized_map landing-site value not a string
+    expect_red(
+        "realized-map-bad-value",
+        green_packet,
+        green_draft.replace('"status": "ratified"', '"status": "realized"')
+        + '\n```json\n{"realized_map": {"C1": "landed", "C2": 7}}\n```\n',
+    )
+    # 31 pre-v2 packet with an unrelated malformed fence must PASS
+    # (grandfathered means SKIPPED, not failed)
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / "packets").mkdir()
+        (root / "contracts").mkdir()
+        (root / "packets" / "ch4-p1-old.md").write_text(
+            "# old packet\n\n```json\n{broken\n```\n", encoding="utf-8"
+        )
+        if run_lint(root / "packets", root / "contracts", ADR_DIR) != 0:
+            failures.append("selftest green NOT green: pre-v2 packet with bad fence failed")
+    # 32 a packet NAMING mutation_boundary inside a malformed fence must
+    # stay v2 and go red (no silent demotion to grandfathered)
+    expect_red(
+        "malformed-boundary-fence",
+        '# packet\n\n```json\n{"mutation_boundary": {broken\n```\n',
+        green_draft,
+    )
     # 23-25 git integration: an UNCOMMITTED, a COMMITTED, and a MULTI-STEP
     # (ratified -> draft -> ratified) downgrade must all go red (the
     # HEAD-only form passed the committed case; the latest-edge form
@@ -843,7 +933,7 @@ def run_selftest() -> int:
 
     for f in failures:
         print(f"selftest FAIL: {f}", file=sys.stderr)
-    print(f"selftest: 27 red dims exercised, green fixture pass, {len(failures)} failure(s)")
+    print(f"selftest: 32 red dims exercised, green fixture pass, {len(failures)} failure(s)")
     return 1 if failures else 0
 
 
