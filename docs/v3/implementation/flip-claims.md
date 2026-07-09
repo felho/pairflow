@@ -70,13 +70,19 @@ of these is itself a finding.
   Closure + derived-row entailment attack + draft→packet semantic
   drift → lens 2; claim-negatives/matrix-symmetry + EVERY LANE DRIVEN
   (D4's own parenthetical — fold round 4: the flip edge would drop the
-  lane-driven check's home) + collapsed-lane inventories + the §7.4
+  lane-driven check's home) + WIDE-CLAIM COVERAGE (fold round 6, both
+  arms: the THIRD member of that same parenthetical was still
+  unclaimed — R-WIDE-CLAIM's "named lens home" in FC-A9 could
+  otherwise land away from the negatives-derivation lens whose basis
+  it is) + collapsed-lane inventories + the §7.4
   prose-obligation PAIR — the prose-contract scan ("is every normative
   sentence a row?" — the review-side detection half) AND prose
   range/scalar consistency (both withdrawn from tier 0 to review —
   lens material, not machine data) → lens 3; mirror/propagation
   (post-lint semantic remainder) → lens 4; downstream viability
-  (sibling packets + plan rows) → lens 5. *Hostile:* a lens that did not run is `missing` in
+  (sibling-packet impact + PLAN CONSISTENCY — D4's own words; fold
+  round 6: "plan rows" was readable as remaining-task viability
+  only) → lens 5. *Hostile:* a lens that did not run is `missing` in
   the matrix (blocks approve) — silence is never coverage.
 - **FC-A4** Findings carry the taxonomy (`packet_defect` /
   `packet_plan_drift` / `plan_contract_challenge` / `watchpoint` /
@@ -151,7 +157,11 @@ of these is itself a finding.
   twin-session lesson — the anchor of the engine's challenge posture)
   → a panel-level rule, not any one lens's; the ergonomics half
   (self-containment, mirror discipline, density, embedding
-  freshness) → lens 4/5. And the LearnedRules registry is not merely
+  freshness, and plan consistency — the R-ALIGNED-UP review half:
+  the prepared same-commit plan edit EXISTS for any contradiction;
+  fold round 6, both arms: the list named four where the live half
+  has five members) → lens 4/5, plan consistency to lens 5 BY NAME
+  (D4's own words). And the LearnedRules registry is not merely
   untouched (FC-H2) but CONSUMED: the new panel text names its
   per-lens consumption points — an untouched-but-unreferenced
   registry is orphaned.
@@ -177,7 +187,18 @@ of these is itself a finding.
   the tally" alone would land as a counts-only definition in template
   §1, and a packet with two authority-touching new-decision rows would
   read Case A) — and stated in the packet header with a one-line
-  derivation (form home: the template §1 header line, FC-E2). The D1 derived-row DERIVATION
+  derivation (form home: the template §1 header line, FC-E2). In a
+  Case-A verdict the new-decision rows RIDE AS PRE-APPROVAL FLAGS —
+  D1's own clause (fold round 6, both arms, the round's strongest:
+  no row bridged the manifest class to the flags section, and the
+  lint has no manifest-vs-flags cross-check, so a Case-A packet with
+  new-decision rows and an empty flags section would read as a
+  flag-FREE approve under every row's letter and STOP 4 would never
+  fire): the manifest class ENTAILS the flags-section entry — a
+  new-decision manifest row with no corresponding flag is a defect —
+  and "flag-bearing" in the approve sense is DEFINED from the
+  manifest: new-decision rows present ⇒ the approve is flag-bearing
+  (FC-B4). The D1 derived-row DERIVATION
   NOTE (one line per derived row) lives in the row's own table text —
   lens-2 material for the entailment attack, NOT manifest data: the
   exact keyset stays {id, class, refs} (fold round 3 — the ratified
@@ -205,7 +226,8 @@ of these is itself a finding.
   deeper → STOP).
 - **FC-B4** The loop iterates refine/split autonomously; it stops at
   approve — flag-free: human in calibration, delegation deferred per
-  the D6 clause FC-F1 inlines; flag-BEARING: STOP 4, human ALWAYS,
+  the D6 clause FC-F1 inlines; flag-BEARING (manifest-defined,
+  FC-B1): STOP 4, human ALWAYS,
   at every trust stage (fold round 4: the compressed "human in
   calibration" licensed reading ALL approves as delegable with trust)
   — and at every STOP. *Temporal:* the 0a next-step derivation + its
@@ -223,8 +245,13 @@ of these is itself a finding.
   extraction; the Mirrored Surface Map; "flags live IN the packet."
   And the `aligned at <packet-id> pre-approval` marker string survives
   VERBATIM as the plan-alignment act's recorded convention (fold
-  round 4: FC-A8's state-name sweep meets a convention string on five
-  surfaces + ~8 committed historical plan markers — a hostile sweeper
+  round 4, its counts corrected at round 6 against live grep — the
+  counts-to-lists rule applied to the audit record's own
+  parenthetical, which said "five surfaces + ~8" and was wrong on
+  both: FC-A8's state-name sweep meets the convention string on FOUR
+  surfaces — AGENTS.md, SKILL.md, AuthorPacket [whose copy spells
+  the placeholder `<PACKET_ID>`], LearnedRules R-ALIGNED-UP — plus
+  14 committed historical plan markers; a hostile sweeper
   would rename the convention and orphan the history): historical
   markers are immutable, and renaming the convention is
   chapter-boundary work, the FC-H2 class, never part of the flip.
@@ -255,7 +282,11 @@ of these is itself a finding.
   OPERATIONALIZED, not just named: the D2 litmus
   ("if v3/src were deleted and rewritten from the packets, would this
   row still be true and decidable?") and the In/Out boundary lists
-  ride into the DraftContract/contract-draft-template texts.
+  ride into the DraftContract/contract-draft-template texts — the
+  template CANONICAL (content-admissibility is form), DraftContract
+  deferring (fold round 6: two full homes with no canonical
+  designation is the drift class the one-home rule exists for; the
+  FC-X3 entry added).
 - **FC-C2** The artifact follows contract-draft-template.md exactly
   (docs win); every normative statement is a C-row — prose is
   non-normative by declaration, and an iff-clause found in prose is a
@@ -269,7 +300,15 @@ of these is itself a finding.
   INSTANTIATED: the basis line hashes the DRAFT file and the verdict
   binds only those bytes (fold round 4, reconciled: engine identity
   entails it — arm 2's read — but the live line is packet-NAMED, so
-  the letter states the instantiation — arm 1's gap).
+  the letter states the instantiation — arm 1's gap). And the
+  transitional cross-model arms run on DRAFT rounds before
+  ratification, as with packets — D2's own sentence — with the
+  ratification block's `arms` list naming them (fold round 6,
+  reconciled: one arm read FC-F1's convention + engine identity as
+  carrying it, the other showed FC-F1's statement is
+  packet/phase-2-framed and the mandatory `arms` field would
+  otherwise have no live referent on the draft flow — the fold-4
+  instantiation lesson again: the letter states it).
 - **FC-C4** Ratification and RE-ratification are permanently human,
   EXPLICIT and post-fold, NEVER INFERRED from an intent statement —
   the D6 never-delegates rule includes never-infers, and the
@@ -384,7 +423,16 @@ of these is itself a finding.
   arms: the row declared completion "to the P8 claim set" while
   listing a subset — the under-enumeration class inside its own fix)
   — the audit sits outside the FC-D2 mirror, so nothing else forces
-  §1a's completeness.
+  §1a's completeness. *Edit mode (fold round 6 — the FC-B7 formula
+  applied to the packet-form authority itself):* the flip EDITS
+  template §1/§1a in place — live form text not named by FC-E2/E3/X3
+  (the Pairflow-metadata rule, the ledger-slice syntax rules, the
+  flags Route enum line, the 16-file grandfather set with its
+  never-retroactively clause, the machine-block skeletons) survives
+  unchanged unless it contradicts the new carrier; the named items
+  are insertions and sweeps, not a whitelist — and under FC-E3 a
+  silently dropped rule flips authority AGAINST the still-correct
+  lint, so the edit-mode clause is what keeps the mirror sound.
 - **FC-E3** The packet-side mirror rule, stated symmetrically with
   FC-D1 (fold round 4: no row said who wins on a PACKET-form
   mismatch): task-packet-template §1/§1a is the canonical packet-form
@@ -444,8 +492,22 @@ of these is itself a finding.
   transitional cross-model-arms convention (the user's manual arms
   play phase 2 until pairflow doc-bubbles arrive; no formal stop
   criterion, retires as trust builds), the routing
-  rule's third row (shape → contract-draft) WITH the D2 ADR-relation
-  rules 3–4 riding beside the three-lanes statement (shape never goes
+  rule's third row (shape → contract-draft) WITH the three lanes
+  THEMSELVES ENUMERATED (fold round 6, both arms: FC-F1/F2/F4 all
+  pointed at "the three lanes" and no row stated the members — the
+  README is their canonical home per FC-X3, so post-flip the lane
+  content would live only in the historical doc, the FC-X2 class on
+  the row's own canonical home): draft-ratified content → accepted
+  at draft ratification; plan-ratified content whose ADR is authored
+  during packet work → acceptance rides with the packet approve; a
+  genuinely new ADR-class decision mid-loop → STOP 1, its ADR
+  following whichever ratification act resolves it — PLUS the
+  outside-the-list case riding along: a chapter-ratification-born
+  ADR is accepted by that ratification act itself (fold round 6:
+  FC-F4 kills §4 step 5's unconditional acceptance sentence, and
+  without this case a ch8 ratification-born ADR has no live
+  acceptance path), and the D2
+  ADR-relation rules 3–4 riding beside them (shape never goes
   into an ADR — the ADR records decision+rationale and references the
   draft, the draft cites the ADR for decision provenance; after
   chapter close decisions persist in ADRs, shapes in
@@ -522,9 +584,15 @@ of these is itself a finding.
   three draft-close conditions (fold round 4, both arms: the DoD is
   exactly what a closing agent executes — without these a chapter
   closes green by the DoD's letter with a reopened or unrealized
-  draft): ZERO reopened drafts (§7.3's gate point), the chapter's
-  contract-draft flipped `realized` — map filled + status flipped in
-  ONE act (FC-C5) — and the draft-metrics close line (FC-C6);
+  draft): ZERO reopened drafts (§7.3's gate point; unconditional —
+  naturally vacuous when no draft exists), the chapter's
+  contract-draft IF ONE EXISTS flipped `realized` — map filled +
+  status flipped in ONE act (FC-C5) — and the draft-metrics close
+  line (FC-C6), both scoped to the chapter's draft IF ANY (fold
+  round 6: D2's scope is the chapter's MEMO-BORN surface and §5's
+  first full draft exercise is ch8 — ch7, the first post-flip close,
+  is draftless by design; written unconditioned, the DoD's letter
+  cannot pass a draftless chapter or invites a vacuous draft);
   AuthorPacket's 0a step-3 DoD mirror updates with it (FC-B7's
   contradiction clause carries the skill side). The same §6 edit
   corrects the stale process-log pointer ("(§8)" → §7 — mechanical
@@ -542,7 +610,14 @@ of these is itself a finding.
 ## FC-G — AGENTS.md v3 section
 
 - **FC-G1** The verdict sentence is replaced by the matrix summary
-  (STOPs + flag-bearing approves are the user's; refine + in-chapter
+  (STOPs + flag-bearing approves are the user's; flag-free approves
+  are the user's in calibration with delegation deferred per D6 —
+  fold round 6: the two-sided compression left flag-free approve on
+  NEITHER side, and combined with the surviving "never build before
+  an explicit approve" an AGENTS.md-only reader would read the
+  panel's flag-free approve as that explicit approve, licensing an
+  autonomous build in calibration — the round-4 FC-B4 class in
+  mirror image; refine + in-chapter
   split are the loop's); AGENTS.md's "authoring STOPS at 'ready for
   pre-approval'" clause rewrites to the loop form IN THE SAME WORDS
   as FC-H1's skill-side sentence (FC-F3's identical-restatement test
@@ -556,7 +631,18 @@ of these is itself a finding.
   docs-win enumeration) gains contract-draft-template.md (fold
   round 4, both arms: the single-surface reader must also learn WHERE
   the draft's form authority lives, or a draft-form dispute resolves
-  against nothing on that surface).
+  against nothing on that surface). The verification-bridges
+  enumeration gains `v3:packet-lint` (fold round 6: FC-F1 names it a
+  tier-0 gate and ci-local's v3 lane runs it, but the AGENTS.md-only
+  reader's bridge list stops at `v3:adr-check` — a new gate must
+  appear on every enumerating surface, the round-3/5 rule). Edit
+  mode, stated (fold round 6, both arms — with FC-E2's clause the
+  last rewritten surface without one): the flip EDITS the v3 section
+  in place — bullets not named by FC-G1/FC-F2 (the no-session-memory
+  intro, the process-authority pointer, the docs-win packet-authoring
+  bullet, the verification bridges, the one-packet-one-commit shape)
+  survive unchanged unless they contradict the matrix or the new
+  carrier.
 
 ## FC-H — CreateTaskPacket/SKILL.md Hard boundaries
 
@@ -639,7 +725,9 @@ of these is itself a finding.
   `--forbid-reopened` description + the lint docstring as the
   mechanical mirrors (fold round 4: FC-D2 directed the gate's home
   question HERE and no entry existed — the broken cross-row pointer
-  now resolves).
+  now resolves); the tree-independence bar (litmus + In/Out lists) →
+  contract-draft-template, with DraftContract deferring (fold
+  round 6, FC-C1).
 
 ## Review record
 
@@ -851,3 +939,63 @@ State: awaiting the arms' round-5 run on these bytes.
   keys, not prose paraphrases.
 
 State: awaiting the arms' round-6 run on these bytes.
+
+**Fold round 6 (2026-07-09): two arms — 8 + 9 findings, four
+convergent; all folded (one cross-arm conflict reconciled, one
+count corrected against live grep):**
+
+- The round's strongest (both arms, #1 on each list): the Case-A
+  BRIDGE — D1's "the rows ride as pre-approval flags" was unclaimed,
+  so a Case-A packet with new-decision manifest rows and an empty
+  flags section read flag-FREE and STOP 4 never fired (the lint has
+  no manifest-vs-flags cross-check); FC-B1 now states the manifest
+  class ENTAILS the flags-section entry and DEFINES flag-bearing
+  from the manifest (FC-B4 cross-refs).
+- The three ADR lanes ENUMERATED in FC-F1 (both arms: three rows
+  pointed at "the three lanes", none stated the members — README is
+  their canonical home, so post-flip the lane content lived only in
+  the historical doc), plus the outside-the-list
+  chapter-ratification-born acceptance case (arm 2: FC-F4 kills §4
+  step 5's unconditional sentence — without the fourth case a ch8
+  ratification-born ADR had no live acceptance path).
+- The edit-mode principle completed to the LAST two rewritten
+  surfaces without a declaration: template §1/§1a (FC-E2, arm 1 —
+  under FC-E3 a silently dropped form rule flips authority AGAINST
+  the still-correct lint) and the AGENTS.md v3 section (FC-G1, both
+  arms — the one-packet-one-commit shape and the docs-win bullet
+  were droppable a contrario).
+- FC-G1 grew two more ways: the matrix summary's third disposition
+  (arm 1 — flag-free approve sat on NEITHER side of the compression;
+  combined with "never build before an explicit approve" the panel's
+  flag-free approve read as that approve, licensing an autonomous
+  build in calibration — the round-4 FC-B4 class in mirror image)
+  and the verification-bridges enumeration + `v3:packet-lint`
+  (arm 2 — the enumerating-surface rule applied to the bridge list).
+- Preservation-row lists completed to their live registries (the
+  round-4 class, two more instances): FC-A9's ergonomics half gained
+  PLAN CONSISTENCY (the fifth live member — the R-ALIGNED-UP review
+  half) with FC-A3's lens-5 wording tightened to D4's own words;
+  FC-A3's lens 3 gained WIDE-CLAIM COVERAGE (the third member of the
+  same D4 parenthetical round 4 restored "every lane driven" from).
+- FC-C3: the transitional cross-model arms run on DRAFT rounds
+  before ratification (reconciled — arm 1 held it entailed and filed
+  it considered-not; arm 2 showed FC-F1's convention is
+  packet/phase-2-framed and the ratification block's mandatory
+  `arms` field had no live referent on the draft flow; the fold-4
+  instantiation lesson decided: the letter states it).
+- FC-B5's parenthetical corrected against live grep (arm 2 — the
+  counts-to-lists rule applied to the audit record's own text): FOUR
+  surfaces named [the AuthorPacket copy spells `<PACKET_ID>` — the
+  exact case-sensitivity a literal sweeper would miss], 14 committed
+  plan markers, not "five + ~8".
+- FC-F4's draft-close DoD conditions scoped to "the chapter's draft,
+  IF ANY" (arm 2 — D2's scope is the chapter's memo-born surface and
+  §5's first draft exercise is ch8, so ch7, the first post-flip
+  close, is draftless by design; unconditioned, the DoD's letter
+  cannot pass it or invites a vacuous draft).
+- FC-C1's tree-independence bar got its canonical home (arm 1, low
+  weight — two full homes with no designation is the drift class the
+  one-home rule exists for): contract-draft-template canonical,
+  DraftContract defers; the FC-X3 entry added.
+
+State: awaiting the arms' round-7 run on these bytes.
