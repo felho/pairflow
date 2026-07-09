@@ -324,7 +324,7 @@ run_quality_suite() {
   typecheck_pid=$!
   run_quality_child "test" "ci:local test" bash -lc 'root_exit=0; ui_exit=0; pnpm exec vitest run --maxWorkers=8 & root_pid=$!; pnpm --dir ui test --maxWorkers=2 & ui_pid=$!; wait $root_pid || root_exit=$?; wait $ui_pid || ui_exit=$?; test $root_exit -eq 0 -a $ui_exit -eq 0' &
   test_pid=$!
-  run_quality_child "v3" "ci:local v3" bash -lc 'pnpm v3:lint && pnpm v3:typecheck && pnpm v3:test && pnpm v3:adr-check && pnpm v3:coverage' &
+  run_quality_child "v3" "ci:local v3" bash -lc 'pnpm v3:lint && pnpm v3:typecheck && pnpm v3:test && pnpm v3:adr-check && pnpm v3:coverage && pnpm v3:packet-lint' &
   v3_pid=$!
 
   wait "$lint_pid" || lint_exit=$?
@@ -346,7 +346,7 @@ run_quality_suite() {
   fi
   if [[ "$v3_exit" -ne 0 ]]; then
     failed=1
-    print_failure_summary "$step_id" "$step_label: v3" "$RUN_DIR/check-v3.log" "$v3_exit" "pnpm v3:lint && pnpm v3:typecheck && pnpm v3:test && pnpm v3:adr-check && pnpm v3:coverage"
+    print_failure_summary "$step_id" "$step_label: v3" "$RUN_DIR/check-v3.log" "$v3_exit" "pnpm v3:lint && pnpm v3:typecheck && pnpm v3:test && pnpm v3:adr-check && pnpm v3:coverage && pnpm v3:packet-lint"
   fi
   if [[ "$failed" -ne 0 ]]; then
     echo "ci:local quality suite failed after all parallel checks completed"

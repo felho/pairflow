@@ -72,7 +72,7 @@ jobs:
       - name: Test
         run: pnpm test
       - name: V3 checks
-        run: pnpm v3:lint && pnpm v3:typecheck && pnpm v3:test && pnpm v3:adr-check && pnpm v3:coverage
+        run: pnpm v3:lint && pnpm v3:typecheck && pnpm v3:test && pnpm v3:adr-check && pnpm v3:coverage && pnpm v3:packet-lint
       - name: Build
         run: pnpm build
 

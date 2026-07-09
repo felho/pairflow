@@ -116,6 +116,7 @@ echo
     pnpm v3:test
     pnpm v3:adr-check
     pnpm v3:coverage
+    pnpm v3:packet-lint
     echo
 
     echo "ci:github-local step: build"
