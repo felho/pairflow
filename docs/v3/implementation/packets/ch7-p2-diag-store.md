@@ -97,9 +97,12 @@ a committed-row copy (dimension 8 draws the line).
    here. For HOSTILE carriers the guarantees are the projection's, not
    fidelity: extra enumerable keys are DROPPED (driven); a carrier
    `toJSON` is never consulted (driven — the ch-4 hidden-toJSON
-   precedent transposed); a type-LIED value (e.g. a BigInt where a
-   number is declared) may lose the event to the swallow fence —
-   fidelity for lied values is deliberately NOT claimed.
+   precedent transposed); a type-LIED value may lose the event to the
+   swallow fence — whether by a stringify throw (BigInt/cycle) OR by the
+   emit-side shape gate (a JSON-serializable lie, e.g. a number where a
+   string is declared — aftermath fix); fidelity for lied values is
+   deliberately NOT claimed, and a lied value never writes a
+   self-poisoning row.
 6. **Cursor domain — a NEW validator over a numeric domain, full ladder
    [R-NUMERIC-LADDER]:** nonnegative safe integer, `-0` REJECTED via
    `Object.is` (the numeric-identity rung), `RangeError` BEFORE any SQL
@@ -153,7 +156,7 @@ a committed-row copy (dimension 8 draws the line).
 |---|---|
 | `openDiagStore(path, time): DiagStoreHandle` | NEVER throws — every open-sequence failure degrades to the unavailable state (open-sequence inventory + open-outcome matrix). **Open order: schema fence FIRST, WAL PRAGMA LAST** — a deliberate divergence from `openStore`'s WAL-first order (recorded in ADR-010): the PRAGMA is a potential journal-mode-switch WRITE and must never fire before the fence on hostile/readonly states; WAL is a persistent file property, so setting it after the schema settles is equivalent (fresh init runs its DDL in delete mode, then switches — one-time, harmless). WAL PRAGMA on file-backed paths, skipped for `:memory:` — driven by a `journal_mode` assert on a file-backed store; lives in `diag/` (the channel's ADR-001 reserved home) |
 | `DiagStoreHandle` | `{ readonly sink: DiagnosticsSink; readonly reader: DiagnosticsReader; close(): void }` — implementation-local shape in `diag/` (the ch-4 `StoreHandle` precedent) |
-| `sink.emit(body)` | synchronous inline INSERT (non-blocking NOT claimed — the P1 aligned block stands); stamps `at = time.now()` at emit; serializes an **ALLOWLIST PROJECTION** of the body — the declared `DiagnosticEventBody` keys (nested `error.name`/`error.message` included) read as own properties ONCE each into a fresh plain object, so extra enumerable keys are DROPPED and a carrier `toJSON` is never consulted; the allowlist is TYPE-LEVEL-synced to the port type (exhaustiveness-checked, the CHK-A2-IDEMKEY pattern — it cannot silently drift); `instance_id` column = the PROJECTED object's `instanceId ?? NULL` (never a second property read — no getter-torn values); swallows EVERY failure (emit-path inventory) |
+| `sink.emit(body)` | synchronous inline INSERT (non-blocking NOT claimed — the P1 aligned block stands); stamps `at = time.now()` at emit; serializes an **ALLOWLIST PROJECTION** of the body — the declared `DiagnosticEventBody` keys (nested `error.name`/`error.message` included) read as own properties ONCE each into a fresh plain object, so extra enumerable keys are DROPPED and a carrier `toJSON` is never consulted; the allowlist is TYPE-LEVEL-synced to the port type (exhaustiveness-checked, the CHK-A2-IDEMKEY pattern — it cannot silently drift); the projected object is then GATED through the SAME shape validator the reader runs (R3) BEFORE the INSERT — a projection that fails it (a NON-throwing type-lie, e.g. a number where a string is declared, which `JSON.stringify` would NOT reject) is LOST to the swallow fence, never written, so the diag file holds ONLY valid projections BY CONSTRUCTION (dimension 8b; aftermath fix); `instance_id` column = the PROJECTED object's `instanceId ?? NULL` (never a second property read — no getter-torn values); swallows EVERY failure (emit-path inventory) |
 | `DiagnosticsReader` (TYPE in `ports/diagnostics.ts`) | `getDiagnostics(instanceId: InstanceId, afterOrdinal: number): Promise<readonly DiagnosticEvent[]>` — the instance's ATTRIBUTED rows, ordinal-ascending, `ordinal > afterOrdinal`; `getGlobalDiagnostics(afterOrdinal: number): Promise<readonly DiagnosticEvent[]>` — ALL rows, unattributed included, same cursor semantics. Rows are SHAPE-VALIDATED on read (the emit allowlist reused — R3): the gate enforces EVERY row-decidable P1 rule per the **Canonical R3 row-decidable shape table** (the single decision surface — required/forbidden/conditional per row class), so the typed surface never leaks a malformed event; the write-side-guaranteed residue is exactly that table's three stated items (the `internal_failure` digest-point + its handle-vs-start attribution beyond the row-decidable rules, and ingress best-effort attribution beyond `not_plain_object`). Promise-based (StorePort parity) while `emit` is sync void — a deliberate asymmetry: consumers await reads, emitters never wait |
 | cursor domain (both reads) | nonnegative safe integer; `-0` rejected (`Object.is`); violation = `RangeError` BEFORE any SQL and BEFORE the availability check (dimension 6 mirrors this row) |
 | `DiagUnavailableReason` (TYPE in `ports/diagnostics.ts`) | `"open_failed" \| "refused_marker" \| "read_failed"` — a declared claim: every token driven; the token is the enumerated constant P3's bundle serializes as `unavailable(reason)` (plan §7.4: never the raw underlying error text) |
@@ -231,6 +234,7 @@ sits inside one fence:
 | body property access — a HOSTILE GETTER on a caller-constructed body (the port accepts any `DiagnosticEventBody`-typed value; "emit never THROWS" derives its negatives from the claim, not from polite callers) | swallowed | throwing-getter fake body |
 | `time.now()` throw (contract-violating `TimeSource`) | swallowed | throwing-clock fake — the P1 digest-throw pattern: proves the WRAPPER, not reachability |
 | `JSON.stringify(projected)` — runs on the fresh projected literal, so a carrier-level `toJSON`/cycle cannot reach it; a throw remains possible ONLY via type-LIED values inside declared keys (e.g. a BigInt where a number is declared, a cycle inside a lied `error`) | swallowed — DRIVEN (a "ruled out by type" argument does not prove a claim against a structural interface: a typed value can lie) | BigInt-lied fake body |
+| write-side shape gate — `validateShape(projected)`, the read-side R3 gate REUSED, runs BEFORE the INSERT | swallowed — a NON-throwing type-lie (JSON-serializable, e.g. `instanceId` a number where a string is declared) fails the gate and is LOST to the fence rather than writing a self-poisoning row that would fail every later read (aftermath fix; the file holds ONLY valid projections by construction) | non-throwing type-lied fake body |
 | INSERT prepare/run throw | swallowed | emit after `close()` (W1); the same catch owns OS-level write failures AND STRICT type rejections — e.g. a LYING (non-throwing) `TimeSource` returning a non-integer `at` is rejected by the STRICT table and lands here (the type-lie class applied to the injected deps, not just the body) |
 
 ## Canonical R3 row-decidable shape table (the gate's source — replaces the prose enumeration)
@@ -363,7 +367,10 @@ rows').
   canonical statement; this note is its named mirror) reads each
   declared key once and derives nothing from the values (the P1
   observer rule: the diagnostic path performs no new fallible work
-  beyond its own reads and I/O).
+  beyond its own reads and I/O). The write-side shape gate (aftermath)
+  is a VALIDATION, not a derivation — it computes no new value, only
+  admits-or-drops the projection inside the swallow fence, so the
+  observer rule still holds.
 
 ## Embedding gates (v1-inherited)
 
@@ -862,3 +869,25 @@ rung is a live R3 lane, caught by `Object.is`), whereas
 carries the literal. All five v3 bridges green (typecheck, lint, 322
 tests, coverage validation on the empty slice, adr-check: 11 ADRs
 consistent). Node v26.3.0.
+
+**Aftermath (2026-07-09, post-build review — fixed same day, 323
+tests):** `emit` allowlist-projected the body but did NOT gate the
+projection before the INSERT, so a NON-throwing type-lie (a
+JSON-serializable declared-key lie, e.g. `instanceId: 123` where a
+string is declared) was WRITTEN — and then poisoned EVERY later read as
+`read_failed`, violating the wide claim that the file holds ONLY
+P1-declared projections (dimension 8b). The build had driven only the
+THROWING type-lie (BigInt → `JSON.stringify` throws → lost to the
+fence); the JSON-serializable lie slipped the same reasoning. Fix: the
+emit fence now runs the read-side R3 gate on the projected object
+(`validateShape(projected)`) BEFORE the INSERT, so a non-projection is
+LOST to the swallow fence rather than written — making dimension 8b
+write-side-true and extending dimension 5's "lost to the swallow fence"
+to non-throwing lies. Driven RED-first: a `instanceId: 123` body
+followed by a valid body, asserting the valid one lands at ordinal 1
+(the lie consumed no AUTOINCREMENT ordinal) and the read is clean.
+Lesson: "type-lied → lost to the swallow fence" was true only for
+STRINGIFY-throwing lies; the write-side claim (file holds only
+projections) needed the emit path to enforce it, not just the read
+path to defend it — the same emit-gate/read-gate symmetry the R3 table
+already assumed.

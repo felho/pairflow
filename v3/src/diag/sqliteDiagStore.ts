@@ -393,6 +393,14 @@ export function openDiagStore(path: string, time: TimeSource): DiagStoreHandle {
       try {
         if (!available || db === undefined) return;
         const projected = project(body);
+        // WRITE-SIDE shape gate: the projected object must itself be a
+        // valid P1 projection — the SAME gate the reader runs (R3). A
+        // NON-throwing type-lie (e.g. `instanceId: 123`) is valid JSON
+        // yet not a projection; without this it would write a row that
+        // poisons EVERY later read as `read_failed` (dimension 8b: the
+        // file holds ONLY projections; dimension 5: a lied value is lost
+        // to the swallow fence — non-throwing lies included).
+        validateShape(projected);
         const at = time.now();
         const instanceId = projected.instanceId;
         db.prepare("INSERT INTO diagnostics (at, instance_id, body) VALUES (?, ?, ?)").run(

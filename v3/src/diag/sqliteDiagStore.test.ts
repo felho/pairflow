@@ -512,6 +512,23 @@ describe("emit-path fallible sites all swallow (REV-DIAG-FAILOPEN)", () => {
     expect(await handle.reader.getGlobalDiagnostics(0)).toEqual([]);
     handle.close();
   });
+
+  it("a NON-throwing type-lied body is lost to the swallow fence — never a self-poisoning row", async () => {
+    const handle = openDiagStore(":memory:", createControlledClock(0));
+    // instanceId: 123 is a number where a string is declared — JSON-
+    // serializable (JSON.stringify does NOT throw), so the OLD emit wrote
+    // it, and every later read then failed read_failed (self-poison). The
+    // emit-side shape gate now loses it to the swallow fence instead.
+    const lied = { ...B_DUP, instanceId: 123 } as unknown as DiagnosticEventBody;
+    expect(() => handle.sink.emit(lied)).not.toThrow();
+    // A VALID body after the lie still lands, at ordinal 1 (the lie never
+    // reached the INSERT, so it consumed no AUTOINCREMENT ordinal), and the
+    // read is CLEAN — [] would-be-poison is now a real, readable event.
+    handle.sink.emit(B_DUP);
+    const events = await handle.reader.getGlobalDiagnostics(0);
+    expect(events).toEqual([{ ...B_DUP, at: 0, ordinal: 1 }]);
+    handle.close();
+  });
 });
 
 // ===========================================================================
