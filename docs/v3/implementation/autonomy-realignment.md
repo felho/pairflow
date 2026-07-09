@@ -86,3 +86,47 @@ manifest/lint/draft machinery (it is exactly what makes AL-1 safe);
 draft ratification permanently human, never inferred; one packet =
 one commit; the post-build audit; the DoD; the threat model; the
 watchdog; fix-all and the routes.
+
+## Addendum — round 2 (2026-07-10, the user's instruction + two arm reviews)
+
+The user's rule for this round: the v3 texts must be SELF-CONTAINED
+(no "check the referenced v1 gate" reliance), and NOTHING from the v1
+risk gate may be dropped without a stated reason.
+
+- **AL-7 — the COMPLETE risk gate lands in template §2 step 0:** all
+  SIX v1 axes (identity/join fragility RESTORED — v3 has cross-seam
+  joins: diag rows correlated to instances/timeline across two
+  stores), all ELEVEN hard-stop combinations translated to v3
+  surfaces, the below-hard-stop escalation combos, the discovery-first
+  consume-family scan (present/absent/unknown), the
+  implementation-closure proof requirement ("shared invariant
+  coherence is NOT sufficient"), the split-shape vocabulary, and the
+  RECORD requirement (the packet materializes the assessment).
+  **The ONLY v1 element not carried, with the reason:** the 0|1|2
+  numeric scoring and its 0–4/5–7/8–12 thresholds — the qualitative
+  axes + the hard-stop/escalation COMBINATIONS carry the same
+  decisions without presuming v1's score calibration; if a packet
+  class later needs finer discrimination, scoring returns via the
+  boundary review.
+- **AL-8 — the review-side Mandatory Output Audit + the split-bias
+  rule land in ReviewPacket** (the v1 ReviewSpec §2a rhythm the user
+  remembers): before any approve, audit that every triggered
+  mandatory output is MATERIALIZED in the packet (detail budget:
+  N/A-with-evidence / compact / full); a missing output is a refine
+  finding that ADDS it — round 1 materializes, the next round
+  assesses. And: **split is NOT advisory** — a hard-stop combination
+  defaults the verdict to `split`; a single packet continues only
+  with implementation-closure proof ("somewhat ambitious but fine" is
+  not a legal assessment — the v1 bias this rule exists for).
+- **AL-9 — consequence fixes from the round-1 reviews:** the
+  ReviewPacket approve-owner sentence and template §2 step 10 align
+  to the matrix (both P1s); README §8's tail gets the same short
+  restatement; the ramp stages get their post-realignment definitions
+  in §5.5 (calibration = through the ch7 pilot, closed; measurement =
+  ch8+ autonomy with the post-hoc boundary audit; chaining = the
+  Phase-2 pairflow delivery — so plan §1.3's convention and the
+  template header enum stay meaningful); the rollout "Phase 2" is
+  renamed "the chaining stage" (three meanings collided); the
+  "calibration-permissive" threshold name drops its stage prefix; the
+  matrix wording aligns literally to AL-1 ("new-decision MANIFEST
+  rows", "approve-time TIER-0 gate").
