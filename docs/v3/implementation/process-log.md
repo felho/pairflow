@@ -623,3 +623,24 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   the claim-derived negative-test rule applies to the LINT'S OWN claims
   — a checker's selftest must derive from what the checker CLAIMS to
   gate, not from the checks it happens to implement
+- 2026-07-09 · process-v2 Phase 0 (lint retro, rule candidate) · five
+  review rounds (18 findings) on check_packet.py decomposed cleanly:
+  the lint was INVENTION-class work (its contract existed only as
+  design-doc bullets — "monotonic status", "DEEP schema" — with the
+  row-granular enforcement semantics decided at implementation time,
+  systematically in the weak reading), built OUTSIDE the very process
+  it enforces (no claim-dimension enumeration, no panel — the
+  bootstrap paradox), with a self-referential selftest (the "claim" it
+  derived from was the author's own docstring describing the
+  implementation). The missing dimensions patterned exactly as the
+  ch-4 ladder predicts: TEMPORAL (committed downgrade, multi-step
+  history, block rewrite, audit pinning) and ADVERSARIAL (multi-marks,
+  payload on new-decision, unquoted fence) axes arrived only via
+  fresh-context reviewer probes, post-commit — the ch-4 aftermath
+  pattern relocated onto tooling. RULE CANDIDATE for the boundary:
+  contract-enforcing tooling is itself contract-dense invention and
+  gets packet-grade treatment (claim rows, dimension sweep with the
+  temporal+adversarial axes named, panel before build) — "it is a
+  script, not a packet" exempts nothing. Applied immediately in the
+  weak form: the Phase-1 flip's TEXT claims get enumerated and
+  reviewed before the flip lands
