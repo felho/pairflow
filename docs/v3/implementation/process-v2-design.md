@@ -1178,6 +1178,11 @@ token + one watchpoint), arm 1 refine (two findings); all folded:**
   **`contract:chN-<surface>#Cn`** — "contract" is the artifact's
   durable identity across its whole lifecycle, carrying no status
   connotation. The rename supersedes the arms' clean verdict on the
-  prior bytes by the user's own authority (their ratification was
-  pre-declared conditional on this fold), and this commit becomes the
-  recorded content commit.
+  prior bytes by the user's own authority (a user-raised finding
+  outranks the arms' proxy role), and the fold commit becomes the
+  §7.6 content-commit candidate — the ratification act itself remains
+  the user's explicit act on the final bytes. (A status flip executed
+  from a MISREAD intent statement — "I'll ratify after the edit" —
+  was withdrawn by reset before any ratification: the act must be
+  explicit and post-fold, never inferred; the D6 never-delegates rule
+  includes never-INFERRED.)
