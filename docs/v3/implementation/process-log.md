@@ -607,3 +607,19 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   review per the registry's own "chapter boundaries only / never
   invents a rule the log does not carry" discipline — this log entry
   block is their provenance
+- 2026-07-09 · process-v2 Phase 0 (packet-lint review) · the user's
+  review caught FOUR false-green gates in the just-shipped lint — the
+  "gate proves less than its claim" class, now on the tool built to
+  mechanize that very lesson: (1) packet_metrics nested fields
+  type-checked only "if dict" (a string prediction passed); (2) lane
+  ranges validated ENDPOINTS only (O1–O3 green with O2 undefined);
+  (3) provenance marks were counted but no check that canonical rows
+  CARRY marks (an unmarked lane row passed — the D1 contract leaked);
+  (4) draft status monotonicity was an enum check, not a history check
+  (a downgrade was undetectable). All four fixed (deep schema walk;
+  full-range member resolution; lane-row mark requirement — the
+  mechanically detectable canonical-row set v0; git-HEAD status
+  comparison), selftest 15→19 red dims. Lesson line for the boundary:
+  the claim-derived negative-test rule applies to the LINT'S OWN claims
+  — a checker's selftest must derive from what the checker CLAIMS to
+  gate, not from the checks it happens to implement

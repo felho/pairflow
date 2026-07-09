@@ -26,9 +26,12 @@ V2 packet checks:
     `ADR-\\d{3}` refs resolve to a file under v3/adr/. Other ref forms
     (plan §, ledger §, packet §) are pass-through in v0.
   - lane id registry + range/scalar consistency: table-defined lane ids
-    (e.g. O1, R3) are unique; textual refs and ranges (O4–O10) resolve
-    to defined ids of the same family; family "P" is excluded (packet
-    names collide). Fenced blocks are excluded from the ref scan.
+    (e.g. O1, R3) are unique AND each lane row carries a [P:*] mark (the
+    mechanically detectable canonical-row set v0 = lane-id table rows;
+    type-matrix rows remain the panel's duty); textual refs resolve, and
+    ranges (O4–O10) resolve over EVERY member, not just endpoints; family
+    "P" is excluded (packet names collide). Fenced blocks are excluded
+    from the ref scan.
   - packet_metrics block (when present): schema keys + stops[].type
     tokens against the canonical STOP member-token registry.
   - --post-build <commit>: the commit's changed files must be a subset
@@ -41,7 +44,9 @@ excluded; a missing directory means zero drafts, which is fine).
 Draft checks (the D2 artifact contract):
   - {"contract_draft": {"chapter", "surface", "status"}} meta block;
     filename equals ch<N>-<surface>-contract.md; status in
-    draft|ratified|realized.
+    draft|ratified|realized, and MONOTONIC against the last committed
+    version (git show HEAD: — a status downgrade fails; a reopen is a
+    new ratification block, never a step back).
   - C-row registry: table rows whose first cell is C<n>; unique ids;
     ratified-or-later requires at least one row.
   - canonical row payload hash: sha256 over the raw C-row lines
@@ -97,6 +102,7 @@ STOP_TOKEN_REGISTRY = {
 
 DRAFT_STATUSES = ("draft", "ratified", "realized")
 RATIFIED_OR_LATER = ("ratified", "realized")
+STATUS_ORDER = {"draft": 0, "ratified": 1, "realized": 2}
 
 FENCED_JSON_RE = re.compile(r"```json\s*\n(.*?)```", re.DOTALL)
 FENCED_ANY_RE = re.compile(r"```.*?```", re.DOTALL)
@@ -172,6 +178,39 @@ def draft_payload_hash(text: str) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
+def check_status_monotonic(name: str, prev: str | None, current: str, checker: Checker) -> None:
+    """Monotonic status: draft -> ratified -> realized, never backwards.
+    Selftested directly; the live lint feeds `prev` from git HEAD."""
+    if prev in STATUS_ORDER and current in STATUS_ORDER and STATUS_ORDER[current] < STATUS_ORDER[prev]:
+        checker.error(
+            f"{name}: status downgrade '{prev}' -> '{current}' — the status "
+            f"machine is monotonic (a reopen is a new ratification block, "
+            f"never a status step back)"
+        )
+
+
+def head_status(path: Path) -> str | None:
+    """The draft's status in the last committed version (HEAD), or None
+    for new/untracked/out-of-repo files."""
+    try:
+        rel = path.resolve().relative_to(REPO_ROOT)
+    except ValueError:
+        return None
+    out = subprocess.run(
+        ["git", "-C", str(REPO_ROOT), "show", f"HEAD:{rel}"],
+        capture_output=True,
+        text=True,
+    )
+    if out.returncode != 0:
+        return None
+    silent = Checker()
+    metas = block_by_key(json_blocks(out.stdout, path.name, silent), "contract_draft")
+    if len(metas) == 1 and isinstance(metas[0], dict):
+        status = metas[0].get("status")
+        return status if status in DRAFT_STATUSES else None
+    return None
+
+
 def check_draft(path: Path, checker: Checker) -> dict | None:
     """Returns {"status": str, "rows": set[str]} for cross-ref use, or None."""
     text = path.read_text(encoding="utf-8")
@@ -191,6 +230,7 @@ def check_draft(path: Path, checker: Checker) -> dict | None:
     if status not in DRAFT_STATUSES:
         checker.error(f"{path.name}: contract_draft.status '{status}' not in {DRAFT_STATUSES}")
         return None
+    check_status_monotonic(path.name, head_status(path), status, checker)
     name_match = DRAFT_NAME_RE.match(path.name)
     if not name_match:
         checker.error(f"{path.name}: filename must be ch<N>-<surface>-contract.md")
@@ -326,6 +366,13 @@ def check_packet(
             fam, num = m.group(1), int(m.group(2))
             defined.setdefault(fam, set()).add(num)
             seen_ids.append(f"{fam}{num}")
+            # D1: every canonical row carries a provenance class. The
+            # mechanically detectable canonical-row set v0 = lane-id
+            # table rows; type-matrix rows remain the panel's duty.
+            if not PROV_MARK_RE.search(line):
+                checker.error(
+                    f"{path.name}: canonical row {fam}{num} carries no [P:*] provenance mark"
+                )
     dupes = {i for i in seen_ids if seen_ids.count(i) > 1}
     if dupes:
         checker.error(f"{path.name}: duplicate lane id definitions {sorted(dupes)}")
@@ -336,10 +383,12 @@ def check_packet(
             continue
         if a > b:
             checker.error(f"{path.name}: lane range '{m.group(0)}' is descending")
-        for endpoint in (a, b):
-            if endpoint not in defined[fam]:
+        # FULL range resolution — every member, not just the endpoints
+        # (an O1–O3 with O2 undefined is a false claim about O2).
+        for member in range(a, b + 1):
+            if member not in defined[fam]:
                 checker.error(
-                    f"{path.name}: lane range '{m.group(0)}' endpoint {fam}{endpoint} undefined"
+                    f"{path.name}: lane range '{m.group(0)}' member {fam}{member} undefined"
                 )
     for m in LANE_REF_RE.finditer(prose):
         fam, num = m.group(1), int(m.group(2))
@@ -348,32 +397,98 @@ def check_packet(
         if num not in defined[fam]:
             checker.error(f"{path.name}: lane ref '{fam}{num}' undefined in this packet")
 
-    # packet_metrics (optional block; syntax-checked when present).
+    # packet_metrics (optional block; DEEP schema check when present —
+    # a shallow "if it happens to be a dict" check is a false gate).
     for metrics in block_by_key(blocks, "packet_metrics"):
-        if not isinstance(metrics, dict):
-            checker.error(f"{path.name}: packet_metrics is not an object")
-            continue
-        keys = set(metrics.keys())
-        missing = PACKET_METRICS_KEYS - keys
-        unknown = keys - PACKET_METRICS_KEYS - PACKET_METRICS_OPTIONAL
-        if missing:
-            checker.error(f"{path.name}: packet_metrics missing keys {sorted(missing)}")
-        if unknown:
-            checker.error(f"{path.name}: packet_metrics unknown keys {sorted(unknown)}")
-        rounds = metrics.get("rounds")
-        if isinstance(rounds, dict) and set(rounds.keys()) != ROUNDS_KEYS:
-            checker.error(f"{path.name}: packet_metrics.rounds keys must be {sorted(ROUNDS_KEYS)}")
-        prediction = metrics.get("prediction")
-        if isinstance(prediction, dict) and not PREDICTION_KEYS <= set(prediction.keys()):
-            checker.error(f"{path.name}: packet_metrics.prediction needs {sorted(PREDICTION_KEYS)}")
-        for stop in metrics.get("stops", []) or []:
-            token = stop.get("type") if isinstance(stop, dict) else None
-            if token not in STOP_TOKEN_REGISTRY:
-                checker.error(
-                    f"{path.name}: stops[].type '{token}' not in the canonical "
-                    f"STOP member-token registry"
-                )
+        check_packet_metrics(path.name, metrics, checker)
     return True
+
+
+def _is_int(value: object) -> bool:
+    return type(value) is int  # bool is an int subclass; excluded on purpose
+
+
+def check_packet_metrics(name: str, metrics: object, checker: Checker) -> None:
+    if not isinstance(metrics, dict):
+        checker.error(f"{name}: packet_metrics is not an object")
+        return
+    keys = set(metrics.keys())
+    missing = PACKET_METRICS_KEYS - keys
+    unknown = keys - PACKET_METRICS_KEYS - PACKET_METRICS_OPTIONAL
+    if missing:
+        checker.error(f"{name}: packet_metrics missing keys {sorted(missing)}")
+    if unknown:
+        checker.error(f"{name}: packet_metrics unknown keys {sorted(unknown)}")
+
+    def type_err(field: str, expected: str) -> None:
+        checker.error(f"{name}: packet_metrics.{field} must be {expected}")
+
+    if "class" in metrics and not isinstance(metrics["class"], str):
+        type_err("class", "a string")
+    if "learned" in metrics and not isinstance(metrics["learned"], str):
+        type_err("learned", "a string")
+    if "baseline_note" in metrics and not isinstance(metrics["baseline_note"], str):
+        type_err("baseline_note", "a string")
+
+    prediction = metrics.get("prediction")
+    if "prediction" in metrics:
+        if not isinstance(prediction, dict):
+            type_err("prediction", "an object")
+        else:
+            if not PREDICTION_KEYS <= set(prediction.keys()):
+                type_err("prediction", f"an object with keys {sorted(PREDICTION_KEYS)}")
+            for key in PREDICTION_KEYS & set(prediction.keys()):
+                if not isinstance(prediction[key], str):
+                    type_err(f"prediction.{key}", "a string")
+
+    provenance = metrics.get("provenance")
+    if "provenance" in metrics:
+        if not isinstance(provenance, dict) or set(provenance.keys()) != PROVENANCE_KEYS:
+            type_err("provenance", f"an object with exactly keys {sorted(PROVENANCE_KEYS)}")
+        else:
+            for key, value in provenance.items():
+                if not _is_int(value):
+                    type_err(f"provenance.{key}", "an integer")
+
+    rounds = metrics.get("rounds")
+    if "rounds" in metrics:
+        if not isinstance(rounds, dict) or set(rounds.keys()) != ROUNDS_KEYS:
+            type_err("rounds", f"an object with exactly keys {sorted(ROUNDS_KEYS)}")
+        else:
+            for key, value in rounds.items():
+                if not _is_int(value):
+                    type_err(f"rounds.{key}", "an integer")
+
+    stops = metrics.get("stops")
+    if "stops" in metrics:
+        if not isinstance(stops, list):
+            type_err("stops", "a list")
+        else:
+            for stop in stops:
+                if not isinstance(stop, dict) or not {"type", "what", "resolution"} <= set(stop.keys()):
+                    type_err("stops[]", "objects with type/what/resolution")
+                    continue
+                if stop["type"] not in STOP_TOKEN_REGISTRY:
+                    checker.error(
+                        f"{name}: stops[].type '{stop['type']}' not in the canonical "
+                        f"STOP member-token registry"
+                    )
+                for key in ("what", "resolution"):
+                    if not isinstance(stop[key], str):
+                        type_err(f"stops[].{key}", "a string")
+
+    misses = metrics.get("detector_misses")
+    if "detector_misses" in metrics:
+        if not isinstance(misses, list):
+            type_err("detector_misses", "a list")
+        else:
+            for miss in misses:
+                if not isinstance(miss, dict) or not {"found_at", "what", "why_missed"} <= set(miss.keys()):
+                    type_err("detector_misses[]", "objects with found_at/what/why_missed")
+                    continue
+                for key in ("found_at", "what", "why_missed"):
+                    if not isinstance(miss[key], str):
+                        type_err(f"detector_misses[].{key}", "a string")
 
 
 def check_post_build(packet_path: Path, commit: str, checker: Checker) -> None:
@@ -548,6 +663,42 @@ def run_selftest() -> int:
     expect_red("mark-without-ref", green_packet.replace("[P:anchored draft:ch9-test-surface#C1]", "[P:anchored]").replace("draft:ch9-test-surface#C2", "draft:ch9-test-surface#C1"), green_draft)
     # 15 packet_metrics missing a required key
     expect_red("metrics-missing-key", green_packet.replace(', "learned": "l"', ""), green_draft)
+    # 16 packet_metrics nested field with a wrong TYPE (the shallow-gate class)
+    expect_red(
+        "metrics-nested-wrong-type",
+        green_packet.replace(
+            '"prediction": {"predicted": "projection", "reasoning": "r", "discovered": "projection"}',
+            '"prediction": "projection"',
+        ),
+        green_draft,
+    )
+    # 17 range INTERIOR member undefined (O1–O3 with O2 missing)
+    expect_red(
+        "range-interior-undefined",
+        green_packet.replace(
+            "| O2 | b [P:derived draft:ch9-test-surface#C2] |",
+            "| O4 | b [P:derived draft:ch9-test-surface#C2] |",
+        ).replace("O2 alone too", "O4 alone too"),
+        green_draft,
+    )
+    # 18 canonical lane row WITHOUT a provenance mark
+    expect_red(
+        "lane-row-unmarked",
+        green_packet.replace(
+            "| O3 | c [P:new-decision] |",
+            "| O3 | c [P:new-decision] |\n| O5 | unmarked row |",
+        ),
+        green_draft,
+    )
+    # 19 draft status downgrade (the monotonicity comparison, tested directly)
+    mono = Checker()
+    check_status_monotonic("fixture.md", "ratified", "draft", mono)
+    if not mono.errors:
+        failures.append("selftest dim NOT red: status-downgrade")
+    mono_ok = Checker()
+    check_status_monotonic("fixture.md", "ratified", "realized", mono_ok)
+    if mono_ok.errors:
+        failures.append("selftest green NOT green: status-upgrade flagged")
 
     # green must pass
     with tempfile.TemporaryDirectory() as tmp:
@@ -561,7 +712,7 @@ def run_selftest() -> int:
 
     for f in failures:
         print(f"selftest FAIL: {f}", file=sys.stderr)
-    print(f"selftest: 15 red dims exercised, green fixture pass, {len(failures)} failure(s)")
+    print(f"selftest: 19 red dims exercised, green fixture pass, {len(failures)} failure(s)")
     return 1 if failures else 0
 
 
