@@ -182,7 +182,7 @@ commit:
   surfaces). Fold-time checks (Amendment-1 carrier): machine-block
   syntax with exact keysets, the `packet_rows` manifest rules
   (strict-or-`prose:`-prefixed refs, bidirectional table-defined lane
-  ids), retired-carrier rejection, and the `packet_metrics` deep
+  ids), withdrawn-carrier rejection, and the `packet_metrics` deep
   schema + manifest-tally cross-lock. Post-build check:
   `check_packet.py --post-build <commit> --packet <path>` — the
   commit's changed files must stay inside the declared mutation

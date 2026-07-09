@@ -26,9 +26,11 @@ Packets (docs/v3/implementation/packets/*.md, README.md excluded):
       unique, repo-relative paths; exactly one block.
   P3. packet_rows (exactly one per v2 packet) =
       {"rows": [{id, class, refs}]}: exact keysets at both levels; ids
-      unique, lane-grammar shaped ([A-Z]{1,2} + integer), never in a
-      reserved family; class in anchored|derived|new-decision;
-      anchored/derived carry >=1 ref, new-decision carries none.
+      unique, lane-grammar shaped ([A-Z]{1,2} + integer, no leading
+      zeros), never in a reserved family, and compared as EXACT
+      strings everywhere (O01 is never O1); class in
+      anchored|derived|new-decision; anchored/derived carry >=1 ref,
+      new-decision carries none.
   P4. Every ref parses EXACTLY as a strict form —
       contract:ch<N>-<surface>#C<n> (resolves to a row of a
       ratified-or-later draft; reopened does NOT qualify) or ADR-NNN
@@ -81,8 +83,11 @@ missing directory means zero drafts):
       realized}; status draft => no blocks.
   D5. Recorded-commit equality (status ratified|realized): the C-row
       lines in the working tree equal the C-row lines at the latest
-      block's recorded commit (git show). An out-of-repo draft or an
-      unresolvable recorded commit is a LOUD error, never a skip.
+      block's recorded commit (git show). The recorded sha must
+      resolve to a COMMIT object (git cat-file -t): a tree/blob/tag
+      would satisfy git show while being no auditable ratification
+      point. An out-of-repo draft or an unresolvable recorded commit
+      is a LOUD error, never a skip.
       Suspended ONLY at reopened — the two-commit reopen choreography
       (content+status commit, then record commit) stays green at every
       step.
@@ -151,7 +156,10 @@ FENCED_JSON_RE = re.compile(r"```json\s*\n(.*?)```", re.DOTALL)
 # Machine blocks stay ```json only (the template's declared form).
 FENCED_ANY_RE = re.compile(r"```.*?```|~~~.*?~~~", re.DOTALL)
 LANE_DEF_RE = re.compile(r"^\|\s*([A-Z]{1,2})(\d+)\s*\|")
-MANIFEST_ID_RE = re.compile(r"^([A-Z]{1,2})(\d+)$")
+# No leading zeros, and ids compare as EXACT strings everywhere —
+# int() normalization made O01 == O1, a silent reinterpretation of
+# declared data (P5 says "manifest id == table first-cell id").
+MANIFEST_ID_RE = re.compile(r"^([A-Z]{1,2})([1-9]\d*)$")
 CONTRACT_REF_RE = re.compile(r"^contract:(ch\d+-[a-z0-9-]+)#(C\d+)$")
 ADR_STRICT_RE = re.compile(r"^ADR-(\d{3})$")
 # The WHOLE [P: family is withdrawn (P6) — not just the three known
@@ -308,6 +316,22 @@ def check_recorded_equality(path: Path, commit: str, current_rows: list[str], ch
         )
         return
     root, rel = located
+    # D3/D5 say COMMIT sha — `git show <sha>:<path>` happily resolves a
+    # TREE sha too, but a tree is not an auditable ratification point
+    # (no date, author, or history position).
+    typ = subprocess.run(
+        ["git", "-C", str(root), "cat-file", "-t", commit],
+        capture_output=True,
+        text=True,
+    )
+    obj_type = typ.stdout.strip() if typ.returncode == 0 else "unresolvable"
+    if obj_type != "commit":
+        checker.error(
+            f"{path.name}: recorded sha '{commit}' does not resolve to a COMMIT "
+            f"(got '{obj_type}') — the ratification record is broken: only a "
+            f"commit is an auditable ratification point"
+        )
+        return
     out = subprocess.run(
         ["git", "-C", str(root), "show", f"{commit}:{rel}"],
         capture_output=True,
@@ -527,7 +551,10 @@ def check_packet_rows(
         row_id = row["id"]
         m = MANIFEST_ID_RE.match(row_id) if isinstance(row_id, str) else None
         if m is None:
-            checker.error(f"{name}: row id '{row_id}' is not lane-grammar shaped ([A-Z]{{1,2}} + integer)")
+            checker.error(
+                f"{name}: row id '{row_id}' is not lane-grammar shaped "
+                f"([A-Z]{{1,2}} + integer, no leading zeros)"
+            )
             continue
         if m.group(1) in EXCLUDED_LANE_FAMILIES:
             checker.error(
@@ -535,7 +562,7 @@ def check_packet_rows(
                 f"'{m.group(1)}' (mirrored from task-packet-template.md §1)"
             )
             continue
-        normalized = f"{m.group(1)}{int(m.group(2))}"
+        normalized = row_id  # exact string — no numeric normalization
         manifest_ids.append(normalized)
         cls = row["class"]
         refs = row["refs"]
@@ -566,7 +593,7 @@ def check_packet_rows(
     for line in prose.splitlines():
         m = LANE_DEF_RE.match(line)
         if m and m.group(1) not in EXCLUDED_LANE_FAMILIES:
-            doc_ids.add(f"{m.group(1)}{int(m.group(2))}")
+            doc_ids.add(f"{m.group(1)}{m.group(2)}")  # exact string — O01 is never O1
     manifest_set = set(manifest_ids)
     for missing in sorted(manifest_set - doc_ids):
         checker.error(
@@ -1134,6 +1161,16 @@ def run_selftest() -> int:
         "reserved lane family",
     )
     expect_red_packet(
+        "manifest-id-leading-zero",
+        GREEN_PACKET.replace('{"id": "O3"', '{"id": "O03"'),
+        "no leading zeros",
+    )
+    expect_red_packet(
+        "table-id-leading-zero",
+        GREEN_PACKET.replace("| O3 | c |", "| O03 | c |"),
+        "lane id O03 is missing",
+    )
+    expect_red_packet(
         "anchored-without-ref",
         GREEN_PACKET.replace('"refs": ["contract:ch9-test-surface#C1"]', '"refs": []'),
         "carries no ref",
@@ -1355,6 +1392,24 @@ def run_selftest() -> int:
         tmp.cleanup()
 
     _dates_decreasing_fixture()
+
+    def _tree_sha_fixture() -> None:
+        # a TREE sha satisfies `git show <sha>:<path>` but is not an
+        # auditable ratification point — must be red, not green
+        fixture = build_green_fixture()
+        if fixture is None:
+            failures.append("selftest fixture setup failed: ratification-tree-sha")
+            return
+        tmp, root, draft, _packet, green = fixture
+        tree = _git_out(root, "rev-parse", "HEAD~1^{tree}")
+        draft.write_text(
+            re.sub(r'"commit": "[0-9a-f]+"', f'"commit": "{tree}"', green), encoding="utf-8"
+        )
+        errors, _ = lint(root / "packets", root / "contracts", ADR_DIR)
+        assert_red("ratification-tree-sha", errors, "does not resolve to a COMMIT")
+        tmp.cleanup()
+
+    _tree_sha_fixture()
 
     # ---- D4 state consistency
     expect_red_draft(

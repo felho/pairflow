@@ -808,3 +808,20 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   members stays open (the next member is a miss); when a SINK
   invariant exists ("changed set is never empty"), close the family
   there
+- 2026-07-09 · process-v2 Phase 0.1 (lint review round 5, two
+  findings + a docs nit, all folded) · both findings are ONE class:
+  the code accepted LOOSER shapes than the claim names, and the gap
+  was a silent reinterpretation — (1) int() normalized lane-id
+  numerics, so O01 == O1 across manifest and table while P5 claims
+  exact identity (reproduced both directions); fixed with exact
+  string comparison everywhere + a no-leading-zero grammar (two
+  near-identical ids would be a readability hazard with zero value);
+  (2) the ratification `commit` field accepted any hex that
+  `git show <sha>:<path>` resolves — a TREE sha passed (reproduced)
+  though a tree has no date/author/history position, i.e. it is not
+  an auditable ratification point; fixed with a `git cat-file -t ==
+  commit` guard. Plus the template §1a still said "retired-carrier"
+  — the round-4 vocabulary correction had missed one mirror; swept.
+  Selftest 66→69. Class lesson named: LOOSE-ACCEPT — validate the
+  declared FORM, then verify the resolved OBJECT is the claimed KIND;
+  hex-shape or regex-shape alone proves neither
