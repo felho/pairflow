@@ -835,3 +835,25 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   family, root/empty diff-tree, duplicate JSON keys, exact lane ids,
   commit-object guard) — the first clean-ish round on the new
   carrier, six rounds in
+- 2026-07-09 · process-v2 Phase 0.1 (lint review round 7, one Medium
+  + a carrier question answered) · the pair-matching fence regexes
+  did not understand fence NESTING: a ````markdown outer fence (the
+  template's own quoting pattern) leaked its quoted ```text content
+  into the prose scans (reproduced: quoted rows/marks false-RED) and
+  could read a QUOTED ```json block as a machine-block declaration;
+  replaced with a line-oriented scanner honoring the CommonMark
+  closing rule (same char, at least opener length) — machine blocks
+  parse ONLY from top-level ```json fences; quoted fences are
+  material. The user's follow-up question — "move the machine data to
+  YAML front matter instead?" — was CONSIDERED AND DECLINED with
+  reasons (the effort/truth record): (a) YAML implicit typing is the
+  LOOSE-ACCEPT class itself (an unquoted short sha like 123e4567
+  parses as a float; no/off parse as booleans) — it would re-import
+  silent reinterpretation at the parser layer; (b) front matter is
+  position-bound to line 1, and the template's pairflow rule
+  anticipates packets EMBEDDED as sections of wrapper task docs,
+  where front matter ceases to exist while fenced blocks survive;
+  (c) stdlib-only culture (PyYAML dependency); (d) ledger_slice stays
+  a fenced block (check_coverage, 16 live packets) — two carriers
+  forever. The structured-data goal is already delivered by JSON;
+  the defect was the fence SCANNER, not the carrier

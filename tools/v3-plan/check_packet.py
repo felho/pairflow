@@ -14,6 +14,11 @@ Cross-cutting: fenced ```json machine blocks parse with duplicate-key
 REJECTION — json.loads' silent last-wins is a reinterpretation of
 declared data (the reader and the tool could disagree on which value
 holds), so a duplicated key anywhere in a machine block is red.
+Fences are scanned LINE-ORIENTED with the CommonMark closing rule (a
+fence closes only on a line of the opener's character with at least
+the opener's length): a ````markdown outer fence QUOTES inner ```json
+/ ```text blocks as material — quoted machine blocks are never
+declarations, and quoted rows/marks never reach the prose scans.
 
 Packets (docs/v3/implementation/packets/*.md, README.md excluded):
   P1. A packet is v2 iff it carries the mutation_boundary machine
@@ -150,11 +155,14 @@ ROW_CLASSES = ("anchored", "derived", "new-decision")
 RATIFICATION_KEYS = {"date", "arms", "commit"}
 PROSE_PREFIX = "prose:"
 
-FENCED_JSON_RE = re.compile(r"```json\s*\n(.*?)```", re.DOTALL)
-# BOTH markdown fence forms — the P5/P6 claims say "fenced code
-# excluded", and a tilde fence hides code exactly like a backtick one.
-# Machine blocks stay ```json only (the template's declared form).
-FENCED_ANY_RE = re.compile(r"```.*?```|~~~.*?~~~", re.DOTALL)
+# Line-oriented fence scanning (round 7): a fence opens with >=3
+# backticks or tildes and closes ONLY on a line of the SAME character
+# with AT LEAST the opener's length (the CommonMark rule) — so a
+# ````markdown outer fence QUOTES an inner ```json or ```text block as
+# material (the template itself quotes this way). The old
+# pair-matching regexes leaked quoted content into the prose scans and
+# could read a quoted json block as a machine block.
+FENCE_OPEN_RE = re.compile(r"^(`{3,}|~{3,})(.*)$")
 LANE_DEF_RE = re.compile(r"^\|\s*([A-Z]{1,2})(\d+)\s*\|")
 # No leading zeros, and ids compare as EXACT strings everywhere —
 # int() normalization made O01 == O1, a silent reinterpretation of
@@ -244,11 +252,48 @@ def _reject_duplicate_keys(pairs: list[tuple[str, object]]) -> dict:
     return seen
 
 
+def _scan_fences(text: str) -> tuple[str, list[str]]:
+    """One line-oriented pass over the document. Returns (the prose
+    with ALL fenced content removed, the raw contents of TOP-LEVEL
+    ```json fences). Fence marker lines belong to neither side. An
+    unclosed fence consumes to EOF (conservative: quoted material never
+    leaks into the prose scans; a swallowed machine block is caught
+    loudly by the exactly-one / no-parseable checks)."""
+    prose: list[str] = []
+    jsons: list[str] = []
+    in_fence = False
+    char = ""
+    length = 0
+    is_json = False
+    buf: list[str] = []
+    for line in text.splitlines():
+        if in_fence:
+            stripped = line.strip()
+            if re.fullmatch(rf"{re.escape(char)}{{{length},}}", stripped):
+                if is_json:
+                    jsons.append("\n".join(buf))
+                in_fence = False
+                buf = []
+                continue
+            if is_json:
+                buf.append(line)
+            continue
+        m = FENCE_OPEN_RE.match(line)
+        if m:
+            in_fence = True
+            char = m.group(1)[0]
+            length = len(m.group(1))
+            is_json = char == "`" and m.group(2).strip() == "json"
+            continue
+        prose.append(line)
+    return "\n".join(prose), jsons
+
+
 def json_blocks(text: str, path_name: str, checker: Checker) -> list[dict]:
     blocks: list[dict] = []
-    for match in FENCED_JSON_RE.finditer(text):
+    for raw in _scan_fences(text)[1]:
         try:
-            data = json.loads(match.group(1), object_pairs_hook=_reject_duplicate_keys)
+            data = json.loads(raw, object_pairs_hook=_reject_duplicate_keys)
         except (json.JSONDecodeError, ValueError) as exc:
             checker.error(f"{path_name}: unparseable json block ({exc})")
             continue
@@ -262,7 +307,7 @@ def block_by_key(blocks: list[dict], key: str) -> list[dict]:
 
 
 def strip_fences(text: str) -> str:
-    return FENCED_ANY_RE.sub("", text)
+    return _scan_fences(text)[0]
 
 
 def git_root_and_rel(path: Path) -> tuple[Path, str] | None:
@@ -1248,16 +1293,29 @@ def run_selftest() -> int:
         "not defined as a table row",
     )
     # fenced noise must stay green: unresolvable refs/marks inside
-    # fences of EITHER form
+    # fences of EITHER form, and QUOTED fences (the ````markdown
+    # pattern the template itself uses) — including a quoted duplicate
+    # machine block, which is material, never a declaration
     shared_packet.write_text(
         GREEN_PACKET
         + "\n```\nADR-999 and contract:ch9-test-surface#C9 and [P:new-decision]\n```\n"
-        + "\n~~~\nADR-999 and contract:ch9-test-surface#C9 and [P:new-decision]\n~~~\n",
+        + "\n~~~\nADR-999 and contract:ch9-test-surface#C9 and [P:new-decision]\n~~~\n"
+        + "\n````markdown\n```text\n| O9 | quoted row | [P:typo]\n```\n"
+        + '```json\n{"packet_rows": {"rows": []}}\n```\n````\n',
         encoding="utf-8",
     )
     errors, _ = lint(shared_root / "packets", shared_root / "contracts", ADR_DIR)
-    expect_green("fenced noise (backtick + tilde)", errors)
+    expect_green("fenced noise (backtick + tilde + quoted fences)", errors)
     shared_packet.write_text(GREEN_PACKET, encoding="utf-8")
+    # …and a machine block that exists ONLY inside a quoted fence does
+    # NOT satisfy the exactly-one requirement
+    expect_red_packet(
+        "quoted-json-not-a-declaration",
+        GREEN_PACKET.replace('{"packet_rows": {"rows": [', '{"packet_rows_gone": {"rows": [')
+        .replace("| O1 | a |\n| O2 | b |\n| O3 | c |\n", "")
+        + '\n````markdown\n```json\n{"packet_rows": {"rows": []}}\n```\n````\n',
+        "exactly one packet_rows block",
+    )
 
     # ---- P6 withdrawn carrier
     expect_red_packet(
