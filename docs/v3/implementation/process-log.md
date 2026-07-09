@@ -891,3 +891,18 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   summary LISTS reopened drafts but lint() reduced them to a count —
   names now ride the stats and the summary prints them, with a
   structural selftest assertion. Selftest 72→74
+- 2026-07-09 · process-v2 Phase 0.1 (lint review round 10, one
+  Medium; reviewer audited the fixed HEAD a0dfabc7) · --post-build
+  accepted commit-ISH refs — HEAD, a branch name, an annotated tag
+  name, and the tag OBJECT sha all produced a green audit
+  (reproduced) — while P8's own words say "audit reruns are pinned":
+  a movable ref makes the recorded verdict non-reproducible, and a
+  tag object is not the build commit. This is the round-5 draft-side
+  commit-kind guard's SIBLING SURFACE on the audit path, again swept
+  by the reviewer rather than the author (the second missed
+  family-sweep of the series — the pattern to internalize: when a
+  guard lands on ONE side of a mirrored pair of surfaces, the other
+  side inherits the obligation in the same commit). Fixed by
+  mirroring the guard (hex shape + cat-file -t == commit before git
+  show); the selftest's own audits now pass rev-parse'd shas, with
+  HEAD and tag-object red dims. Selftest 74→76

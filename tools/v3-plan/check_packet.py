@@ -62,9 +62,12 @@ Packets (docs/v3/implementation/packets/*.md, README.md excluded):
       values, stops[].type against the canonical STOP registry),
       nonnegative integer counters, baseline_note the only optional
       key; its provenance counts equal the manifest tally.
-  P8. --post-build <commit>: the commit's changed files must be a
-      subset of the boundary read from the PACKET'S BYTES AT THAT
-      COMMIT plus the packet file itself (audit reruns are pinned);
+  P8. --post-build <commit>: the audited ref must be a PINNED commit
+      sha (hex shape + cat-file -t == commit — HEAD/branch/tag names
+      move, and a tag object is not the build commit); the commit's
+      changed files must be a subset of the boundary read from the
+      PACKET'S BYTES AT THAT COMMIT plus the packet file itself
+      (audit reruns are pinned);
       the boundary must satisfy the FULL P2 shape rules on this path
       too (a subset check over a malformed boundary proves nothing).
       The vacuous-audit family is closed at the SINK: merge commits
@@ -860,6 +863,28 @@ def check_post_build(packet_path: Path, commit: str, checker: Checker) -> None:
         checker.error(f"--post-build: {packet_path} is not inside a git repository")
         return
     root, rel = located
+    # The draft-side round-5 guard, mirrored: the audit is PINNED, so
+    # commit-ish refs are red — HEAD/branch/tag names move (the same
+    # invocation could change verdicts later), and an annotated tag
+    # OBJECT is not the build commit.
+    if not COMMIT_RE.match(commit):
+        checker.error(
+            f"--post-build: '{commit}' is not a pinned commit sha — HEAD, branch, "
+            f"and tag names move; pass the build commit's sha"
+        )
+        return
+    typ = subprocess.run(
+        ["git", "-C", str(root), "cat-file", "-t", commit],
+        capture_output=True,
+        text=True,
+    )
+    obj_type = typ.stdout.strip() if typ.returncode == 0 else "unresolvable"
+    if obj_type != "commit":
+        checker.error(
+            f"--post-build: '{commit}' does not resolve to a COMMIT "
+            f"(got '{obj_type}') — a tag object is not the build commit"
+        )
+        return
     shown = subprocess.run(
         ["git", "-C", str(root), "show", f"{commit}:{rel}"],
         capture_output=True,
@@ -1653,8 +1678,17 @@ def run_selftest() -> int:
             _git_ok(root, "add", "-A")
             _git_ok(root, "commit", "-q", "-m", "code-only")
             checker = Checker()
-            check_post_build(packet, "HEAD", checker)
+            check_post_build(packet, _git_out(root, "rev-parse", "HEAD"), checker)
             assert_red("post-build-wrong-commit", checker.errors, "wrong commit to audit")
+            # P8 pinned audit: a symbolic ref moves — HEAD itself is red
+            checker = Checker()
+            check_post_build(packet, "HEAD", checker)
+            assert_red("post-build-symbolic-ref", checker.errors, "not a pinned commit sha")
+            # …and an annotated TAG OBJECT is not the build commit
+            _git_ok(root, "tag", "-a", "-m", "t", "vtest")
+            checker = Checker()
+            check_post_build(packet, _git_out(root, "rev-parse", "vtest"), checker)
+            assert_red("post-build-tag-object", checker.errors, "does not resolve to a COMMIT")
             # a build-shaped commit (packet included) with an
             # out-of-boundary file
             (root / "x.txt").write_text("x2", encoding="utf-8")
@@ -1664,8 +1698,9 @@ def run_selftest() -> int:
             )
             _git_ok(root, "add", "-A")
             _git_ok(root, "commit", "-q", "-m", "outside")
+            outside_sha = _git_out(root, "rev-parse", "HEAD")
             checker = Checker()
-            check_post_build(packet, "HEAD", checker)
+            check_post_build(packet, outside_sha, checker)
             assert_red("post-build-outside-boundary", checker.errors, "OUTSIDE")
             # widen the WORKING-TREE boundary; the old commit must stay red
             packet.write_text(
@@ -1673,7 +1708,7 @@ def run_selftest() -> int:
                 encoding="utf-8",
             )
             checker = Checker()
-            check_post_build(packet, "HEAD", checker)
+            check_post_build(packet, outside_sha, checker)
             assert_red("post-build-not-pinned", checker.errors, "OUTSIDE")
             branch = _git_out(root, "rev-parse", "--abbrev-ref", "HEAD")
             ok = _git_ok(root, "checkout", "-q", "--", ".")
@@ -1690,7 +1725,7 @@ def run_selftest() -> int:
                 failures.append("selftest git fixture setup failed (merge)")
             else:
                 checker = Checker()
-                check_post_build(packet, "HEAD", checker)
+                check_post_build(packet, _git_out(root, "rev-parse", "HEAD"), checker)
                 assert_red("post-build-merge-commit", checker.errors, "merge commit")
 
     # a MALFORMED boundary at the audited commit is a red error, never
@@ -1706,7 +1741,7 @@ def run_selftest() -> int:
             failures.append("selftest git fixture setup failed (post-build-malformed)")
         else:
             checker = Checker()
-            check_post_build(packet, "HEAD", checker)
+            check_post_build(packet, _git_out(root, "rev-parse", "HEAD"), checker)
             assert_red(
                 "post-build-malformed-boundary",
                 checker.errors,
@@ -1728,7 +1763,7 @@ def run_selftest() -> int:
             failures.append("selftest git fixture setup failed (post-build-shape)")
         else:
             checker = Checker()
-            check_post_build(packet, "HEAD", checker)
+            check_post_build(packet, _git_out(root, "rev-parse", "HEAD"), checker)
             assert_red(
                 "post-build-boundary-shape-rules",
                 checker.errors,
@@ -1752,7 +1787,7 @@ def run_selftest() -> int:
             failures.append("selftest git fixture setup failed (post-build-root)")
         else:
             checker = Checker()
-            check_post_build(packet, "HEAD", checker)
+            check_post_build(packet, _git_out(root, "rev-parse", "HEAD"), checker)
             assert_red("post-build-root-commit", checker.errors, "OUTSIDE")
             # the family's third member: an --allow-empty commit's
             # change list is empty — red at the sink, not enumerated
@@ -1760,7 +1795,7 @@ def run_selftest() -> int:
                 failures.append("selftest git fixture setup failed (post-build-empty)")
             else:
                 checker = Checker()
-                check_post_build(packet, "HEAD", checker)
+                check_post_build(packet, _git_out(root, "rev-parse", "HEAD"), checker)
                 assert_red("post-build-empty-commit", checker.errors, "EMPTY change list")
 
     # ---- the green pair must pass
