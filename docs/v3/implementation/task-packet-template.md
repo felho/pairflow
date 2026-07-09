@@ -96,20 +96,36 @@ packet commit's changed files against it):
 }
 ```
 
-## Provenance (v2 — the D1 classification's machine face)
+## Row manifest (v2 — the D1 classification's machine face; Amendment 1)
 
-Every canonical row carries an inline mark: `[P:anchored <ref>]` /
-`[P:derived <ref[, ref…]>]` / `[P:new-decision]`. Strictly resolved ref
-forms: `draft:ch<N>-<surface>#C<n>` (a ratified-or-later contract-draft
-row) and `ADR-<NNN>`; other forms (ledger §, plan §, packet §) are
-pass-through. The counts below must equal the inline marks (lint-locked):
+ONE machine block declares every canonical row's provenance — inline
+marks are retired (one home, no drift; the lint rejects a lingering
+`[P:*]` mark or a standalone counts block). Rules (lint-enforced):
+
+- row ids unique, lane-grammar shaped, and **bidirectionally
+  table-defined**: every manifest id is the FIRST cell of a table row
+  and every table-defined lane id is in the manifest (fenced code is
+  excluded; reserved non-lane families: `P`). Finer elements
+  (token-list members, inventory members) travel with their host row;
+- `class` ∈ `anchored` / `derived` / `new-decision`; anchored/derived
+  carry ≥1 ref, new-decision carries none;
+- every ref either parses EXACTLY as a strict form —
+  `contract:ch<N>-<surface>#C<n>` (a ratified-or-later contract-draft
+  row) or `ADR-<NNN>` (file exists) — or carries the `prose:` prefix
+  (unverified, human-facing provenance: ledger §, plan §, packet §);
+  anything else is red;
+- close-time counts live in `packet_metrics.provenance` and must equal
+  the manifest tally (lint-locked; the duplicate home is deliberate —
+  D7's aggregation surface reads the metrics block).
 
 ```json
 {
-  "provenance": {
-    "anchored": 0,
-    "derived": 0,
-    "new_decision": 0
+  "packet_rows": {
+    "rows": [
+      { "id": "O1", "class": "anchored", "refs": ["contract:ch7-diag#C3"] },
+      { "id": "O2", "class": "derived", "refs": ["ADR-006", "prose:plan §7.2"] },
+      { "id": "O3", "class": "new-decision", "refs": [] }
+    ]
   }
 }
 ```
@@ -151,25 +167,37 @@ qualifiers — never ad hoc keys.>
 
 ## 1a. The v2 machine blocks (process-v2-design.md §5, Phase 0)
 
-Additive layer, landed 2026-07-09 — the §2 checklist itself is rewritten
-only by the Phase-1 authority-flip commit:
+Additive layer, landed 2026-07-09; carrier per process-v2-design.md §7
+(Amendment 1, ratified 2026-07-09 — manifest + git-native ratification).
+The §2 checklist itself is rewritten only by the Phase-1 authority-flip
+commit:
 
 - **A packet is v2 iff it carries the `mutation_boundary` machine
   block.** The 16 pre-v2 packets (ch4–ch7-P2) are GRANDFATHERED: the
   lint reports and skips them; v2 obligations bind from the ch7-P3
   pilot onward, never retroactively.
 - **Lint:** `pnpm v3:packet-lint` (selftest + live; wired into the CI
-  surfaces). Fold-time checks: machine-block syntax, provenance
-  bookkeeping, strict cross-refs (draft rows ratified-or-later,
-  ADR files), lane id registry + range/scalar consistency.
-  Post-build check: `check_packet.py --post-build <commit>
-  --packet <path>` — the commit's changed files must stay inside the
-  declared mutation boundary (plus the packet file itself).
+  surfaces). Fold-time checks (Amendment-1 carrier): machine-block
+  syntax with exact keysets, the `packet_rows` manifest rules
+  (strict-or-`prose:`-prefixed refs, bidirectional table-defined lane
+  ids), retired-carrier rejection, and the `packet_metrics` deep
+  schema + manifest-tally cross-lock. Post-build check:
+  `check_packet.py --post-build <commit> --packet <path>` — the
+  commit's changed files must stay inside the declared mutation
+  boundary (plus the packet file itself).
 - **Contract-drafts** (`docs/v3/implementation/contracts/`) are linted
-  by the same tool per the D2 artifact contract (meta block, C-row
-  registry, canonical-row-payload hash against the latest ratification
-  block, realized-map completeness). The docs-side
-  `contract-draft-template.md` lands with the Phase-1 flip.
+  by the same tool per the D2 artifact contract on the Amendment-1
+  carrier: meta block, C-row registry, `{date, arms, commit}`
+  ratification blocks (dates non-decreasing; the block lands in a
+  follow-up commit — the recorded sha binds content, not the record),
+  the recorded-commit equality check (working-tree C-rows ==
+  C-rows at the latest block's commit; suspended only at `reopened`),
+  state-consistency status rules, and realized-map completeness
+  (any map row ⇔ `realized` + complete). `reopened` is a transient
+  STOP-artifact: the lint lists reopened drafts and
+  `--forbid-reopened` is the zero-reopened gate form (packet approve /
+  chapter close / flip). The docs-side `contract-draft-template.md`
+  lands with the Phase-1 flip.
 
 ## 2. The projection checklist (compiling a packet)
 

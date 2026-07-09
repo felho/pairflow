@@ -703,3 +703,23 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   surfaces is deliberately deferred to when it first bites — no
   pre-building; the STOP family catches the first live case
   (mid-chapter corpus extension has no workflow yet, by design)
+- 2026-07-09 · process-v2 Phase 0.1 (lint rewrite + template swap,
+  with a prediction miss recorded) · check_packet.py rewritten to the
+  Amendment-1 carrier: the docstring is now the CLAIM REGISTRY (P1–P8
+  packets, D1–D7 drafts — the round-6 selftest-derives-from-claims
+  rule realized structurally), all prose scanning reduced to the
+  first-cell lane-id existence check, all history mining replaced by
+  the single recorded-commit equality (git show) + HEAD-only
+  state-consistency rules incl. `reopened`; `--forbid-reopened` is
+  the zero-reopened gate form. Selftest 58 claim-derived red dims +
+  three named greens (reopen choreography per step, re-ratification,
+  fenced noise). PREDICTION MISS, logged per the metrics culture: §7.5
+  estimated ~700–800 lines; the file is ~1360 — flat, not halved. The
+  estimate measured the wrong dimension: what shrank is the FRAGILE
+  SURFACE (regex prose parsing, history walking — the two
+  hole-generating classes of all 7 review rounds), while the line
+  count stayed flat because the ratified claim set is LARGER and more
+  precise (reopened state machine, ref strictness, bidirectionality),
+  each claim buying one cheap declared-data dim. Lesson: size
+  estimates for gate code should predict the fragile-surface delta,
+  not the line count
