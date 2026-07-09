@@ -2,6 +2,16 @@
 
 Status: **draft — for the two-arm review BEFORE the flip commit lands.**
 Date: 2026-07-09.
+Revision 1 (2026-07-09): aligned to **Amendment 1** (process-v2-design.md
+§7, ratified — manifest + git-native ratification) and the Phase-0.1
+lint review series (11 rounds). The FC rows below describe the
+post-flip texts on the NEW carrier: `packet_rows` manifest (inline
+`[P:*]` marks withdrawn at design time, never live), `contract:` refs,
+`{date, arms, commit}` ratification with the `reopened` lifecycle, and
+the pinned post-build audit. Where the ratified §7.2 wording is looser
+than the Phase-0.1 outcome (id grammar: "integer" vs
+no-leading-zeros/exact-string), the FORM authorities (templates) carry
+the tightened rule — §7.2 stays as ratified history.
 Purpose: the packet-lint retro's lesson applied to text (process-log,
 2026-07-09): the flip rewrites the authority surfaces agents EXECUTE, and
 prose has the same failure mode a checker has — an under-specified claim
@@ -13,9 +23,9 @@ list; the flip is then written to satisfy exactly these rows; after
 landing, this file is the flip's audit record (do the landed texts match
 the claims?).
 
-Source of every row: process-v2-design.md D1–D7 + §5 (ratified). This
-file adds NO new semantics — a row here that cannot be traced to the
-design doc is itself a finding.
+Source of every row: process-v2-design.md D1–D7 + §5 + §7 (Amendment 1,
+ratified). This file adds NO new semantics — a row here that cannot be
+traced to the design doc is itself a finding.
 
 ## FC-A — ReviewPacket.md (the panel engine)
 
@@ -47,7 +57,13 @@ design doc is itself a finding.
   ownership-only; `plan_contract_challenge` → STOP 2;
   `packet_plan_drift` bifurcates (propagation → autonomous plan edit;
   meaning-changing → STOP 2); nothing is dropped silently — every
-  considered issue is classified.
+  considered issue is classified. The Amendment-1 §7.4 rules ride
+  along: fix-all binds CONTENT findings and routes EFFORT, never
+  truth (per-finding dispositions folded/narrowed/declined with
+  reasons; conflicting feedback sources reconciled explicitly;
+  genuinely open choices escalate as STOPs); TOOLING findings get a
+  mandatory threat-model judgment with `declined: out of threat
+  model` as a live route.
 - **FC-A5** The report contract is a validity gate: `Packet basis`
   (sha256 + HEAD + dirty state), `Skill source`, the Gate Coverage
   Matrix, and the verdict are mandatory lines; a report missing one is
@@ -62,11 +78,16 @@ design doc is itself a finding.
 
 ## FC-B — AuthorPacket.md
 
-- **FC-B1** Every canonical row is written with EXACTLY ONE provenance
-  mark; the machine blocks (mutation_boundary, provenance, flags
-  routes) are written at authoring; the case verdict
-  (projection/invention) is computed from the row counts and stated in
-  the packet header with a one-line derivation.
+- **FC-B1** Every canonical row is declared in the `packet_rows`
+  manifest — id, class, refs (Amendment 1; the inline-mark convention
+  was withdrawn at design time, never live, and the lint rejects a
+  reappearance); refs are strict (`contract:chN-<surface>#Cn`,
+  `ADR-NNN`) or `prose:`-prefixed; the machine blocks
+  (mutation_boundary, packet_rows, flags routes) are written at
+  authoring; the case verdict (projection/invention) is computed from
+  the manifest tally and stated in the packet header with a one-line
+  derivation. Form details (id grammar, keysets) defer to
+  task-packet-template.md §1 — the workflow never restates them.
 - **FC-B2** A B-case verdict (new-decision mass over the calibration
   threshold, or ANY authority-class new-decision row) STOPS authoring
   BEFORE drafting continues and routes to DraftContract; the
@@ -99,12 +120,22 @@ design doc is itself a finding.
   review finding, never a legal edit path.
 - **FC-C3** The draft loop = the packet loop minus `split` (a draft
   split is STOP `2:draft-split`); watchdog 8; tier 0 = draft-lint.
-- **FC-C4** Ratification and RE-ratification are permanently human; a
-  reopen appends a new ratification block (append-only history —
-  lint-enforced); packets anchor only to ratified-or-later rows.
+- **FC-C4** Ratification and RE-ratification are permanently human.
+  The record is `{date, arms, commit}` — the recorded sha binds
+  CONTENT, not the record (the block lands in a follow-up commit); a
+  reopen runs the two-commit choreography through the transient
+  `reopened` status (equality suspended ONLY there; packet refs into
+  a reopened draft go loud-red for the window; ZERO reopened drafts
+  at packet approve, chapter close, and the flip — tier-0 reportable,
+  `--forbid-reopened`). The machine check is the recorded-commit
+  equality (working-tree C-rows == C-rows at the latest block's
+  commit; the sha must resolve to a COMMIT object); older blocks are
+  human-readable history verified by diff review, not tier 0 — the
+  stated threat model. Packets anchor only to ratified-or-later rows
+  (reopened does NOT qualify).
 - **FC-C5** At chapter close the boundary review fills the realized map
-  and flips status in place; the file never moves; row IDs never
-  change.
+  and flips status in place, in ONE act (ANY map row on a non-realized
+  status is red); the file never moves; row IDs never change.
 
 ## FC-D — contract-draft-template.md (new, the form authority)
 
@@ -112,11 +143,16 @@ design doc is itself a finding.
   constants are its mechanical mirror — on any mismatch the TEMPLATE
   wins and the lint is the bug.
 - **FC-D2** The template documents exactly what the lint enforces
-  today: meta block, C-rows, ratification block shape (exact keyset,
-  YYYY-MM-DD, string-list arms, 64-hex sha over the canonical row
-  payload — rows only), realized map, status machine, append-only
-  block history. *Hostile:* nothing in the template may describe a
-  field the lint cannot see, without marking it panel-owned.
+  today (the Amendment-1 carrier): meta block ({chapter, surface,
+  status} exact keyset; status draft|ratified|reopened|realized),
+  C-rows (unique ids, NO leading zeros — ids are exact strings),
+  ratification block shape (exact keyset {date, arms, commit}:
+  YYYY-MM-DD date, nonempty string-list arms, 7–40-hex sha resolving
+  to a COMMIT object; dates non-decreasing; latest block = last in
+  document order), the two-commit ratification and reopen
+  choreography, the state-consistency status rules, and the realized
+  map. *Hostile:* nothing in the template may describe a field the
+  lint cannot see, without marking it panel-owned.
 
 ## FC-E — task-packet-template.md §2 rewrite
 
@@ -135,8 +171,11 @@ design doc is itself a finding.
   design doc — and the lint's docstring pointer is updated IN THE SAME
   COMMIT: the flip therefore touches `tools/v3-plan/check_packet.py`'s
   header comment, an addition to the §5 item-8 file list discovered by
-  this enumeration), the draft phase in the build loop, the routing
-  rule's third row (shape → contract-draft), and the metrics
+  this enumeration), the draft phase in the build loop incl. the
+  `reopened` lifecycle's gate rule (zero reopened drafts at packet
+  approve / chapter close / the flip), the routing rule's third row
+  (shape → contract-draft), the Amendment-1 §7.4 process rules
+  (fix-all scope, tier-0 scoping, effort/truth), and the metrics
   convention.
 - **FC-F2** §5.5's standing-checkpoint list post-flip: chapter
   ratification, model↔code divergence stop, draft ratification —
@@ -184,6 +223,7 @@ design doc is itself a finding.
   flip itself).
 - **FC-X3** Canonical-statement homes post-flip (one home, others
   defer): STOP list + matrix + token registry → README; ADR lanes →
-  README; draft artifact form → contract-draft-template; packet form →
-  task-packet-template; fix-all + routes → ReviewPacket (procedure
-  mirror of README's rule).
+  README; draft artifact form → contract-draft-template; packet form
+  (incl. the manifest rules and id grammar) → task-packet-template;
+  fix-all + §7.4 scope/effort-truth rules + routes → README canonical
+  with ReviewPacket as the procedure mirror.
