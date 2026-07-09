@@ -644,3 +644,25 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   script, not a packet" exempts nothing. Applied immediately in the
   weak form: the Phase-1 flip's TEXT claims get enumerated and
   reviewed before the flip lands
+- 2026-07-09 · process-v2 Amendment 1 (carrier simplification,
+  proposed) · the USER raised the overengineering challenge against
+  the ratified Phase-0 mechanics — the first live
+  `2:contested-ratified-vs-reality` STOP, exercised on the process
+  artifacts themselves. Two independent arm assessments converged on
+  the diagnosis (machine data in a fragile prose carrier; version
+  control re-implemented inside a version-controlled file) and
+  diverged on the remedy (git-native anchoring vs current-state +
+  review policy); the amendment (design doc §7) adopts the synthesis:
+  recorded-commit anchoring with NO history mining, and a row
+  MANIFEST block replacing the inline `[P:*]` marks. D1–D7 semantics
+  untouched — the design held; the Phase-0 carrier choice was the
+  defect. TWO RULES MINTED: (1) fix-all binds CONTENT findings; for
+  tooling findings the threat-model judgment is a mandatory step and
+  `declined: out of threat model` is a live route (evidence: 18 lint
+  findings, zero declined — the judgment was skipped, not decided);
+  (2) tier-0 scoping — tier 0 checks hard deterministic facts over
+  DECLARED data and never extracts semantics from prose; prose
+  obligations are lens duties. Lesson for the boundary: the
+  1330-line/45-dim lint guarded a gate with ZERO traffic — armor
+  preceded use because the fix-all reflex ran where a threat-model
+  judgment belonged

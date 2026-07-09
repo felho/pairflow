@@ -10,6 +10,10 @@ authority; once Phase 0/1 land, the REALIZED files
 (README/template/skill/AGENTS.md) are the authority and this document is
 a historical record — its own D2 rule ("never a third permanent
 authority"), applied to itself.
+**Amendment 1 (2026-07-09, §7): carrier simplification — PROPOSED,
+awaiting ratification.** Until ratified, §5 stands as written; once
+ratified, §7 supersedes the mechanics it names (D1–D7 semantics
+unchanged).
 Date: 2026-07-08.
 
 Provenance, by verifiability class:
@@ -800,3 +804,195 @@ order. This closes the two-arm terminal condition by the decision
 authority it served: the arms are advisory instruments of the same
 authority, and the direct order supersedes their proxy role. Phase 0
 execution begins from this state.
+
+## 7. Amendment 1 (2026-07-09) — carrier simplification: manifest + git-native ratification
+
+Status: **proposed — awaiting the user's ratification** (the D6 rule —
+ratification never delegates — applied to this document's own reopen;
+the trigger is a live STOP `2:contested-ratified-vs-reality`, raised by
+the USER against the ratified §5 mechanics: the first exercise of that
+STOP member on the process artifacts themselves).
+
+### 7.1 The finding
+
+Phase 0 shipped the mechanics §5 item 1 specified, and seven adversarial
+review rounds (18 findings, all fixed under fix-all) grew the lint to
+1330 lines and 45 selftest dimensions — guarding a gate ZERO live v2
+packets and ZERO drafts have passed through. Two independent arm
+assessments of the "is this overengineered?" challenge converged on the
+same diagnosis:
+
+1. **The machine data lives in a fragile carrier.** Inline `[P:*]`
+   marks scattered through prose and tables, lane-range prose parsing,
+   fence-stripping subtleties — the lint fishes structured data out of
+   free-form markdown with regexes, and roughly half the review-round
+   holes were expressible ONLY because that carrier admits them.
+2. **The draft machinery re-implements version control inside a
+   version-controlled file.** The canonical-row-payload sha256, the
+   append-only ratification-block history, the full git-history walk —
+   two sources of truth about history (git and the embedded blocks)
+   that ever-smarter lint code must reconcile. The other half of the
+   holes (committed downgrade, block rewrite, unparseable intermediate
+   version, merge commit) came from exactly this duplication.
+
+The arms diverged on the remedy for (2): git-NATIVE anchoring (arm 1)
+vs current-state blocks + review policy with no CI history checks
+(arm 2). This amendment adopts a synthesis: recorded-commit anchoring
+(machine-checked, because silent edits of ratified rows are exactly the
+mechanical failure class v3 exists to gate) with NO history mining (the
+lint only ever resolves explicitly recorded commits, never walks).
+
+**Not overengineered — reaffirmed:** the D1 provenance trichotomy, the
+D3 STOP list + verdict-action matrix, the D2 contract-draft LAYER, the
+D4 two-tier review, the D5 fix-all-on-content default, the D7 metrics
+schema, and the one-commit authority flip. The design's semantics are
+untouched by this amendment; only the Phase-0 carrier changes.
+
+### 7.2 Carrier change A — the row manifest (retires inline marks)
+
+The packet's machine-readable row facts move into ONE machine block,
+`packet_rows`, beside the existing `ledger_slice` / `mutation_boundary`
+/ `packet_metrics` blocks (which were never the problem — the fragile
+residue was exactly the part encoded in prose):
+
+```json
+{
+  "packet_rows": {
+    "rows": [
+      { "id": "O1", "class": "anchored", "refs": ["draft:ch7-diag#C3"] },
+      { "id": "O2", "class": "derived", "refs": ["ADR-006", "plan §7.2"] },
+      { "id": "O3", "class": "new-decision", "refs": [] }
+    ]
+  }
+}
+```
+
+Rules (all tier-0): row ids unique; `class` in the D1 enum;
+`anchored`/`derived` carry ≥1 ref, `new-decision` carries none; the
+strict ref forms (`draft:chN-<surface>#Cn` → ratified-or-later draft
+row; `ADR-NNN` → file exists) machine-resolve, other ref strings pass
+through as prose provenance; **bidirectional completeness** — every
+manifest id exists as a lane id defined in the document's tables, and
+every table-defined lane id appears in the manifest (the one remaining
+document scan is the structural table-row id extraction, the simplest
+kind); `packet_metrics.provenance` counts must equal the manifest
+tally.
+
+The inline `[P:*]` marks are **retired, not made optional** — two homes
+for the same fact is itself the drift class this process hunts. The
+standalone `provenance` counts block in template §1 retires with them
+(the manifest IS the counts; close-time counts live in
+`packet_metrics`, cross-checked). Prose range/scalar consistency stops
+being a tier-0 concern: range claims in prose are lens-3 review
+material, not machine data.
+
+### 7.3 Carrier change B — git-native ratification (retires the hash machinery)
+
+The draft ratification block becomes `{date, arms, commit}` — `commit`
+is the sha of the CONTENT commit whose version of the C-rows the human
+ratified. Because a commit's sha cannot be known before it exists, the
+ratification block lands in a follow-up commit: **the recorded sha
+binds content, not the record.**
+
+The single machine check that replaces the payload hash, the
+fingerprint-prefix property, and the history walk: the C-row set and
+bytes at HEAD must equal the C-row set and bytes at the LATEST
+ratification block's recorded commit (`git show <commit>:<file>`).
+A reopen appends a new block with the new content commit — the D2
+re-ratification rule (permanently human) is unchanged.
+
+Status-machine monotonicity moves from history-walking to
+**state-consistency rules** (all decidable from HEAD alone):
+ratification block(s) present ⇔ status ratified-or-later; status
+`draft` ⇒ no blocks; complete realized map ⇔ status `realized` (the
+boundary review fills the map and flips the status in ONE act — a
+complete map on a `ratified` draft is an inconsistent state, red).
+
+Earlier ratification blocks remain human-readable history and are
+machine-UNVERIFIED by design: rewriting an old block is visible in any
+commit diff the operator reviews, while the invariant that matters —
+*the rows packets anchor to are the rows the human ratified* — is
+carried entirely by the latest block's equality check. D2's "every
+normative statement is a canonical row" rule SURVIVES with a new
+justification: the machine-guarded surface is the C-row set, so prose
+stays non-normative by declaration and a post-ratification prose edit
+still cannot change the contract.
+
+### 7.4 Two process rules minted
+
+- **Fix-all scope (D5 clarification).** The fix-all default binds
+  CONTENT findings — packets, drafts, authority text — where the
+  ambiguity-transfer argument holds. For TOOLING findings the
+  threat-model judgment is a mandatory explicit step, and
+  `declined: out of threat model` is a live route. Evidence for the
+  rule: 18 lint findings, zero declined, zero threat-model judgments —
+  the judgment was skipped, not decided.
+- **Tier-0 scoping principle.** Tier 0 checks hard deterministic facts
+  over DECLARED data: schema shape, existence, reference resolution,
+  equality-at-commit, subset-of-boundary. It never extracts semantics
+  from prose — prose obligations ("is every normative sentence a
+  row?", "does the prose range match the table?") are tier-1 lens
+  duties. Corollary: selftest armor scales with the declared surface,
+  so shrinking the surface shrinks the armor without shrinking
+  confidence.
+
+**Threat model, stated once:** one operator plus review-gated agents on
+a single repo. The machine gates defend against agent drift and
+sloppiness (silent edit of ratified text, unresolved reference,
+mutation-boundary escape) — not against adversarial history forgery;
+git history plus the operator's diff review own that layer.
+
+### 7.5 The shrink plan (supersedes §5 item 1's check list; revises item 2)
+
+`tools/v3-plan/check_packet.py`, by disposition:
+
+**Keep unchanged:** the v2 marker (mutation_boundary presence) + the
+closed 16-file grandfather whitelist; the `mutation_boundary` keyset;
+the post-build check pinned to commit bytes incl. merge-commit
+rejection; the full `packet_metrics` deep schema (STOP-token registry
+enum, found_at enums, non-negative int rounds, prediction classes,
+baseline_note as the only optional key); the draft meta keyset; C-row
+id uniqueness; realized-map completeness; strict ref resolution; the
+selftest culture (fixtures + red dims, re-derived from the shrunk
+claim set).
+
+**Retire:** all inline-mark machinery (`PROV_MARK_RE`, per-row mark
+presence, multi-mark detection, mark-vs-counts cross-lock at mark
+level, fence-stripping for marks/refs); lane-range/scalar prose
+scanning (`LANE_RANGE_RE`, `LANE_REF_RE`); the canonical-payload
+sha256 (`draft_payload_hash`), the ratification fingerprint-prefix
+property, and the full-history walk (`draft_history` + its git
+selftest fixtures); the `sha256` ratification key.
+
+**Add/replace:** the `packet_rows` manifest checks (§7.2); the
+`{date, arms, commit}` ratification block + the single git-show
+equality check (§7.3); the status state-consistency rules (§7.3).
+
+Estimated result: the ~1330-line lint drops to roughly 700–800 lines,
+with the retired selftest dimensions replaced by a smaller claim-derived
+set over the declared surfaces.
+
+**Template (§5 item 2, revised — still Phase-0-safe):** §1's provenance
+section is replaced by the `packet_rows` block + its rules; §1a's lint
+description updated. Zero v2 packets exist, so this is a block swap,
+not a migration. The §2 checklist rewrite stays flip-bound, unchanged.
+
+**Contract-draft template (§5 item 5):** documents the new ratification
+block shape + the follow-up-commit rule; lands with the flip as
+planned.
+
+**flip-claims.md:** gets a revision pass BEFORE its arm review — at
+minimum FC-B1 (marks → manifest), FC-D2 (hash/append-only →
+recorded-commit + state-consistency), FC-C4 (append-only enforcement →
+latest-block equality + diff-review policy). The arm review runs on the
+revised file.
+
+### 7.6 Sequencing
+
+1. This amendment is ratified (human act — resolves the STOP).
+2. **Phase 0.1, one commit:** lint rewrite per §7.5 + template §1/§1a
+   block swap.
+3. flip-claims revision → arm review → the Phase-1 flip, as planned.
+
+The ch7-P2 aftermath thread (code findings + retroactive partial
+baseline) is independent of this amendment and proceeds in parallel.
