@@ -36,10 +36,13 @@ Packets (docs/v3/implementation/packets/*.md, README.md excluded):
       every table-defined lane id (reserved families excluded) is in
       the manifest. The table scan is intentionally narrow — it checks
       id existence in both directions and reads NOTHING else.
-  P6. The retired carrier may not linger: an inline [P:*] provenance
-      mark (outside fences) or a standalone {"provenance": ...} block
-      in a v2 packet is red — the manifest is the single home
-      (Amendment 1: two homes for one fact is the drift class).
+  P6. The withdrawn carrier may not REAPPEAR: an inline [P:*]
+      provenance mark (outside fences) or a standalone
+      {"provenance": ...} block in a v2 packet is red. The convention
+      was withdrawn at DESIGN TIME (Amendment 1) — it never went
+      live; the threat is generation drift reproducing it from
+      historical texts, and a reappearing mark would be a second,
+      dead provenance home a reader might trust (the drift class).
   P7. packet_metrics (at most one; DEEP schema when present): exact
       keysets at every level, D7 enums (prediction classes, found_at
       values, stops[].type against the canonical STOP registry),
@@ -139,10 +142,13 @@ LANE_DEF_RE = re.compile(r"^\|\s*([A-Z]{1,2})(\d+)\s*\|")
 MANIFEST_ID_RE = re.compile(r"^([A-Z]{1,2})(\d+)$")
 CONTRACT_REF_RE = re.compile(r"^contract:(ch\d+-[a-z0-9-]+)#(C\d+)$")
 ADR_STRICT_RE = re.compile(r"^ADR-(\d{3})$")
-# The WHOLE [P: family is retired (P6) — not just the three known
-# kinds: [P:typo] outside a fence is as much a lingering carrier as
-# [P:anchored …].
-RETIRED_MARK_RE = re.compile(r"\[P:")
+# The WHOLE [P: family is withdrawn (P6) — not just the three known
+# kinds: [P:typo] outside a fence is as much a reappearing carrier as
+# [P:anchored …]. "Withdrawn at design time", deliberately not
+# "retired": the convention never went live (zero packets used it);
+# what this guards against is generation drift re-emitting it from
+# the repo's historical texts.
+WITHDRAWN_MARK_RE = re.compile(r"\[P:")
 C_ROW_RE = re.compile(r"^\|\s*(C\d+)\s*\|")
 DRAFT_NAME_RE = re.compile(r"^(ch\d+)-([a-z0-9-]+)-contract\.md$")
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -593,17 +599,19 @@ def check_packet(
 
     prose = strip_fences(text)
 
-    # P6: the retired carrier may not linger.
-    retired_mark = RETIRED_MARK_RE.search(prose)
-    if retired_mark:
+    # P6: the withdrawn carrier may not reappear.
+    withdrawn_mark = WITHDRAWN_MARK_RE.search(prose)
+    if withdrawn_mark:
         checker.error(
-            f"{path.name}: inline provenance mark '{retired_mark.group(0)}…' — "
-            f"retired by Amendment 1; the packet_rows manifest is the single home"
+            f"{path.name}: inline provenance mark '{withdrawn_mark.group(0)}…' — "
+            f"withdrawn at design time (Amendment 1, never live); the "
+            f"packet_rows manifest is the single home"
         )
     if block_by_key(blocks, "provenance"):
         checker.error(
-            f"{path.name}: standalone provenance block — retired by Amendment 1; "
-            f"close-time counts live in packet_metrics, declaration in packet_rows"
+            f"{path.name}: standalone provenance block — withdrawn at design time "
+            f"(Amendment 1, never live); close-time counts live in packet_metrics, "
+            f"declaration in packet_rows"
         )
 
     tally = check_packet_rows(path.name, blocks, prose, drafts, adr_dir, checker)
@@ -1159,21 +1167,21 @@ def run_selftest() -> int:
     expect_green("fenced noise", errors)
     shared_packet.write_text(GREEN_PACKET, encoding="utf-8")
 
-    # ---- P6 retired carrier
+    # ---- P6 withdrawn carrier
     expect_red_packet(
-        "retired-inline-mark",
+        "withdrawn-inline-mark",
         GREEN_PACKET.replace("| O3 | c |", "| O3 | c [P:new-decision] |"),
-        "retired by Amendment 1",
+        "withdrawn at design time",
     )
     expect_red_packet(
-        "retired-provenance-block",
+        "withdrawn-provenance-block",
         GREEN_PACKET + '\n```json\n{"provenance": {"anchored": 1, "derived": 1, "new_decision": 1}}\n```\n',
         "standalone provenance block",
     )
     expect_red_packet(
-        "retired-mark-unknown-kind",
+        "withdrawn-mark-unknown-kind",
         GREEN_PACKET.replace("| O3 | c |", "| O3 | c [P:typo] |"),
-        "retired by Amendment 1",
+        "withdrawn at design time",
     )
 
     # ---- P7 metrics

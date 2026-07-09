@@ -756,3 +756,19 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   gate culture hunts: the code proving less than its stated claim —
   on the new carrier the claim registry (docstring) made the gap
   DECIDABLE by reading, which is how the reviewer found it
+- 2026-07-09 · process-v2 Phase 0.1 (vocabulary correction, USER
+  pattern-catch) · the P6 check stays (the user concurred after the
+  threat-model case: a lint cannot make a syntax "not exist" — prose
+  admits only silently-tolerated or loudly-rejected, and a
+  reappearing mark would be a second, dead provenance home a reader
+  might trust; the source is generation drift from the repo's
+  historical texts, not usage — the convention never went live). But
+  the USER caught a recurring LLM framing pattern in my wording:
+  narrating a DESIGN-PHASE catch with production-lifecycle vocabulary
+  ("retired") as if the construct had been live. Corrected on the
+  live surfaces: "withdrawn at design time (Amendment 1, never
+  live)" in the lint's P6 claim, messages, dim names, and template
+  §1; ratified/frozen texts stay as history. Rule of thumb minted:
+  never-live constructs get design-time wording, and a reappearance
+  guard names the REAL threat (generation drift), never a fictional
+  decommission

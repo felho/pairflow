@@ -98,9 +98,11 @@ packet commit's changed files against it):
 
 ## Row manifest (v2 — the D1 classification's machine face; Amendment 1)
 
-ONE machine block declares every canonical row's provenance — inline
-marks are retired (one home, no drift; the lint rejects a lingering
-`[P:*]` mark or a standalone counts block). Rules (lint-enforced):
+ONE machine block declares every canonical row's provenance. The
+inline-mark convention (`[P:*]`) was withdrawn at DESIGN TIME
+(Amendment 1) — it never went live; the lint rejects a reappearing
+mark or standalone counts block, because a second provenance home a
+reader might trust is the drift class. Rules (lint-enforced):
 
 - row ids unique, lane-grammar shaped, and **bidirectionally
   table-defined**: every manifest id is the FIRST cell of a table row
