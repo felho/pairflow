@@ -912,7 +912,7 @@ true — every absent field's reason lives in `baseline_note`.
       }
     ],
     "learned": "a write-side wide claim needs the WRITE path to enforce it, not the read path to defend it (emit-gate/read-gate symmetry)",
-    "baseline_note": "PARTIAL BASELINE, recorded retroactively 2026-07-10. rounds.review = 14 OLD-REGIME human-relayed two-arm rounds per the build record, not v2 panel rounds (a mid-flight retro counted 8; the build record is authoritative). prediction ABSENT: pre-registration did not exist at ch7 ratification and is never retro-filled (README section 5.5). provenance ABSENT: no packet_rows manifest exists pre-v2 — rows were never classed. stops empty: the STOP registry postdates this packet's flow. detector_misses increments on late discoveries (README section 5.5); the user's post-build code-review findings are an expected source."
+    "baseline_note": "PARTIAL BASELINE, recorded retroactively 2026-07-10. rounds.review = 14 OLD-REGIME human-relayed two-arm rounds per the build record, not v2 panel rounds (a mid-flight retro counted 8; the build record is authoritative). prediction ABSENT: pre-registration did not exist at ch7 ratification and is never retro-filled (README section 5.5). provenance ABSENT: no packet_rows manifest exists pre-v2 — rows were never classed. stops empty: the STOP registry postdates this packet's flow. detector_misses increments on late discoveries (README section 5.5). The user's announced post-build code-review findings (2026-07-09) proved NON-RECONSTRUCTIBLE (multi-session origin) and were set aside 2026-07-10 — the increment channel stays open for any future find, but none is pending."
   }
 }
 ```

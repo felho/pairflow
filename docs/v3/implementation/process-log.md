@@ -1204,3 +1204,16 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   delivered into a session — increment the block on arrival per the
   README late-discovery rule (process-log line + increment). The
   aftermath thread's remaining open half is exactly that delivery.
+- 2026-07-10 · ch 7 (P2 aftermath thread CLOSED) · the findings half
+  closes as SET-ASIDE by the user's call: the post-build code-review
+  findings announced 2026-07-09 came from several different sessions
+  and are not retroactively reconstructible — no pending fold; the
+  P2 baseline_note updated to say so (no dangling "expected source").
+  ROUTED boundary-review (revisit: the ch7 chapter-close log review):
+  the user's raised question — should cross-session review findings
+  get a durable storage/delivery convention so they cannot be lost
+  between sessions? Context for the revisit: the v2 regime already
+  closes the in-session loss channel (panel findings fold
+  immediately, routes are recorded in the packet), so the residual
+  gap is exactly USER-side findings born OUTSIDE the packet session
+  — today's loss is the concrete evidence the decision can weigh.
