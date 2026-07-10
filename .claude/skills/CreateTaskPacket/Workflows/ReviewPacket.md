@@ -280,8 +280,8 @@ phase-2 obligation (README §5.5).
 
 - **`refine`** — any fold-now finding: fold + re-run the panel
   (autonomous).
-- **`split`** — packets only, within the chapter: apply the §N.7
-  repartition with a visible report (inheritance: mode, predicted
+- **`split`** — packets only, within the chapter: apply the
+  Packets-and-flow-mode repartition with a visible report (inheritance: mode, predicted
   class, watchpoints; fresh watchdog per part; depth 1 — deeper is a
   STOP). A scope/sequencing-changing split is STOP
   `2:scope-changing-split`. **Split is NOT advisory:** when a

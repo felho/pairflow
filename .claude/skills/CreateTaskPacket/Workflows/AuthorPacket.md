@@ -23,14 +23,17 @@ Deterministic, from repo surfaces ONLY — no session memory:
    (the header's "Chapters present" range). No such row → the next
    step is proposing the NEXT chapter's ratification (a user verdict
    gates it) — STOP after presenting the proposal.
-2. **The next packet** = the first row of the open chapter's packet
-   table (§N.7) with NO packet file under
+2. **The next packet** = the first row of the open chapter's
+   Packets-and-flow-mode table (resolve it BY HEADING in the plan —
+   the section NUMBER wanders by chapter: 4.8/5.8/6.7/7.7) with NO
+   packet file under
    `docs/v3/implementation/packets/` — a packet file lands in git only
    WITH its build commit (the one-commit rule), so absence = not
    built. EDGE: an UNCOMMITTED packet file in a dirty worktree is a
    packet IN FLIGHT (pre-approval) — resume it, do not skip it.
 2b. **Draft-phase branch:** if ANY contract-draft the open chapter's
-   §N.7 table references is not yet ratified-or-later (file absent,
+   Packets-and-flow-mode table references is not yet
+   ratified-or-later (file absent,
    status `draft`, or `reopened`), the next step is the
    **DraftContract** round for THAT draft, not packet authoring —
    packets anchor only to ratified rows (README §4). The late-B STOP
@@ -263,7 +266,8 @@ ch7-P1 dangling-"flagged below" lesson).
 1. Run the **ReviewPacket** panel on the draft — the SINGLE engine;
    there is no lighter authoring-side mode. The loop is AUTONOMOUS:
    `refine` verdicts fold and re-run the panel; in-chapter `split`
-   verdicts apply the §N.7 repartition per step 2's inheritance and
+   verdicts apply the Packets-and-flow-mode repartition per step 2's
+   inheritance and
    depth-1 rules; watchdog 8 per target. Contract-reality issues
    become pre-approval flags, never silent acceptance.
 2. **Flag write-back loop:** if the self-review yields ANY flag,

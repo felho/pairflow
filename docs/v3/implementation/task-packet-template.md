@@ -241,10 +241,13 @@ Spec-writing is projection, not invention. In order:
    read the chapter's predicted class (plan §1.3 convention); run the
    sizing heuristics — substrate novelty, claim families, matrix
    families, dimension count, sibling-packet fanout — and the RISK
-   GATE below. The gate is SELF-CONTAINED (the v1 Complexity-Risk
-   gate carried in full; the one element not carried is the numeric
-   0|1|2 scoring wrapper — the axes and combinations below carry the
-   same decisions). Do not estimate risk from file count; estimate it
+   GATE below. The gate is SELF-CONTAINED — the v1 Complexity-Risk
+   gate carried with a CLOSED two-element exclusion list: the
+   numeric 0|1|2 scoring wrapper (the axes and combinations below
+   carry the same decisions) and the workflow/orchestration scan
+   role (the v3 kernel IS the orchestrator — that consumption is the
+   execution-consumer role; a separate role would double-count it).
+   Do not estimate risk from file count; estimate it
    from boundary spread, on SIX axes:
    - **authority movement** — the packet introduces or MOVES a
      canonical source of truth;
@@ -354,7 +357,8 @@ Spec-writing is projection, not invention. In order:
    autonomously per the verdict-action matrix; a scope-changing one
    is STOP 2). **Chapter-level use (the v1 "For Plans" tail):** the
    same gate informs the CHAPTER's packet cut at ratification (the
-   plan §N.7 table); no numeric score is persisted anywhere — the
+   chapter's Packets-and-flow-mode table in the plan); no numeric
+   score is persisted anywhere — the
    record is always the resulting split/dependency shape.
    **Draft-routing STOP:** a memo-born
    surface whose chapter contract-draft is not ratified-or-later

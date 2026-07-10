@@ -16,7 +16,7 @@ checkpoint, never delegated, never inferred).
 - `CHAPTER` + `SURFACE`: the draft names one memo-born surface —
   `docs/v3/implementation/contracts/ch<N>-<surface>-contract.md`. A
   chapter may carry several drafts (one per surface); the chapter's
-  draft set is what its plan §N.7 table references.
+  draft set is what its plan Packets-and-flow-mode table references.
 - `SEED_ROWS`: the new-decision row set handed over by AuthorPacket's
   B-case STOP (when the draft is born from a packet-routing verdict),
   or the chapter memo's decision list (when planned at ratification).

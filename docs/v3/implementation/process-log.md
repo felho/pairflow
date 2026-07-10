@@ -1124,3 +1124,22 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   (the gate's intended shape) instead of implying an exemption the
   rule's letter contradicts. The "substrate-resting row" coinage got
   its definition pointer (DraftContract §1.2).
+- 2026-07-10 · realignment round 5 (two arm reviews on round 4;
+  anchor addendum AL-16..AL-17) · the completeness claim's THIRD
+  falsification was positional, not substantive: AL-14's closed
+  exclusion list existed in the anchor while the CANON still said
+  "carried in full; the one element" — the drift the form-change was
+  built to catch had not reached the authority surface. Template §2
+  step 0's intro now carries the closed two-element list with both
+  reasons inline (numeric scoring wrapper; workflow/orchestration
+  scan role — the kernel IS the orchestrator, a separate role would
+  double-count execution-consumer). And a reference-class retirement
+  beyond the flagged instance (family-sweep-at-the-sink): "§N.7" is
+  not a convention — the packets table's number wanders by chapter
+  (4.8/5.8/6.7/7.7), so a literal resolution breaks exactly where
+  autonomy opens (ch8+, no human resolving the reference); all eight
+  live occurrences across six surfaces switched to the genre name
+  "the chapter's Packets-and-flow-mode table", with one
+  resolve-by-heading note at the operational resolver (AuthorPacket
+  step 2). Lesson: an anchor row is not DONE until the canon says it
+  — the anchor captures intent, the authority surface carries it.

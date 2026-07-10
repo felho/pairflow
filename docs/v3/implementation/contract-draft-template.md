@@ -33,7 +33,8 @@ from the packets, would this row still be true and decidable?"*
   inventory source-site columns, fixtures, acceptance counts.
 
 A chapter may have MORE than one draft (one per memo-born surface);
-the chapter's draft set = the drafts its plan §N.7 table references.
+the chapter's draft set = the drafts its plan Packets-and-flow-mode
+table references.
 
 ## 2. The template
 

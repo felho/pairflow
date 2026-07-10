@@ -76,7 +76,8 @@ proposed → ratified → committed.** No monolithic draft.
 
 Every plan step runs the same cycle. **Draft phase (before packet
 authoring, when the chapter carries a memo-born surface):** if ANY
-contract-draft the chapter's plan §N.7 table references is not yet
+contract-draft the chapter's plan Packets-and-flow-mode table
+references is not yet
 ratified-or-later, the DraftContract round runs FIRST — the chapter's
 undecided row-level contracts are decided once and ratified by the
 human (§5.5), and packets then anchor to the ratified rows
