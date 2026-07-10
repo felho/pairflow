@@ -1437,3 +1437,38 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   §6 DoD — full ci:local, map-row + PI-4 flip, boundary review incl.
   the CreateTaskPacket first-run verdict and this chapter's routed
   boundary-review items) is the next step, on the user's go.
+- 2026-07-10 · ch7-P4 process miss (the user's catch, post-build): the
+  pilot's flagged approve and the build ran BACK-TO-BACK in one turn —
+  the transitional cross-model arm (README §5.5: the USER's manual
+  external review plays phase 2 until doc-bubbles arrive) never got
+  its window; at P3 the approve verdict and the build sat in separate
+  turns/sessions, which is what left the arm room. The external
+  review ran POST-build and returned four findings — (1) the diag
+  handle close() contract gap (the healthy branch's close is
+  unguarded while the born-unavailable release already swallows: a
+  close-throw in a verb's finally could flip a successful outcome,
+  against REV-DIAG-FAILOPEN's character), (2) the F2 "--from stays
+  valid with --diag / both cursors" claim carries no driven resume
+  COMBINATION lane, (3) the F1 "--diag rejected on every other verb"
+  claim leans on the generic --nope regression, no representative
+  negative, (4) the acceptance REV-C line says "read-only" while
+  flag 2 declares the O1 file-creation side effect — wording. All
+  four folded as ch7-P4 aftermath (packet claim surface first, the
+  fix round follows). Boundary-review candidate: an explicit
+  "external arm ran / explicitly waived" checkpoint between a
+  flagged approve and build start.
+- 2026-07-10 · ch7-P4 aftermath round 2 (the external arm's second
+  pass): three packet-coherence findings on the round-1 aftermath
+  fold itself — the store-suite acceptance lane referenced files
+  missing from the Edited list / mutation_boundary; the Sizing/risk
+  closure-budget "N/A" went stale against the aftermath-born
+  shared-contract close extension; packet_metrics.discovered lacked
+  the P3-precedent baseline_note nuance. All three folded. LESSON:
+  the round-1 aftermath fold ran WITHOUT a reconciliation pass — the
+  panel discipline (every fold gets its lens-4 delta reconciliation)
+  applies to AFTERMATH folds too, and skipping it reproduced exactly
+  the propagation class the panel's reconciliation exists to catch.
+  This round closes with a reconciliation pass over both aftermath
+  deltas. Boundary-review candidate: state the aftermath-fold
+  reconciliation obligation explicitly in README §4 step 8 or the
+  skill's aftermath handling.
