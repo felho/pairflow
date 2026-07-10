@@ -11,6 +11,11 @@ import type { TemplateRef, WorkflowTemplate } from "../domain/index.js";
  * null at START = start-side failure (no state, no invented rejection
  * name); null at HANDLE = integrity error (the ref was pinned at
  * create) — the kernel throws.
+ *
+ * The load Promise MAY REJECT by type (ch8-P1 / draft C28): a PRESENT
+ * but invalid-or-unreadable definition rejects with the store's typed
+ * error — never conflated with the absent-`null` disposition. Callers
+ * propagate it; the mapping to an operator surface is the CLI's.
  */
 export interface DefinitionStore {
   load(ref: TemplateRef): Promise<WorkflowTemplate | null>;

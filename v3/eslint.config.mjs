@@ -151,6 +151,8 @@ export default tseslint.config(
       "src/floor/**",
       "src/diag/**",
       "src/cli/**",
+      // ch8-P1 (plan §8.7): the production bans extend to definition/.
+      "src/definition/**",
     ],
     ignores: ["src/**/*.test.ts", "src/cli/dev/**"],
     rules: {
@@ -315,7 +317,9 @@ export default tseslint.config(
   // above and keep their ADR-009 testkit exemption. kernel/ gets its
   // dynamic form inside the allowlist entry below.
   {
-    files: ["src/ports/**", "src/store/**", "src/ingress/**", "src/emit/**", "src/diag/**"],
+    // ch8-P1: src/definition/** joins the plain dynamic group — it
+    // claims no other no-restricted-syntax selectors (plan §8.7).
+    files: ["src/ports/**", "src/store/**", "src/ingress/**", "src/emit/**", "src/diag/**", "src/definition/**"],
     ignores: ["src/**/*.test.ts"],
     rules: {
       "no-restricted-syntax": ["error", ...dynamicTestkitDriftSelectors],
