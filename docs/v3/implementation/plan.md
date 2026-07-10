@@ -1729,7 +1729,7 @@ draft phase precedes P1 (README §4).
 
 | Packet | Content | Mode |
 |---|---|---|
-| ch8-P1 | the `definition/` module: YAML 1.2 parse + the fail-at-create validator (path-accumulated errors, full lane matrix) + the file-backed pinned `DefinitionStore` + the lint-boundary extension + the dependency landing | pre-approve (first-of-a-kind: file-format parser/validator class; first draft-anchored packet; the first runtime dependency); predicted: invention (memo-born; draft: `contracts/ch8-template-format-contract.md`, ratified — date recorded at draft close) |
+| ch8-P1 | the `definition/` module: YAML 1.2 parse + the fail-at-create validator (path-accumulated errors, full lane matrix) + the file-backed pinned `DefinitionStore` + the lint-boundary extension + the dependency landing | pre-approve (first-of-a-kind: file-format parser/validator class; first draft-anchored packet; the first runtime dependency); predicted: invention (memo-born; draft: `contracts/ch8-template-format-contract.md`, ratified 2026-07-10) |
 | ch8-P2 | the MD-1 migration: both template copies onto the canonical file, drift-pin retarget, CLI activation (`start --template` + dev `validate` per the draft), MD-1 retired with the old-status sweep | flag-free approve → autonomous build (measurement; the §5.5 fallbacks stand — any flag, STOP, or first-of-a-kind reclassification at authoring routes to the human); predicted: projection (source: the ratified draft rows + the P1 packet contract + the ch4/ch6 template copies) |
 
 Order: draft → P1 → P2. One packet = packet file + code + tests in

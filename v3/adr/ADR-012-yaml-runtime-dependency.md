@@ -1,13 +1,13 @@
 # ADR-012: the yaml package — the first v3 runtime dependency
 
-Status: proposed
+Status: accepted
 Date: 2026-07-10
 Links: supersedes — · amends ADR-002 · depends-on ADR-011 · related ADR-009
 
-Draft-lane ADR (README §4 step 5): rides the `ch8-template-format`
+Draft-lane ADR (README §4 step 5): rode the `ch8-template-format`
 contract-draft — `proposed` with the draft's content commit, flipped
-`accepted` by the draft's human ratification act (the ratification IS
-the acceptance).
+`accepted` by the draft's human ratification act of 2026-07-10 (the
+ratification IS the acceptance; recorded content commit 9ea630a0).
 
 ## Context
 

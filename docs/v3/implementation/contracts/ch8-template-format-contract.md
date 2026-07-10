@@ -1,7 +1,7 @@
 # ch8 — template-format contract
 
 ```json
-{"contract_draft": {"chapter": "ch8", "surface": "template-format", "status": "draft"}}
+{"contract_draft": {"chapter": "ch8", "surface": "template-format", "status": "ratified"}}
 ```
 
 ## Context (non-normative by declaration)
@@ -150,7 +150,16 @@ deliberately NOT contract rows):**
   surfaces at the `ingress.submit` await (a mechanical copy of the
   start-shape catch would miss it).
 
-**Draft metrics (template §5):** *(filled at ratification)*
+**Draft metrics (template §5, recorded at ratification 2026-07-10):**
+rounds to ratify: 8 full five-lens panel rounds + 5 external-arm
+rounds (3 user-run, 2 agent-invoked `codex exec`) + 4 close passes
+under the amended regime; new-decision rows: the whole surface is
+memo-born (38 rows; 2 carry an explicit in-row DECIDED-HERE marker —
+C29, C31; the per-row provenance manifest is a packet-side mechanism);
+post-ratification reopenings: 0. Ratification-act character (honest
+record): the human ratified on REVIEW-EVIDENCE TRUST — a skim, not a
+full parse ("elég sok szem látta"); the draft's legibility for a
+human ratifier is boundary-review material.
 
 ## Contract rows (every normative statement is a C-row)
 
@@ -201,5 +210,9 @@ deliberately NOT contract rows):**
 |---|---|---|
 
 ## Ratification history (empty at `draft` — blocks are appended by the lifecycle acts)
+
+```json
+{"ratification": {"date": "2026-07-10", "arms": ["claude-opus-4-8 five-lens panel (8 full rounds) + close passes", "external codex arm, user's default config (5 rounds: 3 user-run, 2 agent-invoked)"], "commit": "9ea630a03936d45309e53a33771a705b99e744cd"}}
+```
 
 ## Realized map (empty until chapter close)
