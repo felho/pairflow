@@ -6,6 +6,11 @@ written to satisfy exactly the AL rows below; reviewers diff the
 landed texts against this file. Ratification: the user's explicit
 approval of the landed alignment (their arms may review first).
 
+**RATIFIED 2026-07-10** — the user's explicit act ("approve") on the
+landed state at commit `a2673f6d` (rounds 1–6, AL-1..AL-20; the
+flagged decisions AL-11 and AL-19 stand approved). Process work STOPS
+here per drift point 3; the next act is the ch7-P3 pilot.
+
 ## The intent being restored
 
 v1's `ExecutePairflowPlan` delivered a WHOLE plan autonomously; its

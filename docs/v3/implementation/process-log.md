@@ -1166,3 +1166,21 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   disposition resolved-in-live-authority; the flagged files are
   FC-X2 history and stay unedited (the two arms' apparent conflict
   reconciled: the history rule wins the edit question).
+- 2026-07-10 · REALIGNMENT RATIFIED · the user's explicit "approve"
+  on the landed state at a2673f6d closes the autonomy-realignment
+  thread (anchor: autonomy-realignment.md, AL-1..AL-20 across six
+  review rounds; the two flagged adaptation decisions — AL-11
+  testkit-contract narrowing, AL-19 ch8+ heading convention — stand
+  approved). Series shape for the record: each round = anchor
+  addendum commit (capture intent first) + fold commit (satisfy
+  exactly those rows), the user's arms diffing the fold against the
+  addendum; finding classes converged content → fold-residue →
+  propagation/hygiene, the loop-until-dry signal. Durable mints
+  beyond the gate itself: the measurement rule (completeness claims
+  carry their scope + command output), closed exclusion lists over
+  "only X" claims, "an anchor row is not DONE until the canon says
+  it". PROCESS WORK STOPS HERE (drift point 3) — the next act is the
+  ch7-P3 pilot: the first packet through the v2 system,
+  human-approved (first-of-a-kind), plan §7.7 predictions
+  pre-registered. Parallel open thread: the ch7-P2 aftermath (user
+  code findings + the retroactive partial-baseline packet_metrics).
