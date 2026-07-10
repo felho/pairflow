@@ -211,3 +211,28 @@ risk gate may be dropped without a stated reason.
   pointer** (DraftContract §1.2 — a row resting on
   driver/OS/filesystem behavior carries an in-session probe result
   or a concrete cited source).
+
+## Addendum — round 5 (2026-07-10, two arm reviews on round 4)
+
+- **AL-16 — the closed exclusion list lands IN THE CANON:** template
+  §2 step 0's intro still said "carried in full; the one element not
+  carried is the numeric scoring wrapper" — falsified by AL-14's own
+  second exclusion. The intro now carries the CLOSED two-element
+  list with both reasons inline (numeric 0|1|2 wrapper — the axes
+  and combinations carry the same decisions; workflow/orchestration
+  scan role — the v3 kernel IS the orchestrator, that consumption is
+  the execution-consumer role, a separate role would double-count
+  it). The round-2 self-containment rule is what this satisfies: the
+  reader learns the deliberate omission and its reason FROM the
+  authority text, not from the anchor.
+- **AL-17 — the "§N.7" reference class is RETIRED on live surfaces
+  (the family swept at the sink, beyond the one flagged instance):**
+  the packets table's section number WANDERS by chapter (4.8 / 5.8 /
+  6.7 / 7.7 — it depends on how many sections the chapter has), so a
+  literal `§N.7` resolution breaks exactly where it matters most:
+  ch8+, where autonomy opens and the loop resolves the reference
+  without a human. All eight live occurrences (template,
+  contract-draft-template, README, ReviewPacket, DraftContract,
+  AuthorPacket ×3) switch to the GENRE name — "the chapter's
+  Packets-and-flow-mode table" — with one resolve-by-heading note at
+  the operational resolver (AuthorPacket step 2).
