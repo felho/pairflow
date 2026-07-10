@@ -76,7 +76,12 @@ Probe + contested-probe corollary; the strong-word inventories)*
    only, any, all, exactly once, fail-open, non-blocking, single
    owner, source of truth, by construction*. For each: is it PROVABLE
    on the actual substrate and by the named downstream proof? **Proof
-   means SOURCE-SIDE INVENTORY, not a plausibility judgment.**
+   means SOURCE-SIDE INVENTORY, not a plausibility judgment.** Judge
+   each seam against its OWN contract character (a fail-open
+   best-effort channel vs an authoritative fail-loud store) —
+   structural parity with a neighboring seam is NOT a frame (the
+   ch7-P4 close-contract miss: ten same-family lenses cleared an
+   unguarded release by main-store parity).
 2. **Code-path inventory** for *any/all/never/only* lanes: walk the
    seam's ACTUAL code paths (throw sites, branches) INCLUDING the
    transitive call graph — helpers carry their own throw sites — AND
@@ -288,8 +293,10 @@ revisit = human ratification at approve/boundary), `declined` (NO
 revisit BY DESIGN — a human-ratified standing decision whose home is
 the target's flags section: `declined — <reason>`). A fourth label,
 `approve-ratified`, is a decision-record MARKER, not an ownership
-route: it names a resolved STOP verdict whose ratification point IS
-the approve act (revisit: none — the approve ratified it). Findings, flags,
+route: it names a decision whose ratification point IS the approve
+act — a resolved STOP verdict OR a below-Case-B new-decision riding
+to a human approve (revisit: none — the approve ratified it;
+generalized at the ch7 boundary). Findings, flags,
 and routes stay EXPRESSIBLE in the severity ontology's language — the
 phase-2 obligation (README §5.5).
 
@@ -399,7 +406,7 @@ Skill source: installed registry | repo-local file read @ <path, commit, dirty?>
 Packet basis: sha256(<target file>) = <hash> @ HEAD <commit>, worktree: clean | dirty (<what>)
 Reconciled basis: <none | hash after reconciliation-verified bookkeeping folds — the two-hash model>
 Tier 0 (approve-time): <green | failures>
-Re-run mode: full | targeted (<lenses run>; skipped: <lens — proven-unaffected reason>) | reconciliation-only · escalation: <none | trigger fired> · models: <the ACTUAL model id per pass — recorded, never the rule restated>
+Re-run mode: full | targeted (<lenses run>; skipped: <lens — proven-unaffected reason>) | reconciliation-only · escalation: <none | trigger fired> · models: <the ACTUAL model id per pass, TRANSCRIPT-VERIFIED (the agent transcript's `model` field) — measured, never the launch parameter echoed (ch7 boundary: the launch call is not evidence)>
 Gate Coverage Matrix: <complete | missing/unknown cells listed>
 Lens reports: 1 substrate | 2 projection | 3 negatives | 4 mirror | 5 downstream — each: pass | findings | skipped(<reason>)
 Findings by type: <taxonomy-tagged list, considered_not_finding included, dispositions + routes>

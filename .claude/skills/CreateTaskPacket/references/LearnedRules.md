@@ -20,6 +20,9 @@ adopted or standing; WATCH items enter marked as such.
 | R-FIRST-STOP | The first packet of a new task class is pre-approve regardless of the chapter's ramp stage (first-of-a-kind stop). Flow mode is for classes with precedent. | ch5 ratification (flow-mode rule); log 2026-07-07 ch5 boundary |
 | R-WIDE-CLAIM | State claims WIDE — "no diagnostic or non-committed data can EVER enter this surface", not "trivially true because the store holds nothing else". The negatives derive from the wide statement. | plan §6.2 (ch6-P1); log 2026-07-07 ch4 aftermath |
 | R-STRUCTURE-SEMANTICS | When a surface splits malformed input from semantic failure (usage/2 vs mismatch/1), the structure-vs-semantics line is drawn in ONE place, and the boundary validator's depth matches the declared matrix row. | log 2026-07-08 ch6 aftermath 2 |
+| R-DELEGATION-CLOSURE | A claim that DELEGATES its definition ("P1-declared", "per ledger §X", "the canonical body") is expanded IN-PACKET — the delegated source's FULL rule set (field lists, presence iffs, enum domains) — with a stated PROOF BOUNDARY for rules the packet's own surface cannot decide. R-FIELD-LISTS' cross-artifact sibling. | AuthorPacket step 4.5; log 2026-07-08 ch7-P2 round 8; adopted at the ch7 boundary |
+| R-FLAGS-IN-PACKET | Every flag, narrowing, or decision point lives IN the packet's flags section — the pre-approval summary may only REFERENCE it; a flag living only in chat is a self-containment defect. | AuthorPacket step 8; log 2026-07-08 ch7-P1 (the dangling "flagged below"); adopted at the ch7 boundary |
+| R-CLAIM-FORM-PROBES | A mechanized guardrail's negative probes derive from the CLAIM's form dimensions (e.g. import FORMS: static / dynamic / re-export), never from the implemented rule's shape — R-CLAIM-NEGATIVES applied at the lint/tooling layer. | log 2026-07-10 ch7-P3 aftermath (the dynamic-import hole); adopted at the ch7 boundary |
 
 ## How a rule gets here
 
