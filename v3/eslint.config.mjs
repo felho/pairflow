@@ -15,6 +15,56 @@ const testClockMessage =
 const noRandomMessage =
   "Fixture convention (testkit/README.md): no randomness in tests/fixtures — inject a deterministic source.";
 
+// ch8-opening sweep (deferred fix, ch7 boundary review): every import ban
+// carries its DYNAMIC form. The declaration rules (no-restricted-imports)
+// check ImportDeclaration nodes only, so `await import("…")` was lint-green
+// against every ban except floor→diag (closed in the ch7-P3 aftermath —
+// that entry is the selector-form precedent: / = "/", because esquery
+// delimits attribute regexes with raw slashes). A NON-LITERAL source
+// (`import(expr)`) stays out of selector reach — the same
+// compromised-caller scope-out the floor rule recorded; the drift entry is
+// the one exception (it bans the ImportExpression node itself: under
+// import-type-only discipline no dynamic import is legal at all).
+// MERGE RULE: flat config REPLACES a rule id's whole config on a later
+// matching entry (never merges options), so every scope needing two
+// selector families gets ONE merged `no-restricted-syntax` entry; the
+// shared families live in these consts. The base no-clock/test-clock
+// entries below keep their own copies as defense in depth — for kernel,
+// domain, and testkit files they are shadowed by the merged entries.
+const noClockSyntaxSelectors = [
+  { selector: "NewExpression[callee.name='Date']", message: noClockMessage },
+  { selector: "CallExpression[callee.name='Date']", message: noClockMessage },
+];
+const testClockSyntaxSelectors = [
+  {
+    selector: "NewExpression[callee.name='Date'][arguments.length=0]",
+    message: testClockMessage,
+  },
+];
+const dynamicTestkitDriftSelectors = [
+  {
+    selector: "ImportExpression[source.value=/\\u002Ftestkit\\u002F/]",
+    message: "ADR-005: production modules never import testkit/ — dynamic import() included.",
+  },
+  {
+    selector: "ImportExpression[source.value=/\\u002Fdrift\\u002F/]",
+    message:
+      "ADR-007: production modules never import drift/ (test-only module) — dynamic import() included.",
+  },
+];
+const cliWriteBoundarySelectors = [
+  {
+    selector: "CallExpression[callee.property.name='commitTransition']",
+    message:
+      "ch6-P4a write boundary: CLI code never calls StorePort.commitTransition — ops go through ingress.submit.",
+  },
+  {
+    selector: "CallExpression[callee.property.name='createInstance']",
+    message:
+      "ch6-P4a write boundary: CLI code never calls StorePort.createInstance — births go through kernel.startInstance.",
+  },
+];
+
 export default tseslint.config(
   {
     ignores: ["node_modules/**", "eslint.config.mjs", "vitest.config.ts"],
@@ -60,13 +110,7 @@ export default tseslint.config(
         { object: "Math", property: "random", message: noRandomMessage },
         { object: "crypto", property: "randomUUID", message: noRandomMessage },
       ],
-      "no-restricted-syntax": [
-        "error",
-        {
-          selector: "NewExpression[callee.name='Date'][arguments.length=0]",
-          message: testClockMessage,
-        },
-      ],
+      "no-restricted-syntax": ["error", ...testClockSyntaxSelectors],
     },
   },
 
@@ -87,17 +131,15 @@ export default tseslint.config(
         { object: "Date", property: "now", message: noClockMessage },
         { object: "performance", property: "now", message: noClockMessage },
       ],
-      "no-restricted-syntax": [
-        "error",
-        { selector: "NewExpression[callee.name='Date']", message: noClockMessage },
-        { selector: "CallExpression[callee.name='Date']", message: noClockMessage },
-      ],
+      "no-restricted-syntax": ["error", ...noClockSyntaxSelectors],
     },
   },
 
   // ADR-005 + ADR-007: production modules never import testkit/ or drift/.
   // ADR-009: the NORMAL cli graph is production — the src/cli/dev/**
   // entrypoint is the ONE structural exemption (dev CLI boundary).
+  // The DYNAMIC form of this ban lives in the per-scope merged
+  // no-restricted-syntax entries below (ch8-opening sweep).
   {
     files: [
       "src/domain/**",
@@ -172,6 +214,9 @@ export default tseslint.config(
           message:
             "ch7-P3 floor→diag boundary: floor/ never value-imports diag/ — dynamic import() included; readers arrive injected (composition roots wire them).",
         },
+        // Merged (ch8-opening sweep): floor claims the rule id here, so the
+        // production-wide dynamic testkit/drift ban rides in the same entry.
+        ...dynamicTestkitDriftSelectors,
       ],
     },
   },
@@ -197,6 +242,17 @@ export default tseslint.config(
           ],
         },
       ],
+      // Dynamic form (ch8-opening sweep): a dynamic import() is ALWAYS a
+      // value import, so under import-type-only discipline none is legal —
+      // the ban is on the node itself (non-literal sources included).
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "ImportExpression",
+          message:
+            "ADR-007: non-test drift modules are static bookkeeping — dynamic import() is always a value import; none is legal here.",
+        },
+      ],
     },
   },
 
@@ -217,6 +273,23 @@ export default tseslint.config(
           ],
         },
       ],
+      // Merged (ch8-opening sweep): this entry claims the rule id for
+      // src/testkit/**, so the CHK-D-TESTCLOCK selector is repeated here
+      // alongside the dynamic form of the kernel/store ban.
+      "no-restricted-syntax": [
+        "error",
+        ...testClockSyntaxSelectors,
+        {
+          selector: "ImportExpression[source.value=/\\u002Fkernel\\u002F/]",
+          message:
+            "ADR-005: testkit never imports kernel/ or store/ — dynamic import() included.",
+        },
+        {
+          selector: "ImportExpression[source.value=/\\u002Fstore\\u002F/]",
+          message:
+            "ADR-005: testkit never imports kernel/ or store/ — dynamic import() included.",
+        },
+      ],
     },
   },
 
@@ -228,19 +301,38 @@ export default tseslint.config(
     files: ["src/cli/**"],
     ignores: ["src/**/*.test.ts"],
     rules: {
-      "no-restricted-syntax": [
-        "error",
-        {
-          selector: "CallExpression[callee.property.name='commitTransition']",
-          message:
-            "ch6-P4a write boundary: CLI code never calls StorePort.commitTransition — ops go through ingress.submit.",
-        },
-        {
-          selector: "CallExpression[callee.property.name='createInstance']",
-          message:
-            "ch6-P4a write boundary: CLI code never calls StorePort.createInstance — births go through kernel.startInstance.",
-        },
-      ],
+      "no-restricted-syntax": ["error", ...cliWriteBoundarySelectors],
+    },
+  },
+
+  // ch8-opening sweep: the dynamic testkit/drift ban for the remaining
+  // production scopes. Three groups, because flat config replaces a rule
+  // id's whole config per matching file (see the MERGE RULE note above):
+  // (1) scopes with no prior no-restricted-syntax claim get the plain
+  // dynamic ban; (2) domain/ repeats its no-clock selectors; (3) the
+  // NORMAL cli graph repeats the write boundary — src/cli/dev/** is
+  // ignored here, so dev files stay on the write-boundary-only entry
+  // above and keep their ADR-009 testkit exemption. kernel/ gets its
+  // dynamic form inside the allowlist entry below.
+  {
+    files: ["src/ports/**", "src/store/**", "src/ingress/**", "src/emit/**", "src/diag/**"],
+    ignores: ["src/**/*.test.ts"],
+    rules: {
+      "no-restricted-syntax": ["error", ...dynamicTestkitDriftSelectors],
+    },
+  },
+  {
+    files: ["src/domain/**"],
+    ignores: ["src/**/*.test.ts"],
+    rules: {
+      "no-restricted-syntax": ["error", ...noClockSyntaxSelectors, ...dynamicTestkitDriftSelectors],
+    },
+  },
+  {
+    files: ["src/cli/**"],
+    ignores: ["src/**/*.test.ts", "src/cli/dev/**"],
+    rules: {
+      "no-restricted-syntax": ["error", ...cliWriteBoundarySelectors, ...dynamicTestkitDriftSelectors],
     },
   },
 
@@ -267,6 +359,21 @@ export default tseslint.config(
                 "ADR-001: the port-parametric kernel imports domain/ and ports/ ONLY — everything else (other modules, node builtins, packages) arrives through ports.",
             },
           ],
+        },
+      ],
+      // Merged (ch8-opening sweep): the ALLOWLIST's dynamic form — same
+      // negated lookahead over the literal source (this subsumes the
+      // testkit/drift ban for kernel files, like its static twin) — plus
+      // the repeated CHK-D-NOCLOCK selectors this entry would otherwise
+      // clobber.
+      "no-restricted-syntax": [
+        "error",
+        ...noClockSyntaxSelectors,
+        {
+          selector:
+            "ImportExpression[source.value=/^(?!\\.\\u002F|\\.\\.\\u002Fdomain\\u002F|\\.\\.\\u002Fports\\u002F)/]",
+          message:
+            "ADR-001: the port-parametric kernel imports domain/ and ports/ ONLY — dynamic import() included; everything else arrives through ports.",
         },
       ],
     },
