@@ -1184,3 +1184,23 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   human-approved (first-of-a-kind), plan §7.7 predictions
   pre-registered. Parallel open thread: the ch7-P2 aftermath (user
   code findings + the retroactive partial-baseline packet_metrics).
+- 2026-07-10 · ch 7 (P2 retroactive partial-baseline metrics) · the
+  transition convention executed: the P2 packet gains its
+  packet_metrics block retroactively, template §1 FORM on a
+  pre-v2/grandfathered packet (the v2 marker machine block stays
+  intentionally absent — the block does NOT promote the packet).
+  Partial-baseline semantics: absent-with-reason over false-precision
+  — prediction ABSENT (pre-registration postdates ch7; never
+  retro-filled), provenance ABSENT (no manifest pre-v2), stops empty
+  (the registry postdates the flow); every absence's reason lives in
+  baseline_note, the only legal home. rounds.review = 14 per the
+  build record — the mid-flight "8" (the rounds-1–8 retro, quoted by
+  two later plans) was a snapshot, not the total: the packet's own
+  build-close record is the authoritative count. detector_misses
+  seeds with the one recorded escape (the emit-gate aftermath,
+  found_at code-review, why_missed: only the throwing type-lie was
+  driven; no lens demanded emit/read gate symmetry); the USER's
+  post-build code-review findings — announced 2026-07-09, never yet
+  delivered into a session — increment the block on arrival per the
+  README late-discovery rule (process-log line + increment). The
+  aftermath thread's remaining open half is exactly that delivery.

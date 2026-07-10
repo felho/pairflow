@@ -891,3 +891,28 @@ STRINGIFY-throwing lies; the write-side claim (file holds only
 projections) needed the emit path to enforce it, not just the read
 path to defend it — the same emit-gate/read-gate symmetry the R3 table
 already assumed.
+
+**Retroactive partial-baseline metrics (2026-07-10, the transition
+convention):** the block below follows the template §1 FORM; this
+packet stays pre-v2/grandfathered (the v2 marker machine block is
+intentionally absent), so the partial baseline records only what is
+true — every absent field's reason lives in `baseline_note`.
+
+```json
+{
+  "packet_metrics": {
+    "class": "operability",
+    "rounds": { "review": 14, "doc_refinement": 0, "implementation": 2 },
+    "stops": [],
+    "detector_misses": [
+      {
+        "found_at": "code-review",
+        "what": "emit allowlist-projected the body but did not gate the projection before the INSERT — a non-throwing JSON-serializable type-lie was written and poisoned every later read as read_failed, violating dimension 8b's write-side claim",
+        "why_missed": "the pre-approval rounds drove only the THROWING type-lie (BigInt -> stringify throws -> lost to the fence); 'the file holds only P1-declared projections' was proven read-side and assumed write-side — no lens demanded emit-gate/read-gate symmetry"
+      }
+    ],
+    "learned": "a write-side wide claim needs the WRITE path to enforce it, not the read path to defend it (emit-gate/read-gate symmetry)",
+    "baseline_note": "PARTIAL BASELINE, recorded retroactively 2026-07-10. rounds.review = 14 OLD-REGIME human-relayed two-arm rounds per the build record, not v2 panel rounds (a mid-flight retro counted 8; the build record is authoritative). prediction ABSENT: pre-registration did not exist at ch7 ratification and is never retro-filled (README section 5.5). provenance ABSENT: no packet_rows manifest exists pre-v2 — rows were never classed. stops empty: the STOP registry postdates this packet's flow. detector_misses increments on late discoveries (README section 5.5); the user's post-build code-review findings are an expected source."
+  }
+}
+```
