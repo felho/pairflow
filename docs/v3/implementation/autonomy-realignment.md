@@ -236,3 +236,48 @@ risk gate may be dropped without a stated reason.
   AuthorPacket ×3) switch to the GENRE name — "the chapter's
   Packets-and-flow-mode table" — with one resolve-by-heading note at
   the operational resolver (AuthorPacket step 2).
+
+## Addendum — round 6 (2026-07-10, two arm reviews on round 5)
+
+- **AL-18 — the plan's convention paragraph joins the genre-name
+  class; the round-5 sweep claim was ENUMERATION, falsified by
+  measurement:** "all eight live occurrences across six surfaces"
+  was counted from the edited-file list, not measured over the
+  defined live set — a full-scope grep found THREE more in
+  plan.md:107-116 (the predicted-class convention paragraph — the
+  highest-authority surface, and exactly the ch8+ zone where the
+  reference must resolve without a human). The paragraph's three
+  `§N.7` mentions switch to the genre name (propagation-class plan
+  edit: AL-17's naming decision applied — naming, not semantics —
+  with a visible in-paragraph alignment marker). Post-fold residue,
+  MEASURED (grep over docs/v3 + skills + AGENTS.md): zero on live
+  surfaces — the remaining hits are this anchor's own captured rows
+  (AL-14's round-4 text stays as history-of-intent; AL-17's
+  meta-mentions NAME the retired class), dated process-log entries,
+  and the FC-X2 history files (flip-claims, process-v2-design).
+- **AL-19 — the resolver hardens against heading variants (a
+  convention ADDITION, flagged for the user's veto like AL-11):**
+  legacy headings vary (ch4 "Packets — the convention's first live
+  use", ch5 "Packets and the flow mode", ch6/7 "Packets and flow
+  mode"), so the match rule becomes "the chapter section whose
+  heading STARTS WITH `Packets`" (AuthorPacket step 2), and the
+  plan's convention paragraph states the forward rule: from ch8
+  ratifications the section heading is exactly `Packets and flow
+  mode` — resolvers match the heading, never the number.
+- **AL-20 — the measurement rule is MINTED (the meta-remark's fourth
+  recurrence):** a completeness or sweep claim ("all N occurrences",
+  "the only element not carried") is admissible only WITH its
+  measurement — the defined scope and the command output that proves
+  it; enumeration from memory is not a measurement. Lands in README
+  §5.5's finding-policy block; binds panel reports and fold reports
+  alike.
+- **Arm-2's two flip-claims findings — no AL row, disposition only:**
+  their SUBSTANCE (P8 post-build is build-close, not approve-time;
+  clean excludes STOP-class findings) is already carried by the live
+  authority (README §4 step 8 "build-close tier-0", the §5.5 matrix's
+  "approve-time tier-0 gate green", ReviewPacket's "clean = ZERO
+  fold-now findings AND ZERO STOP-class findings"); the flagged files
+  are declared history (FC-X2 — flip-claims' own status banner says
+  "the landed texts are the authority"). The two arms' apparent
+  conflict reconciles as: arm-1's history rule wins the edit
+  question; arm-2's substance verified as already-landed.
