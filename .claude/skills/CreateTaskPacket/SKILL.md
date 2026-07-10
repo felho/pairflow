@@ -83,7 +83,8 @@ User: "jöhet a ch7 P1 packet" (chapter 7 already ratified)
 ```
 User: "folded the findings — run the panel again"
 → Invokes ReviewPacket on the edited packet file (fresh-context lenses
-  on the new bytes; a fold voids all prior clean rounds)
+  on the new bytes; a CONTENT fold voids all prior clean rounds —
+  a bookkeeping fold takes one reconciliation pass, ReviewPacket §5)
 → Reports tier-0 + Gate Coverage Matrix + per-lens results + verdict
 ```
 

@@ -319,14 +319,49 @@ mandatory threat-model judgment; `declined: out of threat model` is a
 live route. A completeness or sweep claim ("all N occurrences", "the
 only element not carried") is admissible only WITH its measurement —
 the defined scope and the command output that proves it; enumeration
-from memory is not a measurement. Routes exist ONLY for ownership
-misfit:
+from memory is not a measurement. Three routes exist for ownership
+misfit, plus `approve-ratified` — a decision-record MARKER (it
+routes nothing; it names WHERE a resolved STOP verdict was
+ratified):
 
 | Route | Home | Revisit |
 |---|---|---|
 | `boundary-review` | process-log line | the chapter DoD's mandatory log review |
 | `later-chapter` | proposed plan-map row | ratified by the human at approve/boundary |
 | `declined` | packet flag, `declined — <reason>` | none BY DESIGN — a human-ratified standing decision |
+| `approve-ratified` | packet flag — the dated STOP-verdict decision record | none — the approve act ratified it (the marker class named in the intro above; minted at the ch7-P3 pilot) |
+
+**Panel re-run scoping (adopted 2026-07-10 — the ch7-P3 pilot
+evaluation, ratified in-session as a blocking sustainability fix;
+the v1 `targeted_lane_review` discipline ported from
+ExecutePairflowPlan's Delegation Gates, ReviewSpec Hard Stop 8–11):**
+the panel has ONE review definition and SCOPED re-runs. First pass on
+a new target: FULL (all five lenses). After a **CONTENT fold**
+(canonical-row semantics, a lane set, a claim/dimension statement,
+or a manifest class changed) the default re-run is **TARGETED** —
+the lenses that found last round, the lenses whose surfaces the
+delta touched, plus lens 4 as reconciliation over the delta list —
+with MANDATORY escalation to full on: a manifest-class change, a
+scope/split change, a claim/matrix-STRUCTURE change, a
+STOP-resolution fold, or a skipped lens not PROVEN unaffected. A
+**BOOKKEEPING fold** (mirror lists, measurement transcription,
+cross-references, wording sync — zero canonical-content change)
+never voids a clean round and is verified by ONE reconciliation
+pass (a content hit reclassifies it; three consecutive non-clean
+reconciliation passes escalate to a targeted round, which counts
+toward the watchdog); bookkeeping findings batch
+into one fold, never restarting the loop one at a time. **Clean** =
+zero CONTENT fold-now findings AND zero STOP-class findings. The
+approve still requires one FULL clean round; after it, only
+reconciliation-verified bookkeeping folds may touch the bytes.
+**Model tiering:** every FULL round on an Opus-class model — the
+closing confirmatory full round included (FULL ⇒ Opus, regardless
+of expected outcome); targeted and reconciliation passes on a
+Sonnet-class model;
+Fable-class models are reserved for exceptional one-off planning at
+the user's explicit call — never business-as-usual packet review.
+The panel report records the re-run mode, skipped lenses with their
+proven-unaffected reasons, and any escalation trigger fired.
 
 **Phase-2 obligation:** findings, flags, and routes stay EXPRESSIBLE
 in the severity ontology's language

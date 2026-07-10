@@ -4,7 +4,10 @@ ONE review engine (process-v2 D4): a five-lens, fresh-context panel
 with a Gate Coverage Matrix and a single verdict set. The pre-v2
 dual-mode split (`self_review` / `pre_approval`) is retired — the loop
 invokes this same panel every round, and a standalone "review pls"
-invocation runs the same engine; there is no lighter mode. *(History:
+invocation runs the same engine. There is ONE review DEFINITION —
+re-run SCOPING (§5 below, adopted at the ch7-P3 pilot evaluation)
+narrows WHICH lenses re-run after a fold, never WHAT a lens checks:
+a lens that runs, runs its full duty list. *(History:
 v2's `split` / `refine` / `approve` adapts v1 ReviewSpec's
 `approve_task` / `refine_task` / `route_back_to_plan` /
 `block_not_ready`; the pre-v2 "ready for pre-approval" state name
@@ -53,7 +56,12 @@ Each lens runs as a FRESH-CONTEXT sub-agent (single model family is
 fine — model diversity is phase 2's job): the author's context NEVER
 scores its own bytes clean. Every lens report cites the target's
 packet-basis hash; a lens that did not run is `missing` in the matrix
-and blocks approve — silence is never coverage. The LearnedRules
+and blocks approve — silence is never coverage. In a TARGETED round
+(§5) a deliberately skipped lens is `skipped (proven unaffected:
+<reason>)` — a RESOLVED state, never `missing`; a lens with no
+recorded state at all remains `missing` and blocks. A `skipped`
+state never satisfies the approve gate: the approve's one FULL
+clean round runs ALL FIVE lenses. The LearnedRules
 registry (`references/LearnedRules.md`) is CONSUMED at the lens named
 per rule below. **The duty lists below are a FLOOR, never the
 review's definition** (the ch7-P1 twin-session lesson: a checklist
@@ -199,8 +207,10 @@ consistency; the ergonomics floor)*
 ### 2a) The Gate Coverage Matrix
 
 One row per lens duty, one column per target surface it applies to;
-every cell is `pass | finding | n/a (reason) | missing | unknown`.
-`missing` blocks approve. An `unknown` (a discovery state) blocks
+every cell is `pass | finding | n/a (reason) | skipped (proven
+unaffected — targeted rounds only, §5) | missing | unknown`.
+`missing` blocks approve; `skipped` is resolved for the ROUND but
+never for the approve gate (the full clean round runs all five). An `unknown` (a discovery state) blocks
 approve until INSPECTED — inspection converts it to a known
 present/absent-with-evidence state, which may THEN be routed per the
 D5 routes or split away; an uninspected `unknown` is NEVER routable
@@ -219,7 +229,11 @@ per TARGET KIND:
   scope (template §2 step 0's gate — its axes, scan, and
   single-packet decision with proof or split shape, PLUS that gate's
   conditional annexes when their material is present); the
-  collapsed-lane member inventories; the Mirrored Surface Map when
+  collapsed-lane member inventories; the **site × shape × phase
+  coverage grid** whenever the packet declares failure lanes over a
+  seam with PHASES (template §2's write-time discipline — trigger:
+  phased execution; otherwise a one-line N/A with evidence, the
+  Sizing/risk pattern); the Mirrored Surface Map when
   contract-dense.
 - **Drafts:** the form registry is tier-0-enforced
   (contract-draft-template §3) — this audit owns the SEMANTIC
@@ -267,18 +281,23 @@ sources reconciled explicitly, genuinely open choices escalate as
 STOPs. TOOLING findings get a mandatory threat-model judgment —
 `declined: out of threat model` is a live route.
 
-Routes exist ONLY for ownership misfit (README §5.5 carries the
+Three routes exist for ownership misfit (README §5.5 carries the
 canonical table): `boundary-review` (process-log line; revisit = the
 chapter DoD's log review), `later-chapter` (proposed plan-map row;
 revisit = human ratification at approve/boundary), `declined` (NO
 revisit BY DESIGN — a human-ratified standing decision whose home is
-the target's flags section: `declined — <reason>`). Findings, flags,
+the target's flags section: `declined — <reason>`). A fourth label,
+`approve-ratified`, is a decision-record MARKER, not an ownership
+route: it names a resolved STOP verdict whose ratification point IS
+the approve act (revisit: none — the approve ratified it). Findings, flags,
 and routes stay EXPRESSIBLE in the severity ontology's language — the
 phase-2 obligation (README §5.5).
 
 ### 4) Verdict
 
-- **`refine`** — any fold-now finding: fold + re-run the panel
+- **`refine`** — any fold-now finding: fold + re-run per the
+  fold-class scoping (§5) — targeted by default after a content
+  fold, one reconciliation pass after a bookkeeping fold
   (autonomous).
 - **`split`** — packets only, within the chapter: apply the
   Packets-and-flow-mode repartition with a visible report (inheritance: mode, predicted
@@ -292,16 +311,23 @@ phase-2 obligation (README §5.5).
   exists for).
 - **`approve`** — requires ALL of: every APPROVAL-TIME tier-0 gate
   green (step 0); ONE FULL clean panel round — **full** = all five
-  lenses ran as fresh-context sub-agents ON THE FINAL BYTES (each
-  report cites the packet-basis hash); **clean** = ZERO fold-now
-  findings AND ZERO STOP-class findings (non-STOP routed and
-  watchpoint items ride as flags/routes without voiding the round);
-  the coverage matrix complete with no `missing` and no unresolved
-  `unknown`. *Temporal:* any fold voids all prior clean rounds — a
-  clean round binds to its hash; approve-readiness is never assembled
-  from lens results of different revisions. *Hostile:* a narrow-delta
-  re-check does NOT count — the LAST round before approve is
-  full-panel on the final bytes. The approve's OWNER follows the
+  lenses ran as fresh-context sub-agents ON THE FINAL CONTENT BYTES
+  (each report cites the packet-basis hash; the two-hash model: the
+  full round binds its CONTENT hash, and any subsequent
+  reconciliation-verified bookkeeping fold produces the FINAL
+  RECONCILED hash — the report records both); **clean** = ZERO fold-now
+  CONTENT findings AND ZERO STOP-class findings (non-STOP routed and
+  watchpoint items ride as flags/routes without voiding the round;
+  bookkeeping items batch per §5); the coverage matrix complete with
+  no `missing` and no unresolved `unknown`. *Temporal:* any CONTENT
+  fold voids all prior clean rounds — a clean round binds to its
+  hash; a BOOKKEEPING fold (§5) does not void PROVIDED it carries a
+  clean reconciliation pass; approve-readiness is never assembled
+  from lens results of different revisions. *Hostile:* a
+  narrow-delta re-check never substitutes for the required full
+  round — after the full clean round, only reconciliation-verified
+  bookkeeping folds may touch the bytes before the approve; any
+  content fold voids and re-enters the loop. The approve's OWNER follows the
   README §5.5 matrix: a flag-free approve (zero new-decision manifest
   rows, zero approve-ratified routes, every approve-time tier-0 gate
   green, one clean full round) is AUTONOMOUS from ch8 on and proceeds
@@ -314,7 +340,56 @@ phase-2 obligation (README §5.5).
   reports; resolution is the human's.
 - **Watchdog: 8 panel rounds** — a safety cap, not a tuning lever;
   exhaustion → STOP `3:watchdog` with a diagnosis (churn composition →
-  split proposal vs draft proposal), never silent continuation.
+  split proposal vs draft proposal), never silent continuation. Full
+  and targeted rounds both count; reconciliation passes do not —
+  but THREE consecutive non-clean reconciliation passes escalate to
+  a targeted round (which counts): the cap covers silent
+  reconciliation churn too.
+
+### 5) Fold classes and re-run scoping
+
+Adopted 2026-07-10 at the ch7-P3 pilot evaluation; the v1
+`targeted_lane_review` discipline ported from ExecutePairflowPlan
+`references/Delegation-Gates.md`, ReviewSpec Hard Stop points 8–11.
+Canonical statement: README §5.5 (this section is its procedure
+mirror). The scoping governs COST, never the review definition.
+
+- **First pass on a new target: FULL panel** — all five lenses.
+- **Fold classes, decided per fold from the delta list:**
+  - **CONTENT fold** — a canonical row's semantics, a lane set, a
+    claim/dimension statement, or a manifest class changes. VOIDS
+    all prior clean rounds.
+  - **BOOKKEEPING fold** — mirror-list maintenance, measurement
+    transcription, cross-reference pointers, wording sync; ZERO
+    canonical-content change. Does NOT void a clean round.
+- **After a CONTENT fold the default is a TARGETED re-run:** (i) the
+  lenses that returned findings in the previous round, (ii) the
+  lenses whose covered surfaces the fold's delta touched, and (iii)
+  ALWAYS lens 4 as the final reconciliation, fed the delta list (the
+  fresh-eyes function — it also owns catching the author's own
+  fold-propagation misses; this IS AuthorPacket step 9.3's pass, one
+  mechanism). **Mandatory escalation to FULL** (the burden of proof
+  is on skipping): a manifest-class change (a new-decision row
+  minted or reclassified), a scope/split change, a claim- or
+  matrix-STRUCTURE change (a new lane family or dimension), a
+  STOP-resolution fold, or a skipped lens that cannot be PROVEN
+  unaffected by the delta.
+- **After a BOOKKEEPING fold:** ONE lens-4 reconciliation pass over
+  the delta list. A CONTENT hit reclassifies the fold (the void
+  applies). Bookkeeping findings from any round BATCH into one fold
+  and one reconciliation pass — they never restart the loop one at
+  a time.
+- **Model tiering (the Agent-launch discipline — never inherit the
+  session default silently):** every FULL round runs on an
+  OPUS-class model — the closing confirmatory full round INCLUDED
+  (FULL ⇒ Opus, regardless of expected outcome); targeted re-runs
+  and reconciliation passes run on a SONNET-class model; FABLE-class
+  models are reserved for exceptional one-off planning at the
+  user's explicit call — never business-as-usual packet review.
+- **The report records the mode** (see the Report block): full |
+  targeted | reconciliation-only, the lenses run, the skipped
+  lenses WITH their proven-unaffected reasons, and any escalation
+  trigger fired.
 
 ## Report
 
@@ -322,9 +397,11 @@ phase-2 obligation (README §5.5).
 Panel review: <TARGET_PATH>   (packet | draft)
 Skill source: installed registry | repo-local file read @ <path, commit, dirty?>
 Packet basis: sha256(<target file>) = <hash> @ HEAD <commit>, worktree: clean | dirty (<what>)
+Reconciled basis: <none | hash after reconciliation-verified bookkeeping folds — the two-hash model>
 Tier 0 (approve-time): <green | failures>
+Re-run mode: full | targeted (<lenses run>; skipped: <lens — proven-unaffected reason>) | reconciliation-only · escalation: <none | trigger fired> · models: <the ACTUAL model id per pass — recorded, never the rule restated>
 Gate Coverage Matrix: <complete | missing/unknown cells listed>
-Lens reports: 1 substrate | 2 projection | 3 negatives | 4 mirror | 5 downstream — each: pass | findings
+Lens reports: 1 substrate | 2 projection | 3 negatives | 4 mirror | 5 downstream — each: pass | findings | skipped(<reason>)
 Findings by type: <taxonomy-tagged list, considered_not_finding included, dispositions + routes>
 Verdict: approve | refine | split | STOP <member token>
 ```
@@ -333,10 +410,15 @@ The `Skill source` line exists because activation path and text
 freshness are separable — the report must make visible WHICH version
 of this workflow acted. The `Packet basis` line exists because a
 target under refine rounds is a MOVING target: a verdict binds ONLY
-the exact bytes the hash names; any later edit voids it.
+the exact bytes the hash names; any later CONTENT edit voids it. A
+BOOKKEEPING fold (§5) does not void, but MUST be recorded as a
+`Reconciled basis` hash beside the bound full-round hash, each fold
+carrying its clean reconciliation pass — an unrecorded byte change
+of ANY class voids.
 
 **Report validity gate:** the report is INVALID without its
-`Skill source`, `Packet basis`, `Gate Coverage Matrix`, and verdict
-lines — each filled or carrying an explicit one-line reason. A verdict
-delivered in commentary without the report block is a workflow defect
-to fix BEFORE handing back.
+`Skill source`, `Packet basis`, `Re-run mode` (with skipped-lens
+reasons and the ACTUAL models used), `Gate Coverage Matrix`, and
+verdict lines — each filled or carrying an explicit one-line reason.
+A verdict delivered in commentary without the report block is a
+workflow defect to fix BEFORE handing back.

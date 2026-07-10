@@ -1217,3 +1217,58 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   immediately, routes are recorded in the packet), so the residual
   gap is exactly USER-side findings born OUTSIDE the packet session
   — today's loss is the concrete evidence the decision can weigh.
+- 2026-07-10 · ch7-P3 pilot COST PROFILE (captured at the user's
+  sustainability stop): the packet reached its clean round in FIVE
+  full 5-lens panel rounds + one fresh-eyes propagation pass (26
+  fresh-context subagents, ~3.4M subagent tokens, ~1h wall-clock)
+  for ONE packet's authoring review. Value curve: round 1 caught the
+  2 STOPs + structural contract gaps (high); round 2 real but
+  smaller contract holes (medium); rounds 3-4 symmetry/mirror
+  residues incl. the author's own fold propagation miss (low);
+  round 5 pure confirmation, zero findings (~600K tokens). The cost
+  driver is the "any fold voids all prior rounds → full 5-lens
+  re-run" rule interacting with fix-all: one-clause mirror-sync
+  folds repeatedly forced full re-panels. The user declared the
+  mode unsustainable; evaluation held IN-SESSION before the pilot
+  approve — candidate remedies routed to the boundary review
+  (two-tier fold rule: mirror-only folds re-verified by ONE
+  propagation pass, canonical folds still void; a write-time
+  site×shape coverage-grid template section to front-load symmetry
+  findings; a "clean = zero CONTENT findings" definition with
+  bookkeeping batched; cheaper/narrower confirmation rounds).
+- 2026-07-10 · SUSTAINABILITY PACKAGE RATIFIED (the user's explicit
+  agreement, in-session — a blocking in-chapter process fix per
+  README §7's exception): (1) panel re-run scoping — the v1
+  targeted_lane_review discipline ported from ExecutePairflowPlan
+  Delegation-Gates ReviewSpec Hard Stop 8-11 (first pass full;
+  content folds → targeted re-run with mandatory full-escalation
+  triggers; bookkeeping folds → one reconciliation pass, no round
+  void; clean = zero CONTENT findings); (2) write-time
+  site×shape×phase coverage grid + combination-lane heuristic
+  (template §2); (3) model tiering — full/first-pass panels on
+  OPUS-class (the user: Fable-class is unaffordable for
+  business-as-usual via API, reserved for exceptional one-off
+  planning), targeted/reconciliation/confirm on SONNET-class;
+  (4) the approve-ratified route class joins the template §1 enum +
+  the README route table. Landed on: README §5.5, template §1+§2,
+  ReviewPacket.md §5 + report block, AuthorPacket.md step 9. The
+  "no lighter mode" sentence re-scoped (one review DEFINITION;
+  scoped re-runs are not a lighter mode) — the D4 decision
+  clarified, not reversed. First live subject: ch7-P4.
+- 2026-07-10 · the sustainability package took a cross-model arms
+  findings round PRE-COMMIT (the user's two arms, 8 consolidated
+  findings, all folded): the approve-ratified route re-seated as a
+  decision-record MARKER (the "ONLY for ownership misfit" intro was
+  falsified by its own table; ReviewPacket §3 mirror gained the
+  class); the two-hash model minted (full-round CONTENT hash +
+  Reconciled basis hash — "any later edit voids" scoped to content);
+  the coverage-matrix schema gained the skipped(proven-unaffected)
+  state (targeted rounds only, never satisfies the approve gate);
+  FULL ⇒ Opus pinned (the undefined "confirm pass" class removed —
+  the closing confirmatory full round is Opus-class); the grid got
+  its review-side anchor (Mandatory Output Audit packet list);
+  AuthorPacket 9.3(c) gained the content-hit EXIT; reconciliation
+  churn capped (3 non-clean passes → targeted round); the §5 heading
+  un-wrapped; the Re-run mode line joined the report validity gate
+  with ACTUAL model ids recorded. SKILL.md's stale void-example
+  fixed (CONTENT fold qualifier).

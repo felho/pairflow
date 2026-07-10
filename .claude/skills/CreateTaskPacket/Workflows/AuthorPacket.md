@@ -265,11 +265,16 @@ ch7-P1 dangling-"flagged below" lesson).
 
 ### 9) The panel loop, then the human decision points
 
-1. Run the **ReviewPacket** panel on the draft — the SINGLE engine;
-   there is no lighter authoring-side mode. The loop is AUTONOMOUS:
-   `refine` verdicts fold and re-run the panel; in-chapter `split`
-   verdicts apply the Packets-and-flow-mode repartition per step 2's
-   inheritance and
+1. Run the **ReviewPacket** panel on the draft — the SINGLE engine
+   (one review DEFINITION; ReviewPacket §5's fold-class scoping
+   decides which lenses re-run after a fold: targeted by default
+   after a CONTENT fold, one reconciliation pass after a BOOKKEEPING
+   fold, with mandatory full-escalation triggers; model tiering per
+   the same section — Opus-class full passes, Sonnet-class
+   targeted/reconciliation). The loop is AUTONOMOUS:
+   `refine` verdicts fold and re-run per that scoping; in-chapter
+   `split` verdicts apply the Packets-and-flow-mode repartition per
+   step 2's inheritance and
    depth-1 rules; watchdog 8 per target. Contract-reality issues
    become pre-approval flags, never silent acceptance.
 2. **Flag write-back loop:** if the self-review yields ANY flag,
@@ -285,7 +290,8 @@ ch7-P1 dangling-"flagged below" lesson).
    lesson: the port-boundary rule was applied to `definitions.load`
    only, and the next round found `loadInstance`/`findOp`/
    `commitTransition` still collapsed).
-3. **Fresh-eyes propagation check (after every fold round):** the
+3. **Fresh-eyes propagation check (after every fold round — this IS
+   ReviewPacket §5's reconciliation pass, one mechanism):** the
    author's post-fold context carries "I already fixed it" bias — a
    single LLM pass rarely lands ALL consequences of a logical change.
    Before presenting: (a) state each fold as a one-line DELTA ("the
@@ -295,7 +301,12 @@ ch7-P1 dangling-"flagged below" lesson).
    with no fold history; its sole task: find every statement
    inconsistent with the deltas (old conditions, un-updated mirrors,
    contradicted scalars/keysets); (c) fold its hits and repeat until
-   it returns clean. This is the self-healing half of the pair: the
+   it returns clean — with one EXIT: a CONTENT hit (canonical-row
+   semantics, a lane set, a claim statement, a manifest class)
+   reclassifies the fold per ReviewPacket §5 (the void applies and
+   the re-run is scoped there); only propagation/bookkeeping hits
+   iterate in this loop, and THREE consecutive non-clean passes
+   escalate to a targeted round. This is the self-healing half of the pair: the
    mirror map SHRINKS the propagation surface, the fresh pass VERIFIES
    the remainder (ch7-P1 rounds 4/6b/7 are the driving evidence —
    each was a propagation miss a fresh reader caught one round later).

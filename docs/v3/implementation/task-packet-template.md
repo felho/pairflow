@@ -144,9 +144,12 @@ reader might trust is the drift class. Rules (lint-enforced):
 <Every flag, narrowing, or decision point the summary will raise lives
 HERE in full — the summary may only reference it. Each flag carries a
 route:> `Route: fold-now | boundary-review | later-chapter |
-declined — <reason>` <(a `declined` route ALWAYS carries its stated
-reason: it is a human-ratified standing decision with no revisit by
-design — README §5.5)>
+approve-ratified | declined — <reason>` <(a `declined` route ALWAYS
+carries its stated reason: it is a human-ratified standing decision
+with no revisit by design — README §5.5; `approve-ratified` marks a
+STOP-verdict decision whose ratification point IS the approve act —
+the flag is the dated decision record, revisit: none, the approve
+ratified it; minted at the ch7-P3 pilot)>
 
 ## Acceptance
 - Contract tests: <CT-* ids this packet must turn green>
@@ -410,9 +413,33 @@ Spec-writing is projection, not invention. In order:
     refine and in-chapter split iterate AUTONOMOUSLY; every STOP,
     every flag-bearing approve, and the ch7-pilot/first-of-a-kind
     approves are the human's; a flag-free approve is AUTONOMOUS from
-    ch8 on and proceeds to build. The old
+    ch8 on and proceeds to build. Re-run scoping and model tiering
+    per README §5.5's panel re-run paragraph (first pass full on an
+    Opus-class model; content folds → targeted re-run; bookkeeping
+    folds → one reconciliation pass; Sonnet-class for
+    targeted/reconciliation). The old
     content-half/ergonomic-half rubric is retired: its content checks
     live in lens 2, its ergonomics in lenses 4–5.
+
+Write-time coverage disciplines (adopted 2026-07-10 — the ch7-P3
+pilot evaluation; they FRONT-LOAD what the panel otherwise discovers
+lane-by-lane across rounds):
+
+- **The site × shape × phase coverage grid.** When a packet declares
+  failure lanes over a seam whose execution has PHASES (normal
+  rounds vs a stop/drain path; pre- vs post-commit), the packet
+  writes the FULL grid ONCE at authoring — every awaited site ×
+  every failure shape (rejection, null/empty return, synchronous
+  throw where a catch exists, domain error) × every phase — and
+  every cell is either a driven lane id or an explicit rule-out
+  with its reason. A phase change MINTS cells (the ch7-P2 flag-8(b)
+  lesson); discovering them one panel round at a time is the cost
+  pattern the ch7-P3 pilot measured.
+- **The combination-lane heuristic.** A precedence or ordering claim
+  ("X takes precedence over Y", "A fires before B") is driven by a
+  COMBINATION lane staging both conditions at once — isolated lanes
+  cannot falsify a reordered implementation (the ch7-P3 round-3 E3
+  lesson).
 
 ## 3. Standing review rules (the `REV-*` registry)
 
