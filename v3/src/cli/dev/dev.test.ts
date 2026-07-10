@@ -1,11 +1,13 @@
 import { execFile } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { openDiagStore } from "../../diag/index.js";
+import type { DiagnosticEvent, DiagnosticEventBody } from "../../ports/diagnostics.js";
 import { openStore } from "../../store/index.js";
 import { createControlledClock, createScriptedTailWait } from "../../testkit/index.js";
 import type { CliErrorDoc } from "../contract.js";
@@ -36,10 +38,15 @@ interface Run {
   stderr: string[];
 }
 
-function testDeps(): CliDeps {
+interface DevTestDepsOptions {
+  openDiagStore?: CliDeps["openDiagStore"];
+}
+
+function testDeps(options: DevTestDepsOptions = {}): CliDeps {
   let ids = 0;
   return {
     openStore: (path, time) => openStore(path, time),
+    openDiagStore: options.openDiagStore ?? ((path, time) => openDiagStore(path, time)),
     time: createControlledClock(1_000),
     instanceIdSource: () => {
       ids += 1;
@@ -49,6 +56,20 @@ function testDeps(): CliDeps {
     tailWait: () => createScriptedTailWait([]).wait,
     env: {},
   };
+}
+
+/** The derived diag-DB sibling (packet ch7-P4, C1). */
+function diagPathOf(db: string): string {
+  return `${db}.diag.sqlite`;
+}
+
+/** Stages R3-valid bodies into the REAL diag store on the derived path. */
+function stageDiagEvents(db: string, bodies: readonly DiagnosticEventBody[]): void {
+  const handle = openDiagStore(diagPathOf(db), createControlledClock(2_000));
+  for (const body of bodies) {
+    handle.sink.emit(body);
+  }
+  handle.close();
 }
 
 async function runDev(argv: readonly string[], deps: CliDeps): Promise<Run> {
@@ -149,12 +170,41 @@ describe("dev cli — bundle --passthrough (REV-BUNDLE-DEFAULT-POLICY closure)",
     assertError(await runDev(["bundle", "ghost", "--db", db], testDeps()), "not_found", EXIT.notFound);
   });
 
-  it("dev bundle: interim diag wiring (ch7-P3, lane X1) — rejectedInputs = unavailable(open_failed) until P4 wires the store", async () => {
+  it("dev bundle on the WIRED channel (ch7-P4 V4/C5/M10): known-empty → rejected row → unavailable on corrupt, exit 0 throughout", async () => {
     const { db, id } = await seedDb();
-    const bundle = await runDev(["bundle", id, "--db", db], testDeps());
-    expect(bundle.code).toBe(EXIT.ok);
-    const doc = JSON.parse(bundle.stdout[0] ?? "") as { rejectedInputs: unknown };
-    expect(doc.rejectedInputs).toEqual({ status: "unavailable", reason: "open_failed" });
+
+    // C5: the wired channel's empty store is KNOWN-EMPTY (the X1
+    // interim unavailable(open_failed) state ceased to exist at P4).
+    const fresh = await runDev(["bundle", id, "--db", db], testDeps());
+    expect(fresh.code).toBe(EXIT.ok);
+    expect((JSON.parse(fresh.stdout[0] ?? "") as { rejectedInputs: unknown }).rejectedInputs).toEqual({
+      status: "present",
+      rows: [],
+    });
+
+    // A real rejected submit through the NORMAL cli lands in the store.
+    const reject = await runCli(
+      ["submit", "--db", db, "--instance", id, "--type", "NOPE", "--expected-version", "2"],
+      testDeps(),
+      { out: () => undefined, err: () => undefined },
+    );
+    expect(reject).toBe(EXIT.notFound);
+    const withRow = await runDev(["bundle", id, "--db", db], testDeps());
+    const rows = (JSON.parse(withRow.stdout[0] ?? "") as {
+      rejectedInputs: { status: string; rows: { kind: string }[] };
+    }).rejectedInputs;
+    expect(rows.status).toBe("present");
+    expect(rows.rows).toHaveLength(1);
+    expect(rows.rows[0]?.kind).toBe("rejected");
+
+    // M10: corrupt diag → stated gap, the bundle itself SUCCEEDS.
+    writeFileSync(diagPathOf(db), "garbage-not-a-database", "utf8");
+    const corrupt = await runDev(["bundle", id, "--db", db], testDeps());
+    expect(corrupt.code).toBe(EXIT.ok);
+    expect((JSON.parse(corrupt.stdout[0] ?? "") as { rejectedInputs: unknown }).rejectedInputs).toEqual({
+      status: "unavailable",
+      reason: "open_failed",
+    });
   });
 });
 
@@ -368,6 +418,191 @@ describe("dev cli — replay (hermetic golden-trace diagnostics)", () => {
   });
 });
 
+describe("dev cli — the diag verb: the global cursor dump (packet ch7-P4: V3/F3/F4/M2/M9)", () => {
+  const staged: readonly DiagnosticEventBody[] = [
+    {
+      source: "kernel",
+      kind: "internal_failure",
+      instanceId: "inst-a",
+      error: { name: "BoomError", message: "boom detail with context" },
+    },
+    // Unattributed (R3: not_plain_object forbids ALL attribution) — the
+    // dump is the ONLY surface where this row is reachable (§7.5).
+    { source: "ingress", kind: "rejected", reason: "invalid_shape", detail: "not_plain_object" },
+    {
+      source: "kernel",
+      kind: "rejected",
+      reason: "unknown_instance",
+      instanceId: "inst-b",
+      opId: "op-1",
+      actorId: "actor-1",
+      type: "PASS",
+    },
+  ];
+
+  it("V3: one JSON array — FULL events (error.message intact), unattributed VISIBLE, ordinal order; no main store opened (F4)", async () => {
+    const db = join(tempDir(), "store.db");
+    stageDiagEvents(db, staged);
+
+    const result = await runDev(["diag", "--db", db], testDeps());
+    expect(result.code).toBe(EXIT.ok);
+    expect(result.stderr).toEqual([]);
+    expect(result.stdout).toHaveLength(1);
+    const rows = JSON.parse(result.stdout[0] ?? "") as DiagnosticEvent[];
+    expect(rows.map((r) => r.ordinal)).toEqual([1, 2, 3]);
+    expect(rows[0]?.error).toEqual({ name: "BoomError", message: "boom detail with context" });
+    expect(rows[1]?.instanceId).toBeUndefined();
+    expect(rows[1]?.detail).toBe("not_plain_object");
+    // F4: the MAIN store was never opened — no store.db file appears.
+    expect(existsSync(db)).toBe(false);
+  });
+
+  it("F3/M7: --after skips delivered ordinals; a bad --after is usage 2 with the keyset doc", async () => {
+    const db = join(tempDir(), "store.db");
+    stageDiagEvents(db, staged);
+
+    const after = await runDev(["diag", "--db", db, "--after", "1"], testDeps());
+    expect(after.code).toBe(EXIT.ok);
+    const rows = JSON.parse(after.stdout[0] ?? "") as DiagnosticEvent[];
+    expect(rows.map((r) => r.ordinal)).toEqual([2, 3]);
+
+    const bad = await runDev(["diag", "--db", db, "--after", "1.5"], testDeps());
+    const error = assertError(bad, "usage", EXIT.usage);
+    expect(Object.keys(error).sort()).toEqual(
+      expect.arrayContaining(["class", "message", "name"]),
+    );
+    expect(bad.stdout).toEqual([]);
+  });
+
+  it("M9: a fresh derived path is KNOWN-EMPTY — [] at exit 0 (and the O1 open initializes the file, flag 2)", async () => {
+    const db = join(tempDir(), "store.db");
+    const result = await runDev(["diag", "--db", db], testDeps());
+    expect(result.code).toBe(EXIT.ok);
+    expect(JSON.parse(result.stdout[0] ?? "")).toEqual([]);
+    // Flag 2, stated: the read verb's open CREATED the diag file (O1).
+    expect(existsSync(diagPathOf(db))).toBe(true);
+  });
+
+  it("M2: a corrupt diag store is LOUD — internal / 1, name + details.reason; missing db stays the inherited usage lane", async () => {
+    const db = join(tempDir(), "store.db");
+    writeFileSync(diagPathOf(db), "garbage-not-a-database", "utf8");
+
+    const result = await runDev(["diag", "--db", db], testDeps());
+    const error = assertError(result, "internal", EXIT.internal);
+    expect(result.stdout).toEqual([]);
+    expect(error.name).toBe("DiagUnavailableError");
+    expect(error.details).toEqual({ reason: "open_failed" });
+
+    assertError(await runDev(["diag"], testDeps()), "usage", EXIT.usage);
+  });
+
+  it("dimension 6 recourse (the DUMP face, plan §7.4 literal): a post-close rejected submit is in the dump, NOT in the closed stream", async () => {
+    const db = join(tempDir(), "store.db");
+    const deps = testDeps();
+    const outs: string[] = [];
+    const sink = { out: (l: string) => outs.push(l), err: () => undefined };
+    expect(await runCli(["start", "--db", db, "--task", "t"], deps, sink)).toBe(EXIT.ok);
+    const id = (JSON.parse(outs[0] ?? "") as { instanceId: string }).instanceId;
+    expect(
+      await runCli(
+        ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "1", "--payload", '{"ref":"d"}'],
+        deps,
+        sink,
+      ),
+    ).toBe(EXIT.ok);
+    expect(
+      await runCli(
+        ["submit", "--db", db, "--instance", id, "--type", "CONVERGED", "--expected-version", "2"],
+        deps,
+        sink,
+      ),
+    ).toBe(EXIT.ok);
+
+    // The tail closes at the committed terminal (already-terminal run).
+    const tailOut: string[] = [];
+    expect(
+      await runCli(["tail", id, "--db", db, "--diag"], testDeps(), {
+        out: (l) => tailOut.push(l),
+        err: () => undefined,
+      }),
+    ).toBe(EXIT.ok);
+    const closedDiagRows = tailOut.filter(
+      (line) => (JSON.parse(line) as { lane: string }).lane === "diag",
+    );
+    expect(closedDiagRows).toEqual([]);
+
+    // Post-close: a rejected submit against the DONE instance.
+    expect(
+      await runCli(
+        ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "3"],
+        testDeps(),
+        { out: () => undefined, err: () => undefined },
+      ),
+    ).toBe(EXIT.notFound);
+
+    // The query surface is the recourse: the dump shows it.
+    const dump = await runDev(["diag", "--db", db], testDeps());
+    expect(dump.code).toBe(EXIT.ok);
+    const rows = JSON.parse(dump.stdout[0] ?? "") as DiagnosticEvent[];
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.kind).toBe("rejected");
+    expect(rows[0]?.instanceId).toBe(id);
+  });
+});
+
+describe("dev cli — wiring negatives (packet ch7-P4: C4/M11)", () => {
+  it("C4: replay is hermetic — ZERO openDiagStore calls, no diag file", async () => {
+    let opens = 0;
+    const deps = testDeps({
+      openDiagStore: (path, time) => {
+        opens += 1;
+        return openDiagStore(path, time);
+      },
+    });
+    const file = writeJson("green-c4.json", {
+      name: "c4 hermetic",
+      steps: [
+        { kind: "start", instanceId: "r1", task: "t", expect: { currentStep: "implement", version: 1 } },
+        {
+          kind: "emit",
+          opId: "a1",
+          type: "PASS",
+          actorId: "codex",
+          expectedVersion: 1,
+          payload: { ref: "d" },
+          expect: { kind: "committed", version: 2 },
+        },
+      ],
+      finalTranscript: [[1, "a1"]],
+      finalState: { currentStep: "review", round: 1, status: "RUNNING", version: 2 },
+    });
+    const result = await runDev(["replay", "--file", file], deps);
+    expect(result.code).toBe(EXIT.ok);
+    expect(opens).toBe(0);
+    expect(existsSync(":memory:.diag.sqlite")).toBe(false);
+  });
+
+  it("M11: inject outcomes are byte-identical under a corrupt diag store (the sink swallows)", async () => {
+    const seedTwo = async (): Promise<{ db: string; id: string }> => {
+      const { db, id } = await seedDb();
+      return { db, id };
+    };
+    const healthy = await seedTwo();
+    const corrupt = await seedTwo();
+    rmSync(diagPathOf(corrupt.db), { force: true });
+    writeFileSync(diagPathOf(corrupt.db), "garbage-not-a-database", "utf8");
+
+    const file = writeJson("m11-steps.json", {
+      steps: [{ type: "PASS", expectedVersion: 2, payload: { ref: "d2" } }],
+    });
+    const h = await runDev(["inject", "--instance", healthy.id, "--file", file, "--db", healthy.db], testDeps());
+    const c = await runDev(["inject", "--instance", corrupt.id, "--file", file, "--db", corrupt.db], testDeps());
+    expect(c.code).toBe(h.code);
+    expect(c.stdout).toEqual(h.stdout);
+    expect(c.stderr).toEqual(h.stderr);
+  });
+});
+
 describe("dev cli — last-mile smoke: the SHIPPED dev entrypoint", () => {
   it("bundle --passthrough through the real cli/dev/main.ts process", { timeout: 30_000 }, async () => {
     const { db, id } = await seedDb();
@@ -378,5 +613,24 @@ describe("dev cli — last-mile smoke: the SHIPPED dev entrypoint", () => {
     const bundle = JSON.parse(result.stdout.trim()) as { policy: string };
     expect(bundle.policy).toBe("dev-passthrough");
     expect(result.stdout).toContain(MARKER);
+  });
+
+  it("diag dump through the real cli/dev/main.ts process (the derived config end-to-end)", { timeout: 30_000 }, async () => {
+    const db = join(tempDir(), "store.db");
+    stageDiagEvents(db, [
+      {
+        source: "kernel",
+        kind: "internal_failure",
+        instanceId: "inst-smoke",
+        error: { name: "SmokeError", message: "smoke detail" },
+      },
+    ]);
+    const tsxBin = join(process.cwd(), "..", "node_modules", ".bin", "tsx");
+    const devMain = join(process.cwd(), "src", "cli", "dev", "main.ts");
+
+    const result = await execFileAsync(tsxBin, [devMain, "diag", "--db", db]);
+    const rows = JSON.parse(result.stdout.trim()) as DiagnosticEvent[];
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.error?.name).toBe("SmokeError");
   });
 });

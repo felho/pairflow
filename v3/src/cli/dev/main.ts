@@ -16,22 +16,25 @@ import {
   dispatch,
   flagString,
   notFound,
+  parseNonNegativeSafeInt,
   requireInstanceId,
   usage,
-  withStore,
+  withDiagStore,
+  withStoreAndDiag,
 } from "../common.js";
 import { CliError, EXIT } from "../contract.js";
 import type { CliDeps } from "../runtime.js";
 import { productionDeps } from "../runtime.js";
 import { builtinDefinitionStore, builtinTemplate } from "../templates.js";
-import { noopDiagnosticsSink, unavailableDiagnosticsReader } from "../../diag/index.js";
+import { DiagUnavailableError, noopDiagnosticsSink } from "../../diag/index.js";
 
 /**
  * The DEV entrypoint (plan §6.5, packet ch6-P4b; ADR-009 dev CLI
  * boundary): the ONE graph that may import the testkit. Verbs:
- * bundle [--passthrough] · inject · replay. Shares the dispatch shell,
- * the channel rule, and the error-doc contract with the normal CLI
- * (cli/common.ts) — the contracts cannot fork.
+ * bundle [--passthrough] · inject · replay · diag (the global cursor
+ * dump — packet ch7-P4). Shares the dispatch shell, the channel rule,
+ * and the error-doc contract with the normal CLI (cli/common.ts) —
+ * the contracts cannot fork.
  *
  * Dev runtime config matrix: bundle and inject inherit the P4a config
  * contract in full (--db > PAIRFLOW_V3_DB; missing = usage 2;
@@ -43,13 +46,13 @@ import { noopDiagnosticsSink, unavailableDiagnosticsReader } from "../../diag/in
 async function verbDevBundle(ctx: VerbContext): Promise<number> {
   const id = requireInstanceId(ctx);
   const passthrough = ctx.values["passthrough"] === true;
-  return withStore(ctx, async (handle) => {
-    // Interim diag wiring (ch7-P3, lane X1): the unavailable reader
-    // rides until ch7-P4 wires the store on the derived config.
+  return withStoreAndDiag(ctx, async (handle, diag) => {
+    // The store-backed reader on the derived path (ch7-P4, V4) — the
+    // ch7-P3 interim reader retired with this wiring.
     const exporter = createDebugBundleExporter(
       handle.store,
       passthrough ? devPassthroughRedactionPolicy : redactPayloadsPolicy,
-      unavailableDiagnosticsReader,
+      diag.reader,
     );
     const bundle = await exporter.exportDebugBundle(id);
     if (bundle === null) {
@@ -200,15 +203,17 @@ async function verbInject(ctx: VerbContext): Promise<number> {
     throw usage("MissingInstance", "--instance <id> is required");
   }
   const steps = validateInjectFile(await readJsonFile(ctx, "file"));
-  return withStore(ctx, async (handle) => {
+  return withStoreAndDiag(ctx, async (handle, diag) => {
+    // V5 (ch7-P4): the store-backed sink on the derived path, BARE
+    // (REV-DIAG-FAILOPEN) — inject stages through the real channel.
     const kernel = createKernel({
       store: handle.store,
       definitions: builtinDefinitionStore(),
       time: ctx.deps.time,
       digest: deriveEmitDigest,
-      diag: noopDiagnosticsSink,
+      diag: diag.sink,
     });
-    const ingress = createIngress({ kernel, diag: noopDiagnosticsSink });
+    const ingress = createIngress({ kernel, diag: diag.sink });
     for (const step of steps) {
       const opId =
         step.opId ??
@@ -442,16 +447,47 @@ async function verbReplay(ctx: VerbContext): Promise<number> {
   }
 }
 
+// ── diag: the global cursor dump (packet ch7-P4, V3/F3/F4) ───────────
+
+/**
+ * The ONLY surface for unattributed rows (plan §7.5). A bounded
+ * one-shot read → ONE JSON array of FULL read-face events
+ * (`error.message` included — a LOCAL surface, §7.4). Fail-LOUD (M2):
+ * an unavailable/corrupt diag store is one stderr doc at exit 1, never
+ * a silent `[]`; known-empty IS `[]` (M9). The MAIN store is never
+ * opened (F4) — the path derivation is textual.
+ */
+async function verbDiag(ctx: VerbContext): Promise<number> {
+  const after = parseNonNegativeSafeInt(flagString(ctx, "after") ?? "0", "--after");
+  return withDiagStore(ctx, async (diag) => {
+    try {
+      const rows = await diag.reader.getGlobalDiagnostics(after);
+      ctx.sinks.out(JSON.stringify(rows));
+      return EXIT.ok;
+    } catch (error) {
+      if (error instanceof DiagUnavailableError) {
+        // M2: fail-LOUD with the enumerated token in details (§7.3).
+        throw new CliError("internal", "DiagUnavailableError", error.message, {
+          reason: error.reason,
+        });
+      }
+      throw error;
+    }
+  });
+}
+
 const VERB_OPTIONS: Record<string, VerbOptions> = {
   bundle: { db: { type: "string" }, passthrough: { type: "boolean" } },
   inject: { db: { type: "string" }, instance: { type: "string" }, file: { type: "string" } },
   replay: { file: { type: "string" } },
+  diag: { db: { type: "string" }, after: { type: "string" } },
 };
 
 const VERBS: Record<string, VerbHandler> = {
   bundle: verbDevBundle,
   inject: verbInject,
   replay: verbReplay,
+  diag: verbDiag,
 };
 
 export async function runDevCli(

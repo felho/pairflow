@@ -1,10 +1,11 @@
 import { pathToFileURL } from "node:url";
 
-import { noopDiagnosticsSink, unavailableDiagnosticsReader } from "../diag/index.js";
+import { DiagUnavailableError } from "../diag/index.js";
 import type { EventEnvelope, Outcome, WorkflowTemplate } from "../domain/index.js";
 import { deriveEmitDigest, deriveOperatorOpId } from "../emit/index.js";
 import {
   createDebugBundleExporter,
+  createDiagTail,
   createFloor,
   createTail,
   redactPayloadsPolicy,
@@ -22,6 +23,7 @@ import {
   requireInstanceId,
   usage,
   withStore,
+  withStoreAndDiag,
 } from "./common.js";
 import { CliError, EXIT } from "./contract.js";
 import type { CliDeps } from "./runtime.js";
@@ -133,15 +135,28 @@ async function verbTail(ctx: VerbContext): Promise<number> {
   const id = requireInstanceId(ctx);
   const from = parseNonNegativeSafeInt(flagString(ctx, "from") ?? "0", "--from");
   const pollMs = parseNonNegativeSafeInt(flagString(ctx, "poll-ms") ?? "250", "--poll-ms");
-  return withStore(ctx, async (handle) => {
-    const tail = createTail(handle.store, ctx.deps.tailWait(pollMs));
+  const diagMode = ctx.values["diag"] === true;
+  const fromOrdinalRaw = flagString(ctx, "from-ordinal");
+  if (fromOrdinalRaw !== undefined && !diagMode) {
+    // M8 (packet ch7-P4): a cursor for a lane not requested is a
+    // contract violation — presence-checked, so `--from-ordinal 0`
+    // without --diag is red too.
+    throw usage("FromOrdinalWithoutDiag", "--from-ordinal is valid only with --diag");
+  }
+  const fromOrdinal = parseNonNegativeSafeInt(fromOrdinalRaw ?? "0", "--from-ordinal");
+
+  // ONE shared catch for BOTH branches (ch7-P4 M5 build-guard): the
+  // plain and --diag streams map through the same type-based site, so
+  // the P4a-driven mappings structurally cover the diag path too.
+  const streamTail = async (rows: AsyncIterable<unknown>): Promise<number> => {
     try {
-      for await (const row of tail.tailCommittedTimeline(id, from)) {
+      for await (const row of rows) {
         ctx.sinks.out(JSON.stringify(row));
       }
     } catch (error) {
-      // Tail Error Contract (P2): rows already on stdout stay parseable;
-      // the failure becomes ONE stderr document + the class exit code.
+      // Tail Error Contract (P2/P3): rows already on stdout stay
+      // parseable; the failure becomes ONE stderr document + the class
+      // exit code.
       if (error instanceof TailUnknownInstanceError) {
         throw notFound("TailUnknownInstanceError", error.message);
       }
@@ -151,23 +166,45 @@ async function verbTail(ctx: VerbContext): Promise<number> {
       if (error instanceof TailIntegrityError) {
         throw new CliError("internal", "TailIntegrityError", error.message);
       }
+      if (error instanceof DiagUnavailableError) {
+        // M2: fail-LOUD with the enumerated token in details (§7.3).
+        throw new CliError("internal", "DiagUnavailableError", error.message, {
+          reason: error.reason,
+        });
+      }
       throw error;
     }
     return EXIT.ok;
-  });
+  };
+
+  if (!diagMode) {
+    // V2: the plain tail stays on the ch6-P2 engine — no diag open (C3).
+    return withStore(ctx, (handle) =>
+      streamTail(createTail(handle.store, ctx.deps.tailWait(pollMs)).tailCommittedTimeline(id, from)),
+    );
+  }
+  return withStoreAndDiag(ctx, (handle, diag) =>
+    streamTail(
+      createDiagTail(handle.store, diag.reader, ctx.deps.tailWait(pollMs)).tailWithDiagnostics(
+        id,
+        from,
+        fromOrdinal,
+      ),
+    ),
+  );
 }
 
 async function verbBundle(ctx: VerbContext): Promise<number> {
   const id = requireInstanceId(ctx);
-  return withStore(ctx, async (handle) => {
+  return withStoreAndDiag(ctx, async (handle, diag) => {
     // REV-BUNDLE-DEFAULT-POLICY: the normal CLI binds the production
     // default; pass-through exists only behind the dev entrypoint (P4b).
-    // Interim diag wiring (ch7-P3, lane X1): the unavailable reader
-    // rides until ch7-P4 wires the store on the derived config.
+    // The store-backed reader on the derived path (ch7-P4, V4) — the
+    // ch7-P3 interim reader retired with this wiring.
     const exporter = createDebugBundleExporter(
       handle.store,
       redactPayloadsPolicy,
-      unavailableDiagnosticsReader,
+      diag.reader,
     );
     const bundle = await exporter.exportDebugBundle(id);
     if (bundle === null) {
@@ -197,13 +234,15 @@ async function verbStart(ctx: VerbContext): Promise<number> {
     Array.isArray(overrideFlags) ? overrideFlags.filter((v) => typeof v === "string") : [],
     template,
   );
-  return withStore(ctx, async (handle) => {
+  return withStoreAndDiag(ctx, async (handle, diag) => {
+    // V5 (ch7-P4): the store-backed sink on the derived path, passed
+    // BARE — no defensive wrapper (REV-DIAG-FAILOPEN).
     const kernel = createKernel({
       store: handle.store,
       definitions,
       time: ctx.deps.time,
       digest: deriveEmitDigest,
-      diag: noopDiagnosticsSink,
+      diag: diag.sink,
     });
     try {
       const started = await kernel.startInstance({
@@ -255,15 +294,16 @@ async function verbSubmit(ctx: VerbContext): Promise<number> {
     expectedVersion,
     ...(payload.present ? { payload: payload.value } : {}),
   };
-  return withStore(ctx, async (handle) => {
+  return withStoreAndDiag(ctx, async (handle, diag) => {
+    // V5 (ch7-P4): kernel AND ingress emit into the derived-path store.
     const kernel = createKernel({
       store: handle.store,
       definitions: builtinDefinitionStore(),
       time: ctx.deps.time,
       digest: deriveEmitDigest,
-      diag: noopDiagnosticsSink,
+      diag: diag.sink,
     });
-    const outcome = await createIngress({ kernel, diag: noopDiagnosticsSink }).submit(envelope);
+    const outcome = await createIngress({ kernel, diag: diag.sink }).submit(envelope);
     // The outcome IS the surface's answer — DATA on stdout, always;
     // the exit code classifies it (duplicate = idempotent success).
     ctx.sinks.out(JSON.stringify(outcome));
@@ -275,7 +315,13 @@ const VERB_OPTIONS: Record<string, VerbOptions> = {
   list: { db: { type: "string" } },
   detail: { db: { type: "string" } },
   timeline: { db: { type: "string" }, after: { type: "string" } },
-  tail: { db: { type: "string" }, from: { type: "string" }, "poll-ms": { type: "string" } },
+  tail: {
+    db: { type: "string" },
+    from: { type: "string" },
+    "poll-ms": { type: "string" },
+    diag: { type: "boolean" },
+    "from-ordinal": { type: "string" },
+  },
   bundle: { db: { type: "string" } },
   start: {
     db: { type: "string" },

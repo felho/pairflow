@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
 
+import type { DiagStoreHandle } from "../diag/index.js";
+import { openDiagStore } from "../diag/index.js";
 import type { NonceSource } from "../emit/index.js";
 import { cryptoNonceSource } from "../emit/index.js";
 import type { TailWait } from "../ports/tail.js";
@@ -17,6 +19,10 @@ import { openStore } from "../store/index.js";
  */
 export interface CliDeps {
   readonly openStore: (path: string, time: TimeSource) => StoreHandle;
+  /** The diag channel on the DERIVED path (packet ch7-P4, C1/V7): real
+   * in production, scriptable in tests (C4's zero-call assert, the
+   * scripted mid-stream handles). `openDiagStore` never throws (C2). */
+  readonly openDiagStore: (path: string, time: TimeSource) => DiagStoreHandle;
   readonly time: TimeSource;
   /** Production instance-id minting (the StorePort contract's "lands
    * with the ch-6 CLI"): crypto in production, deterministic in tests.
@@ -43,6 +49,7 @@ export function realTimerTailWait(pollMs: number): TailWait {
 export function productionDeps(): CliDeps {
   return {
     openStore: (path, time) => openStore(path, time),
+    openDiagStore: (path, time) => openDiagStore(path, time),
     time: wallClockTimeSource,
     instanceIdSource: () => randomUUID(),
     nonceSource: cryptoNonceSource,

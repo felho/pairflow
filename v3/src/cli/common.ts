@@ -1,5 +1,6 @@
 import { parseArgs } from "node:util";
 
+import type { DiagStoreHandle } from "../diag/index.js";
 import type { StoreHandle } from "../store/index.js";
 import { CliError, exitCodeFor, toErrorDoc } from "./contract.js";
 import type { CliDeps } from "./runtime.js";
@@ -93,6 +94,45 @@ export function withStore<T>(
   const handle = openStoreOrInternal(path, ctx.deps);
   return run(handle).finally(() => {
     handle.close();
+  });
+}
+
+/** The derived diag-DB path (packet ch7-P4, C1): a textual append after
+ * the P4a resolution — no new flag, no new env var (plan §7.5). */
+export function deriveDiagDbPath(dbPath: string): string {
+  return `${dbPath}.diag.sqlite`;
+}
+
+/** withStore plus the diag handle on the derived path (ch7-P4, C3/V7).
+ * Only diag-consuming/emitting verbs come through here; `openDiagStore`
+ * never throws (C2), so — deliberately unlike `openStoreOrInternal` —
+ * the diag open needs no fail-closed wrapper: a bad diag state
+ * surfaces at the consuming read (fail-LOUD) or swallows at the write
+ * (fail-open), per the §7.3 availability matrix. */
+export function withStoreAndDiag<T>(
+  ctx: VerbContext,
+  run: (handle: StoreHandle, diag: DiagStoreHandle) => Promise<T>,
+): Promise<T> {
+  const path = resolveDbPath(flagString(ctx, "db"), ctx.deps);
+  const handle = openStoreOrInternal(path, ctx.deps);
+  const diag = ctx.deps.openDiagStore(deriveDiagDbPath(path), ctx.deps.time);
+  return run(handle, diag).finally(() => {
+    diag.close();
+    handle.close();
+  });
+}
+
+/** Diag-only access for the dev dump (ch7-P4, F4): resolves the db path
+ * (the inherited usage lane) but NEVER opens the MAIN store — the
+ * derivation is textual, and the dump consumes only the diag surface. */
+export function withDiagStore<T>(
+  ctx: VerbContext,
+  run: (diag: DiagStoreHandle) => Promise<T>,
+): Promise<T> {
+  const path = resolveDbPath(flagString(ctx, "db"), ctx.deps);
+  const diag = ctx.deps.openDiagStore(deriveDiagDbPath(path), ctx.deps.time);
+  return run(diag).finally(() => {
+    diag.close();
   });
 }
 

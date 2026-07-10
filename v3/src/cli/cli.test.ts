@@ -1,11 +1,14 @@
 import { execFile } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import type { DiagStoreHandle } from "../diag/index.js";
+import { DiagUnavailableError, openDiagStore } from "../diag/index.js";
+import type { DiagnosticEvent, DiagnosticEventBody } from "../ports/diagnostics.js";
 import { openStore } from "../store/index.js";
 import { createControlledClock, createScriptedTailWait } from "../testkit/index.js";
 import type { CliErrorDoc } from "./contract.js";
@@ -40,12 +43,14 @@ interface TestDepsOptions {
   nonce?: () => string;
   tailSteps?: ReadonlyArray<() => void | Promise<void>>;
   env?: Readonly<Record<string, string | undefined>>;
+  openDiagStore?: CliDeps["openDiagStore"];
 }
 
 function testDeps(options: TestDepsOptions = {}): CliDeps {
   let ids = 0;
   return {
     openStore: (path, time) => openStore(path, time),
+    openDiagStore: options.openDiagStore ?? ((path, time) => openDiagStore(path, time)),
     time: createControlledClock(1_000),
     instanceIdSource: () => {
       ids += 1;
@@ -55,6 +60,29 @@ function testDeps(options: TestDepsOptions = {}): CliDeps {
     tailWait: () => createScriptedTailWait(options.tailSteps ?? []).wait,
     env: options.env ?? {},
   };
+}
+
+/** The derived diag-DB sibling (packet ch7-P4, C1). */
+function diagPathOf(db: string): string {
+  return `${db}.diag.sqlite`;
+}
+
+/** Stages R3-valid bodies into the REAL diag store on the derived path
+ * (the P3 direct-sink.emit staging culture). */
+function stageDiagEvents(db: string, bodies: readonly DiagnosticEventBody[]): void {
+  const handle = openDiagStore(diagPathOf(db), createControlledClock(2_000));
+  for (const body of bodies) {
+    handle.sink.emit(body);
+  }
+  handle.close();
+}
+
+type TailLine =
+  | { lane: "committed"; row: { seq: number } }
+  | { lane: "diag"; event: DiagnosticEvent };
+
+function tailLines(result: Run): TailLine[] {
+  return result.stdout.map((line) => JSON.parse(line) as TailLine);
 }
 
 async function run(argv: readonly string[], deps: CliDeps): Promise<Run> {
@@ -313,15 +341,47 @@ describe("cli — read verbs (the floor activated)", () => {
     );
   });
 
-  it("bundle: interim diag wiring (ch7-P3, lane X1) — rejectedInputs = unavailable(open_failed) until P4 wires the store", async () => {
+  it("bundle on the WIRED channel (ch7-P4 C5/V4/C1): fresh → present []; a real rejected submit → present rows; the sibling file appears", async () => {
     const db = tempDbPath();
     const deps = testDeps();
     const id = await startOne(db, deps);
 
-    // Pass-through CONTENT only: exit code, channel rule, and the rest
-    // of the bundle contract are untouched (dimension 14).
+    // C5: a wired channel's empty store is KNOWN-EMPTY, never the X1
+    // interim unavailable(open_failed) — that state ceased to exist here.
+    const fresh = await run(["bundle", id, "--db", db], deps);
+    expect(fresh.code).toBe(EXIT.ok);
+    const freshDoc = JSON.parse(fresh.stdout[0] ?? "") as { rejectedInputs: unknown };
+    expect(freshDoc.rejectedInputs).toEqual({ status: "present", rows: [] });
+    // C1 sibling placement: the derived diag DB sits beside the main DB.
+    expect(existsSync(diagPathOf(db))).toBe(true);
+
+    // V5→V4 pass-through: a REAL rejected submit lands in the diag store
+    // and surfaces as an attributed bundle row.
+    const rejected = await run(
+      ["submit", "--db", db, "--instance", id, "--type", "NOPE", "--expected-version", "1"],
+      deps,
+    );
+    expect(rejected.code).toBe(EXIT.notFound);
     const bundle = await run(["bundle", id, "--db", db], deps);
     expect(bundle.code).toBe(EXIT.ok);
+    const doc = JSON.parse(bundle.stdout[0] ?? "") as {
+      rejectedInputs: { status: string; rows: { kind: string; reason?: string }[] };
+    };
+    expect(doc.rejectedInputs.status).toBe("present");
+    expect(doc.rejectedInputs.rows).toHaveLength(1);
+    expect(doc.rejectedInputs.rows[0]?.kind).toBe("rejected");
+    expect(doc.rejectedInputs.rows[0]?.reason).toBe("no_transition");
+  });
+
+  it("bundle under a corrupt diag store (M10): section = unavailable(reason), the bundle SUCCEEDS at exit 0", async () => {
+    const db = tempDbPath();
+    const deps = testDeps();
+    const id = await startOne(db, deps);
+    writeFileSync(diagPathOf(db), "garbage-not-a-database", "utf8");
+
+    const bundle = await run(["bundle", id, "--db", db], deps);
+    expect(bundle.code).toBe(EXIT.ok);
+    expect(bundle.stderr).toEqual([]);
     const doc = JSON.parse(bundle.stdout[0] ?? "") as { rejectedInputs: unknown };
     expect(doc.rejectedInputs).toEqual({ status: "unavailable", reason: "open_failed" });
   });
@@ -423,6 +483,283 @@ describe("cli — P4a aftermath (post-commit review, 2026-07-08)", () => {
     expect((JSON.parse(result.stdout[0] ?? "") as { seq: number }).seq).toBe(1);
     expect(result.stderr).toHaveLength(1);
     expect((JSON.parse(result.stderr[0] ?? "") as CliErrorDoc).error.class).toBe("internal");
+  });
+});
+
+describe("cli — tail --diag (packet ch7-P4: V1/M1–M8/F1–F2)", () => {
+  /** Drives the builtin template to its terminal: PASS@1 → CONVERGED@2. */
+  async function startAndConverge(db: string, deps: CliDeps): Promise<string> {
+    const id = await startOne(db, deps);
+    expect(
+      (await run(["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "1", "--payload", '{"ref":"d"}'], deps)).code,
+    ).toBe(EXIT.ok);
+    expect(
+      (await run(["submit", "--db", db, "--instance", id, "--type", "CONVERGED", "--expected-version", "2"], deps)).code,
+    ).toBe(EXIT.ok);
+    return id;
+  }
+
+  it("V1/M1: two-lane NDJSON — history + LIVE diag via the real sink, completion on terminal, exit 0", async () => {
+    const db = tempDbPath();
+    const setupDeps = testDeps();
+    const id = await startOne(db, setupDeps);
+    await run(
+      ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "1", "--payload", '{"ref":"d1"}'],
+      setupDeps,
+    );
+    // Pre-tail diag history: a REAL rejected submit through the wired sink.
+    const preReject = await run(
+      ["submit", "--db", db, "--instance", id, "--type", "NOPE", "--expected-version", "2"],
+      setupDeps,
+    );
+    expect(preReject.code).toBe(EXIT.notFound);
+
+    const tailDeps = testDeps({
+      tailSteps: [
+        async () => {
+          // Mid-tail LIVE diag event: another real rejected submit.
+          const midReject = await run(
+            ["submit", "--db", db, "--instance", id, "--type", "NOPE", "--expected-version", "2"],
+            testDeps(),
+          );
+          expect(midReject.code).toBe(EXIT.notFound);
+        },
+        async () => {
+          expect(
+            (await run(["submit", "--db", db, "--instance", id, "--type", "CONVERGED", "--expected-version", "2"], testDeps())).code,
+          ).toBe(EXIT.ok);
+        },
+      ],
+    });
+    const tail = await run(["tail", id, "--db", db, "--diag"], tailDeps);
+    expect(tail.code).toBe(EXIT.ok);
+    expect(tail.stderr).toEqual([]);
+    const lines = tailLines(tail);
+    // Every row carries the lane discriminator (V1).
+    expect(lines.every((l) => l.lane === "committed" || l.lane === "diag")).toBe(true);
+    const committed = lines.filter((l) => l.lane === "committed");
+    const diag = lines.filter((l) => l.lane === "diag");
+    expect(committed.map((l) => (l as { row: { seq: number } }).row.seq)).toEqual([1, 2]);
+    expect(diag).toHaveLength(2);
+    for (const line of diag) {
+      const event = (line as { event: DiagnosticEvent }).event;
+      expect(event.kind).toBe("rejected");
+      expect(event.reason).toBe("no_transition");
+      expect(typeof event.ordinal).toBe("number");
+      expect(typeof event.at).toBe("number");
+    }
+  });
+
+  it("dimension 1 tail-side full-event lane: an internal_failure's error.message rides INTACT (local surface)", async () => {
+    const db = tempDbPath();
+    const deps = testDeps();
+    const id = await startAndConverge(db, deps);
+    stageDiagEvents(db, [
+      {
+        source: "kernel",
+        kind: "internal_failure",
+        instanceId: id,
+        error: { name: "BoomError", message: "boom detail with context" },
+      },
+    ]);
+
+    const tail = await run(["tail", id, "--db", db, "--diag"], testDeps());
+    expect(tail.code).toBe(EXIT.ok);
+    const diag = tailLines(tail).filter((l) => l.lane === "diag");
+    expect(diag).toHaveLength(1);
+    const event = (diag[0] as { event: DiagnosticEvent }).event;
+    expect(event.error).toEqual({ name: "BoomError", message: "boom detail with context" });
+  });
+
+  it("M2 at-start + M4 combination: corrupt diag → DiagUnavailableError doc / 1; unknown id + corrupt diag → 3", async () => {
+    const db = tempDbPath();
+    const deps = testDeps();
+    const id = await startOne(db, deps);
+    writeFileSync(diagPathOf(db), "garbage-not-a-database", "utf8");
+
+    const result = await run(["tail", id, "--db", db, "--diag"], testDeps());
+    assertErrorContract(result, "internal", EXIT.internal);
+    expect(result.stdout).toEqual([]);
+    const doc = errorDoc(result);
+    expect(doc.name).toBe("DiagUnavailableError");
+    expect(doc.details).toEqual({ reason: "open_failed" });
+
+    // M4: the committed fetch runs FIRST (P3 E3) — unknown id wins over
+    // the corrupt diag store, and the CLI cannot reorder (one iteration).
+    assertErrorContract(
+      await run(["tail", "ghost", "--db", db, "--diag"], testDeps()),
+      "not_found",
+      EXIT.notFound,
+    );
+  });
+
+  it("M3 mid-stream diag failure: prior rows stay parseable, ONE stderr doc, exit 1", async () => {
+    const db = tempDbPath();
+    const setupDeps = testDeps();
+    const id = await startOne(db, setupDeps);
+    await run(
+      ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "1", "--payload", '{"ref":"d"}'],
+      setupDeps,
+    );
+
+    let reads = 0;
+    const scripted: DiagStoreHandle = {
+      sink: { emit: () => undefined },
+      reader: {
+        getDiagnostics: () => {
+          reads += 1;
+          return reads === 1
+            ? Promise.resolve([])
+            : Promise.reject(new DiagUnavailableError("read_failed"));
+        },
+        getGlobalDiagnostics: () => Promise.resolve([]),
+      },
+      close: () => undefined,
+    };
+    const deps = testDeps({ openDiagStore: () => scripted, tailSteps: [() => undefined] });
+    const result = await run(["tail", id, "--db", db, "--diag"], deps);
+    expect(result.code).toBe(EXIT.internal);
+    expect(result.stdout).toHaveLength(1);
+    expect((JSON.parse(result.stdout[0] ?? "") as { lane: string }).lane).toBe("committed");
+    expect(result.stderr).toHaveLength(1);
+    const doc = (JSON.parse(result.stderr[0] ?? "") as CliErrorDoc).error;
+    expect(doc.name).toBe("DiagUnavailableError");
+    expect(doc.details).toEqual({ reason: "read_failed" });
+  });
+
+  it("M6: a NON-typed reader failure propagates to the catch-all — internal / 1 with the error's OWN name", async () => {
+    const db = tempDbPath();
+    const setupDeps = testDeps();
+    const id = await startOne(db, setupDeps);
+
+    const scripted: DiagStoreHandle = {
+      sink: { emit: () => undefined },
+      reader: {
+        getDiagnostics: () => Promise.reject(new Error("kaboom — not a typed diag error")),
+        getGlobalDiagnostics: () => Promise.resolve([]),
+      },
+      close: () => undefined,
+    };
+    const result = await run(
+      ["tail", id, "--db", db, "--diag"],
+      testDeps({ openDiagStore: () => scripted }),
+    );
+    assertErrorContract(result, "internal", EXIT.internal);
+    expect(errorDoc(result).name).toBe("Error");
+  });
+
+  it("F2/M7/M8: --from-ordinal parses lexically, skips delivered events, and is REJECTED without --diag", async () => {
+    const db = tempDbPath();
+    const deps = testDeps();
+    const id = await startAndConverge(db, deps);
+    stageDiagEvents(db, [
+      { source: "kernel", kind: "internal_failure", instanceId: id, error: { name: "E1", message: "first" } },
+      { source: "kernel", kind: "internal_failure", instanceId: id, error: { name: "E2", message: "second" } },
+    ]);
+
+    // M7: the CLI parse lane (lexical, the shared helper — no new validator).
+    assertErrorContract(
+      await run(["tail", id, "--db", db, "--diag", "--from-ordinal", "1.5"], testDeps()),
+      "usage",
+      EXIT.usage,
+    );
+    // M8: presence-checked coupling — the value 0 is red too.
+    assertErrorContract(
+      await run(["tail", id, "--db", db, "--from-ordinal", "0"], testDeps()),
+      "usage",
+      EXIT.usage,
+    );
+
+    // The skip lane: ordinal ≤ 1 is excluded (`ordinal > fromOrdinal`).
+    const skipped = await run(["tail", id, "--db", db, "--diag", "--from-ordinal", "1"], testDeps());
+    expect(skipped.code).toBe(EXIT.ok);
+    const diag = tailLines(skipped).filter((l) => l.lane === "diag");
+    expect(diag).toHaveLength(1);
+    expect((diag[0] as { event: DiagnosticEvent }).event.error?.name).toBe("E2");
+  });
+});
+
+describe("cli — write-path wiring + separation (packet ch7-P4: V5/M11/C3/dimension 8)", () => {
+  it("M11: start/submit outcomes and exits are byte-identical under a corrupt diag store (the sink swallows)", async () => {
+    const healthyDb = tempDbPath();
+    const corruptDb = tempDbPath();
+    writeFileSync(diagPathOf(corruptDb), "garbage-not-a-database", "utf8");
+
+    const runFlow = async (db: string): Promise<{ outs: string[]; codes: number[] }> => {
+      const deps = testDeps();
+      const outs: string[] = [];
+      const codes: number[] = [];
+      const record = (r: Run): void => {
+        outs.push(...r.stdout);
+        codes.push(r.code);
+      };
+      record(await run(["start", "--db", db, "--task", "t"], deps));
+      const id = "inst-1";
+      record(
+        await run(
+          ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "1", "--payload", '{"ref":"d"}'],
+          deps,
+        ),
+      );
+      record(
+        await run(["submit", "--db", db, "--instance", id, "--type", "NOPE", "--expected-version", "2"], deps),
+      );
+      return { outs, codes };
+    };
+
+    const healthy = await runFlow(healthyDb);
+    const corrupt = await runFlow(corruptDb);
+    expect(corrupt.outs).toEqual(healthy.outs);
+    expect(corrupt.codes).toEqual(healthy.codes);
+  });
+
+  it("C3: committed-only verbs NEVER create the diag file", async () => {
+    const db = tempDbPath();
+    const deps = testDeps();
+    const id = await startOne(db, deps);
+    await run(
+      ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "1", "--payload", '{"ref":"d"}'],
+      deps,
+    );
+    await run(["submit", "--db", db, "--instance", id, "--type", "CONVERGED", "--expected-version", "2"], deps);
+    // The write verbs ARE diag verbs — remove their sibling so the
+    // committed-only reads run against a diag-free path.
+    rmSync(diagPathOf(db), { force: true });
+
+    expect((await run(["list", "--db", db], deps)).code).toBe(EXIT.ok);
+    expect((await run(["detail", id, "--db", db], deps)).code).toBe(EXIT.ok);
+    expect((await run(["timeline", id, "--db", db], deps)).code).toBe(EXIT.ok);
+    // The plain tail (V2) — already-terminal, zero waits, no diag open.
+    expect((await run(["tail", id, "--db", db], testDeps())).code).toBe(EXIT.ok);
+    expect(existsSync(diagPathOf(db))).toBe(false);
+  });
+
+  it("dimension 8: list + plain tail outputs are byte-identical beside a corrupt diag file", async () => {
+    const seed = async (db: string): Promise<string> => {
+      const deps = testDeps();
+      const id = await startOne(db, deps);
+      await run(
+        ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "1", "--payload", '{"ref":"d"}'],
+        deps,
+      );
+      await run(["submit", "--db", db, "--instance", id, "--type", "CONVERGED", "--expected-version", "2"], deps);
+      return id;
+    };
+    const healthyDb = tempDbPath();
+    const corruptDb = tempDbPath();
+    const idH = await seed(healthyDb);
+    const idC = await seed(corruptDb);
+    writeFileSync(diagPathOf(corruptDb), "garbage-not-a-database", "utf8");
+
+    const listH = await run(["list", "--db", healthyDb], testDeps());
+    const listC = await run(["list", "--db", corruptDb], testDeps());
+    expect(listC.stdout).toEqual(listH.stdout);
+    expect(listC.code).toBe(listH.code);
+
+    const tailH = await run(["tail", idH, "--db", healthyDb], testDeps());
+    const tailC = await run(["tail", idC, "--db", corruptDb], testDeps());
+    expect(tailC.stdout).toEqual(tailH.stdout);
+    expect(tailC.code).toBe(tailH.code);
   });
 });
 
