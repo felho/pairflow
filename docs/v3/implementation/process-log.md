@@ -1513,3 +1513,12 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   measurement (autonomous flag-free approves with the post-hoc
   boundary audit), and ch8 ratification is the next act, on the
   user's explicit go.
+- 2026-07-10 · ch8 opening · both boundary-deferred fixes LANDED as
+  their own fix commits before the ratification proposal: c95ebd8a
+  (config-wide dynamic-form import-ban sweep — every remaining static
+  ban gained its ImportExpression twin; 20/20 executed probes incl.
+  preserved-selector re-reds and the dev-CLI exemption green) and
+  ea6cbde2 (fold-time prose-tally cross-lock P9 in check_packet.py +
+  the template §1 twin rule line; 78 selftest dims, live packets
+  green). The deferral trail from the ch7 boundary review item (6) is
+  closed; the ch8 ratification proposal is the next act.
