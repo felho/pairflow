@@ -1544,3 +1544,22 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   the two closing confirmatory rounds found ZERO, and every
   round-4-6 find came from lenses the targeted set would have
   included; ~40 Opus lens runs ≈ 4.3M subagent tokens for one draft.
+- 2026-07-10 · ch8 draft phase · REVIEW-ECONOMICS AMENDMENT LANDED
+  (user-ratified, "mehet" on the discussed shape): README §5.5 (the
+  canonical home) + ReviewPacket §1/§2a/§4/§5 + AuthorPacket §9 +
+  template §2 review-tie edited in ONE act. Content: (1) the CLOSE
+  reverts to the v1 shape — first round FULL, targeted re-runs after
+  content folds, approve = a clean top-level reconciliation decision
+  over the FINAL content hash (fresh-context, fed the delta history
+  + recorded lens outputs); a closing full fan-out only when an
+  escalation trigger fired on the last fold — the D4 strengthening
+  is RETIRED (rationale: layered defense — doc refinement + the
+  user's external arms sit behind the creation phase; the retiring
+  run measured two zero-yield closing full rounds). (2) EXTERNAL-ARM
+  folds = ordinary folds: finder-lane rerun = the arm's own re-check
+  CITING THE NEW HASH, plus the mandatory delta-scoped
+  reconciliation; escalation triggers unchanged. (3) MODEL POLICY:
+  every panel pass Opus-class; the full⇒Opus/targeted⇒Sonnet tiering
+  retired (model-effectiveness experiments = a later explicit act);
+  the Fable ban stands. process-v2-design.md D4 stays untouched as
+  the historical record — README §5.5 carries the amendment.

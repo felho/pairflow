@@ -421,11 +421,12 @@ Spec-writing is projection, not invention. In order:
     refine and in-chapter split iterate AUTONOMOUSLY; every STOP,
     every flag-bearing approve, and the ch7-pilot/first-of-a-kind
     approves are the human's; a flag-free approve is AUTONOMOUS from
-    ch8 on and proceeds to build. Re-run scoping and model tiering
-    per README §5.5's panel re-run paragraph (first pass full on an
-    Opus-class model; content folds → targeted re-run; bookkeeping
-    folds → one reconciliation pass; Sonnet-class for
-    targeted/reconciliation). The old
+    ch8 on and proceeds to build. Re-run scoping and model policy
+    per README §5.5's panel re-run paragraph (first pass full;
+    content folds → targeted re-run; bookkeeping folds → one
+    reconciliation pass; the approve gate = the v1-shape close, a
+    top-level reconciliation decision over the final hash; EVERY
+    pass Opus-class — amended 2026-07-10). The old
     content-half/ergonomic-half rubric is retired: its content checks
     live in lens 2, its ergonomics in lenses 4–5.
 

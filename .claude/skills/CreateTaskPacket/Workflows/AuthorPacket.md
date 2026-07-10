@@ -269,9 +269,10 @@ ch7-P1 dangling-"flagged below" lesson).
    (one review DEFINITION; ReviewPacket §5's fold-class scoping
    decides which lenses re-run after a fold: targeted by default
    after a CONTENT fold, one reconciliation pass after a BOOKKEEPING
-   fold, with mandatory full-escalation triggers; model tiering per
-   the same section — Opus-class full passes, Sonnet-class
-   targeted/reconciliation). The loop is AUTONOMOUS:
+   fold, with mandatory full-escalation triggers; the approve gate =
+   the v1-shape CLOSE — a top-level reconciliation decision over the
+   final hash, per ReviewPacket §4; model policy per the same
+   section — EVERY pass Opus-class, amended 2026-07-10). The loop is AUTONOMOUS:
    `refine` verdicts fold and re-run per that scoping; in-chapter
    `split` verdicts apply the Packets-and-flow-mode repartition per
    step 2's inheritance and
@@ -321,7 +322,7 @@ ch7-P1 dangling-"flagged below" lesson).
    every stage); and at the ch7 pilot / first-of-a-kind approves.
    From ch8 on, a FLAG-FREE approve (zero new-decision manifest rows,
    zero approve-ratified routes, every approve-time tier-0 gate
-   green, one full clean panel round) is AUTONOMOUS: the loop proceeds to build
+   green, a clean close per ReviewPacket §4) is AUTONOMOUS: the loop proceeds to build
    (README §4 — one packet, one commit, post-build audit at close).
    **Entry mode is the trust dial:** the user chooses per work item —
    prompt-by-prompt in the loop, or delegating a whole

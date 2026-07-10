@@ -309,7 +309,7 @@ records them):**
 | `refine` (any fold-now finding) | autonomous: fold + re-run panel |
 | `split`, within chapter (coverage union preserved) | autonomous, visible report |
 | `split` changing chapter scope/sequencing/dependencies | STOP 2 |
-| `approve`, flag-free (zero new-decision manifest rows, zero approve-ratified routes, every approve-time tier-0 gate green, one full clean panel round) | AUTONOMOUS from ch8 on — the loop proceeds to build (§4); the ch7 pilot packets (P3/P4) stay human-approved (first-of-a-kind), the last per-packet manual rounds |
+| `approve`, flag-free (zero new-decision manifest rows, zero approve-ratified routes, every approve-time tier-0 gate green, a clean CLOSE per the re-run scoping below) | AUTONOMOUS from ch8 on — the loop proceeds to build (§4); the ch7 pilot packets (P3/P4) stay human-approved (first-of-a-kind), the last per-packet manual rounds |
 | `approve`, flag-bearing | human (STOP 4), at every trust stage |
 | STOP 1–3 events | human, always |
 
@@ -366,14 +366,33 @@ pass (a content hit reclassifies it; three consecutive non-clean
 reconciliation passes escalate to a targeted round, which counts
 toward the watchdog); bookkeeping findings batch
 into one fold, never restarting the loop one at a time. **Clean** =
-zero CONTENT fold-now findings AND zero STOP-class findings. The
-approve still requires one FULL clean round; after it, only
+zero CONTENT fold-now findings AND zero STOP-class findings.
+**The close (the creation-phase amendment, user-ratified 2026-07-10
+— the v1 shape restored, the D4 closing-full-round floor RETIRED;
+provenance: the process-log entry of the same date):** the approve
+requires the FIRST round FULL plus a clean TOP-LEVEL RECONCILIATION
+CLOSE over the FINAL content hash — one fresh-context pass fed the
+final bytes, the accumulated delta history, and the recorded lens
+outputs; a full fan-out at close ONLY when an escalation trigger
+fired on the last fold. Rationale: the creation phase sits inside a
+LAYERED defense (doc refinement follows; the user's external
+adversarial arms follow) — maximal in-phase assurance was the
+retired strengthening, and the run that retired it measured two
+zero-yield closing full rounds. A clean close binds to its hash:
+any later CONTENT fold voids it (approve-readiness is never
+assembled across revisions); after a clean close only
 reconciliation-verified bookkeeping folds may touch the bytes.
-**Model tiering:** every FULL round on an Opus-class model — the
-closing confirmatory full round included (FULL ⇒ Opus, regardless
-of expected outcome); targeted and reconciliation passes on a
-Sonnet-class model;
-Fable-class models are reserved for exceptional one-off planning at
+**External-arm folds** (user-relayed third-party review findings)
+are ORDINARY folds — the fold classes apply; the finder-lane rerun
+is the ARM'S OWN RE-CHECK on the folded bytes, its verdict citing
+the NEW content hash (a verdict on stale bytes is no verdict), plus
+the mandatory delta-scoped reconciliation pass; the escalation
+triggers are unchanged.
+**Model policy (amended 2026-07-10):** EVERY panel pass — full,
+targeted, reconciliation, the close — runs on an Opus-class model;
+the full⇒Opus / targeted⇒Sonnet tiering is retired
+(model-effectiveness experiments are a later, explicit act);
+Fable-class models stay reserved for exceptional one-off planning at
 the user's explicit call — never business-as-usual packet review.
 The panel report records the re-run mode, skipped lenses with their
 proven-unaffected reasons, and any escalation trigger fired.

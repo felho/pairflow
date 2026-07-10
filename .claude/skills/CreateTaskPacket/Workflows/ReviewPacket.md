@@ -60,8 +60,8 @@ and blocks approve — silence is never coverage. In a TARGETED round
 (§5) a deliberately skipped lens is `skipped (proven unaffected:
 <reason>)` — a RESOLVED state, never `missing`; a lens with no
 recorded state at all remains `missing` and blocks. A `skipped`
-state never satisfies the approve gate: the approve's one FULL
-clean round runs ALL FIVE lenses. The LearnedRules
+state is resolved for its ROUND; at the approve, §4's close verifies
+the deltas since each lens last ran. The LearnedRules
 registry (`references/LearnedRules.md`) is CONSUMED at the lens named
 per rule below. **The duty lists below are a FLOOR, never the
 review's definition** (the ch7-P1 twin-session lesson: a checklist
@@ -214,8 +214,9 @@ consistency; the ergonomics floor)*
 One row per lens duty, one column per target surface it applies to;
 every cell is `pass | finding | n/a (reason) | skipped (proven
 unaffected — targeted rounds only, §5) | missing | unknown`.
-`missing` blocks approve; `skipped` is resolved for the ROUND but
-never for the approve gate (the full clean round runs all five). An `unknown` (a discovery state) blocks
+`missing` blocks approve; `skipped` is resolved for the ROUND — at
+approve, matrix cells carry from the last round that ran their lens,
+§4's close verifying the deltas since. An `unknown` (a discovery state) blocks
 approve until INSPECTED — inspection converts it to a known
 present/absent-with-evidence state, which may THEN be routed per the
 D5 routes or split away; an uninspected `unknown` is NEVER routable
@@ -316,28 +317,35 @@ phase-2 obligation (README §5.5).
   with the implementation-closure proof; "somewhat ambitious but it
   will be fine" is not a legal assessment (the v1 bias this rule
   exists for).
-- **`approve`** — requires ALL of: every APPROVAL-TIME tier-0 gate
-  green (step 0); ONE FULL clean panel round — **full** = all five
-  lenses ran as fresh-context sub-agents ON THE FINAL CONTENT BYTES
-  (each report cites the packet-basis hash; the two-hash model: the
-  full round binds its CONTENT hash, and any subsequent
-  reconciliation-verified bookkeeping fold produces the FINAL
-  RECONCILED hash — the report records both); **clean** = ZERO fold-now
-  CONTENT findings AND ZERO STOP-class findings (non-STOP routed and
-  watchpoint items ride as flags/routes without voiding the round;
-  bookkeeping items batch per §5); the coverage matrix complete with
-  no `missing` and no unresolved `unknown`. *Temporal:* any CONTENT
-  fold voids all prior clean rounds — a clean round binds to its
-  hash; a BOOKKEEPING fold (§5) does not void PROVIDED it carries a
-  clean reconciliation pass; approve-readiness is never assembled
-  from lens results of different revisions. *Hostile:* a
-  narrow-delta re-check never substitutes for the required full
-  round — after the full clean round, only reconciliation-verified
-  bookkeeping folds may touch the bytes before the approve; any
-  content fold voids and re-enters the loop. The approve's OWNER follows the
+- **`approve`** — requires ALL of (the creation-phase amendment,
+  user-ratified 2026-07-10: the v1 close shape restored, the
+  closing-full-fan-out floor retired — README §5.5 is canonical):
+  every APPROVAL-TIME tier-0 gate green (step 0); the FIRST round
+  FULL (all five lenses, fresh-context, reports citing the
+  packet-basis hash); and a clean TOP-LEVEL RECONCILIATION CLOSE
+  over the FINAL CONTENT BYTES — one fresh-context pass fed the
+  final bytes, the accumulated delta history, and the recorded lens
+  outputs, returning ZERO fold-now CONTENT findings and ZERO
+  STOP-class findings (non-STOP routed and watchpoint items ride as
+  flags/routes; bookkeeping items batch per §5); a full fan-out at
+  close ONLY when an escalation trigger fired on the last fold; the
+  coverage matrix complete with no `missing` and no unresolved
+  `unknown` — cells carry from the last round that ran their lens,
+  the close verifying the deltas since. *Temporal:* a clean close
+  binds to its hash — any later CONTENT fold voids it;
+  approve-readiness is never assembled from verdicts on different
+  revisions; a BOOKKEEPING fold does not void PROVIDED it carries a
+  clean reconciliation pass (the two-hash model: the close binds its
+  CONTENT hash, a subsequent bookkeeping fold produces the FINAL
+  RECONCILED hash — the report records both). *Hostile:* the close
+  is a FRESH-CONTEXT pass — the author's context never closes its
+  own bytes; and the close never replaces the first full round.
+  *External-arm folds* are ORDINARY folds: the finder-lane rerun is
+  the arm's own re-check citing the NEW hash, plus the mandatory
+  delta-scoped reconciliation; escalation triggers unchanged. The approve's OWNER follows the
   README §5.5 matrix: a flag-free approve (zero new-decision manifest
   rows, zero approve-ratified routes, every approve-time tier-0 gate
-  green, one clean full round) is AUTONOMOUS from ch8 on and proceeds
+  green, a clean close) is AUTONOMOUS from ch8 on and proceeds
   to build; a flag-bearing approve is the human's ALWAYS (STOP
   `4:flagged-approve`; "flag-bearing" per the README §5.5
   definition); the ch7 pilot and first-of-a-kind packets are
@@ -386,13 +394,14 @@ mirror). The scoping governs COST, never the review definition.
   applies). Bookkeeping findings from any round BATCH into one fold
   and one reconciliation pass — they never restart the loop one at
   a time.
-- **Model tiering (the Agent-launch discipline — never inherit the
-  session default silently):** every FULL round runs on an
-  OPUS-class model — the closing confirmatory full round INCLUDED
-  (FULL ⇒ Opus, regardless of expected outcome); targeted re-runs
-  and reconciliation passes run on a SONNET-class model; FABLE-class
-  models are reserved for exceptional one-off planning at the
-  user's explicit call — never business-as-usual packet review.
+- **Model policy (the Agent-launch discipline — never inherit the
+  session default silently; amended 2026-07-10):** EVERY panel pass
+  — full, targeted, reconciliation, and the close — runs on an
+  OPUS-class model; the full⇒Opus / targeted⇒Sonnet tiering is
+  RETIRED (model-effectiveness experiments are a later, explicit
+  act); FABLE-class models stay reserved for exceptional one-off
+  planning at the user's explicit call — never business-as-usual
+  packet review.
 - **The report records the mode** (see the Report block): full |
   targeted | reconciliation-only, the lenses run, the skipped
   lenses WITH their proven-unaffected reasons, and any escalation
@@ -406,7 +415,7 @@ Skill source: installed registry | repo-local file read @ <path, commit, dirty?>
 Packet basis: sha256(<target file>) = <hash> @ HEAD <commit>, worktree: clean | dirty (<what>)
 Reconciled basis: <none | hash after reconciliation-verified bookkeeping folds — the two-hash model>
 Tier 0 (approve-time): <green | failures>
-Re-run mode: full | targeted (<lenses run>; skipped: <lens — proven-unaffected reason>) | reconciliation-only · escalation: <none | trigger fired> · models: <the ACTUAL model id per pass, TRANSCRIPT-VERIFIED (the agent transcript's `model` field) — measured, never the launch parameter echoed (ch7 boundary: the launch call is not evidence)>
+Re-run mode: full | targeted (<lenses run>; skipped: <lens — proven-unaffected reason>) | reconciliation-only | close (top-level reconciliation over the final hash) · escalation: <none | trigger fired> · models: <the ACTUAL model id per pass, TRANSCRIPT-VERIFIED (the agent transcript's `model` field) — measured, never the launch parameter echoed (ch7 boundary: the launch call is not evidence)>
 Gate Coverage Matrix: <complete | missing/unknown cells listed>
 Lens reports: 1 substrate | 2 projection | 3 negatives | 4 mirror | 5 downstream — each: pass | findings | skipped(<reason>)
 Findings by type: <taxonomy-tagged list, considered_not_finding included, dispositions + routes>
