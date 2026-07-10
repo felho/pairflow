@@ -319,6 +319,21 @@ describe("reader + write failure lanes", () => {
     expect(() => handle.sink.emit(B_DUP)).not.toThrow();
   });
 
+  it("V8 (ch7-P4 aftermath) — close() is FAIL-OPEN: a second close() never throws", () => {
+    // The channel swallows its OWN release failure (packet ch7-p4 V8:
+    // a close throw escaping a verb's finally would flip a successful
+    // outcome — Claim 5/M10 forbid it). The second close is the known
+    // drivable throw instance (the W1 pattern: the same catch owns
+    // OS-level close failures); double-close stays UNCLAIMED as an
+    // affordance — this drives failure containment, not idempotency.
+    const handle = openDiagStore(tempDbPath(), createControlledClock(0));
+    handle.sink.emit(B_DUP);
+    handle.close();
+    expect(() => {
+      handle.close();
+    }).not.toThrow();
+  });
+
   it("precedence — an invalid cursor beats unavailability (RangeError, not the reason)", async () => {
     const path = tempDbPath();
     writeFileSync(path, "garbage — the store is unavailable");

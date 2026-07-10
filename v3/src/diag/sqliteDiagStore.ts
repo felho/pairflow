@@ -466,9 +466,16 @@ export function openDiagStore(path: string, time: TimeSource): DiagStoreHandle {
     close(): void {
       // Single-close by the owning composition root (StoreHandle parity).
       // The reference is kept so a post-close read hits `read_failed`
-      // (C1), not the born-unavailable reason.
-      if (db !== undefined) {
-        db.close();
+      // (C1), not the born-unavailable reason. FAIL-OPEN (packet ch7-p4
+      // V8, aftermath-born): the channel swallows its OWN release
+      // failure — a close throw escaping a verb's `finally` would flip
+      // a successful outcome, which the CLI's Claim 5/M10 forbid;
+      // symmetric with the born-unavailable release catch above.
+      try {
+        db?.close();
+      } catch {
+        // ignore — best-effort release (the same catch owns OS-level
+        // close failures; a second close lands here too)
       }
     },
   };

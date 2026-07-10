@@ -4,8 +4,9 @@ Plan step: plan.md §7.5. Autonomy stage: calibration — **pre-approve**
 (the ch7 pilot's last packet, human-approved per README §5.5;
 first-of-a-kind per §7.7: matrix extensions on both entrypoints).
 Classification: **projection with ONE new-decision row** — manifest
-tally: 18 anchored / 8 derived / 1 new-decision (machine-counted from
-the `packet_rows` block). The new-decision row: F2 — the `tail --diag`
+tally: 18 anchored / 9 derived / 1 new-decision (machine-counted from
+the `packet_rows` block; the ninth derived row is the aftermath-born
+V8 close contract, its entailment stated in-row). The new-decision row: F2 — the `tail --diag`
 cursor surface (the P3 flag-5(b) forward obligation: §7.5 names no
 cursor flag; expose-vs-pin-0 closes by judgment, not anchor). It rides
 as flag 1 to this pilot's human approve. The §7.7 pre-registered
@@ -77,10 +78,20 @@ extraction-guard precedent). Escalation combos below hard-stop: none
 Consume-family scan: N/A — no authority movement (the scan is
 authority-heavy discovery; this packet moves none).
 
-Conditional annexes: **closure-budget triage** N/A — no
+Conditional annexes: **closure-budget triage** N/A at authoring — no
 authority/runtime-semantics/read-projection/shared-contract bucket in
 scope (the `CliDeps` addition is an internal runtime seam whose only
 consumers are the two entrypoints + their tests, all in-boundary).
+AFTERMATH ANNOTATION (2026-07-10, external-review round 2): the
+close-contract finding moved ONE item into the shared-contract bucket
+after all — the `DiagStoreHandle.close()` disposition, a ch7-p2
+surface EXTENSION (fail-open; V8 is the contract, class DERIVED with
+its entailment stated in-row — not a second new-decision).
+Collapse-is-safe grounds: one file, one guarded branch, driven by the
+store suite's second-close stage, no consumer-visible shape change
+(the contract tightens from UNSPECIFIED to fail-open — no caller
+behaves differently on the success path); closed in the same
+aftermath round, not deferred.
 **Proof-boundary triage** N/A — no success/completion proof moves
 (P1–P3 suites keep their proofs; the CLI adds mapping lanes only).
 **Mutable-flow record** N/A — no hard-stop-9 material (no
@@ -89,8 +100,10 @@ P1/P2 contract, untouched).
 
 **single-packet allowed: yes** — closure proof: one bounded build
 wires both entrypoints; the same proof surface (the two CLI suites +
-one shipped smoke) validates all of it; the same owner (this packet's
-boundary) takes the fallout; the interim X1 lanes are replaced in the
+one shipped smoke; extended by the aftermath-born store-suite lane —
+V8's close-guard drive) validates all of it; the same owner (this
+packet's boundary, aftermath-extended) takes the fallout; the interim
+X1 lanes are replaced in the
 same commit and no external consumer pins the interim state (the X1
 token was one-packet-lifetime by design, P3 flag 1).
 
@@ -152,7 +165,15 @@ Dimensions:
 3. **Cursor flags:** F2/F3 parse lanes (bad value → usage 2 via the
    shared lexical parse; default 0; one representative skip lane per
    cursor — `--from-ordinal` skips `ordinal ≤ n` events, `--after`
-   skips dump rows); the M8 coupling lane; the delegation statement
+   skips dump rows); the RESUME COMBINATION lane (aftermath-born,
+   external-review finding 2 — the template §2 combination-lane
+   heuristic applied to flag 1's "both cursors" ground): `--from` AND
+   `--from-ordinal` staged TOGETHER on one `tail --diag` invocation —
+   committed rows only `seq > from` AND diag rows only
+   `ordinal > fromOrdinal` in the same output (isolated cursor lanes
+   cannot falsify a swapped or dropped wiring; this also DRIVES F2's
+   "`--from` stays valid with `--diag`" clause); the M8 coupling
+   lane; the delegation statement
    driven by absence: the CLI introduces NO numeric validator beyond
    the shared parse helper (M7 — the P3 dimension-13 delegation
    transposed; the library ladders are P2's/§6.2's).
@@ -229,7 +250,8 @@ oversight.
 | V4 | `bundle` (BOTH entrypoints) | the store-backed reader on the derived path replaces the interim reader; the section is the REAL three-state (the P3 S/K matrices — the projection untouched, byte-level P3's proof); NO new flag; REV-BUNDLE-DEFAULT-POLICY unchanged — the normal graph binds `redactPayloadsPolicy`, `--passthrough` exists only behind dev (re-verified: the sweep in the embedding gates) (anchored: plan §7.5 bundle row + packet ch7-p3 S/K) |
 | V5 | `start` / `submit` (operator) + `inject` (dev) | kernel and ingress are constructed with the derived-path store-backed SINK (replacing `noopDiagnosticsSink` at exactly these call sites); outcome documents and exit codes UNCHANGED (zero semantics — emission is P1's, persistence P2's); call sites pass the sink BARE — no defensive wrapper (REV-DIAG-FAILOPEN) (anchored: plan §7.7 P4 row + packet ch7-p3 X1 "until P4 wires the store on the derived config") |
 | V6 | `unavailableDiagnosticsReader` RETIRES | the export is DELETED from `diag/index.ts` (sweep, measured 2026-07-10: production references are exactly `cli/main.ts:3,170` and `cli/dev/main.ts:27,52`; zero test references outside the two X1 lanes); the two X1 test lanes are REPLACED by the real three-state lanes (dimension 5). The P3 packet is a historical record — not edited (flag 3) (anchored: packet ch7-p3 flag 1 — "P4 retires it"; the X1 cell's own text is "until P4 wires the store") |
-| V7 | `CliDeps` gains `openDiagStore: (path, time) => DiagStoreHandle` | `productionDeps()` binds the real `openDiagStore`; verbs open the diag handle around the work, consume `handle.sink` (write verbs, V5) or `handle.reader` (read verbs, V1/V3/V4), and CLOSE it in `finally` (the `withStore` shape). The seam is what makes C4's zero-call assert and dimension 2's scripted mid-stream handle drivable. DERIVATION: the `openStore` injection precedent — the P4a runtime-seam culture (one real-resource binding point) (derived) |
+| V7 | `CliDeps` gains `openDiagStore: (path, time) => DiagStoreHandle` | `productionDeps()` binds the real `openDiagStore`; verbs open the diag handle around the work, consume `handle.sink` (write verbs, V5) or `handle.reader` (read verbs, V1/V3/V4), and CLOSE it in `finally` (the `withStore` shape); the handle's `close()` is FAIL-OPEN (V8 — the aftermath-born contract). The seam is what makes C4's zero-call assert and dimension 2's scripted mid-stream handle drivable. DERIVATION: the `openStore` injection precedent — the P4a runtime-seam culture (one real-resource binding point) (derived) |
+| V8 | `DiagStoreHandle.close()` — the release contract (AFTERMATH-BORN: external-review finding 1) | FAIL-OPEN: the handle swallows its OWN close failure — a diag-store failure must never flip a verb's outcome or channel contract. WHY DERIVED, not a second new-decision (the entailment, stated): the APPROVED Claim 5 ("outcomes and exit codes UNCHANGED under any diag-store failure") and M10 ("the bundle SUCCEEDS under ANY diag-side failure") already ENTAIL the swallow on the write and bundle paths — a loud close would falsify both under an OS-level close failure; the handle-owned uniform guard is the only shape satisfying them WITHOUT a per-verb defensive wrapper (the blurred-owner anti-pattern REV-DIAG-FAILOPEN names); and P2's own born-unavailable release catch ("best-effort release") is the in-repo precedent the healthy branch joins. Extends the ch7-p2 surface's close row cross-packet (the flag-3 supersession culture — P2's packet stays historical); driven at the store suite via the second-close stage (the known drivable throw instance — the W1 pattern: the same catch owns OS-level close failures); double-close stays UNCLAIMED as an affordance (failure containment, not an idempotency promise) (derived) |
 
 ## Canonical exit/error mapping matrix (extends the ch6-P4a exit matrix — its rows untouched, regression-guarded)
 
@@ -258,7 +280,7 @@ composition root value-imports `diag/` legally (in-context note 2).
 
 | Id | Flag | Rule |
 |---|---|---|
-| F1 | `--diag` (operator `tail`) | boolean; absent = the plain tail (V2). The strict dispatch shell keeps rejecting it on every other verb (unknown flag → usage 2 — the existing rule, regression-guarded) (anchored: plan §7.5 "tail --diag") |
+| F1 | `--diag` (operator `tail`) | boolean; absent = the plain tail (V2). The strict dispatch shell keeps rejecting it on every other verb (unknown flag → usage 2) — driven by a REPRESENTATIVE negative (aftermath-born, external-review finding 3): `--diag` on a non-tail verb (`list`) → usage 2, so the claim carries its own drive instead of leaning on the generic `--nope` regression (anchored: plan §7.5 "tail --diag") |
 | F2 | `--from-ordinal <n>` (operator `tail`) | the diag lane's cursor: nonneg safe int string via the shared lexical parse, DEFAULT "0"; VALID ONLY with `--diag` (M8). `--from` stays the COMMITTED-lane cursor and remains valid with `--diag` — the diag path calls `tailWithDiagnostics(id, from, fromOrdinal)`; only the DIAG cursor is `--diag`-coupled. **NEW-DECISION (flag 1):** §7.5 names no cursor flag — expose vs pin-0 closes by judgment. The pick (EXPOSE, default 0): T4/dimension-6 resumability — rows carry their own cursors, so a terminated `tail --diag` resumes losslessly ONLY if the CLI accepts both cursors; the exposed-cursor precedents (`--from`, `--after`). Pin-0 (rejected) would force duplicate re-delivery on every CLI resume, weakening the carried-cursor affordance the library claims |
 | F3 | `--after <n>` (dev `diag`) | the global cursor: nonneg safe int string, DEFAULT "0". DERIVATION: §7.5 names the verb "the global CURSOR dump"; the P2 global-read signature takes `afterOrdinal`; the `timeline --after` naming precedent (derived) |
 | F4 | dev `diag` accepts `--db` and `--after` ONLY | config inherited (missing db → usage 2 — the P4a lane in force for this verb); the verb does NOT open the MAIN store — the derivation is textual (C1), so no main DB file side effect and no `StoreOpenFailed` lane exists for it (driven: the dump answers with the main store file ABSENT). DERIVATION: the dump consumes only the diag read surface; opening the main store would create the main DB file as a side effect of a diag-only read and mint a failure lane §7.5 never names — the C3 side-effect-minimality family (derived) |
@@ -283,7 +305,7 @@ P3's driven lanes, not re-proven here (the proof boundary).
 | `bundle` × any diag-side failure | DRIVEN (M10 — the P3 S-matrix wrapper at the CLI) | n/a (one-shot) |
 | `start`/`submit`/`inject` × sink-side failure | DRIVEN (M11 — corrupt file; the swallow fence is P2's) | n/a (emit is fire-and-forget by contract) |
 | diag handle open × any state | ruled out as a THROW source: `openDiagStore` never throws (C2 — the P2 open fence); a bad state surfaces as M2/M10 at the read, or swallows at the write | — |
-| diag handle `close()` | single-close by the owning verb's `finally` (the P2 non-lane: double-close unclaimed, parity with `StoreHandle`) | — |
+| diag handle `close()` | single-close by the owning verb's `finally`; the release CONTRACT is V8 (fail-open, aftermath-born — a throw escaping a `finally` would REPLACE a successful result, which V8's entailment base forbids), so NO exit-mapping lane exists and M11 + the channel rule hold by construction; driven at the store suite (V8's second-close stage) | — |
 
 Render-primitive note (non-lane, stated): the one un-enumerated call
 site on the new paths is the row/event serialization
@@ -316,7 +338,7 @@ that restate a rule count as mirrors and are listed.
 | dump-face recourse (post-close events visible in the dump) | dimension 6 (the driving lane) | plan §7.4 recourse sentence (cross-artifact) · packet ch7-p3 flag 5(a) (cross-artifact, the obligation source) · acceptance list |
 | composition root (the CLI value-imports `diag/`; `instanceof` match) | in-context note 2 | the M-matrix header's instanceof clause · dimension 9's eslint clause · the embedding-gates eslint line |
 | REV-BUNDLE-DEFAULT-POLICY closure (default policy; passthrough dev-only) | V4 | the embedding-gates `devPassthroughRedactionPolicy` sweep · the acceptance REV-BUNDLE-DEFAULT-POLICY line |
-| diag handle lifecycle (open never throws; close in `finally`, single-close) | C2 | in-context note 3 · the grid's two handle rows |
+| diag handle lifecycle (open never throws; close in `finally`, single-close, close FAIL-OPEN) | C2 (the open half) + V8 (the close half — aftermath-born) | in-context note 3 · the grid's open and close rows · V7's close clause · the acceptance store-suite bullet |
 
 The Pre-approval flags ledger is deliberately NOT in the live mirror
 set (the P1–P3 precedent): entries are dated decision snapshots;
@@ -370,6 +392,17 @@ history is never rewritten when a canonical row changes.
   precedent. The retirement ripple also drops `noopDiagnosticsSink`
   from `cli/main.ts`'s imports — V5 replaces all three of its uses —
   while `cli/dev/main.ts` KEEPS it for replay, C4).
+- Edited, AFTERMATH-BORN (the post-build external-review rounds; these
+  land in the `fix(v3)` aftermath commit, NOT the audited build
+  commit — the build-commit audit read the boundary AT commit
+  `3cec0969` and stays pinned to those bytes; the extension below
+  binds the AFTERMATH commit's audit): `v3/src/diag/sqliteDiagStore.ts`
+  (the close fail-open guard — the healthy branch's release gains the
+  catch the born-unavailable branch already carries; the grid's close
+  row is the contract), `v3/src/diag/sqliteDiagStore.test.ts` (the
+  second-close drive), plus the aftermath lanes in
+  `v3/src/cli/cli.test.ts` (the resume combination lane; the F1
+  representative negative — both files already in-boundary).
 - Untouched, explicitly: `kernel/`, `ingress/`, `store/`, `floor/`,
   `ports/`, `testkit/`, `emit/`, `domain/`, `v3/eslint.config.mjs`
   (the CLI's diag value import is already legal), `package.json`
@@ -382,8 +415,9 @@ history is never rewritten when a canonical row changes.
   `grep -rn "devPassthroughRedactionPolicy" v3/src/cli` →
   `dev/main.ts:10,51` ONLY (REV-BUNDLE-DEFAULT-POLICY re-verified per
   the P3 forward pointer); `grep -rln "CliDeps" v3/src` → six of the
-  seven boundary files ONLY (`diag/index.ts` carries no `CliDeps`
-  reference — the V7 type ripple is closed in-boundary);
+  nine boundary files ONLY (none of the three `diag/` boundary files
+  carries a `CliDeps` reference — the V7 type ripple is closed
+  in-boundary);
   `grep -n "rejectedInputs" v3/src/cli` → the two X1 test lanes
   (`cli.test.ts:316–326`, `dev/dev.test.ts:152–157`) — the exact
   replacement set (dimension 5).
@@ -400,7 +434,9 @@ history is never rewritten when a canonical row changes.
       "v3/src/cli/runtime.ts",
       "v3/src/cli/cli.test.ts",
       "v3/src/cli/dev/dev.test.ts",
-      "v3/src/diag/index.ts"
+      "v3/src/diag/index.ts",
+      "v3/src/diag/sqliteDiagStore.ts",
+      "v3/src/diag/sqliteDiagStore.test.ts"
     ]
   }
 }
@@ -424,6 +460,7 @@ history is never rewritten when a canonical row changes.
       { "id": "V5", "class": "anchored", "refs": ["prose:plan §7.7 (P4 packet row)", "prose:packet ch7-p3 (X1 — until P4 wires the store)"] },
       { "id": "V6", "class": "anchored", "refs": ["prose:packet ch7-p3 (X1/flag 1 — P4 retires the interim reader)"] },
       { "id": "V7", "class": "derived", "refs": ["prose:packet ch6-p4a (the runtime seam — openStore injection precedent)"] },
+      { "id": "V8", "class": "derived", "refs": ["prose:plan §7.3 (the availability matrix the entailing claims transpose)", "prose:packet ch7-p1 (REV-DIAG-FAILOPEN — the channel swallows its own failures)", "prose:packet ch7-p2 (the born-unavailable release catch precedent)"] },
       { "id": "M1", "class": "anchored", "refs": ["prose:plan §7.5 (tail --diag row)"] },
       { "id": "M2", "class": "anchored", "refs": ["prose:plan §7.3 (availability matrix — tail --diag + dev diag rows)", "prose:packet ch7-p2 ((name, reason) contract)"] },
       { "id": "M3", "class": "anchored", "refs": ["prose:packet ch6-p4a (channel rule — parseable prior rows)", "prose:plan §7.3"] },
@@ -503,7 +540,10 @@ history is never rewritten when a canonical row changes.
     (scripted V7 handle; prior rows parseable) + M4 (unknown id, incl.
     the corrupt-diag combination) + M6 (non-typed scripted rejection);
     F2 lanes (bad value → 2; default 0; the skip representative; M8
-    coupling); V2 regression (plain tail byte-unchanged, no diag
+    coupling; the RESUME COMBINATION lane — `--from` +
+    `--from-ordinal` together, dimension 3); the F1 representative
+    negative (`--diag` on `list` → 2); V2 regression (plain tail
+    byte-unchanged, no diag
     file); bundle: C5 `present([])` fresh, `present(rows)` after a
     real rejected submit, M10 `unavailable` + exit 0; M11
     (start/submit outcome twins under corrupt diag); C1 sibling
@@ -523,6 +563,10 @@ history is never rewritten when a canonical row changes.
     through the REAL `cli/dev/main.ts` process (tsx bridge) on a
     staged diag file → rows on stdout (the derived config proven
     end-to-end).
+  - **diag store suite (`sqliteDiagStore.test.ts` — aftermath-born,
+    V8):** the close fail-open guard driven via the second-close
+    stage (a repeated `close()` never throws — failure containment,
+    not a claimed idempotency affordance).
   Estimated ~28 new tests at `it` granularity.
 - Dimension 9: the FULL existing suite green (380 baseline at the P3
   close — re-verified in-session at build); all v3 bridges green
@@ -537,9 +581,10 @@ history is never rewritten when a canonical row changes.
   P2-probed/driven lane (garbage bytes, corrupt row, closed handle);
   no new premise rests on driver/OS behavior.
 - Standing review rules in force: **REV-C-PROJECTIONS-READONLY** (the
-  new read surfaces are read-only; the dump/tail never write —
-  the diag file creation on open is the P2 open contract, not a data
-  write); **REV-DIAG-FAILOPEN** (this packet adds NO sink
+  new read surfaces are read-only OVER THE DIAG RECORDS — no row is
+  written, updated, or deleted by dump/tail/bundle; they are NOT
+  filesystem-side-effect free: the O1 open initializes a missing diag
+  file — flag 2, a schema-init, never a data write); **REV-DIAG-FAILOPEN** (this packet adds NO sink
   implementation; the P2 sink is passed BARE at every new call site —
   no defensive wrapper, checked on the diff); **REV-B** (cursors are
   stream positions, never authority); **REV-E** (sink and reader
@@ -596,6 +641,34 @@ All bridges green at close: `v3:typecheck`, `v3:lint`, `v3:test`
 `v3:packet-lint` (0 errors), `v3:adr-check` (11 ADRs — no trigger
 fired, per the acceptance's no-ADR statement). Node v26.3.0.
 
+**Aftermath (2026-07-10, the user's EXTERNAL post-build review — three
+rounds; fixed same day, 401 tests):** the pilot's flagged approve and
+the build ran back-to-back in one turn, so the transitional
+cross-model arm (README §5.5) got no pre-build window — the external
+review ran POST-build (process-logged; boundary-review candidate: an
+explicit "external arm ran / waived" checkpoint). Substance catches
+(both in `detector_misses`): (1) the `DiagStoreHandle.close()`
+contract gap — the healthy branch's close was unguarded while the
+born-unavailable release already swallowed; folded as V8 (derived —
+the Claim 5/M10 entailment stated in-row), the guard landed in
+`sqliteDiagStore.ts` (the second-close drive in the store suite:
+RED before the guard, green after), and the mutation boundary gained
+the two diag-store files (aftermath-scoped — the build-commit audit
+stays pinned to `3cec0969`'s bytes); (2) the resume COMBINATION lane
+(`--from` + `--from-ordinal` on one invocation) — declared in
+dimension 3 and driven. Plus: the F1 representative negative
+(`list --diag` → usage 2) driven; REV-C reworded (read-only over the
+diag RECORDS, not filesystem-side-effect free); record-coherence
+folds (the closure-budget aftermath annotation; the Edited/boundary
+extension; the metrics nuance + scope sentences) — the round-1
+aftermath fold initially SKIPPED the reconciliation pass and the
+external round 2 caught exactly the propagation class it would have
+found (process-logged as the aftermath-reconciliation lesson); the
+round-2/3 folds closed WITH reconciliation passes (one PROPAGATION
+hit each, folded). All bridges re-verified green at the aftermath
+close: 401 tests, typecheck, lint, coverage validation, packet-lint,
+adr-check.
+
 ```json
 {
   "packet_metrics": {
@@ -605,8 +678,8 @@ fired, per the acceptance's no-ADR statement). Node v26.3.0.
       "reasoning": "pre-registered at the Phase-1 flip (2026-07-09), before authoring: the six-precedent CLI class + plan §7.5 were expected to determine every row",
       "discovered": "projection"
     },
-    "provenance": { "anchored": 18, "derived": 8, "new_decision": 1 },
-    "rounds": { "review": 2, "doc_refinement": 0, "implementation": 1 },
+    "provenance": { "anchored": 18, "derived": 9, "new_decision": 1 },
+    "rounds": { "review": 2, "doc_refinement": 0, "implementation": 2 },
     "stops": [
       {
         "type": "4:flagged-approve",
@@ -614,9 +687,20 @@ fired, per the acceptance's no-ADR statement). Node v26.3.0.
         "resolution": "the user's explicit approve (2026-07-10) on the reconciled basis b18f4c4e ratified the expose pick and the generalized token reading; the token-definition question is process-logged for the boundary review"
       }
     ],
-    "detector_misses": [],
+    "detector_misses": [
+      {
+        "found_at": "code-review",
+        "what": "the DiagStoreHandle.close() contract gap (V8): the healthy branch's unguarded close could flip a successful verb outcome from a finally block — against Claim 5/M10's entailment and REV-DIAG-FAILOPEN's character",
+        "why_missed": "the R2 lens-1 code-path duty SAW the close site and cleared it as a watchpoint by MAIN-STORE parity (fail-loud is correct for the authoritative store) instead of judging it by the diag channel's own fail-open character — the wrong-frame class; ten same-family lenses shared the frame"
+      },
+      {
+        "found_at": "code-review",
+        "what": "the resume COMBINATION lane (--from + --from-ordinal together) was declared nowhere while flag 1's decision rested on the 'both cursors' ground",
+        "why_missed": "the R2 lens-3 duty considered it and cleared it via an indirect structural argument (a swapped wiring would break the isolated skip lane) — accepting an inference where the template section-2 combination-lane heuristic demands a staged combination"
+      }
+    ],
     "learned": "the second v2 packet ran 2 FULL rounds + 1 bookkeeping reconciliation to approve (the panel-sustainability scoping's first post-pilot data point); review-ahead-of-build held again — one dead-import lint round, zero behavioral surprises",
-    "baseline_note": "The ch7 pilot's LAST human-approved packet (calibration closes with it). rounds.review = 2 FULL five-lens rounds (R1 refine: 1 content + a bookkeeping batch; R2 clean), reconciliation passes not counted; all ten FULL-round lenses transcript-verified claude-opus-4-8, the reconciliation claude-sonnet-5. rounds.implementation = 1 (the build round; one mechanical lint fix). The +18 net vs the ~28 estimate is body-vs-lane counting, recorded honestly above."
+    "baseline_note": "The ch7 pilot's LAST human-approved packet (calibration closes with it). prediction.discovered = projection per the D7 enum (deliberately binary); the header carries the honest nuance — projection WITH one flagged new-decision row (F2), exactly the mismatch class the pilot measures (the P3 baseline_note precedent). rounds.review = 2 FULL five-lens PRE-APPROVE panel rounds (R1 refine: 1 content + a bookkeeping batch; R2 clean), reconciliation passes not counted; all ten FULL-round lenses transcript-verified claude-opus-4-8, the reconciliations claude-sonnet-5. The POST-BUILD external-review rounds are chronicled in the Aftermath and feed detector_misses (its two entries are the external arm's substance catches; the aftermath rounds' record-coherence findings are PROCESS misses — the skipped aftermath reconciliation, process-logged — not detector misses). rounds.implementation = 2: the build round (one mechanical lint fix) + the same-day external-review aftermath round (the V8 guard + three driven lanes + record-coherence folds — the P3 aftermath-counting precedent). The +18 net vs the ~28 estimate is body-vs-lane counting, recorded honestly above; the aftermath adds +3 (401 at aftermath close)."
   }
 }
 ```

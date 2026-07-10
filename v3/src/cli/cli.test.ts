@@ -677,6 +677,40 @@ describe("cli — tail --diag (packet ch7-P4: V1/M1–M8/F1–F2)", () => {
     expect(diag).toHaveLength(1);
     expect((diag[0] as { event: DiagnosticEvent }).event.error?.name).toBe("E2");
   });
+
+  it("dimension 3 RESUME COMBINATION (aftermath): --from + --from-ordinal together — each lane honors ITS cursor", async () => {
+    const db = tempDbPath();
+    const deps = testDeps();
+    const id = await startAndConverge(db, deps); // committed seq 1, 2
+    stageDiagEvents(db, [
+      { source: "kernel", kind: "internal_failure", instanceId: id, error: { name: "E1", message: "first" } },
+      { source: "kernel", kind: "internal_failure", instanceId: id, error: { name: "E2", message: "second" } },
+    ]);
+
+    // A swapped or dropped cursor wiring cannot pass BOTH assertions
+    // at once (the combination-lane heuristic — flag 1's "both
+    // cursors" resumability ground driven as ONE invocation).
+    const resumed = await run(
+      ["tail", id, "--db", db, "--diag", "--from", "1", "--from-ordinal", "1"],
+      testDeps(),
+    );
+    expect(resumed.code).toBe(EXIT.ok);
+    const lines = tailLines(resumed);
+    const committed = lines.filter((l) => l.lane === "committed");
+    const diag = lines.filter((l) => l.lane === "diag");
+    expect(committed.map((l) => (l as { row: { seq: number } }).row.seq)).toEqual([2]);
+    expect(diag).toHaveLength(1);
+    expect((diag[0] as { event: DiagnosticEvent }).event.error?.name).toBe("E2");
+  });
+
+  it("F1 representative negative (aftermath): --diag on a NON-tail verb → usage 2", async () => {
+    const db = tempDbPath();
+    assertErrorContract(
+      await run(["list", "--db", db, "--diag"], testDeps()),
+      "usage",
+      EXIT.usage,
+    );
+  });
 });
 
 describe("cli — write-path wiring + separation (packet ch7-P4: V5/M11/C3/dimension 8)", () => {
