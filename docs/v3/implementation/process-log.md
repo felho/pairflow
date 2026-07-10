@@ -1472,3 +1472,44 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   deltas. Boundary-review candidate: state the aftermath-fold
   reconciliation obligation explicitly in README §4 step 8 or the
   skill's aftermath handling.
+- 2026-07-10 · ch 7 boundary · review HELD, the package RATIFIED by
+  the user ("mehet a zárás"). Verdicts: (1) CreateTaskPacket
+  first-run VALIDATED — four packets through the skill, round count
+  P3 pilot 5 → P4 2 + reconciliation, two builds with zero
+  behavioral surprises, the next-step derivation and the D1 detector
+  worked live; the skill is the standing authoring path. (2) README
+  §4 gains the aftermath rules (an aftermath fold IS a fold — the
+  reconciliation pass is mandatory; the log-lines/fix(v3) commit
+  choreography; aftermath-scoped boundary extension audited at its
+  own sha) and §5.5 the EXTERNAL-ARM CHECKPOINT (flagged approve →
+  build only after the arm ran or an explicit waive). (3) Template §1
+  + README §5.5 + ReviewPacket: `approve-ratified` GENERALIZED (a
+  resolved STOP verdict OR a below-Case-B new-decision riding to a
+  human approve — the ch7-P4 F2 precedent). (4) ReviewPacket: the
+  models line is TRANSCRIPT-VERIFIED; lens-1 gains the
+  own-contract-character frame rule (the P4 close-miss lesson). (5)
+  LearnedRules += R-DELEGATION-CLOSURE, R-FLAGS-IN-PACKET,
+  R-CLAIM-FORM-PROBES; R-RAW-FIXTURES stays WATCH (no second
+  occurrence). (6) Deferred to the ch8 opening as fix commits: the
+  config-wide dynamic-form sweep of the remaining import bans; the
+  fold-time prose-tally lint check. (7) Cross-session findings
+  convention ADOPTED (README §7): capture-time dated log entries,
+  the packet Aftermath as the durable home on immediate folds — the
+  P2 set-aside loss is the counter-evidence. (8) The ch9 derivation
+  seam rides to the ch9 ratification agenda. Conscious NON-ISSUES:
+  the P1 round count and the P3 cost profile (remedied mid-chapter
+  by the ratified sustainability package — P4's 2 rounds are the
+  evidence it holds); the P2 contested readonly-WAL probe (the
+  contested-probe corollary covered it); the "rule change mints
+  lanes" and cross-attempt combination classes (subsumed by the
+  adopted grid + combination-lane disciplines); the ch6→7
+  skill-ification findings (fixed same day, class covered); the
+  process-v2/realignment threads (closed by their own
+  ratifications). Chapter totals: 217 → 401 v3 tests, 10 → 11 ADRs
+  (ADR-010 accepted), units 5/158 / invariants 8/116 / traces 2/20
+  unchanged (empty slices by design — the channel is memo-born
+  operability); the full ci:local gate GREEN at the close; the
+  calibration stage CLOSES with this boundary — ch8 opens at
+  measurement (autonomous flag-free approves with the post-hoc
+  boundary audit), and ch8 ratification is the next act, on the
+  user's explicit go.

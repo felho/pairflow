@@ -125,6 +125,19 @@ human (§5.5), and packets then anchor to the ratified rows
    DONE: a red audit is a defect fixed before any further packet work,
    never advisory.
 
+**Aftermath handling (adopted at the ch7 boundary — the P3/P4
+practice made rule):** post-close findings fold into the packet's
+claim surface and Build-record Aftermath, and **an aftermath fold IS
+a fold** — it gets the same lens-4 delta-reconciliation pass as a
+panel fold (the ch7-P4 round-1 skip reproduced exactly the
+propagation class the pass exists to catch). Commit choreography:
+process-log lines land in their OWN docs commits around the build
+(the log is outside every packet boundary); an aftermath `fix(v3)`
+commit carries packet + code + tests together and MAY extend the
+`mutation_boundary` aftermath-scoped — the build commit's audit
+stays pinned to its own bytes, and the aftermath commit is audited
+against the extended boundary at its own sha.
+
 ## 5. Execution model — running the loop on Pairflow v1
 
 The build loop executes through the working v1 machinery
@@ -321,15 +334,17 @@ only element not carried") is admissible only WITH its measurement —
 the defined scope and the command output that proves it; enumeration
 from memory is not a measurement. Three routes exist for ownership
 misfit, plus `approve-ratified` — a decision-record MARKER (it
-routes nothing; it names WHERE a resolved STOP verdict was
-ratified):
+routes nothing; it names WHERE a decision was ratified by the
+approve act — a resolved STOP verdict OR a below-Case-B new-decision
+riding to a human approve; generalized at the ch7 boundary from the
+ch7-P3 minting, first applied at ch7-P4 F2):
 
 | Route | Home | Revisit |
 |---|---|---|
 | `boundary-review` | process-log line | the chapter DoD's mandatory log review |
 | `later-chapter` | proposed plan-map row | ratified by the human at approve/boundary |
 | `declined` | packet flag, `declined — <reason>` | none BY DESIGN — a human-ratified standing decision |
-| `approve-ratified` | packet flag — the dated STOP-verdict decision record | none — the approve act ratified it (the marker class named in the intro above; minted at the ch7-P3 pilot) |
+| `approve-ratified` | packet flag — the dated decision record (a resolved STOP verdict or a below-Case-B new-decision) | none — the approve act ratified it (the marker class named in the intro above; minted at the ch7-P3 pilot, generalized at the ch7 boundary) |
 
 **Panel re-run scoping (adopted 2026-07-10 — the ch7-P3 pilot
 evaluation, ratified in-session as a blocking sustainability fix;
@@ -429,7 +444,12 @@ arrive, the USER's manual cross-model arms play phase 2 (the
 adversarial, cross-model review) — explicitly a TRANSITIONAL
 skill-validation scaffold with no formal stop criterion; it retires as
 skill trust builds. The ratification blocks' `arms` lists name exactly
-these reviewers.
+these reviewers. **External-arm checkpoint (adopted at the ch7
+boundary):** on a FLAGGED approve, the build starts only after the
+external arm has run on the approved bytes OR the user explicitly
+waives it — the approve act and the build never share one turn (the
+ch7-P4 miss: the arm's window vanished and its seven findings arrived
+post-build).
 
 **Metrics convention:** one `packet_metrics` machine block per packet,
 written once at build close (schema FORM: template §1). `stops[].type`
@@ -476,7 +496,12 @@ loop — pre-defined **capture**, deferred **structure**:
   line per observation, written **the moment the friction happens** (a
   session summary will not preserve it later). Anything qualifies: a packet
   that needed out-of-packet fishing, a gate that fired late, a rule that
-  read ambiguous, a step that felt ceremonial.
+  read ambiguous, a step that felt ceremonial. **Cross-session findings
+  (adopted at the ch7 boundary):** findings born OUTSIDE a packet session
+  (user-side external reviews included) are captured as dated log entries
+  AT CAPTURE TIME — never announced without a written home; when folded
+  immediately, the packet's Aftermath is the durable record (the ch7-P2
+  set-aside loss is the counter-evidence this rule exists for).
 - **Capture, don't fix.** No process edits mid-chapter unless the issue
   blocks; the log is the pressure valve that keeps work from drifting into
   process-polishing.

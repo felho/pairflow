@@ -147,9 +147,11 @@ route:> `Route: fold-now | boundary-review | later-chapter |
 approve-ratified | declined — <reason>` <(a `declined` route ALWAYS
 carries its stated reason: it is a human-ratified standing decision
 with no revisit by design — README §5.5; `approve-ratified` marks a
-STOP-verdict decision whose ratification point IS the approve act —
-the flag is the dated decision record, revisit: none, the approve
-ratified it; minted at the ch7-P3 pilot)>
+decision whose ratification point IS the approve act — a resolved
+STOP verdict OR a below-Case-B new-decision riding to a human
+approve — the flag is the dated decision record, revisit: none, the
+approve ratified it; minted at the ch7-P3 pilot, generalized at the
+ch7 boundary)>
 
 ## Acceptance
 - Contract tests: <CT-* ids this packet must turn green>
