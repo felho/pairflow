@@ -1143,3 +1143,26 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   resolve-by-heading note at the operational resolver (AuthorPacket
   step 2). Lesson: an anchor row is not DONE until the canon says it
   — the anchor captures intent, the authority surface carries it.
+- 2026-07-10 · realignment round 6 (two arm reviews on round 5;
+  anchor addendum AL-18..AL-20) · the FOURTH completeness
+  falsification was a SCOPE error: the round-5 sweep grepped the
+  edited-file list, not the defined live set — plan.md's
+  predicted-class convention paragraph (the highest-authority
+  surface, exactly the ch8+ zone) carried three more §N.7 mentions.
+  Folded: the plan paragraph switches to the genre name
+  (propagation-class — AL-17's naming decision applied, visible
+  in-paragraph marker), and states the forward heading convention
+  (ch8+ section heading exactly `Packets and flow mode`; resolvers
+  match the heading, never the number — AL-19, flagged for veto);
+  the AuthorPacket resolver hardens to "heading STARTS WITH
+  `Packets`" against the legacy variants. RULE MINTED (AL-20, the
+  meta-remark's fourth recurrence): a completeness/sweep claim is
+  admissible only WITH its measurement — defined scope + the command
+  output; enumeration from memory is not a measurement (README §5.5
+  finding-policy). Arm-2's two flip-claims findings: substance
+  already carried by the live authority (README §4 step 8
+  build-close tier-0; the matrix's approve-time wording;
+  ReviewPacket's clean = zero fold-now AND zero STOP-class) —
+  disposition resolved-in-live-authority; the flagged files are
+  FC-X2 history and stay unedited (the two arms' apparent conflict
+  reconciled: the history rule wins the edit question).

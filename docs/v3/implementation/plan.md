@@ -105,15 +105,19 @@ convention is itself a chapter-1 rule.
 | 10 | Operator recourse card: one page (query via the floor, cancel, deleteRequested; no watchdog/retry until L9) | PI-9 | planned(ch 10) |
 
 **Predicted-class convention (process-v2, added at the Phase-1 flip;
-applies from ch8 ratifications).** Each chapter's §N.7 packet-table
+applies from ch8 ratifications; reference form aligned at realignment
+round 6 — AL-18/AL-19).** Each chapter's Packets-and-flow-mode table
 rows carry a one-word PREDICTED class — `projection (source: …)` /
 `invention (memo-born)` — recorded AT ratification (a boundary-time
 retro-annotation is worthless); the authoring-time discovery is always
 the authority, and a prediction/discovery mismatch routes to a
-friction-log line. The same §N.7 tables reference every chapter
+friction-log line. The same tables reference every chapter
 contract-draft with the `draft: …, ratified <date>` convention (the
-refs are REPEATABLE — the chapter's draft set is what its §N.7
-references, mirrored by the `contracts/chN-*-contract.md` glob).
+refs are REPEATABLE — the chapter's draft set is what the table
+references, mirrored by the `contracts/chN-*-contract.md` glob). From
+ch8 ratifications the section's heading is exactly `Packets and flow
+mode` (legacy headings vary and the section NUMBER wanders by
+chapter — resolvers match the heading, never the number).
 
 **Map extension note (added at ch-5 ratification, §5.6).** The 10-chapter
 map is the Block A core sequence, not a closed list: semantic surfaces the

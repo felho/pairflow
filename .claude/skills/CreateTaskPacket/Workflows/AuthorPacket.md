@@ -25,8 +25,10 @@ Deterministic, from repo surfaces ONLY — no session memory:
    gates it) — STOP after presenting the proposal.
 2. **The next packet** = the first row of the open chapter's
    Packets-and-flow-mode table (resolve it BY HEADING in the plan —
-   the section NUMBER wanders by chapter: 4.8/5.8/6.7/7.7) with NO
-   packet file under
+   the chapter section whose heading STARTS WITH `Packets`; the
+   NUMBER wanders by chapter (4.8/5.8/6.7/7.7), legacy headings
+   vary, and ch8+ headings are exactly `Packets and flow mode` per
+   the plan's convention paragraph) with NO packet file under
    `docs/v3/implementation/packets/` — a packet file lands in git only
    WITH its build commit (the one-commit rule), so absence = not
    built. EDGE: an UNCOMMITTED packet file in a dirty worktree is a

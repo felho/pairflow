@@ -316,7 +316,11 @@ truth: per-finding dispositions (folded / narrowed / declined, with
 reasons), conflicting feedback sources reconciled explicitly,
 genuinely open choices escalate as STOPs. TOOLING findings get a
 mandatory threat-model judgment; `declined: out of threat model` is a
-live route. Routes exist ONLY for ownership misfit:
+live route. A completeness or sweep claim ("all N occurrences", "the
+only element not carried") is admissible only WITH its measurement —
+the defined scope and the command output that proves it; enumeration
+from memory is not a measurement. Routes exist ONLY for ownership
+misfit:
 
 | Route | Home | Revisit |
 |---|---|---|
