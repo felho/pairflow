@@ -82,7 +82,7 @@ by the ADR-001 allowlist, static + dynamic forms).
 
 ## Verification
 
-The draft's probe record (P1–P22, `scratchpad/yaml-probe/*.mjs`
+The draft's probe record (P1–P23, `scratchpad/yaml-probe/*.mjs`
 transcribed into the draft's Context); at ch8-P1: the dependency
 lands with the lockfile pin, the parser-behavior contract rows
 (C1–C6, C34–C35) are driven as tests against the REAL library, and
