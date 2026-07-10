@@ -25,6 +25,7 @@ Integrity check: [`check.sh`](check.sh) — root bridge `pnpm v3:adr-check`.
 | [ADR-008](ADR-008-transcript-digest-form.md) | the transcript digest is type-inclusive — two digest surfaces | accepted | 2026-07-07 |
 | [ADR-009](ADR-009-operator-cli-module-and-dev-boundary.md) | the operator CLI module and the dev entrypoint boundary | accepted | 2026-07-08 |
 | [ADR-010](ADR-010-diag-store-separate-sqlite-file.md) | the diag store is a separate SQLite file, fail-open | accepted | 2026-07-09 |
+| [ADR-011](ADR-011-definition-module.md) | the definition module — authored-definition surface home | accepted | 2026-07-10 |
 
 ## Trigger watch (dormant ADRs)
 

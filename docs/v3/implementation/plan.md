@@ -125,6 +125,11 @@ model ladder carries beyond it enter as APPENDED chapters when their
 prerequisites exist — first candidate: the archive-purge / LC4 surface,
 the re-homed `CT-C-PURGE-AUDIT`'s owner. A re-home is recorded in both the
 intake row and the ratifying chapter; it is never a silent drop.
+Second named candidate (added at ch-8 ratification, §8.1): the **L2
+gate core**, expected to precede chapter 9 — the process-gate runner
+needs its call site (`GateEvaluator` + the `HANDLE` gate hook), and
+the template format gains its gate-declaration surface in that
+chapter, per the §8.2 evolution stance.
 
 **Ordering note (walking-skeleton-first, README §3.4).** Chapter 3 before
 chapter 4 does not contradict the principle: ch 3 is the constraint-sink /
@@ -1493,3 +1498,260 @@ validation green; all v3 bridges + the FULL `pnpm ci:local` gate green;
 ADR-010 `accepted`, integrity check green; the ch-7 map row + PI-4
 flipped to `realized`; process-log review held at the boundary,
 including the CreateTaskPacket first-run verdict.
+
+---
+
+## Chapter 8 — Template file-format spec (ratified 2026-07-10)
+
+(autonomy stage: **measurement** — the first chapter at measurement:
+a flag-free panel approve proceeds to build AUTONOMOUSLY with the
+post-hoc boundary audit; flags, STOPs, and first-of-a-kind classes
+still route to the human, per README §5.5 and the ch7 boundary
+package.)
+
+Realizes **PI-5** (the canonical authoring format) and **migrates
+MD-1** (§1.3). The chapter's central surface — the file format
+itself — is memo-born (the model deliberately states no file syntax),
+so this is the **first chapter with a contract-draft phase**: the
+DraftContract round runs before any packet (README §4), and its
+ratification act is the human's.
+
+### 8.1 Scope and boundaries
+
+**In scope:**
+
+1. **The canonical authoring file format** for the template surface
+   the implementation has REALIZED so far — the ch-4 domain shape,
+   1:1: `ref {id, version}`, `start`, `steps` (role, instruction,
+   transitions), `terminal`, `roles` (defaultActor), and the
+   `agentConfig` raw pass-through block (uninterpreted until L0c).
+   The format maps onto the existing `WorkflowTemplate`; it does not
+   extend it.
+2. **The format validator** — the fail-at-create family's concrete
+   form: file bytes → a valid `WorkflowTemplate` OR a typed,
+   path-addressed error list (§8.4).
+3. **A file-backed `DefinitionStore`** — pinned `{id, version}` load
+   from canonical files (§8.5).
+4. **The MD-1 migration** — BOTH hardcoded copies (the testkit
+   `fixtureTemplate()` and the CLI `builtinTemplate()` production
+   copy) move onto the canonical format; the drift-pin is retargeted;
+   MD-1 is retired (§8.6).
+5. **CLI activation** — the operator start path accepts a template
+   file and the dev entrypoint gains a validate surface; exact verbs
+   and flags are draft C-rows (§8.8).
+
+**Out of scope (deliberate, with corrected framing):**
+
+- **The gate/policy template surface.** L2/L2a/L2b are Block A MODEL
+  surface (all their units sit in the §1.4 inventory) — they are NOT
+  deferred out of Block A; they enter the FORMAT together with the
+  chapter that realizes gate semantics, per the ratified evolution
+  stance (§8.2). This ratification records the plan-structural
+  consequence: **an L2 gate-core chapter is expected to enter the map
+  as an appended chapter BEFORE chapter 9** (the §1.3 map-extension
+  mechanism) — ch-9's process-gate runner needs its call site
+  (`GateEvaluator` + the `HANDLE` gate hook), and the format gains
+  gate declarations in that chapter, with its own semantics.
+- **Latest-resolution** (load by id without a version). Re-homed to
+  the future L0f chapter (§8.5) — the D1 decision of this
+  ratification.
+- **Format versioning.** None, by design — §8.2 is the stance.
+- The L0f slot/mode resolution cascade; template marketplace /
+  discovery beyond the local convention; cross-version migration
+  tooling.
+
+### 8.2 The evolution stance — the format grows with realized capabilities
+
+Ratified principle (the user's, 2026-07-10): **the config format
+evolves together with the implemented capabilities — the format
+always covers exactly what the implementation supports, and a
+capability and its format surface land in the same chapter.** No
+speculative keys, ever.
+
+The operative rules (sharpened against a survey of omnigent's config
+evolution practice, 2026-07-10; the survey's LEARN/AVOID detail lands
+in the chapter draft's rationale — the rules below are the binding
+form):
+
+1. **No format-version field, no compat machinery during Block A.**
+   The format and its single in-repo consumer move together; there is
+   NO cross-version compatibility guarantee while development is
+   active — the PI-7 storage stance ("wipe-and-recreate, stated
+   explicitly") mirrored onto the authoring surface. Re-authoring a
+   template file after a format change is acceptable and cheap at
+   this population size. A mandatory-constant version field is the
+   named anti-pattern (it decays into dead weight); if a format-family
+   discriminator is ever needed, it is an honest `kind:` key.
+2. **Evolution mechanics: additive optional keys with
+   behavior-preserving defaults.** An old file keeps its exact
+   meaning under a newer parser; each new key's default is chosen so
+   absence = the pre-key behavior.
+3. **Removed or renamed keys fail LOUD with migration text** in the
+   error message ("key X was removed/renamed to Y — edit the file"),
+   never silently ignored. If an alias is ever introduced, it
+   canonicalizes at parse time so downstream code reads one shape.
+4. **Unknown key = fail-closed, path-addressed rejection.** The
+   silent-typo drop is the named failure mode this rule exists
+   against. Openness is not needed for evolution: the parser learns a
+   new key in the capability's own commit; an old file never carries
+   unknown keys, and a newer-format file against an older in-repo
+   parser cannot occur.
+
+### 8.3 The authoring format: YAML 1.2
+
+The syntax family is **YAML with YAML 1.2 semantics mandatory** (D2,
+ratified 2026-07-10). The deciding requirement: **step instruction
+prose is multiline and must be comfortably authorable INLINE** (block
+scalars) — a v1-scale workflow already carries many prompt fragments,
+and fragmenting them into side files makes editing materially worse;
+the separate-file form was rejected as the primary authoring shape (a
+file-ref variant may arrive later as an additive option).
+
+Guardrails:
+
+- **YAML 1.2 core-schema semantics are part of the contract**: only
+  `true`/`false` are booleans — the YAML-1.1 `on`/`off`/`yes`/`no`
+  coercion trap is the named hazard (omnigent had to patch its loader
+  to escape it; we pick a 1.2 parser instead). The parser choice is
+  the chapter's dependency decision.
+- **This is the v3 package's FIRST runtime dependency**, amending
+  ADR-002's stdlib-only stance — the dependency ADR is authored in
+  the draft phase and accepted with the draft ratification (the
+  draft-ratified ADR lane, README §4 step 5).
+- The exact field grammar, id/name rules, and the canonical example
+  are draft C-rows; `agentConfig` stays a raw pass-through block
+  (uninterpreted map, the omnigent `params:` precedent).
+
+### 8.4 The validator (fail-at-create)
+
+- **Shape:** file bytes → `WorkflowTemplate` OR an **accumulated**
+  error list of `{path, message}` entries (dotted paths, e.g.
+  `steps.review.transitions.PASS`) surfaced in ONE result — never
+  first-error-only, never a throw per finding.
+- **The validation rule table is a canonical contract matrix** (the
+  ch-6 rule binds: every declared lane is DRIVEN by a test, never
+  merely documented).
+- **Channel boundary:** template well-formedness failures are
+  LOAD-side failures, not envelope rejections — the `start.ts`
+  precedent stands (a definition-load failure at START is a
+  start-side failure with NO invented rejection name). Whether any
+  validator lane maps onto an existing 85-registry name is a draft
+  C-row; a needed-but-missing model name is the model↔code divergence
+  stop (README §6), never a code-invented name.
+- The well-formedness floor derives from the realized domain type's
+  stated rules (every transition target ∈ steps ∪ terminal; `start` ∈
+  steps; terminal ids disjoint from step ids) — the exact lane list
+  is the draft's matrix.
+
+### 8.5 The file-backed DefinitionStore (pinned-only)
+
+Implements the existing `ports/definition.ts` contract 1:1 —
+**pinned `{id, version}` load only** (D1, ratified 2026-07-10).
+Discovery and file-naming conventions (how a file's identity relates
+to its `ref`) are draft C-rows; the null-at-start vs loud-validator
+split follows §8.4's channel boundary.
+
+**Latest-resolution re-home (recorded here, the declining chapter):**
+the ch-4 forward pointer ("latest-resolution is L0f / chapter-8
+territory", `ports/definition.ts`) is resolved AGAINST ch-8 — "which
+version is newest" is a semantics package belonging to the L0f
+resolution cascade (whose own invariant, template-pinned-at-
+resolution, already fixes that any resolution ends in a pinned
+snapshot). The port comment is corrected in this ratification commit;
+the future L0f chapter records the receipt when ratified. Adding
+latest later is purely additive; nothing in ch-8 blocks it.
+
+### 8.6 The MD-1 migration (P2)
+
+The canonical file becomes the SINGLE source of the `local-pair-v0`
+template; both hardcoded copies are re-expressed against it and the
+duplication ends:
+
+- the **testkit** `fixtureTemplate()` and the **CLI**
+  `builtinTemplate()` production copy both derive from (or are
+  equality-pinned to) the canonical bytes;
+- the ADR-005 import stance is untouched: the testkit itself does NOT
+  import `definition/` — the equality with the canonical file is
+  asserted from TESTS (tests may import anything), or the kit fixture
+  is retired in favor of test-layer file loading; the exact shape is
+  packet work;
+- **MD-1 is retired at the chapter DoD with the full old-status
+  sweep**: the §1.3 MD-1 block, §4.8, the `templateFixture.ts` and
+  `templates.ts` comments — every surface stating the debt flips in
+  the retiring commit (the status-flip sweep rule).
+
+### 8.7 Module home: `src/definition/` (ADR-011)
+
+The authored-definition surface — format knowledge, the validator,
+and the file-backed `DefinitionStore` — lives in a NEW top-level v3
+module, `src/definition/` (D3, ratified 2026-07-10):
+
+- **Cohesion:** everything about authored definitions in one module;
+  future format growth (the gate surface, §8.1) touches one home.
+- **Mirrors the model:** the definition aggregate is a SEPARATE store
+  from the run store ("separate store; pinned immutable version") —
+  the code map now shows the same cut. `domain/` stays the pure
+  ledger mirror (the file format is memo-born and has no model
+  units); `store/` keeps meaning "the run-state SQLite substrate".
+- **Import stance:** `definition/` imports `domain/` (types),
+  `ports/`, node builtins, and the YAML dependency; kernel, floor,
+  and the other production modules never import it — composition
+  roots (CLI runtime) wire it. The production testkit/drift lint bans
+  (static + dynamic forms) extend to `src/definition/**`; the lint
+  extension lands in P1 with executed probes.
+- **ADR-011** records this and amends ADR-001's module map; born at
+  THIS ratification, it is accepted by the ratification act itself
+  (the chapter-ratification-born ADR lane).
+
+### 8.8 The draft phase — the first live DraftContract run
+
+Before any packet: `contracts/ch8-template-format-contract.md`
+(surface: `template-format`). Indicative C-row set — the draft
+decides, this list only scopes it: the field grammar + canonical
+example; id/name rules; the discovery/file-naming convention; the
+unknown-key and removed-key error contracts (§8.2 rules 3–4 made
+concrete); the validator lane matrix + its channel mapping (§8.4);
+the CLI verbs (`start --template`, dev `validate`); the dependency
+pick + its ADR (amends ADR-002); the canonical `local-pair-v0` file's
+in-repo home. The draft's rationale section carries the omnigent
+survey's LEARN/AVOID detail as provenance. Ratification is
+permanently human; packets anchor to ratified rows as
+`contract:ch8-template-format#Cn`. The plan's table below references
+the draft file; its `ratified <date>` completion is recorded when the
+draft phase closes (a plan-alignment edit riding the draft's own
+commit).
+
+### 8.9 Packets and flow mode
+
+Process note: the FIRST chapter at measurement stage and the first
+draft exercise — both verdicts are boundary-review material. The
+draft phase precedes P1 (README §4).
+
+| Packet | Content | Mode |
+|---|---|---|
+| ch8-P1 | the `definition/` module: YAML 1.2 parse + the fail-at-create validator (path-accumulated errors, full lane matrix) + the file-backed pinned `DefinitionStore` + the lint-boundary extension + the dependency landing | pre-approve (first-of-a-kind: file-format parser/validator class; first draft-anchored packet; the first runtime dependency); predicted: invention (memo-born; draft: `contracts/ch8-template-format-contract.md`, ratified — date recorded at draft close) |
+| ch8-P2 | the MD-1 migration: both template copies onto the canonical file, drift-pin retarget, CLI activation (`start --template` + dev `validate` per the draft), MD-1 retired with the old-status sweep | flag-free approve → autonomous build (measurement; the §5.5 fallbacks stand — any flag, STOP, or first-of-a-kind reclassification at authoring routes to the human); predicted: projection (source: the ratified draft rows + the P1 packet contract + the ch4/ch6 template copies) |
+
+Order: draft → P1 → P2. One packet = packet file + code + tests in
+ONE commit.
+
+### 8.10 Deliverables and DoD
+
+Shipped: this section; the ratified-then-realized
+`ch8-template-format` contract-draft; the `src/definition/` module
+(format + validator + file store); the CLI activation; the canonical
+`local-pair-v0` file as single source; ADR-011 (this act) + the
+draft-lane dependency ADR; the lint-boundary extension.
+
+DoD: the packets' contract tests green with claim-derived negatives
+EXECUTED; the validator matrix fully driven; drift suite green;
+coverage unchanged on ownership axes (empty ledger slices BY DESIGN —
+the format is memo-born operability; any unit discovered at authoring
+routes through the D1 detector) and validation green; all v3 bridges
++ the FULL `pnpm ci:local` gate green; ADR-011 `accepted` (this act),
+the dependency ADR `accepted` with the draft ratification, integrity
+check green; the draft flipped `realized`-in-place with its
+`realized_map`; the ch-8 map row + PI-5 flipped to `realized`; MD-1
+retired with the full old-status sweep; process-log review held at
+the boundary, including the first-DraftContract verdict and the first
+measurement-stage data points.
