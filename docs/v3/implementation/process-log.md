@@ -1322,3 +1322,23 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   tests + the flag-4 aligned plan edit + the packet-work log lines),
   then the post-build audit; the approve note and packet_metrics
   land in the Build record at close.
+- 2026-07-10 · ch7-P3 build choreography friction (caught at commit
+  planning, BEFORE the build commit): the approve record above
+  prescribes "one commit (… + the packet-work log lines)", but the
+  post-build audit binds the build commit's changed files to the
+  declared mutation_boundary ∪ packet — process-log.md is not in the
+  boundary, so log lines riding the build commit would have turned
+  the audit red. Resolved: the log lines land in their own docs(v3)
+  commits around the build (the approve-session lines before it, this
+  session's lines after). Boundary-review candidate: either the audit
+  gains a standard allowance for the process log, or the build
+  choreography prose names the separate-commit shape (capture, don't
+  fix — no mid-chapter tool/template edit).
+- 2026-07-10 · ch7-P3 BUILT (2e26921d — the pilot's fresh-session
+  build): README §4 ran clean end-to-end — 323→380 tests, all v3
+  bridges + the post-build boundary audit green, self-containment
+  held (repo surfaces sufficed). Two mechanical in-build rounds only
+  (a test-fixture staging-schedule bug caught by its own red; a
+  no-useless-assignment dead cursor advance on the stop path), ZERO
+  behavioral surprises — the review-ahead-of-build economics
+  observed at ch7-P1 repeats at the first v2-form packet.
