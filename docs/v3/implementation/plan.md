@@ -1424,7 +1424,13 @@ CLI surface (§7.5).
   runtime errors or payloads appears ANYWHERE in the default bundle's
   full serialization** — the ch6-P3 marker-scan extends to the
   `internal_failure.message` path (a payload marker embedded in an
-  error message) and the `unavailable` lane.
+  error message) and the `unavailable` lane — with one enumerated
+  exception: `error.name` rides as the projection's `errorName`
+  scalar, verbatim up to a 64-character (UTF-16 code-unit) prefix
+  cap, an untrusted-in-principle identifier-by-convention (aligned at
+  ch7-P3 pre-approval; the marker-scan negative binds every OTHER
+  position of the serialization, and the hostile-name lane pins the
+  boundary and the cap).
 
 ### 7.5 The CLI surface (P4)
 

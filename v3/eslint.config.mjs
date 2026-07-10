@@ -130,6 +130,36 @@ export default tseslint.config(
     },
   },
 
+  // ch7-P3 floor→diag boundary: floor/ never VALUE-imports diag/ —
+  // DiagUnavailableError is matched by `error.name` (the P2 cross-module
+  // (name, reason) contract) and readers/sinks arrive injected; the
+  // interim reader's value import lives in the CLI composition roots.
+  // The TS variant (the base rule has no allowTypeImports; the drift
+  // entry below is the in-file precedent) coexists with the base-rule
+  // testkit/drift bans above (later-entry-overrides-per-RULE-ID
+  // semantics — distinct rule ids never clobber). Floor TEST files
+  // legitimately value-import openDiagStore (the ADR-005 ignores
+  // culture).
+  {
+    files: ["src/floor/**"],
+    ignores: ["src/**/*.test.ts"],
+    rules: {
+      "@typescript-eslint/no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["**/diag/**"],
+              allowTypeImports: true,
+              message:
+                "ch7-P3 floor→diag boundary: floor/ never value-imports diag/ — match DiagUnavailableError by error.name; readers arrive injected (composition roots wire them).",
+            },
+          ],
+        },
+      ],
+    },
+  },
+
   // ADR-007: non-test drift modules (the manifests / import tables) are
   // compile-time bookkeeping — `import type` ONLY. Drift TEST files may
   // value-import domain registry values (comparing the runtime value

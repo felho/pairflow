@@ -3,21 +3,33 @@ import type {
   EventEnvelope,
   InstanceId,
   OpId,
+  RejectionName,
   TranscriptEntry,
   WorkflowInstance,
 } from "../domain/index.js";
+import type {
+  DiagnosticEvent,
+  DiagnosticKind,
+  DiagnosticSource,
+  DiagnosticsReader,
+  DiagUnavailableReason,
+  IngressDetailToken,
+} from "../ports/diagnostics.js";
 import type { RedactionPolicy } from "../ports/redaction.js";
 import type { StorePort } from "../ports/store.js";
 
 /**
- * The debug bundle (plan §6.4, packet ch6-P3): ONE read-only export of
- * one run, reading from the store ONLY — env/runtime material cannot
- * enter by construction. FOUNDATION ONLY: the operator/dev bundle-dump
- * verb activates in P4; this module is the format + the policy seam.
+ * The debug bundle (plan §6.4, packet ch6-P3; `rejectedInputs` flipped
+ * three-state by packet ch7-P3): ONE read-only export of one run,
+ * reading from the store and the injected diag reader ONLY —
+ * env/runtime material cannot enter by construction.
  *
- * The shape below IS the canonical bundle schema (the packet's matrix;
- * the single source for the keyset tests and the P4 JSON consumer).
- * Unknown instance = null (the §6.2 read-surface duality).
+ * The shape below IS the canonical bundle schema (the ch7-P3 K matrix
+ * supersedes ch6-P3's `rejectedInputs` row; every other level is
+ * inherited unchanged — the single source for the keyset tests and the
+ * ch7-P4 JSON consumer). Unknown instance = null (the §6.2 read-surface
+ * duality) — decided by the committed detail read alone: the diag store
+ * has no instance-existence authority (S7).
  */
 export interface BundleEnvelopeMeta {
   readonly instanceId: InstanceId;
@@ -40,11 +52,37 @@ export interface BundleTranscriptRow {
   readonly envelope: BundleEnvelopeMeta;
 }
 
-/** A stated gap, never a silent one (ratification finding). */
-export interface RejectedInputsSection {
-  readonly status: "absent";
-  readonly reason: string;
+/**
+ * The bundle diag-row projection (the ch7-P3 J matrix): a COPY of
+ * plan-enumerated fields from the read-face event — it derives nothing
+ * and performs no fallible work beyond its own reads. `errorName` is
+ * `error.name` ONLY, flattened to a scalar (an error OBJECT would leave
+ * a structural slot for `message`; the flat key makes the no-message
+ * rule structural) and capped at a 64-code-unit prefix (J10).
+ * `error.message`, attribution fields, and version fields NEVER appear
+ * (J9's closed exclusion list).
+ */
+export interface BundleDiagRow {
+  readonly kind: DiagnosticKind;
+  readonly source: DiagnosticSource;
+  readonly at: EpochMillis;
+  readonly ordinal: number;
+  readonly reason?: RejectionName;
+  readonly errorName?: string;
+  readonly payloadDigest?: string;
+  readonly detail?: IngressDetailToken;
 }
+
+/**
+ * Three-state, NEVER a silent empty (plan §7.4): attributed rows
+ * present (zero rows = known-empty), or `unavailable(reason)` with the
+ * enumerated token — never underlying error text. The ch6-P3 `absent`
+ * state RETIRED with this packet: the union has no such member, so it
+ * cannot re-enter.
+ */
+export type RejectedInputsSection =
+  | { readonly status: "present"; readonly rows: readonly BundleDiagRow[] }
+  | { readonly status: "unavailable"; readonly reason: DiagUnavailableReason };
 
 export interface DebugBundle {
   readonly formatVersion: 1;
@@ -70,12 +108,36 @@ export interface DebugBundleExporter {
   exportDebugBundle(instanceId: InstanceId): Promise<DebugBundle | null>;
 }
 
+/** J10: the projected errorName is `error.name`'s first 64 UTF-16 code
+ * units — deterministic prefix truncation, unmarked; a conforming name
+ * is untouched. Caps the per-event covert-channel bandwidth of the one
+ * stated free-text exception (the STOP-2 verdict). */
+const ERROR_NAME_CAP = 64;
+
+/** K3's token enum — a name-matched carrier's `reason` is VALIDATED
+ * against it, so a lying carrier degrades to `read_failed` and free
+ * text never rides the `unavailable` lane. */
+const DIAG_UNAVAILABLE_REASONS: ReadonlySet<string> = new Set([
+  "open_failed",
+  "refused_marker",
+  "read_failed",
+]);
+
+/**
+ * The reader is REQUIRED (X2): an optional dep would leave a silent
+ * path back toward an undeclared section state — explicit wiring
+ * forecloses it (the `KernelDeps.diag` culture, ch7-P1).
+ */
 export function createDebugBundleExporter(
   store: StorePort,
   policy: RedactionPolicy,
+  diag: DiagnosticsReader,
 ): DebugBundleExporter {
   return {
     async exportDebugBundle(instanceId: InstanceId): Promise<DebugBundle | null> {
+      // The committed half is authoritative: its failure is the export's
+      // failure (S9), and existence is ITS decision — on null the diag
+      // reader is never consulted (S7).
       const detail = await store.getInstanceDetail(instanceId);
       if (detail === null) {
         return null;
@@ -85,12 +147,63 @@ export function createDebugBundleExporter(
         policy: policy.id,
         instance: detail.instance,
         transcript: detail.transcript.map((entry) => toBundleRow(entry, policy)),
-        rejectedInputs: {
-          status: "absent",
-          reason: "diagnostic channel lands ch 7",
-        },
+        rejectedInputs: await readRejectedInputs(diag, instanceId),
       };
     },
+  };
+}
+
+/**
+ * The succeed-anyway scope is the DIAG side only (§7.3: the bundle
+ * itself SUCCEEDS under ANY diag-side failure). The catch wraps the
+ * diag read AND the row projection — the whole diag-side consumption,
+ * never the committed half. Every S6 member lands here: a non-typed
+ * rejection or synchronous throw, a lying name-matched carrier, and a
+ * malformed resolved row that breaks the projection.
+ */
+async function readRejectedInputs(
+  diag: DiagnosticsReader,
+  instanceId: InstanceId,
+): Promise<RejectedInputsSection> {
+  try {
+    const events = await diag.getDiagnostics(instanceId, 0);
+    return { status: "present", rows: events.map(toDiagRow) };
+  } catch (error) {
+    return { status: "unavailable", reason: diagFailureReason(error) };
+  }
+}
+
+/**
+ * `DiagUnavailableError` is matched BY NAME — the P2 cross-module
+ * `(name, reason)` contract; `floor/` takes no `diag/` value import
+ * (ADR-007 discipline, lint-mechanized in this packet) — and its
+ * `reason` is validated against the three-token enum.
+ */
+function diagFailureReason(error: unknown): DiagUnavailableReason {
+  if (error instanceof Error && error.name === "DiagUnavailableError") {
+    const reason: unknown = (error as unknown as { reason?: unknown }).reason;
+    if (typeof reason === "string" && DIAG_UNAVAILABLE_REASONS.has(reason)) {
+      return reason as DiagUnavailableReason;
+    }
+  }
+  return "read_failed";
+}
+
+function toDiagRow(event: DiagnosticEvent): BundleDiagRow {
+  return {
+    kind: event.kind,
+    source: event.source,
+    at: event.at,
+    ordinal: event.ordinal,
+    ...(event.reason !== undefined ? { reason: event.reason } : {}),
+    // internal_failure carries `error` by the P1/P2 contract; a
+    // malformed resolved row (error absent) breaks THIS read — S6
+    // member (iii), lost to the diag-side catch, never a thrown export.
+    ...(event.kind === "internal_failure"
+      ? { errorName: (event.error as { name: string }).name.slice(0, ERROR_NAME_CAP) }
+      : {}),
+    ...(event.payloadDigest !== undefined ? { payloadDigest: event.payloadDigest } : {}),
+    ...(event.detail !== undefined ? { detail: event.detail } : {}),
   };
 }
 

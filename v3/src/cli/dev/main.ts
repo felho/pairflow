@@ -24,7 +24,7 @@ import { CliError, EXIT } from "../contract.js";
 import type { CliDeps } from "../runtime.js";
 import { productionDeps } from "../runtime.js";
 import { builtinDefinitionStore, builtinTemplate } from "../templates.js";
-import { noopDiagnosticsSink } from "../../diag/index.js";
+import { noopDiagnosticsSink, unavailableDiagnosticsReader } from "../../diag/index.js";
 
 /**
  * The DEV entrypoint (plan §6.5, packet ch6-P4b; ADR-009 dev CLI
@@ -44,9 +44,12 @@ async function verbDevBundle(ctx: VerbContext): Promise<number> {
   const id = requireInstanceId(ctx);
   const passthrough = ctx.values["passthrough"] === true;
   return withStore(ctx, async (handle) => {
+    // Interim diag wiring (ch7-P3, lane X1): the unavailable reader
+    // rides until ch7-P4 wires the store on the derived config.
     const exporter = createDebugBundleExporter(
       handle.store,
       passthrough ? devPassthroughRedactionPolicy : redactPayloadsPolicy,
+      unavailableDiagnosticsReader,
     );
     const bundle = await exporter.exportDebugBundle(id);
     if (bundle === null) {

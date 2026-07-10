@@ -313,6 +313,19 @@ describe("cli — read verbs (the floor activated)", () => {
     );
   });
 
+  it("bundle: interim diag wiring (ch7-P3, lane X1) — rejectedInputs = unavailable(open_failed) until P4 wires the store", async () => {
+    const db = tempDbPath();
+    const deps = testDeps();
+    const id = await startOne(db, deps);
+
+    // Pass-through CONTENT only: exit code, channel rule, and the rest
+    // of the bundle contract are untouched (dimension 14).
+    const bundle = await run(["bundle", id, "--db", db], deps);
+    expect(bundle.code).toBe(EXIT.ok);
+    const doc = JSON.parse(bundle.stdout[0] ?? "") as { rejectedInputs: unknown };
+    expect(doc.rejectedInputs).toEqual({ status: "unavailable", reason: "open_failed" });
+  });
+
   it("tail: NDJSON rows on stdout, completion on terminal; error lanes → 3 / 2", async () => {
     const db = tempDbPath();
     const setupDeps = testDeps();

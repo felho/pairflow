@@ -1,6 +1,6 @@
 import { pathToFileURL } from "node:url";
 
-import { noopDiagnosticsSink } from "../diag/index.js";
+import { noopDiagnosticsSink, unavailableDiagnosticsReader } from "../diag/index.js";
 import type { EventEnvelope, Outcome, WorkflowTemplate } from "../domain/index.js";
 import { deriveEmitDigest, deriveOperatorOpId } from "../emit/index.js";
 import {
@@ -162,7 +162,13 @@ async function verbBundle(ctx: VerbContext): Promise<number> {
   return withStore(ctx, async (handle) => {
     // REV-BUNDLE-DEFAULT-POLICY: the normal CLI binds the production
     // default; pass-through exists only behind the dev entrypoint (P4b).
-    const exporter = createDebugBundleExporter(handle.store, redactPayloadsPolicy);
+    // Interim diag wiring (ch7-P3, lane X1): the unavailable reader
+    // rides until ch7-P4 wires the store on the derived config.
+    const exporter = createDebugBundleExporter(
+      handle.store,
+      redactPayloadsPolicy,
+      unavailableDiagnosticsReader,
+    );
     const bundle = await exporter.exportDebugBundle(id);
     if (bundle === null) {
       throw notFound("UnknownInstance", `no such run: '${id}'`);

@@ -148,6 +148,14 @@ describe("dev cli — bundle --passthrough (REV-BUNDLE-DEFAULT-POLICY closure)",
 
     assertError(await runDev(["bundle", "ghost", "--db", db], testDeps()), "not_found", EXIT.notFound);
   });
+
+  it("dev bundle: interim diag wiring (ch7-P3, lane X1) — rejectedInputs = unavailable(open_failed) until P4 wires the store", async () => {
+    const { db, id } = await seedDb();
+    const bundle = await runDev(["bundle", id, "--db", db], testDeps());
+    expect(bundle.code).toBe(EXIT.ok);
+    const doc = JSON.parse(bundle.stdout[0] ?? "") as { rejectedInputs: unknown };
+    expect(doc.rejectedInputs).toEqual({ status: "unavailable", reason: "open_failed" });
+  });
 });
 
 describe("dev cli — inject schema + derived/override paths", () => {
