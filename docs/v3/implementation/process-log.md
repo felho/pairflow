@@ -1563,3 +1563,48 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   retired (model-effectiveness experiments = a later explicit act);
   the Fable ban stands. process-v2-design.md D4 stays untouched as
   the historical record — README §5.5 carries the amendment.
+
+- 2026-07-11 · ch8-P1 authoring + approve · the FIRST measurement-stage
+  packet ran the full creation loop: R1 full panel (6 fold-now: the
+  fs-errno substrate record, the validate→store combination lane, the
+  dim-4 reference-integrity enumeration, the -0 raw lane, the S2
+  mirror-map row, the path-presence scoping three lenses converged
+  on) → content fold → R2 targeted CLEAN → close₁. Then the
+  user-requested EXTERNAL ARM ran PRE-approve (agent-invoked `codex
+  exec`, find + hash-citing re-check — the first pre-approve arm
+  window; ch7-P4's arm only got post-build): verdict `refine` with
+  TWO substance catches twelve Opus lens passes had cleared — S1's
+  "no out-of-directory access by construction" overclaim (a planted
+  SYMLINK is a byte-exact listing match and readFile follows it out;
+  the arm PROBED instead of judging the ref-axis argument) and the
+  "non-integer version resolves null" example (a matching x@1.5.yaml
+  file loads and takes a TYPED rejection). Folded as a claim
+  NARROWING + symlink non-claim (operator-trusted content, the §5.5
+  threat model — no lstat rule minted) + the no-prevalidation twin
+  lane; arm re-check cleared, close₂ clean on 00ba6643. The STOP-4
+  flagged approve (2026-07-11) ratified flag 1 (E6 echo adoption).
+  Diminishing-returns cutoff honored: 2 arm rounds, stop.
+- 2026-07-11 · ch8-P1 friction (flag 2) · PREDICTION/DISCOVERY
+  MISMATCH: plan §8.9 predicted `invention` (memo-born, recorded at
+  ratification BEFORE the draft phase ran); authoring discovered
+  `projection` (36/3/1 — the ratified draft absorbed the memo-born
+  decisions). Boundary-review question: does the predicted class bind
+  the SURFACE's genesis or the packet-time manifest? Draft-phased
+  chapters make the two systematically diverge.
+- 2026-07-11 · ch8-P1 friction (metrics enum) · the
+  `detector_misses[].found_at` closed enum (approve /
+  architecture-review / code-review / implementation / refinement)
+  PREDATES the pre-approve external-arm lane — `approve` used as the
+  nearest member, the arm named in the entry text. Boundary-review
+  candidate: an `external-arm` enum member.
+- 2026-07-11 · ch8-P1 build · FIRST-EXECUTION GREEN on every
+  yaml-substrate lane (the G gates, class-major + directive-heads
+  ordering, the toJS guard, the cycle non-throw, the version
+  node-inspection ladder): a ratified draft's probe record TRANSFERS
+  to code with zero behavioral surprises — the strongest evidence yet
+  for the draft-phase→packet pipeline. Mechanical residue only (4
+  readonly casts, 1 optional chain, 2 auto-fixed assertions, 1 NBSP
+  escape). Test-estimate counting: 401 → 515 (+114 vs "~55") — the
+  INVERSE of ch7-P4's over-count: parametrized lanes expand to
+  per-form `it` bodies; the estimating convention still has no stable
+  unit.
