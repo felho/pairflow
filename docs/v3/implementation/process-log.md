@@ -1217,6 +1217,38 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   immediately, routes are recorded in the packet), so the residual
   gap is exactly USER-side findings born OUTSIDE the packet session
   — today's loss is the concrete evidence the decision can weigh.
+- 2026-07-10 · ch7-P3 authoring (the pilot's first v2 packet): the
+  header manifest tally was written from MEMORY and was wrong
+  (claimed 27/13/0 = 40 rows; machine count 26/15/0 = 41) — all five
+  round-1 lenses caught it independently. The AL-20 measurement rule
+  applies to a packet's OWN tallies (compute from the block, never
+  recall); the lint's tally cross-lock binds only at close
+  (packet_metrics), so a fold-time prose-tally check is a candidate
+  lint extension for the boundary review.
+- 2026-07-10 · ch7-P3 round 1: the D1 detector chain WORKED at its
+  first live trial — the lens-2 entailment attack reclassified X1
+  (the interim CLI reader token) derived→new-decision, tripping the
+  Case-B semantic trigger → STOP 1:late-b-signal raised instead of a
+  laundered decision; a second STOP 2:contested-ratified-vs-reality
+  surfaced on plan §7.4's errorName-vs-wide-free-text-claim tension
+  (both sentences ratified; reality contradicts their conjunction).
+  Both STOPs presented at the pilot's human decision point.
+- 2026-07-10 · ch7-P3 STOP verdicts (the user's, one session): STOP 1
+  → (a) the open_failed interim mapping stands, approve-ratified;
+  STOP 2 → the user's OWN hybrid — stated exception PLUS a
+  64-character prefix cap on the projected errorName (J10, the
+  packet's second new-decision row, minted honestly rather than
+  absorbed). Note for the pilot record: the human decision point
+  produced a design improvement neither panel option carried — the
+  cap idea came from the user, which is exactly the intent-injection
+  value the STOP class exists to preserve.
+- 2026-07-10 · ch7-P3 rounds 2-3: a route-class gap surfaced — the
+  STOP-verdict decision flags carry "Route: approve-ratified", a
+  token outside the template §1 route enum (fold-now /
+  boundary-review / later-chapter / declined). The class is real
+  (a decision the pilot's approve act ratifies); the enum should
+  gain it at the boundary review (capture, don't fix — no
+  mid-chapter template edit).
 - 2026-07-10 · ch7-P3 pilot COST PROFILE (captured at the user's
   sustainability stop): the packet reached its clean round in FIVE
   full 5-lens panel rounds + one fresh-eyes propagation pass (26
@@ -1272,3 +1304,21 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   un-wrapped; the Re-run mode line joined the report validity gate
   with ACTUAL model ids recorded. SKILL.md's stale void-example
   fixed (CONTENT fold qualifier).
+- 2026-07-10 · ch7-P3 APPROVED — the user's explicit "approve" on
+  sha256 fd6fee2af8e3546620ef34193539cb2544381ff503d4e6db9012061cb60a2d80
+  (the round-5 clean bytes: all five lenses CLEAN, every approve-time
+  tier-0 gate green). The STOP-4 flagged-approve act RATIFIES the
+  packet's approve-ratified routes: flag 1 (X1 new-decision — the
+  interim open_failed mapping; the STOP-1 verdict formalized), flag 4
+  (J10 new-decision — the errorName stated exception + 64-code-unit
+  prefix cap; the STOP-2 verdict formalized), flag 2 (the bundle's
+  succeed-anyway direction), flag 3 (the ch6-P3 schema-row
+  supersession), flag 5 (the two P4 forward obligations). Pilot
+  bookkeeping: 5 full panel rounds + 1 propagation pass to the clean
+  round; 2 STOPs raised and human-resolved; 2 new-decision rows
+  carried honestly. The BUILD proceeds in a FRESH session (the
+  packet's self-containment is the pilot's own test — no session
+  memory assumed): README §4 steps 1-8, one commit (packet + code +
+  tests + the flag-4 aligned plan edit + the packet-work log lines),
+  then the post-build audit; the approve note and packet_metrics
+  land in the Build record at close.
