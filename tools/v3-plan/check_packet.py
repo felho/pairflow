@@ -77,6 +77,16 @@ Packets (docs/v3/implementation/packets/*.md, README.md excluded):
       POSITIVELY too: the audited commit must change the packet file
       itself — a code-only or follow-up commit is the wrong audit
       target.
+  P9. Fold-time prose-tally cross-lock (the ch8-opening deferred fix;
+      AL-20 applied to the packet's own header): every UNFENCED prose
+      occurrence of the tally form `<n> anchored / <m> derived /
+      <k> new-decision` must equal the packet_rows machine tally. The
+      close-time packet_metrics lock binds too late — the ch7-P3
+      round-1 header wrote its tally from memory and was wrong; this
+      binds at EVERY lint run. The scan VERIFIES a stated numeric
+      claim against the declared block; the prose numbers never
+      become machine data (they gate nothing downstream), so the
+      no-semantics-from-free-text principle stands.
 
 Drafts (docs/v3/implementation/contracts/*.md, README.md excluded; a
 missing directory means zero drafts):
@@ -186,6 +196,9 @@ ADR_STRICT_RE = re.compile(r"^ADR-(\d{3})$")
 # what this guards against is generation drift re-emitting it from
 # the repo's historical texts.
 WITHDRAWN_MARK_RE = re.compile(r"\[P:")
+# P9: the header tally form the live packets state (template §1's
+# Classification line) — matched in fence-stripped prose only.
+PROSE_TALLY_RE = re.compile(r"(\d+)\s+anchored\s*/\s*(\d+)\s+derived\s*/\s*(\d+)\s+new-decision")
 C_ROW_RE = re.compile(r"^\|\s*(C\d+)\s*\|")
 DRAFT_NAME_RE = re.compile(r"^(ch\d+)-([a-z0-9-]+)-contract\.md$")
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -737,6 +750,23 @@ def check_packet(
 
     tally = check_packet_rows(path.name, blocks, prose, drafts, adr_dir, checker)
 
+    # P9: fold-time prose-tally cross-lock — every prose statement of
+    # the tally must equal the machine count (AL-20 on the packet's own
+    # header; the close-time packet_metrics lock binds too late — the
+    # ch7-P3 round-1 header wrote its tally from memory). Skipped when
+    # the manifest itself is malformed: P3's errors already own that.
+    if tally is not None:
+        expected = (tally["anchored"], tally["derived"], tally["new_decision"])
+        for m in PROSE_TALLY_RE.finditer(prose):
+            stated = tuple(int(g) for g in m.groups())
+            if stated != expected:
+                checker.error(
+                    f"{path.name}: prose tally '{m.group(0)}' contradicts the "
+                    f"packet_rows manifest ({expected[0]} anchored / "
+                    f"{expected[1]} derived / {expected[2]} new-decision) — "
+                    f"compute tallies from the block, never recall"
+                )
+
     # packet_metrics (optional block, AT MOST ONE — D7: one compact
     # machine block per packet, written once at close; DEEP schema when
     # present). Its provenance counts are cross-locked to the manifest.
@@ -1057,6 +1087,8 @@ RATIFICATION_TMPL = """
 
 GREEN_PACKET = """# packet fixture
 
+Classification: projection — manifest tally: 1 anchored / 1 derived / 1 new-decision
+
 ```json
 {"mutation_boundary": {"files": ["v3/src/x.ts", "v3/src/x.test.ts"]}}
 ```
@@ -1259,6 +1291,28 @@ def run_selftest() -> int:
         GREEN_PACKET.replace('"class": "new-decision"', '"class": "vibes"'),
         "class 'vibes' not in",
     )
+    expect_red_packet(
+        "prose-tally-contradicts-manifest",
+        GREEN_PACKET.replace(
+            "manifest tally: 1 anchored / 1 derived / 1 new-decision",
+            "manifest tally: 2 anchored / 1 derived / 0 new-decision",
+        ),
+        "prose tally",
+    )
+    expect_red_packet(
+        "prose-tally-second-statement-contradicts",
+        GREEN_PACKET
+        + "\nThe summary restates the tally: 3 anchored / 0 derived / 0 new-decision.\n",
+        "prose tally",
+    )
+    # …and a QUOTED wrong tally is material, never a stated claim
+    shared_packet.write_text(
+        GREEN_PACKET + "\n```text\nround-1 header said: 9 anchored / 9 derived / 9 new-decision\n```\n",
+        encoding="utf-8",
+    )
+    errors, _ = lint(shared_root / "packets", shared_root / "contracts", ADR_DIR)
+    expect_green("fenced wrong tally stays green (P9 reads prose only)", errors)
+    shared_packet.write_text(GREEN_PACKET, encoding="utf-8")
     expect_red_packet(
         "row-reserved-family",
         GREEN_PACKET.replace('{"id": "O3"', '{"id": "P3"'),

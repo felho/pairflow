@@ -125,7 +125,13 @@ reader might trust is the drift class. Rules (lint-enforced):
   never manifest data (the manifest keyset stays {id, class, refs});
 - close-time counts live in `packet_metrics.provenance` and must equal
   the manifest tally (lint-locked; the duplicate home is deliberate —
-  D7's aggregation surface reads the metrics block).
+  D7's aggregation surface reads the metrics block);
+- every PROSE statement of the tally (`<n> anchored / <m> derived /
+  <k> new-decision`, e.g. the Classification line) is lint-locked to
+  the manifest at EVERY run, not just at close (the fold-time
+  prose-tally cross-lock, ch8-opening fix — the AL-20 rule: compute
+  tallies from the block, never recall; a quoted/fenced tally is
+  material and stays out of the scan).
 
 ```json
 {
