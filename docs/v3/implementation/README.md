@@ -387,7 +387,12 @@ are ORDINARY folds — the fold classes apply; the finder-lane rerun
 is the ARM'S OWN RE-CHECK on the folded bytes, its verdict citing
 the NEW content hash (a verdict on stale bytes is no verdict), plus
 the mandatory delta-scoped reconciliation pass; the escalation
-triggers are unchanged.
+triggers are unchanged. The arm may be run by the user manually OR
+invoked by the loop non-interactively — an OPTION, not a mandate,
+proven 2026-07-10 (the ch8 draft's rounds 5: find + re-check both
+agent-invoked, hash-citing); the mechanics live in the
+`CreateTaskPacket` skill's ReviewPacket workflow. Whether it becomes
+a STANDING loop leg is a queued boundary-review decision.
 **Model policy (amended 2026-07-10):** EVERY panel pass — full,
 targeted, reconciliation, the close — runs on an Opus-class model;
 the full⇒Opus / targeted⇒Sonnet tiering is retired

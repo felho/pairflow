@@ -407,6 +407,33 @@ mirror). The scoping governs COST, never the review definition.
   lenses WITH their proven-unaffected reasons, and any escalation
   trigger fired.
 
+### 6) The external arm — OPTIONAL invocation leg (recorded 2026-07-10)
+
+A fresh third-party model session reviewing the target from the repo
+root — the same arm the user runs manually by pasting the
+STOP/pre-approval message into a fresh Codex session; both paths have
+IDENTICAL standing. The loop MAY invoke it (an option, never a
+mandate — the standing-leg question is boundary-review queued):
+
+- **When:** at a pre-ratification/pre-approval STOP as an extra
+  adversarial pass, or as the FINDER-LANE RERUN after an
+  external-arm fold (README §5.5).
+- **How:** `codex exec - < <promptfile> > <outfile> 2>&1` from the
+  repo root, run in background (minutes-scale; the user's
+  `~/.codex/config.toml` defaults govern model and sandbox — do not
+  override). The prompt = the current STOP/pre-approval summary
+  VERBATIM + `pls review`; a re-check prompt additionally lists the
+  folded findings and the NEW basis hash and asks the verdict to
+  cite it.
+- **Rules:** the arm's verdict is admissible ONLY citing the basis
+  hash (a verdict on stale bytes is no verdict); its findings fold
+  as ORDINARY folds per README §5.5; the run and verdict enter the
+  packet/draft record (the ratification `arms` list names it,
+  user-run vs agent-invoked distinguished).
+- **Observed behavior (first proven run, ch8 draft):** the fresh
+  session discovers the repo's own review machinery and uses it;
+  ~5–10 min, ~70–130k tokens per run.
+
 ## Report
 
 ```
