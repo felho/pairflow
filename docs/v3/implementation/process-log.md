@@ -1362,3 +1362,63 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   allowlist) share the static-only limitation — a config-wide
   dynamic-form sweep is ONE reviewed decision, not per-packet
   patches.
+- 2026-07-10 · ch7-P4 round-1 model-tier visibility friction (the
+  user's live catch, verified before logging): the operator flagged
+  the five FULL-round panel lenses as apparently running on a
+  Fable-class model. Transcript verification (the per-agent JSONL's
+  `model` field) showed all five ON `claude-opus-4-8` — the
+  Agent-launch override took effect; what the surface showed was the
+  SESSION model (the orchestrating loop runs on Fable — authoring and
+  aggregation, not a lens pass), which the tiering rule does not
+  govern. The friction is real regardless of the false alarm: the
+  per-lens model tier is INVISIBLE at launch surfaces — only the
+  transcript carries it — so the ReviewPacket report's "ACTUAL model
+  id per pass" line is the ONLY conformance record, and this round
+  adds the mid-run form of the check (grep the agent transcript's
+  first `model` field) rather than trusting the launch parameter. The
+  rule restated for the record: every FULL round's lenses run
+  Opus-class; Fable-class is never business-as-usual packet review
+  (README §5.5). Boundary-review candidate: whether the panel report
+  should ALWAYS carry the transcript-verified model id (measured, not
+  echoed from the launch call) — this round already records it that
+  way.
+- 2026-07-10 · ch7-P4 round-1 route-token generalization (lens-2
+  watchpoint, routed boundary-review): the template defines
+  `approve-ratified` as marking a STOP-VERDICT decision whose
+  ratification point is the approve act; ch7-P4's F2 (the tail
+  cursor-surface pick) is the first below-Case-B new-decision row —
+  no STOP fires, yet the row rides as a flag to the human approve
+  whose act ratifies it, which is exactly the token's semantics minus
+  the STOP provenance. The packet applies the token WITH a stated
+  generalization note (flag 1). Boundary-review question: broaden the
+  template's token definition to "a decision whose ratification point
+  IS the approve act (STOP-verdict or below-Case-B new-decision)", or
+  mint a sibling token. Capture, don't fix — no mid-chapter template
+  edit.
+- 2026-07-10 · ch7-P4 round-2 forward note (lens-5 watchpoint, routed
+  boundary-review): the derived diag-path rule (`<db>.diag.sqlite`)
+  and the diag-handle helper land in `cli/common.ts`; ch9's
+  runner/adapter emission points (§7.1 named-deferred) live in a
+  NON-CLI composition root that cannot import `cli/` — ch9 will
+  re-derive the one-string append or the helper moves to a shared
+  home then. Not a P4 defect (ch9 is out of scope); recorded so the
+  chapter boundary sees the reuse seam before ch9 ratification.
+- 2026-07-10 · ch7-P4 APPROVED — the user's explicit approve
+  ("egyet értek az expose-zal, mehet") on the reconciled basis sha256
+  b18f4c4ee470f35daa027af812b5b8de17ee862502c7556f7b257d6f7b3185b5
+  (two-hash model: the clean R2 FULL round bound content hash
+  02ddc1988ca002da0357c1e5ebe07bcc565bc358a4b06d73b8b26d96e59c7549;
+  one bookkeeping fold + clean Sonnet reconciliation produced the
+  reconciled basis). The STOP-4 flagged-approve act RATIFIES: flag 1
+  (F2 — the exposed `--from-ordinal` cursor, default 0,
+  `--diag`-coupled; AND the approve-ratified route-token
+  generalization to a below-Case-B new-decision, its first
+  application), flags 2–4 (read-verb file creation per O1; the X1
+  interim replacement; the P3 flag-5 discharge record). Panel
+  bookkeeping: 2 FULL rounds (R1 refine — 1 content + bookkeeping
+  batch; R2 clean) + 1 clean reconciliation pass; all ten FULL-round
+  lenses transcript-verified claude-opus-4-8, the reconciliation
+  claude-sonnet-5. The build proceeds in THIS session per README §4
+  steps 1–8: one commit (packet + code + tests), post-build audit;
+  the log lines land in their own docs commits around the build (the
+  P3 choreography).
