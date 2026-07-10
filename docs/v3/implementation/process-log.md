@@ -1522,3 +1522,25 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   the template §1 twin rule line; 78 selftest dims, live packets
   green). The deferral trail from the ch7 boundary review item (6) is
   closed; the ch8 ratification proposal is the next act.
+- 2026-07-10 · ch8 draft phase · REVIEW-ECONOMICS COURSE DIRECTION
+  (the user's, stated at the draft STOP; capture-don't-fix — the
+  text amendment's landing point is a pending decision): the D4
+  "approve requires one FULL clean panel round" floor is a
+  v2-ORIGINAL strengthening, NOT part of the ported v1 discipline —
+  Delegation-Gates 8-11 verified: v1 = full FIRST pass, targeted
+  refinement reruns, close = ONE top-level reconciliation decision
+  (no closing full fan-out). The v1 shape sufficed because the
+  creation phase sat in a LAYERED defense (doc-refinement bubble
+  after task create); v2's creation phase has the same layering (doc
+  refinement later + the user's manual adversarial model checks —
+  which just live-caught a panel misclassification the closing full
+  rounds did not). Direction stated: the CREATION phase reverts to
+  the v1 shape — first round always FULL on an Opus-class model
+  (the original tiering constraint was "not Fable", not
+  "Opus everywhere"), targeted reruns after folds, close = top-level
+  reconciliation over the final hash, full fan-out only on the
+  escalation triggers; model-effectiveness experiments later. Run
+  data supporting it: 8/8 FULL Opus rounds (the collapse choice),
+  the two closing confirmatory rounds found ZERO, and every
+  round-4-6 find came from lenses the targeted set would have
+  included; ~40 Opus lens runs ≈ 4.3M subagent tokens for one draft.
