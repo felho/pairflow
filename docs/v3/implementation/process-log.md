@@ -1422,3 +1422,18 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   steps 1–8: one commit (packet + code + tests), post-build audit;
   the log lines land in their own docs commits around the build (the
   P3 choreography).
+- 2026-07-10 · ch7-P4 BUILT (3cec0969 — same-session build after the
+  flagged approve): README §4 ran clean end-to-end — 380→398 tests
+  (+18 net; 20 new `it` bodies, the two X1 interim lanes replaced),
+  all v3 bridges + the post-build boundary audit green (changed files
+  exactly the 7-file mutation_boundary + the packet). ONE mechanical
+  in-build round (a dead `withStore` import in dev/main.ts caught by
+  v3:lint — the same dead-import class the packet's diag/index.ts
+  note predicted; both predicted dead imports there were real), ZERO
+  behavioral surprises: typecheck and every CLI test green on the
+  first run — review-ahead-of-build holds at the second v2 packet
+  with the scoped panel (2 FULL rounds + 1 reconciliation vs the
+  pilot's 5). ch7 is now packet-complete: the chapter CLOSE (README
+  §6 DoD — full ci:local, map-row + PI-4 flip, boundary review incl.
+  the CreateTaskPacket first-run verdict and this chapter's routed
+  boundary-review items) is the next step, on the user's go.
