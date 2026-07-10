@@ -157,6 +157,22 @@ export default tseslint.config(
           ],
         },
       ],
+      // The DYNAMIC form of the same ban (ch7-P3 aftermath): the import
+      // rules above check declarations only — `await import("../diag/…")`
+      // is a value import with no ImportDeclaration node. The legal type
+      // route stays `import type … from "../diag/…"` (allowTypeImports
+      // above); the type-position `typeof import(...)` form is a
+      // TSImportType node this selector ignores, and
+      // consistent-type-imports disallows that annotation form anyway
+      // (probe-verified: neither boundary rule fires on it).
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "ImportExpression[source.value=/\\u002Fdiag\\u002F/]",
+          message:
+            "ch7-P3 floor→diag boundary: floor/ never value-imports diag/ — dynamic import() included; readers arrive injected (composition roots wire them).",
+        },
+      ],
     },
   },
 

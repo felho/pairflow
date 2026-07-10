@@ -824,6 +824,29 @@ choreography collides with the post-build audit's boundary contract
 in the boundary) — the log lines land in their own docs(v3) commits
 around the build commit instead.
 
+**Aftermath (2026-07-10, the user's post-build review — fixed same
+day):** the floor→diag lint ban proved LESS than its claim — the
+import rules (base + TS variant) check import DECLARATIONS only, so a
+dynamic `await import("../diag/index.js")` VALUE import in a floor
+file stayed lint-green, bypassing the mechanized guardrail (the
+user's stdin probe; reproduced in-repo before fixing). Fix: a
+`no-restricted-syntax` ban in the SAME floor-scope block — selector
+`ImportExpression[source.value=/\u002Fdiag\u002F/]` (the escaped
+`/diag/` path SEGMENT, so `ports/diagnostics.js` never matches). Probe trio EXECUTED: the dynamic scratch violation
+RED under the new selector; the static ban re-probed RED; the
+type-position form fires NEITHER boundary rule (probe-verified —
+`consistent-type-imports` separately disallows the `typeof import()`
+annotation form; `import type … from "../diag/…"` remains the legal
+type route). No production change: no dynamic import existed — the
+hole was the GUARDRAIL's, not the boundary's (the runtime claim
+held). Lesson (process-logged): the probe set derived from the
+implemented rule FORM (static import declaration), not from the
+claim's dimensions (import FORMS: static / dynamic / re-export) —
+the ch-4 claim-negatives class recurring at the lint layer. The same
+static-only limitation holds for the config's OTHER import bans
+(testkit/drift, kernel allowlist) — routed boundary-review, never
+silently swept here.
+
 ```json
 {
   "packet_metrics": {
@@ -834,7 +857,7 @@ around the build commit instead.
       "discovered": "projection"
     },
     "provenance": { "anchored": 26, "derived": 14, "new_decision": 2 },
-    "rounds": { "review": 5, "doc_refinement": 0, "implementation": 1 },
+    "rounds": { "review": 5, "doc_refinement": 0, "implementation": 2 },
     "stops": [
       {
         "type": "1:late-b-signal",
@@ -847,9 +870,15 @@ around the build commit instead.
         "resolution": "the user's STOP-2 hybrid verdict (2026-07-10): stated exception PLUS a 64-code-unit prefix cap (J10, the second new-decision row); ratified by the pilot's approve (flag 4) with the prepared aligned plan edit landing in the build commit"
       }
     ],
-    "detector_misses": [],
-    "learned": "review-ahead-of-build held at the first v2 packet: zero behavioral build surprises; the one live conflict was commit choreography (log lines vs the audit boundary), not content",
-    "baseline_note": "The FIRST v2-form packet (the ch7 pilot, human-approved). rounds.review = 5 FULL five-lens panel rounds to the clean round (one fresh-eyes propagation pass not counted; the panel-sustainability re-run scoping was ratified mid-pilot from this packet's cost profile). prediction.discovered = projection per the D7 enum; the header carries the honest nuance — projection WITH two flagged new-decision rows (X1, J10), exactly the mismatch the pilot exists to measure. rounds.implementation = 1 build round (two mechanical in-build fixes; no post-build aftermath at close time — late discoveries increment per README section 5.5)."
+    "detector_misses": [
+      {
+        "found_at": "code-review",
+        "what": "the floor->diag lint ban covered only STATIC import declarations — a dynamic await import('../diag/index.js') value import in a floor file stayed lint-green, bypassing the mechanized guardrail (no production violation existed; the hole was the guardrail's)",
+        "why_missed": "the executed negative probes were derived from the implemented rule FORM (a static import declaration), not from the claim's dimensions (import FORMS: static / dynamic / re-export) — the ch-4 claim-negatives class recurring at the lint layer"
+      }
+    ],
+    "learned": "review-ahead-of-build held at the first v2 packet (zero behavioral surprises); both post-close finds were meta — commit choreography vs the audit boundary, and a lint guardrail probed on its rule form instead of its claim",
+    "baseline_note": "The FIRST v2-form packet (the ch7 pilot, human-approved). rounds.review = 5 FULL five-lens panel rounds to the clean round (one fresh-eyes propagation pass not counted; the panel-sustainability re-run scoping was ratified mid-pilot from this packet's cost profile). prediction.discovered = projection per the D7 enum; the header carries the honest nuance — projection WITH two flagged new-decision rows (X1, J10), exactly the mismatch the pilot exists to measure. rounds.implementation = 2: the build round (two mechanical in-build fixes) + the same-day aftermath round (the dynamic-import lint hole, detector_misses[0])."
   }
 }
 ```

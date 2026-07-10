@@ -1342,3 +1342,23 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   no-useless-assignment dead cursor advance on the stop path), ZERO
   behavioral surprises — the review-ahead-of-build economics
   observed at ch7-P1 repeats at the first v2-form packet.
+- 2026-07-10 · ch7-P3 aftermath (the user's post-build review, fixed
+  same day): the floor→diag lint ban proved LESS than its claim — the
+  import rules check import DECLARATIONS only, so a dynamic
+  `await import("../diag/…")` value import in a floor file stayed
+  lint-green (reproduced in-repo before fixing; no production
+  violation existed — the hole was the guardrail's, not the
+  boundary's). Fix: a no-restricted-syntax ImportExpression ban in
+  the same floor block; probe set EXECUTED: dynamic red / static
+  re-probed red / type-position fires neither boundary rule /
+  ports/diagnostics.js over-match probed green (the /diag/ path
+  SEGMENT is the regex). LESSON — the claim-negatives class recurring
+  at the LINT layer: the probes were derived from the implemented
+  rule FORM (a static import declaration), not from the claim's
+  dimensions (import FORMS: static / dynamic / re-export); when
+  mechanizing a prose rule, enumerate the forms FIRST, then derive
+  one probe per form. Boundary-review candidate: the config's OTHER
+  import bans (the production testkit/drift ban, the kernel
+  allowlist) share the static-only limitation — a config-wide
+  dynamic-form sweep is ONE reviewed decision, not per-packet
+  patches.
