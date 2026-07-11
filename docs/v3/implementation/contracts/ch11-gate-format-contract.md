@@ -1,7 +1,7 @@
 # ch11 — gate-format contract
 
 ```json
-{"contract_draft": {"chapter": "ch11", "surface": "gate-format", "status": "draft"}}
+{"contract_draft": {"chapter": "ch11", "surface": "gate-format", "status": "ratified"}}
 ```
 
 ## Context (non-normative by declaration)
@@ -72,7 +72,14 @@ re-executed and reproduced by the round-1 substrate lens):
 | GP4 | integer forms for `timeoutMs`? | `900.0`, `0x384`, `9e2` ALL resolve to integral `900` (`Number.isInteger` true); `"900"` resolves to a string — the ch8-C8 source-form trap reproduced on this surface |
 | GP5 | does an empty gate list parse? | yes — clean parse; the nonempty rule must be validator-owned |
 
-**Draft metrics** (template §5): recorded at ratification.
+**Draft metrics** (template §5, recorded at the 2026-07-12 ratification):
+rounds to ratify: 1 full five-lens panel round + 3 delta-reconciliation
+close passes + 1 external-arm round (with clean re-check) + the ratifier's
+read sweep (6 catches — among them the model gap that produced the ratified
+model fix 453d3be9); new-decision rows: 11 (C1, C6, C7, C11, C13, C15, C17,
+C18, C24, C26, C33); post-ratification reopenings: 0. (The Opus panel and
+the sweep are review EVIDENCE — not arms; the arms field names the
+transitional cross-model arm only, per the template's letter.)
 
 ## Contract rows (every normative statement is a C-row)
 
@@ -115,6 +122,10 @@ re-executed and reproduced by the round-1 substrate lens):
 | C35 | HANDLE runtime backstop #1 — REGISTRY AVAILABILITY: the gate rung's `gateRegistry.resolve(uses)`; an unresolved id is `Rejected(gate_evaluator_unavailable)` — normally UNREACHABLE under a well-formed, unchanged registry (admission resolved every id at load); the lane guards REGISTRY DRIFT (an old instance loading under a new process generation's composition). Runtime-only; its admission twin is C21's resolve lane. |
 | C36 | HANDLE runtime backstop #2 — WORKSPACE EMPTINESS: a process gate reached with `instance.runtime_context = ready(∅)` is `Rejected(runtime_context_required_for_process_gate)` — the model's l2a HANDLE lane and the registry's DUAL name (its compile twin is C21's declaration-level lane, C19). Realized by ch11-P3 directly from the l2a HANDLE unit. |
 
-## Ratification history (empty at `draft` — blocks are appended by the lifecycle acts)
+## Ratification history
+
+```json
+{"ratification": {"date": "2026-07-12", "arms": ["agent-invoked codex gpt-5.6-sol/high — one review round + clean re-check"], "commit": "1748443f"}}
+```
 
 ## Realized map (empty until chapter close)

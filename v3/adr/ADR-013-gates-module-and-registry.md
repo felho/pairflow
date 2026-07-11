@@ -1,12 +1,13 @@
 # ADR-013: the gates module — evaluators, static registry, injected composition
 
-Status: proposed
+Status: accepted
 Date: 2026-07-11
 Links: supersedes — · amends ADR-001 · depends-on ADR-005 · related ADR-003
 
 Draft-lane ADR (README §4 step 5): rides the `ch11-gate-format`
 contract-draft (row C29) — `proposed` with the draft's content
-commit; flips `accepted` by the draft's human ratification act.
+commit; flipped `accepted` by the draft's human ratification act
+(2026-07-12, the ratifying commit).
 
 ## Context
 
