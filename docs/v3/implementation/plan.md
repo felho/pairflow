@@ -141,7 +141,8 @@ the re-homed `CT-C-PURGE-AUDIT`'s owner. A re-home is recorded in both the
 intake row and the ratifying chapter; it is never a silent drop.
 Second named candidate (added at ch-8 ratification, §8.1): the **L2
 gate core**, expected to precede chapter 9 — the process-gate runner
-needs its call site (`GateEvaluator` + the `HANDLE` gate hook), and
+needs its call site (`GateRegistration` + the `HANDLE` gate hook —
+GateEvaluator until the ch11 model fix), and
 the template format gains its gate-declaration surface in that
 chapter, per the §8.2 evolution stance. **ENTERED as chapter 11
 (ratified 2026-07-11, §11)** — the mechanism's first live use, which
@@ -291,7 +292,7 @@ Under `v3/src/`, the dependency direction IS the rule:
 
 | Module | Role |
 |---|---|
-| `domain/` | the type layer targeted by ledger §4 (51 aggregates / 121 entities) + the 85-name rejection type |
+| `domain/` | the type layer targeted by ledger §4 (51 aggregates / 122 entities at the ch11 alignment) + the rejection type (85 → 54 names at the ch11 model fix) |
 | `kernel/` | the **port-parametric kernel**: apply/commit logic and invariants, parameterized over the `ports/` interfaces; imports `domain/` and `ports/` ONLY |
 | `ports/` | injected dependency interfaces: `StorePort`, `ActorAdapter`, `EgressAdapter`, `GateRunner`, `TimeSource` (IC-D / IC-E as types) |
 | `store/` | the SQLite `StorePort` implementation + schema (IC-A1 uniqueness, IC-C commit-boundary timestamps) |
@@ -1588,7 +1589,8 @@ ratification act is the human's.
   consequence: **an L2 gate-core chapter is expected to enter the map
   as an appended chapter BEFORE chapter 9** (the §1.3 map-extension
   mechanism) — ch-9's process-gate runner needs its call site
-  (`GateEvaluator` + the `HANDLE` gate hook), and the format gains
+  (`GateRegistration` + the `HANDLE` gate hook — GateEvaluator until
+  the ch11 model fix), and the format gains
   gate declarations in that chapter, with its own semantics.
 - **Latest-resolution** (load by id without a version). Re-homed to
   the future L0f chapter (§8.5) — the D1 decision of this
@@ -1811,7 +1813,7 @@ any first-of-a-kind reclassification route to the human.)
 The **first live use of the §1.3 map-extension mechanism**, realizing
 the §8.1 ratified expectation: an appended chapter BEFORE chapter 9,
 because the ch-9 process-gate runner needs its call site
-(`GateEvaluator` + the `HANDLE` gate hook + the classification
+(`GateRegistration` + the `HANDLE` gate hook + the classification
 contract) and the ch-3 `ports/gate.ts` placeholder seam is
 deliberately not the ledger shape. Numbered 11 (arrival order),
 ordered before ch 9 (build order) — the convention minted in §1.3.
@@ -1839,8 +1841,11 @@ trace) — a standalone chapter would be ceremony.
    default-derived; rejections `missing_role` / `role_not_authorized`
    / `not_authorized`.
 2. **The L2 gate core.** `GateBinding`/`GatePipeline` on the template
-   aggregate; the `GateEvaluator` interface (declarative | packaged,
-   inline-only); a STATIC gateRegistry (dynamic-module-loading stays
+   aggregate; the `GateRegistration` descriptor (declarative | packaged,
+   inline-only; `validate_and_normalize_config` + the
+   `requires_runtime_context` flag; `evaluate` on the inline
+   variant — the ratified model fix); a STATIC gateRegistry/catalog
+   (dynamic-module-loading stays
    Absent); the gate rung in `HANDLE` (ordered, first-block-wins;
    block returns BEFORE the commit — version, step, and **round
    untouched**); `gate_projection` as the policy-facing read model;
@@ -1877,7 +1882,8 @@ trace) — a standalone chapter would be ceremony.
    `invalid_process_gate_config` / `gate_config_not_supported`).
 4. **A minimal runtime-context REPRESENTATION** — the template's
    declaration key + the instance field + a testkit-injected ready
-   ref, because `validate_gate_config` and the `HANDLE` backstop read
+   ref, because `admit_definition`'s cross-rule (the registration's
+   `requires_runtime_context` flag) and the `HANDLE` backstop read
    them. Provisioning (L0e) stays out; this is the chapter's
    most-guarded boundary.
 5. **The format's gate-declaration surface** (§8.2: a capability and
