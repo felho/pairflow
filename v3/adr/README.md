@@ -27,6 +27,7 @@ Integrity check: [`check.sh`](check.sh) — root bridge `pnpm v3:adr-check`.
 | [ADR-010](ADR-010-diag-store-separate-sqlite-file.md) | the diag store is a separate SQLite file, fail-open | accepted | 2026-07-09 |
 | [ADR-011](ADR-011-definition-module.md) | the definition module — authored-definition surface home | accepted | 2026-07-10 |
 | [ADR-012](ADR-012-yaml-runtime-dependency.md) | the yaml package — the first v3 runtime dependency | accepted | 2026-07-10 |
+| [ADR-013](ADR-013-gates-module-and-registry.md) | the gates module — evaluators, static registry, injected composition | proposed | 2026-07-11 |
 
 ## Trigger watch (dormant ADRs)
 
