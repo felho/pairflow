@@ -484,6 +484,14 @@ async function verbReplay(ctx: VerbContext): Promise<number> {
  * verdict — the P4b TraceMismatchError precedent).
  */
 async function verbValidate(ctx: VerbContext): Promise<number> {
+  // D1: EXACTLY one positional — a silently ignored extra positional
+  // would blur "exactly one file" (arm gate 2, aftermath finding 1).
+  if (ctx.positionals.length > 1) {
+    throw usage(
+      "InvalidArguments",
+      "validate takes exactly one <path> positional argument",
+    );
+  }
   const path = ctx.positionals[0];
   if (path === undefined || path === "") {
     throw usage("MissingFile", "a <path> positional argument is required");

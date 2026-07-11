@@ -322,7 +322,7 @@ exactly that shape.
 
 | Id | Rule |
 |---|---|
-| D1 | dev `validate <path>`: exactly one file through the P1 pipeline; it takes ONLY the `<path>` positional — no `--db`, no `--templates-dir`; any flag is rejected by strict parse (usage 2) (anchored: contract:ch8-template-format#C31) |
+| D1 | dev `validate <path>`: exactly one file through the P1 pipeline; it takes ONLY the `<path>` positional — no `--db`, no `--templates-dir`; any flag is rejected by strict parse (usage 2), and an EXTRA positional is rejected too (usage 2 — "exactly one" enforced both ways; the arm-gate-2 aftermath fix) (anchored: contract:ch8-template-format#C31) |
 | D2 | OBTAINING the bytes (the OS read) is a PRE-PIPELINE input gate: a missing positional or an OS-unreadable file → usage (exit 2, the dev CLI's input-error CLASS — cited for the class ONLY, never its decode idiom: validate reads raw BYTES and strict-decodes through the pipeline's read stage per C6, or the decode lane could never fire; the exit-2 gate deliberately diverges from the store's typed-error character — a path is operator input, a ref is a pinned commitment) (anchored: contract:ch8-template-format#C31) |
 | D3 | Valid → exit 0 with JSON `{valid: true, ref}` on stdout — exactly that keyset; `ref` is the loaded template's `{id, version}` (anchored: contract:ch8-template-format#C31) |
 | D4 | Content-invalid at ANY pipeline stage (read/parse/resolve/validate) → exit 1 with the standard error doc, name `TemplateInvalid`, details = `{stage, findings}` — the top-level `stage` names the failing stage (the routing field; for a positional-finding list it EQUALS the entries' own marker — deliberate duplication), `findings` entries are P1's E1 form or E2 form, never a mixed list (the pipeline's short-circuit guarantees one stage per result). The exit-1 class is the ratified checker-verb semantic verdict (the P4b `TraceMismatchError` precedent), consciously overriding the dev file-helpers' structural→usage-2 line (anchored: contract:ch8-template-format#C31) |
@@ -662,6 +662,38 @@ unchanged — the empty slice held: units 5/158, invariants 8/116,
 traces 2/20), `v3:packet-lint --forbid-reopened`, `v3:adr-check`
 (13 ADRs; no new trigger). Drift suite green (9/9).
 
+**Aftermath (2026-07-11, arm gate 2 — the build-close implementation
+review; verdict `refine` on the build sha `c9c2f011`, three substance
+groups; folded same day in ONE `fix(v3)` round, every file inside the
+declared boundary):**
+(1) **The D1 defect (the product catch):** `validate` silently
+accepted extra positionals — `validate <path> extra` exited 0 against
+D1's "exactly one file". Fix: `positionals.length > 1` → usage 2
+(`InvalidArguments`); driven by the new extra-positional negative.
+(2) **The M5 receipts were ANNOTATIONS, not flips:** the plan edits
+had kept the open-status verbs and appended the receipt ("MD-1 stays
+open … — retired", "MD-1 stands — retired") — self-contradictory
+prose a cold reader trips on. Re-worded to true past-tense receipts
+("stayed open by design (ch-8 debt; retired at ch8-P2)", "stood until
+ch8-P2 — retired", "ch 8 retired both"). The flip's meaning sharpened
+for the convention: a status flip changes the STATEMENT's tense, it
+never leaves the open-status assertion standing beside its own
+receipt.
+(3) **Four lanes were mutation-insensitive** (present but unable to
+fail on a violation): W2/D4's `{stage, findings}` asserts checked the
+keyset, not the CONTENT — now deep-equal the pipeline's OWN result on
+the same bytes (the verbatim proof, at start, submit, and all four
+validate stage lanes); T2's last-`@` split had no id-containing-`@`
+positive (an `indexOf` regression would have passed) — `a@b@1` added;
+A1's "missing/empty" had only the missing half driven — the empty
+flag and empty env forms added; J1's floor-read agreement compared
+projected fields (`seq`/`opId`) — now full-row deep equality.
+Bridges re-verified green at the aftermath close: 547 tests (the
+strengthening lands inside existing `it` bodies), typecheck, lint,
+coverage validation, packet-lint, adr-check; the delta-scoped
+reconciliation pass ran before the aftermath commit (the ch7-P4
+round-1 skip lesson).
+
 ```json
 {
   "packet_metrics": {
@@ -672,17 +704,22 @@ traces 2/20), `v3:packet-lint --forbid-reopened`, `v3:adr-check`
       "discovered": "projection"
     },
     "provenance": { "anchored": 20, "derived": 4, "new_decision": 0 },
-    "rounds": { "review": 2, "doc_refinement": 0, "implementation": 1 },
+    "rounds": { "review": 2, "doc_refinement": 0, "implementation": 2 },
     "stops": [],
     "detector_misses": [
+      {
+        "found_at": "code-review",
+        "what": "the arm's build-close review caught: validate accepting extra positionals against D1's 'exactly one'; the M5 plan receipts ANNOTATING the open-status text instead of flipping its tense; and four driven lanes unable to FAIL on a violation (keyset-only {stage,findings} asserts, no last-@ positive, no empty-config forms, projected-field journey equality)",
+        "why_missed": "the panel and the closes verified lane PRESENCE, not lane SENSITIVITY — a test that exercises a row without being able to fail on its violation satisfies every 'driven' check; and the receipt edits were judged by their INTENT in the diff, not by reading the resulting sentence cold ('MD-1 stands — retired' contradicts itself only to a cold reader). The arm read the built artifacts cold"
+      },
       {
         "found_at": "approve",
         "what": "the M5 sweep's 'every surface stating the debt' list omitted the LIVE domain/template.ts debt-status comment ('the format validator is chapter-8 work'), while the mutation boundary excluded the file — the build would have left a stale debt surface or escaped the boundary",
         "why_missed": "the authoring-time MD-1 sweep piped its grep through 'head -20' and the template.ts hit was the line that fell off — a completeness claim rode on a TRUNCATED measurement; five Opus lenses and one close accepted the measured list without re-running the measurement. The finding policy's rule ('enumeration from memory is not a measurement') has a sibling this miss names: a truncated measurement is not a measurement. Caught by arm gate 1 PRE-build — zero code impact"
       }
     ],
-    "learned": "the first autonomous flag-free packet: arm gate 1's first live run caught a truncated-measurement detector miss the whole internal panel accepted; the activation build then ran first-execution green on every lane — a built foundation's packet contract (P1 B4/E5) transfers to its activation without reclassification",
-    "baseline_note": "rounds.review = 2 counted panel rounds (R1 full, R2 targeted); the two closes, the two lens-4 reconciliation passes, and the arm's find + hash-citing re-check are chronicled above and do not count. implementation = 1: the single build round (test-side journey-expectation fix + two mechanical imports; zero product-code reds). 534 -> 547 at the build commit: +15 new tests, -2 retired with the deleted templates.test.ts. The arm's FIRST gate-1 invocation was killed mid-run (no verdict); the retry completed — recorded for the transitional-arm reliability picture. detector_misses.found_at = 'approve' (the closed enum's nearest member, the ch8-P1 precedent): the finder was the MANDATORY pre-build arm gate the autonomous path introduced"
+    "learned": "the first autonomous flag-free packet: arm gate 1 caught a truncated-measurement detector miss the whole internal panel accepted; the build ran first-execution green on every PRESENT lane — and arm gate 2 then showed presence is not SENSITIVITY (a lane that cannot fail on its row's violation satisfies every 'driven' check); a built foundation's contract (P1 B4/E5) transfers to its activation without reclassification",
+    "baseline_note": "rounds.review = 2 counted panel rounds (R1 full, R2 targeted); the closes, the lens-4 reconciliation passes, and the arm's find + hash-citing re-check legs are chronicled above and do not count. implementation = 2: the build round (test-side journey-expectation fix + two mechanical imports; zero product-code reds) + the arm-gate-2 aftermath round (the D1 extra-positional fix + the receipt tense flips + the four lane strengthenings — test count unchanged at 547, the strengthening lands inside existing it bodies). 534 -> 547 at the build commit: +15 new tests, -2 retired with the deleted templates.test.ts. The arm's FIRST gate-1 invocation was killed mid-run (no verdict); the retry completed — recorded for the transitional-arm reliability picture. detector_misses.found_at values per the ch8-P1 precedent: 'approve' = the pre-build arm gate 1; 'code-review' = the build-close arm gate 2 (the arm IS that lane post-build)"
   }
 }
 ```

@@ -96,11 +96,10 @@ describe("cli — the full-lifecycle journey smoke (packet ch8-P2: J1/J2)", () =
         .split("\n")
         .map((line) => JSON.parse(line) as TimelineRow);
 
-      // the two floor reads agree on the committed row sequence.
-      expect(tailRows.map((r) => r.seq)).toEqual(timelineRows.map((r) => r.seq));
-      expect(tailRows.map((r) => r.envelope.opId)).toEqual(
-        timelineRows.map((r) => r.envelope.opId),
-      );
+      // the two floor reads agree on THE SAME ROWS — full deep
+      // equality, not a projected field pair (arm gate 2, aftermath
+      // finding 3).
+      expect(tailRows).toEqual(timelineRows);
       expect(tailRows.every((r) => typeof r.envelope.opId === "string")).toBe(true);
     },
   );

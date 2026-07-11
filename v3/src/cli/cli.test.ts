@@ -14,6 +14,7 @@ import { promisify } from "node:util";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { loadTemplate } from "../definition/index.js";
 import type { DiagStoreHandle } from "../diag/index.js";
 import { DiagUnavailableError, openDiagStore } from "../diag/index.js";
 import type { DiagnosticEvent, DiagnosticEventBody } from "../ports/diagnostics.js";
@@ -854,6 +855,20 @@ describe("cli — the templates-dir config lane (packet ch8-P2: A1/A2/A3)", () =
     const err = errorDoc(missing);
     expect(missing.code).toBe(EXIT.usage);
     expect(err.name).toBe("MissingTemplatesDir");
+
+    // the EMPTY forms (A1's "missing/empty" — both halves driven;
+    // aftermath finding 3): an empty flag and an empty env value each
+    // take the missing lane.
+    const emptyFlag = await run(
+      ["start", "--db", tempDbPath(), "--task", "t", "--templates-dir", ""],
+      testDeps({ env: {} }),
+    );
+    expect(errorDoc(emptyFlag).name).toBe("MissingTemplatesDir");
+    const emptyEnv = await run(
+      ["start", "--db", tempDbPath(), "--task", "t"],
+      testDeps({ env: { PAIRFLOW_V3_TEMPLATES: "" } }),
+    );
+    expect(errorDoc(emptyEnv).name).toBe("MissingTemplatesDir");
   });
 
   it("A2: unlistable dir (absent / a FILE / unreadable) → usage 2 InvalidTemplatesDir, EAGERLY — no store write, no diag file", async () => {
@@ -922,9 +937,11 @@ describe("cli — the pinned --template ref grammar (packet ch8-P2: T1/T2)", () 
       expect(res.code).toBe(EXIT.usage);
       expect(err.name).toBe("InvalidTemplateRef");
     }
-    // Positives past the parse (incl. the safe boundary): the repo dir
+    // Positives past the parse (incl. the safe boundary, and an id
+    // CONTAINING '@' — the split is at the LAST '@'; an indexOf
+    // regression would reject it; aftermath finding 3): the repo dir
     // has no such file → UnknownTemplate 3 proves the parse ACCEPTED.
-    for (const good of ["x@10", "x@9007199254740991"]) {
+    for (const good of ["x@10", "x@9007199254740991", "a@b@1"]) {
       const res = await run(
         ["start", "--db", tempDbPath(), "--task", "t", "--template", good],
         testDeps(),
@@ -944,10 +961,9 @@ describe("cli — the pinned --template ref grammar (packet ch8-P2: T1/T2)", () 
 });
 
 describe("cli — write-lane dispositions (packet ch8-P2: W1/W2/W3/W4)", () => {
-  it("W1/W2 at start: present-but-invalid → TemplateInvalid 1 with the exact {stage, findings} details; absent → 3", async () => {
-    const dir = stageTemplates({
-      "local-pair-v0@1.yaml": `${CANONICAL_BYTES()}kind: nope\n`,
-    });
+  it("W1/W2 at start: present-but-invalid → TemplateInvalid 1 with the VERBATIM {stage, findings} details; absent → 3", async () => {
+    const badBody = `${CANONICAL_BYTES()}kind: nope\n`;
+    const dir = stageTemplates({ "local-pair-v0@1.yaml": badBody });
     const res = await run(
       ["start", "--db", tempDbPath(), "--task", "t", "--templates-dir", dir],
       testDeps(),
@@ -960,6 +976,14 @@ describe("cli — write-lane dispositions (packet ch8-P2: W1/W2/W3/W4)", () => {
     expect(Object.keys(err.details ?? {}).sort()).toEqual(["findings", "stage"]);
     expect(details.stage).toBe("validate");
     expect(details.findings.length).toBeGreaterThan(0);
+    // VERBATIM (W2, aftermath finding 3): the doc's details deep-equal
+    // the pipeline's OWN result on the same bytes — never a
+    // re-serialization that changes the shape.
+    const direct = loadTemplate(new TextEncoder().encode(badBody));
+    expect(direct.ok).toBe(false);
+    if (!direct.ok) {
+      expect(details).toEqual({ stage: direct.error.stage, findings: direct.error.findings });
+    }
 
     // absent-at-START (invalid ≠ absent, the other half): version 2
     // has no byte-exact listing match in the repo dir.
@@ -975,9 +999,8 @@ describe("cli — write-lane dispositions (packet ch8-P2: W1/W2/W3/W4)", () => {
   it("W2/W4 at submit: the in-handle typed load error surfaces at the ingress.submit await as the SAME TemplateInvalid doc", async () => {
     const db = tempDbPath();
     const id = await startOne(db, testDeps());
-    const badDir = stageTemplates({
-      "local-pair-v0@1.yaml": `${CANONICAL_BYTES()}kind: nope\n`,
-    });
+    const badBody = `${CANONICAL_BYTES()}kind: nope\n`;
+    const badDir = stageTemplates({ "local-pair-v0@1.yaml": badBody });
     const res = await run(
       [
         "submit", "--db", db, "--instance", id, "--type", "PASS",
@@ -988,9 +1011,16 @@ describe("cli — write-lane dispositions (packet ch8-P2: W1/W2/W3/W4)", () => {
     const err = errorDoc(res);
     expect(res.code).toBe(EXIT.internal);
     expect(err.name).toBe("TemplateInvalid");
-    const details = err.details as { stage: string };
+    const details = err.details as { stage: string; findings: unknown[] };
     expect(Object.keys(err.details ?? {}).sort()).toEqual(["findings", "stage"]);
     expect(details.stage).toBe("validate");
+    // VERBATIM (W2): the in-handle surfacing carries the pipeline's own
+    // findings unchanged.
+    const direct = loadTemplate(new TextEncoder().encode(badBody));
+    expect(direct.ok).toBe(false);
+    if (!direct.ok) {
+      expect(details).toEqual({ stage: direct.error.stage, findings: direct.error.findings });
+    }
   });
 
   it("W3: absent at HANDLE → the kernel's pinned-ref integrity error (internal 1; the doc name is literally 'Error', the MESSAGE is the assert target)", async () => {

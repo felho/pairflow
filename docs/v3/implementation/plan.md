@@ -728,8 +728,8 @@ packets with their code and tests; the MD-1 fixture template.
 DoD: all §4.7 tests green; every `CHK-*` negative-tested from its
 DECLARED claim (README §4 step 2 — these are the first post-rule gates);
 ADR-006 `accepted`, integrity check green; the three ch-4 intake rows +
-the ch-4 map row flipped to `realized` (PI-6); MD-1 stays open by design
-(ch-8 debt — retired at ch8-P2, 2026-07-11); coverage validation green over
+the ch-4 map row flipped to `realized` (PI-6); MD-1 stayed open by design
+(ch-8 debt; retired at ch8-P2, 2026-07-11); coverage validation green over
 the four packets; process-log
 review held at the boundary.
 
@@ -984,8 +984,8 @@ behind a separate entrypoint (§6.5).
 - **`cancel` / `deleteRequested` command verbs** — their kernel levels
   (LC1+) are not implemented; the CLI covers the surface that exists.
   The ch-10 recourse card resolves its own dependency when scheduled.
-- **The canonical template format** → ch 8 (MD-1 stands — retired at
-  ch8-P2, 2026-07-11). The CLI
+- **The canonical template format** → ch 8 (MD-1 stood until ch8-P2 —
+  retired 2026-07-11). The CLI
   `create` works with the fixture-form template and says so.
 
 ### 6.2 `getTimeline`: the cursor read (P1)
@@ -1149,8 +1149,8 @@ behind a separate entrypoint (§6.5).
   - **Template source (MD-1 extended):** the normal CLI graph cannot
     import the testkit fixture, so `cli/templates.ts` carries a
     production COPY of local-pair-v0, drift-pinned by test against
-    `fixtureTemplate()`; ch 8 retires both (done at ch8-P2,
-    2026-07-11: the copy deleted, the pin retargeted onto the
+    `fixtureTemplate()`; ch 8 retired both (ch8-P2, 2026-07-11: the
+    copy deleted, the pin retargeted onto the
     canonical file).
   - **Channel + error contract:** stdout carries ONLY data documents
     (one JSON per verb; tail = NDJSON rows; protocol outcomes incl.

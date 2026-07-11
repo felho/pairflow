@@ -9,6 +9,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { openDiagStore } from "../../diag/index.js";
 import type { DiagnosticEvent, DiagnosticEventBody } from "../../ports/diagnostics.js";
 import { openStore } from "../../store/index.js";
+import { loadTemplate } from "../../definition/index.js";
 import { createControlledClock, createScriptedTailWait } from "../../testkit/index.js";
 import type { CliErrorDoc } from "../contract.js";
 import { EXIT } from "../contract.js";
@@ -339,7 +340,7 @@ describe("dev cli — inject schema + derived/override paths", () => {
 const REPO_CANONICAL = join(process.cwd(), "templates", "local-pair-v0@1.yaml");
 
 describe("dev cli — validate: one file through the load pipeline (packet ch8-P2: D1–D5)", () => {
-  it("D1: validate takes ONLY the <path> positional — --db and --templates-dir rejected by strict parse", async () => {
+  it("D1: validate takes EXACTLY one <path> positional — flags rejected by strict parse, an extra positional rejected too", async () => {
     assertError(
       await runDev(["validate", REPO_CANONICAL, "--db", "x.db"], testDeps()),
       "usage",
@@ -350,6 +351,11 @@ describe("dev cli — validate: one file through the load pipeline (packet ch8-P
       "usage",
       EXIT.usage,
     );
+    // "exactly one file": a silently ignored second positional would
+    // blur which file was judged (arm gate 2, aftermath finding 1).
+    const extra = await runDev(["validate", REPO_CANONICAL, "extra"], testDeps());
+    expect(extra.stdout).toEqual([]);
+    expect(assertError(extra, "usage", EXIT.usage).name).toBe("InvalidArguments");
   });
 
   it("D2: the pre-pipeline input gate — missing positional / OS-unreadable path → usage 2 (a path is operator input)", async () => {
@@ -418,6 +424,17 @@ describe("dev cli — validate: one file through the load pipeline (packet ch8-P
       expect(Object.keys(err.details ?? {}).sort()).toEqual(["findings", "stage"]);
       expect(details.stage).toBe(stage);
       expect(details.findings.length).toBeGreaterThan(0);
+      // VERBATIM (D4/W2, aftermath finding 3): the doc's details
+      // deep-equal the pipeline's OWN result on the same bytes and
+      // path (read-stage findings carry the positional as `path`).
+      const direct = loadTemplate(new Uint8Array(readFileSync(path)), { path });
+      expect(direct.ok).toBe(false);
+      if (!direct.ok) {
+        expect(details).toEqual({
+          stage: direct.error.stage,
+          findings: direct.error.findings,
+        });
+      }
     }
   });
 });
