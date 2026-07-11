@@ -2008,3 +2008,25 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   ratifying text (a conscious decision at subset time, never a later
   discovery). Route: ch11 boundary review — candidate DraftContract §1 /
   chapter-ratification checklist item.
+
+- 2026-07-11 · ch11 DRAFT RATIFICATION READ — MODEL GAP FOUND (the read's 3rd
+  and largest catch): the user's C20/C21 questioning surfaced that the draft
+  CANONIZED an accidental model asymmetry as an architectural rule. The 08-l2
+  section declares gate `config` "load-bearing for every gate kind" yet
+  carries ZERO config-validation; l2a's `validate_gate_config` skips
+  non-process gates ("IF uses ≠ external.process THEN CONTINUE") — the model
+  provides insufficient evidence that this skip constitutes a deliberate,
+  durable "kernel never validates non-process config" rule (the precise
+  epistemic form; "writing-context artifact" is the likely but unproven
+  reading). The GateEvaluator interface signals an EXTENSIBLE gate system —
+  evaluator/registration-owned config validation is the extension-compatible
+  design the model lacks. ROUTE: mandatory model-plane fix BEFORE the draft
+  can close (README divergence-stop class); the draft's C8/C20/C21/C22 (+ the
+  C10/C11 kernel columns) are frozen until the ratified model regenerates the
+  ledger. An external review round on the first fix proposal reshaped it
+  (registration-descriptor over evaluator-interface; shared validator behind
+  both seams over file=form/kernel=semantics; admission-level
+  runtime-context rule; normalize-not-just-validate; phase separation).
+  Ratification-read yield so far: C26 partial-invariant, C17 flat-token (via
+  worked example), this model gap — the read is functioning as a REVIEW TIER,
+  boundary-review material.
