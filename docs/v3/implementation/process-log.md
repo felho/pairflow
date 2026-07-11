@@ -1950,3 +1950,20 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   vs 2 kills / 6 background runs). The ch8-p1-key-hardening
   experiment worktree/branch can be pruned at the user's leisure —
   everything of value is re-landed (a925d668, be5108c9).
+
+- 2026-07-11 · ch8 CHAPTER CLOSE. DoD evidence: contract tests + the
+  full v3 suite green (560; the round-6 residue fix changed assertion
+  shape only, no test-count change); drift 9/9; the ch8-template-format draft
+  flipped `realized` with its 38-row realized_map in ONE act (this
+  commit); the §1.3 ch8 map row + PI-5 → `realized`; MD-1 retired
+  (P2's seven-target sweep); ADR-011/ADR-012 `accepted` (their
+  ratification acts); FULL `pnpm ci:local` PASSED at the close (the
+  quality gate caught one strict-index residue first — fixed at
+  16777710); zero reopened drafts; the process-log boundary review
+  HELD (nine verdicts, all → annotations above). DOGFOODING
+  checkpoint: WAIVED by the user's explicit act for this close (the
+  waive clause's first live use — recorded, never silent; the
+  checkpoint stands for the next close). The chapter closed with 20
+  packets total, ch8 contributing P1 (7 implementation rounds, 7
+  detector misses — 4 arm-class) and P2 (the first audited-clean
+  autonomous flag-free packet).
