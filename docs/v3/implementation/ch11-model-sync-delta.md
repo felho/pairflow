@@ -5,15 +5,22 @@ by the ch11 gate-admission model fix, referenced by the one-off
 approve-precondition exception and consumed by the ch11-P0
 model-registry-sync packet. The ratified model state: branch
 `model-sync/ch11-gate-admission`, tip `453d3be9` (commits `3b3283a2` +
-`453d3be9`). Derivation is mechanical — the commands are recorded per lane;
-re-running them against the ratified state MUST reproduce these sets
-exactly, and ANY divergence beyond them BLOCKS the P0 approve.
+`453d3be9`). Derivation is mechanical over PINNED refs — never a moving
+`main`/`HEAD` (a later main move must not change what "re-runnable" means):
+
+```
+base:  cd52433bf4b3ede159b0ea86c2790d398828bfc3   (the main tip the branch forked from)
+model: 453d3be9b1d31ad2aaf2c61b6bb5d3599eb6abd0   (the ratified model state)
+```
+
+Re-running the recorded commands over these two refs MUST reproduce the
+sets below exactly; ANY divergence beyond them BLOCKS the P0 approve.
 
 ## Lane 1 — `v3/src/drift/rejectionNames.test.ts` (2 tests red)
 
 Registry: **85 → 54**. Derivation: the `- \`<name>\` — first appears` set of
-`docs/v3/convergence/model-src/ledger.md` §3 at `main` MINUS the same set at
-the ratified state. The 31-name removal set (all moved to the
+`docs/v3/convergence/model-src/ledger.md` §3 at base `cd52433b` MINUS the
+same set at model `453d3be9`. The 31-name removal set (all moved to the
 definition-issue channel; zero additions):
 
 ```
@@ -42,7 +49,7 @@ drift), with its compile twin in `admit_definition`.
 
 ## Lane 2 — `v3/src/drift/unitMap.test.ts` (1 test red)
 
-The units-tree key delta (`git diff --name-status main..HEAD --
+The units-tree key delta (`git diff --name-status cd52433b 453d3be9 --
 docs/v3/convergence/model-src/units/`):
 
 ```
@@ -78,11 +85,16 @@ The ledger §4 delta (51 blocks; entities **121 → 122**):
 > the THREE named drift lanes above may be red at ch11-P0's approve, each
 > lane's divergence EXACTLY the enumerated delta of this file — any
 > deviation beyond BLOCKS the approve; every other approve-time tier-0 gate
-> green; P0's mutation boundary = the mechanical mirrors
+> green; P0's mutation boundary = EXACTLY these files: the mechanical mirrors
 > (`v3/src/domain/rejections.ts`, `v3/src/drift/unitMap.json`,
-> `v3/src/drift/domainRegistry.ts`), the re-derived TWO-WAY exact-set drift
-> locks (probe mutations red in both directions), and the packet file —
-> nothing else; NO runtime/compiler behavior; human approve MANDATORY;
+> `v3/src/drift/domainRegistry.ts`), the count-pinning lock test
+> `v3/src/drift/rejectionNames.test.ts` (it hardcodes the 85 count at three
+> sites — comment, describe, expect — all re-pinned to 54; `unitMap.test.ts`
+> and `domainRegistry.test.ts` are NOT boundary members — measured: they
+> carry no pinned counts, pure set-equality against their manifests), and
+> the packet file — nothing else; the re-derived locks stay TWO-WAY
+> exact-set (probe mutations red in both directions, executed);
+> NO runtime/compiler behavior; human approve MANDATORY;
 > build-close = all three lanes green + `tools/v3-model/check.sh` + full
 > `pnpm ci:local` green, else STOP.
 
