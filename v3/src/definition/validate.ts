@@ -23,8 +23,65 @@ const ROOT_KEYS = ["ref", "start", "steps", "terminal", "roles"] as const;
 const REF_ID = /^[a-z0-9][a-z0-9-]*$/;
 const VERSION_SOURCE = /^[1-9][0-9]*$/;
 
-function isPlainMap(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+type ResolvedMap = ReadonlyMap<unknown, unknown>;
+
+function isResolvedMap(value: unknown): value is ResolvedMap {
+  return value instanceof Map;
+}
+
+function mapKeys(map: ResolvedMap): readonly unknown[] {
+  return [...map.keys()];
+}
+
+function mapEntries(map: ResolvedMap): readonly (readonly [unknown, unknown])[] {
+  return [...map.entries()];
+}
+
+function mapHas(map: ResolvedMap, key: string): boolean {
+  return map.has(key);
+}
+
+function mapGet(map: ResolvedMap, key: unknown): unknown {
+  return map.get(key);
+}
+
+function defineOwn<T>(target: Record<string, T>, key: string, value: T): void {
+  Object.defineProperty(target, key, {
+    configurable: true,
+    enumerable: true,
+    value,
+    writable: true,
+  });
+}
+
+function materializeResolvedValue(value: unknown, seen = new WeakMap<object, unknown>()): unknown {
+  if (typeof value !== "object" || value === null) return value;
+  const existing = seen.get(value);
+  if (existing !== undefined) return existing;
+  if (Array.isArray(value)) {
+    const result: unknown[] = [];
+    seen.set(value, result);
+    for (const item of value) result.push(materializeResolvedValue(item, seen));
+    return result;
+  }
+  if (isResolvedMap(value)) {
+    const entries = mapEntries(value);
+    if (entries.every(([key]) => typeof key === "string")) {
+      const result: Record<string, unknown> = {};
+      seen.set(value, result);
+      for (const [key, item] of entries) {
+        defineOwn(result, key as string, materializeResolvedValue(item, seen));
+      }
+      return result;
+    }
+    const result = new Map<unknown, unknown>();
+    seen.set(value, result);
+    for (const [key, item] of entries) {
+      result.set(materializeResolvedValue(key, seen), materializeResolvedValue(item, seen));
+    }
+    return result;
+  }
+  return value;
 }
 
 /**
@@ -80,10 +137,17 @@ function findCycle(value: unknown, path: string, ancestors: Set<object>): Valida
       }
       return undefined;
     }
-    for (const [key, child] of Object.entries(value)) {
-      const hit = findCycle(child, joinPath(path, key), ancestors);
-      if (hit) {
-        return hit;
+    if (isResolvedMap(value)) {
+      for (const [key, child] of mapEntries(value)) {
+        const segment = typeof key === "string" ? key : "<map-key>";
+        const keyHit = findCycle(key, joinPath(path, `${segment}<key>`), ancestors);
+        if (keyHit) {
+          return keyHit;
+        }
+        const valueHit = findCycle(child, joinPath(path, segment), ancestors);
+        if (valueHit) {
+          return valueHit;
+        }
       }
     }
     return undefined;
@@ -128,7 +192,7 @@ function versionFinding(doc: Document, source: string, resolved: unknown): Valid
 
 export function validateTemplate(value: unknown, doc: Document, source: string): ValidateOutcome {
   // V1: the root container precondition — ONE finding for a non-map root.
-  if (!isPlainMap(value)) {
+  if (!isResolvedMap(value)) {
     return {
       findings: [{ path: "$", message: "the template root must be a map with exactly ref, start, steps, terminal, roles" }],
     };
@@ -152,47 +216,54 @@ export function validateTemplate(value: unknown, doc: Document, source: string):
 
   // V1: exact top-level keyset (missing at "$", unknown at its own path).
   for (const key of ROOT_KEYS) {
-    if (!(key in root)) {
+    if (!mapHas(root, key)) {
       findings.push({ path: "$", message: `missing required key "${key}"` });
     }
   }
-  for (const key of Object.keys(root)) {
-    if (!(ROOT_KEYS as readonly string[]).includes(key)) {
-      findings.push({ path: key, message: `unknown key "${key}" (fixed keysets grow only by ratified additive keys — V16 reserves "kind")` });
+  for (const key of mapKeys(root)) {
+    if (typeof key !== "string" || !(ROOT_KEYS as readonly string[]).includes(key)) {
+      findings.push({
+        path: typeof key === "string" ? key : "$",
+        message: `unknown key ${describeValue(key)} (fixed keysets grow only by ratified additive keys — V16 reserves "kind")`,
+      });
     }
   }
 
   // V2/V3: ref — container precondition, then the field lanes.
   let refId: string | undefined;
   let refVersion: number | undefined;
-  if ("ref" in root) {
-    const ref = root["ref"];
-    if (!isPlainMap(ref)) {
+  if (mapHas(root, "ref")) {
+    const ref = mapGet(root, "ref");
+    if (!isResolvedMap(ref)) {
       findings.push({ path: "ref", message: "ref must be a map with exactly id and version" });
     } else {
-      for (const key of Object.keys(ref)) {
+      for (const key of mapKeys(ref)) {
         if (key !== "id" && key !== "version") {
-          findings.push({ path: `ref.${key}`, message: `unknown key "${key}"` });
+          findings.push({
+            path: typeof key === "string" ? `ref.${key}` : "ref",
+            message: `unknown key ${describeValue(key)}`,
+          });
         }
       }
-      if (!("id" in ref)) {
+      if (!mapHas(ref, "id")) {
         findings.push({ path: "ref", message: 'missing required key "id"' });
       } else {
-        const id = ref["id"];
+        const id = mapGet(ref, "id");
         if (typeof id !== "string" || !REF_ID.test(id)) {
           findings.push({ path: "ref.id", message: `id must be a string matching ^[a-z0-9][a-z0-9-]*$ (filename-safe); got ${describeValue(id)}` });
         } else {
           refId = id;
         }
       }
-      if (!("version" in ref)) {
+      if (!mapHas(ref, "version")) {
         findings.push({ path: "ref", message: 'missing required key "version"' });
       } else {
-        const finding = versionFinding(doc, source, ref["version"]);
+        const version = mapGet(ref, "version");
+        const finding = versionFinding(doc, source, version);
         if (finding) {
           findings.push(finding);
         } else {
-          refVersion = ref["version"] as number;
+          refVersion = version as number;
         }
       }
     }
@@ -206,33 +277,37 @@ export function validateTemplate(value: unknown, doc: Document, source: string):
   let usedRolesReliable = true;
   const transitionTargets: Array<{ readonly path: string; readonly target: unknown }> = [];
   const builtSteps: Record<string, Step> = {};
-  if ("steps" in root) {
-    const steps = root["steps"];
-    if (!isPlainMap(steps)) {
+  if (mapHas(root, "steps")) {
+    const steps = mapGet(root, "steps");
+    if (!isResolvedMap(steps)) {
       findings.push({ path: "steps", message: "steps must be a NONEMPTY map of step-id -> step" });
-    } else if (Object.keys(steps).length === 0) {
+    } else if (steps.size === 0) {
       findings.push({ path: "steps", message: "steps must be a NONEMPTY map" });
     } else {
-      stepIds = Object.keys(steps);
-      for (const id of stepIds) {
+      const rawStepIds = mapKeys(steps);
+      stepIds = rawStepIds.filter((id): id is string => typeof id === "string");
+      for (const id of rawStepIds) {
         const grammar = idGrammarError("step id", id);
         if (grammar) {
           findings.push({ path: "steps", message: grammar });
         }
-        const stepPath = `steps.${id}`;
-        const step = steps[id];
-        if (!isPlainMap(step)) {
+        const stepPath = typeof id === "string" ? `steps.${id}` : "steps";
+        const step = mapGet(steps, id);
+        if (!isResolvedMap(step)) {
           findings.push({ path: stepPath, message: "a step must be a map with exactly role, instruction, transitions (+ optional agentConfig)" });
           usedRolesReliable = false;
           continue;
         }
-        for (const key of Object.keys(step)) {
-          if (!["role", "instruction", "transitions", "agentConfig"].includes(key)) {
-            findings.push({ path: `${stepPath}.${key}`, message: `unknown key "${key}"` });
+        for (const key of mapKeys(step)) {
+          if (typeof key !== "string" || !["role", "instruction", "transitions", "agentConfig"].includes(key)) {
+            findings.push({
+              path: typeof key === "string" ? `${stepPath}.${key}` : stepPath,
+              message: `unknown key ${describeValue(key)}`,
+            });
           }
         }
         for (const key of ["role", "instruction", "transitions"]) {
-          if (!(key in step)) {
+          if (!mapHas(step, key)) {
             findings.push({ path: stepPath, message: `missing required key "${key}"` });
             if (key === "role") {
               usedRolesReliable = false;
@@ -240,8 +315,8 @@ export function validateTemplate(value: unknown, doc: Document, source: string):
           }
         }
         // role (V5's role-name grammar on the reference)
-        if ("role" in step) {
-          const role = step["role"];
+        if (mapHas(step, "role")) {
+          const role = mapGet(step, "role");
           const roleGrammar = idGrammarError("role name", role);
           if (roleGrammar) {
             // A grammar-invalid role (string included) makes the
@@ -254,24 +329,27 @@ export function validateTemplate(value: unknown, doc: Document, source: string):
           }
         }
         // instruction (V6): nonempty string, NO normalization.
-        if ("instruction" in step) {
-          const instruction = step["instruction"];
+        if (mapHas(step, "instruction")) {
+          const instruction = mapGet(step, "instruction");
           if (typeof instruction !== "string" || instruction.length === 0) {
             findings.push({ path: `${stepPath}.instruction`, message: "instruction must be a nonempty string" });
           }
         }
         // transitions (V7): a map, MAY be empty.
-        if ("transitions" in step) {
-          const transitions = step["transitions"];
-          if (!isPlainMap(transitions)) {
+        if (mapHas(step, "transitions")) {
+          const transitions = mapGet(step, "transitions");
+          if (!isResolvedMap(transitions)) {
             findings.push({ path: `${stepPath}.transitions`, message: "transitions must be a map of event-type -> target id (it may be empty)" });
           } else {
-            for (const [eventType, target] of Object.entries(transitions)) {
+            for (const [eventType, target] of mapEntries(transitions)) {
               const eventGrammar = idGrammarError("event type", eventType);
               if (eventGrammar) {
                 findings.push({ path: `${stepPath}.transitions`, message: eventGrammar });
               }
-              transitionTargets.push({ path: `${stepPath}.transitions.${eventType}`, target });
+              transitionTargets.push({
+                path: typeof eventType === "string" ? `${stepPath}.transitions.${eventType}` : `${stepPath}.transitions`,
+                target,
+              });
             }
           }
         }
@@ -284,8 +362,8 @@ export function validateTemplate(value: unknown, doc: Document, source: string):
 
   // V12: terminal — own rules run without steps; disjointness needs keys(steps).
   let terminalIds: string[] | undefined;
-  if ("terminal" in root) {
-    const terminal = root["terminal"];
+  if (mapHas(root, "terminal")) {
+    const terminal = mapGet(root, "terminal");
     if (!Array.isArray(terminal)) {
       findings.push({ path: "terminal", message: "terminal must be a nonempty list of unique ids" });
     } else {
@@ -322,13 +400,14 @@ export function validateTemplate(value: unknown, doc: Document, source: string):
   let declaredRoles: string[] | undefined;
   let declaredRolesReliable = true;
   const builtRoles: Record<string, { readonly defaultActor?: string }> = {};
-  if ("roles" in root) {
-    const roles = root["roles"];
-    if (!isPlainMap(roles)) {
+  if (mapHas(root, "roles")) {
+    const roles = mapGet(root, "roles");
+    if (!isResolvedMap(roles)) {
       findings.push({ path: "roles", message: "roles must be a map of role-name -> { defaultActor? }" });
     } else {
-      declaredRoles = Object.keys(roles);
-      for (const name of declaredRoles) {
+      const rawRoleNames = mapKeys(roles);
+      declaredRoles = rawRoleNames.filter((name): name is string => typeof name === "string");
+      for (const name of rawRoleNames) {
         const grammar = idGrammarError("role name", name);
         if (grammar) {
           // The declared-side twin of the used-set rule: a
@@ -336,34 +415,39 @@ export function validateTemplate(value: unknown, doc: Document, source: string):
           findings.push({ path: "roles", message: grammar });
           declaredRolesReliable = false;
         }
-        const entryPath = `roles.${name}`;
-        const entry = roles[name];
-        if (!isPlainMap(entry)) {
+        const entryPath = typeof name === "string" ? `roles.${name}` : "roles";
+        const entry = mapGet(roles, name);
+        if (!isResolvedMap(entry)) {
           findings.push({ path: entryPath, message: "a roles entry must be a map whose only legal key is the optional defaultActor" });
           continue;
         }
-        for (const key of Object.keys(entry)) {
+        for (const key of mapKeys(entry)) {
           if (key !== "defaultActor") {
-            findings.push({ path: `${entryPath}.${key}`, message: `unknown key "${key}"` });
+            findings.push({
+              path: typeof key === "string" ? `${entryPath}.${key}` : entryPath,
+              message: `unknown key ${describeValue(key)}`,
+            });
           }
         }
-        if ("defaultActor" in entry) {
-          const actor = entry["defaultActor"];
+        if (mapHas(entry, "defaultActor")) {
+          const actor = mapGet(entry, "defaultActor");
           if (typeof actor !== "string" || actor.length === 0) {
             findings.push({ path: `${entryPath}.defaultActor`, message: "defaultActor must be a nonempty string when present" });
-          } else {
-            builtRoles[name] = { defaultActor: actor };
+          } else if (typeof name === "string") {
+            defineOwn(builtRoles, name, { defaultActor: actor });
             continue;
           }
         }
-        builtRoles[name] = {};
+        if (typeof name === "string") {
+          defineOwn(builtRoles, name, {});
+        }
       }
     }
   }
 
   // V13: start ∈ keys(steps) — suppressed when the steps container failed.
-  if ("start" in root && stepIds) {
-    const start = root["start"];
+  if (mapHas(root, "start") && stepIds) {
+    const start = mapGet(root, "start");
     if (typeof start !== "string" || !stepIds.includes(start)) {
       findings.push({ path: "start", message: `start must name an existing step; got ${describeValue(start)}` });
     }
@@ -400,18 +484,27 @@ export function validateTemplate(value: unknown, doc: Document, source: string):
   }
 
   // E3: only a COMPLETE valid template escapes — built here, after zero findings.
-  const steps = root["steps"] as Record<string, Record<string, unknown>>;
-  for (const [id, step] of Object.entries(steps)) {
-    builtSteps[id] = {
-      role: step["role"] as string,
-      instruction: step["instruction"] as string,
-      transitions: { ...(step["transitions"] as Record<string, string>) },
-      ...("agentConfig" in step ? { agentConfig: step["agentConfig"] } : {}),
+  const steps = mapGet(root, "steps") as ResolvedMap;
+  for (const [id, stepValue] of mapEntries(steps)) {
+    const step = stepValue as ResolvedMap;
+    const transitionValues = mapGet(step, "transitions") as ResolvedMap;
+    const transitions: Record<string, string> = {};
+    for (const [eventType, target] of mapEntries(transitionValues)) {
+      defineOwn(transitions, eventType as string, target as string);
+    }
+    const builtStep: Step = {
+      role: mapGet(step, "role") as string,
+      instruction: mapGet(step, "instruction") as string,
+      transitions,
+      ...(mapHas(step, "agentConfig")
+        ? { agentConfig: materializeResolvedValue(mapGet(step, "agentConfig")) }
+        : {}),
     };
+    defineOwn(builtSteps, id as string, builtStep);
   }
   const template: WorkflowTemplate = {
     ref: { id: refId as string, version: refVersion as number },
-    start: root["start"] as string,
+    start: mapGet(root, "start") as string,
     steps: builtSteps,
     terminal: terminalIds as string[],
     roles: builtRoles,

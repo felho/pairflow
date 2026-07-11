@@ -171,6 +171,126 @@ roles:
     );
     expect(err.stage).toBe("parse");
   });
+
+  it("rejects structurally duplicate collection keys inside agentConfig", () => {
+    const err = expectErr(
+      loadTemplate(
+        bytes(`ref:
+  id: t
+  version: 1
+start: s
+steps:
+  s:
+    role: r
+    instruction: i
+    transitions: {}
+    agentConfig:
+      ? [a, b]
+      : first
+      ? [a, b]
+      : second
+terminal:
+  - done
+roles:
+  r: {}
+`),
+      ),
+    );
+    expect(err.stage).toBe("parse");
+    expect(JSON.stringify(err.findings)).toMatch(/unique|duplicate/iu);
+  });
+
+  it("rejects an alias key that resolves to an existing anchored collection key", () => {
+    const err = expectErr(
+      loadTemplate(
+        bytes(`ref:
+  id: t
+  version: 1
+start: s
+steps:
+  s:
+    role: r
+    instruction: i
+    transitions: {}
+    agentConfig:
+      ? &key [a, b]
+      : first
+      ? *key
+      : second
+terminal:
+  - done
+roles:
+  r: {}
+`),
+      ),
+    );
+    expect(err.stage).toBe("parse");
+    expect(JSON.stringify(err.findings)).toMatch(/unique|duplicate/iu);
+  });
+
+  it("rejects an alias key resolved through an anchor declared outside the key", () => {
+    const err = expectErr(
+      loadTemplate(
+        bytes(`ref:
+  id: t
+  version: 1
+start: s
+steps:
+  s:
+    role: r
+    instruction: i
+    transitions: {}
+    agentConfig:
+      seed: &key [a, b]
+      ? [a, b]
+      : first
+      ? *key
+      : second
+terminal:
+  - done
+roles:
+  r: {}
+`),
+      ),
+    );
+    expect(err.stage).toBe("parse");
+    expect(JSON.stringify(err.findings)).toMatch(/unique|duplicate/iu);
+  });
+
+  it("emits one duplicate finding per later key across compose-time and resolved matches", () => {
+    const err = expectErr(
+      loadTemplate(
+        bytes(`ref:
+  id: t
+  version: 1
+start: s
+steps:
+  s:
+    role: r
+    instruction: i
+    transitions: {}
+    agentConfig:
+      seed: &key [a, b]
+      ? *key
+      : first
+      ? [a, b]
+      : second
+      ? &local [a, b]
+      : third
+terminal:
+  - done
+roles:
+  r: {}
+`),
+      ),
+    );
+    expect(err.stage).toBe("parse");
+    expect(err.findings).toHaveLength(2);
+    const positions = err.findings.map((finding) => (
+      "line" in finding ? `${finding.line}:${finding.col}` : "unpositioned"
+    ));
+    expect(new Set(positions).size).toBe(2);
+  });
 });
 
 describe("G7 — the %YAML directive rule (two-mechanism union)", () => {

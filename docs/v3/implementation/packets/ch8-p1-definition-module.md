@@ -803,6 +803,90 @@ sites); driven by a table-driven lane set planting a cyclic map in
 each of the four slots (cycle finding survives, no internal-failure,
 no throw). 530 → 534 tests; bridges re-verified green.
 
+**Aftermath round 3 (2026-07-11, blind cross-model replay of the
+committed implementation — two new fold-now defects):** the replay
+probed V5's key surface as YAML source values and the returned domain
+records as JavaScript property carriers, exposing two dimensions the
+original panel and both implementation-arm rounds missed. First,
+default `toJS()` materialized YAML maps as objects BEFORE validation:
+a numeric open-map key therefore arrived as a string, and
+typed-distinct keys (`1` and `"1"`) collapsed to one property with
+silent data loss. This violated V5's string-key rule and E3's
+no-partial/no-repair outcome. Fix: the resolve stage now requests the
+library's `mapAsMap` projection; validation runs over the resolved
+Maps, so key type and identity survive through every open-key lane.
+Successful raw V9 values materialize losslessly: string-key maps stay
+own-property-safe records, while a map carrying ANY non-string key
+stays a Map (so `1` and `"1"` remain distinct). Second, the
+legal id `__proto__` passed V5 but assignment into plain `{}` records
+invoked the legacy prototype setter: accepted steps, roles, and
+transitions disappeared as own properties. Fix: every domain
+dictionary is materialized with own-property-safe writes. The lens-4
+delta reconciliation then exposed the G6×V9 mirror: the YAML
+library's default uniqueness test is scalar-only, so two structurally
+identical collection-valued keys produced no parse diagnostic. The
+document API's supported `uniqueKeys` comparator now performs
+structural node equality, including anchored-node↔alias identity,
+keeping duplicate rejection document-wide as G6 claims. Nine new
+lanes drive numeric step/role/event keys, the
+`1`/`"1"` collision, raw `agentConfig` compatibility and collision
+preservation, collection-key duplicate rejection, and successful
+`__proto__` round-trip at all three domain-map sites. The full v3
+suite moved 547 → 556 (P2's 13 tests landed
+between P1 round 2 and this fold); `v3:typecheck`, `v3:lint`,
+`v3:test`, `v3:coverage`, `v3:packet-lint`, and `v3:adr-check` are
+green. No mutation-boundary extension, ADR, or fitness-rule change:
+the fix stays inside the existing definition loader/validator/test
+surface and changes no lifecycle, persistence ordering, execution
+context, or command orchestration.
+
+**Aftermath round 4 (2026-07-11, mandatory build-close external arm
+on round 3 — finder result folded before verdict):** the arm propagated
+G6 through the full document anchor graph. The round-3 compose-time
+comparator caught literal structural duplicates and an alias whose
+anchor was attached to the other KEY, but could not resolve an alias
+to an anchor declared elsewhere (for example in another map VALUE).
+A literal collection key and an alias to an externally anchored,
+structurally identical collection therefore still reached `toJS()`;
+resolution collapsed them to one Map entry. Fix: after the document
+is composed, a second structured duplicate pass resolves aliases with
+the complete Document anchor graph and synthesizes only the duplicate
+findings the compose-time comparator could not see; parser diagnostics
+and supplemental findings are merged in source order before warnings,
+preserving E1. The new lane anchors `[a,b]` in a sibling value, then
+uses the same literal collection and its alias as two keys; it now
+rejects at parse. 556 → 557 tests; the finder run was intentionally
+stopped after the fold made its in-progress worktree view non-admissible
+for a final verdict. Per the diminishing-returns rule, one clean,
+SHA-citing re-check runs on the fixed commit.
+
+**Aftermath round 5 (2026-07-11, the clean external-arm re-check on
+round 4, sha `43705cef`; verdict `refine`):** the full-document scan
+suppressed supplemental findings per PAIR, rather than per later key.
+If a later key matched one earlier key at compose time and a different
+earlier key only after document-wide alias resolution, the parser
+reported the compose-time duplicate and the supplemental scan reported
+the same later key again. Fix: each later key first checks ALL earlier
+keys for any compose-time match; only when none exists does it check
+for a resolved match and synthesize one finding. The new lane combines
+an externally anchored alias key, a literal collection key, and a
+locally anchored equivalent key; the two later duplicate keys now
+produce exactly two findings at distinct positions, rather than three
+with the last position repeated. 557 → 558 tests. No mutation-boundary,
+ADR, or fitness-rule change: this is diagnostic multiplicity inside the
+existing definition parse stage.
+
+**Integration note (2026-07-11):** rounds 3–5 were built on the
+user's ad-hoc experiment branch (`codex/ch8-p1-key-hardening` — a
+model-comparison replay that turned into real catches) and RE-LANDED
+onto main as ONE aftermath commit per the README §4 choreography; the
+sha citations above (`43705cef`, and `b07c88a3` in the log) refer to
+the PRE-integration branch commits the arm's verdicts actually bound
+— kept as the honest record. The branch's per-round post-build audits
+ran 0-error; the integrated commit carries its own audit at its own
+sha, and a fresh arm re-check on the integrated sha runs under the
+ch8-boundary §6 mechanics (its first live use).
+
 ```json
 {
   "packet_metrics": {
@@ -813,7 +897,7 @@ no throw). 530 → 534 tests; bridges re-verified green.
       "discovered": "projection"
     },
     "provenance": { "anchored": 36, "derived": 3, "new_decision": 1 },
-    "rounds": { "review": 2, "doc_refinement": 0, "implementation": 3 },
+    "rounds": { "review": 2, "doc_refinement": 0, "implementation": 6 },
     "stops": [
       {
         "type": "4:flagged-approve",
@@ -836,10 +920,25 @@ no throw). 530 → 534 tests; bridges re-verified green.
         "found_at": "code-review",
         "what": "the round-1 aftermath fix itself regressed: with V15 accumulating, the walk runs on cyclic graphs — and JSON.stringify in finding messages threw on a cyclic value in a scalar slot (role: *a), losing the cycle finding to the G1 internal-failure belt",
         "why_missed": "the accumulation fix was scoped to the finding just caught: the walk's HANG-safety was re-derived under the new invariant but the message sites' SERIALIZATION safety was not; the arm's re-check probed a cyclic value in a scalar slot — a combination the round-1 lanes lacked"
+      },
+      {
+        "found_at": "code-review",
+        "what": "default toJS object materialization erased YAML open-map key type before V5 (typed-distinct keys could collapse silently), plain-record assignment made the legal __proto__ id disappear into the object prototype rather than an own domain property, and the library's scalar-only default uniqueness check missed duplicate collection-valued keys under G6",
+        "why_missed": "the V5 grid covered token values but not YAML SOURCE KEY TYPE, the round-trip covered ordinary identifiers but not JavaScript property-creation semantics, and G6's fixtures covered scalar duplicates only; the blind cross-model replay found the first two dimensions and the mandatory lens-4 reconciliation propagated the key-shape axis into G6×V9, including anchored collection↔alias identity on re-check"
+      },
+      {
+        "found_at": "code-review",
+        "what": "the round-3 G6 comparator could relate an alias only to an anchor attached directly to the compared key; an alias resolving through an anchor declared elsewhere in the document still duplicated a structurally identical collection key and collapsed at resolution",
+        "why_missed": "the lens-4 lanes covered literal collection duplicates and key-local anchor↔alias identity, but not the full document anchor graph; the mandatory build-close arm moved the anchor to a sibling value and reproduced the remaining collapse"
+      },
+      {
+        "found_at": "code-review",
+        "what": "the round-4 document-aware duplicate scan suppressed findings per compared pair, so one later key matching different earlier keys through compose-time and resolved equality received the parser finding plus a redundant supplemental finding at the same position",
+        "why_missed": "the round-4 lane had one earlier semantic match only; the clean arm re-check added a third equivalent key and exposed that suppression must be decided per later key across all earlier keys"
       }
     ],
     "learned": "the first measurement-stage packet: an agent-invoked external arm run PRE-approve caught two substrate overclaims twelve internal Opus passes missed; the build ran first-execution green on every yaml lane — a ratified draft's probe record transfers to code with zero behavioral surprises",
-    "baseline_note": "rounds.review = 2 counted panel rounds (R1 full; R2 targeted clean after the content fold); the two closes, the lens-4 reconciliations, and the arm's find + re-check are chronicled above and do not count (reconciliations never count; the arm is the phase-2 adversarial leg). prediction: the invention->projection gap is flag 2's boundary-review question — the draft phase absorbed the memo-born decisions between the ratification-time prediction and authoring. detector_misses.found_at = 'approve' (the closed enum's nearest member): the finder was the EXTERNAL ARM run pre-approve at the user's ask — a NEW lane the enum predates (the ch7-P4 misses arrived post-build via code-review); whether the enum gains an external-arm member is boundary-review material. The miss fed the S1 fold before approve and before build. implementation = 3: the build round (mechanical type/lint residue only — four readonly casts, one optional chain, two auto-fixed assertions, one NBSP escape; zero behavioral test failures) + the external-arm aftermath round (the V15 accumulation fix + toJSON + the V5 grid + the V11 reliability extension — 515 -> 530) + the arm re-check's regression round (the cycle-safe describeValue renderer — 530 -> 534; the third detector_misses entry). 401 -> 515 at the build commit (+114 vs the ~55 estimate: parametrized lanes expand to per-form it bodies — the inverse of ch7-P4's over-count, recorded for the estimating convention). The second detector_misses entry is the post-build arm's substance catch (found_at code-review — the arm IS that lane post-build; its pre-approve run is the first entry's 'approve' lane)."
+    "baseline_note": "rounds.review = 2 counted panel rounds (R1 full; R2 targeted clean after the content fold); the two closes, the lens-4 reconciliations, and the arm's find + re-check are chronicled above and do not count (reconciliations never count; the arm is the phase-2 adversarial leg). prediction: the invention->projection gap is flag 2's boundary-review question — the draft phase absorbed the memo-born decisions between the ratification-time prediction and authoring. detector_misses.found_at = 'approve' (the closed enum's nearest member): the finder was the EXTERNAL ARM run pre-approve at the user's ask — a NEW lane the enum predates (the ch7-P4 misses arrived post-build via code-review); whether the enum gains an external-arm member is boundary-review material. The miss fed the S1 fold before approve and before build. implementation = 6: the build round (mechanical type/lint residue only — four readonly casts, one optional chain, two auto-fixed assertions, one NBSP escape; zero behavioral test failures) + the external-arm aftermath round (the V15 accumulation fix + toJSON + the V5 grid + the V11 reliability extension — 515 -> 530) + the arm re-check's regression round (the cycle-safe describeValue renderer — 530 -> 534; the third detector_misses entry) + the blind replay aftermath round (resolved map-key identity + own-property-safe domain records + lens-4's structural-duplicate and key-local alias propagation; the fourth detector_misses entry; 547 -> 556 after P2 landed 13 intervening tests) + the mandatory build-close arm fold (full-document alias resolution for G6; the fifth detector_misses entry; 556 -> 557) + its clean re-check fold (per-later-key supplemental diagnostic suppression; the sixth detector_misses entry; 557 -> 558). 401 -> 515 at the build commit (+114 vs the ~55 estimate: parametrized lanes expand to per-form it bodies — the inverse of ch7-P4's over-count, recorded for the estimating convention). The second detector_misses entry is the post-build arm's substance catch (found_at code-review — the arm IS that lane post-build; its pre-approve run is the first entry's 'approve' lane)."
   }
 }
 ```

@@ -229,6 +229,49 @@ describe("V4 — steps container and step keysets", () => {
 });
 
 describe("V5 — the shared id/name grammar (no whitespace, no dot, nonempty)", () => {
+  const nonStringOpenMapKeys = [
+    [
+      "step id",
+      template({
+        start: 'start: "1"\n',
+        steps: "steps:\n  1:\n    role: r\n    instruction: i\n    transitions: {}\n",
+      }),
+      "steps",
+    ],
+    [
+      "role name",
+      template({
+        steps: 'steps:\n  s:\n    role: "1"\n    instruction: i\n    transitions: {}\n',
+        roles: "roles:\n  1: {}\n",
+      }),
+      "roles",
+    ],
+    [
+      "event type",
+      template({ steps: "steps:\n  s:\n    role: r\n    instruction: i\n    transitions:\n      1: done\n" }),
+      "steps.s.transitions",
+    ],
+  ] as const;
+  for (const [label, yaml, path] of nonStringOpenMapKeys) {
+    it(`rejects a non-string YAML key used as a ${label}`, () => {
+      const err = expectValidateErr(yaml);
+      expect(paths(err)).toContain(path);
+      expect(JSON.stringify(err.findings)).toContain("nonempty string");
+    });
+  }
+
+  it("rejects typed-distinct YAML keys before toJS can collapse them", () => {
+    const err = expectValidateErr(
+      template({
+        start: 'start: "1"\n',
+        steps:
+          'steps:\n  1:\n    role: r\n    instruction: first\n    transitions: {}\n  "1":\n    role: r\n    instruction: second\n    transitions: {}\n',
+      }),
+    );
+    expect(paths(err)).toContain("steps");
+    expect(JSON.stringify(err.findings)).toContain("step id must be a nonempty string");
+  });
+
   it("rejects a step id with a space", () => {
     const err = expectValidateErr(
       template({
@@ -410,6 +453,52 @@ describe("V9 — agentConfig raw pass-through", () => {
       "weird key with spaces": "ok",
     });
   });
+
+  it("keeps numeric, complex, and __proto__ keys losslessly inside agentConfig", () => {
+    const result = load(
+      template({
+        steps: `steps:
+  s:
+    role: r
+    instruction: i
+    transitions: {}
+    agentConfig:
+      ? [a, b]
+      : complex
+      1: numeric
+      __proto__: proto
+`,
+      }),
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const config = result.template.steps["s"]?.agentConfig;
+    expect(config).toBeInstanceOf(Map);
+    const entries = [...(config as Map<unknown, unknown>).entries()];
+    expect(entries[0]).toStrictEqual([["a", "b"], "complex"]);
+    expect(entries.slice(1)).toStrictEqual([[1, "numeric"], ["__proto__", "proto"]]);
+  });
+
+  it("preserves typed-distinct agentConfig keys without string coercion or data loss", () => {
+    const result = load(
+      template({
+        steps: `steps:
+  s:
+    role: r
+    instruction: i
+    transitions: {}
+    agentConfig:
+      1: numeric
+      "1": string
+`,
+      }),
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const config = result.template.steps["s"]?.agentConfig;
+    expect(config).toBeInstanceOf(Map);
+    expect([...(config as Map<unknown, unknown>).entries()]).toStrictEqual([[1, "numeric"], ["1", "string"]]);
+  });
 });
 
 describe("V15 — acyclicity (cycle-safe validator)", () => {
@@ -568,6 +657,29 @@ describe("E5 — validate finding keysets", () => {
 });
 
 describe("dimension 12 — the canonical example round-trip", () => {
+  it("round-trips legal __proto__ step and role identifiers as own properties", () => {
+    const result = load(
+      template({
+        start: "start: __proto__\n",
+        steps:
+          "steps:\n  __proto__:\n    role: __proto__\n    instruction: i\n    transitions:\n      __proto__: done\n",
+        roles: "roles:\n  __proto__: {}\n",
+      }),
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(Object.keys(result.template.steps)).toStrictEqual(["__proto__"]);
+    expect(Object.keys(result.template.roles)).toStrictEqual(["__proto__"]);
+    expect(Object.hasOwn(result.template.steps, "__proto__")).toBe(true);
+    expect(Object.hasOwn(result.template.roles, "__proto__")).toBe(true);
+    const step = result.template.steps["__proto__"];
+    expect(step?.role).toBe("__proto__");
+    expect(step?.instruction).toBe("i");
+    expect(Object.keys(step?.transitions ?? {})).toStrictEqual(["__proto__"]);
+    expect(Object.hasOwn(step?.transitions ?? {}, "__proto__")).toBe(true);
+    expect(step?.transitions["__proto__"]).toBe("done");
+  });
+
   it("loads the draft's canonical example to the exact WorkflowTemplate value", () => {
     const canonical = `ref:
   id: local-pair-v0
