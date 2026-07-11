@@ -17,8 +17,8 @@ inline evaluators (`declarative.threshold`,
 resolves `uses` ids — code that is neither kernel (the kernel is
 port-parametric: domain + ports only, lint-enforced) nor domain (an
 evaluator EXECUTES policy; domain carries shapes), nor definition
-(the file layer validates grammar, never resolves evaluators —
-ch11 draft C8). The ch-3 placeholder seam in `ports/gate.ts`
+(admission resolves against the injected catalog —
+ch11 draft C8/C20). The ch-3 placeholder seam in `ports/gate.ts`
 (`GateRunner` with pass|fail verdicts, `ProcessRunner` with
 `{exitCode, output}`) predates the ledger shapes and must be
 reconciled, not paralleled.
@@ -32,17 +32,20 @@ reconciled, not paralleled.
    testkit; lint-enforced both directions like every ADR-001 module
    boundary (static + dynamic import forms, the ch8-opening sweep's
    rule).
-2. **The registry reaches the kernel as an INJECTED dependency**
-   (a `KernelDeps` port) — the port-parametric kernel rule holds
-   unchanged; the kernel resolves `uses` through the port at the
-   HANDLE gate rung (model-faithful: resolution at the rung, not at
-   load).
+2. **The registry/catalog reaches BOTH the kernel AND the definition
+   compiler (admission) as INJECTED dependencies** at the composition
+   root — the port-parametric rule holds for both (neither `kernel/`
+   nor `definition/` imports `gates/`). ADMISSION resolves every
+   `uses` at definition load (the ratified model fix, 453d3be9); the
+   HANDLE gate rung keeps resolution as the runtime availability
+   BACKSTOP (registry drift across process generations).
 3. **`domain/` gains the ledger-named gate values** — the template's
    gate bindings and `GateDecision` (allow | warn | block) — shapes,
    no execution.
 4. **`ports/gate.ts` is RECONCILED to the ledger shapes**: the ch-3
    placeholder types and their testkit scripted players are REPLACED
-   by `GateEvaluator`, the registry port, and `ProcessGateRunner`
+   by `GateRegistration` (the inline-evaluator variant carrying
+   `evaluate`), the catalog/registry port, and `ProcessGateRunner`
    (result kinds per draft C26) — a named replacement sweep
    (ch11-P2/P3), never a parallel seam. The testkit re-shapes its
    deterministic players onto the six-outcome drive
@@ -63,9 +66,10 @@ reconciled, not paralleled.
   timeout/runner_error kinds; adapting would build a translation
   layer to preserve a placeholder; rejected (the plan §3.1
   no-mini-domain rule anticipated this replacement).
-- **A registry inside `definition/`** — couples file validation to
-  evaluator composition and violates draft C8's grammar-only file
-  seam; rejected.
+- **A registry inside `definition/`** — static coupling of the
+  compiler to evaluator composition; the injected catalog achieves
+  admission-time resolution WITHOUT the import (draft C8/C20);
+  rejected.
 
 ## IC-N Screen (mandatory)
 
@@ -88,8 +92,9 @@ gate semantic realized here projects from the l2/l2a ledger slices.
 ## Verification
 
 ch11-P2/P3: the module boundary lint probes executed (value-red /
-type-green / dynamic-red, both directions); the registry port drives
-`gate_evaluator_unavailable` at the rung; the replacement sweep
+type-green / dynamic-red, both directions); the admission drives
+`gate_evaluator_unavailable` as an issue and the HANDLE backstop as a
+rejection; the replacement sweep
 leaves zero references to the ch-3 placeholder shapes
 (`git grep` receipts in the packet's build record).
 
