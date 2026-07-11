@@ -78,6 +78,32 @@ The ledger §4 delta (51 blocks; entities **121 → 122**):
    child_wait_for_empty / child_wait_for_incomplete /
    child_wait_target_unresolved)` (the channel move's §4 face).
 
+## Lane 4 — `check_coverage.py --fold-time` (ADDENDUM, ratification pending)
+
+Discovered by RUNNING the approve-time gate at P0 authoring (2026-07-12):
+the coverage validation is a FOURTH approve-time surface red by the same
+ratified delta — under-scoped by the original exception (and by every
+review round: the discovery came from executing the gate, not reading it).
+Its 9 divergences, enumerated:
+
+1. SEVEN unit-map key-set items == EXACTLY Lane 2's seven-key delta
+   (3 `unknown` = the removed keys still in `unitMap.json`; 4 `missing` =
+   the new tree keys absent from it) — no new content beyond Lane 2.
+2. TWO inventory-count items from the script's OWN hardcoded expected
+   dict (`tools/v3-plan/check_coverage.py` line ~441: units 158, rejections
+   85) — a mechanical count mirror in acceptance infrastructure, the same
+   class as Lane 1's test-side count pins; re-pins to 159/54 (docstring
+   count mentions ride along). A sweep of every approve-gate script
+   (`check_packet.py`, `check_coverage.py`, `v3/adr/check.sh`) found NO
+   other executable hardcoded inventory count — this closes the class.
+
+Exception extension (pending the user's ratification act): at ch11-P0's
+approve the `check_coverage.py --fold-time` gate may be red by EXACTLY
+the 9 items above (any deviation beyond BLOCKS); P0's closed mutation
+boundary EXTENDS with `tools/v3-plan/check_coverage.py` (the expected-dict
+re-pin + its docstring counts); build-close adds this gate to the
+must-be-green set. Everything else in the ratified exception stands.
+
 ## The one-off approve-precondition exception (ratified with the model act)
 
 > One-off authorization (user-ratified 2026-07-11; EXPIRES at ch11-P0
