@@ -1884,3 +1884,42 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   P2 stands audited; the first autonomous flag-free packet closes
   AUDITED-CLEAN. This completes the ch8 boundary review: nine items,
   nine verdicts (all logged inline above with → annotations).
+
+- 2026-07-11 · ch8-P1 post-close model-replay review (the user's own
+  experiment: gpt-5.6/high re-running the earlier review to compare
+  against gpt-5.5/xhigh) — two REAL definition defects survived all
+  prior panel and external-arm rounds. First, default `toJS()` object
+  materialization erased YAML map-key TYPE before V5: numeric open-map
+  keys were accepted as strings, and typed-distinct keys (`1` and
+  `"1"`) collapsed with silent data loss. Second, the legal
+  `__proto__` id passed V5 but assignment into plain `{}` records
+  invoked the legacy prototype setter, so accepted steps, roles, or
+  transitions disappeared from their returned dictionaries. The
+  missing dimension was not another token form: it was SOURCE KEY
+  TYPE × JS PROPERTY-CREATION semantics. Fold direction: preserve
+  resolved key identity through validation (`mapAsMap`) and
+  materialize domain dictionaries with own-property-safe writes. The
+  cross-model arm keeps producing COMPLEMENTARY catches, not repeats
+  of the in-session panel.
+
+- 2026-07-11 · ch8-P1 map-key aftermath closed — the blind replay's
+  two defects propagated through G6 as intended by lens 4: preserving
+  key identity exposed that `yaml`'s default uniqueness check is
+  scalar-only; a structural comparator closed literal collection keys
+  and key-local aliases, the build-close arm caught the remaining
+  document-graph gap (an alias to an anchor declared OUTSIDE the
+  key), and its re-check caught one diagnostic-multiplicity defect
+  (pair-local suppression double-reporting a later key). Final rule:
+  finding ownership once per later key. The in-branch arm approve
+  cited pre-integration sha b07c88a3. Process lesson: when a detector
+  catch broadens a semantic EQUIVALENCE relation, propagate BOTH the
+  acceptance axis AND the diagnostic-ownership axis. INTEGRATION
+  (2026-07-11): the experiment branch (codex/ch8-p1-key-hardening,
+  rounds 3–5, per-round audits 0-error) re-landed onto main as ONE
+  §4-choreography aftermath commit, a925d668 — audit 0 errors,
+  547 → 558 tests, all bridges green; the branch commit-message claim
+  of "two pre-existing root-suite concurrency failures" did NOT
+  reproduce on main (full ci:local green pre- and post-integration —
+  recorded as a worktree-environment artifact); a fresh arm re-check
+  on the integrated sha runs under the new §6 mechanics (first live
+  use, incl. the danger-full-access tsx-IPC measurement).
