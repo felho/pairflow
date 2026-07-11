@@ -1631,3 +1631,25 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   status; and the walk-invariant lesson (a suppression removal
   changes what inputs downstream code sees — re-derive EVERY site's
   safety under the new invariant, not just the named one).
+
+- 2026-07-11 · integration/e2e process thread (user-raised, ratified
+  "ok, mehet") · MEASURED baseline first: cross-module integration
+  ALREADY runs (the 4 root trace/worker tests; the CLI suites on real
+  wiring + real SQLite; 3 shipped-entrypoint subprocess smokes), but
+  NO full operator JOURNEY exists — the "end" of end-to-end (an
+  operator-authored input artifact) is born at ch8-P2. Decisions:
+  (1) RATIFIED, landed in the plan §8.9 P2 row: P2 carries the
+  repo's first full-lifecycle journey smoke (file → start → events →
+  terminal → floor reads, through the shipped CLI process).
+  (2) BOUNDARY-REVIEW candidate: a standing rule — every ACTIVATION
+  packet (one that wires previously-built foundation into a live
+  path) ships at least one journey smoke through the real entrypoint;
+  the test-side twin of the foundation→activation split.
+  (3) BOUNDARY-REVIEW candidate: a DOGFOODING checkpoint at chapter
+  closes from P2 on — the operator CLI driven by hand/script once per
+  close; the "reality isn't what we assumed" class that test lanes
+  structurally miss. Context markers: ch9 (runner MVP, real actors)
+  is the strong-sense e2e frontier the plan already stages; the user
+  intends to bring the integration/e2e concept in GENERALLY — the
+  boundary review should treat (2)-(3) as the first instalment, not
+  the whole answer.
