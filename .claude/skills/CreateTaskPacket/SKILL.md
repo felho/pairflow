@@ -55,9 +55,12 @@ lens duties).
   ratification and re-ratification (never delegated, never inferred —
   an explicit act on named bytes). The authoring loop stops at every
   STOP and at every human-gated approve; an autonomous flag-free
-  approve proceeds to build (one packet = one commit) — never build
-  before an approve, and a new chapter starts only on the user's
-  explicit go.
+  approve proceeds to build (one packet = one commit) THROUGH the two
+  transitional external-arm gates (README §5.5, user-ratified
+  2026-07-11: the arm on the approve-ready bytes before build + its
+  implementation review at build close; unavailable arm = STOP) —
+  never build before an approve, and a new chapter starts only on the
+  user's explicit go.
 - **First-of-a-kind stop** (canonical statement: README §5.5): the
   first packet of a new task class is human-approved regardless of
   trust stage.

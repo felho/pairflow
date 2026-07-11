@@ -309,7 +309,7 @@ records them):**
 | `refine` (any fold-now finding) | autonomous: fold + re-run panel |
 | `split`, within chapter (coverage union preserved) | autonomous, visible report |
 | `split` changing chapter scope/sequencing/dependencies | STOP 2 |
-| `approve`, flag-free (zero new-decision manifest rows, zero approve-ratified routes, every approve-time tier-0 gate green, a clean CLOSE per the re-run scoping below) | AUTONOMOUS from ch8 on — the loop proceeds to build (§4); the ch7 pilot packets (P3/P4) stay human-approved (first-of-a-kind), the last per-packet manual rounds |
+| `approve`, flag-free (zero new-decision manifest rows, zero approve-ratified routes, every approve-time tier-0 gate green, a clean CLOSE per the re-run scoping below) | AUTONOMOUS from ch8 on — the loop passes the MANDATORY transitional external-arm gates (the autonomous-path paragraph below), then proceeds to build (§4); the ch7 pilot packets (P3/P4) stay human-approved (first-of-a-kind), the last per-packet manual rounds |
 | `approve`, flag-bearing | human (STOP 4), at every trust stage |
 | STOP 1–3 events | human, always |
 
@@ -473,7 +473,27 @@ boundary):** on a FLAGGED approve, the build starts only after the
 external arm has run on the approved bytes OR the user explicitly
 waives it — the approve act and the build never share one turn (the
 ch7-P4 miss: the arm's window vanished and its seven findings arrived
-post-build).
+post-build). **The autonomous-path arm gates (user-ratified
+2026-07-11 — TRANSITIONAL until pairflow doc-refinement carries
+phase 2, or an earlier boundary-review retirement):** on the
+AUTONOMOUS flag-free path the agent-invoked external arm (the
+`CreateTaskPacket` ReviewPacket §6 mechanics) is MANDATORY at TWO
+gates. (1) APPROVE gate: after the clean close, the arm reviews the
+approve-ready bytes; the build starts only on an arm verdict citing
+the final hash with ZERO fold-now findings — arm findings fold as
+ordinary folds, and an arm-minted flag-bearing item DEMOTES the
+approve to the human path (the matrix's flag-bearing row). (2)
+BUILD-CLOSE gate: after the build commit and its audit, the arm
+reviews the IMPLEMENTATION against the packet contract; the packet is
+DONE only on a clean, sha-citing verdict — substance findings fold
+per the §4 aftermath rules. Discipline: the diminishing-returns
+cutoff binds (find → fold → ONE hash-citing re-check per fold; a
+round yielding only bookkeeping-class items ends the leg); an
+UNAVAILABLE arm is a BLOCKER → STOP to the human, never a silent
+skip; a waive is the human's explicit act, per gate. The boundary
+review evaluates the gates' yield from the `detector_misses` stream.
+Ground: the ch8-P1 measurement — four real catches, two per gate
+class, that the internal Opus panel missed.
 
 **Metrics convention:** one `packet_metrics` machine block per packet,
 written once at build close (schema FORM: template §1). `stops[].type`

@@ -50,9 +50,13 @@ bubble workflow below. Everything an agent needs lives on repo surfaces
   ratification and re-ratification (never delegated, never inferred —
   an explicit act on named bytes). The authoring loop stops at every
   STOP and at every human-gated approve; an autonomous flag-free
-  approve proceeds to build (one packet = one commit) — never build
-  before an approve, and a new chapter starts only on the user's
-  explicit go.
+  approve proceeds to build (one packet = one commit) THROUGH the two
+  transitional external-arm gates (README §5.5, user-ratified
+  2026-07-11: the agent-invoked arm on the approve-ready bytes BEFORE
+  build, and its implementation review at build close — mandatory
+  while doc-refinement is not live; unavailable arm = STOP) — never
+  build before an approve, and a new chapter starts only on the
+  user's explicit go.
 - **Verification bridges (run from repo root):** `pnpm v3:typecheck`,
   `v3:lint`, `v3:test`, `v3:coverage`, `v3:packet-lint`,
   `v3:adr-check`; the chapter DoD additionally requires full

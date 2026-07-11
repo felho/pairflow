@@ -1653,3 +1653,22 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   intends to bring the integration/e2e concept in GENERALLY — the
   boundary review should treat (2)-(3) as the first instalment, not
   the whole answer.
+
+- 2026-07-11 · autonomous-path arm gates RATIFIED (user: "mehet", on
+  the gap the user spotted: the flag-free autonomous path had NO
+  mandatory external check anywhere — the ch7-boundary checkpoint
+  binds FLAGGED approves only, and the close-amendment's layered
+  defense ("doc refinement follows; the arms follow") is EMPTY on
+  that path until doc-bubbles arrive). The transitional rule, README
+  §5.5 canonical: on the autonomous flag-free path the agent-invoked
+  arm is MANDATORY at (1) the APPROVE gate (clean, final-hash-citing
+  verdict = build precondition; an arm-minted flag DEMOTES to the
+  human path) and (2) the BUILD-CLOSE gate (implementation review;
+  clean sha-citing verdict = packet DONE). Diminishing-returns cutoff
+  binds per gate; unavailable arm = BLOCKER → STOP; waive = the
+  human's explicit act. SUNSET: dissolves when doc-refinement carries
+  phase 2, or earlier by boundary-review decision — the review
+  measures yield from detector_misses. Ground: ch8-P1's four real
+  catches (two per gate class) past the internal Opus panel. Mirrors
+  synced: AGENTS.md V3 bullet, CreateTaskPacket SKILL.md + AuthorPacket
+  step 9.5 + report line + ReviewPacket §4/§6, template §2 step 10.

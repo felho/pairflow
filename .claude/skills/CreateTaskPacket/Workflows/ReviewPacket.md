@@ -346,7 +346,8 @@ phase-2 obligation (README §5.5).
   README §5.5 matrix: a flag-free approve (zero new-decision manifest
   rows, zero approve-ratified routes, every approve-time tier-0 gate
   green, a clean close) is AUTONOMOUS from ch8 on and proceeds
-  to build; a flag-bearing approve is the human's ALWAYS (STOP
+  to build THROUGH the two mandatory transitional arm gates (§6;
+  README §5.5's autonomous-path rule); a flag-bearing approve is the human's ALWAYS (STOP
   `4:flagged-approve`; "flag-bearing" per the README §5.5
   definition); the ch7 pilot and first-of-a-kind packets are
   human-approved.
@@ -412,8 +413,12 @@ mirror). The scoping governs COST, never the review definition.
 A fresh third-party model session reviewing the target from the repo
 root — the same arm the user runs manually by pasting the
 STOP/pre-approval message into a fresh Codex session; both paths have
-IDENTICAL standing. The loop MAY invoke it (an option, never a
-mandate — the standing-leg question is boundary-review queued):
+IDENTICAL standing. The loop MAY invoke it anywhere; on the
+AUTONOMOUS flag-free path it is MANDATORY at two gates — the approve
+bytes before build and the implementation at build close (README
+§5.5's transitional autonomous-path rule, user-ratified 2026-07-11;
+unavailable arm = BLOCKER → STOP; a waive is the human's explicit
+act, per gate). Elsewhere it stays an option:
 
 - **When:** at a pre-ratification/pre-approval STOP as an extra
   adversarial pass, or as the FINDER-LANE RERUN after an

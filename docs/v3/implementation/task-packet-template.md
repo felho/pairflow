@@ -421,7 +421,9 @@ Spec-writing is projection, not invention. In order:
     refine and in-chapter split iterate AUTONOMOUSLY; every STOP,
     every flag-bearing approve, and the ch7-pilot/first-of-a-kind
     approves are the human's; a flag-free approve is AUTONOMOUS from
-    ch8 on and proceeds to build. Re-run scoping and model policy
+    ch8 on and proceeds to build through the two mandatory
+    transitional external-arm gates (README §5.5's autonomous-path
+    rule, user-ratified 2026-07-11). Re-run scoping and model policy
     per README §5.5's panel re-run paragraph (first pass full;
     content folds → targeted re-run; bookkeeping folds → one
     reconciliation pass; the approve gate = the v1-shape close, a

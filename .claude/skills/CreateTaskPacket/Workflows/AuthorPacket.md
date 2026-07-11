@@ -322,8 +322,19 @@ ch7-P1 dangling-"flagged below" lesson).
    every stage); and at the ch7 pilot / first-of-a-kind approves.
    From ch8 on, a FLAG-FREE approve (zero new-decision manifest rows,
    zero approve-ratified routes, every approve-time tier-0 gate
-   green, a clean close per ReviewPacket §4) is AUTONOMOUS: the loop proceeds to build
-   (README §4 — one packet, one commit, post-build audit at close).
+   green, a clean close per ReviewPacket §4) is AUTONOMOUS: the loop
+   passes the two MANDATORY transitional external-arm gates (README
+   §5.5, user-ratified 2026-07-11; mechanics: ReviewPacket §6) —
+   (a) the agent-invoked arm on the approve-ready bytes BEFORE build:
+   a clean, final-hash-citing verdict is the build precondition, arm
+   findings fold as ordinary folds, and an arm-minted flag-bearing
+   item DEMOTES the approve to the human path; (b) the arm's
+   implementation review at BUILD CLOSE (after the commit + audit):
+   the packet is DONE only on a clean, sha-citing verdict, substance
+   findings folding per the README §4 aftermath rules — then proceeds
+   to build (README §4 — one packet, one commit, post-build audit at
+   close). The diminishing-returns cutoff binds per gate; an
+   unavailable arm is a BLOCKER → STOP, never a silent skip.
    **Entry mode is the trust dial:** the user chooses per work item —
    prompt-by-prompt in the loop, or delegating a whole
    packet/chapter; no formal mechanism needed. On the HUMAN-GATED
@@ -340,5 +351,5 @@ Slice: <n units / n rejections / n invariants / n traces | EMPTY (declared)>
 Panel: <rounds run, last verdict + Gate Coverage Matrix state>
 Propagation: <lens-4 pass result: clean | hits folded (list)>
 Plan alignment: <none | prepared edit for §X, same-commit>
-→ autonomous flag-free approve — proceeding to build | at a human decision point: approve | STOP <member token>
+→ autonomous flag-free approve — arm gate 1 (approve bytes): <verdict + hash> → build → arm gate 2 (implementation): <verdict + sha> | at a human decision point: approve | STOP <member token>
 ```
