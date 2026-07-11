@@ -181,7 +181,9 @@ accounting *rules* — the in-scope inventory it asserts over — are fixed in
 
 Per README §5.4, "in scope" is a plan decision. The round-1 inventory:
 
-- **158 pseudocode units — all in scope.** Every unit has exactly one owner
+- **159 pseudocode units — all in scope** (158 → 159, aligned at the ch11
+  gate-admission model fix, ratified 2026-07-11 — `admit_definition` born;
+  the exact delta: `ch11-model-sync-delta.md`). Every unit has exactly one owner
   task packet; shared ownership only by explicit declaration. Ownership
   carries a **disposition** (the template's Units line: `implement` /
   `type/schema` / `test-only` / `generated/mapped` / `alias/inherited` /
@@ -190,11 +192,14 @@ Per README §5.4, "in scope" is a plan decision. The round-1 inventory:
   realize as code the same way; the coverage script asserts ownership +
   disposition, never uniform code implementation. The unit→code mapping
   drift test is unconditional (PI-3).
-- **85 rejection names — names unconditional, behavior scoped.** The
-  implementation's rejection type carries all 85 names from day one (drift
+- **54 rejection names — names unconditional, behavior scoped** (85 → 54,
+  aligned at the ch11 model fix: the definition-static validate family moved
+  to the definition-issue channel — those 31 names are admission ISSUE CODES
+  now). The
+  implementation's rejection type carries all 54 names from day one (drift
   test); a rejection-branch trace that *triggers* each name is the **scoped
-  extension**, scheduled by later chapters over the 85-name checklist.
-  Round-1 done does NOT require 85/85 behavioral coverage.
+  extension**, scheduled by later chapters over the 54-name checklist.
+  Round-1 done does NOT require 54/54 behavioral coverage.
 - **20 chapter traces — mandatory core.** The "A concrete trace" block at the
   head of each section becomes a golden test: the scripted actor plays the
   ingress sequence; the test asserts the committed transcript and outcome
@@ -205,14 +210,15 @@ Per README §5.4, "in scope" is a plan decision. The round-1 inventory:
   `test` (a dedicated `CT-*`), or `review` (not machine-checkable; a `REV-*`
   line). The disposition map is a chapter-5 deliverable; this chapter fixes
   only the rule.
-- **Domain registry (51 aggregates · 121 entities)** — the type layer is
+- **Domain registry (51 aggregates · 122 entities** — 121 → 122 at the ch11
+  model fix: `AdmittedDefinition`) — the type layer is
   checked against ledger §4 (unconditional drift test; the ubiquitous
   language, enforced).
 - **140 Absents — NOT implemented.** Realization rule (fail-closed, scoped to
   real surface):
   - If Block A actually exposes a config/API/CLI/emit surface on which the
     Absent could be requested → fail-closed with a **named rejection from the
-    85-name registry**. If no existing name fits, that is a model↔code
+    54-name registry**. If no existing name fits, that is a model↔code
     divergence — mandatory stop, back to the model plane (README §6); never a
     code-invented name.
   - If no such surface exists → absent-by-construction / omitted affordance;
@@ -532,9 +538,9 @@ Home: `tools/v3-plan/check_coverage.py` — beside `tools/v3-model/`,
 **stdlib only** (the `report_ledger.py` culture). Root bridge:
 `v3:coverage`.
 
-- **Inventory sources:** the `model-src/units/` tree (158 files =
-  `<section>/<UnitName>` ids), ledger §2 (116 invariants,
-  `<section>/<slug>`), ledger §3 (85 rejection names), the 20 unit
+- **Inventory sources:** the `model-src/units/` tree (159 files at the ch11
+  alignment = `<section>/<UnitName>` ids), ledger §2 (116 invariants,
+  `<section>/<slug>`), ledger §3 (54 rejection names at the ch11 alignment), the 20 unit
   sections (= the chapter-trace inventory), scoped by the §1.4 rules.
 - **Packet source:** `docs/v3/implementation/packets/` (the convention this
   script fixes; empty until ch 4). It parses the packet's MACHINE slice
@@ -787,10 +793,10 @@ ADR-001)** adds it to the module map with the binding rule: production
 modules never import `drift/`; drift tests read the `model-src` documents
 at test time (the ch-4 `rejectionNames.test.ts` precedent).
 
-1. **Rejection names (85).** The ch-4 pre-test moves here unchanged
+1. **Rejection names (85 at ch5; 54 from the ch11 model fix — the P0 bridge re-pins).** The ch-4 pre-test moves here unchanged
    (`git mv` from `domain/`) — ch 5 formally absorbs it, closing §4.5's
    forward reference.
-2. **Domain registry (51 aggregate blocks · 121 entities).** The test
+2. **Domain registry (51 aggregate blocks · 121 entities at ch5; 122 from the ch11 model fix).** The test
    parses ledger §4 at test time; the code-side counterpart is a
    **manifest** (`drift/domainRegistry.ts`): every ledger entity →
    `realized(<exported type name>)`, `pending` (no chapter claim — the
@@ -803,7 +809,7 @@ at test time (the ch-4 `rejectionNames.test.ts` precedent).
    constraint / policy rows) carry their own manifest dispositions; the
    normalization rule (annotation stripping: `[root]`, `(value)`, …) is
    pinned in the P1 packet with the full row table.
-3. **Unit→code mapping (158).** A manifest (`drift/unitMap.json` — JSON,
+3. **Unit→code mapping (158 at ch5; 159 from the ch11 model fix).** A manifest (`drift/unitMap.json` — JSON,
    dual-read by the vitest test and the stdlib coverage script; aligned
    at P1 pre-approval): unit id → `{"status": "pending"}` or
    `{"status": "realized", "disposition": <§1.4 enum>, "codeRef":
@@ -1628,6 +1634,13 @@ form):
    new key in the capability's own commit; an old file never carries
    unknown keys, and a newer-format file against an older in-repo
    parser cannot occur.
+5. **Existing defaults are stable** (added at the ch11 model-fix
+   ratification, 2026-07-11 — THE single authority for this rule;
+   surface contracts inherit it by name, never restate it). Defaults
+   MATERIALIZE into the effective config at definition admission, so
+   changing an EXISTING key's absent-meaning is a BREAKING change: it
+   takes the removed/renamed route (rule 3 — fail loud with migration
+   text), never a silent redefinition.
 
 ### 8.3 The authoring format: YAML 1.2
 
@@ -1821,7 +1834,7 @@ trace) — a standalone chapter would be ceremony.
    consolidates the admission ladder (idempotency → lifecycle/state →
    staleness → authority) with the state rung LIVE — an actor emits
    only in actor-routable running execution, otherwise `not_active`
-   (the name is l0d-born in the 85 registry; driving it here is the
+   (the name is l0d-born in the 54-name registry; driving it here is the
    scoped-extension rule, no l0d unit ownership); `capability()`
    default-derived; rejections `missing_role` / `role_not_authorized`
    / `not_authorized`.
@@ -1847,8 +1860,9 @@ trace) — a standalone chapter would be ceremony.
 3. **The L2a process-gate contract, kernel side.** The model's own
    cut governs the ch-11/ch-9 boundary: *"the kernel owns the
    contract, the runner owns the spawn."* Here: `validate_gate_config`
-   at create (fail-at-create — the static analog of binding
-   coverage); the `ProcessGateRunner` PORT + a testkit fake runner —
+   as the `external.process` REGISTRATION's validate-and-normalize
+   body, run by ADMISSION (`admit_definition`) at definition load —
+   the ratified model fix (453d3be9); the `ProcessGateRunner` PORT + a testkit fake runner —
    ch 3 shipped the GENERIC deterministic seam
    (`ScriptedGateRunner`/`ScriptedProcessRunner`, pass|fail verdicts);
    the ledger-shaped six-outcome fixture drive
@@ -1856,9 +1870,11 @@ trace) — a standalone chapter would be ceremony.
    P3 scope; `run_process_gate`; `classify_process_result`;
    `runner_outcome` (only `block_transition` realized;
    `fail_instance` → `gate_config_not_supported`);
-   `GateInvocation`/`ProcessResult` values; rejections
-   `invalid_process_gate_config` / `gate_config_not_supported` /
-   `runtime_context_required_for_process_gate`.
+   `GateInvocation`/`ProcessResult` values; the
+   `runtime_context_required_for_process_gate` rejection (the HANDLE
+   `ready(∅)` runtime backstop — the config lanes are DEFINITION-ISSUE
+   codes at admission since the model fix:
+   `invalid_process_gate_config` / `gate_config_not_supported`).
 4. **A minimal runtime-context REPRESENTATION** — the template's
    declaration key + the instance field + a testkit-injected ready
    ref, because `validate_gate_config` and the `HANDLE` backstop read
@@ -1905,14 +1921,17 @@ trace) — a standalone chapter would be ceremony.
 
 ### 11.2 Coverage and intake impact
 
-Unit ownership: **19 ids** (6 l1 + 5 l2 + 8 l2a), several as
+Unit ownership: **20 ids** (6 l1 + 6 l2 + 8 l2a — `admit_definition`
+joined l2 at the model fix), several as
 reprint/`alias/inherited` dispositions (the CREATE_INSTANCE reprints,
-GateEvaluator ×2, the HANDLE inheritance chain); partial-realization
+GateRegistration ×2, the HANDLE inheritance chain); partial-realization
 dispositions on `l1-pseudocode/dispatch_intent` and
 `l1-pseudocode/RECEIVE` (their L0c/L0e-inherited branches stay
 unrealized — a projection-time disposition call, not a scope change).
-Rejections: **9 behavioral** (3 per level) + `not_active` driven as a
-scoped extension. Invariants: **15**, dispositions already fixed by
+Rejections: **7 behavioral** (3 l1 + 3 l2 + 1 l2a — the config lanes are
+definition-issue codes at admission since the model fix) + `not_active`
+driven as a scoped extension + the admission issue-codes driven on the
+definition channel. Invariants: **15**, dispositions already fixed by
 the ch-5 map (8 `test` / 4 `type/schema` / 2 `checker` / 1 `review`);
 the two checkers — `l2/round-is-canonical-reconstructable` (P2) and
 `l2a/evidence-on-every-run` (P3) — land as storeCheckers extensions
@@ -1931,7 +1950,7 @@ only scopes it: the gate-declaration grammar (step/transition
 binding, `uses`, `config`); the evaluator-id grammar as a NEW value
 class + its explicitly stated relation to ch-8 C10's dot-ban (§11.1
 item 5 — any touch of C10's ratified rows is a human
-re-ratification act); the process-config keys (`command`,
+re-ratification act); the process-config keys (the ADMISSION lane matrix replaces the two-seam F/K split — single-authority admission per the ratified model fix, the two HANDLE backstops as standalone rows; keys: `command`,
 `timeout_ms`, `output.mode`, `on_exit` buckets, `on_runner_error` /
 `on_timeout`) + the validator lane matrix and its channel mapping;
 the `runtime_context` declaration key; the `GateDecision` JSON schema
@@ -1957,12 +1976,13 @@ loop's — sizing, not scope).
 
 | Packet | Content | Mode |
 |---|---|---|
+| ch11-P0 | the model-registry sync — the ratified one-off bridge's single instance (`ch11-model-sync-delta.md` @ de33d245): the three mechanical mirrors re-derived from the ratified ledger (453d3be9) + the drift locks re-pinned as two-way exact-set (rejectionNames count sites 85→54); mutation boundary = the evidence file's CLOSED list | pre-approve — HUMAN approve MANDATORY (the bridge demands it; first-of-a-kind: model-sync class; at approve the three named drift lanes are red by EXACTLY the enumerated delta, everything else green); predicted: projection (source: the ratified ledger @ 453d3be9 + the evidence file) |
 | ch11-P1 | the L1 authority slice: `expected_role` on the envelope (warrant), `admit_loaded` consolidation with the live state rung, `capability()`, the three L1 rejections + `not_active` driven, the l1 golden trace, the dev `inject` schema extension | flag-free approve → autonomous build (measurement; the §5.5 fallbacks stand); predicted: projection (source: l1-pseudocode + ledger §2/§3) |
 | ch11-P2 | the L2 gate core: template gate bindings + static registry + the gate rung + `gate_projection` + the ch-4 provisional `round` aligned to its L2 contract (predicate declared, checker added) + the `gate_decisions` schema bump (fenced) + the two inline evaluators + the three L2 rejections + the l2 golden trace | flag-free approve → autonomous build (measurement; the §5.5 fallbacks stand); predicted: projection (basis: l2-pseudocode + ledger §2/§3/§4 + [module home, `ports/gate.ts` reconciliation] draft: `contracts/ch11-gate-format-contract.md`, pending ratification) |
 | ch11-P3 | the L2a contract: `validate_gate_config` at create, the `ProcessGateRunner` port + the ledger-shaped six-outcome testkit fixture drive, classification (`classify_process_result` / `runner_outcome`), the three L2a rejections, the minimal runtime-context representation, the l2a golden trace | flag-free approve → autonomous build; predicted: projection (basis: draft: `contracts/ch11-gate-format-contract.md`, pending ratification) |
 | ch11-P4 | the format extension: YAML gate declarations + process-config keys + the `runtime_context` key + the validator lanes driven + the CLI validate extension + template-fixture updates | flag-free approve → autonomous build; predicted: projection (basis: draft: `contracts/ch11-gate-format-contract.md`, pending ratification) |
 
-Order: draft → P1 → P2 → P3 → P4. One packet = packet file + code +
+Order: draft → P0 → P1 → P2 → P3 → P4 (the chapter's draft-first rule sequences P0 after the draft ratification; P0 anchors no draft row). One packet = packet file + code +
 tests in ONE commit.
 
 ### 11.5 Deliverables and DoD
@@ -1974,9 +1994,10 @@ the format gate surface + validator lanes; the module-home ADR; the
 `ports/gate.ts` reconciliation.
 
 DoD: the packets' contract tests green with claim-derived negatives
-EXECUTED; the three golden traces green; the drift suite green (the
-85 names were carried from ch 4 — this chapter makes nine more of
-them BEHAVE; the unit-map lock extends with the 19 ids); invariant
+EXECUTED; the three golden traces green; the drift suite green (the registry's 54 names post-model-fix — the P0
+bridge re-pins the locks; this chapter makes SEVEN more of them BEHAVE
+and drives the admission issue-codes on the definition channel; the
+unit-map lock extends with the 20 ids); invariant
 dispositions realized per the ch-5 map (both checkers in
 storeCheckers); the `gate_decisions` schema bump behind the ADR-003
 fence; coverage

@@ -430,6 +430,18 @@ selftest armor scales with the declared surface — shrinking the
 surface shrinks the armor without shrinking confidence. This
 principle decides every future "should the lint check this?" dispute.
 
+**One-off model-sync exception (user-ratified 2026-07-11; EXPIRES at
+ch11-P0 build-close or P0 abandonment — the boundary review decides
+promotion-or-expiry):** the approve-precondition carve-out recorded in
+`ch11-model-sync-delta.md` (@ de33d245) binds ch11-P0 ONLY: the three
+NAMED drift lanes (rejectionNames / unitMap / domainRegistry tests) may
+be red at ITS approve, each lane's divergence EXACTLY the evidence
+file's enumerated delta — any deviation beyond BLOCKS; every other
+approve-time gate green; the file also fixes P0's closed mutation
+boundary. This is a ratified, temporary precondition amendment — a red
+mandatory gate is otherwise NEVER approvable, and a flag never
+overrides a precondition.
+
 **Tier-0 gate inventory, with a gate point per member:**
 
 - **Approve-time:** `pnpm v3:packet-lint` (fold-time packet + draft

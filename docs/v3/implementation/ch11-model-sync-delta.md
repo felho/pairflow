@@ -98,7 +98,8 @@ The ledger §4 delta (51 blocks; entities **121 → 122**):
 > build-close = all three lanes green + `tools/v3-model/check.sh` + full
 > `pnpm ci:local` green, else STOP.
 
-Status: awaiting the user's ratification act (the act covers the model
-bytes at `453d3be9` AND this exception text). The ch11 boundary review
-evaluates whether the bridge pattern is promoted to a standing rule or this
-record stays a one-off.
+Status: **RATIFIED 2026-07-11 by the user's explicit act** ("go") — the act
+covers the model bytes at `453d3be9` AND this exception text at
+`de33d245`. Neither may be amended or rebased; a byte change requires a new
+ratification. The ch11 boundary review evaluates whether the bridge pattern
+is promoted to a standing rule or this record stays a one-off.
