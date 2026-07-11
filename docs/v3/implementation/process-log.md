@@ -1672,3 +1672,35 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   catches (two per gate class) past the internal Opus panel. Mirrors
   synced: AGENTS.md V3 bullet, CreateTaskPacket SKILL.md + AuthorPacket
   step 9.5 + report line + ReviewPacket §4/§6, template §2 step 10.
+
+- 2026-07-11 · ch8-P2 authoring — the truncated-measurement detector
+  miss (arm gate 1's first live catch): the packet's M5 sweep claimed
+  "every surface stating the debt" from a grep piped through
+  `head -20` — the `domain/template.ts` hit was the line that fell
+  off, so the sweep list omitted a LIVE debt-status source comment
+  while the mutation boundary excluded the file. Five Opus lenses,
+  two closes, and one reconciliation accepted the measured list
+  without re-running the measurement; the MANDATORY pre-build arm
+  (gate 1, agent-invoked codex) caught it on the approve-ready bytes
+  — zero code impact. The lesson, stated as the finding-policy
+  sibling: "enumeration from memory is not a measurement" has a twin
+  — a TRUNCATED measurement is not a measurement; a completeness
+  claim is admissible only with its UNTRUNCATED output (or an
+  explicit count of what the truncation hides). Boundary-review
+  candidate: should the panel's lens duties require re-RUNNING (not
+  re-reading) any measurement a completeness claim rides on?
+
+- 2026-07-11 · ch8-P2 — the FIRST autonomous flag-free packet closed
+  end-to-end (the §5.5 ch8 row live): panel R1 full → 1 content +
+  bookkeeping folds → R2 targeted clean → close; arm gate 1 refine
+  (the catch above) → fold → reconciliation → second close clean →
+  arm re-check approve, hash-citing; build first-execution green on
+  every product lane (534 → 547; the only red was a test-side journey
+  expectation — START commits the instance, not a transcript row);
+  post-build audit 0 errors. Reliability note for the transitional
+  arm: the FIRST gate-1 codex invocation was killed mid-run (no
+  verdict, ~200k of session transcript); the retry completed — the
+  gate choreography (find → fold → one hash-citing re-check →
+  diminishing-returns cutoff) held as designed. The journey smoke ran
+  through the shipped processes as ratified — the activation packet
+  carried the repo's first full-lifecycle e2e.
