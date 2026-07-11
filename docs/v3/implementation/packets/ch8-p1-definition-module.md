@@ -911,7 +911,11 @@ and the 10-minute ceiling is TIGHT when the arm runs full suites (the
 boundary note is logged). The lesson (the R-DIMENSIONS ladder's `-0`
 rung, re-minted on the KEY axis): when two layers each look locally
 correct, ask whether their EQUALITY RELATIONS compose — a gate finer
-than its container is a silent-loss channel.
+than its container is a silent-loss channel. Residue: the identity
+lane's strict-index access (two TS2532) was caught by the ci:local
+quality gate at the chapter close and fixed in a follow-up commit —
+the round's own typecheck claim was mis-measured from a wrong cwd
+(the tsc never ran; the measurement lesson's wrong-cwd form).
 
 ```json
 {

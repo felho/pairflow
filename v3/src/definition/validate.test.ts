@@ -452,7 +452,10 @@ roles:
 `);
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.template.steps["a"].agentConfig).toBe(result.template.steps["b"].agentConfig);
+      const a = result.template.steps["a"];
+      const b = result.template.steps["b"];
+      expect(a?.agentConfig).toBeDefined();
+      expect(a?.agentConfig).toBe(b?.agentConfig);
     }
   });
 
