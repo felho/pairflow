@@ -1987,3 +1987,24 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   instance.ts's own forward pointer (code-reality check beats
   model-reading at chapter boundaries too), and the ch-3 fixture
   claim inherited plan-§1.3-row wording over shipped-code reality.
+
+- 2026-07-11 · ch11 DRAFT — C1 PLACEMENT-DIVERGENCE LESSON (user-raised at the
+  ratification STOP, accepted with a guard request). The draft's C1 moves gate
+  bindings to a step-level `gates` key because ch8's ratified scalar transition
+  targets cannot additively become the model Config view's nested
+  `{target, gates}` form. The user's read: the process let a transitional
+  subset (ch8) foreclose the model-sketched end shape — watch that we do not
+  foot-gun ourselves mid-path again. HONEST FRAME: the model Config views are
+  illustrative model-plane sketches, not ratified format; ch8's minimal choice
+  was CORRECT under no-speculative-keys, and the divergence class is the
+  STRUCTURAL consequence of (no-speculative-keys + additive-only evolution)
+  operating together — placement divergence is inevitable in this regime and
+  is legal WHEN the semantic grain is preserved (here: the (step, event_type)
+  binding grain, C2). THE GAP: no named FORWARD-SWEEP step exists at
+  format-chapter draft/ratification time. Proposed rule for the boundary
+  review: when a format chapter fixes or grows a keyset, the draft phase
+  sweeps the model Config views for FUTURE surfaces touching those keysets,
+  and every foreseeable placement divergence is PREDICTED and RECORDED in the
+  ratifying text (a conscious decision at subset time, never a later
+  discovery). Route: ch11 boundary review — candidate DraftContract §1 /
+  chapter-ratification checklist item.
