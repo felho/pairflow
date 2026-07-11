@@ -1967,3 +1967,23 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   packets total, ch8 contributing P1 (7 implementation rounds, 7
   detector misses — 4 arm-class) and P2 (the first audited-clean
   autonomous flag-free packet).
+
+- 2026-07-11 · ch11 RATIFICATION ARM ROUND (user-requested — the
+  first external-arm pass on ratified CHAPTER text, not a packet).
+  Round 1 on 313bf5de: 6 findings (4 P1 + 2 P2), all source-verified,
+  folded at 2cf6fb18; re-check found one residual (the §1.3
+  `draft: …` table-form reference), folded at ffb42804; re-check 2
+  CLEAN citing the final basis. LESSON (the round's P1-1): a
+  MEMORY-CARRIED claim survived into ratified text — "C10 names this
+  chapter the owner of the dotted-id reconciliation" lived in the
+  session-memory summary of the ch8 draft, not in C10's bytes (C10
+  bans dots and names no owner; C7 is the row that anticipates the
+  gate-core key). The standing rule "memory may accelerate, never
+  carry" already covers it; the OPERATIVE form for chapter authoring:
+  a ratification proposal's load-bearing source citations are
+  verified AT THE CITED ROW, never from the session summary of that
+  row. Same class as ch4's claim-negatives, at the provenance layer.
+  Secondary yields: the "round is born here" claim contradicted
+  instance.ts's own forward pointer (code-reality check beats
+  model-reading at chapter boundaries too), and the ch-3 fixture
+  claim inherited plan-§1.3-row wording over shipped-code reality.
