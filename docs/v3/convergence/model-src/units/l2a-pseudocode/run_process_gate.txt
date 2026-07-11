@@ -3,7 +3,7 @@ run_process_gate(gate, instance, template, envelope) → GateDecision   # L2a �
   invocation ← GateInvocation {
     instance_id: instance.id, template_ref: instance.template_ref,
     step_id: instance.current_step, event_type: envelope.type, expected_version: instance.version,
-    config:     gate.config,                                          # snapshot of the authored GateBinding.config
+    config:     gate.effective_config,                                # the admission-materialized EFFECTIVE config — the one downstream form, on the wire too
     projection: compact(gate_projection(instance, template, envelope)) }   # MVP: small inline payload (NOT projection_ref + SDK)
   result ← processRunner.run(gate.config.command, {
     cwd: runtime_context_workspace(instance),                         # runs in the provisioned workspace (v1: the worktree)

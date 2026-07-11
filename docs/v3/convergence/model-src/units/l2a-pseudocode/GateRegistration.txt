@@ -1,0 +1,10 @@
+
+# GateRegistration — L2a adds the external.process registration to L2 core's declarative/packaged members
+INTERFACE GateRegistration:
+  implementation: declarative | packaged | process      # L2a realizes inline process too; only DEFERRED execution stays out (later slice)
+  execution:      inline | deferred                      # still inline only — deferred is a later lifecycle slice (gate_pending + GATE_RESULT)
+  requires_runtime_context: yes | no                     # the external.process registration declares YES — admission enforces it against the definition
+  validate_and_normalize_config(raw) → effective | issues   # external.process OWNS the process-config schema (validate_gate_config is its validator body)
+INTERFACE InlineGateEvaluator extends GateRegistration:  # declarative | packaged — in-process evaluate
+  evaluate(effective_config, projection) → GateDecision
+# the process registration has NO evaluate — a process gate runs via run_process_gate instead

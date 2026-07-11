@@ -51,7 +51,7 @@
 
         <h3 class="view-h"><span class="view-tag pseudo">Pseudocode</span> The rule behind the trace</h3>
         <p>One inline gate-pipeline block in <code>HANDLE</code> (after L1 authorization, before the commit),
-        a <code>GateEvaluator</code> contract, a policy-facing <code>gate_projection</code>, and a
+        a <code>GateRegistration</code> contract with a definition-ADMISSION seam (<code>admit_definition</code> — the single semantic authority at definition load), a policy-facing <code>gate_projection</code>, and a
         commit-maintained <code>instance.round</code>:</p>
         <div class="code-diff" aria-label="L2 pseudocode" data-old-label="L1 baseline" data-new-label="L2 current">
           <script type="text/plain" class="diff-source" data-code-old-ref="l1-pseudocode"></script>
@@ -88,9 +88,9 @@
           </div>
         </div>
         <div class="agg">
-          <div class="agg-label">Evaluation — one shared interface, two value types</div>
+          <div class="agg-label">Evaluation &amp; admission — one registration contract, two value types</div>
           <div class="ents">
-            <div class="ent"><div class="en">GateEvaluator</div><div class="fields">the shared contract <code>evaluate(config, projection) → GateDecision</code> over two orthogonal axes — <code>implementation: declarative | packaged | process</code> and <code>execution: inline | deferred</code>; L2 core realizes only inline <code>declarative.*</code> / packaged <code>pairflow.*</code>. <code>PolicyModule</code> is now just one kind of packaged gate</div></div>
+            <div class="ent"><div class="en">GateRegistration</div><div class="fields">the registry's per-evaluator descriptor — the axes <code>implementation: declarative | packaged | process</code> and <code>execution: inline | deferred</code>, a <code>requires_runtime_context</code> flag, and <code>validate_and_normalize_config(raw) → effective | issues</code> (the registration OWNS its config schema; defaults materialize once at ADMISSION); the inline variant adds <code>evaluate(effective_config, projection) → GateDecision</code>. L2 core realizes only inline <code>declarative.*</code> / packaged <code>pairflow.*</code>. <code>PolicyModule</code> is now just one kind of packaged gate</div></div>
             <div class="ent"><div class="en">GateDecision <span style="font-size:10px;color:var(--muted)">(value)</span></div><div class="fields"><code>{ verdict: allow | warn | block, reason?, message?, evidence_refs? }</code> — <b>allow</b> continue · <b>warn</b> continue, retain diagnostics/evidence · <b>block</b> reject before commit; <code>route</code> is known vocabulary, deferred to a later slice</div></div>
           </div>
         </div>
@@ -105,7 +105,7 @@
           <div class="agg-label" style="color:var(--runtime)">New rejections — before commit, no state change, no round burned</div>
           <div class="ents">
             <div class="ent"><div class="en">Rejected(gate_blocked(reason))</div><div class="fields">a policy returned <code>block</code> for this state</div></div>
-            <div class="ent"><div class="en">Rejected(gate_evaluator_unavailable)</div><div class="fields">the gate's <code>uses</code> name did not resolve (config invariant)</div></div>
+            <div class="ent"><div class="en">Rejected(gate_evaluator_unavailable)</div><div class="fields">the gate's <code>uses</code> name did not resolve — the runtime availability backstop (admission resolves at definition load; this lane guards registry drift)</div></div>
             <div class="ent"><div class="en">Rejected(gate_execution_not_supported)</div><div class="fields">a <code>process</code> implementation (⇒ <span class="at">L2a</span>) or a <code>deferred</code> evaluator (⇒ a later lifecycle slice) reached in L2 core — declarable, not executable here</div></div>
           </div>
         </div>

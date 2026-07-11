@@ -1,45 +1,45 @@
 {
-  "section": "l2a",
-  "blocks": [
+ "section": "l2a",
+ "blocks": [
+  {
+   "indent": "            ",
+   "items": [
     {
-      "indent": "            ",
-      "items": [
-        {
-          "id": "runs-in-the-workspace",
-          "name_html": "runs in the workspace",
-          "body_html": "a process gate executes with <code>cwd = runtime_context</code> workspace (v1: the worktree); a workflow declaring <code>runtime_context: none</code> may not bind an <code>external.process</code> gate — the static mismatch is a definition error, and the kernel also guards it at run with <code>Rejected(runtime_context_required_for_process_gate)</code>"
-        },
-        {
-          "id": "gate-config-validated-at-definition-load",
-          "name_html": "gate config validated at definition load",
-          "body_html": "<code>validate_gate_config(template)</code> runs when the definition is loaded (in <code>CREATE_INSTANCE</code>, beside binding coverage): a process gate without a workspace (<code>runtime_context_required_for_process_gate</code>), a <code>fail_instance</code> disposition (<code>gate_config_not_supported</code>), or an incomplete/invalid config — missing <code>command</code>/<code>timeout_ms</code>, an unknown <code>output.mode</code> or runner disposition, or <code>exit_code</code> buckets that are missing or not <code>allow | warn | block</code> (<code>invalid_process_gate_config</code>) — is rejected at create, not mid-run. <code>output.mode</code> defaults to <code>exit_code</code> when absent"
-        },
-        {
-          "id": "bounded-timeout-mandatory",
-          "name_html": "bounded timeout mandatory",
-          "body_html": "every process gate carries a <code>timeout_ms</code>; a timeout is a runner outcome, not an indefinite block (v1 had none)"
-        },
-        {
-          "id": "evidence-on-every-run",
-          "name_html": "evidence on every run",
-          "body_html": "a log + artifact is persisted whether the gate allows, warns, or blocks (v1-faithful); the ref is carried to the commit or the rejection"
-        },
-        {
-          "id": "explicit-output-mode",
-          "name_html": "explicit output mode",
-          "body_html": "verdict source is <code>exit_code</code> or <code>gate_decision_json</code> by config — never guessed from whether stdout happens to parse"
-        },
-        {
-          "id": "runner-error-business-block",
-          "name_html": "runner error ≠ business block",
-          "body_html": "<code>runner_error</code> / <code>timeout</code> / <code>malformed_gate_decision_json</code> → <code>block_transition</code> with a distinct reason, separable in audit from a <code>test_failed</code> block"
-        },
-        {
-          "id": "still-inline-only",
-          "name_html": "still inline only",
-          "body_html": "a <code>deferred</code> process gate is still rejected (<code>gate_execution_not_supported</code>) — the deferred lifecycle is a later slice"
-        }
-      ]
+     "id": "runs-in-the-workspace",
+     "name_html": "runs in the workspace",
+     "body_html": "a process gate executes with <code>cwd = runtime_context</code> workspace (v1: the worktree); a workflow declaring <code>runtime_context: none</code> may not bind an <code>external.process</code> gate — the static mismatch is a definition error, and the kernel also guards it at run with <code>Rejected(runtime_context_required_for_process_gate)</code>"
+    },
+    {
+     "id": "gate-config-validated-at-definition-load",
+     "name_html": "gate config validated at definition load",
+     "body_html": "<code>validate_gate_config(raw)</code> is the <code>external.process</code> registration's <code>validate_and_normalize_config</code> body, run by ADMISSION (<code>admit_definition</code>) at definition load: a process gate without a workspace (<code>runtime_context_required_for_process_gate</code> — via the registration's <code>requires_runtime_context</code> flag), a <code>fail_instance</code> disposition (<code>gate_config_not_supported</code>), or an incomplete/invalid config — missing <code>command</code> / <code>timeout_ms</code>, an unknown <code>output.mode</code> or runner disposition, or <code>exit_code</code> buckets that are missing or not <code>allow | warn | block</code> (<code>invalid_process_gate_config</code>) — is a DEFINITION ISSUE at admission, never a mid-run surprise; the <code>HANDLE</code> <code>ready(∅)</code> lane keeps the runtime backstop. Defaults (<code>output.mode</code>, dispositions) MATERIALIZE into the effective config — resolved once, downstream reads one form"
+    },
+    {
+     "id": "bounded-timeout-mandatory",
+     "name_html": "bounded timeout mandatory",
+     "body_html": "every process gate carries a <code>timeout_ms</code>; a timeout is a runner outcome, not an indefinite block (v1 had none)"
+    },
+    {
+     "id": "evidence-on-every-run",
+     "name_html": "evidence on every run",
+     "body_html": "a log + artifact is persisted whether the gate allows, warns, or blocks (v1-faithful); the ref is carried to the commit or the rejection"
+    },
+    {
+     "id": "explicit-output-mode",
+     "name_html": "explicit output mode",
+     "body_html": "verdict source is <code>exit_code</code> or <code>gate_decision_json</code> by config — never guessed from whether stdout happens to parse"
+    },
+    {
+     "id": "runner-error-business-block",
+     "name_html": "runner error ≠ business block",
+     "body_html": "<code>runner_error</code> / <code>timeout</code> / <code>malformed_gate_decision_json</code> → <code>block_transition</code> with a distinct reason, separable in audit from a <code>test_failed</code> block"
+    },
+    {
+     "id": "still-inline-only",
+     "name_html": "still inline only",
+     "body_html": "a <code>deferred</code> process gate is still rejected (<code>gate_execution_not_supported</code>) — the deferred lifecycle is a later slice"
     }
-  ]
+   ]
+  }
+ ]
 }

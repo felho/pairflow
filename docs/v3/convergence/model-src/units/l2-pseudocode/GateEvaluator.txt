@@ -1,6 +1,0 @@
-
-# GateEvaluator — shared gate contract; L2 core executes only inline declarative/packaged evaluators
-INTERFACE GateEvaluator:
-  implementation: declarative | packaged | process      # orthogonal axes: L2 core realizes declarative + packaged; process ⇒ L2a
-  execution:      inline | deferred                      # L2 core runs inline evaluators; deferred ⇒ a later lifecycle slice (gate_pending + GATE_RESULT)
-  evaluate(config, projection) → GateDecision            # GateDecision = { verdict: allow | warn | block, reason?, message?, evidence_refs? }

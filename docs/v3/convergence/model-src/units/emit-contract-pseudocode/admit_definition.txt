@@ -1,0 +1,20 @@
+
+# ─── DEFINITION ADMISSION (L2) — the EC delta: the gate FAMILY dimension joins the generic sweep ───
+admit_definition(definition_source, gateRegistry) → AdmittedDefinition | issues
+  REQUIRE structural well-formedness                                 # steps / roles / transitions / terminal — the structure rules
+  FOR gate IN all_gate_bindings(definition_source):                  # every (step, event_type) gate
+    # EC — the gate FAMILY is a validated dimension: policy (run-state authorization) | verify
+    # (independent evidence). Absent ⇒ policy (zero migration: every existing gate is policy by
+    # default); verify is OPT-IN, and opting in brings the currency obligation with it (Q2)
+    IF gate.family is present AND gate.family NOT IN { policy, verify }
+       THEN issue(invalid_gate_config)                                # unknown family — the generic gate-config code (the process-scoped code stays process-scoped)
+    IF gate.family = verify AND gate.currency_binding is absent
+       THEN issue(invalid_gate_config)                                # a verify gate MUST declare what state its evidence certifies — no stale-green by construction; the inline process form satisfies it by construction, STATED in its binding, not exempted
+    registration ← gateRegistry.resolve(gate.uses)
+    IF registration is none
+       THEN issue(gate_evaluator_unavailable)                        # compile twin — HANDLE keeps the registry-drift runtime backstop
+    IF registration.requires_runtime_context AND definition_source.runtime_context = none
+       THEN issue(runtime_context_required_for_process_gate)         # compile twin — HANDLE's ready(∅) lane stays the runtime backstop
+    gate.effective_config ← registration.validate_and_normalize_config(gate.config)   # registration-owned schema; defaults materialize ONCE
+  REQUIRE every level-declared definition-static validator           # the validate_* family — each level's section declares its member; all emit issues on this channel
+  RETURN AdmittedDefinition(definition with effective configs)       # downstream — HANDLE, dispatch, the process wire — reads ONLY the effective form

@@ -36,13 +36,13 @@ HANDLE envelope → Outcome
   # L2: policy gate pipeline — the transition exists (L0b) and is authorized (L1); do the policies allow it now?
   gate_decisions ← []                                                                       # retained allow/warn verdicts + evidence refs, carried to the commit
   FOR gate IN template.gates_for(instance.current_step, envelope.type):   # ordered, authored; empty for ungated transitions
-    evaluator ← gateRegistry.resolve(gate.uses)
-    IF evaluator is none            THEN RETURN Rejected(gate_evaluator_unavailable)      # config invariant — unresolved gate name
-    IF evaluator.execution ≠ inline THEN RETURN Rejected(gate_execution_not_supported)    # deferred ⇒ later lifecycle slice (gate_pending + GATE_RESULT)
-    IF evaluator.implementation = process                                                 # L2a: inline process now runs (was rejected at L2 core)
-      THEN IF instance.runtime_context = ready(∅) THEN RETURN Rejected(runtime_context_required_for_process_gate)   # ready(∅) = context-free: validate_gate_config rejects this at definition load; runtime backstop here
+    registration ← gateRegistry.resolve(gate.uses)
+    IF registration is none            THEN RETURN Rejected(gate_evaluator_unavailable)      # runtime availability backstop — admission resolved the name at load; this lane guards registry drift
+    IF registration.execution ≠ inline THEN RETURN Rejected(gate_execution_not_supported)    # deferred ⇒ later lifecycle slice (gate_pending + GATE_RESULT)
+    IF registration.implementation = process                                                 # L2a: inline process now runs (was rejected at L2 core)
+      THEN IF instance.runtime_context = ready(∅) THEN RETURN Rejected(runtime_context_required_for_process_gate)   # ready(∅) = context-free: ADMISSION flags the declaration-level case (admit_definition); this lane is the runtime backstop
            decision ← run_process_gate(gate, instance, template, envelope)                # spawn in the workspace, bounded timeout
-      ELSE decision ← evaluator.evaluate(gate.config, gate_projection(instance, template, envelope))   # declarative / packaged, in-process
+      ELSE decision ← registration.evaluate(gate.effective_config, gate_projection(instance, template, envelope))   # declarative / packaged, in-process
     IF decision.verdict = block     THEN RETURN Rejected(gate_blocked(decision.reason), decision.evidence_refs)   # no commit ⇒ round not burned; refs surfaced
     gate_decisions.append(decision)                                                       # allow or warn ⇒ retained (verdict + evidence_refs + diagnostics)
     # allow or warn ⇒ next gate in the pipeline

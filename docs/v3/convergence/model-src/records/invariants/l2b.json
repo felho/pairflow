@@ -1,40 +1,40 @@
 {
-  "section": "l2b",
-  "blocks": [
+ "section": "l2b",
+ "blocks": [
+  {
+   "indent": "            ",
+   "items": [
     {
-      "indent": "            ",
-      "items": [
-        {
-          "id": "single-body-source",
-          "name_html": "single body source",
-          "body_html": "a context block’s body lives only in <code>template.context_blocks</code>; refs are ids, never inline prose — one place to author, dedup, and validate"
-        },
-        {
-          "id": "refs-validated-at-definition-load",
-          "name_html": "refs validated at definition load",
-          "body_html": "<code>validate_context_refs(template)</code> runs in <code>CREATE_INSTANCE</code> beside binding coverage and <code>validate_gate_config</code>; an unresolved ref is <code>unresolved_context_block_ref</code> — fail at create, not a render-time drop"
-        },
-        {
-          "id": "deterministic-ordered-render",
-          "name_html": "deterministic ordered render",
-          "body_html": "role → step → gate, declaration order within each; same instance state + config ⇒ byte-identical <code>context_blocks</code>. Order is reading sequence, not precedence/override"
-        },
-        {
-          "id": "authority-scoped-gate-blocks",
-          "name_html": "authority-scoped gate blocks",
-          "body_html": "a gate’s block renders only for a transition in <code>available_ops ∩ L1 capability</code> — transition existence plus the L1 role/<code>current_step</code> authority check; never blind step membership"
-        },
-        {
-          "id": "dedup-with-retained-provenance",
-          "name_html": "dedup with retained provenance",
-          "body_html": "an id reached from several sources renders once; <code>provenance.sources[]</code> keeps every emitter, so the packet stays terse but auditable"
-        },
-        {
-          "id": "communication-only",
-          "name_html": "communication only",
-          "body_html": "<code>context_blocks</code> never enter a verdict or the commit; removing a block cannot change what L2 enforces (correctness is L2’s job, legibility is L2b’s)"
-        }
-      ]
+     "id": "single-body-source",
+     "name_html": "single body source",
+     "body_html": "a context block’s body lives only in <code>template.context_blocks</code>; refs are ids, never inline prose — one place to author, dedup, and validate"
+    },
+    {
+     "id": "refs-validated-at-definition-load",
+     "name_html": "refs validated at definition load",
+     "body_html": "<code>validate_context_refs(template)</code> runs under ADMISSION (<code>admit_definition</code>) beside the rest of the definition-static family; an unresolved ref is the <code>unresolved_context_block_ref</code> definition issue — an admission failure, not a render-time drop"
+    },
+    {
+     "id": "deterministic-ordered-render",
+     "name_html": "deterministic ordered render",
+     "body_html": "role → step → gate, declaration order within each; same instance state + config ⇒ byte-identical <code>context_blocks</code>. Order is reading sequence, not precedence/override"
+    },
+    {
+     "id": "authority-scoped-gate-blocks",
+     "name_html": "authority-scoped gate blocks",
+     "body_html": "a gate’s block renders only for a transition in <code>available_ops ∩ L1 capability</code> — transition existence plus the L1 role/<code>current_step</code> authority check; never blind step membership"
+    },
+    {
+     "id": "dedup-with-retained-provenance",
+     "name_html": "dedup with retained provenance",
+     "body_html": "an id reached from several sources renders once; <code>provenance.sources[]</code> keeps every emitter, so the packet stays terse but auditable"
+    },
+    {
+     "id": "communication-only",
+     "name_html": "communication only",
+     "body_html": "<code>context_blocks</code> never enter a verdict or the commit; removing a block cannot change what L2 enforces (correctness is L2’s job, legibility is L2b’s)"
     }
-  ]
+   ]
+  }
+ ]
 }

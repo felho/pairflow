@@ -1,6 +1,0 @@
-
-# GateEvaluator — shared gate contract; L2a adds inline external.process to L2 core's declarative/packaged
-INTERFACE GateEvaluator:
-  implementation: declarative | packaged | process      # L2a realizes inline process too; only DEFERRED execution stays out (later slice)
-  execution:      inline | deferred                      # still inline only — deferred is a later lifecycle slice (gate_pending + GATE_RESULT)
-  evaluate(config, projection) → GateDecision            # in-process (declarative/packaged); a process gate runs via run_process_gate instead

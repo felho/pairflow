@@ -1,23 +1,23 @@
 
-validate_gate_config(template) → ok | Rejected                       # run at definition load (CREATE_INSTANCE) — fail at create, not mid-run; the static analog of binding coverage
-  FOR gate IN all_gate_bindings(template):                            # every (step, event_type) gate in the pinned definition
-    IF gate.uses ≠ external.process THEN CONTINUE                     # only process gates carry an execution config to validate
-    cfg ← gate.config
-    IF template.runtime_context = none
-       THEN RETURN Rejected(runtime_context_required_for_process_gate)        # a process gate has no workspace in a context-free workflow
-    IF cfg.command is absent OR cfg.timeout_ms is absent
-       THEN RETURN Rejected(invalid_process_gate_config)                      # command + bounded timeout are mandatory
-    # disposition allowlist — block_transition is the only realized value (absent ⇒ block_transition default)
-    FOR disposition IN [cfg.on_runner_error, cfg.on_timeout]:
-      IF disposition is absent          THEN CONTINUE                          # absent ⇒ block_transition default
-      IF disposition = fail_instance    THEN RETURN Rejected(gate_config_not_supported)    # reserved future disposition (distinct reason)
-      IF disposition ≠ block_transition THEN RETURN Rejected(invalid_process_gate_config)  # any other value is unknown
-    # output mode — exit_code is the default; only an explicit-but-unknown value is invalid
-    IF cfg.output.mode is present AND cfg.output.mode NOT IN { exit_code, gate_decision_json }
-       THEN RETURN Rejected(invalid_process_gate_config)
-    IF (cfg.output.mode ?? exit_code) = exit_code THEN                        # exit_code mode (incl. the default when output.mode is absent)
-      IF cfg.on_exit["0"] is absent OR cfg.on_exit[nonzero] is absent
-         THEN RETURN Rejected(invalid_process_gate_config)                    # both exit buckets are required
-      IF cfg.on_exit["0"] NOT IN { allow, warn, block } OR cfg.on_exit[nonzero] NOT IN { allow, warn, block }
-         THEN RETURN Rejected(invalid_process_gate_config)                    # buckets map only to realized verdicts — no route smuggled in
-  RETURN ok
+# validate_gate_config — the external.process REGISTRATION's validate_and_normalize_config body
+# (GateRegistration contract). Invoked by ADMISSION (admit_definition) at definition load — never
+# by CREATE (instance admission owns only task/binding) and never mid-run. Failures are DEFINITION
+# ISSUES; defaults MATERIALIZE here into the effective config (resolved once — downstream, including
+# the process wire, reads only the effective form).
+validate_gate_config(raw) → effective | issues                       # the process-config schema, registration-owned
+  IF raw.command is absent OR raw.timeout_ms is absent
+     THEN issue(invalid_process_gate_config)                          # command + bounded timeout are mandatory
+  # disposition allowlist — block_transition is the only realized value (absent ⇒ block_transition default)
+  FOR disposition IN [raw.on_runner_error, raw.on_timeout]:
+    IF disposition is absent          THEN CONTINUE                   # absent ⇒ block_transition materializes into effective
+    IF disposition = fail_instance    THEN issue(gate_config_not_supported)    # reserved future disposition (distinct code)
+    IF disposition ≠ block_transition THEN issue(invalid_process_gate_config)  # any other value is unknown
+  # output mode — exit_code is the default; only an explicit-but-unknown value is invalid
+  IF raw.output.mode is present AND raw.output.mode NOT IN { exit_code, gate_decision_json }
+     THEN issue(invalid_process_gate_config)
+  IF (raw.output.mode ?? exit_code) = exit_code THEN                  # exit_code mode (incl. the defaulted form)
+    IF raw.on_exit["0"] is absent OR raw.on_exit[nonzero] is absent
+       THEN issue(invalid_process_gate_config)                        # both exit buckets are required
+    IF raw.on_exit["0"] NOT IN { allow, warn, block } OR raw.on_exit[nonzero] NOT IN { allow, warn, block }
+       THEN issue(invalid_process_gate_config)                        # buckets map only to realized verdicts — no route smuggled in
+  RETURN effective(raw with defaults materialized)                    # output.mode, dispositions resolved — the ONE config form downstream

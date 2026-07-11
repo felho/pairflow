@@ -3,21 +3,21 @@
 # the pinned template; it is NOT a full JSON Schema. It is this detailed because each rejected shape would
 # change runtime SEMANTICS (a dropped required field, a misrouted decision), not merely form. Further lexical
 # refinements (valid-identifier decision keys, field-name conventions) belong to the later general template schema.
-validate_decision_gates(template) → ok | Rejected                     # L3 — definition load (CREATE_INSTANCE); the generic decision vocabulary must not be a loose string-map. Fail at create, beside validate_gate_config / validate_context_refs
+validate_decision_gates(template) → ok | issues                     # L3 — definition load (CREATE_INSTANCE); the generic decision vocabulary must not be a loose string-map. Fail at create, beside validate_gate_config / validate_context_refs
   FOR step IN human_gate_steps(template):
-    IF step.decisions is absent OR step.decisions is not a map THEN RETURN Rejected(invalid_decision_gate_config)   # the decisions map must be a map (not a scalar/list) — a human_gate's transition vocabulary
-    IF step.decisions is empty THEN RETURN Rejected(decision_gate_empty)              # ...and must offer at least one decision
+    IF step.decisions is absent OR step.decisions is not a map THEN RETURN issue(invalid_decision_gate_config)   # the decisions map must be a map (not a scalar/list) — a human_gate's transition vocabulary
+    IF step.decisions is empty THEN RETURN issue(decision_gate_empty)              # ...and must offer at least one decision
     FOR (key, choice) IN step.decisions:
-      IF choice is not a map                   THEN RETURN Rejected(invalid_decision_gate_config)   # each decision entry must be a map { target, payload? }
-      IF keys_of(choice) ⊄ { target, payload } THEN RETURN Rejected(invalid_decision_gate_config)   # CLOSED entry — an unknown key (e.g. a `paylod` typo) silently dropping the required-instruction rule is rejected, not ignored
-      IF template.step(choice.target) is none  THEN RETURN Rejected(decision_target_unresolved)   # every decision routes to a declared step
-      IF choice.payload is present AND choice.payload is not a map THEN RETURN Rejected(invalid_decision_payload_schema)   # the payload schema itself must be a map (absent is fine) — not a scalar/list (e.g. payload: true / "instruction")
+      IF choice is not a map                   THEN RETURN issue(invalid_decision_gate_config)   # each decision entry must be a map { target, payload? }
+      IF keys_of(choice) ⊄ { target, payload } THEN RETURN issue(invalid_decision_gate_config)   # CLOSED entry — an unknown key (e.g. a `paylod` typo) silently dropping the required-instruction rule is rejected, not ignored
+      IF template.step(choice.target) is none  THEN RETURN issue(decision_target_unresolved)   # every decision routes to a declared step
+      IF choice.payload is present AND choice.payload is not a map THEN RETURN issue(invalid_decision_payload_schema)   # the payload schema itself must be a map (absent is fine) — not a scalar/list (e.g. payload: true / "instruction")
       FOR (field, spec) IN (choice.payload ?? {}):                    # MVP payload schema is minimal + CLOSED: per field only { required: bool } — keeps the generic map from being a loose string-map
-        IF spec is not a map                           THEN RETURN Rejected(invalid_decision_payload_schema)   # the field spec must be an object { required: bool } — not a scalar (e.g. instruction: true / "required")
-        IF keys_of(spec) ⊄ { required }                THEN RETURN Rejected(invalid_decision_payload_schema)   # no nested types / unknown schema keys yet (e.g. type: markdown)
-        IF spec.required is present AND spec.required NOT IN { true, false } THEN RETURN Rejected(invalid_decision_payload_schema)   # required must be a bool (e.g. NOT "yes")
+        IF spec is not a map                           THEN RETURN issue(invalid_decision_payload_schema)   # the field spec must be an object { required: bool } — not a scalar (e.g. instruction: true / "required")
+        IF keys_of(spec) ⊄ { required }                THEN RETURN issue(invalid_decision_payload_schema)   # no nested types / unknown schema keys yet (e.g. type: markdown)
+        IF spec.required is present AND spec.required NOT IN { true, false } THEN RETURN issue(invalid_decision_payload_schema)   # required must be a bool (e.g. NOT "yes")
   FOR edge IN routing_edges_with_recommends(template):                # LC3b — ANY routing edge carrying `recommends`: actor transitions (on_pass / on_converged) AND action outcomes (e.g. perf_test.pass); meaningful ONLY when the edge target is a human_gate
-    IF NOT is_human_gate(template, edge.target) THEN RETURN Rejected(recommends_on_non_gate)
+    IF NOT is_human_gate(template, edge.target) THEN RETURN issue(recommends_on_non_gate)
     IF edge.recommends NOT IN keys_of(template.step(edge.target).decisions)
-       THEN RETURN Rejected(recommends_unknown_decision)              # a recommendation must name an existing decision key of its target gate
+       THEN RETURN issue(recommends_unknown_decision)              # a recommendation must name an existing decision key of its target gate
   RETURN ok

@@ -1,8 +1,8 @@
 
-validate_emit_contracts(template) → ok | error                     # EC — definition-load validation, fail at create (the house pattern beside the gate/context/decision/release/action/child/help validators)
+validate_emit_contracts(template) → ok | issues                     # EC — runs under ADMISSION (admit_definition) at definition load — the definition-issue channel (the house pattern beside the gate/context/decision/release/action/child/help validators)
   FOR step IN template.steps:
     FOR contract IN declared emit contracts of step (transition-edge payloads + step.help):
       REQUIRE contract's field schemas are well-formed (required/type/domain shapes)
-      REQUIRE every vocabulary reference resolves in template.vocabularies AND is version-pinned   # E3 — an unpinned or dangling reference fails at create, never mid-run
-      REQUIRE every evidence obligation names a claim path + a ref kind                            # E7 — a malformed obligation is a config error, not a runtime surprise
+      REQUIRE every vocabulary reference resolves in template.vocabularies AND is version-pinned   # E3 — an unpinned or dangling reference an admission issue, never a mid-run surprise
+      REQUIRE every evidence obligation names a claim path + a ref kind                            # E7 — a malformed obligation is an admission issue, not a runtime surprise
   RETURN ok

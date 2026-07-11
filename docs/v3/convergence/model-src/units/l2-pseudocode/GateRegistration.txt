@@ -1,0 +1,11 @@
+
+# GateRegistration — the registry's per-evaluator descriptor: the gate system's EXTENSION contract.
+# The registry maps a gate's `uses` id to its registration; composition is static (dynamic loading is Absent).
+INTERFACE GateRegistration:
+  implementation: declarative | packaged | process      # orthogonal axes: L2 core realizes declarative + packaged; process ⇒ L2a
+  execution:      inline | deferred                      # L2 core runs inline evaluators; deferred ⇒ a later lifecycle slice (gate_pending + GATE_RESULT)
+  requires_runtime_context: yes | no                     # read by ADMISSION (admit_definition): a requiring gate in a context-free definition is a definition issue
+  validate_and_normalize_config(raw) → effective | issues   # the registration OWNS its config schema; defaults materialize HERE, once — downstream reads only the EFFECTIVE form
+INTERFACE InlineGateEvaluator extends GateRegistration:  # the declarative | packaged members
+  evaluate(effective_config, projection) → GateDecision   # GateDecision = { verdict: allow | warn | block, reason?, message?, evidence_refs? }
+# a process registration carries NO evaluate — its execution path is run_process_gate (L2a)

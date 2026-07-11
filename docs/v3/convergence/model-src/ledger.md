@@ -384,48 +384,25 @@
 - `emit-contract` · **digest-pinned-to-the-contract** — idempotency is pinned to the full contract
 - `emit-contract` · **a-version-pins-meaning-forever** — a catalog version pins meaning forever
 
-## 3 · Rejection registry — 85 distinct `Rejected(...)` reasons
+## 3 · Rejection registry — 54 distinct `Rejected(...)` reasons
 
-- `action_outcome_ambiguous_route` — first appears in `auto-action-pseudocode`
-- `action_outcome_no_route` — first appears in `auto-action-pseudocode`
-- `action_outcome_target_unresolved` — first appears in `action-pseudocode`
-- `action_outcomes_empty` — first appears in `action-pseudocode`
 - `action_result_mismatch` — first appears in `auto-action-pseudocode`
 - `action_result_not_auto_action` — first appears in `auto-action-pseudocode`
-- `action_retry_requires_auto` — first appears in `auto-action-pseudocode`
 - `action_trigger_mismatch` — first appears in `action-pseudocode`
 - `already_purged` — first appears in `complete-pseudocode`
-- `auto_action_payload_unsupported` — first appears in `auto-action-pseudocode`
-- `child_key_missing` — first appears in `l4-pseudocode`
 - `child_lifecycle_not_subscribed` — first appears in `l4-pseudocode`
 - `child_link_mismatch` — first appears in `l4-pseudocode`
 - `child_link_unknown` — first appears in `l4-pseudocode`
 - `child_spawn_already_resolved` — first appears in `l4-pseudocode`
-- `child_template_ref_missing` — first appears in `l4-pseudocode`
-- `child_template_ref_unresolved` — first appears in `l4-pseudocode`
-- `child_wait_for_empty` — first appears in `l4-pseudocode`
-- `child_wait_for_incomplete` — first appears in `l4-pseudocode`
-- `child_wait_target_unresolved` — first appears in `l4-pseudocode`
-- `decision_gate_empty` — first appears in `l3-pseudocode`
 - `decision_request_mismatch` — first appears in `l3-pseudocode`
-- `decision_target_unresolved` — first appears in `l3-pseudocode`
 - `default_mode_undeclared` — first appears in `l0f-mode-pseudocode`
 - `delete_confirmation_required` — first appears in `complete-pseudocode`
 - `gate_blocked` — first appears in `l2-pseudocode`
-- `gate_config_not_supported` — first appears in `l2a-pseudocode`
 - `gate_evaluator_unavailable` — first appears in `l2-pseudocode`
 - `gate_execution_not_supported` — first appears in `l2-pseudocode`
 - `help_not_declared` — first appears in `l5-pseudocode`
 - `help_request_mismatch` — first appears in `l5-pseudocode`
-- `invalid_action_outcome_schema` — first appears in `action-pseudocode`
-- `invalid_action_step` — first appears in `action-pseudocode`
-- `invalid_decision_gate_config` — first appears in `l3-pseudocode`
-- `invalid_decision_payload_schema` — first appears in `l3-pseudocode`
 - `invalid_field_value` — first appears in `emit-contract-pseudocode`
-- `invalid_gate_config` — first appears in `emit-contract-pseudocode`
-- `invalid_process_gate_config` — first appears in `l2a-pseudocode`
-- `invalid_release_policy` — first appears in `release-pseudocode`
-- `invalid_retry_budget` — first appears in `auto-action-pseudocode`
 - `invalid_shape` — first appears in `l0a-pseudocode`
 - `missing_evidence_ref` — first appears in `emit-contract-pseudocode`
 - `missing_required_field` — first appears in `l3-pseudocode`
@@ -449,13 +426,7 @@
 - `operator_not_authorized` — first appears in `l3-pseudocode`
 - `override_not_applicable` — first appears in `l3-pseudocode`
 - `override_required` — first appears in `l3-pseudocode`
-- `recommends_on_non_gate` — first appears in `l3-pseudocode`
-- `recommends_unknown_decision` — first appears in `l3-pseudocode`
-- `release_boundaries_empty` — first appears in `release-pseudocode`
-- `release_boundaries_not_allowed` — first appears in `release-pseudocode`
-- `release_policy_undeclared` — first appears in `release-pseudocode`
 - `resume_event_mismatch` — first appears in `l3-pseudocode`
-- `retry_escalation_target_unresolved` — first appears in `auto-action-pseudocode`
 - `role_not_authorized` — first appears in `l1-pseudocode`
 - `runtime_context_provider_unavailable` — first appears in `l0e-pseudocode`
 - `runtime_context_required_for_process_gate` — first appears in `l2a-pseudocode`
@@ -468,8 +439,6 @@
 - `unknown_mode` — first appears in `l0f-mode-pseudocode`
 - `unknown_slot` — first appears in `l0f-pseudocode`
 - `unknown_target` — first appears in `l0f-pseudocode`
-- `unresolved_context_block_ref` — first appears in `l2b-pseudocode`
-- `unsupported_action_trigger` — first appears in `action-pseudocode`
 - `workflow_definition_unavailable` — first appears in `l0f-pseudocode`
 
 ## 4 · Domain registry — 51 aggregate blocks · 121 entities
@@ -521,7 +490,7 @@
 ### `l2` (4 blocks · 9 entities)
 
 - **Template aggregate — gains the gate pipeline** — GateBinding · GatePipeline
-- **Evaluation — one shared interface, two value types** — GateEvaluator · GateDecision (value)
+- **Evaluation & admission — one registration contract, two value types** — GateRegistration · GateDecision (value)
 - **Instance & read model — a canonical round and a policy-facing view** — WorkflowInstance · gate_projection
 - **New rejections — before commit, no state change, no round burned** — Rejected(gate_blocked(reason)) · Rejected(gate_evaluator_unavailable) · Rejected(gate_execution_not_supported)
 
@@ -576,7 +545,7 @@
 ### `l4-child` (2 blocks · 10 entities)
 
 - **Five primitives — the canonical contract (the kernel adds only these; the rest is parent-template authoring)** — (no entities)
-- **New values + rejections** — SpawnIntent (produce, not perform) · CHILD_SPAWNED (kernel event) · CHILD_SPAWN_FAILED (kernel event) · CHILD_LIFECYCLE (kernel event) · Rejected(child_link_unknown) · Rejected(child_link_mismatch) · Rejected(not_awaiting_this_child) · Rejected(child_lifecycle_not_subscribed) · Rejected(child_template_ref_unresolved / child_key_missing / child_wait_for_empty / child_wait_for_incomplete / child_wait_target_unresolved) · Rejected(child_spawn_already_resolved)
+- **New values + rejections** — SpawnIntent (produce, not perform) · CHILD_SPAWNED (kernel event) · CHILD_SPAWN_FAILED (kernel event) · CHILD_LIFECYCLE (kernel event) · Rejected(child_link_unknown) · Rejected(child_link_mismatch) · Rejected(not_awaiting_this_child) · Rejected(child_lifecycle_not_subscribed) · Definition issues (child_template_ref_unresolved / child_key_missing / child_wait_for_empty / child_wait_for_incomplete / child_wait_target_unresolved) · Rejected(child_spawn_already_resolved)
 
 ### `l5` (1 block · 5 entities)
 

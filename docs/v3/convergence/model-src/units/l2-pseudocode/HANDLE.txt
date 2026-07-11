@@ -31,11 +31,11 @@ HANDLE envelope → Outcome
   # L2: policy gate pipeline — the transition exists (L0b) and is authorized (L1); do the policies allow it now?
   gate_decisions ← []                                                                       # retained allow/warn verdicts + evidence refs, carried to the commit
   FOR gate IN template.gates_for(instance.current_step, envelope.type):   # ordered, authored; empty for ungated transitions
-    evaluator ← gateRegistry.resolve(gate.uses)
-    IF evaluator is none                  THEN RETURN Rejected(gate_evaluator_unavailable)    # config invariant — unresolved gate name
-    IF evaluator.implementation = process THEN RETURN Rejected(gate_execution_not_supported)  # process contract is L2a — even an inline process gate
-    IF evaluator.execution ≠ inline       THEN RETURN Rejected(gate_execution_not_supported)  # deferred ⇒ a later lifecycle slice (gate_pending + GATE_RESULT)
-    decision ← evaluator.evaluate(gate.config, gate_projection(instance, template, envelope))
+    registration ← gateRegistry.resolve(gate.uses)
+    IF registration is none                  THEN RETURN Rejected(gate_evaluator_unavailable)    # runtime availability backstop — admission resolved the name at load; this lane guards registry drift
+    IF registration.implementation = process THEN RETURN Rejected(gate_execution_not_supported)  # process contract is L2a — even an inline process gate
+    IF registration.execution ≠ inline       THEN RETURN Rejected(gate_execution_not_supported)  # deferred ⇒ a later lifecycle slice (gate_pending + GATE_RESULT)
+    decision ← registration.evaluate(gate.effective_config, gate_projection(instance, template, envelope))
     IF decision.verdict = block       THEN RETURN Rejected(gate_blocked(decision.reason), decision.evidence_refs)  # no commit ⇒ round not burned; refs surfaced
     gate_decisions.append(decision)                                                       # allow or warn ⇒ retained (verdict + evidence_refs + diagnostics)
     # allow or warn ⇒ next gate in the pipeline

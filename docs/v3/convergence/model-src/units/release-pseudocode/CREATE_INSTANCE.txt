@@ -6,10 +6,7 @@ CREATE_INSTANCE(template_ref, activation_mode, task, binding, run_overrides) →
   template ← definitionStore.load(template_ref)                # a pinned definition — a plain template, or an L0f-resolved definition (slots applied)
   IF activation_mode = immediate AND task is absent THEN RETURN Rejected(task_required)
   REQUIRE binding covers every role reachable in template      # binding resolved pre-kernel; the kernel only validates coverage (fail at create, not mid-run)
-  REQUIRE validate_gate_config(template)                          # L2a: static gate-config invariants (process↔workspace, no fail_instance) — definition-load validation, fail at create
-  REQUIRE validate_context_refs(template)                         # L2b: every issued context_block ref resolves in the catalog — fail at create, beside binding coverage
-  REQUIRE validate_decision_gates(template)                       # L3: every human_gate's decisions resolve, and every `recommends` names a real decision key of its target gate
-  REQUIRE validate_release_policy(template)                       # LC2: a teardown-managed runtime_context MUST declare runtime_context.release (policy + non-empty boundaries when required)
+  # definition-static validation happened at ADMISSION (admit_definition, definition load) — the store issues only ADMITTED definitions; CREATE validates INSTANCE inputs (task, binding coverage) only
   instance ← create { template_ref, task, binding, activation_mode,
                       kernel_status: CREATED, current_step: none, round: 0,   # round 0 = prepared, no work cycle begun yet (position none until ACTIVE)
                       runtime_context: none, run_overrides: snapshot(run_overrides), version: 1 }

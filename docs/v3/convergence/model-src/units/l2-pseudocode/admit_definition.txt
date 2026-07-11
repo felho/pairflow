@@ -1,0 +1,18 @@
+
+# ─── DEFINITION ADMISSION (L2) — the single semantic authority over a workflow definition ───
+# Runs at DEFINITION LOAD — wherever a definition enters the system (a file loaded, a directly
+# constructed template): the definition store issues ONLY admitted definitions, and CREATE_INSTANCE
+# consumes admitted definitions by that store contract — instance inputs (task, binding) stay
+# CREATE's own admission. Failures are DEFINITION ISSUES ({path, code, message} — the definition
+# channel), never instance rejections: no instance exists yet to reject into.
+admit_definition(definition_source, gateRegistry) → AdmittedDefinition | issues
+  REQUIRE structural well-formedness                                 # steps / roles / transitions / terminal — the structure rules
+  FOR gate IN all_gate_bindings(definition_source):                  # every (step, event_type) gate
+    registration ← gateRegistry.resolve(gate.uses)
+    IF registration is none
+       THEN issue(gate_evaluator_unavailable)                        # compile twin — HANDLE keeps the registry-drift runtime backstop
+    IF registration.requires_runtime_context AND definition_source.runtime_context = none
+       THEN issue(runtime_context_required_for_process_gate)         # compile twin — HANDLE's ready(∅) lane stays the runtime backstop
+    gate.effective_config ← registration.validate_and_normalize_config(gate.config)   # registration-owned schema; defaults materialize ONCE
+  REQUIRE every level-declared definition-static validator           # the validate_* family — each level's section declares its member; all emit issues on this channel
+  RETURN AdmittedDefinition(definition with effective configs)       # downstream — HANDLE, dispatch, the process wire — reads ONLY the effective form

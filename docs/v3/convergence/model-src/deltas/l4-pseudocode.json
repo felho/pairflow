@@ -4,7 +4,8 @@
   "order": [
     "resolve_agent_config",
     "capability",
-    "GateEvaluator",
+    "GateRegistration",
+    "admit_definition",
     "gate_projection",
     "ProcessGateRunner",
     "run_process_gate",

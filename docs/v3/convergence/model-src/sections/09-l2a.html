@@ -85,7 +85,7 @@
               <tr><td>gate_decision_json verdict</td><td>runtime</td><td><code>allow | warn | block</code></td><td>malformed / route / unknown ⇒ <code>gate_blocked(malformed_gate_decision_json)</code></td></tr>
             </tbody>
           </table>
-          <div class="fields" style="margin-top:8px">This table is the contract; the pseudocode is its executable sketch — <code>validate_gate_config</code> enforces the config rows at definition load, <code>classify_process_result</code> the runtime rows — and the config example below is one instance of it. Same runner, hard gate or warning gate, by <code>on_exit</code> alone.</div>
+          <div class="fields" style="margin-top:8px">This table is the contract; the pseudocode is its executable sketch — <code>validate_gate_config</code> (the <code>external.process</code> registration's validator, run by ADMISSION) enforces the config rows at definition load as DEFINITION ISSUES, <code>classify_process_result</code> the runtime rows as kernel outcomes — and the config example below is one instance of it. Same runner, hard gate or warning gate, by <code>on_exit</code> alone.</div>
         </div>
         <div class="note domain">
           <code>evidence_refs</code> on <code>GateDecision</code> become concrete here: every run persists a
