@@ -2030,3 +2030,17 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   Ratification-read yield so far: C26 partial-invariant, C17 flat-token (via
   worked example), this model gap — the read is functioning as a REVIEW TIER,
   boundary-review material.
+
+- 2026-07-12 · ch11-P0 — LANE-4 DISCOVERY (the bridge's scope closed by
+  RUNNING the gate): authoring tier-0 surfaced a FOURTH red approve-time
+  surface (check_coverage --fold-time) the ratified exception and FIVE
+  review rounds all missed — 7 items were Lane 2 through a second checker,
+  2 came from the script's OWN hardcoded count dict (the same mirror class
+  as the test-side pins; a full approve-gate-script sweep closed the
+  class: no other executable hardcoded inventory count exists). LESSON:
+  executing an approve-time gate at authoring is a CHEAP completeness
+  probe no amount of reading substitutes — candidate AuthorPacket step
+  (boundary review). The under-scope was repaired as a ratified Lane-4
+  addendum + a five-site authority alignment (README §5.5 / plan P0 row /
+  packet Flag 1 + S6 + Sizing); the dual act (addendum ratification + P0
+  approve) landed on the fresh receipt set at 30fe3479.
