@@ -53,6 +53,10 @@ function resolveAlias(value: unknown, doc: Document | undefined): unknown {
   return doc && isAlias(value) ? (value.resolve(doc) ?? value) : value;
 }
 
+function sameValueZero(a: unknown, b: unknown): boolean {
+  return a === b || (a !== a && b !== b);
+}
+
 function yamlNodeEqual(
   left: unknown,
   right: unknown,
@@ -63,7 +67,13 @@ function yamlNodeEqual(
   const b = resolveAlias(right, doc);
   if (a === b) return true;
   if (markCompared(a, b, compared)) return true;
-  if (isScalar(a) && isScalar(b)) return Object.is(a.value, b.value);
+  // SameValueZero, not Object.is: the comparator's equality must be at
+  // least as coarse as the downstream Map's KEY identity (SameValueZero),
+  // or a distinct-judged pair collapses silently after the gate — the
+  // integration re-check's 0/-0 catch (Object.is(0, -0) is false, the
+  // Map still merges them). YAML canonical int equality also makes
+  // 0 == -0; NaN == NaN holds under both forms.
+  if (isScalar(a) && isScalar(b)) return sameValueZero(a.value, b.value);
   if (isAlias(a) && isAlias(b)) return a.source === b.source;
   if (isAlias(a) && nodeAnchor(b) !== undefined) return nodeAnchor(b) === a.source;
   if (nodeAnchor(a) !== undefined && isAlias(b)) return nodeAnchor(a) === b.source;

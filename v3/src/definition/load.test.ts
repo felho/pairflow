@@ -291,6 +291,36 @@ roles:
     ));
     expect(new Set(positions).size).toBe(2);
   });
+
+  it("rejects 0 and -0 as duplicate keys — comparator equality matches Map key identity (SameValueZero)", () => {
+    // The integration re-check's catch: Object.is judged 0/-0 DISTINCT,
+    // no duplicate finding fired, then the downstream Map (SameValueZero)
+    // collapsed them — the first value silently lost (an E3/G6 violation).
+    // YAML canonical int equality also makes 0 == -0.
+    const err = expectErr(
+      loadTemplate(
+        bytes(`ref:
+  id: t
+  version: 1
+start: s
+steps:
+  s:
+    role: r
+    instruction: i
+    transitions: {}
+    agentConfig:
+      0: first
+      -0: second
+terminal:
+  - done
+roles:
+  r: {}
+`),
+      ),
+    );
+    expect(err.stage).toBe("parse");
+    expect(JSON.stringify(err.findings)).toMatch(/unique|duplicate/iu);
+  });
 });
 
 describe("G7 — the %YAML directive rule (two-mechanism union)", () => {

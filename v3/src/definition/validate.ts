@@ -484,6 +484,11 @@ export function validateTemplate(value: unknown, doc: Document, source: string):
   }
 
   // E3: only a COMPLETE valid template escapes — built here, after zero findings.
+  // ONE materialization memo per template build: a cross-step aliased
+  // graph (two steps sharing one anchored agentConfig) must keep its
+  // referential identity in the returned domain — a per-step memo
+  // duplicated it (the integration re-check's catch; lossless/raw V9).
+  const materializeMemo = new WeakMap<object, unknown>();
   const steps = mapGet(root, "steps") as ResolvedMap;
   for (const [id, stepValue] of mapEntries(steps)) {
     const step = stepValue as ResolvedMap;
@@ -497,7 +502,7 @@ export function validateTemplate(value: unknown, doc: Document, source: string):
       instruction: mapGet(step, "instruction") as string,
       transitions,
       ...(mapHas(step, "agentConfig")
-        ? { agentConfig: materializeResolvedValue(mapGet(step, "agentConfig")) }
+        ? { agentConfig: materializeResolvedValue(mapGet(step, "agentConfig"), materializeMemo) }
         : {}),
     };
     defineOwn(builtSteps, id as string, builtStep);

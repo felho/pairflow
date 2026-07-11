@@ -426,6 +426,36 @@ describe("V7 — transitions may be empty", () => {
 });
 
 describe("V9 — agentConfig raw pass-through", () => {
+  it("preserves referential identity of a cross-step aliased agentConfig graph (one memo per build)", () => {
+    // The integration re-check's catch: a per-step materialization memo
+    // duplicated a shared anchored graph — two steps aliasing one
+    // anchor received DIFFERENT objects, refuting the lossless/raw claim.
+    const result = load(`ref:
+  id: t
+  version: 1
+start: a
+steps:
+  a:
+    role: r
+    instruction: i
+    transitions: { GO: b }
+    agentConfig: &cfg { shared: { x: 1 } }
+  b:
+    role: r
+    instruction: i
+    transitions: {}
+    agentConfig: *cfg
+terminal:
+  - done
+roles:
+  r: {}
+`);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.template.steps["a"].agentConfig).toBe(result.template.steps["b"].agentConfig);
+    }
+  });
+
   it("passes an arbitrary nested map through untouched (deep-equal)", () => {
     const result = load(
       template({

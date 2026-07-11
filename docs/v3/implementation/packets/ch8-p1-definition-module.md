@@ -887,6 +887,32 @@ ran 0-error; the integrated commit carries its own audit at its own
 sha, and a fresh arm re-check on the integrated sha runs under the
 ch8-boundary §6 mechanics (its first live use).
 
+**Aftermath round 6 (2026-07-11, the integrated-sha arm re-check —
+the FIRST run under the ch8-boundary §6 mechanics: foreground,
+byte-guarded, pinned gpt-5.6-sol/high, approval never,
+danger-full-access):** the run hit the 10-minute ceiling while
+composing its verdict — an infra failure per §6 — but its finder
+output carried TWO catches, both reproduced by in-session probes and
+folded as ordinary findings (the stopped-finder precedent): (1) the
+round-3 comparator judged `0`/`-0` DISTINCT (`Object.is`) while the
+downstream Map's key identity is SameValueZero — the pair passed the
+duplicate gate and silently collapsed, first value lost (E3/G6). Fix:
+scalar equality is SameValueZero — the comparator is now EXACTLY as
+coarse as Map key identity, so no distinct-judged pair can collapse
+downstream; `0`/`-0` rejects loudly at parse. (2) The materialization
+memo was PER-STEP: a cross-step aliased `agentConfig` graph lost
+referential identity in the returned domain (the lossless/raw V9
+claim). Fix: ONE memo per template build; the cross-step alias keeps
+`===` identity. Both driven by name (the `0`/`-0` duplicate lane; the
+cross-step identity lane). 558 → 560 tests; typecheck/lint green.
+First-use mechanics measurements: `danger-full-access` DID clear the
+tsx-IPC limit — the subprocess suites EXECUTED in the arm's sandbox;
+and the 10-minute ceiling is TIGHT when the arm runs full suites (the
+boundary note is logged). The lesson (the R-DIMENSIONS ladder's `-0`
+rung, re-minted on the KEY axis): when two layers each look locally
+correct, ask whether their EQUALITY RELATIONS compose — a gate finer
+than its container is a silent-loss channel.
+
 ```json
 {
   "packet_metrics": {
@@ -897,7 +923,7 @@ ch8-boundary §6 mechanics (its first live use).
       "discovered": "projection"
     },
     "provenance": { "anchored": 36, "derived": 3, "new_decision": 1 },
-    "rounds": { "review": 2, "doc_refinement": 0, "implementation": 6 },
+    "rounds": { "review": 2, "doc_refinement": 0, "implementation": 7 },
     "stops": [
       {
         "type": "4:flagged-approve",
@@ -935,10 +961,15 @@ ch8-boundary §6 mechanics (its first live use).
         "found_at": "code-review",
         "what": "the round-4 document-aware duplicate scan suppressed findings per compared pair, so one later key matching different earlier keys through compose-time and resolved equality received the parser finding plus a redundant supplemental finding at the same position",
         "why_missed": "the round-4 lane had one earlier semantic match only; the clean arm re-check added a third equivalent key and exposed that suppression must be decided per later key across all earlier keys"
+      },
+      {
+        "found_at": "arm-build-close",
+        "what": "the integrated-sha re-check refuted the round-3 hardening twice: the Object.is scalar comparator was FINER than the downstream Map's SameValueZero key identity (0 and -0 passed the duplicate gate, then collapsed silently with the first value lost), and the per-step materialization memo broke cross-step aliased-graph referential identity (the lossless/raw V9 claim)",
+        "why_missed": "the round-3 fold verified acceptance and rejection lanes but never asked whether the two layers' EQUALITY RELATIONS compose — a gate finer than its container is a silent-loss channel; and the memo's scope was chosen at the call site with no cross-step identity lane. The R-DIMENSIONS ladder's -0 rung existed for VALUES; the key axis re-minted it"
       }
     ],
     "learned": "the first measurement-stage packet: an agent-invoked external arm run PRE-approve caught two substrate overclaims twelve internal Opus passes missed; the build ran first-execution green on every yaml lane — a ratified draft's probe record transfers to code with zero behavioral surprises",
-    "baseline_note": "rounds.review = 2 counted panel rounds (R1 full; R2 targeted clean after the content fold); the two closes, the lens-4 reconciliations, and the arm's find + re-check are chronicled above and do not count (reconciliations never count; the arm is the phase-2 adversarial leg). prediction: the invention->projection gap is flag 2's boundary-review question — the draft phase absorbed the memo-born decisions between the ratification-time prediction and authoring. detector_misses.found_at = 'approve' (the closed enum's nearest member): the finder was the EXTERNAL ARM run pre-approve at the user's ask — a NEW lane the enum predates (the ch7-P4 misses arrived post-build via code-review); whether the enum gains an external-arm member is boundary-review material. The miss fed the S1 fold before approve and before build. implementation = 6: the build round (mechanical type/lint residue only — four readonly casts, one optional chain, two auto-fixed assertions, one NBSP escape; zero behavioral test failures) + the external-arm aftermath round (the V15 accumulation fix + toJSON + the V5 grid + the V11 reliability extension — 515 -> 530) + the arm re-check's regression round (the cycle-safe describeValue renderer — 530 -> 534; the third detector_misses entry) + the blind replay aftermath round (resolved map-key identity + own-property-safe domain records + lens-4's structural-duplicate and key-local alias propagation; the fourth detector_misses entry; 547 -> 556 after P2 landed 13 intervening tests) + the mandatory build-close arm fold (full-document alias resolution for G6; the fifth detector_misses entry; 556 -> 557) + its clean re-check fold (per-later-key supplemental diagnostic suppression; the sixth detector_misses entry; 557 -> 558). 401 -> 515 at the build commit (+114 vs the ~55 estimate: parametrized lanes expand to per-form it bodies — the inverse of ch7-P4's over-count, recorded for the estimating convention). The second detector_misses entry is the post-build arm's substance catch (found_at code-review — the arm IS that lane post-build; its pre-approve run is the first entry's 'approve' lane)."
+    "baseline_note": "rounds.review = 2 counted panel rounds (R1 full; R2 targeted clean after the content fold); the two closes, the lens-4 reconciliations, and the arm's find + re-check are chronicled above and do not count (reconciliations never count; the arm is the phase-2 adversarial leg). prediction: the invention->projection gap is flag 2's boundary-review question — the draft phase absorbed the memo-born decisions between the ratification-time prediction and authoring. detector_misses.found_at = 'approve' (the closed enum's nearest member): the finder was the EXTERNAL ARM run pre-approve at the user's ask — a NEW lane the enum predates (the ch7-P4 misses arrived post-build via code-review); whether the enum gains an external-arm member is boundary-review material. The miss fed the S1 fold before approve and before build. implementation = 7: the build round (mechanical type/lint residue only — four readonly casts, one optional chain, two auto-fixed assertions, one NBSP escape; zero behavioral test failures) + the external-arm aftermath round (the V15 accumulation fix + toJSON + the V5 grid + the V11 reliability extension — 515 -> 530) + the arm re-check's regression round (the cycle-safe describeValue renderer — 530 -> 534; the third detector_misses entry) + the blind replay aftermath round (resolved map-key identity + own-property-safe domain records + lens-4's structural-duplicate and key-local alias propagation; the fourth detector_misses entry; 547 -> 556 after P2 landed 13 intervening tests) + the mandatory build-close arm fold (full-document alias resolution for G6; the fifth detector_misses entry; 556 -> 557) + its clean re-check fold (per-later-key supplemental diagnostic suppression; the sixth detector_misses entry; 557 -> 558) + the integrated-sha re-check round (the SameValueZero comparator + the one-memo-per-build identity fix; the seventh detector_misses entry — the FIRST use of the ch8-boundary arm-build-close enum member; 558 -> 560). 401 -> 515 at the build commit (+114 vs the ~55 estimate: parametrized lanes expand to per-form it bodies — the inverse of ch7-P4's over-count, recorded for the estimating convention). The second detector_misses entry is the post-build arm's substance catch (found_at code-review — the arm IS that lane post-build; its pre-approve run is the first entry's 'approve' lane)."
   }
 }
 ```
