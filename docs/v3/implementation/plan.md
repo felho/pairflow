@@ -101,7 +101,7 @@ convention is itself a chapter-1 rule.
 | 6 | Visibility floor + operator CLI: full floor (`listInstances` / `getInstanceDetail` / `getTimeline` committed-rows-only / live tail), debug bundle with redaction boundary, command + dev verbs, all writes through normal ingress | PI-2 | realized |
 | 7 | Kernel diagnostics & structured logging: the named non-authoritative diagnostic channel's concrete form | PI-4 | realized |
 | 8 | Template file-format spec: the canonical authoring format; **migrates MD-1** | PI-5 | realized |
-| 11 | **Gate core** (appended chapter, build order: BEFORE ch 9 — §11): the L1 authority slice, the L2 gate pipeline + inline evaluators (the `round` field is born here), the L2a process-gate contract (kernel side — the spawn is ch 9's), a minimal runtime-context representation, the format's gate-declaration surface (§8.2 stance) | — (map-extension, §8.1) | planned(ch 11) |
+| 11 | **Gate core** (appended chapter, build order: BEFORE ch 9 — §11): the L1 authority slice, the L2 gate pipeline + inline evaluators (the ch-4 provisional `round` aligned to its L2 contract), the L2a process-gate contract (kernel side — the spawn is ch 9's), a minimal runtime-context representation, the format's gate-declaration surface (§8.2 stance) | — (map-extension, §8.1) | planned(ch 11) |
 | 9 | Runner MVP: local worktree provider, one real actor adapter, process-gate runner, attach channel (tmux observe/takeover); sub-decision: local-worktree only vs headless/cloud | PI-8 | planned(ch 9) |
 | 10 | Operator recourse card: one page (query via the floor, cancel, deleteRequested; no watchdog/retry until L9) | PI-9 | planned(ch 10) |
 
@@ -1831,21 +1831,29 @@ trace) — a standalone chapter would be ceremony.
    Absent); the gate rung in `HANDLE` (ordered, first-block-wins;
    block returns BEFORE the commit — version, step, and **round
    untouched**); `gate_projection` as the policy-facing read model;
-   **the `round` field is born here** (instance schema + the
-   `advances_round` predicate + the `round-is-canonical-reconstructable`
-   checker; a schema bump under the ADR-003 fenced-wipe stance); the
+   **the ch-4 provisional `round` ALIGNED to its L2 contract** — the
+   field, column, and loop-back increment already exist (the
+   `instance.ts` comment's own forward pointer: "Formal round
+   machinery (limits, gate rounds) is L2"); this chapter declares the
+   `advances_round` predicate against transition semantics (the
+   current `target === template.start` heuristic assessed at
+   projection), adds the `round-is-canonical-reconstructable` checker,
+   and makes `gate_projection` its first policy consumer; the
    transcript gains `gate_decisions` provenance (retained allow/warn
-   verdicts + evidence refs); the two Block A evaluators:
-   `declarative.threshold` and the packaged
+   verdicts + evidence refs) — THAT column is the chapter's schema
+   bump, under the ADR-003 fenced-wipe stance; the two Block A
+   evaluators: `declarative.threshold` and the packaged
    `pairflow.previous_reviewer_verdict`.
 3. **The L2a process-gate contract, kernel side.** The model's own
    cut governs the ch-11/ch-9 boundary: *"the kernel owns the
    contract, the runner owns the spawn."* Here: `validate_gate_config`
    at create (fail-at-create — the static analog of binding
-   coverage); the `ProcessGateRunner` PORT + a testkit fake runner
-   (the ch-3 deterministic gate/process fixture set —
-   allow/warn/block/timeout/runner_error/malformed — was built for
-   exactly this); `run_process_gate`; `classify_process_result`;
+   coverage); the `ProcessGateRunner` PORT + a testkit fake runner —
+   ch 3 shipped the GENERIC deterministic seam
+   (`ScriptedGateRunner`/`ScriptedProcessRunner`, pass|fail verdicts);
+   the ledger-shaped six-outcome fixture drive
+   (allow/warn/block/timeout/runner_error/malformed) lands HERE, in
+   P3 scope; `run_process_gate`; `classify_process_result`;
    `runner_outcome` (only `block_transition` realized;
    `fail_instance` → `gate_config_not_supported`);
    `GateInvocation`/`ProcessResult` values; rejections
@@ -1860,8 +1868,18 @@ trace) — a standalone chapter would be ceremony.
    its format surface land in the same chapter): gate declarations in
    the YAML template, the process-config keys, the `runtime_context`
    declaration key, the validator lanes, the CLI validate extension.
-   The ch-8 draft C10's reserved dotted-id note names this chapter
-   the owner of the `external.process` evaluator-id reconciliation.
+   The ch-8 contract's C7 forward declaration anticipates exactly
+   this ("the fixed keysets grow ONLY by ADDITIVE OPTIONAL keys
+   ratified in the realizing chapter — first expected: the L2 gate
+   core's key"). A REAL C10 tension exists and the draft must
+   confront it explicitly: C10 bans `.` in its id classes (ids are
+   C21 path segments), while the model's canonical evaluator names
+   are dotted (`external.process`, `declarative.threshold`,
+   `pairflow.previous_reviewer_verdict`); evaluator ids enter as
+   VALUES (never path segments), so the draft decides the new
+   class's grammar and STATES its relation to C10 — and if the
+   resolution touches C10's ratified rows, that is a human
+   re-ratification act, never an inferred relaxation.
    The ch-3 `ports/gate.ts` placeholder
    (`GateRunner`/`GateSpec`/`GateVerdict`) is RECONCILED to the
    ledger shapes — a named replacement, never a parallel seam.
@@ -1895,19 +1913,25 @@ dispositions on `l1-pseudocode/dispatch_intent` and
 unrealized — a projection-time disposition call, not a scope change).
 Rejections: **9 behavioral** (3 per level) + `not_active` driven as a
 scoped extension. Invariants: **15**, dispositions already fixed by
-the ch-5 map (9 `test` / 4 `type/schema` / 1 `checker` / 1 `review`);
-the checker lands as a storeCheckers extension. Chapter traces:
+the ch-5 map (8 `test` / 4 `type/schema` / 2 `checker` / 1 `review`);
+the two checkers — `l2/round-is-canonical-reconstructable` (P2) and
+`l2a/evidence-on-every-run` (P3) — land as storeCheckers extensions
+with named packet owners. Chapter traces:
 **3 golden traces** (the l1, l2, and l2a section traces). The l2b
 slice (4 units / 1 rejection / 6 invariants / 1 trace) stays unowned
 — the coverage lock closes at Block A end, not per chapter.
 
 ### 11.3 The draft phase
 
-Before P3/P4: `contracts/ch11-gate-format-contract.md` (surface:
-`gate-format`). Indicative C-row set — the draft decides, this list
+Before ANY packet (README §4: a referenced draft not yet
+ratified-or-later means the DraftContract round runs FIRST):
+`contracts/ch11-gate-format-contract.md` (surface: `gate-format`).
+Indicative C-row set — the draft decides, this list
 only scopes it: the gate-declaration grammar (step/transition
-binding, `uses`, `config`); the dotted evaluator-id grammar (the ch-8
-C10 reconciliation); the process-config keys (`command`,
+binding, `uses`, `config`); the evaluator-id grammar as a NEW value
+class + its explicitly stated relation to ch-8 C10's dot-ban (§11.1
+item 5 — any touch of C10's ratified rows is a human
+re-ratification act); the process-config keys (`command`,
 `timeout_ms`, `output.mode`, `on_exit` buckets, `on_runner_error` /
 `on_timeout`) + the validator lane matrix and its channel mapping;
 the `runtime_context` declaration key; the `GateDecision` JSON schema
@@ -1922,20 +1946,23 @@ the draft's own commit).
 
 ### 11.4 Packets and flow mode
 
-Process note: P1 and P2 are pure ledger projections, independent of
-the draft — P1 may run while the draft round is open; P3 and P4
-anchor to ratified draft rows (README §4). P2 is the declared sizing
-split candidate (template §2 step 0; a split is the loop's — sizing,
-not scope).
+Draft reference (§1.3 convention): `contracts/ch11-gate-format-contract.md`
+— its `ratified <date>` completion is recorded at draft close.
+Process note: the draft round runs FIRST, before any packet (README
+§4). P1's CONTENT is a pure ledger projection with no format surface;
+P2 anchors to the draft for the module home + the `ports/gate.ts`
+reconciliation; P3 and P4 anchor to ratified draft rows. P2 is the
+declared sizing split candidate (template §2 step 0; a split is the
+loop's — sizing, not scope).
 
 | Packet | Content | Mode |
 |---|---|---|
 | ch11-P1 | the L1 authority slice: `expected_role` on the envelope (warrant), `admit_loaded` consolidation with the live state rung, `capability()`, the three L1 rejections + `not_active` driven, the l1 golden trace, the dev `inject` schema extension | flag-free approve → autonomous build (measurement; the §5.5 fallbacks stand); predicted: projection (source: l1-pseudocode + ledger §2/§3) |
-| ch11-P2 | the L2 gate core: template gate bindings + static registry + the gate rung + `gate_projection` + the `round` birth (schema bump, fenced) + the two inline evaluators + `gate_decisions` provenance + the three L2 rejections + the l2 golden trace | flag-free approve → autonomous build; predicted: projection (source: l2-pseudocode + ledger §2/§3/§4) — the module-home residual is expected as an ADR-lane flag |
-| ch11-P3 | the L2a contract: `validate_gate_config` at create, the `ProcessGateRunner` port + testkit fake, classification (`classify_process_result` / `runner_outcome`), the three L2a rejections, the minimal runtime-context representation, the l2a golden trace | flag-free approve → autonomous build; predicted: projection (basis: the chapter draft — pending ratification) |
+| ch11-P2 | the L2 gate core: template gate bindings + static registry + the gate rung + `gate_projection` + the ch-4 provisional `round` aligned to its L2 contract (predicate declared, checker added) + the `gate_decisions` schema bump (fenced) + the two inline evaluators + the three L2 rejections + the l2 golden trace | flag-free approve → autonomous build (measurement; the §5.5 fallbacks stand); predicted: projection (basis: l2-pseudocode + ledger §2/§3/§4 + the chapter draft [module home, `ports/gate.ts` reconciliation] — pending ratification) |
+| ch11-P3 | the L2a contract: `validate_gate_config` at create, the `ProcessGateRunner` port + the ledger-shaped six-outcome testkit fixture drive, classification (`classify_process_result` / `runner_outcome`), the three L2a rejections, the minimal runtime-context representation, the l2a golden trace | flag-free approve → autonomous build; predicted: projection (basis: the chapter draft — pending ratification) |
 | ch11-P4 | the format extension: YAML gate declarations + process-config keys + the `runtime_context` key + the validator lanes driven + the CLI validate extension + template-fixture updates | flag-free approve → autonomous build; predicted: projection (basis: the chapter draft — pending ratification) |
 
-Order: draft ∥ P1 → P2 → P3 → P4. One packet = packet file + code +
+Order: draft → P1 → P2 → P3 → P4. One packet = packet file + code +
 tests in ONE commit.
 
 ### 11.5 Deliverables and DoD
@@ -1950,8 +1977,9 @@ DoD: the packets' contract tests green with claim-derived negatives
 EXECUTED; the three golden traces green; the drift suite green (the
 85 names were carried from ch 4 — this chapter makes nine more of
 them BEHAVE; the unit-map lock extends with the 19 ids); invariant
-dispositions realized per the ch-5 map (the checker in
-storeCheckers); the schema bump behind the ADR-003 fence; coverage
+dispositions realized per the ch-5 map (both checkers in
+storeCheckers); the `gate_decisions` schema bump behind the ADR-003
+fence; coverage
 validation green; all v3 bridges + the FULL `pnpm ci:local` gate
 green; the module-home ADR `accepted` per its lane; the draft flipped
 `realized`-in-place with its `realized_map`; the ch-11 map row
