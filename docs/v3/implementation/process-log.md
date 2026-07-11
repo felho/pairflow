@@ -1608,3 +1608,26 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   INVERSE of ch7-P4's over-count: parametrized lanes expand to
   per-form `it` bodies; the estimating convention still has no stable
   unit.
+
+- 2026-07-11 · ch8-P1 implementation arm (post-build, user-requested)
+  · THREE rounds, each earning its keep before the diminishing-returns
+  stop: R1 (verdict refine on 50f6d7af) caught the V15 CYCLE
+  SHORT-CIRCUIT — the build had generalized container-suppression to
+  the cycle precondition, hiding every co-present structural finding
+  (E2/C21 violation; the arm PROBED a cycle+defects combination the
+  suite lacked) — plus three watchpoints (toJSON shape leak, the
+  partial V5 grid, the V11 role-grammar cascade). R2 (the finder-lane
+  re-check on the fold, 53fb8913) caught the fold's OWN regression:
+  with accumulation the walk runs on cyclic graphs, and
+  JSON.stringify at arbitrary-value message sites threw on a cyclic
+  scalar-slot value — the "fix scoped to the finding just caught"
+  class, live twice in one packet. R3 (scoped, 077f9ee9): zero
+  findings, its own cyclic map+list probes green in all four slots.
+  Aftermath commits 53fb8913 + 077f9ee9, audits green at their own
+  shas, reconciliation passes ran pre-commit both rounds (the ch7-P4
+  skip lesson held). 515 → 534 tests. Boundary-review material: the
+  arm caught TWO real defects post-build that the in-session build
+  loop missed — the post-build arm leg is earning standing-leg
+  status; and the walk-invariant lesson (a suppression removal
+  changes what inputs downstream code sees — re-derive EVERY site's
+  safety under the new invariant, not just the named one).
