@@ -752,6 +752,40 @@ slice held: units 5/158, invariants 8/116, traces 2/20),
 `v3:packet-lint`, `v3:adr-check` (13 ADRs; no new trigger — ADR-011
 and ADR-012 pre-accepted by their ratification acts).
 
+**Aftermath (2026-07-11, the external arm's POST-BUILD implementation
+review — user-requested; verdict `refine` on the build sha `50f6d7af`,
+HEAD-cited; fixed same day, 530 tests):** one fold-now defect + three
+watchpoints, all folded in ONE `fix(v3)` round, every file in the
+declared boundary (no aftermath extension needed):
+(1) **The V15 short-circuit defect (the substance catch):** the build
+implemented the cycle finding as a whole-stage short-circuit — against
+E2/C21's accumulation rule, whose suppression is CONTAINER-precondition
+only (the arm's probe: a cyclic `agentConfig` + a missing `start` + an
+unknown key returned ONLY the cycle finding). The fix: the cycle
+finding ACCUMULATES — the structural walk is constant-depth (it never
+traverses the value graph; `agentConfig` rides untraversed), so it is
+hang-safe on a cyclic graph, and a cycle still guarantees a nonempty
+finding set (E3 holds). Driven by the new combination lane (cycle +
+V13 defect + unknown key → all three findings).
+(2) `TemplateLoadError.toJSON()` added: the naive `JSON.stringify`
+path now emits EXACTLY the E5 `{stage, findings}` shape (the
+enumerable `name` own-property had leaked); driven at the store suite.
+(3) The V5 id-class × form grid completed TABLE-DRIVEN (4 classes ×
+whitespace/dot/empty + the NBSP representative), replacing the partial
+per-class sampling the arm flagged.
+(4) The V11 reliability rule extended: a grammar-invalid role token on
+EITHER surface (a step's `role` field or a declared `roles` key)
+suppresses V11 — the same one-defect-one-finding-set spirit as E2's
+container rule, stated here as an implementation-level refinement
+(canonical rows untouched: E2's ratified suppression set is
+container-precondition; this extension is narrower than a row change
+and is recorded for the boundary review). Driven by the exact-path
+suppression lane.
+Bridges re-verified green at the aftermath close: 530 tests,
+typecheck, lint, coverage validation, packet-lint, adr-check; the
+delta-scoped reconciliation pass ran before the aftermath commit (the
+ch7-P4 round-1 skip lesson).
+
 ```json
 {
   "packet_metrics": {
@@ -762,7 +796,7 @@ and ADR-012 pre-accepted by their ratification acts).
       "discovered": "projection"
     },
     "provenance": { "anchored": 36, "derived": 3, "new_decision": 1 },
-    "rounds": { "review": 2, "doc_refinement": 0, "implementation": 1 },
+    "rounds": { "review": 2, "doc_refinement": 0, "implementation": 2 },
     "stops": [
       {
         "type": "4:flagged-approve",
@@ -775,10 +809,15 @@ and ADR-012 pre-accepted by their ratification acts).
         "found_at": "approve",
         "what": "S1's 'no out-of-directory access exists by construction' overclaimed — a symlink listing entry is a byte-exact match and readFile follows it outside the dir; and the 'non-integer version resolves null' example was false when a matching file exists (typed rejection per invalid-is-not-absent)",
         "why_missed": "twelve Opus lens passes accepted the by-construction REF-traversal argument as covering the whole out-of-directory claim — the directory-CONTENT axis (a planted symlink) sat outside every lens's frame; the arm probed the substrate instead of judging the argument. Folded PRE-approve: the packet was corrected before any code existed — zero code impact"
+      },
+      {
+        "found_at": "code-review",
+        "what": "the V15 cycle finding SHORT-CIRCUITED the whole validate stage — against E2/C21's accumulation rule (suppression is container-precondition only): a cyclic agentConfig hid every other structural finding",
+        "why_missed": "the build generalized the container-suppression pattern to the cycle precondition ('the walk presupposes an acyclic graph') — but the structural walk is constant-depth and never traverses the value graph, so the presupposition was false; no in-session check re-derived it, and the arm's post-build probe staged the cycle+defects COMBINATION the suite lacked"
       }
     ],
     "learned": "the first measurement-stage packet: an agent-invoked external arm run PRE-approve caught two substrate overclaims twelve internal Opus passes missed; the build ran first-execution green on every yaml lane — a ratified draft's probe record transfers to code with zero behavioral surprises",
-    "baseline_note": "rounds.review = 2 counted panel rounds (R1 full; R2 targeted clean after the content fold); the two closes, the lens-4 reconciliations, and the arm's find + re-check are chronicled above and do not count (reconciliations never count; the arm is the phase-2 adversarial leg). prediction: the invention->projection gap is flag 2's boundary-review question — the draft phase absorbed the memo-born decisions between the ratification-time prediction and authoring. detector_misses.found_at = 'approve' (the closed enum's nearest member): the finder was the EXTERNAL ARM run pre-approve at the user's ask — a NEW lane the enum predates (the ch7-P4 misses arrived post-build via code-review); whether the enum gains an external-arm member is boundary-review material. The miss fed the S1 fold before approve and before build. implementation = 1: one build round — mechanical type/lint residue only (four readonly casts, one optional chain, two auto-fixed assertions, one NBSP escape), zero behavioral test failures. 401 -> 515 (+114 vs the ~55 estimate: parametrized lanes expand to per-form it bodies — the inverse of ch7-P4's over-count, recorded for the estimating convention)."
+    "baseline_note": "rounds.review = 2 counted panel rounds (R1 full; R2 targeted clean after the content fold); the two closes, the lens-4 reconciliations, and the arm's find + re-check are chronicled above and do not count (reconciliations never count; the arm is the phase-2 adversarial leg). prediction: the invention->projection gap is flag 2's boundary-review question — the draft phase absorbed the memo-born decisions between the ratification-time prediction and authoring. detector_misses.found_at = 'approve' (the closed enum's nearest member): the finder was the EXTERNAL ARM run pre-approve at the user's ask — a NEW lane the enum predates (the ch7-P4 misses arrived post-build via code-review); whether the enum gains an external-arm member is boundary-review material. The miss fed the S1 fold before approve and before build. implementation = 2: the build round (mechanical type/lint residue only — four readonly casts, one optional chain, two auto-fixed assertions, one NBSP escape; zero behavioral test failures) + the same-day external-arm aftermath round (the V15 accumulation fix + toJSON + the V5 grid + the V11 reliability extension — 515 -> 530). 401 -> 515 at the build commit (+114 vs the ~55 estimate: parametrized lanes expand to per-form it bodies — the inverse of ch7-P4's over-count, recorded for the estimating convention). The second detector_misses entry is the post-build arm's substance catch (found_at code-review — the arm IS that lane post-build; its pre-approve run is the first entry's 'approve' lane)."
   }
 }
 ```

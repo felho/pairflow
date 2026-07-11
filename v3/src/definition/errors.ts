@@ -55,6 +55,17 @@ export class TemplateLoadError extends Error {
     this.stage = info.stage;
     this.findings = info.findings;
   }
+
+  /**
+   * The E5 machine shape holds on the SERIALIZATION surface too
+   * (aftermath fix, the external arm's catch: the enumerable `name`
+   * own-property leaked into JSON.stringify output). P2's CLI builds
+   * its doc from the fields either way; this makes the naive path
+   * emit exactly `{stage, findings}`.
+   */
+  toJSON(): TemplateLoadErrorInfo {
+    return { stage: this.stage, findings: this.findings };
+  }
 }
 
 /** E3 (draft C22): a template XOR an error result — nothing partial. */

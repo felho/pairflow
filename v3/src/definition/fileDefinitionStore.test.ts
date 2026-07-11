@@ -200,4 +200,12 @@ describe("E5 — the typed error's machine shape at the store surface", () => {
     const finding = err.findings[0];
     expect(Object.keys(finding as object).sort()).toStrictEqual(["code", "message", "path", "stage"]);
   });
+
+  it("serializes to EXACTLY {stage, findings} (aftermath — toJSON keeps E5's shape on the naive path)", async () => {
+    const dir = join(tempDir(), "missing");
+    const store = createFileDefinitionStore(dir);
+    const err = await expectReject(store.load({ id: "x", version: 1 }));
+    const serialized = JSON.parse(JSON.stringify(err)) as Record<string, unknown>;
+    expect(Object.keys(serialized).sort()).toStrictEqual(["findings", "stage"]);
+  });
 });

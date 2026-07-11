@@ -288,6 +288,58 @@ describe("V5 — the shared id/name grammar (no whitespace, no dot, nonempty)", 
     const err = expectValidateErr(template({ terminal: 'terminal:\n  - "do ne"\n' }));
     expect(JSON.stringify(err.findings)).toContain("do ne");
   });
+
+  // Aftermath (external-arm watchpoint): the FULL id-class × form grid,
+  // table-driven — every class rejects every form at its exact path.
+  const forms = [
+    ["whitespace", "a b"],
+    ["dot", "a.b"],
+    ["empty", ""],
+  ] as const;
+  for (const [formLabel, token] of forms) {
+    it(`grid: step id × ${formLabel}`, () => {
+      const err = expectValidateErr(
+        template({
+          start: `start: "${token}"\n`,
+          steps: `steps:\n  "${token}":\n    role: r\n    instruction: i\n    transitions: {}\n`,
+        }),
+      );
+      expect(paths(err)).toContain("steps");
+    });
+
+    it(`grid: terminal id × ${formLabel}`, () => {
+      const err = expectValidateErr(template({ terminal: `terminal:\n  - "${token}"\n` }));
+      expect(paths(err)).toContain("terminal");
+    });
+
+    it(`grid: role name × ${formLabel} (both surfaces; V11 suppressed, no cascade)`, () => {
+      const err = expectValidateErr(
+        template({
+          steps: `steps:\n  s:\n    role: "${token}"\n    instruction: i\n    transitions: {}\n`,
+          roles: `roles:\n  "${token}": {}\n`,
+        }),
+      );
+      const p = paths(err);
+      expect(p).toContain("steps.s.role");
+      expect(p).toContain("roles");
+      // No V11 noise from the same defect: only the two grammar findings.
+      expect(err.findings.length).toBe(2);
+    });
+
+    it(`grid: event type × ${formLabel}`, () => {
+      const err = expectValidateErr(
+        template({ steps: `steps:\n  s:\n    role: r\n    instruction: i\n    transitions:\n      "${token}": done\n` }),
+      );
+      expect(paths(err)).toContain("steps.s.transitions");
+    });
+  }
+
+  it("V11 suppression on a grammar-invalid USED role: exactly the grammar finding, no undeclared/unused cascade", () => {
+    const err = expectValidateErr(
+      template({ steps: 'steps:\n  s:\n    role: "a b"\n    instruction: i\n    transitions: {}\n' }),
+    );
+    expect(paths(err)).toStrictEqual(["steps.s.role"]);
+  });
 });
 
 describe("V6 — instruction rules (no normalization)", () => {
@@ -369,6 +421,20 @@ describe("V15 — acyclicity (cycle-safe validator)", () => {
     );
     expect(err.findings.length).toBeGreaterThanOrEqual(1);
     expect(JSON.stringify(err.findings)).toMatch(/cycl/i);
+  });
+
+  it("ACCUMULATES the cycle finding with the other structural lanes (aftermath — E2 has no cycle exemption)", () => {
+    const err = expectValidateErr(
+      template({
+        start: "start: nope\n",
+        steps: "steps:\n  s:\n    role: r\n    instruction: i\n    transitions: {}\n    agentConfig: &a\n      self: *a\n",
+      }) + "extra: 1\n",
+    );
+    const p = paths(err);
+    expect(JSON.stringify(err.findings)).toMatch(/cycl/i);
+    expect(p).toContain("start");
+    expect(p).toContain("extra");
+    expect(err.findings.length).toBe(3);
   });
 });
 

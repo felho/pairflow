@@ -113,12 +113,6 @@ function versionFinding(doc: Document, source: string, resolved: unknown): Valid
 }
 
 export function validateTemplate(value: unknown, doc: Document, source: string): ValidateOutcome {
-  // Cycle precondition first — the walk below presupposes an acyclic graph.
-  const cycle = findCycle(value, "$", new Set());
-  if (cycle) {
-    return { findings: [cycle] };
-  }
-
   // V1: the root container precondition — ONE finding for a non-map root.
   if (!isPlainMap(value)) {
     return {
@@ -128,6 +122,19 @@ export function validateTemplate(value: unknown, doc: Document, source: string):
 
   const findings: ValidationFinding[] = [];
   const root = value;
+
+  // V15: the cycle finding ACCUMULATES with the structural lanes
+  // (E2/C21 accumulation — aftermath fix, the external arm's catch:
+  // suppression is a CONTAINER-precondition rule and the cycle is not
+  // a container). The walk below is constant-depth (it never recurses
+  // into the value graph — agentConfig rides untraversed), so it is
+  // hang-safe on a cyclic graph; only findCycle itself recurses, with
+  // a path-scoped ancestor set. A cycle guarantees findings.length > 0,
+  // so no circular value can ride into a template (E3 holds).
+  const cycle = findCycle(value, "$", new Set());
+  if (cycle) {
+    findings.push(cycle);
+  }
 
   // V1: exact top-level keyset (missing at "$", unknown at its own path).
   for (const key of ROOT_KEYS) {
@@ -223,12 +230,13 @@ export function validateTemplate(value: unknown, doc: Document, source: string):
           const role = step["role"];
           const roleGrammar = idGrammarError("role name", role);
           if (roleGrammar) {
+            // A grammar-invalid role (string included) makes the
+            // used-set unreliable — running V11 over it would cascade
+            // a second finding from the same defect (aftermath fix).
             findings.push({ path: `${stepPath}.role`, message: roleGrammar });
-          }
-          if (typeof role === "string" && role.length > 0) {
-            usedRoles.add(role);
-          } else {
             usedRolesReliable = false;
+          } else {
+            usedRoles.add(role as string);
           }
         }
         // instruction (V6): nonempty string, NO normalization.
@@ -298,6 +306,7 @@ export function validateTemplate(value: unknown, doc: Document, source: string):
 
   // V10: roles — container precondition, entry keysets, defaultActor rule.
   let declaredRoles: string[] | undefined;
+  let declaredRolesReliable = true;
   const builtRoles: Record<string, { readonly defaultActor?: string }> = {};
   if ("roles" in root) {
     const roles = root["roles"];
@@ -308,7 +317,10 @@ export function validateTemplate(value: unknown, doc: Document, source: string):
       for (const name of declaredRoles) {
         const grammar = idGrammarError("role name", name);
         if (grammar) {
+          // The declared-side twin of the used-set rule: a
+          // grammar-invalid declared name suppresses V11 (aftermath).
           findings.push({ path: "roles", message: grammar });
+          declaredRolesReliable = false;
         }
         const entryPath = `roles.${name}`;
         const entry = roles[name];
@@ -353,8 +365,10 @@ export function validateTemplate(value: unknown, doc: Document, source: string):
   }
 
   // V11: keys(roles) == used roles, both directions — suppressed when
-  // the steps side is unreliable or the roles container failed.
-  if (declaredRoles && stepIds && usedRolesReliable) {
+  // EITHER role surface is unreliable (a broken step container, a
+  // missing or grammar-invalid role field, a grammar-invalid declared
+  // name) or the roles container failed.
+  if (declaredRoles && stepIds && usedRolesReliable && declaredRolesReliable) {
     for (const role of usedRoles) {
       if (!declaredRoles.includes(role)) {
         findings.push({ path: "roles", message: `role ${JSON.stringify(role)} is used by steps but not declared` });
