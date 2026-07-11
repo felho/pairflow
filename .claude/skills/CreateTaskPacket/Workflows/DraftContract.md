@@ -66,7 +66,21 @@ never an autonomous act.
 
 ### 4) Ratification (permanently human — never delegated, never inferred)
 
-1. Present the rows; the human's explicit act ratifies THE BYTES of a
+1. Present the rows WITH the **ratifier's digest** (adopted at the ch8
+   boundary, 2026-07-11 — the first live ratification's lesson): a
+   short list surfacing exactly the spots where HUMAN judgment carries
+   the most weight — the in-row DECIDED-HERE markers, deviations from
+   precedent, the deliberate non-rows (packet-time watchpoints), and
+   the panel's most-contested topics. Rationale (the user's own
+   articulation, honest-record class): for a dense draft, deep
+   coherence is not human-certifiable by reading — verification is
+   build-equivalent; the act's content is a contradiction-hunting
+   read + acceptance of the evidence chain + the GO, with the
+   residual coherence risk consciously carried to the build (where
+   the divergence stop and the aftermath channels own it). The digest
+   aims the human read at the decision-dense rows, where reading DOES
+   leverage judgment — never at coherence-checking, where it cannot.
+   The human's explicit act ratifies THE BYTES of a
    named content commit.
 2. **Two-commit choreography** (template §4): the content commit lands
    the final rows (status `draft`); the ratifying commit appends

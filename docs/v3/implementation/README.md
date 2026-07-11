@@ -26,6 +26,9 @@ cross-reference).
   `REV-*` registry §3).
 - `contracts/` — the chapter contract-drafts (the memo-born surfaces'
   decision home); their form authority is `contract-draft-template.md`.
+- `arm-pin.md` — the external arm's chapter-pinned model/effort pair
+  (the ReviewPacket §6 pin's source of truth; revised at chapter
+  boundaries only).
 
 ## 2. Binding inputs
 
@@ -332,7 +335,13 @@ mandatory threat-model judgment; `declined: out of threat model` is a
 live route. A completeness or sweep claim ("all N occurrences", "the
 only element not carried") is admissible only WITH its measurement —
 the defined scope and the command output that proves it; enumeration
-from memory is not a measurement. Three routes exist for ownership
+from memory is not a measurement, and a TRUNCATED measurement is not
+a measurement either: the output rides untruncated (or with the exact
+count of what the cut hides), and a truncation-SATURATED output — the
+hit count equals the cut limit, e.g. a `head -20` pipe returning
+exactly 20 lines — is itself the overflow signal that forces a re-run
+before any "full set" claim (adopted at the ch8 boundary, 2026-07-11;
+the ch8-P2 arm-gate-1 catch). Three routes exist for ownership
 misfit, plus `approve-ratified` — a decision-record MARKER (it
 routes nothing; it names WHERE a decision was ratified by the
 approve act — a resolved STOP verdict OR a below-Case-B new-decision
@@ -438,7 +447,13 @@ restated identically on AGENTS.md and the skill):** plan-chapter
 ratification; the model↔code divergence stop (§6); contract-draft
 ratification and RE-ratification (the intent-injection point — never
 delegated at any trust level, and never inferred from an intent
-statement: the act is explicit, on named bytes). The **first-of-a-kind
+statement: the act is explicit, on named bytes; the act's DEPTH is
+the human's risk call on the evidence chain — for a dense draft,
+deep coherence is build-equivalent to verify, so the act legitimately
+is a contradiction-hunting read + evidence-chain acceptance + GO,
+with the residual carried to the build's own stops; the ratifier's
+digest aims the read at the decision-dense rows — adopted at the ch8
+boundary, mechanics in DraftContract §4). The **first-of-a-kind
 rule**: the first packet of a new task class is human-approved
 regardless of trust stage. The **measurement rule**: "did a human catch
 new-decision content the detector did not flag?" is asked at the ch7
@@ -523,7 +538,16 @@ aggregation tooling is built until packet count justifies it.
   CI gate (`pnpm ci:local`) green** — the ROOT suite included, not just
   the v3 bridges (adopted at the ch-5 boundary, effective from chapter
   6: v3-only bridge runs let a stale root-side CI test sleep until the
-  next push) — **plus the three draft-close conditions:** ZERO
+  next push) — **plus the DOGFOODING checkpoint** (adopted at the ch8
+  boundary, 2026-07-11; effective from the ch8 close): the operator
+  surface driven BY HAND or script at least once before the close —
+  the "reality isn't what we assumed" class that test lanes
+  structurally miss; findings land as process-log lines. Once the
+  ch9 runner lives, the checkpoint includes a real-LLM basic-workflow
+  run (the tier-2 lane — CI journeys stay deterministic, template §2).
+  WAIVABLE per close by the USER's explicit act, recorded with the
+  close — never silently skipped — **plus the three draft-close
+  conditions:** ZERO
   reopened drafts (`check_packet.py --forbid-reopened`; unconditional
   — naturally vacuous when no draft exists); EVERY chapter-referenced
   contract-draft flipped `realized` (map filled + status flipped in

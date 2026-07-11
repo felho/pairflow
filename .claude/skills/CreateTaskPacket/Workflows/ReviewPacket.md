@@ -104,6 +104,15 @@ Probe + contested-probe corollary; the strong-word inventories)*
    NOT admissible. Corollary — CONTESTED probes: when two probes
    disagree, NO claim may stand on the contested premise — remove the
    premise (re-design the lane/fixture) or drive both environments.
+5. **Measurement re-run for completeness claims** (adopted at the ch8
+   boundary — the ch8-P2 arm-gate-1 catch) [R-UNTRUNCATED-SWEEP]: a
+   "full set / all N / nothing else" claim over the TREE is verified
+   by RE-RUNNING its defining measurement, untruncated — never by
+   reading the target's transcription of it. A truncation-SATURATED
+   transcript (hit count == the cut limit) is an automatic finding
+   until re-measured: the saturated cut is itself the overflow
+   signal. Scope: the canonical rows' completeness claims (cheap
+   greps), not every measurement.
 
 **Lens 2 — projection / delegation closure** *(owns: the content
 floor; the derived-row entailment attack; draft→packet semantic
@@ -146,7 +155,16 @@ sweep)*
 2. **Every canonical matrix lane is DRIVEN** by a named test
    obligation [R-MATRIX-LANES]. A lane declared "cannot occur" either
    leaves the matrix for an explicitly-marked non-lane note (with the
-   prior-contract proof cited) or gets driven.
+   prior-contract proof cited) or gets driven. **Sensitivity probe
+   (adopted at the ch8 boundary — the ch8-P2 arm-gate-2 catch)
+   [R-LANE-SENSITIVITY]: driven means ABLE TO FAIL.** Per driven
+   lane, name a plausible violation of the row's MEANING and check
+   the named test would CATCH it; a lane whose test cannot fail on
+   its row's violation is NOT driven — a finding. The ch8-P2 blind
+   classes to probe for: a keyset-only assert passing wrong CONTENT;
+   a single-form fixture blind to a split/ordering regression (the
+   one-`@` refs); a rule's stated-but-undriven half (missing vs
+   empty); a projected-field equality passing a full-row divergence.
 3. **Matrix Symmetry Gate**: an entrypoint pulled in on any
    error/failure lane needs its SUCCESS lane as an explicit
    no-emit/no-effect negative — or a stated out-of-scope decision. A
@@ -423,13 +441,101 @@ act, per gate). Elsewhere it stays an option:
 - **When:** at a pre-ratification/pre-approval STOP as an extra
   adversarial pass, or as the FINDER-LANE RERUN after an
   external-arm fold (README §5.5).
-- **How:** `codex exec - < <promptfile> > <outfile> 2>&1` from the
-  repo root, run in background (minutes-scale; the user's
-  `~/.codex/config.toml` defaults govern model and sandbox — do not
-  override). The prompt = the current STOP/pre-approval summary
-  VERBATIM + `pls review`; a re-check prompt additionally lists the
-  folded findings and the NEW basis hash and asks the verdict to
-  cite it.
+- **How (amended at the ch8 boundary, 2026-07-11 — the P2 runs'
+  lessons + the user's external-feedback round; supersedes the
+  "user defaults govern, run in background" form):**
+  1. **Byte guard BEFORE:** record HEAD; the target file's sha256;
+     the porcelain hash (`git status --porcelain=v1 -z | shasum`);
+     the FULL tracked-diff hash vs HEAD, STAGED INCLUDED
+     (`git diff --binary HEAD | shasum` — a plain `git diff` misses
+     the index); and EVERY untracked file's path + content sha256 —
+     canonical enumeration: `git ls-files --others
+     --exclude-standard -z`, each entry hashed in stable
+     null-delimited order (porcelain output may COLLAPSE untracked
+     directories; a path list alone is blind to an untracked file's
+     content change — the gate-1 target itself is untracked).
+  2. **Launch FOREGROUND** from the repo root with an explicit
+     10-minute tool timeout — NEVER `run_in_background` (both P2
+     kills were the background-task manager's, not the arm's; at a
+     mandatory gate, blocking is correct — nothing may proceed
+     without the verdict, and the main loop must not touch the
+     reviewed tree while the arm runs):
+     `codex exec --sandbox danger-full-access -m <pinned model>
+     -c model_reasoning_effort=<pinned effort>
+     -c approval_policy=never - < <promptfile>
+     > <outfile> 2>&1`
+     (the concrete tool config: Bash `timeout: 600000`,
+     `run_in_background` omitted/false). `<promptfile>` and
+     `<outfile>` live OUTSIDE the repository (the session
+     scratchpad) — an in-repo output file would let the arm's own
+     transcript trip the byte guard, turning a successful review
+     into a false STOP; the retry writes a SEPARATE outfile.
+  3. **The sandbox relaxation is a CONSCIOUS trust decision**, paired
+     with the prompt's mandatory READ-ONLY block ("do not edit,
+     format, install, generate, or commit repository files; tests may
+     write only their normal temporary runtime artifacts; missing
+     dependencies are an evidence gap — never install") and the byte
+     guard. Stated precisely: the byte guard verifies REPOSITORY
+     integrity only — it neither restricts nor detects reads or
+     writes OUTSIDE the repository; that residual exposure is the
+     trust decision. Whether `danger-full-access` actually clears the
+     tsx-IPC subprocess limit is MEASURED at its first use — never
+     assumed; until measured, the evidence-gap rule (item 9) carries.
+  4. **Model pinning (chapter-pinned policy — the user's 2026-07-11
+     decision):** the invocation pins model + reasoning effort
+     EXPLICITLY; the machine's current `~/.codex/config.toml` default
+     is never trusted (an operator's config-in-flux must not silently
+     swap the reviewer). The pin's SOURCE OF TRUTH is
+     `docs/v3/implementation/arm-pin.md` (current row; revised at
+     chapter boundaries only) — this workflow never hardcodes it.
+     PIN-MISMATCH RULE: an output header whose model/effort disagrees
+     with the current pin, OR whose approval policy is not `never`
+     (also pinned explicitly — `-c approval_policy=never`, never the
+     user config's) → the verdict is INVALID and the run counts
+     as an INFRA failure (item 8's retry ladder). Yield comparisons
+     are valid within one pin, never across.
+  5. **Byte guard AFTER:** re-take EVERY before-measurement — HEAD,
+     target sha256, porcelain hash, `git diff --binary HEAD` hash,
+     untracked path+content hashes — all unchanged; a clean-tree gate
+     additionally `git diff HEAD --exit-code` (index-aware) AND an
+     empty porcelain. ANY divergence → the verdict is INVALID + STOP.
+     The FIRST guard trip is the worktree-isolation hardening trigger
+     (isolation deferred by the user's decision, 2026-07-11).
+  6. **Record** the exit code and the exact model + reasoning effort
+     + approval policy FROM THE OUTPUT HEADER (transcript-verified)
+     in the gate record.
+  7. **Prompt shape — falsification-first:** the basis hash, the
+     contract surface, the READ-ONLY block, and the verdict schema
+     (hash-citing); NEVER the prior clean/approve narrative (an
+     anchoring risk) beyond the minimal hash chronicle the citation
+     requirement needs. A re-check prompt lists the folded findings +
+     the NEW basis hash and requires the verdict to cite it.
+  8. **Infra failure** (kill, transport, timeout, pin mismatch — not
+     a content verdict): ONE retry in a NEW session with a SEPARATE
+     output file (evidence preserved); BEFORE the retry, verify the
+     prior codex process has TERMINATED (two reviewers must never run
+     on the same tree); a second consecutive infra failure =
+     unavailable arm → STOP.
+  9. **Evidence gap:** a test the arm's environment cannot run is
+     named — test, command, exact error — and the arm may cite a
+     same-basis receipt ONLY if it carries the minimum fields: exact
+     commit/target hash, exact command, exit code, test count/result,
+     timestamp, runner provenance. The VERDICT declares the
+     non-self-reproduced evidence explicitly. Route precision: an
+     evidence gap is NOT a content finding — there is nothing to
+     fold; a receipt-less gap on a CRITICAL acceptance lane keeps
+     the GATE OPEN (no clean approve) until an adequate same-basis
+     receipt exists, and if the evidence cannot be obtained, that is
+     UNAVAILABLE VERIFICATION → STOP. Only an actual
+     product/packet/test defect folds. CRITICAL, bound (never
+     reviewer interpretation): a test the packet's acceptance/matrix
+     prescribes BY NAME, or a mandatory check of the README
+     chapter/packet DoD; an exploratory/adversarial probe is NOT
+     critical unless it reproduces a finding. The prompt never
+     pre-declares substitute evidence "fully acceptable".
+  10. **Yield accounting:** findings counted by GROUP with class
+     labels — product / packet-docs / test-evidence — the boundary
+     review's arm-yield metric.
 - **Rules:** the arm's verdict is admissible ONLY citing the basis
   hash (a verdict on stale bytes is no verdict); its findings fold
   as ORDINARY folds per README §5.5; the run and verdict enter the

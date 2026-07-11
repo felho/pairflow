@@ -246,7 +246,19 @@ PACKET_METRICS_OPTIONAL = {"baseline_note"}
 ROUNDS_KEYS = {"review", "doc_refinement", "implementation"}
 PREDICTION_KEYS = {"predicted", "reasoning", "discovered"}
 PREDICTION_CLASSES = {"projection", "invention"}
-FOUND_AT_VALUES = {"approve", "code-review", "architecture-review", "refinement", "implementation"}
+# arm-approve / arm-build-close: the mandatory external-arm gates'
+# own lanes (ch8 boundary, 2026-07-11 — gate-resolved so the boundary
+# review's arm-yield query is mechanical; pre-ch8 entries keep their
+# nearest-member values as dated records).
+FOUND_AT_VALUES = {
+    "approve",
+    "code-review",
+    "architecture-review",
+    "refinement",
+    "implementation",
+    "arm-approve",
+    "arm-build-close",
+}
 PROVENANCE_KEYS = {"anchored", "derived", "new_decision"}
 
 

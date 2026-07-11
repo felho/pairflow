@@ -111,7 +111,20 @@ rows carry a one-word PREDICTED class — `projection (source: …)` /
 `invention (memo-born)` — recorded AT ratification (a boundary-time
 retro-annotation is worthless); the authoring-time discovery is always
 the authority, and a prediction/discovery mismatch routes to a
-friction-log line. The same tables reference every chapter
+friction-log line. **Granularity (ratified at the ch8 boundary,
+2026-07-11 — the ch8-P1 flag-2 resolution):** (1) the prediction
+binds the packet-time RESIDUAL ad-hoc decision content — the
+D1-manifest the detector sees at the packet boundary; structural
+invention absorbed by a declared prerequisite artifact (the chapter's
+contract-draft) is the DRAFT's, not the packet's, so packets
+anchoring to a ratified draft are predicted `projection`; (2) the
+prediction NAMES ITS BASIS in the parenthetical, and a basis not yet
+ratified at prediction time (the chapter's own draft) marks the
+prediction as visibly CONDITIONAL — `projection (basis: the chapter
+draft — pending ratification)`; the enum stays two-valued, the basis
+note carries the ready-vs-pending distinction; (3) the prediction and
+the row's flow mode must be CONSISTENT — an invention-predicted row
+cannot declare flag-free autonomous mode. The same tables reference every chapter
 contract-draft with the `draft: …, ratified <date>` convention (the
 refs are REPEATABLE — the chapter's draft set is what the table
 references, mirrored by the `contracts/chN-*-contract.md` glob). From

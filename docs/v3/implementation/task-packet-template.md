@@ -451,6 +451,21 @@ lane-by-lane across rounds):
   COMBINATION lane staging both conditions at once — isolated lanes
   cannot falsify a reordered implementation (the ch7-P3 round-3 E3
   lesson).
+- **The activation-journey rule (adopted at the ch8 boundary,
+  2026-07-11 — the §8.9 P2 journey ratification generalized).** A
+  packet that wires previously-built foundation into a live path
+  reachable from a SHIPPED entrypoint ships at least one JOURNEY
+  SMOKE through that entrypoint: subprocess, production bindings,
+  the full lifecycle from the operator-authored input artifact to
+  the end-state reads (the ch8-P2 `journey.test.ts` is the
+  template). No shipped entrypoint touched → the rule does not
+  fire. **Determinism clause:** the journey runs with DETERMINISTIC
+  actors — a stub bound through the SHIPPED actor-configuration
+  surface is legal (in this system the production actor IS a
+  spawned command, so the stub is configuration, not test
+  machinery); an injection-borne test seam is not. Real-LLM runs
+  are a SEPARATE non-CI tier (the dogfooding class), never a CI
+  journey lane.
 
 ## 3. Standing review rules (the `REV-*` registry)
 

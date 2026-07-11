@@ -1591,12 +1591,30 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   decisions). Boundary-review question: does the predicted class bind
   the SURFACE's genesis or the packet-time manifest? Draft-phased
   chapters make the two systematically diverge.
+  → ADOPTED at the ch8 boundary (user, 2026-07-11): the packet-time
+  manifest — refined through the user's two-invention-type analysis
+  (structural invention absorbed by a declared prerequisite artifact
+  is the DRAFT's; the prediction forecasts the packet's RESIDUAL
+  ad-hoc decision content, i.e. the approve path). Codified in plan
+  §1.3 as three elements: residual-content binding; mandatory basis
+  note (a pending-draft basis = visibly conditional prediction; enum
+  stays two-valued — no tooling change); prediction/flow-mode
+  consistency. The P1 packet file stays untouched (dated record —
+  the mismatch is history).
 - 2026-07-11 · ch8-P1 friction (metrics enum) · the
   `detector_misses[].found_at` closed enum (approve /
   architecture-review / code-review / implementation / refinement)
   PREDATES the pre-approve external-arm lane — `approve` used as the
   nearest member, the arm named in the entry text. Boundary-review
   candidate: an `external-arm` enum member.
+  → ADOPTED at the ch8 boundary (user, 2026-07-11), gate-resolved:
+  TWO members — `arm-approve` (gate 1, the approve-bytes review) and
+  `arm-build-close` (gate 2, the implementation review) — join
+  FOUND_AT_VALUES in check_packet.py (the §5.5 arm-yield evaluation
+  is per gate class; a single `external-arm` member would push the
+  gate split back into text parsing). Existing entries stay as dated
+  nearest-member records — no re-labeling; the members bind from the
+  next packet on.
 - 2026-07-11 · ch8-P1 build · FIRST-EXECUTION GREEN on every
   yaml-substrate lane (the G gates, class-major + directive-heads
   ordering, the toJS guard, the cycle non-throw, the version
@@ -1645,10 +1663,32 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   packet (one that wires previously-built foundation into a live
   path) ships at least one journey smoke through the real entrypoint;
   the test-side twin of the foundation→activation split.
+  → ADOPTED at the ch8 boundary (user, 2026-07-11) WITH the
+  determinism clause (user-raised): journeys run with DETERMINISTIC
+  actors — a stub bound through the SHIPPED actor-config surface is
+  legal (the production actor IS a spawned command; the stub is
+  configuration, not test machinery), an injected seam is not;
+  real-LLM runs are a SEPARATE non-CI tier. Home: template §2
+  write-time disciplines + R-ACTIVATION-JOURNEY. CH9-PLANNING NOTE
+  (the user's general e2e intent, next instalment): the two-tier
+  taxonomy — tier 1 journey smoke (stub actors, every build, CI) =
+  "OUR parts work together"; tier 2 real-LLM basic workflow
+  (chapter-close / dogfooding cadence) = "the system meets the
+  world" (adapter/provider reality); the middle form (a real LLM
+  instructed to answer immediately) was considered and rejected for
+  CI — it keeps network/cost/nondeterminism while the intelligence
+  is stubbed anyway; what it uniquely tests (provider adapter) is
+  tier-2 material. The scriptable command-actor mechanics are ch9
+  design work.
   (3) BOUNDARY-REVIEW candidate: a DOGFOODING checkpoint at chapter
   closes from P2 on — the operator CLI driven by hand/script once per
   close; the "reality isn't what we assumed" class that test lanes
-  structurally miss. Context markers: ch9 (runner MVP, real actors)
+  structurally miss.
+  → ADOPTED at the ch8 boundary (user, 2026-07-11) into the README §6
+  chapter DoD, effective from the ch8 close, WITH the user's waive
+  clause: waivable per close by the USER's explicit act, recorded
+  with the close — never silently skipped. From ch9 on the checkpoint
+  carries the tier-2 real-LLM basic-workflow run. Context markers: ch9 (runner MVP, real actors)
   is the strong-sense e2e frontier the plan already stages; the user
   intends to bring the integration/e2e concept in GENERALLY — the
   boundary review should treat (2)-(3) as the first instalment, not
@@ -1689,6 +1729,12 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   explicit count of what the truncation hides). Boundary-review
   candidate: should the panel's lens duties require re-RUNNING (not
   re-reading) any measurement a completeness claim rides on?
+  → ADOPTED at the ch8 boundary (user, 2026-07-11): README §5.5
+  truncated-measurement clause WITH the user's sharpening (a
+  truncation-SATURATED output — hits == the cut limit — is itself
+  the overflow signal); R-UNTRUNCATED-SWEEP in LearnedRules; the
+  lens-1 measurement-re-run duty (ReviewPacket §1 duty 5), scoped to
+  canonical-row completeness claims.
 
 - 2026-07-11 · ch8-P2 — the FIRST autonomous flag-free packet closed
   end-to-end (the §5.5 ch8 row live): panel R1 full → 1 content +
@@ -1719,10 +1765,122 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   "every lane driven" is satisfiable by a test that cannot FAIL on
   its row's violation — should lens 3's duty add a sensitivity probe
   (per driven lane: name the violation the test would catch)?
+  → ADOPTED at the ch8 boundary (user, 2026-07-11): option A — the
+  lens-3 sensitivity probe folded into ReviewPacket §1 duty 2 +
+  R-LANE-SENSITIVITY in LearnedRules; the write-time half (per-lane
+  mutation spec in the packet) deliberately NOT adopted — revisit on
+  recurrence.
   Transitional-arm reliability notes: two MORE codex invocations were
   killed mid-run this packet (gate-2's first re-check among them;
   each retry completed) — 3 kills / 6 runs total; and the codex
+  → CORRECTION (measured 2026-07-11 at the boundary review — the
+  counts above were written FROM MEMORY, the R-UNTRUNCATED-SWEEP
+  lesson's own sibling; the measured record): SIX runs, TWO kills.
+  g1-find 10:19:23 KILLED@49s (019f5042-84bc); g1-find-retry
+  10:21:07–10:26:15 refine (019f5044-1afe); g1-recheck
+  10:34:14–10:36:44 approve (019f5050-1f0f); g2-find 10:56:52–
+  11:00:30 refine (019f5064-d499); g2-recheck 11:15:44 KILLED@57s
+  (019f5076-1a36); g2-recheck-retry 11:17:43–11:20:50 approve
+  (019f5077-e91b). Pattern: both kills at ~50–60s while completed
+  runs took 2.5–5 min — an EARLY external stop, not a mid-work crash;
+  cause undetermined from this session (operator-side stop vs harness
+  behavior). Full codex session ids retained for `codex resume` /
+  ~/.codex/sessions cross-checking.
   sandbox cannot execute the subprocess-based suites (tsx IPC EPERM
   in $TMPDIR) — the arm verified those lanes from source while the
   in-session 547/547 run carried the execution evidence. Both notes
   feed the boundary review's arm-yield evaluation.
+  → ADOPTED at the ch8 boundary (user, 2026-07-11, after two
+  external-feedback rounds — one run in the user's own Codex
+  session): the gates STAY (yield, correctly framed: both completed
+  P2 finders returned substance — 1 product + 1 packet-docs + 4
+  test-evidence items in 3 groups — and both re-checks closed clean;
+  the 2 kills were the CLAUDE-side background-task manager's, both
+  at ~50–60s, not arm failures). ReviewPacket §6 mechanics rewritten:
+  foreground launch with an explicit 10-min timeout (never
+  run_in_background — removes the kill class at its source); BYTE
+  guard before/after (HEAD + target sha256 + dirty-path set +
+  tracked-diff hash; status-only guarding is blind to an untracked
+  target's content — the feedback's catch), any divergence = invalid
+  verdict + STOP, first guard trip = the worktree-isolation hardening
+  trigger (isolation itself DEFERRED — the user's call:
+  rule-following models, git safety net, harden later);
+  `--sandbox danger-full-access` as a CONSCIOUS trust decision with
+  the mandatory READ-ONLY prompt block, its tsx-IPC effect MEASURED
+  at first use, never assumed; EXPLICIT model+effort pinning per
+  invocation (the user's addition — never the machine's
+  config-in-flux; chapter-pinned, current pin gpt-5.6-sol/high;
+  yield comparable only within a pin); one new-session infra retry
+  then STOP; evidence gaps declared in the verdict, never pre-blessed
+  in the prompt; yield counted by finding GROUP with
+  product/packet-docs/test-evidence classes. Deferred alongside
+  isolation: gate-2 subagent probes (same-model delegation adds no
+  cross-model independence — logged as a later option).
+  → SECOND feedback round folded (user's Codex session, 2026-07-11):
+  the byte guard COMPLETED — `git diff --binary HEAD` (staged
+  included) + porcelain hash + per-untracked-file CONTENT hashes; the
+  first form (`git diff | shasum` + path lists) was blind to staged
+  edits and to non-target untracked content, and the clean-tree check
+  gained the index-aware `git diff HEAD --exit-code` + empty
+  porcelain. Evidence-gap receipt minimum defined (exact hash,
+  command, exit code, counts, timestamp, runner provenance; a
+  receipt-less gap on a critical acceptance lane blocks a clean
+  approve). Pin-mismatch rule minted (observed header != pin →
+  invalid verdict, infra-retry ladder) and the pin's source of truth
+  moved OUT of the skill into docs/v3/implementation/arm-pin.md
+  (boundary-revised table; first row gpt-5.6-sol/high). The guard's
+  NON-containment stated (repo integrity only — outside-repo access
+  is the residual trust exposure). Retry preconditioned on verified
+  termination of the prior process. The foreground tool config made
+  concrete (Bash timeout 600000, no background).
+  → THIRD feedback round folded (same channel, 2026-07-11): prompt
+  and output files pinned OUTSIDE the repo (an in-repo outfile would
+  let the arm's own transcript trip the byte guard — a successful
+  review self-STOPping); the untracked enumeration made canonical
+  (`git ls-files --others --exclude-standard -z`, per-entry content
+  hashes, stable null-delimited order — porcelain collapses
+  untracked dirs); the receipt-less evidence-gap route made precise
+  (an evidence gap is NOT a content finding — nothing folds: the
+  gate stays OPEN until an adequate same-basis receipt exists,
+  unobtainable evidence = UNAVAILABLE VERIFICATION → STOP);
+  arm-pin.md registered in the README §1 "what lives here" list.
+  → FOURTH feedback round folded (same channel, 2026-07-11): the
+  approval policy pinned EXPLICITLY in the invocation
+  (`-c approval_policy=never` — never the user config's), recorded
+  from the output header, and a non-`never` header joins the
+  pin-mismatch → invalid-verdict/infra-retry rule; CRITICAL
+  acceptance lane BOUND (never reviewer interpretation): a test the
+  packet's acceptance/matrix prescribes by name, or a mandatory
+  README chapter/packet DoD check — exploratory/adversarial probes
+  are not critical unless they reproduce a finding.
+
+- 2026-07-11 · ch8 boundary — the draft-legibility question (queued
+  from the ch8 draft's metrics honest-record: ratification happened
+  on review-evidence trust, a skim) RESOLVED with the user's own
+  epistemic articulation: two decision types exist — full-parse-
+  decidable vs BUILD-EQUIVALENT verification. A dense draft's deep
+  coherence is not human-certifiable by reading; the ratification
+  act's honest content there is a contradiction-hunting read +
+  evidence-chain acceptance + GO, the residual coherence risk
+  consciously carried to the build (divergence stop + aftermath own
+  it — and ch8-P1's first-execution-green build was exactly that
+  residual coming back clean). ADOPTED: the depth-is-the-human's-
+  risk-call clause in README §5.5 + the RATIFIER'S DIGEST in
+  DraftContract §4 (the pre-ratification summary surfaces the
+  DECIDED-HERE rows, precedent deviations, deliberate non-rows, and
+  most-contested panel topics — aiming the human read where judgment
+  leverages, not at coherence-checking, where it cannot).
+
+- 2026-07-11 · ch8 boundary — the MEASUREMENT-RULE AUDIT (README
+  §5.5: "did a human catch new-decision content the detector did not
+  flag?", post-hoc on the autonomously-approved packets): the user
+  audited ch8-P2's full decision surface via a digest — the four
+  derived rows (T2 flag grammar incl. the default's preservation and
+  the coercion-tightening's behavior change; W4 per-verb catch sites;
+  M7 pin retarget; J2 zero-seams journey character) and the two
+  note-level choices (the EACCES root-guard skip, the 30s subprocess
+  timeout) — and CONCURRED with all six: zero human-caught
+  new-decision content. The detector's zero-new-decision verdict on
+  P2 stands audited; the first autonomous flag-free packet closes
+  AUDITED-CLEAN. This completes the ch8 boundary review: nine items,
+  nine verdicts (all logged inline above with → annotations).
