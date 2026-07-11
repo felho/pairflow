@@ -1923,3 +1923,30 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   recorded as a worktree-environment artifact); a fresh arm re-check
   on the integrated sha runs under the new §6 mechanics (first live
   use, incl. the danger-full-access tsx-IPC measurement).
+
+- 2026-07-11 · ch8-P1 round 6 + the §6 mechanics' FIRST LIVE USE. The
+  integrated-sha re-check (foreground, byte-guarded, pinned
+  gpt-5.6-sol/high, approval never, danger-full-access) TIMED OUT at
+  the 10-minute ceiling while composing its verdict — but its finder
+  output carried two catches, both reproduced by in-session probes
+  and folded as round 6 (commit be5108c9): the Object.is scalar
+  comparator was FINER than the Map's SameValueZero key identity
+  (0/-0 passed the gate, collapsed silently, first value lost), and
+  the per-step materialization memo broke cross-step aliased-graph
+  identity. Lesson minted in the packet: when two layers each look
+  locally correct, ask whether their EQUALITY RELATIONS compose — a
+  gate finer than its container is a silent-loss channel (the
+  R-DIMENSIONS -0 rung, re-minted on the KEY axis). The §6-retry
+  (scoped prompt with an explicit time budget) returned CLEAN —
+  APPROVE citing be5108c9, header pin verified, byte guard unchanged
+  before/after. First-use mechanics measurements: (1)
+  danger-full-access DID clear the tsx-IPC limit — the subprocess
+  suites executed inside the arm's sandbox (the §6 item-3 open
+  question, now measured); (2) the 10-minute ceiling is TIGHT when
+  the arm runs full suites — the retry's mitigations (an explicit
+  time budget + in-session receipts + scoped suites) worked and are
+  the recommended finder-prompt shape; (3) the foreground launch
+  eliminated the background-kill class (0 kills / 2 foreground runs
+  vs 2 kills / 6 background runs). The ch8-p1-key-hardening
+  experiment worktree/branch can be pruned at the user's leisure —
+  everything of value is re-landed (a925d668, be5108c9).
