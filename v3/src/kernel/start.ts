@@ -35,7 +35,9 @@ function resolveBinding(
     }
   }
   // Coverage over ALL declared steps' roles — a superset of "reachable"
-  // (strictly safe); reachability-aware refinement is ch-8 territory.
+  // (strictly safe). The format layer fixes declared==used strictly
+  // (draft C16, realized ch8-P1); reachability-aware relaxation stays
+  // deferred-additive (pointer retired at ch8-P2).
   for (const [stepId, step] of Object.entries(template.steps)) {
     if (binding[step.role] === undefined) {
       throw new Error(

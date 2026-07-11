@@ -5,9 +5,16 @@ import { deriveActorEmitOpId, deriveEmitDigest, isCanonicalizable } from "../../
 import { createDebugBundleExporter, redactPayloadsPolicy } from "../../floor/index.js";
 import { createIngress } from "../../ingress/index.js";
 import { createKernel } from "../../kernel/index.js";
+import {
+  createFileDefinitionStore,
+  loadTemplate,
+  TemplateLoadError,
+} from "../../definition/index.js";
 import type { TraceFixture } from "../../testkit/index.js";
 import {
   devPassthroughRedactionPolicy,
+  fixtureDefinitionStore,
+  fixtureTemplate,
   replayTrace,
   TraceMismatchError,
 } from "../../testkit/index.js";
@@ -18,6 +25,8 @@ import {
   notFound,
   parseNonNegativeSafeInt,
   requireInstanceId,
+  resolveTemplatesDir,
+  toTemplateInvalid,
   usage,
   withDiagStore,
   withStoreAndDiag,
@@ -25,14 +34,14 @@ import {
 import { CliError, EXIT } from "../contract.js";
 import type { CliDeps } from "../runtime.js";
 import { productionDeps } from "../runtime.js";
-import { builtinDefinitionStore, builtinTemplate } from "../templates.js";
 import { DiagUnavailableError, noopDiagnosticsSink } from "../../diag/index.js";
 
 /**
  * The DEV entrypoint (plan §6.5, packet ch6-P4b; ADR-009 dev CLI
  * boundary): the ONE graph that may import the testkit. Verbs:
- * bundle [--passthrough] · inject · replay · diag (the global cursor
- * dump — packet ch7-P4). Shares the dispatch shell, the channel rule,
+ * bundle [--passthrough] · inject · replay · validate (one file
+ * through the load pipeline — packet ch8-P2) · diag (the global
+ * cursor dump — packet ch7-P4). Shares the dispatch shell, the channel rule,
  * and the error-doc contract with the normal CLI (cli/common.ts) —
  * the contracts cannot fork.
  *
@@ -203,12 +212,19 @@ async function verbInject(ctx: VerbContext): Promise<number> {
     throw usage("MissingInstance", "--instance <id> is required");
   }
   const steps = validateInjectFile(await readJsonFile(ctx, "file"));
-  return withStoreAndDiag(ctx, async (handle, diag) => {
+  const definitions = createFileDefinitionStore(
+    resolveTemplatesDir(flagString(ctx, "templates-dir"), ctx.deps),
+  );
+  // W4 (packet ch8-P2): inject first touches the template INSIDE
+  // kernel.handle — the typed error surfaces at the ingress.submit
+  // await below; the type-based outer catch maps it there.
+  try {
+  return await withStoreAndDiag(ctx, async (handle, diag) => {
     // V5 (ch7-P4): the store-backed sink on the derived path, BARE
     // (REV-DIAG-FAILOPEN) — inject stages through the real channel.
     const kernel = createKernel({
       store: handle.store,
-      definitions: builtinDefinitionStore(),
+      definitions,
       time: ctx.deps.time,
       digest: deriveEmitDigest,
       diag: diag.sink,
@@ -240,6 +256,9 @@ async function verbInject(ctx: VerbContext): Promise<number> {
     }
     return EXIT.ok;
   });
+  } catch (error) {
+    throw toTemplateInvalid(error);
+  }
 }
 
 // ── replay: hermetic golden-trace diagnostics ────────────────────────
@@ -412,10 +431,13 @@ async function verbReplay(ctx: VerbContext): Promise<number> {
   // neither reads nor pollutes a user DB (dev config matrix).
   const handle = ctx.deps.openStore(":memory:", ctx.deps.time);
   try {
-    const template = builtinTemplate();
+    // C37 (packet ch8-P2, M4): the builtin retired — replay repoints to
+    // the testkit fixture (itself equality-pinned to the canonical
+    // file) and stays OUTSIDE the templates-dir lane (hermetic).
+    const template = fixtureTemplate();
     const kernel = createKernel({
       store: handle.store,
-      definitions: builtinDefinitionStore(),
+      definitions: fixtureDefinitionStore(template),
       time: ctx.deps.time,
       digest: deriveEmitDigest,
       diag: noopDiagnosticsSink,
@@ -445,6 +467,45 @@ async function verbReplay(ctx: VerbContext): Promise<number> {
   } finally {
     handle.close();
   }
+}
+
+// ── validate: one file through the load pipeline (packet ch8-P2, D) ──
+
+/**
+ * dev `validate <path>` (draft C31; packet ch8-P2 D1–D5): exactly one
+ * file through the full P1 load pipeline. Takes ONLY the positional —
+ * no --db, no --templates-dir (strict parse rejects flags). The OS
+ * read is a PRE-PIPELINE input gate (usage 2 — a path is operator
+ * input; the readJsonFile input-error CLASS, cited for the class
+ * only): raw BYTES feed loadTemplate so the strict-decode read stage
+ * can fire — never a lossy utf8 pre-decode. Content-invalid at any
+ * stage → exit 1, the ONE TemplateInvalid doc, details = the
+ * {stage, findings} machine shape (the checker verb's semantic
+ * verdict — the P4b TraceMismatchError precedent).
+ */
+async function verbValidate(ctx: VerbContext): Promise<number> {
+  const path = ctx.positionals[0];
+  if (path === undefined || path === "") {
+    throw usage("MissingFile", "a <path> positional argument is required");
+  }
+  let bytes: Uint8Array;
+  try {
+    bytes = new Uint8Array(await readFile(path));
+  } catch (error) {
+    throw usage(
+      "UnreadableFile",
+      `cannot read '${path}': ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+  const result = loadTemplate(bytes, { path });
+  if (!result.ok) {
+    // Lift the result info into the canonical carrier so the doc is
+    // byte-identical in shape to the W-lane surfacing (C31: "the SAME
+    // TemplateInvalid error doc").
+    throw toTemplateInvalid(new TemplateLoadError(result.error));
+  }
+  ctx.sinks.out(JSON.stringify({ valid: true, ref: result.template.ref }));
+  return EXIT.ok;
 }
 
 // ── diag: the global cursor dump (packet ch7-P4, V3/F3/F4) ───────────
@@ -478,8 +539,16 @@ async function verbDiag(ctx: VerbContext): Promise<number> {
 
 const VERB_OPTIONS: Record<string, VerbOptions> = {
   bundle: { db: { type: "string" }, passthrough: { type: "boolean" } },
-  inject: { db: { type: "string" }, instance: { type: "string" }, file: { type: "string" } },
+  inject: {
+    db: { type: "string" },
+    instance: { type: "string" },
+    file: { type: "string" },
+    "templates-dir": { type: "string" },
+  },
   replay: { file: { type: "string" } },
+  // D1: validate takes ONLY the <path> positional — zero flags; the
+  // strict parse rejects --db/--templates-dir as usage.
+  validate: {},
   diag: { db: { type: "string" }, after: { type: "string" } },
 };
 
@@ -487,6 +556,7 @@ const VERBS: Record<string, VerbHandler> = {
   bundle: verbDevBundle,
   inject: verbInject,
   replay: verbReplay,
+  validate: verbValidate,
   diag: verbDiag,
 };
 

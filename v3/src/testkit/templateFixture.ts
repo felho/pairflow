@@ -2,10 +2,12 @@ import type { TemplateRef, WorkflowTemplate } from "../domain/index.js";
 import type { DefinitionStore } from "../ports/definition.js";
 
 /**
- * MD-1 — declared migration debt (plan §1.3): the walking skeleton
- * instantiates from this FIXTURE-FORM template so the skeleton stays
- * thin. The canonical authoring format lands in chapter 8, which MUST
- * migrate this fixture onto it and retire MD-1.
+ * MD-1 RETIRED at ch8-P2 (2026-07-11): the canonical authoring file
+ * `v3/templates/local-pair-v0@1.yaml` is the SINGLE source of this
+ * template. This fixture STAYS for the kit's own consumers and is
+ * equality-pinned to the canonical file's parsed form FROM TESTS
+ * (`templateFixture.test.ts` — the kit itself never imports
+ * `definition/`; the ADR-005 stance is untouched).
  *
  * Shape: the model's local-pair-v0 — implement ⇄ review with
  * PASS/CONVERGED navigation, defaults implementer→codex,

@@ -1,6 +1,8 @@
+import { readdirSync } from "node:fs";
 import { parseArgs } from "node:util";
 
 import type { DiagStoreHandle } from "../diag/index.js";
+import { TemplateLoadError } from "../definition/index.js";
 import type { StoreHandle } from "../store/index.js";
 import { CliError, exitCodeFor, toErrorDoc } from "./contract.js";
 import type { CliDeps } from "./runtime.js";
@@ -61,6 +63,49 @@ export function openStoreOrInternal(path: string, deps: CliDeps): StoreHandle {
       `store open failed (fail closed): ${error instanceof Error ? error.message : String(error)}`,
     );
   }
+}
+
+/** W2 (packet ch8-P2; draft C38/C31): a typed load error surfaces as
+ * the ONE TemplateInvalid doc — details = the E5 {stage, findings}
+ * shape VERBATIM, never a raw internal wrap. Everything else passes
+ * through unchanged (the kernel's absent-at-handle integrity throw
+ * stays its own internal doc — W3). ONE mapping, PER-VERB catch
+ * sites (W4): start maps at its pre-load+kernel body, submit and
+ * dev inject at their ingress.submit awaits — never one shared
+ * catch site. */
+export function toTemplateInvalid(error: unknown): unknown {
+  return error instanceof TemplateLoadError
+    ? new CliError("internal", "TemplateInvalid", error.message, {
+        stage: error.stage,
+        findings: error.findings,
+      })
+    : error;
+}
+
+/** The templates-dir config lane (packet ch8-P2, A1/A2; draft C29):
+ * --templates-dir > PAIRFLOW_V3_TEMPLATES env; missing/empty = usage
+ * (exit 2). A configured dir that cannot be LISTED (absent, not a
+ * directory, unreadable) is ALSO usage — the ratified deviation from
+ * the ch6 store-open half: a templates dir is a read-only LOOKUP
+ * location, not the fail-closed write substrate. Checked EAGERLY at
+ * wiring, so a bad dir exits 2 BEFORE any kernel handle. */
+export function resolveTemplatesDir(flag: string | undefined, deps: CliDeps): string {
+  const dir = flag ?? deps.env["PAIRFLOW_V3_TEMPLATES"];
+  if (dir === undefined || dir === "") {
+    throw usage(
+      "MissingTemplatesDir",
+      "no templates directory: pass --templates-dir <path> or set PAIRFLOW_V3_TEMPLATES",
+    );
+  }
+  try {
+    readdirSync(dir);
+  } catch (error) {
+    throw usage(
+      "InvalidTemplatesDir",
+      `templates directory '${dir}' cannot be listed: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+  return dir;
 }
 
 export function parseNonNegativeSafeInt(raw: string, flag: string): number {

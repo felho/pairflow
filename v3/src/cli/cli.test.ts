@@ -1,5 +1,13 @@
 import { execFile } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -58,7 +66,12 @@ function testDeps(options: TestDepsOptions = {}): CliDeps {
     },
     nonceSource: options.nonce ?? (() => `nonce-${String((ids += 1))}`),
     tailWait: () => createScriptedTailWait(options.tailSteps ?? []).wait,
-    env: options.env ?? {},
+    // The A4 sweep (packet ch8-P2): the builtin store retired — every
+    // start/submit needs the templates-dir lane; the default deps ride
+    // the ENV leg on the repo's canonical templates dir (A1's env leg,
+    // exercised by every seeded test). Tests overriding env re-state it
+    // (or deliberately omit it — the A1 missing lane).
+    env: options.env ?? { PAIRFLOW_V3_TEMPLATES: join(process.cwd(), "templates") },
   };
 }
 
@@ -797,13 +810,232 @@ describe("cli — write-path wiring + separation (packet ch7-P4: V5/M11/C3/dimen
   });
 });
 
+// ── packet ch8-P2: the templates-dir lane + write-lane dispositions ──
+
+const REPO_TEMPLATES = join(process.cwd(), "templates");
+const CANONICAL_BYTES = (): string =>
+  readFileSync(join(REPO_TEMPLATES, "local-pair-v0@1.yaml"), "utf8");
+
+/** Stages RAW yaml text files into a fresh temp templates dir
+ * (R-RAW-FIXTURES: hostile values ride raw text, never a serializer). */
+function stageTemplates(files: Readonly<Record<string, string>>): string {
+  const dir = mkdtempSync(join(tmpdir(), "v3-tpl-"));
+  dirs.push(dir);
+  for (const [name, body] of Object.entries(files)) {
+    writeFileSync(join(dir, name), body);
+  }
+  return dir;
+}
+
+describe("cli — the templates-dir config lane (packet ch8-P2: A1/A2/A3)", () => {
+  it("A1: --templates-dir beats env; env-only works; both missing → usage 2 MissingTemplatesDir", async () => {
+    // flag beats env: env points at an EMPTY dir (a miss there would be
+    // exit 3), the flag at the repo dir → the flag's dir served.
+    const emptyDir = stageTemplates({});
+    const flagWins = await run(
+      ["start", "--db", tempDbPath(), "--task", "t", "--templates-dir", REPO_TEMPLATES],
+      testDeps({ env: { PAIRFLOW_V3_TEMPLATES: emptyDir } }),
+    );
+    expect(flagWins.code).toBe(EXIT.ok);
+
+    // env-only (the leg every seeded test rides via the default deps),
+    // explicit here:
+    const envOnly = await run(
+      ["start", "--db", tempDbPath(), "--task", "t"],
+      testDeps({ env: { PAIRFLOW_V3_TEMPLATES: REPO_TEMPLATES } }),
+    );
+    expect(envOnly.code).toBe(EXIT.ok);
+
+    // both missing → usage 2 with the A1 doc name:
+    const missing = await run(
+      ["start", "--db", tempDbPath(), "--task", "t"],
+      testDeps({ env: {} }),
+    );
+    const err = errorDoc(missing);
+    expect(missing.code).toBe(EXIT.usage);
+    expect(err.name).toBe("MissingTemplatesDir");
+  });
+
+  it("A2: unlistable dir (absent / a FILE / unreadable) → usage 2 InvalidTemplatesDir, EAGERLY — no store write, no diag file", async () => {
+    const scratch = mkdtempSync(join(tmpdir(), "v3-tpl-a2-"));
+    dirs.push(scratch);
+    const absent = join(scratch, "nope");
+    const fileAtPath = join(scratch, "file-not-dir");
+    writeFileSync(fileAtPath, "not a directory");
+    const forms = [absent, fileAtPath];
+    // The unreadable form is root-guarded (packet note 7): uid 0
+    // bypasses permission checks and the lane is unstageable there.
+    const canRestrict = typeof process.getuid === "function" && process.getuid() !== 0;
+    if (canRestrict) {
+      const unreadable = join(scratch, "locked");
+      mkdirSync(unreadable);
+      chmodSync(unreadable, 0o000);
+      forms.push(unreadable);
+    }
+    for (const form of forms) {
+      const db = tempDbPath();
+      const res = await run(
+        ["start", "--db", db, "--task", "t", "--templates-dir", form],
+        testDeps(),
+      );
+      const err = errorDoc(res);
+      expect(res.code).toBe(EXIT.usage);
+      expect(err.name).toBe("InvalidTemplatesDir");
+      // EAGER (A2): exit 2 fired BEFORE any kernel effect — the run
+      // store and the derived diag file were never created.
+      expect(existsSync(db)).toBe(false);
+      expect(existsSync(diagPathOf(db))).toBe(false);
+    }
+    if (canRestrict) {
+      chmodSync(join(scratch, "locked"), 0o755);
+    }
+  });
+
+  it("A3: --templates-dir is REJECTED by strict parse on unbound verbs (read verbs take no template config)", async () => {
+    const db = tempDbPath();
+    assertErrorContract(
+      await run(["list", "--db", db, "--templates-dir", REPO_TEMPLATES], testDeps()),
+      "usage",
+      EXIT.usage,
+    );
+    assertErrorContract(
+      await run(["tail", "x", "--db", db, "--templates-dir", REPO_TEMPLATES], testDeps()),
+      "usage",
+      EXIT.usage,
+    );
+  });
+});
+
+describe("cli — the pinned --template ref grammar (packet ch8-P2: T1/T2)", () => {
+  it("T2 ladder: source-form negatives → usage 2; lexical positives reach the store (miss = 3); id not prevalidated", async () => {
+    // Negatives: the version half mirrors C8's source grammar — plus
+    // the safe-integer BELT (passes the regex, fails safe-int).
+    for (const bad of [
+      "x", "@1", "x@", "x@0", "x@-1", "x@+1", "x@01", "x@1.0",
+      "x@0x10", "x@1e2", "x@ 1", "x@'1'", "x@9007199254740993",
+    ]) {
+      const res = await run(
+        ["start", "--db", tempDbPath(), "--task", "t", "--template", bad],
+        testDeps(),
+      );
+      const err = errorDoc(res);
+      expect(res.code).toBe(EXIT.usage);
+      expect(err.name).toBe("InvalidTemplateRef");
+    }
+    // Positives past the parse (incl. the safe boundary): the repo dir
+    // has no such file → UnknownTemplate 3 proves the parse ACCEPTED.
+    for (const good of ["x@10", "x@9007199254740991"]) {
+      const res = await run(
+        ["start", "--db", tempDbPath(), "--task", "t", "--template", good],
+        testDeps(),
+      );
+      const err = errorDoc(res);
+      expect(res.code).toBe(EXIT.notFound);
+      expect(err.name).toBe("UnknownTemplate");
+    }
+    // The id half is NOT prevalidated (S1 no-prevalidation): an
+    // off-grammar id can only MISS — never open outside the dir.
+    const trav = await run(
+      ["start", "--db", tempDbPath(), "--task", "t", "--template", "../evil@1"],
+      testDeps(),
+    );
+    expect(trav.code).toBe(EXIT.notFound);
+  });
+});
+
+describe("cli — write-lane dispositions (packet ch8-P2: W1/W2/W3/W4)", () => {
+  it("W1/W2 at start: present-but-invalid → TemplateInvalid 1 with the exact {stage, findings} details; absent → 3", async () => {
+    const dir = stageTemplates({
+      "local-pair-v0@1.yaml": `${CANONICAL_BYTES()}kind: nope\n`,
+    });
+    const res = await run(
+      ["start", "--db", tempDbPath(), "--task", "t", "--templates-dir", dir],
+      testDeps(),
+    );
+    const err = errorDoc(res);
+    expect(res.code).toBe(EXIT.internal);
+    expect(err.class).toBe("internal");
+    expect(err.name).toBe("TemplateInvalid");
+    const details = err.details as { stage: string; findings: unknown[] };
+    expect(Object.keys(err.details ?? {}).sort()).toEqual(["findings", "stage"]);
+    expect(details.stage).toBe("validate");
+    expect(details.findings.length).toBeGreaterThan(0);
+
+    // absent-at-START (invalid ≠ absent, the other half): version 2
+    // has no byte-exact listing match in the repo dir.
+    const absent = await run(
+      ["start", "--db", tempDbPath(), "--task", "t", "--template", "local-pair-v0@2"],
+      testDeps(),
+    );
+    const absentErr = errorDoc(absent);
+    expect(absent.code).toBe(EXIT.notFound);
+    expect(absentErr.name).toBe("UnknownTemplate");
+  });
+
+  it("W2/W4 at submit: the in-handle typed load error surfaces at the ingress.submit await as the SAME TemplateInvalid doc", async () => {
+    const db = tempDbPath();
+    const id = await startOne(db, testDeps());
+    const badDir = stageTemplates({
+      "local-pair-v0@1.yaml": `${CANONICAL_BYTES()}kind: nope\n`,
+    });
+    const res = await run(
+      [
+        "submit", "--db", db, "--instance", id, "--type", "PASS",
+        "--expected-version", "1", "--templates-dir", badDir,
+      ],
+      testDeps(),
+    );
+    const err = errorDoc(res);
+    expect(res.code).toBe(EXIT.internal);
+    expect(err.name).toBe("TemplateInvalid");
+    const details = err.details as { stage: string };
+    expect(Object.keys(err.details ?? {}).sort()).toEqual(["findings", "stage"]);
+    expect(details.stage).toBe("validate");
+  });
+
+  it("W3: absent at HANDLE → the kernel's pinned-ref integrity error (internal 1; the doc name is literally 'Error', the MESSAGE is the assert target)", async () => {
+    // A deletable COPY of the canonical bytes (raw byte copy — the repo
+    // file itself is never touched).
+    const dir = stageTemplates({ "local-pair-v0@1.yaml": CANONICAL_BYTES() });
+    const db = tempDbPath();
+    const started = await run(
+      ["start", "--db", db, "--task", "t", "--templates-dir", dir],
+      testDeps(),
+    );
+    expect(started.code).toBe(EXIT.ok);
+    const id = (JSON.parse(started.stdout[0] ?? "") as { instanceId: string }).instanceId;
+    rmSync(join(dir, "local-pair-v0@1.yaml"));
+    const res = await run(
+      [
+        "submit", "--db", db, "--instance", id, "--type", "PASS",
+        "--expected-version", "1", "--templates-dir", dir,
+      ],
+      testDeps(),
+    );
+    const err = errorDoc(res);
+    expect(res.code).toBe(EXIT.internal);
+    expect(err.name).toBe("Error");
+    expect(err.message).toContain("kernel integrity: pinned template");
+    expect(err.name).not.toBe("TemplateInvalid");
+  });
+});
+
 describe("cli — last-mile smoke: the SHIPPED entrypoint (root tsx bridge)", () => {
   it("start → detail through the real cli/main.ts process", { timeout: 30_000 }, async () => {
     const db = tempDbPath();
     const tsxBin = join(process.cwd(), "..", "node_modules", ".bin", "tsx");
     const mainPath = join(process.cwd(), "src", "cli", "main.ts");
 
-    const started = await execFileAsync(tsxBin, [mainPath, "start", "--db", db, "--task", "smoke"]);
+    const started = await execFileAsync(tsxBin, [
+      mainPath,
+      "start",
+      "--db",
+      db,
+      "--task",
+      "smoke",
+      "--templates-dir",
+      join(process.cwd(), "templates"),
+    ]);
     const doc = JSON.parse(started.stdout.trim()) as { instanceId: string; version: number };
     expect(doc.version).toBe(1);
 

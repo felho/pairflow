@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -54,7 +54,10 @@ function testDeps(options: DevTestDepsOptions = {}): CliDeps {
     },
     nonceSource: () => `nonce-${String((ids += 1))}`,
     tailWait: () => createScriptedTailWait([]).wait,
-    env: {},
+    // The A4 sweep (packet ch8-P2): start/submit/inject construct the
+    // kernel over the FILE store — the default deps ride the env leg
+    // on the repo's canonical templates dir.
+    env: { PAIRFLOW_V3_TEMPLATES: join(process.cwd(), "templates") },
   };
 }
 
@@ -328,6 +331,127 @@ describe("dev cli — inject schema + derived/override paths", () => {
     const vacuous = await runDev(["inject", "--instance", id, "--file", empty, "--db", db], testDeps());
     expect(vacuous.code).toBe(EXIT.ok);
     expect(vacuous.stdout).toEqual([]);
+  });
+});
+
+// ── packet ch8-P2: validate + the inject/replay templates-lane edges ──
+
+const REPO_CANONICAL = join(process.cwd(), "templates", "local-pair-v0@1.yaml");
+
+describe("dev cli — validate: one file through the load pipeline (packet ch8-P2: D1–D5)", () => {
+  it("D1: validate takes ONLY the <path> positional — --db and --templates-dir rejected by strict parse", async () => {
+    assertError(
+      await runDev(["validate", REPO_CANONICAL, "--db", "x.db"], testDeps()),
+      "usage",
+      EXIT.usage,
+    );
+    assertError(
+      await runDev(["validate", REPO_CANONICAL, "--templates-dir", "t"], testDeps()),
+      "usage",
+      EXIT.usage,
+    );
+  });
+
+  it("D2: the pre-pipeline input gate — missing positional / OS-unreadable path → usage 2 (a path is operator input)", async () => {
+    const missing = await runDev(["validate"], testDeps());
+    expect(missing.stdout).toEqual([]);
+    expect(assertError(missing, "usage", EXIT.usage).name).toBe("MissingFile");
+
+    const unreadable = await runDev(
+      ["validate", join(tempDir(), "nope.yaml")],
+      testDeps(),
+    );
+    expect(unreadable.stdout).toEqual([]);
+    expect(assertError(unreadable, "usage", EXIT.usage).name).toBe("UnreadableFile");
+  });
+
+  it("D3: a valid file → exit 0, stdout EXACTLY {valid: true, ref}; stderr silent (D5)", async () => {
+    const res = await runDev(["validate", REPO_CANONICAL], testDeps());
+    expect(res.code).toBe(EXIT.ok);
+    expect(res.stderr).toEqual([]);
+    expect(res.stdout).toHaveLength(1);
+    const doc = JSON.parse(res.stdout[0] ?? "") as Record<string, unknown>;
+    expect(Object.keys(doc).sort()).toEqual(["ref", "valid"]);
+    expect(doc).toEqual({ valid: true, ref: { id: "local-pair-v0", version: 1 } });
+  });
+
+  it("D4: one surfacing per stage class — read/parse/resolve/validate each exit 1, TemplateInvalid, details.stage names the stage", async () => {
+    const dir = tempDir();
+    // read: invalid UTF-8 BYTES (the strict-decode lane — raw bytes,
+    // never a lossy utf8 pre-decode; R-RAW-FIXTURES by construction).
+    const readPath = join(dir, "bad-bytes.yaml");
+    writeFileSync(readPath, Buffer.from([0xff, 0xfe, 0x00, 0xc3]));
+    // parse: duplicate keys.
+    const parsePath = join(dir, "dup.yaml");
+    writeFileSync(parsePath, "a: 1\na: 2\n");
+    // resolve: the alias-amplification bomb (the P1 G8 fixture).
+    const resolvePath = join(dir, "bomb.yaml");
+    writeFileSync(
+      resolvePath,
+      [
+        "a: &a [x,x,x,x,x,x,x,x,x]",
+        "b: &b [*a,*a,*a,*a,*a,*a,*a,*a,*a]",
+        "c: &c [*b,*b,*b,*b,*b,*b,*b,*b,*b]",
+        "d: &d [*c,*c,*c,*c,*c,*c,*c,*c,*c]",
+        "e: &e [*d,*d,*d,*d,*d,*d,*d,*d,*d]",
+        "f: &f [*e,*e,*e,*e,*e,*e,*e,*e,*e]",
+        "g: &g [*f,*f,*f,*f,*f,*f,*f,*f,*f]",
+        "",
+      ].join("\n"),
+    );
+    // validate: an unknown top-level key on the canonical shape.
+    const validatePath = join(dir, "unknown.yaml");
+    writeFileSync(validatePath, `${readFileSync(REPO_CANONICAL, "utf8")}kind: nope\n`);
+
+    const lanes: ReadonlyArray<readonly [string, string]> = [
+      [readPath, "read"],
+      [parsePath, "parse"],
+      [resolvePath, "resolve"],
+      [validatePath, "validate"],
+    ];
+    for (const [path, stage] of lanes) {
+      const res = await runDev(["validate", path], testDeps());
+      expect(res.stdout).toEqual([]); // D5: data channel silent on failure
+      const err = assertError(res, "internal", EXIT.internal);
+      expect(err.name).toBe("TemplateInvalid");
+      const details = err.details as { stage: string; findings: unknown[] };
+      expect(Object.keys(err.details ?? {}).sort()).toEqual(["findings", "stage"]);
+      expect(details.stage).toBe(stage);
+      expect(details.findings.length).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe("dev cli — inject/replay on the templates lane (packet ch8-P2: W-lane + A3/M4 edges)", () => {
+  it("inject W-lane: the in-handle typed load error surfaces at the ingress.submit await → TemplateInvalid 1", async () => {
+    const { db, id } = await seedDb();
+    const badDir = tempDir();
+    writeFileSync(
+      join(badDir, "local-pair-v0@1.yaml"),
+      `${readFileSync(REPO_CANONICAL, "utf8")}kind: nope\n`,
+    );
+    const file = writeJson("w-lane-steps.json", {
+      steps: [{ type: "PASS", expectedVersion: 2, payload: {} }],
+    });
+    const res = await runDev(
+      ["inject", "--instance", id, "--file", file, "--db", db, "--templates-dir", badDir],
+      testDeps(),
+    );
+    expect(res.stdout).toEqual([]);
+    const err = assertError(res, "internal", EXIT.internal);
+    expect(err.name).toBe("TemplateInvalid");
+    const details = err.details as { stage: string };
+    expect(Object.keys(err.details ?? {}).sort()).toEqual(["findings", "stage"]);
+    expect(details.stage).toBe("validate");
+  });
+
+  it("A3/M4: replay stays OUTSIDE the templates-dir lane — the flag is rejected by strict parse", async () => {
+    const file = writeJson("replay-flag.json", { steps: [] });
+    assertError(
+      await runDev(["replay", "--file", file, "--templates-dir", "t"], testDeps()),
+      "usage",
+      EXIT.usage,
+    );
   });
 });
 

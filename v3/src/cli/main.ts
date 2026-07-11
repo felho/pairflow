@@ -21,6 +21,8 @@ import {
   notFound,
   parseNonNegativeSafeInt,
   requireInstanceId,
+  resolveTemplatesDir,
+  toTemplateInvalid,
   usage,
   withStore,
   withStoreAndDiag,
@@ -28,7 +30,7 @@ import {
 import { CliError, EXIT } from "./contract.js";
 import type { CliDeps } from "./runtime.js";
 import { productionDeps } from "./runtime.js";
-import { builtinDefinitionStore } from "./templates.js";
+import { createFileDefinitionStore } from "../definition/index.js";
 
 /**
  * The operator CLI, normal entrypoint (plan §6.5, packet ch6-P4a): a
@@ -44,12 +46,24 @@ export type { CliSinks } from "./common.js";
 function parseTemplateRef(raw: string): { id: string; version: number } {
   const at = raw.lastIndexOf("@");
   const id = at > 0 ? raw.slice(0, at) : "";
-  const version = at > 0 ? Number(raw.slice(at + 1)) : Number.NaN;
-  if (id === "" || !Number.isSafeInteger(version) || version < 1) {
+  const versionSource = at > 0 ? raw.slice(at + 1) : "";
+  // The version half mirrors C8's source grammar, LEXICAL FIRST (the
+  // P4a numeric-flag rule; packet ch8-P2 T2): Number() alone coerces
+  // '0x10'/'1e2'/'01' and would silently canonicalize distinct source
+  // forms onto one filename. The safe-int belt stays — a [1-9]\d* string
+  // past 2^53−1 collapses under Number(). The id half is NOT
+  // prevalidated beyond nonempty: the store judges it (S1, no
+  // prevalidation — an off-grammar id can only miss).
+  if (
+    id === "" ||
+    !/^[1-9][0-9]*$/.test(versionSource) ||
+    !Number.isSafeInteger(Number(versionSource))
+  ) {
     throw usage("InvalidTemplateRef", `--template must be '<id>@<version>', got '${raw}'`);
   }
-  return { id, version };
+  return { id, version: Number(versionSource) };
 }
+
 
 function parseOverrides(
   raw: readonly string[],
@@ -221,54 +235,66 @@ async function verbStart(ctx: VerbContext): Promise<number> {
     throw usage("MissingTask", "--task <text> is required");
   }
   const templateRef = parseTemplateRef(flagString(ctx, "template") ?? "local-pair-v0@1");
-  const definitions = builtinDefinitionStore();
-  const template = await definitions.load(templateRef);
-  if (template === null) {
-    throw notFound(
-      "UnknownTemplate",
-      `template '${templateRef.id}@${String(templateRef.version)}' not found`,
-    );
-  }
-  const overrideFlags = ctx.values["override"];
-  const overrides = parseOverrides(
-    Array.isArray(overrideFlags) ? overrideFlags.filter((v) => typeof v === "string") : [],
-    template,
+  // ONE resolution, ONE store instance (packet ch8-P2 note 1): the
+  // eager dir gate (A2) runs BEFORE any store/kernel construction, and
+  // the SAME file store feeds the pre-load and the kernel.
+  const definitions = createFileDefinitionStore(
+    resolveTemplatesDir(flagString(ctx, "templates-dir"), ctx.deps),
   );
-  return withStoreAndDiag(ctx, async (handle, diag) => {
-    // V5 (ch7-P4): the store-backed sink on the derived path, passed
-    // BARE — no defensive wrapper (REV-DIAG-FAILOPEN).
-    const kernel = createKernel({
-      store: handle.store,
-      definitions,
-      time: ctx.deps.time,
-      digest: deriveEmitDigest,
-      diag: diag.sink,
-    });
-    try {
-      const started = await kernel.startInstance({
-        instanceId: ctx.deps.instanceIdSource(),
-        templateRef,
-        task,
-        ...(Object.keys(overrides).length > 0 ? { startOverrides: overrides } : {}),
-      });
-      ctx.sinks.out(JSON.stringify(started));
-      return EXIT.ok;
-    } catch (error) {
-      // ONLY the start-INPUT lane is usage — binding coverage, the one
-      // reachable start-side input failure (the ref is pre-checked
-      // above). Everything else (store integrity such as a colliding
-      // minted id, unexpected errors) flows to the outer internal
-      // branch: the 2-vs-1 exit split must not collapse (P4a
-      // aftermath finding 1).
-      if (
-        error instanceof Error &&
-        error.message.startsWith("start failed (binding coverage)")
-      ) {
-        throw usage("StartFailed", error.message);
-      }
-      throw error;
+  // The outer catch is TYPE-based (W4/note 2): it maps TemplateLoadError
+  // from EVERY site in this verb body — the pre-load below AND the
+  // kernel's own load inside startInstance (the mid-invocation race).
+  try {
+    const template = await definitions.load(templateRef);
+    if (template === null) {
+      throw notFound(
+        "UnknownTemplate",
+        `template '${templateRef.id}@${String(templateRef.version)}' not found`,
+      );
     }
-  });
+    const overrideFlags = ctx.values["override"];
+    const overrides = parseOverrides(
+      Array.isArray(overrideFlags) ? overrideFlags.filter((v) => typeof v === "string") : [],
+      template,
+    );
+    return await withStoreAndDiag(ctx, async (handle, diag) => {
+      // V5 (ch7-P4): the store-backed sink on the derived path, passed
+      // BARE — no defensive wrapper (REV-DIAG-FAILOPEN).
+      const kernel = createKernel({
+        store: handle.store,
+        definitions,
+        time: ctx.deps.time,
+        digest: deriveEmitDigest,
+        diag: diag.sink,
+      });
+      try {
+        const started = await kernel.startInstance({
+          instanceId: ctx.deps.instanceIdSource(),
+          templateRef,
+          task,
+          ...(Object.keys(overrides).length > 0 ? { startOverrides: overrides } : {}),
+        });
+        ctx.sinks.out(JSON.stringify(started));
+        return EXIT.ok;
+      } catch (error) {
+        // ONLY the start-INPUT lane is usage — binding coverage, the one
+        // reachable start-side input failure (the ref is pre-checked
+        // above). Everything else (store integrity such as a colliding
+        // minted id, unexpected errors) flows to the outer internal
+        // branch: the 2-vs-1 exit split must not collapse (P4a
+        // aftermath finding 1).
+        if (
+          error instanceof Error &&
+          error.message.startsWith("start failed (binding coverage)")
+        ) {
+          throw usage("StartFailed", error.message);
+        }
+        throw error;
+      }
+    });
+  } catch (error) {
+    throw toTemplateInvalid(error);
+  }
 }
 
 async function verbSubmit(ctx: VerbContext): Promise<number> {
@@ -294,21 +320,33 @@ async function verbSubmit(ctx: VerbContext): Promise<number> {
     expectedVersion,
     ...(payload.present ? { payload: payload.value } : {}),
   };
-  return withStoreAndDiag(ctx, async (handle, diag) => {
-    // V5 (ch7-P4): kernel AND ingress emit into the derived-path store.
-    const kernel = createKernel({
-      store: handle.store,
-      definitions: builtinDefinitionStore(),
-      time: ctx.deps.time,
-      digest: deriveEmitDigest,
-      diag: diag.sink,
+  const definitions = createFileDefinitionStore(
+    resolveTemplatesDir(flagString(ctx, "templates-dir"), ctx.deps),
+  );
+  // W4: submit first touches the template INSIDE kernel.handle — the
+  // typed error surfaces at the ingress.submit await (ingress carries
+  // no catch); the type-based outer catch maps it there. The
+  // absent-at-handle null stays the kernel's integrity throw (W3) and
+  // passes through unchanged.
+  try {
+    return await withStoreAndDiag(ctx, async (handle, diag) => {
+      // V5 (ch7-P4): kernel AND ingress emit into the derived-path store.
+      const kernel = createKernel({
+        store: handle.store,
+        definitions,
+        time: ctx.deps.time,
+        digest: deriveEmitDigest,
+        diag: diag.sink,
+      });
+      const outcome = await createIngress({ kernel, diag: diag.sink }).submit(envelope);
+      // The outcome IS the surface's answer — DATA on stdout, always;
+      // the exit code classifies it (duplicate = idempotent success).
+      ctx.sinks.out(JSON.stringify(outcome));
+      return outcomeExitCode(outcome);
     });
-    const outcome = await createIngress({ kernel, diag: diag.sink }).submit(envelope);
-    // The outcome IS the surface's answer — DATA on stdout, always;
-    // the exit code classifies it (duplicate = idempotent success).
-    ctx.sinks.out(JSON.stringify(outcome));
-    return outcomeExitCode(outcome);
-  });
+  } catch (error) {
+    throw toTemplateInvalid(error);
+  }
 }
 
 const VERB_OPTIONS: Record<string, VerbOptions> = {
@@ -327,6 +365,7 @@ const VERB_OPTIONS: Record<string, VerbOptions> = {
     db: { type: "string" },
     task: { type: "string" },
     template: { type: "string" },
+    "templates-dir": { type: "string" },
     override: { type: "string", multiple: true },
   },
   submit: {
@@ -336,6 +375,7 @@ const VERB_OPTIONS: Record<string, VerbOptions> = {
     "expected-version": { type: "string" },
     payload: { type: "string" },
     actor: { type: "string" },
+    "templates-dir": { type: "string" },
   },
 };
 

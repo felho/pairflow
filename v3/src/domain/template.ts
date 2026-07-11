@@ -3,8 +3,9 @@ import type { ActorId, EventType, RoleName, StepId } from "./ids.js";
 /**
  * Template aggregate (ledger §4 l0a + l0b) — the definition, immutable
  * at runtime. A run is pinned to a TemplateRef snapshot { id, version }.
- * Well-formedness VALIDATION is deferred: the ch-4 fixture builds valid
- * templates (MD-1); the format validator is chapter-8 work.
+ * Well-formedness VALIDATION is realized in `src/definition/` (the
+ * fail-at-create pipeline, ch8-P1); the canonical authoring file is
+ * the template's single source (MD-1 retired at ch8-P2, 2026-07-11).
  */
 export interface TemplateRef {
   readonly id: string;

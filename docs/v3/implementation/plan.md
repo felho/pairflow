@@ -141,7 +141,10 @@ ch 4 walking skeleton.
 from a **fixture-form template** (hardcoded, test-kit shaped) so the skeleton
 stays thin. The canonical authoring format lands in chapter 8, which MUST
 migrate the fixture onto it and retire MD-1. This is a deliberate sequencing
-decision, not an oversight.
+decision, not an oversight. **Retired at ch8-P2 (2026-07-11):** the
+canonical file `v3/templates/local-pair-v0@1.yaml` is the single source;
+the testkit fixture is equality-pinned to its parsed form from tests; the
+CLI builtin copy is deleted.
 
 **PI-11 split.** The task-packet convention, the projection checklist, and
 the ramp-marking rule are realized by this chapter (the template file is the
@@ -726,7 +729,8 @@ DoD: all §4.7 tests green; every `CHK-*` negative-tested from its
 DECLARED claim (README §4 step 2 — these are the first post-rule gates);
 ADR-006 `accepted`, integrity check green; the three ch-4 intake rows +
 the ch-4 map row flipped to `realized` (PI-6); MD-1 stays open by design
-(ch-8 debt); coverage validation green over the four packets; process-log
+(ch-8 debt — retired at ch8-P2, 2026-07-11); coverage validation green over
+the four packets; process-log
 review held at the boundary.
 
 ---
@@ -980,7 +984,8 @@ behind a separate entrypoint (§6.5).
 - **`cancel` / `deleteRequested` command verbs** — their kernel levels
   (LC1+) are not implemented; the CLI covers the surface that exists.
   The ch-10 recourse card resolves its own dependency when scheduled.
-- **The canonical template format** → ch 8 (MD-1 stands). The CLI
+- **The canonical template format** → ch 8 (MD-1 stands — retired at
+  ch8-P2, 2026-07-11). The CLI
   `create` works with the fixture-form template and says so.
 
 ### 6.2 `getTimeline`: the cursor read (P1)
@@ -1144,7 +1149,9 @@ behind a separate entrypoint (§6.5).
   - **Template source (MD-1 extended):** the normal CLI graph cannot
     import the testkit fixture, so `cli/templates.ts` carries a
     production COPY of local-pair-v0, drift-pinned by test against
-    `fixtureTemplate()`; ch 8 retires both.
+    `fixtureTemplate()`; ch 8 retires both (done at ch8-P2,
+    2026-07-11: the copy deleted, the pin retargeted onto the
+    canonical file).
   - **Channel + error contract:** stdout carries ONLY data documents
     (one JSON per verb; tail = NDJSON rows; protocol outcomes incl.
     stale/rejected are DATA); every failure is ONE canonical error
