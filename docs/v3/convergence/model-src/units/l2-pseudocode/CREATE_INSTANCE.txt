@@ -3,7 +3,7 @@
 # compose CREATE_INSTANCE(...) then START(instance). activation_mode controls what happens
 # after RUNTIME_CONTEXT_READY (activate vs WAITING(kickoff_pending)) — not whether CREATE dispatches.
 CREATE_INSTANCE(template_ref, activation_mode, task, binding, run_overrides) → Created   # operator_intent; template + binding resolved on the start path (formalized by L0f)
-  template ← definitionStore.load(template_ref)                # a pinned definition — a plain template, or an L0f-resolved definition (slots applied)
+  template ← definitionStore.load(template_ref)                # a pinned ADMITTED definition (admit_definition, L2) — plain or L0f-resolved, always carrying EFFECTIVE configs; the raw/authored form is admission's input and never reaches CREATE
   IF activation_mode = immediate AND task is absent THEN RETURN Rejected(task_required)
   REQUIRE binding covers every role reachable in template      # binding resolved pre-kernel; the kernel only validates coverage (fail at create, not mid-run)
   instance ← create { template_ref, task, binding, activation_mode,

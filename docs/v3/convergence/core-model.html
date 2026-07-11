@@ -2516,16 +2516,20 @@ INTERFACE InlineGateEvaluator extends GateRegistration:  # the declarative | pac
 # CREATE's own admission. Failures are DEFINITION ISSUES ({path, code, message} — the definition
 # channel), never instance rejections: no instance exists yet to reject into.
 admit_definition(definition_source, gateRegistry) → AdmittedDefinition | issues
-  REQUIRE structural well-formedness                                 # steps / roles / transitions / terminal — the structure rules
+  issues ← []                                                        # accumulated — admission reports the FULL finding set, never first-error-only
+  REQUIRE structural well-formedness                                 # steps / roles / transitions / terminal — structure issues accumulate on the same channel
   FOR gate IN all_gate_bindings(definition_source):                  # every (step, event_type) gate
     registration ← gateRegistry.resolve(gate.uses)
     IF registration is none
-       THEN issue(gate_evaluator_unavailable)                        # compile twin — HANDLE keeps the registry-drift runtime backstop
+       THEN issues.add(gate_evaluator_unavailable); CONTINUE         # nothing below may dereference an unresolved registration; HANDLE keeps the registry-drift runtime backstop
     IF registration.requires_runtime_context AND definition_source.runtime_context = none
-       THEN issue(runtime_context_required_for_process_gate)         # compile twin — HANDLE's ready(∅) lane stays the runtime backstop
-    gate.effective_config ← registration.validate_and_normalize_config(gate.config)   # registration-owned schema; defaults materialize ONCE
-  REQUIRE every level-declared definition-static validator           # the validate_* family — each level's section declares its member; all emit issues on this channel
-  RETURN AdmittedDefinition(definition with effective configs)       # downstream — HANDLE, dispatch, the process wire — reads ONLY the effective form
+       THEN issues.add(runtime_context_required_for_process_gate)    # compile twin — HANDLE's ready(∅) lane stays the runtime backstop
+    result ← registration.validate_and_normalize_config(gate.config) # registration-owned schema over the AUTHORED (raw) config
+    IF result is issues THEN issues.add(result.issues)
+    ELSE gate.effective_config ← result.effective                    # defaults materialize ONCE — the one downstream form
+  REQUIRE every level-declared definition-static validator           # the validate_* family — each level's section declares its member; their issues accumulate here
+  IF issues is nonempty THEN RETURN issues                           # ALL-OR-NOTHING: no AdmittedDefinition exists on ANY issue
+  RETURN AdmittedDefinition(definition with effective configs)       # downstream — CREATE, HANDLE, dispatch, the process wire — consumes ONLY this
 
 gate_projection(instance, template, envelope) → Projection   # policy-facing read model — read-only, derived; the policy reads, never mutates
   RETURN {
@@ -2544,7 +2548,7 @@ RECEIVE(input) → Outcome                                               # one k
 # compose CREATE_INSTANCE(...) then START(instance). activation_mode controls what happens
 # after RUNTIME_CONTEXT_READY (activate vs WAITING(kickoff_pending)) — not whether CREATE dispatches.
 CREATE_INSTANCE(template_ref, activation_mode, task, binding, run_overrides) → Created   # operator_intent; template + binding resolved on the start path (formalized by L0f)
-  template ← definitionStore.load(template_ref)                # a pinned definition — a plain template, or an L0f-resolved definition (slots applied)
+  template ← definitionStore.load(template_ref)                # a pinned ADMITTED definition (admit_definition, L2) — plain or L0f-resolved, always carrying EFFECTIVE configs; the raw/authored form is admission's input and never reaches CREATE
   IF activation_mode = immediate AND task is absent THEN RETURN Rejected(task_required)
   REQUIRE binding covers every role reachable in template      # binding resolved pre-kernel; the kernel only validates coverage (fail at create, not mid-run)
   instance ← create { template_ref, task, binding, activation_mode,
@@ -2634,7 +2638,7 @@ HANDLE envelope → Outcome
 
   instance ← instanceStore.load(envelope.instance_id)
   IF instance is none                     THEN RETURN Rejected(unknown_instance)
-  template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
+  template ← definitionStore.load(instance.template_ref)   # separate store; a pinned immutable ADMITTED definition — effective configs, admission's output (L2)
   step     ← template.step(instance.current_step)           # positional read, NOT a rung — infallible over committed
                                                             # state (load-time validation: every reachable step id
                                                             # resolves in the pinned template), so hoisting it cannot
@@ -2734,7 +2738,7 @@ dispatch_intent(instance, template, step_id) → DispatchIntent
         <div class="agg">
           <div class="agg-label">Template aggregate — gains the gate pipeline</div>
           <div class="ents">
-            <div class="ent"><div class="en">GateBinding</div><div class="fields"><code>where</code> (step + event_type) · <code>uses</code> (<code>declarative.*</code> | packaged <code>pairflow.*</code> | <code>external.*</code>) · <code>config</code> — the authored per-point policy parameterization, load-bearing for <em>every</em> gate kind (a threshold value, a required clean-run count), passed to the evaluator</div></div>
+            <div class="ent"><div class="en">GateBinding</div><div class="fields"><code>where</code> (step + event_type) · <code>uses</code> (<code>declarative.*</code> | packaged <code>pairflow.*</code> | <code>external.*</code>) · <code>config</code> — the AUTHORED per-point policy parameterization, load-bearing for <em>every</em> gate kind (a threshold value, a required clean-run count); it is ADMISSION's input — <code>validate_and_normalize_config</code> turns it into the <code>effective_config</code> the evaluator/runner actually receives</div></div>
             <div class="ent"><div class="en">GatePipeline</div><div class="fields">ordered list of GateBindings at one <code>(step, event)</code> point; first <code>block</code> stops, later gates run only after <code>allow</code> — exposed as <code>gates_for(step, event)</code></div></div>
           </div>
         </div>
@@ -2743,6 +2747,7 @@ dispatch_intent(instance, template, step_id) → DispatchIntent
           <div class="ents">
             <div class="ent"><div class="en">GateRegistration</div><div class="fields">the registry's per-evaluator descriptor — the axes <code>implementation: declarative | packaged | process</code> and <code>execution: inline | deferred</code>, a <code>requires_runtime_context</code> flag, and <code>validate_and_normalize_config(raw) → effective | issues</code> (the registration OWNS its config schema; defaults materialize once at ADMISSION); the inline variant adds <code>evaluate(effective_config, projection) → GateDecision</code>. L2 core realizes only inline <code>declarative.*</code> / packaged <code>pairflow.*</code>. <code>PolicyModule</code> is now just one kind of packaged gate</div></div>
             <div class="ent"><div class="en">GateDecision <span style="font-size:10px;color:var(--muted)">(value)</span></div><div class="fields"><code>{ verdict: allow | warn | block, reason?, message?, evidence_refs? }</code> — <b>allow</b> continue · <b>warn</b> continue, retain diagnostics/evidence · <b>block</b> reject before commit; <code>route</code> is known vocabulary, deferred to a later slice</div></div>
+            <div class="ent"><div class="en">AdmittedDefinition <span style="font-size:10px;color:var(--muted)">(value)</span></div><div class="fields">the definition store's ONLY output from L2 on — a definition that passed <code>admit_definition</code>, carrying EFFECTIVE configs; the raw/authored form is admission's input and never reaches <code>CREATE_INSTANCE</code> or <code>HANDLE</code> (both consume admitted definitions by the store contract)</div></div>
           </div>
         </div>
         <div class="agg">
@@ -2957,16 +2962,20 @@ INTERFACE InlineGateEvaluator extends GateRegistration:  # declarative | package
 # CREATE's own admission. Failures are DEFINITION ISSUES ({path, code, message} — the definition
 # channel), never instance rejections: no instance exists yet to reject into.
 admit_definition(definition_source, gateRegistry) → AdmittedDefinition | issues
-  REQUIRE structural well-formedness                                 # steps / roles / transitions / terminal — the structure rules
+  issues ← []                                                        # accumulated — admission reports the FULL finding set, never first-error-only
+  REQUIRE structural well-formedness                                 # steps / roles / transitions / terminal — structure issues accumulate on the same channel
   FOR gate IN all_gate_bindings(definition_source):                  # every (step, event_type) gate
     registration ← gateRegistry.resolve(gate.uses)
     IF registration is none
-       THEN issue(gate_evaluator_unavailable)                        # compile twin — HANDLE keeps the registry-drift runtime backstop
+       THEN issues.add(gate_evaluator_unavailable); CONTINUE         # nothing below may dereference an unresolved registration; HANDLE keeps the registry-drift runtime backstop
     IF registration.requires_runtime_context AND definition_source.runtime_context = none
-       THEN issue(runtime_context_required_for_process_gate)         # compile twin — HANDLE's ready(∅) lane stays the runtime backstop
-    gate.effective_config ← registration.validate_and_normalize_config(gate.config)   # registration-owned schema; defaults materialize ONCE
-  REQUIRE every level-declared definition-static validator           # the validate_* family — each level's section declares its member; all emit issues on this channel
-  RETURN AdmittedDefinition(definition with effective configs)       # downstream — HANDLE, dispatch, the process wire — reads ONLY the effective form
+       THEN issues.add(runtime_context_required_for_process_gate)    # compile twin — HANDLE's ready(∅) lane stays the runtime backstop
+    result ← registration.validate_and_normalize_config(gate.config) # registration-owned schema over the AUTHORED (raw) config
+    IF result is issues THEN issues.add(result.issues)
+    ELSE gate.effective_config ← result.effective                    # defaults materialize ONCE — the one downstream form
+  REQUIRE every level-declared definition-static validator           # the validate_* family — each level's section declares its member; their issues accumulate here
+  IF issues is nonempty THEN RETURN issues                           # ALL-OR-NOTHING: no AdmittedDefinition exists on ANY issue
+  RETURN AdmittedDefinition(definition with effective configs)       # downstream — CREATE, HANDLE, dispatch, the process wire — consumes ONLY this
 
 gate_projection(instance, template, envelope) → Projection   # policy-facing read model — read-only, derived; the policy reads, never mutates
   RETURN {
@@ -2985,11 +2994,11 @@ run_process_gate(gate, instance, template, envelope) → GateDecision   # L2a �
     step_id: instance.current_step, event_type: envelope.type, expected_version: instance.version,
     config:     gate.effective_config,                                # the admission-materialized EFFECTIVE config — the one downstream form, on the wire too
     projection: compact(gate_projection(instance, template, envelope)) }   # MVP: small inline payload (NOT projection_ref + SDK)
-  result ← processRunner.run(gate.config.command, {
+  result ← processRunner.run(gate.effective_config.command, {
     cwd: runtime_context_workspace(instance),                         # runs in the provisioned workspace (v1: the worktree)
-    stdin: json(invocation), timeout_ms: gate.config.timeout_ms })    # bounded timeout — a v3 addition (v1 had none)
+    stdin: json(invocation), timeout_ms: gate.effective_config.timeout_ms })    # bounded timeout — a v3 addition (v1 had none)
   # evidence (log + exit_code + duration + head_sha + git_status_hash) is persisted on EVERY run (v1-faithful)
-  RETURN classify_process_result(result, gate.config)
+  RETURN classify_process_result(result, gate.effective_config)
 
 classify_process_result(result, config) → GateDecision
   output_mode     ← config.output.mode      ?? exit_code             # contract defaults (absent ⇒ these) — resolved once
@@ -3041,7 +3050,7 @@ RECEIVE(input) → Outcome                                               # one k
 # compose CREATE_INSTANCE(...) then START(instance). activation_mode controls what happens
 # after RUNTIME_CONTEXT_READY (activate vs WAITING(kickoff_pending)) — not whether CREATE dispatches.
 CREATE_INSTANCE(template_ref, activation_mode, task, binding, run_overrides) → Created   # operator_intent; template + binding resolved on the start path (formalized by L0f)
-  template ← definitionStore.load(template_ref)                # a pinned definition — a plain template, or an L0f-resolved definition (slots applied)
+  template ← definitionStore.load(template_ref)                # a pinned ADMITTED definition (admit_definition, L2) — plain or L0f-resolved, always carrying EFFECTIVE configs; the raw/authored form is admission's input and never reaches CREATE
   IF activation_mode = immediate AND task is absent THEN RETURN Rejected(task_required)
   REQUIRE binding covers every role reachable in template      # binding resolved pre-kernel; the kernel only validates coverage (fail at create, not mid-run)
   # definition-static validation happened at ADMISSION (admit_definition, definition load) — the store issues only ADMITTED definitions; CREATE validates INSTANCE inputs (task, binding coverage) only
@@ -3132,7 +3141,7 @@ HANDLE envelope → Outcome
 
   instance ← instanceStore.load(envelope.instance_id)
   IF instance is none                     THEN RETURN Rejected(unknown_instance)
-  template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
+  template ← definitionStore.load(instance.template_ref)   # separate store; a pinned immutable ADMITTED definition — effective configs, admission's output (L2)
   step     ← template.step(instance.current_step)           # positional read, NOT a rung — infallible over committed
                                                             # state (load-time validation: every reachable step id
                                                             # resolves in the pinned template), so hoisting it cannot
@@ -3463,16 +3472,20 @@ INTERFACE InlineGateEvaluator extends GateRegistration:  # declarative | package
 # CREATE's own admission. Failures are DEFINITION ISSUES ({path, code, message} — the definition
 # channel), never instance rejections: no instance exists yet to reject into.
 admit_definition(definition_source, gateRegistry) → AdmittedDefinition | issues
-  REQUIRE structural well-formedness                                 # steps / roles / transitions / terminal — the structure rules
+  issues ← []                                                        # accumulated — admission reports the FULL finding set, never first-error-only
+  REQUIRE structural well-formedness                                 # steps / roles / transitions / terminal — structure issues accumulate on the same channel
   FOR gate IN all_gate_bindings(definition_source):                  # every (step, event_type) gate
     registration ← gateRegistry.resolve(gate.uses)
     IF registration is none
-       THEN issue(gate_evaluator_unavailable)                        # compile twin — HANDLE keeps the registry-drift runtime backstop
+       THEN issues.add(gate_evaluator_unavailable); CONTINUE         # nothing below may dereference an unresolved registration; HANDLE keeps the registry-drift runtime backstop
     IF registration.requires_runtime_context AND definition_source.runtime_context = none
-       THEN issue(runtime_context_required_for_process_gate)         # compile twin — HANDLE's ready(∅) lane stays the runtime backstop
-    gate.effective_config ← registration.validate_and_normalize_config(gate.config)   # registration-owned schema; defaults materialize ONCE
-  REQUIRE every level-declared definition-static validator           # the validate_* family — each level's section declares its member; all emit issues on this channel
-  RETURN AdmittedDefinition(definition with effective configs)       # downstream — HANDLE, dispatch, the process wire — reads ONLY the effective form
+       THEN issues.add(runtime_context_required_for_process_gate)    # compile twin — HANDLE's ready(∅) lane stays the runtime backstop
+    result ← registration.validate_and_normalize_config(gate.config) # registration-owned schema over the AUTHORED (raw) config
+    IF result is issues THEN issues.add(result.issues)
+    ELSE gate.effective_config ← result.effective                    # defaults materialize ONCE — the one downstream form
+  REQUIRE every level-declared definition-static validator           # the validate_* family — each level's section declares its member; their issues accumulate here
+  IF issues is nonempty THEN RETURN issues                           # ALL-OR-NOTHING: no AdmittedDefinition exists on ANY issue
+  RETURN AdmittedDefinition(definition with effective configs)       # downstream — CREATE, HANDLE, dispatch, the process wire — consumes ONLY this
 
 gate_projection(instance, template, envelope) → Projection   # policy-facing read model — read-only, derived; the policy reads, never mutates
   RETURN {
@@ -3491,11 +3504,11 @@ run_process_gate(gate, instance, template, envelope) → GateDecision   # L2a �
     step_id: instance.current_step, event_type: envelope.type, expected_version: instance.version,
     config:     gate.effective_config,                                # the admission-materialized EFFECTIVE config — the one downstream form, on the wire too
     projection: compact(gate_projection(instance, template, envelope)) }   # MVP: small inline payload (NOT projection_ref + SDK)
-  result ← processRunner.run(gate.config.command, {
+  result ← processRunner.run(gate.effective_config.command, {
     cwd: runtime_context_workspace(instance),                         # runs in the provisioned workspace (v1: the worktree)
-    stdin: json(invocation), timeout_ms: gate.config.timeout_ms })    # bounded timeout — a v3 addition (v1 had none)
+    stdin: json(invocation), timeout_ms: gate.effective_config.timeout_ms })    # bounded timeout — a v3 addition (v1 had none)
   # evidence (log + exit_code + duration + head_sha + git_status_hash) is persisted on EVERY run (v1-faithful)
-  RETURN classify_process_result(result, gate.config)
+  RETURN classify_process_result(result, gate.effective_config)
 
 classify_process_result(result, config) → GateDecision
   output_mode     ← config.output.mode      ?? exit_code             # contract defaults (absent ⇒ these) — resolved once
@@ -3553,7 +3566,7 @@ RECEIVE(input) → Outcome                                               # one k
 # compose CREATE_INSTANCE(...) then START(instance). activation_mode controls what happens
 # after RUNTIME_CONTEXT_READY (activate vs WAITING(kickoff_pending)) — not whether CREATE dispatches.
 CREATE_INSTANCE(template_ref, activation_mode, task, binding, run_overrides) → Created   # operator_intent; template + binding resolved on the start path (formalized by L0f)
-  template ← definitionStore.load(template_ref)                # a pinned definition — a plain template, or an L0f-resolved definition (slots applied)
+  template ← definitionStore.load(template_ref)                # a pinned ADMITTED definition (admit_definition, L2) — plain or L0f-resolved, always carrying EFFECTIVE configs; the raw/authored form is admission's input and never reaches CREATE
   IF activation_mode = immediate AND task is absent THEN RETURN Rejected(task_required)
   REQUIRE binding covers every role reachable in template      # binding resolved pre-kernel; the kernel only validates coverage (fail at create, not mid-run)
   # definition-static validation happened at ADMISSION (admit_definition, definition load) — the store issues only ADMITTED definitions; CREATE validates INSTANCE inputs (task, binding coverage) only
@@ -3644,7 +3657,7 @@ HANDLE envelope → Outcome
 
   instance ← instanceStore.load(envelope.instance_id)
   IF instance is none                     THEN RETURN Rejected(unknown_instance)
-  template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
+  template ← definitionStore.load(instance.template_ref)   # separate store; a pinned immutable ADMITTED definition — effective configs, admission's output (L2)
   step     ← template.step(instance.current_step)           # positional read, NOT a rung — infallible over committed
                                                             # state (load-time validation: every reachable step id
                                                             # resolves in the pinned template), so hoisting it cannot
@@ -4052,16 +4065,20 @@ INTERFACE InlineGateEvaluator extends GateRegistration:  # declarative | package
 # CREATE's own admission. Failures are DEFINITION ISSUES ({path, code, message} — the definition
 # channel), never instance rejections: no instance exists yet to reject into.
 admit_definition(definition_source, gateRegistry) → AdmittedDefinition | issues
-  REQUIRE structural well-formedness                                 # steps / roles / transitions / terminal — the structure rules
+  issues ← []                                                        # accumulated — admission reports the FULL finding set, never first-error-only
+  REQUIRE structural well-formedness                                 # steps / roles / transitions / terminal — structure issues accumulate on the same channel
   FOR gate IN all_gate_bindings(definition_source):                  # every (step, event_type) gate
     registration ← gateRegistry.resolve(gate.uses)
     IF registration is none
-       THEN issue(gate_evaluator_unavailable)                        # compile twin — HANDLE keeps the registry-drift runtime backstop
+       THEN issues.add(gate_evaluator_unavailable); CONTINUE         # nothing below may dereference an unresolved registration; HANDLE keeps the registry-drift runtime backstop
     IF registration.requires_runtime_context AND definition_source.runtime_context = none
-       THEN issue(runtime_context_required_for_process_gate)         # compile twin — HANDLE's ready(∅) lane stays the runtime backstop
-    gate.effective_config ← registration.validate_and_normalize_config(gate.config)   # registration-owned schema; defaults materialize ONCE
-  REQUIRE every level-declared definition-static validator           # the validate_* family — each level's section declares its member; all emit issues on this channel
-  RETURN AdmittedDefinition(definition with effective configs)       # downstream — HANDLE, dispatch, the process wire — reads ONLY the effective form
+       THEN issues.add(runtime_context_required_for_process_gate)    # compile twin — HANDLE's ready(∅) lane stays the runtime backstop
+    result ← registration.validate_and_normalize_config(gate.config) # registration-owned schema over the AUTHORED (raw) config
+    IF result is issues THEN issues.add(result.issues)
+    ELSE gate.effective_config ← result.effective                    # defaults materialize ONCE — the one downstream form
+  REQUIRE every level-declared definition-static validator           # the validate_* family — each level's section declares its member; their issues accumulate here
+  IF issues is nonempty THEN RETURN issues                           # ALL-OR-NOTHING: no AdmittedDefinition exists on ANY issue
+  RETURN AdmittedDefinition(definition with effective configs)       # downstream — CREATE, HANDLE, dispatch, the process wire — consumes ONLY this
 
 gate_projection(instance, template, envelope) → Projection   # policy-facing read model — read-only, derived; the policy reads, never mutates
   RETURN {
@@ -4080,11 +4097,11 @@ run_process_gate(gate, instance, template, envelope) → GateDecision   # L2a �
     step_id: instance.current_step, event_type: envelope.type, expected_version: instance.version,
     config:     gate.effective_config,                                # the admission-materialized EFFECTIVE config — the one downstream form, on the wire too
     projection: compact(gate_projection(instance, template, envelope)) }   # MVP: small inline payload (NOT projection_ref + SDK)
-  result ← processRunner.run(gate.config.command, {
+  result ← processRunner.run(gate.effective_config.command, {
     cwd: runtime_context_workspace(instance),                         # runs in the provisioned workspace (v1: the worktree)
-    stdin: json(invocation), timeout_ms: gate.config.timeout_ms })    # bounded timeout — a v3 addition (v1 had none)
+    stdin: json(invocation), timeout_ms: gate.effective_config.timeout_ms })    # bounded timeout — a v3 addition (v1 had none)
   # evidence (log + exit_code + duration + head_sha + git_status_hash) is persisted on EVERY run (v1-faithful)
-  RETURN classify_process_result(result, gate.config)
+  RETURN classify_process_result(result, gate.effective_config)
 
 classify_process_result(result, config) → GateDecision
   output_mode     ← config.output.mode      ?? exit_code             # contract defaults (absent ⇒ these) — resolved once
@@ -4225,7 +4242,7 @@ RECEIVE(input) → Outcome                                               # one k
 # compose CREATE_INSTANCE(...) then START(instance). activation_mode controls what happens
 # after RUNTIME_CONTEXT_READY (activate vs WAITING(kickoff_pending)) — not whether CREATE dispatches.
 CREATE_INSTANCE(template_ref, activation_mode, task, binding, run_overrides) → Created   # operator_intent; template + binding resolved on the start path (formalized by L0f)
-  template ← definitionStore.load(template_ref)                # a pinned definition — a plain template, or an L0f-resolved definition (slots applied)
+  template ← definitionStore.load(template_ref)                # a pinned ADMITTED definition (admit_definition, L2) — plain or L0f-resolved, always carrying EFFECTIVE configs; the raw/authored form is admission's input and never reaches CREATE
   IF activation_mode = immediate AND task is absent THEN RETURN Rejected(task_required)
   REQUIRE binding covers every role reachable in template      # binding resolved pre-kernel; the kernel only validates coverage (fail at create, not mid-run)
   # definition-static validation happened at ADMISSION (admit_definition, definition load) — the store issues only ADMITTED definitions; CREATE validates INSTANCE inputs (task, binding coverage) only
@@ -4425,7 +4442,7 @@ HANDLE envelope → Outcome
 
   instance ← instanceStore.load(envelope.instance_id)
   IF instance is none                     THEN RETURN Rejected(unknown_instance)
-  template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
+  template ← definitionStore.load(instance.template_ref)   # separate store; a pinned immutable ADMITTED definition — effective configs, admission's output (L2)
   step     ← template.step(instance.current_step)           # positional read, NOT a rung — infallible over committed
                                                             # state (load-time validation: every reachable step id
                                                             # resolves in the pinned template), so hoisting it cannot
@@ -5106,16 +5123,20 @@ INTERFACE InlineGateEvaluator extends GateRegistration:  # declarative | package
 # CREATE's own admission. Failures are DEFINITION ISSUES ({path, code, message} — the definition
 # channel), never instance rejections: no instance exists yet to reject into.
 admit_definition(definition_source, gateRegistry) → AdmittedDefinition | issues
-  REQUIRE structural well-formedness                                 # steps / roles / transitions / terminal — the structure rules
+  issues ← []                                                        # accumulated — admission reports the FULL finding set, never first-error-only
+  REQUIRE structural well-formedness                                 # steps / roles / transitions / terminal — structure issues accumulate on the same channel
   FOR gate IN all_gate_bindings(definition_source):                  # every (step, event_type) gate
     registration ← gateRegistry.resolve(gate.uses)
     IF registration is none
-       THEN issue(gate_evaluator_unavailable)                        # compile twin — HANDLE keeps the registry-drift runtime backstop
+       THEN issues.add(gate_evaluator_unavailable); CONTINUE         # nothing below may dereference an unresolved registration; HANDLE keeps the registry-drift runtime backstop
     IF registration.requires_runtime_context AND definition_source.runtime_context = none
-       THEN issue(runtime_context_required_for_process_gate)         # compile twin — HANDLE's ready(∅) lane stays the runtime backstop
-    gate.effective_config ← registration.validate_and_normalize_config(gate.config)   # registration-owned schema; defaults materialize ONCE
-  REQUIRE every level-declared definition-static validator           # the validate_* family — each level's section declares its member; all emit issues on this channel
-  RETURN AdmittedDefinition(definition with effective configs)       # downstream — HANDLE, dispatch, the process wire — reads ONLY the effective form
+       THEN issues.add(runtime_context_required_for_process_gate)    # compile twin — HANDLE's ready(∅) lane stays the runtime backstop
+    result ← registration.validate_and_normalize_config(gate.config) # registration-owned schema over the AUTHORED (raw) config
+    IF result is issues THEN issues.add(result.issues)
+    ELSE gate.effective_config ← result.effective                    # defaults materialize ONCE — the one downstream form
+  REQUIRE every level-declared definition-static validator           # the validate_* family — each level's section declares its member; their issues accumulate here
+  IF issues is nonempty THEN RETURN issues                           # ALL-OR-NOTHING: no AdmittedDefinition exists on ANY issue
+  RETURN AdmittedDefinition(definition with effective configs)       # downstream — CREATE, HANDLE, dispatch, the process wire — consumes ONLY this
 
 gate_projection(instance, template, envelope) → Projection   # policy-facing read model — read-only, derived; the policy reads, never mutates
   RETURN {
@@ -5134,11 +5155,11 @@ run_process_gate(gate, instance, template, envelope) → GateDecision   # L2a �
     step_id: instance.current_step, event_type: envelope.type, expected_version: instance.version,
     config:     gate.effective_config,                                # the admission-materialized EFFECTIVE config — the one downstream form, on the wire too
     projection: compact(gate_projection(instance, template, envelope)) }   # MVP: small inline payload (NOT projection_ref + SDK)
-  result ← processRunner.run(gate.config.command, {
+  result ← processRunner.run(gate.effective_config.command, {
     cwd: runtime_context_workspace(instance),                         # runs in the provisioned workspace (v1: the worktree)
-    stdin: json(invocation), timeout_ms: gate.config.timeout_ms })    # bounded timeout — a v3 addition (v1 had none)
+    stdin: json(invocation), timeout_ms: gate.effective_config.timeout_ms })    # bounded timeout — a v3 addition (v1 had none)
   # evidence (log + exit_code + duration + head_sha + git_status_hash) is persisted on EVERY run (v1-faithful)
-  RETURN classify_process_result(result, gate.config)
+  RETURN classify_process_result(result, gate.effective_config)
 
 classify_process_result(result, config) → GateDecision
   output_mode     ← config.output.mode      ?? exit_code             # contract defaults (absent ⇒ these) — resolved once
@@ -5267,7 +5288,7 @@ RECEIVE(input) → Outcome                                               # one k
 # compose CREATE_INSTANCE(...) then START(instance). activation_mode controls what happens
 # after RUNTIME_CONTEXT_READY (activate vs WAITING(kickoff_pending)) — not whether CREATE dispatches.
 CREATE_INSTANCE(template_ref, activation_mode, task, binding, run_overrides) → Created   # operator_intent; template + binding resolved on the start path (formalized by L0f)
-  template ← definitionStore.load(template_ref)                # a pinned definition — a plain template, or an L0f-resolved definition (slots applied)
+  template ← definitionStore.load(template_ref)                # a pinned ADMITTED definition (admit_definition, L2) — plain or L0f-resolved, always carrying EFFECTIVE configs; the raw/authored form is admission's input and never reaches CREATE
   IF activation_mode = immediate AND task is absent THEN RETURN Rejected(task_required)
   REQUIRE binding covers every role reachable in template      # binding resolved pre-kernel; the kernel only validates coverage (fail at create, not mid-run)
   # definition-static validation happened at ADMISSION (admit_definition, definition load) — the store issues only ADMITTED definitions; CREATE validates INSTANCE inputs (task, binding coverage) only
@@ -5541,7 +5562,7 @@ HANDLE envelope → Outcome
 
   instance ← instanceStore.load(envelope.instance_id)
   IF instance is none                     THEN RETURN Rejected(unknown_instance)
-  template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
+  template ← definitionStore.load(instance.template_ref)   # separate store; a pinned immutable ADMITTED definition — effective configs, admission's output (L2)
   step     ← template.step(instance.current_step)           # positional read, NOT a rung — infallible over committed
                                                             # state (load-time validation: every reachable step id
                                                             # resolves in the pinned template), so hoisting it cannot
@@ -5987,16 +6008,20 @@ INTERFACE InlineGateEvaluator extends GateRegistration:  # declarative | package
 # CREATE's own admission. Failures are DEFINITION ISSUES ({path, code, message} — the definition
 # channel), never instance rejections: no instance exists yet to reject into.
 admit_definition(definition_source, gateRegistry) → AdmittedDefinition | issues
-  REQUIRE structural well-formedness                                 # steps / roles / transitions / terminal — the structure rules
+  issues ← []                                                        # accumulated — admission reports the FULL finding set, never first-error-only
+  REQUIRE structural well-formedness                                 # steps / roles / transitions / terminal — structure issues accumulate on the same channel
   FOR gate IN all_gate_bindings(definition_source):                  # every (step, event_type) gate
     registration ← gateRegistry.resolve(gate.uses)
     IF registration is none
-       THEN issue(gate_evaluator_unavailable)                        # compile twin — HANDLE keeps the registry-drift runtime backstop
+       THEN issues.add(gate_evaluator_unavailable); CONTINUE         # nothing below may dereference an unresolved registration; HANDLE keeps the registry-drift runtime backstop
     IF registration.requires_runtime_context AND definition_source.runtime_context = none
-       THEN issue(runtime_context_required_for_process_gate)         # compile twin — HANDLE's ready(∅) lane stays the runtime backstop
-    gate.effective_config ← registration.validate_and_normalize_config(gate.config)   # registration-owned schema; defaults materialize ONCE
-  REQUIRE every level-declared definition-static validator           # the validate_* family — each level's section declares its member; all emit issues on this channel
-  RETURN AdmittedDefinition(definition with effective configs)       # downstream — HANDLE, dispatch, the process wire — reads ONLY the effective form
+       THEN issues.add(runtime_context_required_for_process_gate)    # compile twin — HANDLE's ready(∅) lane stays the runtime backstop
+    result ← registration.validate_and_normalize_config(gate.config) # registration-owned schema over the AUTHORED (raw) config
+    IF result is issues THEN issues.add(result.issues)
+    ELSE gate.effective_config ← result.effective                    # defaults materialize ONCE — the one downstream form
+  REQUIRE every level-declared definition-static validator           # the validate_* family — each level's section declares its member; their issues accumulate here
+  IF issues is nonempty THEN RETURN issues                           # ALL-OR-NOTHING: no AdmittedDefinition exists on ANY issue
+  RETURN AdmittedDefinition(definition with effective configs)       # downstream — CREATE, HANDLE, dispatch, the process wire — consumes ONLY this
 
 gate_projection(instance, template, envelope) → Projection   # policy-facing read model — read-only, derived; the policy reads, never mutates
   RETURN {
@@ -6015,11 +6040,11 @@ run_process_gate(gate, instance, template, envelope) → GateDecision   # L2a �
     step_id: instance.current_step, event_type: envelope.type, expected_version: instance.version,
     config:     gate.effective_config,                                # the admission-materialized EFFECTIVE config — the one downstream form, on the wire too
     projection: compact(gate_projection(instance, template, envelope)) }   # MVP: small inline payload (NOT projection_ref + SDK)
-  result ← processRunner.run(gate.config.command, {
+  result ← processRunner.run(gate.effective_config.command, {
     cwd: runtime_context_workspace(instance),                         # runs in the provisioned workspace (v1: the worktree)
-    stdin: json(invocation), timeout_ms: gate.config.timeout_ms })    # bounded timeout — a v3 addition (v1 had none)
+    stdin: json(invocation), timeout_ms: gate.effective_config.timeout_ms })    # bounded timeout — a v3 addition (v1 had none)
   # evidence (log + exit_code + duration + head_sha + git_status_hash) is persisted on EVERY run (v1-faithful)
-  RETURN classify_process_result(result, gate.config)
+  RETURN classify_process_result(result, gate.effective_config)
 
 classify_process_result(result, config) → GateDecision
   output_mode     ← config.output.mode      ?? exit_code             # contract defaults (absent ⇒ these) — resolved once
@@ -6103,7 +6128,7 @@ RECEIVE(input) → Outcome                                               # one k
 # compose CREATE_INSTANCE(...) then START(instance). activation_mode controls what happens
 # after RUNTIME_CONTEXT_READY (activate vs WAITING(kickoff_pending)) — not whether CREATE dispatches.
 CREATE_INSTANCE(template_ref, activation_mode, task, binding, run_overrides) → Created   # operator_intent; template + binding resolved on the start path (formalized by L0f)
-  template ← definitionStore.load(template_ref)                # a pinned definition — a plain template, or an L0f-resolved definition (slots applied)
+  template ← definitionStore.load(template_ref)                # a pinned ADMITTED definition (admit_definition, L2) — plain or L0f-resolved, always carrying EFFECTIVE configs; the raw/authored form is admission's input and never reaches CREATE
   IF activation_mode = immediate AND task is absent THEN RETURN Rejected(task_required)
   REQUIRE binding covers every role reachable in template      # binding resolved pre-kernel; the kernel only validates coverage (fail at create, not mid-run)
   # definition-static validation happened at ADMISSION (admit_definition, definition load) — the store issues only ADMITTED definitions; CREATE validates INSTANCE inputs (task, binding coverage) only
@@ -6448,7 +6473,7 @@ HANDLE envelope → Outcome
 
   instance ← instanceStore.load(envelope.instance_id)
   IF instance is none                     THEN RETURN Rejected(unknown_instance)
-  template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
+  template ← definitionStore.load(instance.template_ref)   # separate store; a pinned immutable ADMITTED definition — effective configs, admission's output (L2)
   step     ← template.step(instance.current_step)           # positional read, NOT a rung — infallible over committed
                                                             # state (load-time validation: every reachable step id
                                                             # resolves in the pinned template), so hoisting it cannot
@@ -6851,16 +6876,20 @@ INTERFACE InlineGateEvaluator extends GateRegistration:  # declarative | package
 # CREATE's own admission. Failures are DEFINITION ISSUES ({path, code, message} — the definition
 # channel), never instance rejections: no instance exists yet to reject into.
 admit_definition(definition_source, gateRegistry) → AdmittedDefinition | issues
-  REQUIRE structural well-formedness                                 # steps / roles / transitions / terminal — the structure rules
+  issues ← []                                                        # accumulated — admission reports the FULL finding set, never first-error-only
+  REQUIRE structural well-formedness                                 # steps / roles / transitions / terminal — structure issues accumulate on the same channel
   FOR gate IN all_gate_bindings(definition_source):                  # every (step, event_type) gate
     registration ← gateRegistry.resolve(gate.uses)
     IF registration is none
-       THEN issue(gate_evaluator_unavailable)                        # compile twin — HANDLE keeps the registry-drift runtime backstop
+       THEN issues.add(gate_evaluator_unavailable); CONTINUE         # nothing below may dereference an unresolved registration; HANDLE keeps the registry-drift runtime backstop
     IF registration.requires_runtime_context AND definition_source.runtime_context = none
-       THEN issue(runtime_context_required_for_process_gate)         # compile twin — HANDLE's ready(∅) lane stays the runtime backstop
-    gate.effective_config ← registration.validate_and_normalize_config(gate.config)   # registration-owned schema; defaults materialize ONCE
-  REQUIRE every level-declared definition-static validator           # the validate_* family — each level's section declares its member; all emit issues on this channel
-  RETURN AdmittedDefinition(definition with effective configs)       # downstream — HANDLE, dispatch, the process wire — reads ONLY the effective form
+       THEN issues.add(runtime_context_required_for_process_gate)    # compile twin — HANDLE's ready(∅) lane stays the runtime backstop
+    result ← registration.validate_and_normalize_config(gate.config) # registration-owned schema over the AUTHORED (raw) config
+    IF result is issues THEN issues.add(result.issues)
+    ELSE gate.effective_config ← result.effective                    # defaults materialize ONCE — the one downstream form
+  REQUIRE every level-declared definition-static validator           # the validate_* family — each level's section declares its member; their issues accumulate here
+  IF issues is nonempty THEN RETURN issues                           # ALL-OR-NOTHING: no AdmittedDefinition exists on ANY issue
+  RETURN AdmittedDefinition(definition with effective configs)       # downstream — CREATE, HANDLE, dispatch, the process wire — consumes ONLY this
 
 gate_projection(instance, template, envelope) → Projection   # policy-facing read model — read-only, derived; the policy reads, never mutates
   RETURN {
@@ -6879,11 +6908,11 @@ run_process_gate(gate, instance, template, envelope) → GateDecision   # L2a �
     step_id: instance.current_step, event_type: envelope.type, expected_version: instance.version,
     config:     gate.effective_config,                                # the admission-materialized EFFECTIVE config — the one downstream form, on the wire too
     projection: compact(gate_projection(instance, template, envelope)) }   # MVP: small inline payload (NOT projection_ref + SDK)
-  result ← processRunner.run(gate.config.command, {
+  result ← processRunner.run(gate.effective_config.command, {
     cwd: runtime_context_workspace(instance),                         # runs in the provisioned workspace (v1: the worktree)
-    stdin: json(invocation), timeout_ms: gate.config.timeout_ms })    # bounded timeout — a v3 addition (v1 had none)
+    stdin: json(invocation), timeout_ms: gate.effective_config.timeout_ms })    # bounded timeout — a v3 addition (v1 had none)
   # evidence (log + exit_code + duration + head_sha + git_status_hash) is persisted on EVERY run (v1-faithful)
-  RETURN classify_process_result(result, gate.config)
+  RETURN classify_process_result(result, gate.effective_config)
 
 classify_process_result(result, config) → GateDecision
   output_mode     ← config.output.mode      ?? exit_code             # contract defaults (absent ⇒ these) — resolved once
@@ -6967,7 +6996,7 @@ RECEIVE(input) → Outcome                                               # one k
 # compose CREATE_INSTANCE(...) then START(instance). activation_mode controls what happens
 # after RUNTIME_CONTEXT_READY (activate vs WAITING(kickoff_pending)) — not whether CREATE dispatches.
 CREATE_INSTANCE(template_ref, activation_mode, task, binding, run_overrides) → Created   # operator_intent; template + binding resolved on the start path (formalized by L0f)
-  template ← definitionStore.load(template_ref)                # a pinned definition — a plain template, or an L0f-resolved definition (slots applied)
+  template ← definitionStore.load(template_ref)                # a pinned ADMITTED definition (admit_definition, L2) — plain or L0f-resolved, always carrying EFFECTIVE configs; the raw/authored form is admission's input and never reaches CREATE
   IF activation_mode = immediate AND task is absent THEN RETURN Rejected(task_required)
   REQUIRE binding covers every role reachable in template      # binding resolved pre-kernel; the kernel only validates coverage (fail at create, not mid-run)
   # definition-static validation happened at ADMISSION (admit_definition, definition load) — the store issues only ADMITTED definitions; CREATE validates INSTANCE inputs (task, binding coverage) only
@@ -7364,7 +7393,7 @@ HANDLE envelope → Outcome
 
   instance ← instanceStore.load(envelope.instance_id)
   IF instance is none                     THEN RETURN Rejected(unknown_instance)
-  template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
+  template ← definitionStore.load(instance.template_ref)   # separate store; a pinned immutable ADMITTED definition — effective configs, admission's output (L2)
   step     ← template.step(instance.current_step)           # positional read, NOT a rung — infallible over committed
                                                             # state (load-time validation: every reachable step id
                                                             # resolves in the pinned template), so hoisting it cannot
@@ -7759,16 +7788,20 @@ INTERFACE InlineGateEvaluator extends GateRegistration:  # declarative | package
 # CREATE's own admission. Failures are DEFINITION ISSUES ({path, code, message} — the definition
 # channel), never instance rejections: no instance exists yet to reject into.
 admit_definition(definition_source, gateRegistry) → AdmittedDefinition | issues
-  REQUIRE structural well-formedness                                 # steps / roles / transitions / terminal — the structure rules
+  issues ← []                                                        # accumulated — admission reports the FULL finding set, never first-error-only
+  REQUIRE structural well-formedness                                 # steps / roles / transitions / terminal — structure issues accumulate on the same channel
   FOR gate IN all_gate_bindings(definition_source):                  # every (step, event_type) gate
     registration ← gateRegistry.resolve(gate.uses)
     IF registration is none
-       THEN issue(gate_evaluator_unavailable)                        # compile twin — HANDLE keeps the registry-drift runtime backstop
+       THEN issues.add(gate_evaluator_unavailable); CONTINUE         # nothing below may dereference an unresolved registration; HANDLE keeps the registry-drift runtime backstop
     IF registration.requires_runtime_context AND definition_source.runtime_context = none
-       THEN issue(runtime_context_required_for_process_gate)         # compile twin — HANDLE's ready(∅) lane stays the runtime backstop
-    gate.effective_config ← registration.validate_and_normalize_config(gate.config)   # registration-owned schema; defaults materialize ONCE
-  REQUIRE every level-declared definition-static validator           # the validate_* family — each level's section declares its member; all emit issues on this channel
-  RETURN AdmittedDefinition(definition with effective configs)       # downstream — HANDLE, dispatch, the process wire — reads ONLY the effective form
+       THEN issues.add(runtime_context_required_for_process_gate)    # compile twin — HANDLE's ready(∅) lane stays the runtime backstop
+    result ← registration.validate_and_normalize_config(gate.config) # registration-owned schema over the AUTHORED (raw) config
+    IF result is issues THEN issues.add(result.issues)
+    ELSE gate.effective_config ← result.effective                    # defaults materialize ONCE — the one downstream form
+  REQUIRE every level-declared definition-static validator           # the validate_* family — each level's section declares its member; their issues accumulate here
+  IF issues is nonempty THEN RETURN issues                           # ALL-OR-NOTHING: no AdmittedDefinition exists on ANY issue
+  RETURN AdmittedDefinition(definition with effective configs)       # downstream — CREATE, HANDLE, dispatch, the process wire — consumes ONLY this
 
 gate_projection(instance, template, envelope) → Projection   # policy-facing read model — read-only, derived; the policy reads, never mutates
   RETURN {
@@ -7787,11 +7820,11 @@ run_process_gate(gate, instance, template, envelope) → GateDecision   # L2a �
     step_id: instance.current_step, event_type: envelope.type, expected_version: instance.version,
     config:     gate.effective_config,                                # the admission-materialized EFFECTIVE config — the one downstream form, on the wire too
     projection: compact(gate_projection(instance, template, envelope)) }   # MVP: small inline payload (NOT projection_ref + SDK)
-  result ← processRunner.run(gate.config.command, {
+  result ← processRunner.run(gate.effective_config.command, {
     cwd: runtime_context_workspace(instance),                         # runs in the provisioned workspace (v1: the worktree)
-    stdin: json(invocation), timeout_ms: gate.config.timeout_ms })    # bounded timeout — a v3 addition (v1 had none)
+    stdin: json(invocation), timeout_ms: gate.effective_config.timeout_ms })    # bounded timeout — a v3 addition (v1 had none)
   # evidence (log + exit_code + duration + head_sha + git_status_hash) is persisted on EVERY run (v1-faithful)
-  RETURN classify_process_result(result, gate.config)
+  RETURN classify_process_result(result, gate.effective_config)
 
 classify_process_result(result, config) → GateDecision
   output_mode     ← config.output.mode      ?? exit_code             # contract defaults (absent ⇒ these) — resolved once
@@ -7875,7 +7908,7 @@ RECEIVE(input) → Outcome                                               # one k
 # compose CREATE_INSTANCE(...) then START(instance). activation_mode controls what happens
 # after RUNTIME_CONTEXT_READY (activate vs WAITING(kickoff_pending)) — not whether CREATE dispatches.
 CREATE_INSTANCE(template_ref, activation_mode, task, binding, run_overrides) → Created   # operator_intent; template + binding resolved on the start path (formalized by L0f)
-  template ← definitionStore.load(template_ref)                # a pinned definition — a plain template, or an L0f-resolved definition (slots applied)
+  template ← definitionStore.load(template_ref)                # a pinned ADMITTED definition (admit_definition, L2) — plain or L0f-resolved, always carrying EFFECTIVE configs; the raw/authored form is admission's input and never reaches CREATE
   IF activation_mode = immediate AND task is absent THEN RETURN Rejected(task_required)
   REQUIRE binding covers every role reachable in template      # binding resolved pre-kernel; the kernel only validates coverage (fail at create, not mid-run)
   # definition-static validation happened at ADMISSION (admit_definition, definition load) — the store issues only ADMITTED definitions; CREATE validates INSTANCE inputs (task, binding coverage) only
@@ -8272,7 +8305,7 @@ HANDLE envelope → Outcome
 
   instance ← instanceStore.load(envelope.instance_id)
   IF instance is none                     THEN RETURN Rejected(unknown_instance)
-  template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
+  template ← definitionStore.load(instance.template_ref)   # separate store; a pinned immutable ADMITTED definition — effective configs, admission's output (L2)
   step     ← template.step(instance.current_step)           # positional read, NOT a rung — infallible over committed
                                                             # state (load-time validation: every reachable step id
                                                             # resolves in the pinned template), so hoisting it cannot
@@ -9039,16 +9072,20 @@ INTERFACE InlineGateEvaluator extends GateRegistration:  # declarative | package
 # CREATE's own admission. Failures are DEFINITION ISSUES ({path, code, message} — the definition
 # channel), never instance rejections: no instance exists yet to reject into.
 admit_definition(definition_source, gateRegistry) → AdmittedDefinition | issues
-  REQUIRE structural well-formedness                                 # steps / roles / transitions / terminal — the structure rules
+  issues ← []                                                        # accumulated — admission reports the FULL finding set, never first-error-only
+  REQUIRE structural well-formedness                                 # steps / roles / transitions / terminal — structure issues accumulate on the same channel
   FOR gate IN all_gate_bindings(definition_source):                  # every (step, event_type) gate
     registration ← gateRegistry.resolve(gate.uses)
     IF registration is none
-       THEN issue(gate_evaluator_unavailable)                        # compile twin — HANDLE keeps the registry-drift runtime backstop
+       THEN issues.add(gate_evaluator_unavailable); CONTINUE         # nothing below may dereference an unresolved registration; HANDLE keeps the registry-drift runtime backstop
     IF registration.requires_runtime_context AND definition_source.runtime_context = none
-       THEN issue(runtime_context_required_for_process_gate)         # compile twin — HANDLE's ready(∅) lane stays the runtime backstop
-    gate.effective_config ← registration.validate_and_normalize_config(gate.config)   # registration-owned schema; defaults materialize ONCE
-  REQUIRE every level-declared definition-static validator           # the validate_* family — each level's section declares its member; all emit issues on this channel
-  RETURN AdmittedDefinition(definition with effective configs)       # downstream — HANDLE, dispatch, the process wire — reads ONLY the effective form
+       THEN issues.add(runtime_context_required_for_process_gate)    # compile twin — HANDLE's ready(∅) lane stays the runtime backstop
+    result ← registration.validate_and_normalize_config(gate.config) # registration-owned schema over the AUTHORED (raw) config
+    IF result is issues THEN issues.add(result.issues)
+    ELSE gate.effective_config ← result.effective                    # defaults materialize ONCE — the one downstream form
+  REQUIRE every level-declared definition-static validator           # the validate_* family — each level's section declares its member; their issues accumulate here
+  IF issues is nonempty THEN RETURN issues                           # ALL-OR-NOTHING: no AdmittedDefinition exists on ANY issue
+  RETURN AdmittedDefinition(definition with effective configs)       # downstream — CREATE, HANDLE, dispatch, the process wire — consumes ONLY this
 
 gate_projection(instance, template, envelope) → Projection   # policy-facing read model — read-only, derived; the policy reads, never mutates
   RETURN {
@@ -9067,11 +9104,11 @@ run_process_gate(gate, instance, template, envelope) → GateDecision   # L2a �
     step_id: instance.current_step, event_type: envelope.type, expected_version: instance.version,
     config:     gate.effective_config,                                # the admission-materialized EFFECTIVE config — the one downstream form, on the wire too
     projection: compact(gate_projection(instance, template, envelope)) }   # MVP: small inline payload (NOT projection_ref + SDK)
-  result ← processRunner.run(gate.config.command, {
+  result ← processRunner.run(gate.effective_config.command, {
     cwd: runtime_context_workspace(instance),                         # runs in the provisioned workspace (v1: the worktree)
-    stdin: json(invocation), timeout_ms: gate.config.timeout_ms })    # bounded timeout — a v3 addition (v1 had none)
+    stdin: json(invocation), timeout_ms: gate.effective_config.timeout_ms })    # bounded timeout — a v3 addition (v1 had none)
   # evidence (log + exit_code + duration + head_sha + git_status_hash) is persisted on EVERY run (v1-faithful)
-  RETURN classify_process_result(result, gate.config)
+  RETURN classify_process_result(result, gate.effective_config)
 
 classify_process_result(result, config) → GateDecision
   output_mode     ← config.output.mode      ?? exit_code             # contract defaults (absent ⇒ these) — resolved once
@@ -9157,7 +9194,7 @@ RECEIVE(input) → Outcome                                               # one k
 # compose CREATE_INSTANCE(...) then START(instance). activation_mode controls what happens
 # after RUNTIME_CONTEXT_READY (activate vs WAITING(kickoff_pending)) — not whether CREATE dispatches.
 CREATE_INSTANCE(template_ref, activation_mode, task, binding, run_overrides, parent_ref?) → Created   # operator_intent OR a parent's SpawnIntent (L4); template + binding resolved on the start path (formalized by L0f). parent_ref set ONLY for a spawned child, stored on the instance
-  template ← definitionStore.load(template_ref)                # a pinned definition — a plain template, or an L0f-resolved definition (slots applied)
+  template ← definitionStore.load(template_ref)                # a pinned ADMITTED definition (admit_definition, L2) — plain or L0f-resolved, always carrying EFFECTIVE configs; the raw/authored form is admission's input and never reaches CREATE
   IF activation_mode = immediate AND task is absent THEN RETURN Rejected(task_required)
   REQUIRE binding covers every role reachable in template      # binding resolved pre-kernel; the kernel only validates coverage (fail at create, not mid-run)
   # definition-static validation happened at ADMISSION (admit_definition, definition load) — the store issues only ADMITTED definitions; CREATE validates INSTANCE inputs (task, binding coverage) only
@@ -9556,7 +9593,7 @@ HANDLE envelope → Outcome
 
   instance ← instanceStore.load(envelope.instance_id)
   IF instance is none                     THEN RETURN Rejected(unknown_instance)
-  template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
+  template ← definitionStore.load(instance.template_ref)   # separate store; a pinned immutable ADMITTED definition — effective configs, admission's output (L2)
   step     ← template.step(instance.current_step)           # positional read, NOT a rung — infallible over committed
                                                             # state (load-time validation: every reachable step id
                                                             # resolves in the pinned template), so hoisting it cannot
@@ -9978,16 +10015,20 @@ INTERFACE InlineGateEvaluator extends GateRegistration:  # declarative | package
 # CREATE's own admission. Failures are DEFINITION ISSUES ({path, code, message} — the definition
 # channel), never instance rejections: no instance exists yet to reject into.
 admit_definition(definition_source, gateRegistry) → AdmittedDefinition | issues
-  REQUIRE structural well-formedness                                 # steps / roles / transitions / terminal — the structure rules
+  issues ← []                                                        # accumulated — admission reports the FULL finding set, never first-error-only
+  REQUIRE structural well-formedness                                 # steps / roles / transitions / terminal — structure issues accumulate on the same channel
   FOR gate IN all_gate_bindings(definition_source):                  # every (step, event_type) gate
     registration ← gateRegistry.resolve(gate.uses)
     IF registration is none
-       THEN issue(gate_evaluator_unavailable)                        # compile twin — HANDLE keeps the registry-drift runtime backstop
+       THEN issues.add(gate_evaluator_unavailable); CONTINUE         # nothing below may dereference an unresolved registration; HANDLE keeps the registry-drift runtime backstop
     IF registration.requires_runtime_context AND definition_source.runtime_context = none
-       THEN issue(runtime_context_required_for_process_gate)         # compile twin — HANDLE's ready(∅) lane stays the runtime backstop
-    gate.effective_config ← registration.validate_and_normalize_config(gate.config)   # registration-owned schema; defaults materialize ONCE
-  REQUIRE every level-declared definition-static validator           # the validate_* family — each level's section declares its member; all emit issues on this channel
-  RETURN AdmittedDefinition(definition with effective configs)       # downstream — HANDLE, dispatch, the process wire — reads ONLY the effective form
+       THEN issues.add(runtime_context_required_for_process_gate)    # compile twin — HANDLE's ready(∅) lane stays the runtime backstop
+    result ← registration.validate_and_normalize_config(gate.config) # registration-owned schema over the AUTHORED (raw) config
+    IF result is issues THEN issues.add(result.issues)
+    ELSE gate.effective_config ← result.effective                    # defaults materialize ONCE — the one downstream form
+  REQUIRE every level-declared definition-static validator           # the validate_* family — each level's section declares its member; their issues accumulate here
+  IF issues is nonempty THEN RETURN issues                           # ALL-OR-NOTHING: no AdmittedDefinition exists on ANY issue
+  RETURN AdmittedDefinition(definition with effective configs)       # downstream — CREATE, HANDLE, dispatch, the process wire — consumes ONLY this
 
 gate_projection(instance, template, envelope) → Projection   # policy-facing read model — read-only, derived; the policy reads, never mutates
   RETURN {
@@ -10006,11 +10047,11 @@ run_process_gate(gate, instance, template, envelope) → GateDecision   # L2a �
     step_id: instance.current_step, event_type: envelope.type, expected_version: instance.version,
     config:     gate.effective_config,                                # the admission-materialized EFFECTIVE config — the one downstream form, on the wire too
     projection: compact(gate_projection(instance, template, envelope)) }   # MVP: small inline payload (NOT projection_ref + SDK)
-  result ← processRunner.run(gate.config.command, {
+  result ← processRunner.run(gate.effective_config.command, {
     cwd: runtime_context_workspace(instance),                         # runs in the provisioned workspace (v1: the worktree)
-    stdin: json(invocation), timeout_ms: gate.config.timeout_ms })    # bounded timeout — a v3 addition (v1 had none)
+    stdin: json(invocation), timeout_ms: gate.effective_config.timeout_ms })    # bounded timeout — a v3 addition (v1 had none)
   # evidence (log + exit_code + duration + head_sha + git_status_hash) is persisted on EVERY run (v1-faithful)
-  RETURN classify_process_result(result, gate.config)
+  RETURN classify_process_result(result, gate.effective_config)
 
 classify_process_result(result, config) → GateDecision
   output_mode     ← config.output.mode      ?? exit_code             # contract defaults (absent ⇒ these) — resolved once
@@ -10096,7 +10137,7 @@ RECEIVE(input) → Outcome                                               # one k
 # compose CREATE_INSTANCE(...) then START(instance). activation_mode controls what happens
 # after RUNTIME_CONTEXT_READY (activate vs WAITING(kickoff_pending)) — not whether CREATE dispatches.
 CREATE_INSTANCE(template_ref, activation_mode, task, binding, run_overrides, parent_ref?) → Created   # operator_intent OR a parent's SpawnIntent (L4); template + binding resolved on the start path (formalized by L0f). parent_ref set ONLY for a spawned child, stored on the instance
-  template ← definitionStore.load(template_ref)                # a pinned definition — a plain template, or an L0f-resolved definition (slots applied)
+  template ← definitionStore.load(template_ref)                # a pinned ADMITTED definition (admit_definition, L2) — plain or L0f-resolved, always carrying EFFECTIVE configs; the raw/authored form is admission's input and never reaches CREATE
   IF activation_mode = immediate AND task is absent THEN RETURN Rejected(task_required)
   REQUIRE binding covers every role reachable in template      # binding resolved pre-kernel; the kernel only validates coverage (fail at create, not mid-run)
   # definition-static validation happened at ADMISSION (admit_definition, definition load) — the store issues only ADMITTED definitions; CREATE validates INSTANCE inputs (task, binding coverage) only
@@ -10496,7 +10537,7 @@ HANDLE envelope → Outcome
 
   instance ← instanceStore.load(envelope.instance_id)
   IF instance is none                     THEN RETURN Rejected(unknown_instance)
-  template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
+  template ← definitionStore.load(instance.template_ref)   # separate store; a pinned immutable ADMITTED definition — effective configs, admission's output (L2)
   step     ← template.step(instance.current_step)           # positional read, NOT a rung — infallible over committed
                                                             # state (load-time validation: every reachable step id
                                                             # resolves in the pinned template), so hoisting it cannot
@@ -11043,23 +11084,27 @@ INTERFACE InlineGateEvaluator extends GateRegistration:  # declarative | package
 
 # ─── DEFINITION ADMISSION (L2) — the EC delta: the gate FAMILY dimension joins the generic sweep ───
 admit_definition(definition_source, gateRegistry) → AdmittedDefinition | issues
-  REQUIRE structural well-formedness                                 # steps / roles / transitions / terminal — the structure rules
+  issues ← []                                                        # accumulated — admission reports the FULL finding set, never first-error-only
+  REQUIRE structural well-formedness                                 # steps / roles / transitions / terminal — structure issues accumulate on the same channel
   FOR gate IN all_gate_bindings(definition_source):                  # every (step, event_type) gate
     # EC — the gate FAMILY is a validated dimension: policy (run-state authorization) | verify
     # (independent evidence). Absent ⇒ policy (zero migration: every existing gate is policy by
     # default); verify is OPT-IN, and opting in brings the currency obligation with it (Q2)
     IF gate.family is present AND gate.family NOT IN { policy, verify }
-       THEN issue(invalid_gate_config)                                # unknown family — the generic gate-config code (the process-scoped code stays process-scoped)
+       THEN issues.add(invalid_gate_config)                          # unknown family — the generic gate-config code (the process-scoped code stays process-scoped)
     IF gate.family = verify AND gate.currency_binding is absent
-       THEN issue(invalid_gate_config)                                # a verify gate MUST declare what state its evidence certifies — no stale-green by construction; the inline process form satisfies it by construction, STATED in its binding, not exempted
+       THEN issues.add(invalid_gate_config)                          # a verify gate MUST declare what state its evidence certifies — no stale-green by construction; the inline process form satisfies it by construction, STATED in its binding, not exempted
     registration ← gateRegistry.resolve(gate.uses)
     IF registration is none
-       THEN issue(gate_evaluator_unavailable)                        # compile twin — HANDLE keeps the registry-drift runtime backstop
+       THEN issues.add(gate_evaluator_unavailable); CONTINUE         # nothing below may dereference an unresolved registration; HANDLE keeps the registry-drift runtime backstop
     IF registration.requires_runtime_context AND definition_source.runtime_context = none
-       THEN issue(runtime_context_required_for_process_gate)         # compile twin — HANDLE's ready(∅) lane stays the runtime backstop
-    gate.effective_config ← registration.validate_and_normalize_config(gate.config)   # registration-owned schema; defaults materialize ONCE
-  REQUIRE every level-declared definition-static validator           # the validate_* family — each level's section declares its member; all emit issues on this channel
-  RETURN AdmittedDefinition(definition with effective configs)       # downstream — HANDLE, dispatch, the process wire — reads ONLY the effective form
+       THEN issues.add(runtime_context_required_for_process_gate)    # compile twin — HANDLE's ready(∅) lane stays the runtime backstop
+    result ← registration.validate_and_normalize_config(gate.config) # registration-owned schema over the AUTHORED (raw) config
+    IF result is issues THEN issues.add(result.issues)
+    ELSE gate.effective_config ← result.effective                    # defaults materialize ONCE — the one downstream form
+  REQUIRE every level-declared definition-static validator           # the validate_* family — each level's section declares its member; their issues accumulate here
+  IF issues is nonempty THEN RETURN issues                           # ALL-OR-NOTHING: no AdmittedDefinition exists on ANY issue
+  RETURN AdmittedDefinition(definition with effective configs)       # downstream — CREATE, HANDLE, dispatch, the process wire — consumes ONLY this
 
 gate_projection(instance, template, envelope) → Projection   # policy-facing read model — read-only, derived; the policy reads, never mutates
   RETURN {
@@ -11078,11 +11123,11 @@ run_process_gate(gate, instance, template, envelope) → GateDecision   # L2a �
     step_id: instance.current_step, event_type: envelope.type, expected_version: instance.version,
     config:     gate.effective_config,                                # the admission-materialized EFFECTIVE config — the one downstream form, on the wire too
     projection: compact(gate_projection(instance, template, envelope)) }   # MVP: small inline payload (NOT projection_ref + SDK)
-  result ← processRunner.run(gate.config.command, {
+  result ← processRunner.run(gate.effective_config.command, {
     cwd: runtime_context_workspace(instance),                         # runs in the provisioned workspace (v1: the worktree)
-    stdin: json(invocation), timeout_ms: gate.config.timeout_ms })    # bounded timeout — a v3 addition (v1 had none)
+    stdin: json(invocation), timeout_ms: gate.effective_config.timeout_ms })    # bounded timeout — a v3 addition (v1 had none)
   # evidence (log + exit_code + duration + head_sha + git_status_hash) is persisted on EVERY run (v1-faithful)
-  RETURN classify_process_result(result, gate.config)
+  RETURN classify_process_result(result, gate.effective_config)
 
 classify_process_result(result, config) → GateDecision
   output_mode     ← config.output.mode      ?? exit_code             # contract defaults (absent ⇒ these) — resolved once
@@ -11233,7 +11278,7 @@ RECEIVE(input) → Outcome                                               # one k
 # compose CREATE_INSTANCE(...) then START(instance). activation_mode controls what happens
 # after RUNTIME_CONTEXT_READY (activate vs WAITING(kickoff_pending)) — not whether CREATE dispatches.
 CREATE_INSTANCE(template_ref, activation_mode, task, binding, run_overrides, parent_ref?) → Created   # operator_intent OR a parent's SpawnIntent (L4); template + binding resolved on the start path (formalized by L0f). parent_ref set ONLY for a spawned child, stored on the instance
-  template ← definitionStore.load(template_ref)                # a pinned definition — a plain template, or an L0f-resolved definition (slots applied)
+  template ← definitionStore.load(template_ref)                # a pinned ADMITTED definition (admit_definition, L2) — plain or L0f-resolved, always carrying EFFECTIVE configs; the raw/authored form is admission's input and never reaches CREATE
   IF activation_mode = immediate AND task is absent THEN RETURN Rejected(task_required)
   REQUIRE binding covers every role reachable in template      # binding resolved pre-kernel; the kernel only validates coverage (fail at create, not mid-run)
   # definition-static validation happened at ADMISSION (admit_definition, definition load) — the store issues only ADMITTED definitions; CREATE validates INSTANCE inputs (task, binding coverage) only
@@ -11633,7 +11678,7 @@ HANDLE envelope → Outcome
 
   instance ← instanceStore.load(envelope.instance_id)
   IF instance is none                     THEN RETURN Rejected(unknown_instance)
-  template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
+  template ← definitionStore.load(instance.template_ref)   # separate store; a pinned immutable ADMITTED definition — effective configs, admission's output (L2)
   step     ← template.step(instance.current_step)           # positional read, NOT a rung — infallible over committed
                                                             # state (load-time validation: every reachable step id
                                                             # resolves in the pinned template), so hoisting it cannot

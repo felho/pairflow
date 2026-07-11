@@ -4,7 +4,7 @@ HANDLE envelope → Outcome
 
   instance ← instanceStore.load(envelope.instance_id)
   IF instance is none                     THEN RETURN Rejected(unknown_instance)
-  template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
+  template ← definitionStore.load(instance.template_ref)   # separate store; a pinned immutable ADMITTED definition — effective configs, admission's output (L2)
   step     ← template.step(instance.current_step)           # positional read, NOT a rung — infallible over committed
                                                             # state (load-time validation: every reachable step id
                                                             # resolves in the pinned template), so hoisting it cannot

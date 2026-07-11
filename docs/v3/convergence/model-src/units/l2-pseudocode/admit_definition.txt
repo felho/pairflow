@@ -6,13 +6,17 @@
 # CREATE's own admission. Failures are DEFINITION ISSUES ({path, code, message} — the definition
 # channel), never instance rejections: no instance exists yet to reject into.
 admit_definition(definition_source, gateRegistry) → AdmittedDefinition | issues
-  REQUIRE structural well-formedness                                 # steps / roles / transitions / terminal — the structure rules
+  issues ← []                                                        # accumulated — admission reports the FULL finding set, never first-error-only
+  REQUIRE structural well-formedness                                 # steps / roles / transitions / terminal — structure issues accumulate on the same channel
   FOR gate IN all_gate_bindings(definition_source):                  # every (step, event_type) gate
     registration ← gateRegistry.resolve(gate.uses)
     IF registration is none
-       THEN issue(gate_evaluator_unavailable)                        # compile twin — HANDLE keeps the registry-drift runtime backstop
+       THEN issues.add(gate_evaluator_unavailable); CONTINUE         # nothing below may dereference an unresolved registration; HANDLE keeps the registry-drift runtime backstop
     IF registration.requires_runtime_context AND definition_source.runtime_context = none
-       THEN issue(runtime_context_required_for_process_gate)         # compile twin — HANDLE's ready(∅) lane stays the runtime backstop
-    gate.effective_config ← registration.validate_and_normalize_config(gate.config)   # registration-owned schema; defaults materialize ONCE
-  REQUIRE every level-declared definition-static validator           # the validate_* family — each level's section declares its member; all emit issues on this channel
-  RETURN AdmittedDefinition(definition with effective configs)       # downstream — HANDLE, dispatch, the process wire — reads ONLY the effective form
+       THEN issues.add(runtime_context_required_for_process_gate)    # compile twin — HANDLE's ready(∅) lane stays the runtime backstop
+    result ← registration.validate_and_normalize_config(gate.config) # registration-owned schema over the AUTHORED (raw) config
+    IF result is issues THEN issues.add(result.issues)
+    ELSE gate.effective_config ← result.effective                    # defaults materialize ONCE — the one downstream form
+  REQUIRE every level-declared definition-static validator           # the validate_* family — each level's section declares its member; their issues accumulate here
+  IF issues is nonempty THEN RETURN issues                           # ALL-OR-NOTHING: no AdmittedDefinition exists on ANY issue
+  RETURN AdmittedDefinition(definition with effective configs)       # downstream — CREATE, HANDLE, dispatch, the process wire — consumes ONLY this

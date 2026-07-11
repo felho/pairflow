@@ -5,8 +5,8 @@ run_process_gate(gate, instance, template, envelope) → GateDecision   # L2a �
     step_id: instance.current_step, event_type: envelope.type, expected_version: instance.version,
     config:     gate.effective_config,                                # the admission-materialized EFFECTIVE config — the one downstream form, on the wire too
     projection: compact(gate_projection(instance, template, envelope)) }   # MVP: small inline payload (NOT projection_ref + SDK)
-  result ← processRunner.run(gate.config.command, {
+  result ← processRunner.run(gate.effective_config.command, {
     cwd: runtime_context_workspace(instance),                         # runs in the provisioned workspace (v1: the worktree)
-    stdin: json(invocation), timeout_ms: gate.config.timeout_ms })    # bounded timeout — a v3 addition (v1 had none)
+    stdin: json(invocation), timeout_ms: gate.effective_config.timeout_ms })    # bounded timeout — a v3 addition (v1 had none)
   # evidence (log + exit_code + duration + head_sha + git_status_hash) is persisted on EVERY run (v1-faithful)
-  RETURN classify_process_result(result, gate.config)
+  RETURN classify_process_result(result, gate.effective_config)

@@ -441,7 +441,7 @@
 - `unknown_target` — first appears in `l0f-pseudocode`
 - `workflow_definition_unavailable` — first appears in `l0f-pseudocode`
 
-## 4 · Domain registry — 51 aggregate blocks · 121 entities
+## 4 · Domain registry — 51 aggregate blocks · 122 entities
 
 ### `l0a` (3 blocks · 7 entities)
 
@@ -487,10 +487,10 @@
 - **Template aggregate — gains the authorization profile** — CapabilityProfile (value)
 - **New rejections — before commit, no state change** — Rejected(missing_role) · Rejected(role_not_authorized) · Rejected(not_authorized)
 
-### `l2` (4 blocks · 9 entities)
+### `l2` (4 blocks · 10 entities)
 
 - **Template aggregate — gains the gate pipeline** — GateBinding · GatePipeline
-- **Evaluation & admission — one registration contract, two value types** — GateRegistration · GateDecision (value)
+- **Evaluation & admission — one registration contract, two value types** — GateRegistration · GateDecision (value) · AdmittedDefinition (value)
 - **Instance & read model — a canonical round and a policy-facing view** — WorkflowInstance · gate_projection
 - **New rejections — before commit, no state change, no round burned** — Rejected(gate_blocked(reason)) · Rejected(gate_evaluator_unavailable) · Rejected(gate_execution_not_supported)
 
