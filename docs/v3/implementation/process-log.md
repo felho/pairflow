@@ -1704,3 +1704,25 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   diminishing-returns cutoff) held as designed. The journey smoke ran
   through the shipped processes as ratified — the activation packet
   carried the repo's first full-lifecycle e2e.
+
+- 2026-07-11 · ch8-P2 arm gate 2 (build-close) — verdict `refine` on
+  the build sha, three substance groups, all folded same day
+  (aftermath commit 295ee8e9; the arm's re-check: approve, zero new):
+  a REAL product catch (dev `validate` silently accepted extra
+  positionals against D1's "exactly one"); the M5 receipts had
+  ANNOTATED the open-status text instead of flipping its tense
+  ("MD-1 stands — retired" reads as a contradiction to a cold
+  reader); and FOUR lanes were present but mutation-INSENSITIVE
+  (keyset-only {stage,findings} asserts, no last-@ positive, empty
+  config forms undriven, projected-field journey equality).
+  BOUNDARY-REVIEW candidate (the presence-vs-sensitivity lesson):
+  "every lane driven" is satisfiable by a test that cannot FAIL on
+  its row's violation — should lens 3's duty add a sensitivity probe
+  (per driven lane: name the violation the test would catch)?
+  Transitional-arm reliability notes: two MORE codex invocations were
+  killed mid-run this packet (gate-2's first re-check among them;
+  each retry completed) — 3 kills / 6 runs total; and the codex
+  sandbox cannot execute the subprocess-based suites (tsx IPC EPERM
+  in $TMPDIR) — the arm verified those lanes from source while the
+  in-session 547/547 run carried the execution evidence. Both notes
+  feed the boundary review's arm-yield evaluation.
