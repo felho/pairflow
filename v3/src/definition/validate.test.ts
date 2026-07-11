@@ -423,6 +423,24 @@ describe("V15 — acyclicity (cycle-safe validator)", () => {
     expect(JSON.stringify(err.findings)).toMatch(/cycl/i);
   });
 
+  // Aftermath round 2 (the arm's re-check catch): with accumulation the
+  // walk RUNS on cyclic graphs — every message site must be cycle-safe.
+  // A cyclic map planted in each arbitrary-value scalar slot: the cycle
+  // finding survives, no internal-failure, no throw.
+  const cyclicSlots = [
+    ["ref.id (V2 message site)", "ref:\n  id: &a\n    self: *a\n  version: 1\n", "ref"],
+    ["step role (grammar site)", "steps:\n  s:\n    role: &a\n      self: *a\n    instruction: i\n    transitions: {}\n", "steps"],
+    ["start (V13 message site)", "start: &a\n  self: *a\n", "start"],
+    ["transition target (V14 message site)", "steps:\n  s:\n    role: r\n    instruction: i\n    transitions:\n      GO: &a\n        self: *a\n", "steps"],
+  ] as const;
+  for (const [label, part, partName] of cyclicSlots) {
+    it(`stays cycle-safe with a cyclic value at: ${label}`, () => {
+      const err = expectValidateErr(template({ [partName]: part }));
+      expect(JSON.stringify(err.findings)).toMatch(/cycl/i);
+      expect(JSON.stringify(err.findings)).not.toMatch(/internal validator failure/);
+    });
+  }
+
   it("ACCUMULATES the cycle finding with the other structural lanes (aftermath — E2 has no cycle exemption)", () => {
     const err = expectValidateErr(
       template({

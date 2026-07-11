@@ -786,6 +786,23 @@ typecheck, lint, coverage validation, packet-lint, adr-check; the
 delta-scoped reconciliation pass ran before the aftermath commit (the
 ch7-P4 round-1 skip lesson).
 
+**Aftermath round 2 (2026-07-11, the arm's re-check on the round-1
+fold — the finder-lane rerun caught a regression the fold itself
+introduced):** with V15 accumulating, the structural walk RUNS on
+cyclic graphs — and the finding-message sites still used
+`JSON.stringify` on arbitrary values: a cyclic map planted in a
+scalar slot (`role: *a`) threw "Converting circular structure to
+JSON", the G1 belt caught it, and the intended V15 finding was LOST
+to an internal-failure result. The "fix scoped to the finding just
+caught" class made real: the accumulation fix re-derived the walk's
+HANG-safety but not the message sites' SERIALIZATION safety under
+the new invariant. Fix: a cycle-safe `describeValue` renderer at
+every arbitrary-value message site (objects are described, never
+serialized — the V2 id, V13 start, V14 target, and grammar got-value
+sites); driven by a table-driven lane set planting a cyclic map in
+each of the four slots (cycle finding survives, no internal-failure,
+no throw). 530 → 534 tests; bridges re-verified green.
+
 ```json
 {
   "packet_metrics": {
@@ -796,7 +813,7 @@ ch7-P4 round-1 skip lesson).
       "discovered": "projection"
     },
     "provenance": { "anchored": 36, "derived": 3, "new_decision": 1 },
-    "rounds": { "review": 2, "doc_refinement": 0, "implementation": 2 },
+    "rounds": { "review": 2, "doc_refinement": 0, "implementation": 3 },
     "stops": [
       {
         "type": "4:flagged-approve",
@@ -814,10 +831,15 @@ ch7-P4 round-1 skip lesson).
         "found_at": "code-review",
         "what": "the V15 cycle finding SHORT-CIRCUITED the whole validate stage — against E2/C21's accumulation rule (suppression is container-precondition only): a cyclic agentConfig hid every other structural finding",
         "why_missed": "the build generalized the container-suppression pattern to the cycle precondition ('the walk presupposes an acyclic graph') — but the structural walk is constant-depth and never traverses the value graph, so the presupposition was false; no in-session check re-derived it, and the arm's post-build probe staged the cycle+defects COMBINATION the suite lacked"
+      },
+      {
+        "found_at": "code-review",
+        "what": "the round-1 aftermath fix itself regressed: with V15 accumulating, the walk runs on cyclic graphs — and JSON.stringify in finding messages threw on a cyclic value in a scalar slot (role: *a), losing the cycle finding to the G1 internal-failure belt",
+        "why_missed": "the accumulation fix was scoped to the finding just caught: the walk's HANG-safety was re-derived under the new invariant but the message sites' SERIALIZATION safety was not; the arm's re-check probed a cyclic value in a scalar slot — a combination the round-1 lanes lacked"
       }
     ],
     "learned": "the first measurement-stage packet: an agent-invoked external arm run PRE-approve caught two substrate overclaims twelve internal Opus passes missed; the build ran first-execution green on every yaml lane — a ratified draft's probe record transfers to code with zero behavioral surprises",
-    "baseline_note": "rounds.review = 2 counted panel rounds (R1 full; R2 targeted clean after the content fold); the two closes, the lens-4 reconciliations, and the arm's find + re-check are chronicled above and do not count (reconciliations never count; the arm is the phase-2 adversarial leg). prediction: the invention->projection gap is flag 2's boundary-review question — the draft phase absorbed the memo-born decisions between the ratification-time prediction and authoring. detector_misses.found_at = 'approve' (the closed enum's nearest member): the finder was the EXTERNAL ARM run pre-approve at the user's ask — a NEW lane the enum predates (the ch7-P4 misses arrived post-build via code-review); whether the enum gains an external-arm member is boundary-review material. The miss fed the S1 fold before approve and before build. implementation = 2: the build round (mechanical type/lint residue only — four readonly casts, one optional chain, two auto-fixed assertions, one NBSP escape; zero behavioral test failures) + the same-day external-arm aftermath round (the V15 accumulation fix + toJSON + the V5 grid + the V11 reliability extension — 515 -> 530). 401 -> 515 at the build commit (+114 vs the ~55 estimate: parametrized lanes expand to per-form it bodies — the inverse of ch7-P4's over-count, recorded for the estimating convention). The second detector_misses entry is the post-build arm's substance catch (found_at code-review — the arm IS that lane post-build; its pre-approve run is the first entry's 'approve' lane)."
+    "baseline_note": "rounds.review = 2 counted panel rounds (R1 full; R2 targeted clean after the content fold); the two closes, the lens-4 reconciliations, and the arm's find + re-check are chronicled above and do not count (reconciliations never count; the arm is the phase-2 adversarial leg). prediction: the invention->projection gap is flag 2's boundary-review question — the draft phase absorbed the memo-born decisions between the ratification-time prediction and authoring. detector_misses.found_at = 'approve' (the closed enum's nearest member): the finder was the EXTERNAL ARM run pre-approve at the user's ask — a NEW lane the enum predates (the ch7-P4 misses arrived post-build via code-review); whether the enum gains an external-arm member is boundary-review material. The miss fed the S1 fold before approve and before build. implementation = 3: the build round (mechanical type/lint residue only — four readonly casts, one optional chain, two auto-fixed assertions, one NBSP escape; zero behavioral test failures) + the external-arm aftermath round (the V15 accumulation fix + toJSON + the V5 grid + the V11 reliability extension — 515 -> 530) + the arm re-check's regression round (the cycle-safe describeValue renderer — 530 -> 534; the third detector_misses entry). 401 -> 515 at the build commit (+114 vs the ~55 estimate: parametrized lanes expand to per-form it bodies — the inverse of ch7-P4's over-count, recorded for the estimating convention). The second detector_misses entry is the post-build arm's substance catch (found_at code-review — the arm IS that lane post-build; its pre-approve run is the first entry's 'approve' lane)."
   }
 }
 ```

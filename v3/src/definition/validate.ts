@@ -27,10 +27,24 @@ function isPlainMap(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/**
+ * CYCLE-SAFE value rendering for finding messages (aftermath round 2,
+ * the arm's re-check catch): with V15 accumulating, the walk RUNS on
+ * cyclic graphs — `JSON.stringify` on an arbitrary value in a scalar
+ * slot (e.g. `role: *a` aliasing a cyclic map) would throw. Objects
+ * are described, never serialized; primitives are safe literals.
+ */
+function describeValue(value: unknown): string {
+  if (typeof value === "object" && value !== null) {
+    return Array.isArray(value) ? "a list" : "a map";
+  }
+  return JSON.stringify(value) ?? String(value);
+}
+
 /** V5 (draft C10): nonempty, no whitespace (`/\s/u`), no dot — ONE grammar for every id class. */
 function idGrammarError(kind: string, id: unknown): string | undefined {
   if (typeof id !== "string" || id.length === 0) {
-    return `${kind} must be a nonempty string, got ${JSON.stringify(id)}`;
+    return `${kind} must be a nonempty string, got ${describeValue(id)}`;
   }
   if (/[\s.]/u.test(id)) {
     return `invalid ${kind} ${JSON.stringify(id)}: ids contain no whitespace and no "."`;
@@ -166,7 +180,7 @@ export function validateTemplate(value: unknown, doc: Document, source: string):
       } else {
         const id = ref["id"];
         if (typeof id !== "string" || !REF_ID.test(id)) {
-          findings.push({ path: "ref.id", message: `id must be a string matching ^[a-z0-9][a-z0-9-]*$ (filename-safe); got ${JSON.stringify(id)}` });
+          findings.push({ path: "ref.id", message: `id must be a string matching ^[a-z0-9][a-z0-9-]*$ (filename-safe); got ${describeValue(id)}` });
         } else {
           refId = id;
         }
@@ -351,7 +365,7 @@ export function validateTemplate(value: unknown, doc: Document, source: string):
   if ("start" in root && stepIds) {
     const start = root["start"];
     if (typeof start !== "string" || !stepIds.includes(start)) {
-      findings.push({ path: "start", message: `start must name an existing step; got ${JSON.stringify(start)}` });
+      findings.push({ path: "start", message: `start must name an existing step; got ${describeValue(start)}` });
     }
   }
 
@@ -359,7 +373,7 @@ export function validateTemplate(value: unknown, doc: Document, source: string):
   if (stepIds && terminalIds) {
     for (const { path, target } of transitionTargets) {
       if (typeof target !== "string" || !(stepIds.includes(target) || terminalIds.includes(target))) {
-        findings.push({ path, message: `transition target must name a step or a terminal id; got ${JSON.stringify(target)}` });
+        findings.push({ path, message: `transition target must name a step or a terminal id; got ${describeValue(target)}` });
       }
     }
   }
