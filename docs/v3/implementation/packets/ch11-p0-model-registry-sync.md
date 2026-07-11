@@ -90,7 +90,7 @@ it:
       { "id": "S6", "class": "anchored", "refs": ["prose:ch11-model-sync-delta.md — the mutation-boundary clause", "prose:README §5.5 one-off exception"] },
       { "id": "S7", "class": "anchored", "refs": ["prose:README §5.5 one-off exception (user-ratified 2026-07-11)"] },
       { "id": "S8", "class": "anchored", "refs": ["prose:ch11-model-sync-delta.md — the build-close clause", "prose:plan §11.4 ch11-P0 row"] },
-      { "id": "S9", "class": "anchored", "refs": ["prose:ch11-model-sync-delta.md Lane 4 addendum — its ratifying act names the binding commit"] }
+      { "id": "S9", "class": "anchored", "refs": ["prose:ch11-model-sync-delta.md Lane 4 addendum — ratified 2026-07-12 by the dual act naming 30fe3479"] }
     ]
   }
 }
@@ -112,7 +112,7 @@ the three drift locks themselves).
   BY DESIGN — authorized by the user-ratified §5.5 one-off exception
   (@ de33d245) — AND `check_coverage.py --fold-time` is red by EXACTLY
   the Lane-4 addendum's 9 enumerated items — authorized by the addendum
-  (its ratifying act names the binding commit); the delta-equality
+  (ratified 2026-07-12, the dual act naming `30fe3479`); the delta-equality
   receipts ride the pre-approval summary. Route: approve-ratified — the
   approve act consumes the ratified authorizations; revisit: none.
 
@@ -128,4 +128,38 @@ the three drift locks themselves).
 
 ## Build record
 
-<filled at build close>
+Built 2026-07-12 in ONE commit (code + packet; the record + metrics ride
+it). The four mirrors re-derived from the ratified ledger (453d3be9):
+`rejections.ts` 85 → 54 names (the enumerated 31 removed, alphabetical
+order preserved); `unitMap.json` 158 → 159 keys (the Lane-2 seven-key
+delta; new keys `{"status": "pending"}` — the predecessors' unrealized
+disposition); `domainRegistry.ts` — `l2/GateRegistration` rename,
+`l2/AdmittedDefinition` added (l2 comment 9 → 10), the l4-child compound
+entity re-keyed to the parser-normal form `l4-child/Definition issues`
+(the space-paren qualifier rule strips the tuple; the five names lost
+their `RejectionName` binding with the channel move — `kind: "pending"`,
+the realized block retired); `rejectionNames.test.ts` three count sites
+85 → 54; `check_coverage.py` expected dict 158/85 → 159/54 (+ the
+docstring's 158/158 line). SENSITIVITY PROOF (S5) EXECUTED: 6/6 probe
+mutations red (±1 member per lock, both directions, receipts in the
+session transcript). One in-build surprise: the l4-child manifest key's
+parser-normal form (the qualifier-stripping rule) — caught by the lock
+itself on first run, zero behavioral impact. One tooling stumble: the
+unitMap probe's git-restore reverted the UNCOMMITTED build edit
+(re-applied; lesson — probe-restore must be content-based on
+uncommitted trees). Full green at close: 560/560 tests, coverage
+fold-time OK, typecheck, lint, check.sh.
+
+```json
+{
+  "packet_metrics": {
+    "class": "model-registry-sync (bridge)",
+    "prediction": { "predicted": "projection", "reasoning": "every row anchors to the ratified evidence file / ledger state; the bridge itself was ratified before authoring", "discovered": "projection" },
+    "provenance": { "anchored": 9, "derived": 0, "new_decision": 0 },
+    "rounds": { "review": 1, "doc_refinement": 2, "implementation": 1 },
+    "stops": [],
+    "detector_misses": [],
+    "learned": "run the approve-time gates AT authoring — one execution beat five review rounds (Lane 4); probe-restores must be content-based on uncommitted trees"
+  }
+}
+```

@@ -7,7 +7,7 @@ import { REJECTION_NAMES } from "../domain/index.js";
 /**
  * The PI-3 rejection drift test's name axis (packet ch5-P1 — moved here
  * from domain/, where it arrived early per plan §4.5): the in-code union
- * carries ALL 85 ledger §3 names — set equality against the ledger parsed
+ * carries ALL 54 ledger §3 names — set equality against the ledger parsed
  * at test time, so there is no second hand-copied list to drift.
  * ADR-007: drift TEST files may value-import domain registry values —
  * comparing the runtime value against the ledger is the whole point.
@@ -37,9 +37,9 @@ function ledgerRejectionNames(): string[] {
   return names;
 }
 
-describe("the 85-name rejection registry (ledger §3 ↔ code)", () => {
-  it("the ledger parse itself yields 85 names (drift guard, plan §1.4)", () => {
-    expect(ledgerRejectionNames()).toHaveLength(85);
+describe("the 54-name rejection registry (ledger §3 ↔ code)", () => {
+  it("the ledger parse itself yields 54 names (drift guard, plan §1.4)", () => {
+    expect(ledgerRejectionNames()).toHaveLength(54);
   });
 
   it("carries no duplicates in code", () => {

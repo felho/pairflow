@@ -188,11 +188,12 @@ export const DOMAIN_REGISTRY: Readonly<Record<string, RegistryEntry>> = {
     typeName: "RejectionName",
     rejectionNames: ["not_authorized"],
   },
-  // ── l2 (9) ─────────────────────────────────────────────────────────
+  // ── l2 (10) ─────────────────────────────────────────────────────────
   "l2/GateBinding": { kind: "pending" },
   "l2/GatePipeline": { kind: "pending" },
-  "l2/GateEvaluator": { kind: "pending" },
+  "l2/GateRegistration": { kind: "pending" },
   "l2/GateDecision": { kind: "pending" },
+  "l2/AdmittedDefinition": { kind: "pending" },
   "l2/WorkflowInstance": { kind: "pending" },
   "l2/gate_projection": { kind: "pending" },
   "l2/Rejected(gate_blocked(reason))": {
@@ -301,18 +302,10 @@ export const DOMAIN_REGISTRY: Readonly<Record<string, RegistryEntry>> = {
     typeName: "RejectionName",
     rejectionNames: ["child_lifecycle_not_subscribed"],
   },
-  "l4-child/Rejected(child_template_ref_unresolved / child_key_missing / child_wait_for_empty / child_wait_for_incomplete / child_wait_target_unresolved)":
-    {
-      kind: "realized",
-      typeName: "RejectionName",
-      rejectionNames: [
-        "child_template_ref_unresolved",
-        "child_key_missing",
-        "child_wait_for_empty",
-        "child_wait_for_incomplete",
-        "child_wait_target_unresolved",
-      ],
-    },
+  // the ledger token "Definition issues (child_5-tuple)" normalizes to the
+  // space-paren-stripped key (the parser's qualifier rule) — the five names
+  // live as admission ISSUE codes now, no RejectionName binding
+  "l4-child/Definition issues": { kind: "pending" },
   "l4-child/Rejected(child_spawn_already_resolved)": {
     kind: "realized",
     typeName: "RejectionName",

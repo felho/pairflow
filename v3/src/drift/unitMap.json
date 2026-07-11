@@ -89,6 +89,9 @@
   "emit-contract-pseudocode/HANDLE": {
     "status": "pending"
   },
+  "emit-contract-pseudocode/admit_definition": {
+    "status": "pending"
+  },
   "emit-contract-pseudocode/admit_loaded": {
     "status": "pending"
   },
@@ -116,9 +119,6 @@
     "status": "pending"
   },
   "emit-contract-pseudocode/validate_emit_contracts": {
-    "status": "pending"
-  },
-  "emit-contract-pseudocode/validate_gate_config": {
     "status": "pending"
   },
   "l0a-pseudocode/HANDLE": {
@@ -252,7 +252,7 @@
   "l2-pseudocode/CREATE_INSTANCE": {
     "status": "pending"
   },
-  "l2-pseudocode/GateEvaluator": {
+  "l2-pseudocode/GateRegistration": {
     "status": "pending"
   },
   "l2-pseudocode/HANDLE": {
@@ -261,13 +261,16 @@
   "l2-pseudocode/activate": {
     "status": "pending"
   },
+  "l2-pseudocode/admit_definition": {
+    "status": "pending"
+  },
   "l2-pseudocode/gate_projection": {
     "status": "pending"
   },
   "l2a-pseudocode/CREATE_INSTANCE": {
     "status": "pending"
   },
-  "l2a-pseudocode/GateEvaluator": {
+  "l2a-pseudocode/GateRegistration": {
     "status": "pending"
   },
   "l2a-pseudocode/HANDLE": {

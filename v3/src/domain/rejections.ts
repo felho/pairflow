@@ -1,5 +1,7 @@
 /**
- * The 85-name rejection registry (ledger §3), carried in full from day
+ * The 54-name rejection registry (ledger §3; 85 → 54 at the ch11
+ * gate-admission model fix — the definition-static validate family moved
+ * to the definition-issue channel), carried in full from day
  * one (plan §1.4): behavior is scoped by chapters, the NAMES are not.
  * `rejectionNames.test.ts` asserts set equality against the ledger at
  * test time; the ch-5 PI-3 drift test formalizes it. A rejection the
@@ -7,46 +9,23 @@
  * mandatory stop, never a code-invented name (README §6).
  */
 export const REJECTION_NAMES = [
-  "action_outcome_ambiguous_route",
-  "action_outcome_no_route",
-  "action_outcome_target_unresolved",
-  "action_outcomes_empty",
   "action_result_mismatch",
   "action_result_not_auto_action",
-  "action_retry_requires_auto",
   "action_trigger_mismatch",
   "already_purged",
-  "auto_action_payload_unsupported",
-  "child_key_missing",
   "child_lifecycle_not_subscribed",
   "child_link_mismatch",
   "child_link_unknown",
   "child_spawn_already_resolved",
-  "child_template_ref_missing",
-  "child_template_ref_unresolved",
-  "child_wait_for_empty",
-  "child_wait_for_incomplete",
-  "child_wait_target_unresolved",
-  "decision_gate_empty",
   "decision_request_mismatch",
-  "decision_target_unresolved",
   "default_mode_undeclared",
   "delete_confirmation_required",
   "gate_blocked",
-  "gate_config_not_supported",
   "gate_evaluator_unavailable",
   "gate_execution_not_supported",
   "help_not_declared",
   "help_request_mismatch",
-  "invalid_action_outcome_schema",
-  "invalid_action_step",
-  "invalid_decision_gate_config",
-  "invalid_decision_payload_schema",
   "invalid_field_value",
-  "invalid_gate_config",
-  "invalid_process_gate_config",
-  "invalid_release_policy",
-  "invalid_retry_budget",
   "invalid_shape",
   "missing_evidence_ref",
   "missing_required_field",
@@ -70,13 +49,7 @@ export const REJECTION_NAMES = [
   "operator_not_authorized",
   "override_not_applicable",
   "override_required",
-  "recommends_on_non_gate",
-  "recommends_unknown_decision",
-  "release_boundaries_empty",
-  "release_boundaries_not_allowed",
-  "release_policy_undeclared",
   "resume_event_mismatch",
-  "retry_escalation_target_unresolved",
   "role_not_authorized",
   "runtime_context_provider_unavailable",
   "runtime_context_required_for_process_gate",
@@ -89,8 +62,6 @@ export const REJECTION_NAMES = [
   "unknown_mode",
   "unknown_slot",
   "unknown_target",
-  "unresolved_context_block_ref",
-  "unsupported_action_trigger",
   "workflow_definition_unavailable",
 ] as const;
 

@@ -48,7 +48,7 @@ design: packets declare only their slices and may not contradict the
 map. --disposition-map overrides the path (negative-test seam).
 
 Closure axes (the par.1.4 scope rules, mechanized):
-  - units: 158/158 owned, exactly one owner unless shared ownership is
+  - units: 159/159 owned, exactly one owner unless shared ownership is
     declared by EVERY co-owner;
   - invariants: 116/116 dispositioned (the ch-5 disposition map), same
     single-owner rule;
@@ -438,7 +438,7 @@ def run_validation(
 ) -> tuple[Checker, dict[str, set[str]], dict[str, dict[str, list[str]]], list[Path]]:
     checker = Checker()
     inventory = load_inventory()
-    expected = {"units": 158, "invariants": 116, "rejections": 85, "traces": 20}
+    expected = {"units": 159, "invariants": 116, "rejections": 54, "traces": 20}
     for axis, count in expected.items():
         if len(inventory[axis]) != count:
             checker.error(
