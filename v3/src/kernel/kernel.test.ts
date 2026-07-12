@@ -455,18 +455,22 @@ describe("L1 authority — the four new rejections through the real seam (A4/A7/
 
 describe("L1 authority — the cross-boundary ordering combinations (dimension 1, #8/#9/#11)", () => {
   it("#8 wrong role + NONEXISTENT type → role_not_authorized (the canonical reorder catch: navigation hoisted above authority would answer no_transition)", async () => {
-    const { kernel } = await setup();
-    expect(await kernel.handle(envelope("c8", "NOPE", 1, { ref: "d" }, "reviewer"))).toEqual({
-      kind: "rejected",
-      reason: "role_not_authorized",
+    const { kernel, store } = await setup();
+    await expectNoStateChange(store, "inst-1", async () => {
+      expect(await kernel.handle(envelope("c8", "NOPE", 1, { ref: "d" }, "reviewer"))).toEqual({
+        kind: "rejected",
+        reason: "role_not_authorized",
+      });
     });
   });
 
   it("#9 right role + NONEXISTENT type → no_transition (navigation precedes capability)", async () => {
-    const { kernel } = await setup();
-    expect(await kernel.handle(envelope("c9", "NOPE", 1, { ref: "d" }))).toEqual({
-      kind: "rejected",
-      reason: "no_transition",
+    const { kernel, store } = await setup();
+    await expectNoStateChange(store, "inst-1", async () => {
+      expect(await kernel.handle(envelope("c9", "NOPE", 1, { ref: "d" }))).toEqual({
+        kind: "rejected",
+        reason: "no_transition",
+      });
     });
   });
 
@@ -488,9 +492,11 @@ describe("L1 authority — the cross-boundary ordering combinations (dimension 1
       digest: deriveEmitDigest,
       diag: noopDiagnosticsSink,
     });
-    expect(await kernel.handle(envelope("c11", "PASS", 1, { ref: "d" }, "reviewer"))).toEqual({
-      kind: "rejected",
-      reason: "role_not_authorized",
+    await expectNoStateChange(handle.store, "inst-1", async () => {
+      expect(await kernel.handle(envelope("c11", "PASS", 1, { ref: "d" }, "reviewer"))).toEqual({
+        kind: "rejected",
+        reason: "role_not_authorized",
+      });
     });
   });
 });

@@ -174,7 +174,7 @@ const INSTANCE_KEYS = [
 ];
 const ROW_KEYS = ["seq", "committedAt", "payloadDigest", "envelope"];
 const ENVELOPE_REQUIRED = ["instanceId", "opId", "type", "actorId", "hasPayload"];
-const ENVELOPE_OPTIONAL = ["expectedVersion", "eventId", "payload"];
+const ENVELOPE_OPTIONAL = ["expectedVersion", "expectedRole", "eventId", "payload"];
 const PRESENT_KEYS = ["status", "rows"];
 const UNAVAILABLE_KEYS = ["status", "reason"];
 const UNAVAILABLE_REASONS = ["open_failed", "refused_marker", "read_failed"];
@@ -894,6 +894,24 @@ describe("dimension 9 — the free-text marker scan (the wide-claim negative)", 
     const first = await exporter.exportDebugBundle("inst-1");
     const second = await exporter.exportDebugBundle("inst-1");
     expect(JSON.stringify(first)).toBe(JSON.stringify(second));
+    diag.close();
+    close();
+  });
+});
+
+// ── arm gate 2 aftermath (ch11-P1): the bundle is a hand-projection
+// surface — expectedRole must survive the export explicitly, and the
+// declared envelope keyset grows by exactly that member. ──
+
+describe("bundle envelope meta — expectedRole fidelity (ch11-P1)", () => {
+  it("a committed envelope's expectedRole survives into the exported bundle row", async () => {
+    const { store, close } = await seeded();
+    const diag = emptyDiag();
+    const bundle = await exportWith(store, diag.reader);
+    const row = bundle?.transcript.find((r) => r.envelope.opId === "b2");
+    expect(row?.envelope.expectedRole).toBe("reviewer");
+    const first = bundle?.transcript.find((r) => r.envelope.opId === "a1");
+    expect(first?.envelope.expectedRole).toBe("implementer");
     diag.close();
     close();
   });

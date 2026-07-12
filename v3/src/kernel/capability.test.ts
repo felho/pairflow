@@ -57,3 +57,34 @@ describe("capability — explicit profile (C1/C6, type-level channel)", () => {
     expect(capability(template, "implementer", "implement")).toEqual(["PASS"]);
   });
 });
+
+// ── arm gate 2 aftermath (ch11-P1): prototype-hazard lanes — the
+// validated format legally admits __proto__/constructor ids. ──
+
+describe("capability — own-property discipline on hostile ids", () => {
+  it("a __proto__ role/step pair on a profile-bearing template derives from the OWN step, never the prototype chain", () => {
+    const steps = Object.create(null) as Record<string, WorkflowTemplate["steps"][string]>;
+    Object.defineProperty(steps, "__proto__", {
+      value: { role: "__proto__", instruction: "i", transitions: { PASS: "done" } },
+      enumerable: true,
+    });
+    const template: WorkflowTemplate = {
+      ref: { id: "x", version: 1 },
+      start: "__proto__",
+      steps,
+      terminal: ["done"],
+      roles: {},
+      capabilityProfile: { reviewer: { review: ["CONVERGED"] } },
+    };
+    expect(capability(template, "__proto__", "__proto__")).toEqual(["PASS"]);
+  });
+
+  it("an inherited key (constructor/toString) never reads a phantom profile entry or step", () => {
+    const template: WorkflowTemplate = {
+      ...fixtureTemplate(),
+      capabilityProfile: { implementer: { implement: ["PASS"] } },
+    };
+    expect(capability(template, "constructor", "implement")).toEqual([]);
+    expect(capability(template, "implementer", "toString")).toEqual([]);
+  });
+});

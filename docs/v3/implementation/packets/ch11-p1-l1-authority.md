@@ -141,7 +141,11 @@ verbatim, `sqliteStore.ts` lines 275/105 measured, no change);
 execution consumer = emit-loop/scripted actors (present — test-side
 echo of `packet.role`; the production spawned actor is ch-9,
 absent); read/presentation = floor + operator CLI (present —
-envelope pass-through only on the READ verbs, no projection
+envelope pass-through on the READ surfaces EXCEPT the debug
+bundle, which is a HAND-PROJECTION (its envelope meta names its
+fields explicitly — corrected at arm gate 2: `expectedRole` joins
+the projection and the boundary gains `floor/debugBundle.ts`); no
+other projection
 change — but the operator CLI's `submit` verb is a WRITE surface
 (`main.ts` labels it so) and CHANGES: it builds actor envelopes and
 gains the role flag, matrix O); recovery/cleanup = absent;
@@ -196,8 +200,9 @@ and no rollback/retry/coordination primitive is introduced.
    channel records all four new rejection classes (allowlists
    extended — without which the store sink would silently DROP
    them), the dev CLI stages it, the operator `submit` verb carries
-   it (required at parse — matrix O), the trace harness lifts sub-L1
-   traces.
+   it (required at parse — matrix O), the debug bundle's
+   hand-projected envelope meta carries it (the arm-gate-2
+   aftermath correction), the trace harness lifts sub-L1 traces.
 6. **Confinement:** nothing else changes — commit mechanics, digest
    identity, outcome vocabulary, diag event keysets, the 54-name
    registry (all four names pre-exist in it), and the store schema
@@ -606,7 +611,11 @@ P1–P4 precedent): entries are dated decision snapshots.
   ALREADY realized at name level since ch-4 — unchanged here, their
   behavioral drive is A4/A7/A8/A10's),
   `docs/v3/implementation/plan.md` (the aligned §11.4 P1 row edit —
-  the header's R-ALIGNED-UP paragraph; same commit).
+  the header's R-ALIGNED-UP paragraph; same commit),
+  `v3/src/floor/debugBundle.ts` (arm-gate-2 aftermath extension:
+  the envelope meta + row projection gain `expectedRole` — the
+  bundle is a hand-projection surface the original consume-family
+  scan misread as pass-through).
 - **Edited (tests — the type-ripple + behavior-change set; every
   file below drives the real kernel/ingress and must stage
   `expectedRole` or asserts a changed lane):**
@@ -628,8 +637,10 @@ P1–P4 precedent): entries are dated decision snapshots.
   their generic assertions need the new entries named — expected
   no-op).
 - **Untouched, explicitly:** `store/sqliteStore.ts` (W6 — no schema
-  change), `definition/` (note 5), `emit/` (X4), `floor/*.ts`
-  production files (pass-through), `domain/rejections.ts` (names
+  change), `definition/` (note 5), `emit/` (X4), the `floor/*.ts`
+  production files OTHER than `debugBundle.ts` (pass-through; the
+  bundle's hand-projection was corrected at arm gate 2 — see the
+  Edited list), `domain/rejections.ts` (names
   pre-exist), `testkit/templateFixture.ts` (no profile in the
   fixture — C4's channel is per-test values),
   `testkit/scriptedActor.ts` (opaque by design), `v3/templates/`
@@ -698,6 +709,7 @@ P1–P4 precedent): entries are dated decision snapshots.
       "v3/src/l0bTrace.test.ts",
       "v3/src/emitLoop.test.ts",
       "v3/src/twoWorker.test.ts",
+      "v3/src/floor/debugBundle.ts",
       "v3/src/floor/floor.test.ts",
       "v3/src/floor/tail.test.ts",
       "v3/src/floor/diagTail.test.ts",
@@ -940,6 +952,29 @@ coverage validation green — units 11/159, invariants 11/116, traces
 domainRegistry 3 type rows flipped, rejection registry untouched).
 The aligned plan edit (§11.4 P1 row) rides THIS commit (R-ALIGNED-UP).
 
+**Aftermath (2026-07-12, ARM GATE 2 — the build-close implementation
+review; pin-conform gpt-5.6-sol/high, verdict `refine` citing the
+build sha `109221b1`, byte guard clean):** three findings, all
+reproduced by the arm's own probes, folded in ONE `fix(v3)` round:
+(1) **the capability prototype hazard (product):** the record lookups
+read INHERITED members — a `__proto__` role/step pair returned the
+prototype object (then the kernel's `.includes` threw into the
+internal-failure belt) and an inherited profile entry could act as a
+phantom explicit restriction; the validated format legally admits
+such ids (the ch8-P1 lesson's kernel-side face). Fix: every
+`capability()` lookup is own-property-guarded; driven by the hostile
+`__proto__` lane and the inherited-key (`constructor`/`toString`)
+phantom-entry lanes. (2) **the debug bundle dropped `expectedRole`
+(product):** `BundleEnvelopeMeta`/`toBundleRow` is a HAND-PROJECTION,
+not a pass-through — the consume-family scan misread it; fix: the
+field joins the meta + projection + the declared envelope keyset, the
+boundary gains `floor/debugBundle.ts`, and the fidelity lane drives
+it. (3) **A11 under-drive (test-evidence):** the #8/#9/#11
+cross-boundary lanes asserted outcomes without the full-state helper
+— wrapped in `expectNoStateChange`. 619 → 622 tests; full gates
+re-verified green; the delta-scoped reconciliation ran before the
+aftermath commit.
+
 ```json
 {
   "packet_metrics": {
@@ -959,6 +994,11 @@ The aligned plan edit (§11.4 P1 row) rides THIS commit (R-ALIGNED-UP).
         "found_at": "approve",
         "what": "arm gate 1 refuted four packet claims twelve internal Opus passes had accepted: O1's derived classification (parity-argument-as-entailment), C4's prescribed TS container shape, the dev replay validator as a missed envelope-staging surface (no type ripple through the parse-tail cast), and runAllCheckers as a no-state-change proof (consistency, not pre/post equality)",
         "why_missed": "the internal lenses judged O1's parity derivation on its own terms instead of asking whether the ALTERNATIVE was equally conform (the lens-5 watchpoint had named the risk without acting on it); the replay surface hid behind the type system's silence; the checker gap needed the arm's what-would-stay-green-on-a-wrong-commit probe. All four folded PRE-build — zero code impact"
+      }
+      ,{
+        "found_at": "arm-build-close",
+        "what": "the capability lookups read inherited prototype members (a __proto__ role/step returned the prototype object and threw downstream; an inherited profile key acted as a phantom restriction), the debug bundle's hand-projected envelope meta silently dropped expectedRole, and the #8/#9/#11 lanes lacked the full-state equality the acceptance claimed per rejection lane",
+        "why_missed": "the panel's own-property vigilance lived in the ch8 definition layer and never crossed to the kernel-side record lookups; the consume-family scan classified the whole floor as pass-through without opening the bundle's projection; and the R4 equality fold was applied to the lanes the finding named, not re-derived over every rejection lane (the fix-scoped-to-the-finding class, again)"
       }
     ],
     "learned": "the discovered classification arrived in TWO steps: the panel found the missed WRITE SURFACE (round 1), the external arm found the missed DECISION on it (gate 1) — a fresh finder attacks the inventory, an adversarial arm attacks the entailments; the prediction convention should expect classification drift from BOTH directions"

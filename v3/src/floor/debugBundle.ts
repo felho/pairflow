@@ -37,6 +37,10 @@ export interface BundleEnvelopeMeta {
   readonly type: string;
   readonly actorId: string;
   readonly expectedVersion?: number;
+  /** The warrant's role claim (ch11-P1 aftermath: the bundle is a
+   * hand-projection surface, not a pass-through — the field must be
+   * carried explicitly or it silently vanishes from the export). */
+  readonly expectedRole?: string;
   /** Delivery provenance, pass-through (optional on EventEnvelope). */
   readonly eventId?: string;
   /** Distinguishes "payload omitted by policy" from "never had one". */
@@ -222,6 +226,7 @@ function toBundleRow(entry: TranscriptEntry, policy: RedactionPolicy): BundleTra
       ...(envelope.expectedVersion !== undefined
         ? { expectedVersion: envelope.expectedVersion }
         : {}),
+      ...(envelope.expectedRole !== undefined ? { expectedRole: envelope.expectedRole } : {}),
       ...(envelope.eventId !== undefined ? { eventId: envelope.eventId } : {}),
       hasPayload,
       ...(hasPayload && policy.includePayload(envelope)
