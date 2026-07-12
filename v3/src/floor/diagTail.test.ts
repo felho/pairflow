@@ -45,6 +45,7 @@ function env(
   type: string,
   expectedVersion?: number,
   payload?: unknown,
+  expectedRole = "implementer",
 ): EventEnvelope {
   return {
     instanceId: "inst-1",
@@ -53,6 +54,7 @@ function env(
     actorId: "codex",
     ...(expectedVersion !== undefined ? { expectedVersion } : {}),
     ...(payload !== undefined ? { payload } : {}),
+    expectedRole,
   };
 }
 
@@ -243,7 +245,7 @@ describe("tailWithDiagnostics — committed-lane parity (dimension 1)", () => {
   it("parity 1+4b — already-terminal at start: full committed replay, ZERO waits, empty diag lane", async () => {
     const r = await rig();
     await committed(r.kernel, env("a1", "PASS", 1, { ref: "diff-1" }));
-    await committed(r.kernel, env("b2", "CONVERGED", 2));
+    await committed(r.kernel, env("b2", "CONVERGED", 2, undefined, "reviewer"));
 
     const scripted = createScriptedTailWait([]);
     const tail = createDiagTail(r.store, r.diag.reader, scripted.wait);
@@ -261,9 +263,9 @@ describe("tailWithDiagnostics — committed-lane parity (dimension 1)", () => {
     await committed(r.kernel, env("a1", "PASS", 1, { ref: "diff-1" }));
 
     const scripted = createScriptedTailWait([
-      () => committed(r.kernel, env("b2", "PASS", 2, { ref: "diff-2" })),
+      () => committed(r.kernel, env("b2", "PASS", 2, { ref: "diff-2" }, "reviewer")),
       () => committed(r.kernel, env("c3", "PASS", 3, { ref: "diff-3" })),
-      () => committed(r.kernel, env("d4", "CONVERGED", 4)),
+      () => committed(r.kernel, env("d4", "CONVERGED", 4, undefined, "reviewer")),
     ]);
     const tail = createDiagTail(r.store, r.diag.reader, scripted.wait);
     const rows = await collectAll(tail.tailWithDiagnostics("inst-1", 0, 0));
@@ -298,7 +300,7 @@ describe("diag-lane delivery (dimension 2)", () => {
   it("pre-tail history replays on the first poll, in ordinal order", async () => {
     const r = await rig();
     await committed(r.kernel, env("a1", "PASS", 1, { ref: "diff-1" }));
-    await committed(r.kernel, env("b2", "CONVERGED", 2));
+    await committed(r.kernel, env("b2", "CONVERGED", 2, undefined, "reviewer"));
     r.diag.sink.emit(diagBody("e1"));
     r.diag.sink.emit(diagBody("e2"));
     r.diag.sink.emit(diagBody("e3"));
@@ -324,7 +326,7 @@ describe("diag-lane delivery (dimension 2)", () => {
       },
       async () => {
         r.diag.sink.emit(diagBody("e3"));
-        await committed(r.kernel, env("b2", "CONVERGED", 2));
+        await committed(r.kernel, env("b2", "CONVERGED", 2, undefined, "reviewer"));
       },
     ]);
     const tail = createDiagTail(r.store, r.diag.reader, scripted.wait);
@@ -340,7 +342,7 @@ describe("diag-lane delivery (dimension 2)", () => {
   it("fromOrdinal mid-cursor: only ordinal > fromOrdinal is delivered", async () => {
     const r = await rig();
     await committed(r.kernel, env("a1", "PASS", 1, { ref: "diff-1" }));
-    await committed(r.kernel, env("b2", "CONVERGED", 2));
+    await committed(r.kernel, env("b2", "CONVERGED", 2, undefined, "reviewer"));
     r.diag.sink.emit(diagBody("e1"));
     r.diag.sink.emit(diagBody("e2"));
     r.diag.sink.emit(diagBody("e3"));
@@ -357,7 +359,7 @@ describe("attribution scope + separation at the consumer (dimension 3)", () => {
   it("(a) foreign-instance and unattributed events exist in the store yet NEVER appear on the tail", async () => {
     const r = await rig();
     await committed(r.kernel, env("a1", "PASS", 1, { ref: "diff-1" }));
-    await committed(r.kernel, env("b2", "CONVERGED", 2));
+    await committed(r.kernel, env("b2", "CONVERGED", 2, undefined, "reviewer"));
     r.diag.sink.emit(diagBody("own-1"));
     r.diag.sink.emit(diagBody("foreign-1", "other-1"));
     r.diag.sink.emit(UNATTRIBUTED);
@@ -386,7 +388,7 @@ describe("attribution scope + separation at the consumer (dimension 3)", () => {
         const outcome = await r.kernel.handle(env("z9", "PASS", 1, { ref: "x" }));
         expect(outcome.kind).toBe("stale");
       },
-      () => committed(r.kernel, env("b2", "CONVERGED", 2)),
+      () => committed(r.kernel, env("b2", "CONVERGED", 2, undefined, "reviewer")),
     ]);
     const tail = createDiagTail(r.store, r.diag.reader, scripted.wait);
     const rows = await collectAll(tail.tailWithDiagnostics("inst-1", 0, 0));
@@ -404,7 +406,7 @@ describe("union row shape (dimension 4 / T1)", () => {
   it("every yielded row matches exactly ONE variant with the EXACT keyset; the diag variant carries the FULL event, error.message included", async () => {
     const r = await rig();
     await committed(r.kernel, env("a1", "PASS", 1, { ref: "diff-1" }));
-    await committed(r.kernel, env("b2", "CONVERGED", 2));
+    await committed(r.kernel, env("b2", "CONVERGED", 2, undefined, "reviewer"));
     const hostileMessage = "went wrong at /private/path with PAYLOAD_FRAGMENT_x1";
     r.diag.sink.emit({
       source: "kernel",
@@ -439,7 +441,7 @@ describe("stop semantics (dimension 5 / T5)", () => {
   it("(a)+(c)+(d) — final-drain window pickup; no wait after terminal; the final drain is ONE diag read, never till-empty", async () => {
     const r = await rig();
     await committed(r.kernel, env("a1", "PASS", 1, { ref: "diff-1" }));
-    await committed(r.kernel, env("b2", "CONVERGED", 2));
+    await committed(r.kernel, env("b2", "CONVERGED", 2, undefined, "reviewer"));
 
     // Scripted reader over the REAL terminal store: the round read is
     // empty, the ONE final read carries the window event — a third
@@ -459,7 +461,7 @@ describe("stop semantics (dimension 5 / T5)", () => {
   it("(b) — post-close diag events are NOT streamed and ARE visible on the query surface (the recourse, at the library seam)", async () => {
     const r = await rig();
     await committed(r.kernel, env("a1", "PASS", 1, { ref: "diff-1" }));
-    await committed(r.kernel, env("b2", "CONVERGED", 2));
+    await committed(r.kernel, env("b2", "CONVERGED", 2, undefined, "reviewer"));
 
     const tail = createDiagTail(r.store, r.diag.reader, createScriptedTailWait([]).wait);
     const rows = await collectAll(tail.tailWithDiagnostics("inst-1", 0, 0));
@@ -467,7 +469,7 @@ describe("stop semantics (dimension 5 / T5)", () => {
 
     // A rejected submit against the DONE instance, AFTER completion.
     const outcome = await r.kernel.handle(env("p9", "PASS", 3));
-    expect(outcome).toEqual({ kind: "rejected", reason: "no_transition" });
+    expect(outcome).toEqual({ kind: "rejected", reason: "not_active" });
 
     const late = await r.diag.reader.getDiagnostics("inst-1", 0);
     expect(late).toHaveLength(1);
@@ -616,7 +618,7 @@ describe("tail error contract (dimension 6 / the E matrix)", () => {
   it("E6 — stop-path FINAL-read variant: terminal observed, committed lane drained, the final diag read rejects → loud on the last next(), never a silent completion", async () => {
     const r = await rig();
     await committed(r.kernel, env("a1", "PASS", 1, { ref: "diff-1" }));
-    await committed(r.kernel, env("b2", "CONVERGED", 2));
+    await committed(r.kernel, env("b2", "CONVERGED", 2, undefined, "reviewer"));
 
     const reader = scriptedReader([
       ok([]),
@@ -665,7 +667,7 @@ describe("tail error contract (dimension 6 / the E matrix)", () => {
   it("E8 — contract-violating reader at the STOP-PATH final read: the name-filtering-catch falsifier — loud, never a silent completion", async () => {
     const r = await rig();
     await committed(r.kernel, env("a1", "PASS", 1, { ref: "diff-1" }));
-    await committed(r.kernel, env("b2", "CONVERGED", 2));
+    await committed(r.kernel, env("b2", "CONVERGED", 2, undefined, "reviewer"));
 
     const reader = scriptedReader([ok([]), failWith(new Error("untyped final-read failure"))]);
     const tail = createDiagTail(r.store, reader.reader, createScriptedTailWait([]).wait);
@@ -734,7 +736,7 @@ describe("tail error contract (dimension 6 / the E matrix)", () => {
     };
     const scripted = createScriptedTailWait([
       async () => {
-        await committed(r.kernel, env("b2", "CONVERGED", 2));
+        await committed(r.kernel, env("b2", "CONVERGED", 2, undefined, "reviewer"));
         r.diag.sink.emit(diagBody("e2"));
       },
     ]);

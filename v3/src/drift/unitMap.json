@@ -232,22 +232,34 @@
     "status": "pending"
   },
   "l1-pseudocode/HANDLE": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/kernel.ts#createKernel",
+    "disposition": "implement",
+    "status": "realized"
   },
   "l1-pseudocode/RECEIVE": {
-    "status": "pending"
+    "codeRef": "v3/src/ingress/ingress.ts#createIngress",
+    "disposition": "alias/inherited",
+    "status": "realized"
   },
   "l1-pseudocode/admit_loaded": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/admission.ts#admitLoaded",
+    "disposition": "implement",
+    "status": "realized"
   },
   "l1-pseudocode/capability": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/capability.ts#capability",
+    "disposition": "implement",
+    "status": "realized"
   },
   "l1-pseudocode/dispatch_intent": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/dispatchIntent.ts#deriveDispatchIntent",
+    "disposition": "implement",
+    "status": "realized"
   },
   "l1-pseudocode/warrant": {
-    "status": "pending"
+    "codeRef": "v3/src/domain/envelope.ts#EventEnvelope",
+    "disposition": "type/schema",
+    "status": "realized"
   },
   "l2-pseudocode/CREATE_INSTANCE": {
     "status": "pending"

@@ -109,7 +109,7 @@ async function seedDb(): Promise<{ db: string; id: string }> {
   expect(code).toBe(EXIT.ok);
   const id = (JSON.parse(started[0] ?? "") as { instanceId: string }).instanceId;
   const submit = await runCli(
-    ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "1", "--payload", `{"secret":"${MARKER}"}`],
+    ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "1", "--expected-role", "implementer", "--payload", `{"secret":"${MARKER}"}`],
     deps,
     { out: () => undefined, err: () => undefined },
   );
@@ -188,7 +188,7 @@ describe("dev cli — bundle --passthrough (REV-BUNDLE-DEFAULT-POLICY closure)",
 
     // A real rejected submit through the NORMAL cli lands in the store.
     const reject = await runCli(
-      ["submit", "--db", db, "--instance", id, "--type", "NOPE", "--expected-version", "2"],
+      ["submit", "--db", db, "--instance", id, "--type", "NOPE", "--expected-version", "2", "--expected-role", "reviewer"],
       testDeps(),
       { out: () => undefined, err: () => undefined },
     );
@@ -217,7 +217,7 @@ describe("dev cli — inject schema + derived/override paths", () => {
     const { db, id } = await seedDb();
     // The run is at version 2, currentStep review.
     const file = writeJson("ok.json", {
-      steps: [{ type: "PASS", expectedVersion: 2, payload: { ref: "d2" } }],
+      steps: [{ type: "PASS", expectedVersion: 2, expectedRole: "reviewer", payload: { ref: "d2" } }],
     });
     const result = await runDev(["inject", "--instance", id, "--file", file, "--db", db], testDeps());
     expect(result.code).toBe(EXIT.ok);
@@ -228,7 +228,7 @@ describe("dev cli — inject schema + derived/override paths", () => {
   it("derived + null payload derives fine (null IS canonicalizable)", async () => {
     const { db, id } = await seedDb();
     const file = writeJson("null.json", {
-      steps: [{ type: "PASS", expectedVersion: 2, payload: null }],
+      steps: [{ type: "PASS", expectedVersion: 2, expectedRole: "reviewer", payload: null }],
     });
     const result = await runDev(["inject", "--instance", id, "--file", file, "--db", db], testDeps());
     expect(result.code).toBe(EXIT.ok);
@@ -303,7 +303,7 @@ describe("dev cli — inject schema + derived/override paths", () => {
       EXIT.usage,
     );
     expect(error.details).toEqual({
-      allowedFields: ["type", "expectedVersion", "payload", "actorId", "opId"],
+      allowedFields: ["type", "expectedVersion", "expectedRole", "payload", "actorId", "opId"],
     });
 
     const badVersion = writeJson("badv.json", {
@@ -488,6 +488,7 @@ describe("dev cli — replay (hermetic golden-trace diagnostics)", () => {
         type: "PASS",
         actorId: "codex",
         expectedVersion: 1,
+        expectedRole: "implementer",
         payload: { ref: "d" },
         expect: { kind: "committed", version: 2 },
       },
@@ -646,14 +647,14 @@ describe("dev cli — the diag verb: the global cursor dump (packet ch7-P4: V3/F
     const id = (JSON.parse(outs[0] ?? "") as { instanceId: string }).instanceId;
     expect(
       await runCli(
-        ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "1", "--payload", '{"ref":"d"}'],
+        ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "1", "--expected-role", "implementer", "--payload", '{"ref":"d"}'],
         deps,
         sink,
       ),
     ).toBe(EXIT.ok);
     expect(
       await runCli(
-        ["submit", "--db", db, "--instance", id, "--type", "CONVERGED", "--expected-version", "2"],
+        ["submit", "--db", db, "--instance", id, "--type", "CONVERGED", "--expected-version", "2", "--expected-role", "reviewer"],
         deps,
         sink,
       ),
@@ -675,7 +676,7 @@ describe("dev cli — the diag verb: the global cursor dump (packet ch7-P4: V3/F
     // Post-close: a rejected submit against the DONE instance.
     expect(
       await runCli(
-        ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "3"],
+        ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "3", "--expected-role", "implementer"],
         testDeps(),
         { out: () => undefined, err: () => undefined },
       ),
@@ -710,6 +711,7 @@ describe("dev cli — wiring negatives (packet ch7-P4: C4/M11)", () => {
           type: "PASS",
           actorId: "codex",
           expectedVersion: 1,
+          expectedRole: "implementer",
           payload: { ref: "d" },
           expect: { kind: "committed", version: 2 },
         },
@@ -734,7 +736,7 @@ describe("dev cli — wiring negatives (packet ch7-P4: C4/M11)", () => {
     writeFileSync(diagPathOf(corrupt.db), "garbage-not-a-database", "utf8");
 
     const file = writeJson("m11-steps.json", {
-      steps: [{ type: "PASS", expectedVersion: 2, payload: { ref: "d2" } }],
+      steps: [{ type: "PASS", expectedVersion: 2, expectedRole: "reviewer", payload: { ref: "d2" } }],
     });
     const h = await runDev(["inject", "--instance", healthy.id, "--file", file, "--db", healthy.db], testDeps());
     const c = await runDev(["inject", "--instance", corrupt.id, "--file", file, "--db", corrupt.db], testDeps());
@@ -773,5 +775,108 @@ describe("dev cli — last-mile smoke: the SHIPPED dev entrypoint", () => {
     const rows = JSON.parse(result.stdout.trim()) as DiagnosticEvent[];
     expect(rows).toHaveLength(1);
     expect(rows[0]?.error?.name).toBe("SmokeError");
+  });
+});
+
+// ── packet ch11-P1: the dev CLI role surfaces (X1–X3, X5) ────────────
+
+describe("dev cli — inject expectedRole (X1–X3)", () => {
+  it("X2: an empty expectedRole is an InvalidInjectStep usage error", async () => {
+    const { db } = await seedDb();
+    const file = writeJson("inject-empty-role.json", {
+      steps: [{ type: "PASS", expectedVersion: 2, expectedRole: "", payload: { ref: "d" } }],
+    });
+    assertError(
+      await runDev(["inject", "--db", db, "--instance", "inst-1", "--file", file], testDeps()),
+      "usage",
+      EXIT.usage,
+    );
+  });
+
+  it("X3: ABSENCE stages a missing_role probe — the rejection is a DATA row, exit 0", async () => {
+    const { db, id } = await seedDb();
+    const file = writeJson("inject-roleless.json", {
+      steps: [{ type: "PASS", expectedVersion: 2, payload: { ref: "probe" } }],
+    });
+    const result = await runDev(
+      ["inject", "--db", db, "--instance", id, "--file", file],
+      testDeps(),
+    );
+    expect(result.code).toBe(EXIT.ok);
+    expect(JSON.parse(result.stdout[0] ?? "")).toEqual({
+      kind: "rejected",
+      reason: "missing_role",
+    });
+  });
+});
+
+describe("dev cli — replay role schema (X5)", () => {
+  const roleLiftFixture = {
+    name: "x5 role lift round-trip",
+    lift: { expectedRole: "supply-current-step-role" },
+    steps: [
+      { kind: "start", instanceId: "x5a", task: "t", expect: { currentStep: "implement", version: 1 } },
+      {
+        kind: "emit",
+        opId: "a1",
+        type: "PASS",
+        actorId: "codex",
+        expectedVersion: 1,
+        payload: { ref: "d" },
+        expect: { kind: "committed", version: 2 },
+      },
+    ],
+    finalTranscript: [[1, "a1"]],
+    finalState: { currentStep: "review", round: 1, status: "RUNNING", version: 2 },
+  };
+
+  it("the role-lift axis round-trips (a liftless-role fixture commits via the current step's role)", async () => {
+    const file = writeJson("x5-lift.json", roleLiftFixture);
+    const result = await runDev(["replay", "--file", file], testDeps());
+    expect(result.code).toBe(EXIT.ok);
+  });
+
+  it("an unknown emit-step key is still rejected (the keyset stays fail-closed)", async () => {
+    const file = writeJson("x5-unknown.json", {
+      ...roleLiftFixture,
+      name: "x5 unknown key",
+      steps: [
+        roleLiftFixture.steps[0],
+        { ...roleLiftFixture.steps[1], expectedRoll: "implementer" },
+      ],
+    });
+    assertError(await runDev(["replay", "--file", file], testDeps()), "usage", EXIT.usage);
+  });
+
+  it("an unknown lift axis value is a usage error", async () => {
+    const file = writeJson("x5-lift-bad.json", {
+      ...roleLiftFixture,
+      name: "x5 bad lift",
+      lift: { expectedRole: "supply-wrong-thing" },
+    });
+    assertError(await runDev(["replay", "--file", file], testDeps()), "usage", EXIT.usage);
+  });
+
+  it("the WRONG-ROLE discriminator: an explicit wrong role must replay to role_not_authorized — a validator that silently dropped the field would let the (absent) lift backfill nothing and land missing_role, failing the lane", async () => {
+    const file = writeJson("x5-wrong-role.json", {
+      name: "x5 wrong role",
+      steps: [
+        { kind: "start", instanceId: "x5b", task: "t", expect: { currentStep: "implement", version: 1 } },
+        {
+          kind: "emit",
+          opId: "w1",
+          type: "PASS",
+          actorId: "codex",
+          expectedVersion: 1,
+          expectedRole: "reviewer",
+          payload: { ref: "d" },
+          expect: { kind: "rejected", reason: "role_not_authorized" },
+        },
+      ],
+      finalTranscript: [],
+      finalState: { currentStep: "implement", round: 1, status: "RUNNING", version: 1 },
+    });
+    const result = await runDev(["replay", "--file", file], testDeps());
+    expect(result.code).toBe(EXIT.ok);
   });
 });

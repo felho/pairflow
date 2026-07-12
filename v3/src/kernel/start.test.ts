@@ -38,6 +38,7 @@ describe("START_INSTANCE — bootstrap (l0b)", () => {
       packet: {
         instanceId: "inst-1",
         expectedVersion: 1,
+        role: "implementer",
         task: "ship the feature",
         instruction: "build it",
         availableOps: ["PASS"],

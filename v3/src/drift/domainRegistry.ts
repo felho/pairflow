@@ -1,5 +1,6 @@
 import type {
   ActorId,
+  CapabilityProfile,
   ContextPacket,
   DispatchIntent,
   EventEnvelope,
@@ -52,6 +53,9 @@ interface RealizedTypeTable {
   readonly "l0b/WorkflowInstance": WorkflowInstance;
   readonly "l0b/DispatchIntent": DispatchIntent;
   readonly "l0b/ContextPacket": ContextPacket;
+  readonly "l1/EventEnvelope": EventEnvelope;
+  readonly "l1/ContextPacket": ContextPacket;
+  readonly "l1/CapabilityProfile": CapabilityProfile;
 }
 
 export type RegistryEntry =
@@ -170,9 +174,9 @@ export const DOMAIN_REGISTRY: Readonly<Record<string, RegistryEntry>> = {
     rejectionNames: ["slot_type_mismatch"],
   },
   // ── l1 (6) ─────────────────────────────────────────────────────────
-  "l1/EventEnvelope": { kind: "pending" },
-  "l1/ContextPacket": { kind: "pending" },
-  "l1/CapabilityProfile": { kind: "pending" },
+  "l1/EventEnvelope": { kind: "realized", typeName: "EventEnvelope" },
+  "l1/ContextPacket": { kind: "realized", typeName: "ContextPacket" },
+  "l1/CapabilityProfile": { kind: "realized", typeName: "CapabilityProfile" },
   "l1/Rejected(missing_role)": {
     kind: "realized",
     typeName: "RejectionName",
@@ -346,6 +350,9 @@ export const REALIZED_TYPE_TABLE_KEYS = [
   "l0b/WorkflowInstance",
   "l0b/DispatchIntent",
   "l0b/ContextPacket",
+  "l1/EventEnvelope",
+  "l1/ContextPacket",
+  "l1/CapabilityProfile",
 ] as const satisfies readonly (keyof RealizedTypeTable)[];
 
 type TypeTableFullyListed =

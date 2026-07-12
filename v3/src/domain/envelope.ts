@@ -13,6 +13,15 @@ export interface EventEnvelope {
   readonly type: EventType;
   readonly actorId: ActorId;
   readonly expectedVersion?: number;
+  /**
+   * The role the actor claims to act as — the Warrant's second
+   * context-authority field (l1-pseudocode/warrant). Semantically
+   * mandatory for actor envelopes from L1 on but OPTIONAL in the type
+   * so the `missing_role` branch stays representable (the
+   * `expectedVersion` precedent above). The kernel VERIFIES it against
+   * the position's active role; it never invents or defaults it.
+   */
+  readonly expectedRole?: string;
   readonly eventId?: string;
   readonly payload?: unknown;
 }

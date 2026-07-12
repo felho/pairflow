@@ -43,6 +43,7 @@ function fakeSeams(detail: InstanceDetail, committedVersions: readonly number[])
         instanceId: detail.instance.instanceId,
         expectedVersion: 1,
         task: detail.instance.task,
+        role: "implementer",
         instruction: "build it",
         availableOps: ["PASS"],
       },

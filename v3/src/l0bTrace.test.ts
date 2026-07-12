@@ -28,6 +28,7 @@ import type { TraceFixture } from "./testkit/index.js";
  */
 const l0bFixture: TraceFixture = {
   name: "l0b golden trace (at-level, no lift)",
+  lift: { expectedRole: "supply-current-step-role" },
   steps: [
     {
       kind: "start",
@@ -113,6 +114,7 @@ describe("l0b golden trace — the walking skeleton end-to-end (on the harness)"
     for (const entry of result.finalDetail.transcript) {
       expect(Object.keys(entry.envelope).sort()).toEqual([
         "actorId",
+        "expectedRole",
         "expectedVersion",
         "instanceId",
         "opId",

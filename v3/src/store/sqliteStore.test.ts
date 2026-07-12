@@ -510,3 +510,29 @@ describe("getTimeline — the ch6-P1 cursor read", () => {
     handle.close();
   });
 });
+
+// ── packet ch11-P1 (W6): expectedRole rides the transcript envelope
+// JSON verbatim — additive field, no schema change. ──
+
+describe("expectedRole round-trip (packet ch11-P1, W6)", () => {
+  it("a role-carrying envelope survives the commit + detail read byte-equal", async () => {
+    const handle = openStore(":memory:", createControlledClock(0));
+    await handle.store.createInstance(instance);
+    const roleEnvelope: EventEnvelope = {
+      ...envelope("op-role", 1),
+      expectedRole: "implementer",
+    };
+    const result = await handle.store.commitTransition({
+      instanceId: "inst-1",
+      expectedVersion: 1,
+      envelope: roleEnvelope,
+      payloadDigest: "dg-role",
+      newCurrentStep: "review",
+      newRound: 1,
+      newStatus: "RUNNING",
+    });
+    expect(result.kind).toBe("committed");
+    const detail = await handle.store.getInstanceDetail("inst-1");
+    expect(detail?.transcript[0]?.envelope).toEqual(roleEnvelope);
+  });
+});

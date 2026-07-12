@@ -54,6 +54,7 @@ function env(
   type: string,
   expectedVersion?: number,
   payload?: unknown,
+  expectedRole = "implementer",
 ): EventEnvelope {
   return {
     instanceId: "inst-1",
@@ -62,6 +63,7 @@ function env(
     actorId: "codex",
     ...(expectedVersion !== undefined ? { expectedVersion } : {}),
     ...(payload !== undefined ? { payload } : {}),
+    expectedRole,
   };
 }
 
@@ -83,7 +85,7 @@ async function seeded(): Promise<{ store: StorePort; close: () => void }> {
     diag: noopDiagnosticsSink,
   });
   await committed(kernel, env("a1", "PASS", 1, { ref: MARKER_A, nested: { deep: MARKER_B } }));
-  await committed(kernel, { ...env("b2", "PASS", 2, { note: MARKER_C }), eventId: "evt-42" });
+  await committed(kernel, { ...env("b2", "PASS", 2, { note: MARKER_C }, "reviewer"), eventId: "evt-42" });
   await committed(kernel, env("c3", "PASS", 3));
   return { store: handle.store, close: () => handle.close() };
 }

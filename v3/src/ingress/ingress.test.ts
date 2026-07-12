@@ -323,3 +323,41 @@ describe("ingress diagnostics — the six detail tokens + attribution (packet ch
     expect(rec.events[0]?.payloadDigest).toBeUndefined();
   });
 });
+
+// ── packet ch11-P1: the expectedRole admission surface (W2/W3/W4) ────
+
+describe("ingress — expectedRole (packet ch11-P1)", () => {
+  it("W2: a role-carrying envelope passes and the typed envelope carries it verbatim", async () => {
+    const { kernel, seen } = capturingKernel();
+    const outcome = await ingressOf(kernel).submit({ ...validRaw, expectedRole: "implementer" });
+    expect(outcome).toEqual({ kind: "committed", version: 2, intent: null });
+    expect(seen[0]?.expectedRole).toBe("implementer");
+  });
+
+  it.each([["empty string", ""], ["number", 7], ["null", null], ["object", { r: 1 }]])(
+    "W3: present-but-malformed expectedRole (%s) → invalid_shape with the invalid_expected_role token",
+    async (_label, value) => {
+      const { kernel, seen } = capturingKernel();
+      const rec = createRecordingDiagnosticsSink();
+      const ingress = createIngress({ kernel, diag: rec.sink });
+      expect(await ingress.submit({ ...validRaw, expectedRole: value })).toEqual({
+        kind: "rejected",
+        reason: "invalid_shape",
+      });
+      expect(seen).toEqual([]);
+      expect(rec.events[0]).toMatchObject({
+        source: "ingress",
+        kind: "rejected",
+        reason: "invalid_shape",
+        detail: "invalid_expected_role",
+      });
+    },
+  );
+
+  it("W4: ABSENCE passes ingress untouched — mandatory-ness is the kernel's (missing_role), never the ingress's", async () => {
+    const { kernel, seen } = capturingKernel();
+    const outcome = await ingressOf(kernel).submit({ ...validRaw });
+    expect(outcome).toEqual({ kind: "committed", version: 2, intent: null });
+    expect(seen[0]).not.toHaveProperty("expectedRole");
+  });
+});

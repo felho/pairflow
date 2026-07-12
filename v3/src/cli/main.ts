@@ -301,10 +301,20 @@ async function verbSubmit(ctx: VerbContext): Promise<number> {
   const instanceId = flagString(ctx, "instance");
   const type = flagString(ctx, "type");
   const expectedVersionRaw = flagString(ctx, "expected-version");
-  if (instanceId === undefined || type === undefined || expectedVersionRaw === undefined) {
+  // ch11-P1 O1: --expected-role joins the required set at parse — the
+  // warrant's context-authority pair gets ONE fail-fast treatment on
+  // this production write surface (the human-approve-ratified form).
+  const expectedRole = flagString(ctx, "expected-role");
+  if (
+    instanceId === undefined ||
+    type === undefined ||
+    expectedVersionRaw === undefined ||
+    expectedRole === undefined ||
+    expectedRole === ""
+  ) {
     throw usage(
       "MissingSubmitFlags",
-      "--instance, --type and --expected-version are required",
+      "--instance, --type, --expected-version and --expected-role are required",
     );
   }
   const expectedVersion = parseNonNegativeSafeInt(expectedVersionRaw, "--expected-version");
@@ -312,12 +322,15 @@ async function verbSubmit(ctx: VerbContext): Promise<number> {
   // ADR-004 operator family: ONE nonce per logical invocation; a retry
   // within this invocation would reuse it (no transport retry in v1).
   const opId = deriveOperatorOpId(ctx.deps.nonceSource());
+  // O2: pass-through — the KERNEL stays the semantic authority; a
+  // wrong role rides stdout as a role_not_authorized outcome data row.
   const envelope: EventEnvelope = {
     instanceId,
     opId,
     type,
     actorId: flagString(ctx, "actor") ?? "operator",
     expectedVersion,
+    expectedRole,
     ...(payload.present ? { payload: payload.value } : {}),
   };
   const definitions = createFileDefinitionStore(
@@ -373,6 +386,7 @@ const VERB_OPTIONS: Record<string, VerbOptions> = {
     instance: { type: "string" },
     type: { type: "string" },
     "expected-version": { type: "string" },
+    "expected-role": { type: "string" },
     payload: { type: "string" },
     actor: { type: "string" },
     "templates-dir": { type: "string" },

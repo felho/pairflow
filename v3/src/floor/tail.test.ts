@@ -42,6 +42,7 @@ function env(
   type: string,
   expectedVersion?: number,
   payload?: unknown,
+  expectedRole = "implementer",
 ): EventEnvelope {
   return {
     instanceId: "inst-1",
@@ -50,6 +51,7 @@ function env(
     actorId: "codex",
     ...(expectedVersion !== undefined ? { expectedVersion } : {}),
     ...(payload !== undefined ? { payload } : {}),
+    expectedRole,
   };
 }
 
@@ -139,7 +141,7 @@ describe("tailCommittedTimeline — the committed floor-tail seed (packet ch6-P2
     await handle.store.createInstance(instance);
     const kernel = makeKernel(handle.store);
     await committed(kernel, env("a1", "PASS", 1, { ref: "diff-1" }));
-    await committed(kernel, env("b2", "CONVERGED", 2));
+    await committed(kernel, env("b2", "CONVERGED", 2, undefined, "reviewer"));
 
     const scripted = createScriptedTailWait([]);
     const tail = createTail(handle.store, scripted.wait);
@@ -160,9 +162,9 @@ describe("tailCommittedTimeline — the committed floor-tail seed (packet ch6-P2
     await committed(kernel, env("a1", "PASS", 1, { ref: "diff-1" }));
 
     const scripted = createScriptedTailWait([
-      () => committed(kernel, env("b2", "PASS", 2, { ref: "diff-2" })),
+      () => committed(kernel, env("b2", "PASS", 2, { ref: "diff-2" }, "reviewer")),
       () => committed(kernel, env("c3", "PASS", 3, { ref: "diff-3" })),
-      () => committed(kernel, env("d4", "CONVERGED", 4)),
+      () => committed(kernel, env("d4", "CONVERGED", 4, undefined, "reviewer")),
     ]);
     const tail = createTail(reader.store, scripted.wait);
     const rows = await collect(tail.tailCommittedTimeline("inst-1", 0));
@@ -230,7 +232,7 @@ describe("tailCommittedTimeline — the committed floor-tail seed (packet ch6-P2
         rejectedOutcomes.push(await kernel.handle(env("z9", "PASS", 1, { ref: "x" })));
         rejectedOutcomes.push(await kernel.handle(env("a1", "PASS", 2, { ref: "TAMPERED" })));
       },
-      () => committed(kernel, env("b2", "CONVERGED", 2)),
+      () => committed(kernel, env("b2", "CONVERGED", 2, undefined, "reviewer")),
     ]);
     const tail = createTail(handle.store, scripted.wait);
     const rows = await collect(tail.tailCommittedTimeline("inst-1", 0));

@@ -50,6 +50,7 @@ function env(
   type: string,
   expectedVersion?: number,
   payload?: unknown,
+  expectedRole = "implementer",
 ): EventEnvelope {
   return {
     instanceId: "inst-1",
@@ -58,6 +59,7 @@ function env(
     actorId: "codex",
     ...(expectedVersion !== undefined ? { expectedVersion } : {}),
     ...(payload !== undefined ? { payload } : {}),
+    expectedRole,
   };
 }
 
@@ -115,7 +117,7 @@ describe("floor.getTimeline — the §6.2 cursor read (packet ch6-P1)", () => {
     expect((await kernel.handle(env("a1", "PASS", 1, { ref: "diff-1" }))).kind).toBe(
       "committed",
     );
-    expect((await kernel.handle(env("b2", "PASS", 2, { ref: "diff-2" }))).kind).toBe(
+    expect((await kernel.handle(env("b2", "PASS", 2, { ref: "diff-2" }, "reviewer"))).kind).toBe(
       "committed",
     );
     const snapshot = await floor.getTimeline("inst-1", 0);

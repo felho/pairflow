@@ -21,6 +21,18 @@ export interface Step {
   readonly agentConfig?: unknown;
 }
 
+/**
+ * The L1 authorization profile (ledger §4 l1): (role × step_id) → the
+ * allowed action set. TYPE-LEVEL ONLY — the authoring format never
+ * carries it (authored restrictions are a deferred Absent; a
+ * `capabilityProfile` key in a template FILE stays an unknown-key
+ * rejection). Explicit profiles enter via directly-constructed values
+ * (tests); absent, `capability()` default-derives from the step graph.
+ */
+export type CapabilityProfile = Readonly<
+  Record<RoleName, Readonly<Record<StepId, readonly EventType[]>>>
+>;
+
 export interface WorkflowTemplate {
   readonly ref: TemplateRef;
   readonly start: StepId;
@@ -29,4 +41,6 @@ export interface WorkflowTemplate {
   readonly terminal: readonly StepId[];
   /** Actor defaults (l0b): resolve_binding = default_actor + start overrides. */
   readonly roles: Readonly<Record<RoleName, { readonly defaultActor?: ActorId }>>;
+  /** L1 explicit restrictions (none in the baseline) — see CapabilityProfile. */
+  readonly capabilityProfile?: CapabilityProfile;
 }

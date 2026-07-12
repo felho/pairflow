@@ -70,23 +70,30 @@ function wireWorker(path: string): Worker {
   };
 }
 
-function raw(opId: string, type: string, actorId: string, expectedVersion: number) {
+function raw(
+  opId: string,
+  type: string,
+  actorId: string,
+  expectedVersion: number,
+  expectedRole: string,
+) {
   return {
     instanceId: "inst-1",
     opId,
     type,
     actorId,
     expectedVersion,
+    expectedRole,
     payload: { note: `${actorId}:${opId}` },
   };
 }
 
 // The four-op run to DONE (the l0b shape, minus the stale probe).
 const OPS = [
-  raw("a1", "PASS", "codex", 1),
-  raw("b2", "PASS", "claude", 2),
-  raw("c4", "PASS", "codex", 3),
-  raw("d5", "CONVERGED", "claude", 4),
+  raw("a1", "PASS", "codex", 1, "implementer"),
+  raw("b2", "PASS", "claude", 2, "reviewer"),
+  raw("c4", "PASS", "codex", 3, "implementer"),
+  raw("d5", "CONVERGED", "claude", 4, "reviewer"),
 ];
 
 describe("CT-B-TWOWORKER — two workers, one instance stream, winner-independent (IC-B)", () => {
@@ -152,7 +159,7 @@ describe("CT-B-TWOWORKER — two workers, one instance stream, winner-independen
     // w2 never saw w1's commit locally — its kernel reads the shared
     // store: the stale intent is visible, the committed op is a
     // duplicate, both THROUGH the other handle.
-    expect(await w2.submit(raw("x9", "PASS", "codex", 1))).toEqual({
+    expect(await w2.submit(raw("x9", "PASS", "codex", 1, "implementer"))).toEqual({
       kind: "stale",
       currentVersion: 2,
     });

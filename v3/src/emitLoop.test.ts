@@ -35,8 +35,15 @@ function wire() {
   return { handle, kernel, ingress, store: handle.store };
 }
 
-function emitRaw(opId: string, type: string, actorId: string, expectedVersion: number, payload: unknown) {
-  return { instanceId: "inst-1", opId, type, actorId, expectedVersion, payload };
+function emitRaw(
+  opId: string,
+  type: string,
+  actorId: string,
+  expectedVersion: number,
+  payload: unknown,
+  expectedRole: string,
+) {
+  return { instanceId: "inst-1", opId, type, actorId, expectedVersion, expectedRole, payload };
 }
 
 async function started(kernel: ReturnType<typeof wire>["kernel"]) {
@@ -69,8 +76,8 @@ describe("CT-A3-RETRANS — resend-without-ack reuses the op_id → Duplicate (I
 
     // The scripted actor plays the send and the ack-less resend.
     const actor = createScriptedActor([
-      emitRaw(first.opId, "PASS", "codex", 1, payload),
-      emitRaw(retransmitted.opId, "PASS", "codex", 1, payload),
+      emitRaw(first.opId, "PASS", "codex", 1, payload, "implementer"),
+      emitRaw(retransmitted.opId, "PASS", "codex", 1, payload, "implementer"),
     ]);
     const outcomes = (await actor.play((raw) => ingress.submit(raw))) as Outcome[];
     expect(outcomes.map((o) => o.kind)).toEqual(["committed", "duplicate"]);
@@ -101,10 +108,10 @@ describe("CT-A3-EMITLIB-REFRESH — a refresh after Stale is a NEW logical op (I
       payload: { ref: "loser" },
     });
 
-    expect((await ingress.submit(emitRaw(winner.opId, "PASS", "codex", 1, { ref: "winner" }))).kind).toBe(
+    expect((await ingress.submit(emitRaw(winner.opId, "PASS", "codex", 1, { ref: "winner" }, "implementer"))).kind).toBe(
       "committed",
     );
-    const stale = await ingress.submit(emitRaw(loser.opId, "PASS", "codex", 1, { ref: "loser" }));
+    const stale = await ingress.submit(emitRaw(loser.opId, "PASS", "codex", 1, { ref: "loser" }, "implementer"));
     expect(stale).toEqual({ kind: "stale", currentVersion: 2 });
 
     // Refresh: a NEW context packet (v2) → new op_id BY CONSTRUCTION.
@@ -117,7 +124,7 @@ describe("CT-A3-EMITLIB-REFRESH — a refresh after Stale is a NEW logical op (I
     expect(refreshed.opId).not.toBe(loser.opId);
 
     const committed = await ingress.submit(
-      emitRaw(refreshed.opId, "PASS", "claude", 2, { ref: "loser" }),
+      emitRaw(refreshed.opId, "PASS", "claude", 2, { ref: "loser" }, "reviewer"),
     );
     expect(committed.kind).toBe("committed");
 
@@ -129,5 +136,36 @@ describe("CT-A3-EMITLIB-REFRESH — a refresh after Stale is a NEW logical op (I
     ]);
     expect(detail?.instance.version).toBe(3);
     handle.close();
+  });
+});
+
+// ── packet ch11-P1 (X4): emit identity is UNTOUCHED — expectedRole is
+// context authority, never operation identity. ──
+
+describe("X4 — derived op_ids are role-independent", () => {
+  it("the same packet identity + payload derives the same op_id regardless of the role claim, and a role-differing retransmission is a duplicate", async () => {
+    const { kernel, store } = wire();
+    await started(kernel);
+    const identity = {
+      instanceId: "inst-1",
+      contextPacketId: "inst-1@v1",
+      opType: "PASS",
+      payload: { ref: "d" },
+    };
+    const first = deriveActorEmitOpId(identity);
+    const second = deriveActorEmitOpId(identity);
+    expect(second.opId).toBe(first.opId);
+    const committed = await kernel.handle(
+      emitRaw(first.opId, "PASS", "codex", 1, { ref: "d" }, "implementer"),
+    );
+    expect(committed.kind).toBe("committed");
+    // Retransmission under the SAME op_id with a DIFFERENT role claim:
+    // the digest covers type+payload only → duplicate, never collision.
+    const retransmitted = await kernel.handle(
+      emitRaw(first.opId, "PASS", "codex", 1, { ref: "d" }, "reviewer"),
+    );
+    expect(retransmitted).toEqual({ kind: "duplicate" });
+    const detail = await store.getInstanceDetail("inst-1");
+    expect(detail?.transcript).toHaveLength(1);
   });
 });

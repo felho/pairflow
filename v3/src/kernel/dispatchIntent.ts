@@ -33,6 +33,8 @@ export function deriveDispatchIntent(
     instanceId: instance.instanceId,
     expectedVersion: instance.version,
     task: instance.task,
+    // Dispatched-as role (l1) — echoed back as expectedRole.
+    role: step.role,
     instruction: step.instruction,
     ...(handoff !== undefined ? { handoff } : {}),
     availableOps: Object.keys(step.transitions),

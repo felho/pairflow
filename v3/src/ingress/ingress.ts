@@ -31,6 +31,7 @@ const KNOWN_KEYS = new Set([
   "type",
   "actorId",
   "expectedVersion",
+  "expectedRole",
   "eventId",
   "payload",
 ]);
@@ -83,7 +84,8 @@ function parseEnvelope(raw: unknown): ParseResult {
       return fail("unknown_key");
     }
   }
-  const { instanceId, opId, type, actorId, expectedVersion, eventId, payload } = record;
+  const { instanceId, opId, type, actorId, expectedVersion, expectedRole, eventId, payload } =
+    record;
   if (
     !isNonEmptyString(instanceId) ||
     !isNonEmptyString(opId) ||
@@ -103,6 +105,11 @@ function parseEnvelope(raw: unknown): ParseResult {
   ) {
     return fail("invalid_expected_version");
   }
+  // Form-when-present ONLY — absence passes: mandatory-ness is the
+  // KERNEL's (`missing_role`), the missing_version pattern (ch11-P1 W4).
+  if ("expectedRole" in record && !isNonEmptyString(expectedRole)) {
+    return fail("invalid_expected_role");
+  }
   if ("eventId" in record && !isNonEmptyString(eventId)) {
     return fail("invalid_event_id");
   }
@@ -117,6 +124,7 @@ function parseEnvelope(raw: unknown): ParseResult {
       type,
       actorId,
       ...(typeof expectedVersion === "number" ? { expectedVersion } : {}),
+      ...(typeof expectedRole === "string" ? { expectedRole } : {}),
       ...(typeof eventId === "string" ? { eventId } : {}),
       ...("payload" in record ? { payload } : {}),
     },

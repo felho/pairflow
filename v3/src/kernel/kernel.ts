@@ -11,17 +11,20 @@ import type { DiagnosticEventBody, DiagnosticsSink } from "../ports/diagnostics.
 import type { DigestSource } from "../ports/digest.js";
 import type { StorePort } from "../ports/store.js";
 import type { TimeSource } from "../ports/time.js";
+import { admitLoaded } from "./admission.js";
+import { capability } from "./capability.js";
 import { deriveDispatchIntent } from "./dispatchIntent.js";
 import { startInstance } from "./start.js";
 import type { StartInstanceInput } from "./start.js";
 
 /**
- * The port-parametric L0b kernel (packet ch4-P3). The check ORDER is
- * contract (l0b-pseudocode/HANDLE): unknown_instance → duplicate →
- * missing_version → stale → no_transition → atomic commit. On a CAS
- * conflict the WHOLE handle restarts from load — re-check idempotency,
- * re-resolve the transition; never re-commit a target computed from
- * stale state.
+ * The port-parametric L1 kernel (packets ch4-P3 · ch11-P1). The check
+ * ORDER is contract (l1-pseudocode/HANDLE): unknown_instance → the
+ * consolidated ADMISSION ladder (idempotency → state → version →
+ * staleness → authority; `kernel/admission.ts`) → no_transition → the
+ * capability gate → atomic commit. On a CAS conflict the WHOLE handle
+ * restarts from load — the FULL ladder re-runs on fresh state; never
+ * re-commit a target computed from stale state.
  *
  * `time` is plumbed per PI-6 (the injected-clock seam); its first real
  * consumer is the ch-5 gate timeout. CHK-D-NOCLOCK stands regardless.
@@ -104,6 +107,13 @@ export function createKernel(deps: KernelDeps): Kernel {
     }
     const template = await loadTemplate(definitions, instance);
 
+    // Hoisted positional read (l1 HANDLE) — TOLERATES undefined: a
+    // terminal current-step id resolves no Step (terminal ids live
+    // outside `steps`); its `role` is consumed only at the authority
+    // rung, which the state rung guards (RUNNING ⇒ currentStep ∈
+    // steps by construction). Never a rejection source.
+    const step = template.steps[instance.currentStep];
+
     // Computed ONCE per attempt (the model's HANDLE: the rung compares
     // it, the commit records it) and threaded into ctx for the diag
     // emit. Ingress admission == canonicalizable, so the derivation
@@ -111,29 +121,31 @@ export function createKernel(deps: KernelDeps): Kernel {
     const payloadDigest = digest(envelope);
     ctx.payloadDigest = payloadDigest;
 
-    // Idempotency first (fast path; the commit txn is the mechanism),
-    // digest-aware since ch5-P4: same digest = retransmission, a
-    // different digest under a committed op_id is a VISIBLE collision —
-    // and it wins over stale (the rung order stands).
+    // The consolidated ADMISSION ladder (ch11-P1) — rung order is
+    // contract; the commit txn stays the correctness mechanism.
     const existing = await store.findOp(envelope.instanceId, envelope.opId);
-    if (existing !== null) {
-      return existing.payloadDigest === payloadDigest
-        ? { kind: "duplicate" }
-        : { kind: "rejected", reason: "op_id_collision" };
+    const admitted = admitLoaded(instance, {
+      existingOp: existing,
+      payloadDigest,
+      expectedVersion: envelope.expectedVersion,
+      expectedRole: envelope.expectedRole,
+      grantedRole: step?.role,
+    });
+    if (admitted.kind !== "accepted") {
+      return admitted;
     }
 
-    if (envelope.expectedVersion === undefined) {
-      return { kind: "rejected", reason: "missing_version" };
-    }
-    if (envelope.expectedVersion !== instance.version) {
-      return { kind: "stale", currentVersion: instance.version };
-    }
-
-    // A terminal current step has no Step entry → no transitions.
-    const step = template.steps[instance.currentStep];
+    // Navigation (L0b): does this action exist here? `step` is defined
+    // past the state rung; the `?.` is the type-level belt only.
     const target = step?.transitions[envelope.type];
-    if (target === undefined) {
+    if (target === undefined || step === undefined) {
       return { kind: "rejected", reason: "no_transition" };
+    }
+
+    // L1 action authorization: the action EXISTS as a transition, but
+    // may this role emit it here? Dormant under default derivation.
+    if (!capability(template, step.role, instance.currentStep).includes(envelope.type)) {
+      return { kind: "rejected", reason: "not_authorized" };
     }
 
     const terminal = template.terminal.includes(target);

@@ -24,6 +24,7 @@ export type IngressDetailToken =
   | "unknown_key"
   | "invalid_required_string"
   | "invalid_expected_version"
+  | "invalid_expected_role"
   | "invalid_event_id"
   | "payload_not_canonicalizable";
 

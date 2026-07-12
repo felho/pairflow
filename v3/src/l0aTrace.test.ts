@@ -46,7 +46,7 @@ function wire(): { seams: TraceSeams; handle: StoreHandle } {
 
 const l0aFixture: TraceFixture = {
   name: "l0a concrete trace (lifted)",
-  lift: { expectedVersion: "track-running-version" },
+  lift: { expectedVersion: "track-running-version", expectedRole: "supply-current-step-role" },
   steps: [
     {
       kind: "start",

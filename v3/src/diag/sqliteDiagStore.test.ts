@@ -647,7 +647,7 @@ const template = fixtureTemplate();
 const definitions = fixtureDefinitionStore(template);
 
 function validEnvelope(opId: string, type: string, expectedVersion: number) {
-  return { instanceId: "inst-1", opId, type, actorId: "codex", expectedVersion, payload: { ref: "d1" } };
+  return { instanceId: "inst-1", opId, type, actorId: "codex", expectedVersion, expectedRole: "implementer", payload: { ref: "d1" } };
 }
 
 interface FlowResult {
@@ -752,5 +752,51 @@ describe("WAL + separation + fail-open product", () => {
       "diagnostics",
       "meta",
     ]);
+  });
+});
+
+// ── packet ch11-P1: the L1 allowlist growth (D1/D2) — load-bearing:
+// before the extension these rows were DROPPED by the closed-set
+// check + the fail-open swallow. ──
+
+describe("L1 allowlist growth — the four kernel reasons persist (D1)", () => {
+  it.each(["not_active", "missing_role", "role_not_authorized", "not_authorized"] as const)(
+    "kernel rejected '%s' with payloadDigest persists and reads back",
+    async (reason) => {
+      const path = tempDbPath();
+      const handle = openDiagStore(path, createControlledClock(5_000));
+      handle.sink.emit({
+        source: "kernel",
+        kind: "rejected",
+        reason,
+        instanceId: "inst-1",
+        opId: "op-1",
+        actorId: "codex",
+        type: "PASS",
+        payloadDigest: "dg-1",
+      });
+      const events = await handle.reader.getGlobalDiagnostics(0);
+      expect(events).toHaveLength(1);
+      expect(events[0]).toMatchObject({ source: "kernel", kind: "rejected", reason });
+      handle.close();
+    },
+  );
+});
+
+describe("L1 allowlist growth — the ingress token (D2)", () => {
+  it("invalid_expected_role persists as an ingress detail token", async () => {
+    const path = tempDbPath();
+    const handle = openDiagStore(path, createControlledClock(5_000));
+    handle.sink.emit({
+      source: "ingress",
+      kind: "rejected",
+      reason: "invalid_shape",
+      detail: "invalid_expected_role",
+      instanceId: "inst-1",
+    });
+    const events = await handle.reader.getGlobalDiagnostics(0);
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({ detail: "invalid_expected_role" });
+    handle.close();
   });
 });

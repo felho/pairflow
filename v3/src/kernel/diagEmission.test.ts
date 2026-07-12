@@ -54,6 +54,7 @@ function envelope(
   type: string,
   expectedVersion?: number,
   payload?: unknown,
+  expectedRole = "implementer",
 ): EventEnvelope {
   return {
     instanceId: "inst-1",
@@ -62,6 +63,7 @@ function envelope(
     actorId: "codex",
     ...(expectedVersion !== undefined ? { expectedVersion } : {}),
     ...(payload !== undefined ? { payload } : {}),
+    expectedRole,
   };
 }
 
@@ -622,3 +624,94 @@ async function conflictThenRealKernel(conflicts: number) {
   });
   return { kernel, diag };
 }
+
+// ── packet ch11-P1: the four new kernel rejections (dimension 7, D3) ──
+
+describe("L1 rejection lanes — one kernel/rejected event each, payloadDigest present (post-digest)", () => {
+  it("missing_role: full keyset with digest", async () => {
+    const { kernel, diag } = await setup();
+    const { expectedRole: dropped, ...env } = envelope("l1a", "PASS", 1, { ref: "d" });
+    void dropped;
+    await kernel.handle(env);
+    expect(diag.events).toEqual([
+      {
+        source: "kernel",
+        kind: "rejected",
+        reason: "missing_role",
+        ...attribution,
+        opId: "l1a",
+        type: "PASS",
+        payloadDigest: deriveEmitDigest(env),
+      },
+    ]);
+  });
+
+  it("role_not_authorized: full keyset with digest", async () => {
+    const { kernel, diag } = await setup();
+    const env = envelope("l1b", "PASS", 1, { ref: "d" }, "reviewer");
+    await kernel.handle(env);
+    expect(diag.events).toEqual([
+      {
+        source: "kernel",
+        kind: "rejected",
+        reason: "role_not_authorized",
+        ...attribution,
+        opId: "l1b",
+        type: "PASS",
+        payloadDigest: deriveEmitDigest(env),
+      },
+    ]);
+  });
+
+  it("not_active (DONE instance): full keyset with digest", async () => {
+    const { kernel, diag } = await setup();
+    await kernel.handle(envelope("l1c", "PASS", 1, { ref: "d" }));
+    await kernel.handle(envelope("l1d", "CONVERGED", 2, { ref: "d" }, "reviewer"));
+    diag.events.length = 0;
+    const env = envelope("l1e", "PASS", 3, { ref: "d" });
+    await kernel.handle(env);
+    expect(diag.events).toEqual([
+      {
+        source: "kernel",
+        kind: "rejected",
+        reason: "not_active",
+        ...attribution,
+        opId: "l1e",
+        type: "PASS",
+        payloadDigest: deriveEmitDigest(env),
+      },
+    ]);
+  });
+});
+
+describe("L1 rejection lanes — not_authorized (explicit profile, local wiring)", () => {
+  it("not_authorized: full keyset with digest", async () => {
+    const profiled: WorkflowTemplate = {
+      ...template,
+      capabilityProfile: { implementer: { implement: [] } },
+    };
+    const handle = openStore(":memory:", createControlledClock(0));
+    await handle.store.createInstance(baseInstance);
+    const diag = createRecordingDiagnosticsSink();
+    const kernel = createKernel({
+      store: handle.store,
+      definitions: { load: () => Promise.resolve(profiled) },
+      time: createControlledClock(0),
+      digest: deriveEmitDigest,
+      diag: diag.sink,
+    });
+    const env = envelope("l1f", "PASS", 1, { ref: "d" });
+    await kernel.handle(env);
+    expect(diag.events).toEqual([
+      {
+        source: "kernel",
+        kind: "rejected",
+        reason: "not_authorized",
+        ...attribution,
+        opId: "l1f",
+        type: "PASS",
+        payloadDigest: deriveEmitDigest(env),
+      },
+    ]);
+  });
+});

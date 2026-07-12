@@ -61,13 +61,27 @@ export type TraceStep =
       readonly payload?: unknown;
       /** Explicit number, or omitted ⇒ supplied by the lift. */
       readonly expectedVersion?: number;
+      /**
+       * Explicit role claim, or omitted ⇒ supplied by the role lift
+       * when declared (ch11-P1 T3: explicit wins over the lift);
+       * omitted WITHOUT a lift the envelope carries no role — a
+       * legitimate missing_role probe.
+       */
+      readonly expectedRole?: string;
       readonly expect: ExpectedOutcome;
     };
 
 export interface TraceFixture {
   readonly name: string;
-  /** Level-lifting declaration — ABSENT for at-level traces (l0b). */
-  readonly lift?: { readonly expectedVersion: "track-running-version" };
+  /**
+   * Level-lifting declaration — ABSENT for at-level traces. The role
+   * axis (ch11-P1 T2) stamps the CURRENT step's role onto emits that
+   * carry none, so sub-L1 traces stay green above their level.
+   */
+  readonly lift?: {
+    readonly expectedVersion?: "track-running-version";
+    readonly expectedRole?: "supply-current-step-role";
+  };
   readonly steps: readonly TraceStep[];
   /** [seq, opId] — full-sequence equality. */
   readonly finalTranscript: readonly (readonly [number, string])[];
@@ -216,12 +230,32 @@ export async function replayTrace(
       }
       expectedVersion = runningVersion;
     }
+    // The role lift (ch11-P1 T2): stamp the CURRENT step's role onto
+    // emits carrying none. Explicit values win (T3); absence without
+    // a lift stays absent — a missing_role probe is trace-expressible.
+    let expectedRole = step.expectedRole;
+    if (expectedRole === undefined && fixture.lift?.expectedRole === "supply-current-step-role") {
+      const current = await seams.store.loadInstance(instanceId);
+      if (current === null) {
+        throw new Error(`${label}: instance vanished before the role lift`);
+      }
+      const role = seams.template.steps[current.currentStep]?.role;
+      if (role === undefined) {
+        throw new Error(`${label}: role lift on a terminal current step`);
+      }
+      expectedRole = role;
+    }
+    // A11 pre-snapshot (ch11-P1 T4): full-instance equality on every
+    // non-committed outcome — the checkers are a consistency belt,
+    // never the equality proof.
+    const before = await seams.store.loadInstance(instanceId);
     const raw: Record<string, unknown> = {
       instanceId,
       opId: step.opId,
       type: step.type,
       actorId: step.actorId,
       expectedVersion,
+      ...(expectedRole !== undefined ? { expectedRole } : {}),
       ...(step.payload !== undefined ? { payload: step.payload } : {}),
     };
     const outcome = await seams.submit(raw);
@@ -229,6 +263,11 @@ export async function replayTrace(
     assertOutcome(label, index, step.expect, outcome);
     if (outcome.kind === "committed") {
       runningVersion = outcome.version;
+    } else {
+      const after = await seams.store.loadInstance(instanceId);
+      if (JSON.stringify(after) !== JSON.stringify(before)) {
+        fail("state", index, `${label} (no-state-change: full instance)`, before, after);
+      }
     }
   }
 

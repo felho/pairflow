@@ -77,6 +77,8 @@ async function verbDevBundle(ctx: VerbContext): Promise<number> {
 interface InjectStep {
   readonly type: string;
   readonly expectedVersion?: number;
+  /** Optional role claim (ch11-P1 X1/X3): absence stages a missing_role probe. */
+  readonly expectedRole?: string;
   readonly hasPayload: boolean;
   readonly payload?: unknown;
   readonly actorId: string;
@@ -104,7 +106,7 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value !== "";
 }
 
-const INJECT_STEP_KEYS = ["type", "expectedVersion", "payload", "actorId", "opId"];
+const INJECT_STEP_KEYS = ["type", "expectedVersion", "expectedRole", "payload", "actorId", "opId"];
 
 /** The canonical inject schema (packet ch6-P4b) — validated in FULL
  * before ANY submit (fail-closed staging: no partial injection on a
@@ -157,6 +159,13 @@ function validateInjectFile(parsed: unknown): InjectStep[] {
     if (actorId !== undefined && (typeof actorId !== "string" || actorId === "")) {
       throw usage("InvalidInjectStep", `${label}.actorId must be a non-empty string when present`);
     }
+    const expectedRole = record["expectedRole"];
+    if (expectedRole !== undefined && (typeof expectedRole !== "string" || expectedRole === "")) {
+      throw usage(
+        "InvalidInjectStep",
+        `${label}.expectedRole must be a non-empty string when present`,
+      );
+    }
     const hasPayload = "payload" in record;
     if (opId === undefined) {
       // Derived path: the emit-lib's content-addressed identity NEEDS a
@@ -177,6 +186,7 @@ function validateInjectFile(parsed: unknown): InjectStep[] {
     return {
       type: record["type"],
       ...(expectedVersion !== undefined ? { expectedVersion } : {}),
+      ...(expectedRole !== undefined ? { expectedRole } : {}),
       hasPayload,
       ...(hasPayload ? { payload: record["payload"] } : {}),
       actorId: typeof actorId === "string" ? actorId : "dev-actor",
@@ -247,6 +257,7 @@ async function verbInject(ctx: VerbContext): Promise<number> {
         ...(step.expectedVersion !== undefined
           ? { expectedVersion: step.expectedVersion }
           : {}),
+        ...(step.expectedRole !== undefined ? { expectedRole: step.expectedRole } : {}),
         ...(step.hasPayload ? { payload: step.payload } : {}),
       };
       // Every outcome — rejections included — is a DATA row: a staging
@@ -340,7 +351,19 @@ function validateStep(raw: unknown, index: number): void {
     return;
   }
   if (raw["kind"] === "emit") {
-    const allowed = ["kind", "opId", "type", "actorId", "payload", "expectedVersion", "expect"];
+    // ch11-P1 X5: expectedRole joins the emit-step keyset — the
+    // hand-rolled schema does not type-ripple (the parse-tail cast),
+    // so the extension is explicit packet contract.
+    const allowed = [
+      "kind",
+      "opId",
+      "type",
+      "actorId",
+      "payload",
+      "expectedVersion",
+      "expectedRole",
+      "expect",
+    ];
     for (const key of Object.keys(raw)) {
       if (!allowed.includes(key)) {
         fixtureError(`${label} has unknown field '${key}'`, { allowedFields: allowed });
@@ -355,6 +378,9 @@ function validateStep(raw: unknown, index: number): void {
     }
     if (raw["expectedVersion"] !== undefined && !isNonNegSafeInt(raw["expectedVersion"])) {
       fixtureError(`${label}.expectedVersion must be a nonnegative safe integer`);
+    }
+    if (raw["expectedRole"] !== undefined && !isNonEmptyString(raw["expectedRole"])) {
+      fixtureError(`${label}.expectedRole must be a non-empty string when present`);
     }
     validateExpect(raw["expect"], `${label}.expect`);
     return;
@@ -379,9 +405,22 @@ function validateFixtureShape(parsed: unknown): TraceFixture {
     if (!isPlainObject(lift)) {
       fixtureError("lift must be an object");
     }
-    assertExactKeys(lift, ["expectedVersion"], "lift");
-    if (lift["expectedVersion"] !== "track-running-version") {
+    // ch11-P1 X5: the lift keyset gains the role axis (T2 mirrored).
+    const liftKeys = Object.keys(lift);
+    const allowedLiftKeys = ["expectedVersion", "expectedRole"];
+    for (const key of liftKeys) {
+      if (!allowedLiftKeys.includes(key)) {
+        fixtureError(`lift has unknown field '${key}'`, { allowedFields: allowedLiftKeys });
+      }
+    }
+    if (liftKeys.length === 0) {
+      fixtureError("lift must declare at least one axis");
+    }
+    if (lift["expectedVersion"] !== undefined && lift["expectedVersion"] !== "track-running-version") {
       fixtureError('lift.expectedVersion must be "track-running-version"');
+    }
+    if (lift["expectedRole"] !== undefined && lift["expectedRole"] !== "supply-current-step-role") {
+      fixtureError('lift.expectedRole must be "supply-current-step-role"');
     }
   }
   const steps = parsed["steps"];

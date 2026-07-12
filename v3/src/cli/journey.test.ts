@@ -63,13 +63,13 @@ describe("cli — the full-lifecycle journey smoke (packet ch8-P2: J1/J2)", () =
       // submitted events driving implement →(PASS)→ review →(CONVERGED)→ done.
       const pass = await cli(
         "submit", "--db", db, "--instance", id, "--type", "PASS",
-        "--expected-version", "1", "--templates-dir", templatesDir,
+        "--expected-version", "1", "--expected-role", "implementer", "--templates-dir", templatesDir,
       );
       expect(JSON.parse(pass.stdout.trim())).toMatchObject({ kind: "committed", version: 2 });
 
       const converged = await cli(
         "submit", "--db", db, "--instance", id, "--type", "CONVERGED",
-        "--expected-version", "2", "--templates-dir", templatesDir,
+        "--expected-version", "2", "--expected-role", "reviewer", "--templates-dir", templatesDir,
       );
       expect(JSON.parse(converged.stdout.trim())).toMatchObject({ kind: "committed", version: 3 });
 

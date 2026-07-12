@@ -99,15 +99,22 @@ const DETAIL_TOKENS: ReadonlySet<string> = new Set([
   "unknown_key",
   "invalid_required_string",
   "invalid_expected_version",
+  "invalid_expected_role",
   "invalid_event_id",
   "payload_not_canonicalizable",
 ]);
 const REASONS: ReadonlySet<string> = new Set(REJECTION_NAMES);
+// The L1 members (ch11-P1 D1) are all POST-DIGEST lanes; unknown_instance
+// stays the only pre-digest member (the payloadDigest presence branch).
 const KERNEL_REJECTED_REASONS: ReadonlySet<string> = new Set([
   "unknown_instance",
   "missing_version",
   "no_transition",
   "op_id_collision",
+  "not_active",
+  "missing_role",
+  "role_not_authorized",
+  "not_authorized",
 ]);
 const ATTRIBUTION = ["instanceId", "opId", "actorId", "type"] as const;
 
