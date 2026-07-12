@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { WorkflowTemplate } from "../domain/index.js";
 import { createGateRegistry } from "../gates/index.js";
-import type { GateCatalog } from "../ports/index.js";
+import type { GateCatalog, InlineGateRegistration } from "../ports/index.js";
 import { admitTemplate } from "./admit.js";
 import type { ValidationFinding } from "./errors.js";
 
@@ -227,5 +227,29 @@ describe("admitTemplate — the injected catalog (A3, note 5)", () => {
     const findings = admitFail({ PASS: [{ uses: "declarative.threshold", config: { metric: "round", op: ">=", value: 1 } }] }, empty);
     expect(findings).toHaveLength(1);
     expect(findings[0]).toMatchObject({ path: "steps.review.gates.PASS[0]", code: "gate_evaluator_unavailable" });
+  });
+
+  it("R4/A2 belt (arm-gate-2 finding 1): a cast-forged EMPTY-findings failure still blocks admission", () => {
+    // The failure arm is statically nonempty; a hostile registration can
+    // only express it through a cast — admission must still refuse to
+    // admit (the synthesized finding), never brand with no effective
+    // config.
+    const forged: GateCatalog = {
+      resolve: () => ({
+        implementation: "declarative",
+        execution: "inline",
+        requiresRuntimeContext: false,
+        validateAndNormalizeConfig: () =>
+          ({ ok: false, findings: [] }) as unknown as ReturnType<
+            InlineGateRegistration["validateAndNormalizeConfig"]
+          >,
+        evaluate: () => ({ verdict: "allow" }) as const,
+      }),
+    };
+    const findings = admitFail({ PASS: [{ uses: "declarative.threshold", config: {} }] }, forged);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.path).toBe("steps.review.gates.PASS[0].config");
+    expect(findings[0]?.message).toContain("without findings");
+    expect(findings[0]).not.toHaveProperty("code");
   });
 });

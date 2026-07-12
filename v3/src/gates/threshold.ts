@@ -66,8 +66,10 @@ function validateAndNormalizeConfig(raw: unknown): GateConfigResult {
     // fail `Number.isSafeInteger(...) && value >= 1`.
     findings.push({ path: "value", message: "value must be a safe integer >= 1" });
   }
-  if (findings.length > 0) {
-    return { ok: false, findings };
+  const [first, ...rest] = findings;
+  if (first !== undefined) {
+    // Nonempty by construction — the tuple type carries it (R4).
+    return { ok: false, findings: [first, ...rest] };
   }
   const effective: ThresholdConfig = { metric: "round", op: ">=", value: value as number };
   return { ok: true, effective };

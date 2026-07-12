@@ -23,12 +23,16 @@ export interface GateConfigFinding {
 
 /**
  * R4: the two-arm result of config validation + normalization — the
- * EFFECTIVE config XOR a nonempty finding set (the ledger's
+ * EFFECTIVE config XOR a NONEMPTY finding set (the ledger's
  * `effective | issues`). Defaults materialize on the `ok` arm, once.
+ * The failure arm is statically nonempty (arm-gate-2 finding 1): an
+ * empty-findings failure would let admission succeed with no effective
+ * config — the tuple type forbids it, and admission carries a runtime
+ * belt for a cast-forged registration.
  */
 export type GateConfigResult =
   | { readonly ok: true; readonly effective: unknown }
-  | { readonly ok: false; readonly findings: readonly GateConfigFinding[] };
+  | { readonly ok: false; readonly findings: readonly [GateConfigFinding, ...GateConfigFinding[]] };
 
 /**
  * R1: the shared descriptor axes. `execution` is realized with its

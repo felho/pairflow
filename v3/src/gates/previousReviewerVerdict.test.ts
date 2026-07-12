@@ -94,42 +94,52 @@ describe("pairflow.previous_reviewer_verdict — validateAndNormalizeConfig (G5)
     expect(result.findings).toHaveLength(1);
     expect(result.findings[0]?.path).toBe("required");
   });
+
+  it("G8 own-property: a computed `__proto__` OWN key is caught as an unknown key (arm-gate-2 finding 4)", () => {
+    const config = { ["__proto__"]: { injected: true }, required: true };
+    const result = reg.validateAndNormalizeConfig(config);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0]?.path).toBe("__proto__");
+  });
 });
 
 describe("pairflow.previous_reviewer_verdict — evaluate (G6)", () => {
-  const effective = { required: true };
-
-  it("empty history ⇒ block(no_previous_verdict)", () => {
-    expect(reg.evaluate(effective, projection([]))).toEqual({
-      verdict: "block",
-      reason: "no_previous_verdict",
-    });
-  });
-
-  it("a prior committed transition FROM the current step ⇒ allow", () => {
-    const history: GateProjectionEntry[] = [{ stepId: "review", eventType: "PASS", role: "reviewer" }];
-    expect(reg.evaluate(effective, projection(history))).toEqual({ verdict: "allow" });
-  });
-
-  it("the sensitivity catch: history with OTHER-step entries only ⇒ block (a naive nonempty check passes wrongly)", () => {
-    const history: GateProjectionEntry[] = [
-      { stepId: "implement", eventType: "PASS", role: "implementer" },
-      { stepId: "triage", eventType: "PASS", role: "lead" },
-    ];
-    expect(reg.evaluate(effective, projection(history))).toEqual({
-      verdict: "block",
-      reason: "no_previous_verdict",
-    });
-  });
-
-  it("G7 purity: the frozen history array (and entries) do not throw; repeated calls are deterministic", () => {
-    const history = deepFreeze<GateProjectionEntry[]>([
-      { stepId: "review", eventType: "PASS", role: "reviewer" },
-    ]);
-    const proj = deepFreeze(projection(history));
+  /** G7 discipline on EVERY semantics lane (arm-gate-2 finding 3): the
+   * inputs run recursively deep-frozen — the history ARRAY included —
+   * and every branch is called twice for determinism. */
+  function evaluateFrozen(history: GateProjectionEntry[]) {
+    const effective = deepFreeze({ required: true });
+    const proj = deepFreeze(projection(deepFreeze(history)));
     const first = reg.evaluate(effective, proj);
     const second = reg.evaluate(effective, proj);
-    expect(first).toEqual({ verdict: "allow" });
     expect(second).toEqual(first);
+    return first;
+  }
+
+  it("empty history ⇒ block(no_previous_verdict) (frozen + deterministic)", () => {
+    expect(evaluateFrozen([])).toEqual({
+      verdict: "block",
+      reason: "no_previous_verdict",
+    });
+  });
+
+  it("a prior committed transition FROM the current step ⇒ allow (frozen + deterministic)", () => {
+    expect(
+      evaluateFrozen([{ stepId: "review", eventType: "PASS", role: "reviewer" }]),
+    ).toEqual({ verdict: "allow" });
+  });
+
+  it("the sensitivity catch: history with OTHER-step entries only ⇒ block (a naive nonempty check passes wrongly; frozen + deterministic)", () => {
+    expect(
+      evaluateFrozen([
+        { stepId: "implement", eventType: "PASS", role: "implementer" },
+        { stepId: "triage", eventType: "PASS", role: "lead" },
+      ]),
+    ).toEqual({
+      verdict: "block",
+      reason: "no_previous_verdict",
+    });
   });
 });

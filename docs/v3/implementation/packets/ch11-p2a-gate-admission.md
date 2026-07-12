@@ -1004,13 +1004,49 @@ with own-key writes so hostile `__proto__` step keys survive
 admission as own keys (caught in-build against the ch8
 `validate.test.ts` pin).
 
+**Aftermath (2026-07-12, ARM GATE 2 — the build-close implementation
+review; pin-conform gpt-5.6-sol/high, verdict `refine` citing the
+build sha `a76b0382`, byte guard clean):** four findings, folded in
+ONE `fix(v3)` round: (1) **the empty-failure-arm hole (product):**
+`GateConfigResult`'s failure arm typed a possibly-EMPTY findings
+list — a registration returning `{ok: false, findings: []}` admitted
+a branded template with `config: undefined` while all 668 tests
+stayed green; fix: the failure arm is now the statically NONEMPTY
+tuple `readonly [GateConfigFinding, ...GateConfigFinding[]]`, both
+builtin validators return through a nonempty-by-construction
+destructure, and admission carries a runtime belt (a cast-forged
+empty failure yields a synthesized uncoded finding at the config
+path — driven by the new hostile-catalog lane). (2) **the
+approve-basis reproducibility gap (packet-docs):** the approve-ready
+bytes (`178a09a2…`) are not a reachable git object — the Build
+record is written between the approve and the commit BY the
+process's own design (template §1: `packet_metrics` at build close;
+the ch11-P1 commit has the same shape), so the committed packet
+hashes differently; DISPOSITION: recorded here (the approve-ready
+bytes = this file with the `## Build record` section restored to its
+pre-build placeholder + zeroed-metrics form; the hash chronicle's
+verification trail lives in the panel/arm transcripts), and the
+process question — should the approve-ready bytes be preserved as a
+git object — routes to the ch11 boundary review (process-log line).
+(3) **G7 freeze under-coverage (test-evidence):** only the dedicated
+purity lanes ran frozen; now EVERY G4/G6 semantics lane runs
+recursively deep-frozen with per-branch repeated-call determinism
+(the standalone purity lanes merged into the grids). (4) **the
+missing own-`__proto__` lane on `pairflow.previous_reviewer_verdict`
+(test-evidence):** the hostile computed-`__proto__` config lane
+existed on the threshold validator only — the "fix scoped to the
+finding" class AGAIN, cross-validator this time; the twin lane
+added. 668 tests before and after (two standalone purity lanes
+merged, two new lanes added); full bridges re-verified green; the
+aftermath commit's post-build audit run against the packet.
+
 ```json
 {
   "packet_metrics": {
     "class": "kernel-semantic",
     "prediction": { "predicted": "projection", "reasoning": "inherited from the ch11-P2 row through the sizing split (plan §11.4, recorded at the ch11 ratification): pure projection from l2-pseudocode + ledger + the ratified draft's module-home and admission rows", "discovered": "projection" },
     "provenance": { "anchored": 22, "derived": 11, "new_decision": 0 },
-    "rounds": { "review": 4, "doc_refinement": 0, "implementation": 1 },
+    "rounds": { "review": 4, "doc_refinement": 0, "implementation": 2 },
     "stops": [],
     "detector_misses": [
       {
@@ -1022,9 +1058,14 @@ admission as own keys (caught in-build against the ch8
         "found_at": "approve",
         "what": "the arm's re-check caught the fold itself minting an inconsistency: the A5 placement freedom contradicted D6's already-pinned branded-intersection type, and the G7 freeze recipe left the history array mutable",
         "why_missed": "a narrowing that GRANTS freedom was not re-checked against the sibling row that already forecloses it — the propagation pass verified the narrowing's mirrors, not its type-level consistency with unchanged rows"
+      },
+      {
+        "found_at": "arm-build-close",
+        "what": "the GateConfigResult failure arm admitted an empty findings list (a forged empty failure branded a template with config undefined, all tests green); the G7 freeze discipline ran only on the dedicated purity lanes, not every semantics lane as the acceptance stated; the previous_reviewer_verdict validator lacked the own-__proto__ lane its threshold twin carried; and the approve-basis hash is not reproducible from the build commit (the build record lands between approve and commit by process design)",
+        "why_missed": "the R4 'nonempty finding set' was prose-asserted but never TYPE-carried, and no internal lens asked whether the type permitted what the row forbade; the acceptance's 'every semantics-grid lane frozen' was folded as a bullet edit without re-deriving the lane list it bound; the own-property lane inventory was per-validator, not per-rule — the fix-scoped-to-the-finding class across validators; the basis-reproducibility gap is a process-shape question no packet lens owns"
       }
     ],
-    "learned": "an adversarial arm attacks entailments in BOTH directions — under-anchored picks AND over-obliging rows; and every granted build freedom needs a consistency check against the rows that already pin the shape"
+    "learned": "an adversarial arm attacks entailments in BOTH directions — under-anchored picks AND over-obliging rows; a granted build freedom needs a consistency check against the rows that already pin the shape; and a prose-asserted 'nonempty' that the TYPE permits to be empty is a standing blind class"
   }
 }
 ```

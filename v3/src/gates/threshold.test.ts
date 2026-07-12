@@ -131,27 +131,29 @@ describe("declarative.threshold — validateAndNormalizeConfig (G3)", () => {
 });
 
 describe("declarative.threshold — evaluate (G4)", () => {
-  it("blocks with round_below_min iff round < value; no reason/message/evidence otherwise", () => {
-    const effective = { metric: "round", op: ">=", value: 2 } as const;
-    expect(reg.evaluate(effective, projection(1))).toEqual({ verdict: "block", reason: "round_below_min" });
-    // the at-boundary allow (round === value): an off-by-one `<=` fails here.
-    expect(reg.evaluate(effective, projection(2))).toEqual({ verdict: "allow" });
-    expect(reg.evaluate(effective, projection(3))).toEqual({ verdict: "allow" });
-  });
-
-  it("never warns across the whole ladder", () => {
-    const effective = { metric: "round", op: ">=", value: 3 } as const;
-    for (const round of [0, 1, 2, 3, 4, 99]) {
-      expect(reg.evaluate(effective, projection(round)).verdict).not.toBe("warn");
-    }
-  });
-
-  it("G7 purity: deep-frozen inputs do not throw, and repeated calls are deterministic", () => {
-    const effective = deepFreeze({ metric: "round", op: ">=", value: 2 });
-    const proj = deepFreeze(projection(2));
-    const first = reg.evaluate(effective, proj);
-    const second = reg.evaluate(effective, proj);
-    expect(first).toEqual({ verdict: "allow" });
+  /** G7 discipline on EVERY semantics lane (arm-gate-2 finding 3): the
+   * inputs run recursively deep-frozen (a mutating evaluator throws in
+   * strict mode) and every branch is called twice for determinism. */
+  function evaluateFrozen(effective: unknown, round: number) {
+    const frozenEffective = deepFreeze(effective);
+    const proj = deepFreeze(projection(round));
+    const first = reg.evaluate(frozenEffective, proj);
+    const second = reg.evaluate(frozenEffective, proj);
     expect(second).toEqual(first);
+    return first;
+  }
+
+  it("blocks with round_below_min iff round < value; no reason/message/evidence otherwise (frozen + deterministic per branch)", () => {
+    const effective = { metric: "round", op: ">=", value: 2 } as const;
+    expect(evaluateFrozen({ ...effective }, 1)).toEqual({ verdict: "block", reason: "round_below_min" });
+    // the at-boundary allow (round === value): an off-by-one `<=` fails here.
+    expect(evaluateFrozen({ ...effective }, 2)).toEqual({ verdict: "allow" });
+    expect(evaluateFrozen({ ...effective }, 3)).toEqual({ verdict: "allow" });
+  });
+
+  it("never warns across the whole ladder (frozen + deterministic per branch)", () => {
+    for (const round of [0, 1, 2, 3, 4, 99]) {
+      expect(evaluateFrozen({ metric: "round", op: ">=", value: 3 }, round).verdict).not.toBe("warn");
+    }
   });
 });

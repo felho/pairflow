@@ -51,8 +51,10 @@ function validateAndNormalizeConfig(raw: unknown): GateConfigResult {
       message: "required must be true (false is a reserved future toggle)",
     });
   }
-  if (findings.length > 0) {
-    return { ok: false, findings };
+  const [first, ...rest] = findings;
+  if (first !== undefined) {
+    // Nonempty by construction — the tuple type carries it (R4).
+    return { ok: false, findings: [first, ...rest] };
   }
   return { ok: true, effective: EFFECTIVE };
 }
