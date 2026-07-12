@@ -2105,3 +2105,31 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   question: preserve the approve-ready bytes as a git object (e.g. a
   refs/notes entry or a recorded pre-record hash file), or ratify the
   current reconstruction-note convention.
+
+- 2026-07-12 · ch11-P2b authoring + arm gate 1: (1) the P2a lesson
+  APPLIED at write time still missed its cross-artifact half — O1
+  obliged a REQUIRED gateReason the already-BUILT sibling type
+  (GateDecision.reason optional even on block) cannot force; the arm
+  caught it as the type-permits-what-the-row-forbids class at the
+  PACKET grain; candidate rule: a derived row's obligations are
+  checked against the BUILT types it consumes, not only its model
+  anchors. (2) The arm's re-check sharpened a one-sided discipline
+  lane: the order-interplay lane drove read-after-checks but nothing
+  failed an EAGER read — every ordering/discipline claim needs BOTH
+  directions driven (the fix-scoped-to-the-finding class at lane
+  grain). (3) The packet-lint's reserved-P-family rejection fired on
+  a fresh authoring (the projection matrix was first lettered P) —
+  the tooling caught it fold-time; no rule needed, the armor worked.
+
+- 2026-07-12 · ch11-P2b arm gate 2 aftermath: three green-but-blind
+  lanes in the BUILT tests ([warn,block] order-insensitive; the
+  CAS-restart lane counting reads/commits but never proving
+  re-evaluation on fresh state; the diag lane asserting a partial
+  shape) — the packet's lane TEXTS demanded the right meanings and
+  the build realized weaker asserts; candidate rule for the boundary
+  review: R-LANE-SENSITIVITY binds twice — once against the packet's
+  lane texts at authoring, once against the BUILT test bodies at
+  build close (a named orchestrator-side sensitivity pass, or an arm
+  prompt clause, before the gate-2 leg). The ingress carried-as-
+  may-change correction also had to be PROPAGATED to T2 + the sweep
+  label — the fix-scoped-to-the-finding class again, at prose grain.
