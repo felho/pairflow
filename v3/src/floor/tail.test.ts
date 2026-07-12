@@ -73,6 +73,7 @@ function makeKernel(store: StorePort): Kernel {
     definitions,
     time: createControlledClock(0),
     digest: deriveEmitDigest,
+    gates: gateCatalog,
     diag: noopDiagnosticsSink,
   });
 }
@@ -99,7 +100,7 @@ async function nextRow(iterator: AsyncIterator<TranscriptEntry>): Promise<Transc
 }
 
 function fakeRow(seq: number): TranscriptEntry {
-  return { seq, envelope: env(`op-${String(seq)}`, "PASS", seq), payloadDigest: "d", committedAt: 0 };
+  return { seq, envelope: env(`op-${String(seq)}`, "PASS", seq), payloadDigest: "d", gateDecisions: [], committedAt: 0 };
 }
 
 /** Engine-probe double (the traceHarness dim-4 precedent): scripted

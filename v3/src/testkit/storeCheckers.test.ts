@@ -27,6 +27,7 @@ function row(seq: number, opId: string, type: string): TranscriptEntry {
     seq,
     envelope: envelope(opId, type),
     payloadDigest: `digest-${opId}`,
+    gateDecisions: [],
     committedAt: 1_000 + seq,
   };
 }

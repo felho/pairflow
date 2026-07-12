@@ -272,10 +272,14 @@
     "status": "realized"
   },
   "l2-pseudocode/HANDLE": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/kernel.ts#createKernel",
+    "disposition": "implement",
+    "status": "realized"
   },
   "l2-pseudocode/activate": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/start.ts#startInstance",
+    "disposition": "alias/inherited",
+    "status": "realized"
   },
   "l2-pseudocode/admit_definition": {
     "codeRef": "v3/src/definition/admit.ts#admitTemplate",
@@ -283,7 +287,9 @@
     "status": "realized"
   },
   "l2-pseudocode/gate_projection": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/gateProjection.ts#deriveGateProjection",
+    "disposition": "implement",
+    "status": "realized"
   },
   "l2a-pseudocode/CREATE_INSTANCE": {
     "status": "pending"

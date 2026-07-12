@@ -32,6 +32,7 @@ afterEach(() => {
 interface TimelineRow {
   seq: number;
   envelope: { opId: string; type: string };
+  gateDecisions: unknown;
 }
 
 describe("cli — the full-lifecycle journey smoke (packet ch8-P2: J1/J2)", () => {
@@ -88,6 +89,10 @@ describe("cli — the full-lifecycle journey smoke (packet ch8-P2: J1/J2)", () =
       const timeline = await cli("timeline", id, "--db", db);
       const timelineRows = JSON.parse(timeline.stdout.trim()) as TimelineRow[];
       expect(timelineRows.map((r) => r.envelope.type)).toEqual(["PASS", "CONVERGED"]);
+      // ch11-P2b R-ACTIVATION-JOURNEY discharge: the C27 read-surface
+      // delta end-to-end — an ungated lifecycle's rows carry
+      // gateDecisions [] (a POSITIVE assert, not compile-survival).
+      expect(timelineRows.map((r) => r.gateDecisions)).toEqual([[], []]);
 
       // …and tail --from 0 (NDJSON; completes on the terminal instance).
       const tail = await cli("tail", id, "--db", db, "--from", "0");

@@ -41,6 +41,21 @@ export interface GateDecision {
 }
 
 /**
+ * O2 (packet ch11-P2b): C27's retained decision list as a domain value
+ * (camelCase realization, the D4 precedent). A committed transition
+ * carries its ordered allow/warn verdicts; `uses` names the producing
+ * binding. `block` is UNREPRESENTABLE in the verdict union — a block
+ * never commits, so it never becomes a retained value (type-level).
+ */
+export interface RetainedGateDecision {
+  readonly uses: string;
+  readonly verdict: "allow" | "warn";
+  readonly reason?: string;
+  readonly message?: string;
+  readonly evidenceRefs?: readonly string[];
+}
+
+/**
  * D5: one committed-transition history entry the projection carries.
  */
 export interface GateProjectionEntry {

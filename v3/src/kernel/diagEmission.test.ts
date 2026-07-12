@@ -92,6 +92,7 @@ async function setup() {
     definitions,
     time: createControlledClock(0),
     digest: deriveEmitDigest,
+    gates: gateCatalog,
     diag: diag.sink,
   });
   return { kernel, store: handle.store, diag };
@@ -274,6 +275,7 @@ describe("cas_restart — count discipline", () => {
       definitions,
       time: createControlledClock(0),
       digest: deriveEmitDigest,
+      gates: gateCatalog,
       diag: diag.sink,
     });
     const env = envelope("x1", "PASS", 1, { r: 1 });
@@ -318,6 +320,7 @@ describe("cas_restart — count discipline", () => {
       definitions,
       time: createControlledClock(0),
       digest: deriveEmitDigest,
+      gates: gateCatalog,
       diag: diag.sink,
     });
     await expect(kernel.handle(envelope("x2", "PASS", 1, { r: 1 }))).rejects.toBe(boom);
@@ -425,6 +428,7 @@ describe("handle internal_failure lanes — emit + rethrow unchanged", () => {
       definitions: { load: () => Promise.resolve(admit(corrupted)) },
       time: createControlledClock(0),
       digest: deriveEmitDigest,
+      gates: gateCatalog,
       diag: rec.sink,
     });
     const env = envelope("t7", "PASS", 1, { x: 1 });
@@ -507,6 +511,7 @@ describe("startInstance internal_failure lanes — {instanceId, error} keyset", 
       definitions,
       time: createControlledClock(0),
       digest: deriveEmitDigest,
+      gates: gateCatalog,
       diag: rec.sink,
     });
     await expect(kernel.startInstance(startInput)).rejects.toBe(boom);
@@ -526,6 +531,7 @@ describe("startInstance internal_failure lanes — {instanceId, error} keyset", 
       definitions: { load: () => Promise.resolve(admit(corrupted)) },
       time: createControlledClock(0),
       digest: deriveEmitDigest,
+      gates: gateCatalog,
       diag: rec.sink,
     });
     await expect(kernel.startInstance(startInput)).rejects.toThrow(/no definition/);
@@ -559,6 +565,7 @@ async function kernelWith(overrides: {
     definitions: overrides.definitions ?? definitions,
     time: createControlledClock(0),
     digest: overrides.digest ?? deriveEmitDigest,
+    gates: gateCatalog,
     diag: overrides.diag.sink,
   });
 }
@@ -578,6 +585,7 @@ async function throwingStoreKernel(method: "loadInstance" | "findOp" | "commitTr
     definitions,
     time: createControlledClock(0),
     digest: deriveEmitDigest,
+    gates: gateCatalog,
     diag: diag.sink,
   });
   return { kernel, diag, boom };
@@ -605,6 +613,7 @@ async function commitResultKernel(result: CommitTransitionResult) {
     definitions,
     time: createControlledClock(0),
     digest: deriveEmitDigest,
+    gates: gateCatalog,
     diag: diag.sink,
   });
   return { kernel, diag, store };
@@ -631,6 +640,7 @@ async function conflictThenRealKernel(conflicts: number) {
     definitions,
     time: createControlledClock(0),
     digest: deriveEmitDigest,
+    gates: gateCatalog,
     diag: diag.sink,
   });
   return { kernel, diag };
@@ -709,6 +719,7 @@ describe("L1 rejection lanes — not_authorized (explicit profile, local wiring)
       definitions: { load: () => Promise.resolve(admit(profiled)) },
       time: createControlledClock(0),
       digest: deriveEmitDigest,
+      gates: gateCatalog,
       diag: diag.sink,
     });
     const env = envelope("l1f", "PASS", 1, { ref: "d" });

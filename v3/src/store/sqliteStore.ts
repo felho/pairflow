@@ -4,6 +4,7 @@ import type {
   EventEnvelope,
   InstanceId,
   LifecycleStatus,
+  RetainedGateDecision,
   TranscriptEntry,
   WorkflowInstance,
 } from "../domain/index.js";
@@ -25,11 +26,11 @@ import type { TimeSource } from "../ports/time.js";
  * commit boundary (CHK-C-TS-SOURCE; IC-D's store binding) — deliberately
  * NOT a SQLite DEFAULT, so a frozen-clock test asserts the real path.
  */
-// v2 (packet ch5-P4): transcript carries the committed payload_digest.
-// The v1→v2 bump exercises the ADR-003 fenced wipe live for the first
-// time: a known PROTOTYPE marker at "1" wipes on open; anything else
-// still refuses.
-const SCHEMA_VERSION = "2";
+// v3 (packet ch11-P2b): transcript carries the retained gate decisions.
+// THE ch11 schema bump — it rides the SAME ADR-003 fenced wipe: a known
+// PROTOTYPE marker at "2" (or any other version) wipes on open; anything
+// else still refuses. No migration path exists (no data carry).
+const SCHEMA_VERSION = "3";
 
 const SCHEMA = `
 CREATE TABLE meta (
@@ -54,6 +55,7 @@ CREATE TABLE transcript (
   op_id          TEXT    NOT NULL,
   envelope       TEXT    NOT NULL,
   payload_digest TEXT    NOT NULL,
+  gate_decisions TEXT    NOT NULL,
   committed_at   INTEGER NOT NULL,
   PRIMARY KEY (instance_id, seq),
   UNIQUE (instance_id, op_id)
@@ -94,16 +96,19 @@ interface TranscriptRow {
   seq: number;
   envelope: string;
   payload_digest: string;
+  gate_decisions: string;
   committed_at: number;
 }
 
 /** One mapper for BOTH read surfaces (getInstanceDetail / getTimeline) —
- * the ch6-P1 cross-consistency dimension is structural, not incidental. */
+ * the ch6-P1 cross-consistency dimension is structural, not incidental.
+ * The gate_decisions column round-trips through JSON verbatim (S3). */
 function toTranscriptEntry(row: TranscriptRow): TranscriptEntry {
   return {
     seq: row.seq,
     envelope: JSON.parse(row.envelope) as EventEnvelope,
     payloadDigest: row.payload_digest,
+    gateDecisions: JSON.parse(row.gate_decisions) as readonly RetainedGateDecision[],
     committedAt: row.committed_at,
   };
 }
@@ -267,13 +272,14 @@ export function openStore(path: string, time: TimeSource): StoreHandle {
           .prepare("SELECT COALESCE(MAX(seq), 0) + 1 AS seq FROM transcript WHERE instance_id = ?")
           .get(input.instanceId) as { seq: number };
         db.prepare(
-          "INSERT INTO transcript (instance_id, seq, op_id, envelope, payload_digest, committed_at) VALUES (?, ?, ?, ?, ?, ?)",
+          "INSERT INTO transcript (instance_id, seq, op_id, envelope, payload_digest, gate_decisions, committed_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
         ).run(
           input.instanceId,
           next.seq,
           input.envelope.opId,
           JSON.stringify(input.envelope),
           input.payloadDigest,
+          JSON.stringify(input.gateDecisions),
           time.now(),
         );
         db.exec("COMMIT");
@@ -300,7 +306,7 @@ export function openStore(path: string, time: TimeSource): StoreHandle {
       }
       const entries = db
         .prepare(
-          "SELECT seq, envelope, payload_digest, committed_at FROM transcript WHERE instance_id = ? ORDER BY seq",
+          "SELECT seq, envelope, payload_digest, gate_decisions, committed_at FROM transcript WHERE instance_id = ? ORDER BY seq",
         )
         .all(instanceId) as unknown as TranscriptRow[];
       return Promise.resolve({
@@ -341,7 +347,7 @@ export function openStore(path: string, time: TimeSource): StoreHandle {
             ? null
             : (db
                 .prepare(
-                  "SELECT seq, envelope, payload_digest, committed_at FROM transcript WHERE instance_id = ? AND seq > ? ORDER BY seq",
+                  "SELECT seq, envelope, payload_digest, gate_decisions, committed_at FROM transcript WHERE instance_id = ? AND seq > ? ORDER BY seq",
                 )
                 .all(instanceId, afterSeq) as unknown as TranscriptRow[]);
         db.exec("COMMIT");

@@ -71,6 +71,7 @@ describe("l0b golden trace — the walking skeleton end-to-end (on the harness)"
       definitions: fixtureDefinitionStore(admit(fixtureTemplate())),
       time: createControlledClock(1_000),
       digest: deriveEmitDigest,
+      gates: gateCatalog,
       diag: noopDiagnosticsSink,
     });
     const ingress = createIngress({ kernel, diag: noopDiagnosticsSink });

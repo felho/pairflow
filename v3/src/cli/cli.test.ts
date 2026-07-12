@@ -333,6 +333,26 @@ describe("cli — read verbs (the floor activated)", () => {
     );
   });
 
+  it("dim8 (ch11-P2b): detail AND timeline rows carry gateDecisions [] on an ungated run", async () => {
+    const db = tempDbPath();
+    const deps = testDeps();
+    const id = await startOne(db, deps);
+    await run(
+      ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "1", "--expected-role", "implementer", "--payload", '{"ref":"d"}'],
+      deps,
+    );
+
+    const detail = await run(["detail", id, "--db", db], deps);
+    const detailDoc = JSON.parse(detail.stdout[0] ?? "") as {
+      transcript: { gateDecisions: unknown }[];
+    };
+    expect(detailDoc.transcript.map((r) => r.gateDecisions)).toEqual([[]]);
+
+    const timeline = await run(["timeline", id, "--db", db], deps);
+    const rows = JSON.parse(timeline.stdout[0] ?? "") as { gateDecisions: unknown }[];
+    expect(rows.map((r) => r.gateDecisions)).toEqual([[]]);
+  });
+
   it("bundle: default policy — payload markers appear NOWHERE (REV-BUNDLE-DEFAULT-POLICY)", async () => {
     const db = tempDbPath();
     const deps = testDeps();

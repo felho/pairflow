@@ -40,6 +40,7 @@ function wire() {
     definitions: fixtureDefinitionStore(admit(fixtureTemplate())),
     time: createControlledClock(1_000),
     digest: deriveEmitDigest,
+    gates: gateCatalog,
     diag: noopDiagnosticsSink,
   });
   const ingress = createIngress({ kernel, diag: noopDiagnosticsSink });

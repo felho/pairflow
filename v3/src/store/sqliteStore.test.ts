@@ -61,6 +61,7 @@ describe("commitTransition — atomic transition commit (l0a invariant)", () => 
       expectedVersion: 1,
       envelope: envelope("a1", 1),
       payloadDigest: DIGEST,
+      gateDecisions: [],
       newCurrentStep: "review",
       newRound: 1,
       newStatus: "RUNNING",
@@ -85,6 +86,7 @@ describe("commitTransition — atomic transition commit (l0a invariant)", () => 
       expectedVersion: 7,
       envelope: envelope("b2", 7),
       payloadDigest: DIGEST,
+      gateDecisions: [],
       newCurrentStep: "review",
       newRound: 1,
       newStatus: "RUNNING",
@@ -105,6 +107,7 @@ describe("commitTransition — atomic transition commit (l0a invariant)", () => 
       expectedVersion: 1,
       envelope: envelope("a1", 1),
       payloadDigest: DIGEST,
+      gateDecisions: [],
       newCurrentStep: "review",
       newRound: 1,
       newStatus: "RUNNING",
@@ -114,6 +117,7 @@ describe("commitTransition — atomic transition commit (l0a invariant)", () => 
       expectedVersion: 2,
       envelope: envelope("b2", 2),
       payloadDigest: DIGEST,
+      gateDecisions: [],
       newCurrentStep: "implement",
       newRound: 2,
       newStatus: "RUNNING",
@@ -125,6 +129,7 @@ describe("commitTransition — atomic transition commit (l0a invariant)", () => 
       expectedVersion: 1,
       envelope: envelope("a1", 1),
       payloadDigest: DIGEST,
+      gateDecisions: [],
       newCurrentStep: "review",
       newRound: 1,
       newStatus: "RUNNING",
@@ -144,6 +149,7 @@ describe("commitTransition — atomic transition commit (l0a invariant)", () => 
         expectedVersion: i + 1,
         envelope: envelope(opId, i + 1),
         payloadDigest: DIGEST,
+        gateDecisions: [],
         newCurrentStep: "review",
         newRound: 1,
         newStatus: "RUNNING",
@@ -172,6 +178,7 @@ describe("CHK-A1-SCHEMA — the uniqueness constraint lives in the database", ()
       expectedVersion: 1,
       envelope: envelope("a1", 1),
       payloadDigest: DIGEST,
+      gateDecisions: [],
       newCurrentStep: "review",
       newRound: 1,
       newStatus: "RUNNING",
@@ -182,11 +189,11 @@ describe("CHK-A1-SCHEMA — the uniqueness constraint lives in the database", ()
     expect(() =>
       raw
         .prepare(
-          // payload_digest supplied: the red must be the UNIQUE
-          // constraint, never the NOT NULL (P4 build watchpoint).
-          "INSERT INTO transcript (instance_id, seq, op_id, envelope, payload_digest, committed_at) VALUES (?, ?, ?, ?, ?, ?)",
+          // payload_digest AND gate_decisions supplied: the red must be
+          // the UNIQUE constraint, never a NOT NULL (P4/P2b watchpoint).
+          "INSERT INTO transcript (instance_id, seq, op_id, envelope, payload_digest, gate_decisions, committed_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
         )
-        .run("inst-1", 99, "a1", "{}", "d", 0),
+        .run("inst-1", 99, "a1", "{}", "d", "[]", 0),
     ).toThrow(/UNIQUE/);
     raw.close();
   });
@@ -202,6 +209,7 @@ describe("CHK-C-TS-SOURCE — timestamps come from the injected TimeSource", () 
       expectedVersion: 1,
       envelope: envelope("a1", 1),
       payloadDigest: DIGEST,
+      gateDecisions: [],
       newCurrentStep: "review",
       newRound: 1,
       newStatus: "RUNNING",
@@ -212,6 +220,7 @@ describe("CHK-C-TS-SOURCE — timestamps come from the injected TimeSource", () 
       expectedVersion: 2,
       envelope: envelope("b2", 2),
       payloadDigest: DIGEST,
+      gateDecisions: [],
       newCurrentStep: "implement",
       newRound: 2,
       newStatus: "RUNNING",
@@ -289,6 +298,7 @@ describe("op_id_collision — the digest-aware idempotency rung (packet ch5-P4)"
       expectedVersion: 1,
       envelope: envelope("a1", 1),
       payloadDigest: DIGEST,
+      gateDecisions: [],
       newCurrentStep: "review",
       newRound: 1,
       newStatus: "RUNNING",
@@ -299,6 +309,7 @@ describe("op_id_collision — the digest-aware idempotency rung (packet ch5-P4)"
       expectedVersion: 2,
       envelope: differingEnvelope("a1", 2),
       payloadDigest: deriveEmitDigest(differingEnvelope("a1", 2)),
+      gateDecisions: [],
       newCurrentStep: "review",
       newRound: 1,
       newStatus: "RUNNING",
@@ -318,6 +329,7 @@ describe("op_id_collision — the digest-aware idempotency rung (packet ch5-P4)"
       expectedVersion: 1,
       envelope: envelope("a1", 1),
       payloadDigest: DIGEST,
+      gateDecisions: [],
       newCurrentStep: "review",
       newRound: 1,
       newStatus: "RUNNING",
@@ -327,6 +339,7 @@ describe("op_id_collision — the digest-aware idempotency rung (packet ch5-P4)"
       expectedVersion: 2,
       envelope: envelope("b2", 2),
       payloadDigest: DIGEST,
+      gateDecisions: [],
       newCurrentStep: "implement",
       newRound: 2,
       newStatus: "RUNNING",
@@ -337,6 +350,7 @@ describe("op_id_collision — the digest-aware idempotency rung (packet ch5-P4)"
       expectedVersion: 1, // stale on purpose — the rung must answer first
       envelope: differingEnvelope("a1", 1),
       payloadDigest: deriveEmitDigest(differingEnvelope("a1", 1)),
+      gateDecisions: [],
       newCurrentStep: "review",
       newRound: 1,
       newStatus: "RUNNING",
@@ -353,6 +367,7 @@ describe("op_id_collision — the digest-aware idempotency rung (packet ch5-P4)"
       expectedVersion: 1,
       envelope: envelope("a1", 1),
       payloadDigest: DIGEST,
+      gateDecisions: [],
       newCurrentStep: "review",
       newRound: 1,
       newStatus: "RUNNING",
@@ -364,15 +379,15 @@ describe("op_id_collision — the digest-aware idempotency rung (packet ch5-P4)"
   });
 });
 
-describe("schema v1 → v2 — the first LIVE fenced wipe (packet ch5-P4, ADR-003)", () => {
-  it("a known PROTOTYPE store at marker '1' wipes on open and re-marks as '2'", async () => {
+describe("schema v2 → v3 — THE ch11 fenced wipe (packet ch11-P2b, S1, ADR-003)", () => {
+  it("a known PROTOTYPE store at marker '2' wipes on open and re-marks as '3'", async () => {
     const path = tempDbPath();
     const first = openStore(path, createControlledClock(0));
     await first.store.createInstance(instance);
     first.close();
 
     const raw = new DatabaseSync(path);
-    raw.prepare("UPDATE meta SET value = '1' WHERE key = 'schema_version'").run();
+    raw.prepare("UPDATE meta SET value = '2' WHERE key = 'schema_version'").run();
     raw.close();
 
     const second = openStore(path, createControlledClock(0));
@@ -383,7 +398,7 @@ describe("schema v1 → v2 — the first LIVE fenced wipe (packet ch5-P4, ADR-00
     const marker = check
       .prepare("SELECT value FROM meta WHERE key = 'schema_version'")
       .get() as { value: string };
-    expect(marker.value).toBe("2");
+    expect(marker.value).toBe("3");
     check.close();
   });
 });
@@ -402,6 +417,7 @@ describe("getTimeline — the ch6-P1 cursor read", () => {
         expectedVersion: version,
         envelope: envelope(opId, version),
         payloadDigest: DIGEST,
+        gateDecisions: [],
         newCurrentStep: "review",
         newRound: 1,
         newStatus: "RUNNING",
@@ -475,6 +491,7 @@ describe("getTimeline — the ch6-P1 cursor read", () => {
       expectedVersion: 4,
       envelope: envelope("d4", 4),
       payloadDigest: DIGEST,
+      gateDecisions: [],
       newCurrentStep: "review",
       newRound: 1,
       newStatus: "RUNNING",
@@ -491,9 +508,9 @@ describe("getTimeline — the ch6-P1 cursor read", () => {
     const raw = new DatabaseSync(path);
     raw
       .prepare(
-        "INSERT INTO transcript (instance_id, seq, op_id, envelope, payload_digest, committed_at) VALUES (?, ?, ?, ?, ?, ?)",
+        "INSERT INTO transcript (instance_id, seq, op_id, envelope, payload_digest, gate_decisions, committed_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
       )
-      .run("inst-1", 1, "bad", "not-json", "d", 0);
+      .run("inst-1", 1, "bad", "not-json", "d", "[]", 0);
     raw.close();
 
     await expect(handle.store.getTimeline("inst-1", 0)).rejects.toThrow(SyntaxError);
@@ -502,6 +519,7 @@ describe("getTimeline — the ch6-P1 cursor read", () => {
       expectedVersion: 1,
       envelope: envelope("x9", 1),
       payloadDigest: DIGEST,
+      gateDecisions: [],
       newCurrentStep: "review",
       newRound: 1,
       newStatus: "RUNNING",
@@ -527,6 +545,7 @@ describe("expectedRole round-trip (packet ch11-P1, W6)", () => {
       expectedVersion: 1,
       envelope: roleEnvelope,
       payloadDigest: "dg-role",
+      gateDecisions: [],
       newCurrentStep: "review",
       newRound: 1,
       newStatus: "RUNNING",
@@ -534,5 +553,85 @@ describe("expectedRole round-trip (packet ch11-P1, W6)", () => {
     expect(result.kind).toBe("committed");
     const detail = await handle.store.getInstanceDetail("inst-1");
     expect(detail?.transcript[0]?.envelope).toEqual(roleEnvelope);
+  });
+});
+
+// ── packet ch11-P2b (S1–S4): the gate_decisions column ──
+
+describe("gate_decisions — the retained-decision column (packet ch11-P2b, S1–S4)", () => {
+  it("the FULL optional-field shape round-trips byte-equal on BOTH read surfaces", async () => {
+    const handle = openStore(":memory:", createControlledClock(0));
+    await handle.store.createInstance(instance);
+    const decisions = [
+      { uses: "declarative.threshold", verdict: "allow" as const },
+      {
+        uses: "pairflow.previous_reviewer_verdict",
+        verdict: "warn" as const,
+        reason: "needs-followup",
+        message: "minor",
+        evidenceRefs: ["ev-1", "ev-2"],
+      },
+    ];
+    const result = await handle.store.commitTransition({
+      instanceId: "inst-1",
+      expectedVersion: 1,
+      envelope: envelope("a1", 1),
+      payloadDigest: DIGEST,
+      gateDecisions: decisions,
+      newCurrentStep: "review",
+      newRound: 1,
+      newStatus: "RUNNING",
+    });
+    expect(result.kind).toBe("committed");
+    // One write, two reads: a mapper divergence between getInstanceDetail
+    // and getTimeline fails this deep-equality.
+    const detail = await handle.store.getInstanceDetail("inst-1");
+    const timeline = await handle.store.getTimeline("inst-1", 0);
+    expect(detail?.transcript[0]?.gateDecisions).toEqual(decisions);
+    expect(timeline?.[0]?.gateDecisions).toEqual(decisions);
+    expect(timeline).toEqual(detail?.transcript);
+    handle.close();
+  });
+
+  it("known-empty: a transition that ran no gates carries gateDecisions [] (never null, never absent)", async () => {
+    const handle = openStore(":memory:", createControlledClock(0));
+    await handle.store.createInstance(instance);
+    await handle.store.commitTransition({
+      instanceId: "inst-1",
+      expectedVersion: 1,
+      envelope: envelope("a1", 1),
+      payloadDigest: DIGEST,
+      gateDecisions: [],
+      newCurrentStep: "review",
+      newRound: 1,
+      newStatus: "RUNNING",
+    });
+    const detail = await handle.store.getInstanceDetail("inst-1");
+    expect(detail?.transcript[0]?.gateDecisions).toEqual([]);
+    handle.close();
+  });
+
+  it("METADATA lane: gate_decisions is declared TEXT + NOT NULL and the table is STRICT", () => {
+    const path = tempDbPath();
+    const handle = openStore(path, createControlledClock(0));
+    handle.close();
+
+    const raw = new DatabaseSync(path);
+    const columns = raw.prepare("PRAGMA table_info(transcript)").all() as {
+      name: string;
+      type: string;
+      notnull: number;
+    }[];
+    const column = columns.find((c) => c.name === "gate_decisions");
+    expect(column).toBeDefined();
+    expect(column?.type).toBe("TEXT");
+    expect(column?.notnull).toBe(1);
+    // The table's STRICT flag (a nullable or type-loose column would not
+    // survive a STRICT declaration byte-for-byte).
+    const ddl = raw
+      .prepare("SELECT sql FROM sqlite_master WHERE name = 'transcript'")
+      .get() as { sql: string };
+    expect(ddl.sql).toMatch(/STRICT/);
+    raw.close();
   });
 });

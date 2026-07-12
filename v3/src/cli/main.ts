@@ -236,12 +236,17 @@ async function verbStart(ctx: VerbContext): Promise<number> {
     throw usage("MissingTask", "--task <text> is required");
   }
   const templateRef = parseTemplateRef(flagString(ctx, "template") ?? "local-pair-v0@1");
+  // ONE catalog value per composition root (ch11-P2b, T1): the SAME
+  // `createGateRegistry()` feeds the definition store AND the kernel —
+  // composing two would let admission and the rung disagree, the drift
+  // the C35 backstop exists to catch.
+  const gates = createGateRegistry();
   // ONE resolution, ONE store instance (packet ch8-P2 note 1): the
   // eager dir gate (A2) runs BEFORE any store/kernel construction, and
   // the SAME file store feeds the pre-load and the kernel.
   const definitions = createFileDefinitionStore(
     resolveTemplatesDir(flagString(ctx, "templates-dir"), ctx.deps),
-    createGateRegistry(),
+    gates,
   );
   // The outer catch is TYPE-based (W4/note 2): it maps TemplateLoadError
   // from EVERY site in this verb body — the pre-load below AND the
@@ -268,6 +273,7 @@ async function verbStart(ctx: VerbContext): Promise<number> {
         time: ctx.deps.time,
         digest: deriveEmitDigest,
         diag: diag.sink,
+        gates,
       });
       try {
         const started = await kernel.startInstance({
@@ -335,9 +341,12 @@ async function verbSubmit(ctx: VerbContext): Promise<number> {
     expectedRole,
     ...(payload.present ? { payload: payload.value } : {}),
   };
+  // ONE catalog value per composition root (ch11-P2b, T1): the same
+  // registry feeds the definition store and the kernel.
+  const gates = createGateRegistry();
   const definitions = createFileDefinitionStore(
     resolveTemplatesDir(flagString(ctx, "templates-dir"), ctx.deps),
-    createGateRegistry(),
+    gates,
   );
   // W4: submit first touches the template INSIDE kernel.handle — the
   // typed error surfaces at the ingress.submit await (ingress carries
@@ -353,6 +362,7 @@ async function verbSubmit(ctx: VerbContext): Promise<number> {
         time: ctx.deps.time,
         digest: deriveEmitDigest,
         diag: diag.sink,
+        gates,
       });
       const outcome = await createIngress({ kernel, diag: diag.sink }).submit(envelope);
       // The outcome IS the surface's answer — DATA on stdout, always;

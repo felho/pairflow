@@ -224,9 +224,12 @@ async function verbInject(ctx: VerbContext): Promise<number> {
     throw usage("MissingInstance", "--instance <id> is required");
   }
   const steps = validateInjectFile(await readJsonFile(ctx, "file"));
+  // ONE catalog value per composition root (ch11-P2b, T1): the same
+  // registry feeds the definition store and the kernel.
+  const gates = createGateRegistry();
   const definitions = createFileDefinitionStore(
     resolveTemplatesDir(flagString(ctx, "templates-dir"), ctx.deps),
-    createGateRegistry(),
+    gates,
   );
   // W4 (packet ch8-P2): inject first touches the template INSIDE
   // kernel.handle — the typed error surfaces at the ingress.submit
@@ -241,6 +244,7 @@ async function verbInject(ctx: VerbContext): Promise<number> {
       time: ctx.deps.time,
       digest: deriveEmitDigest,
       diag: diag.sink,
+      gates,
     });
     const ingress = createIngress({ kernel, diag: diag.sink });
     for (const step of steps) {
@@ -477,11 +481,11 @@ async function verbReplay(ctx: VerbContext): Promise<number> {
     // the testkit fixture (itself equality-pinned to the canonical
     // file) and stays OUTSIDE the templates-dir lane (hermetic).
     const template = fixtureTemplate();
-    // The replay store now yields ADMITTED templates (ch11-P2a, T4):
-    // admit-wrap the canonical fixture with the same catalog the dev
-    // graph composes. The fixture carries no gates, so admission is
-    // vacuous — it never fails here.
-    const admitted = admitTemplate(template, createGateRegistry());
+    // ONE catalog value per composition root (ch11-P2b, T1): the same
+    // registry admits the fixture AND arms the kernel rung. The fixture
+    // carries no gates, so admission is vacuous — it never fails here.
+    const gates = createGateRegistry();
+    const admitted = admitTemplate(template, gates);
     if (!admitted.ok) {
       throw new Error("dev replay: the canonical fixture failed admission (unreachable)");
     }
@@ -491,6 +495,7 @@ async function verbReplay(ctx: VerbContext): Promise<number> {
       time: ctx.deps.time,
       digest: deriveEmitDigest,
       diag: noopDiagnosticsSink,
+      gates,
     });
     const ingress = createIngress({ kernel, diag: noopDiagnosticsSink });
     const result = await replayTrace(fixture, {

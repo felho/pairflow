@@ -1,4 +1,5 @@
 import type { EventEnvelope } from "./envelope.js";
+import type { RetainedGateDecision } from "./gate.js";
 import type { ActorId, InstanceId, RoleName, StepId } from "./ids.js";
 import type { TemplateRef } from "./template.js";
 import type { EpochMillis } from "./time.js";
@@ -35,5 +36,12 @@ export interface TranscriptEntry {
   readonly seq: number;
   readonly envelope: EventEnvelope;
   readonly payloadDigest: string;
+  /**
+   * S3/C27 (packet ch11-P2b): the ordered retained allow/warn decisions
+   * the L2 gate pipeline ran for this transition — `[]` when it ran no
+   * gates (never null, never absent; the ch6 known-empty culture). The
+   * ONE shared row mapper exposes it identically on both read surfaces.
+   */
+  readonly gateDecisions: readonly RetainedGateDecision[];
   readonly committedAt: EpochMillis;
 }

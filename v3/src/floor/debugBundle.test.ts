@@ -94,6 +94,7 @@ async function seeded(): Promise<{ store: StorePort; close: () => void }> {
     definitions,
     time: createControlledClock(0),
     digest: deriveEmitDigest,
+    gates: gateCatalog,
     diag: noopDiagnosticsSink,
   });
   await committed(kernel, env("a1", "PASS", 1, { ref: MARKER_A, nested: { deep: MARKER_B } }));
@@ -271,6 +272,25 @@ describe("debug bundle — the §6.4 export + redaction boundary (packet ch6-P3)
       undefined,
     ]);
     expect("eventId" in (bundle?.transcript[0]?.envelope ?? {})).toBe(false);
+    diag.close();
+    close();
+  });
+
+  it("O4 (ch11-P2b): bundle transcript rows do NOT carry gateDecisions — the projected keyset is unchanged", async () => {
+    const { store, close } = await seeded();
+    const diag = emptyDiag();
+    // The committed transcript DOES carry gateDecisions (the read surface
+    // that detail/timeline expose); the bundle is its OWN projected
+    // surface and drops it (an added key would fail this).
+    const detail = await store.getInstanceDetail("inst-1");
+    expect(detail?.transcript.every((e) => Array.isArray(e.gateDecisions))).toBe(true);
+    const bundle = await exportWith(store, diag.reader);
+    for (const row of bundle?.transcript ?? []) {
+      expect("gateDecisions" in row).toBe(false);
+      expect(Object.keys(row).sort()).toEqual(
+        ["committedAt", "envelope", "payloadDigest", "seq"].sort(),
+      );
+    }
     diag.close();
     close();
   });

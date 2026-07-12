@@ -76,7 +76,8 @@ function makeKernel(store: StorePort, diag: DiagnosticsSink): Kernel {
     definitions,
     time: createControlledClock(0),
     digest: deriveEmitDigest,
-    diag,
+
+    gates: gateCatalog,    diag,
   });
 }
 
@@ -148,7 +149,7 @@ function fakeEvent(ordinal: number): DiagnosticEvent {
 }
 
 function fakeRow(seq: number): TranscriptEntry {
-  return { seq, envelope: env(`op-${String(seq)}`, "PASS", seq), payloadDigest: "d", committedAt: 0 };
+  return { seq, envelope: env(`op-${String(seq)}`, "PASS", seq), payloadDigest: "d", gateDecisions: [], committedAt: 0 };
 }
 
 type Thunk<T> = () => Promise<T>;

@@ -122,6 +122,7 @@ describe("floor.getTimeline — the §6.2 cursor read (packet ch6-P1)", () => {
       definitions,
       time: createControlledClock(0),
       digest: deriveEmitDigest,
+      gates: gateCatalog,
       diag: noopDiagnosticsSink,
     });
     const floor = createFloor(handle.store);

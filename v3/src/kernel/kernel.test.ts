@@ -2,6 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import type {
   EventEnvelope,
+  GateBinding,
+  GateDecision,
+  GateProjection,
+  Outcome,
   WorkflowInstance,
   AdmittedTemplate,
   WorkflowTemplate,
@@ -9,9 +13,16 @@ import type {
 import { deriveEmitDigest } from "../emit/index.js";
 import { createIngress } from "../ingress/index.js";
 import type { DefinitionStore } from "../ports/definition.js";
+import type {
+  DiagnosticsSink,
+  GateCatalog,
+  GateRegistration,
+  InlineGateRegistration,
+  ProcessGateRegistration,
+} from "../ports/index.js";
 import type { StorePort } from "../ports/store.js";
 import { openStore } from "../store/index.js";
-import { createControlledClock } from "../testkit/index.js";
+import { createControlledClock, createRecordingDiagnosticsSink } from "../testkit/index.js";
 import { admitTemplate } from "../definition/index.js";
 import { createGateRegistry } from "../gates/index.js";
 
@@ -24,6 +35,7 @@ function admit(template: WorkflowTemplate): AdmittedTemplate {
   return result.template;
 }
 import { createKernel } from "./kernel.js";
+import type { Kernel } from "./kernel.js";
 import { noopDiagnosticsSink } from "../diag/index.js";
 
 // Test-local fixtures: the testkit MD-1 template builder is ch4-P4's
@@ -85,6 +97,7 @@ async function setup() {
     definitions,
     time: createControlledClock(0),
     digest: deriveEmitDigest,
+    gates: gateCatalog,
     diag: noopDiagnosticsSink,
   });
   return { kernel, store: handle.store };
@@ -165,6 +178,7 @@ describe("CAS restart — never re-commit a target computed from stale state", (
       definitions,
       time: createControlledClock(0),
       digest: deriveEmitDigest,
+      gates: gateCatalog,
       diag: noopDiagnosticsSink,
     });
     const outcome = await kernel.handle(envelope("a1", "PASS", 1));
@@ -193,6 +207,7 @@ describe("CAS restart — never re-commit a target computed from stale state", (
       definitions,
       time: createControlledClock(0),
       digest: deriveEmitDigest,
+      gates: gateCatalog,
       diag: noopDiagnosticsSink,
     });
     const outcome = await kernel.handle(envelope("a1", "PASS", 1));
@@ -455,6 +470,7 @@ describe("L1 authority — the four new rejections through the real seam (A4/A7/
       definitions: defs,
       time: createControlledClock(0),
       digest: deriveEmitDigest,
+      gates: gateCatalog,
       diag: noopDiagnosticsSink,
     });
     // PASS exists as a review transition, the profile allows only CONVERGED.
@@ -504,6 +520,7 @@ describe("L1 authority — the cross-boundary ordering combinations (dimension 1
       definitions: defs,
       time: createControlledClock(0),
       digest: deriveEmitDigest,
+      gates: gateCatalog,
       diag: noopDiagnosticsSink,
     });
     await expectNoStateChange(handle.store, "inst-1", async () => {
@@ -532,6 +549,7 @@ describe("L1 authority — CAS restart × terminal (dimension 6, A12)", () => {
             expectedVersion: 1,
             envelope: envelope("w1", "CONVERGED", 1, { ref: "w" }, "reviewer"),
             payloadDigest: "dg-w",
+            gateDecisions: [],
             newCurrentStep: "done",
             newRound: 1,
             newStatus: "DONE",
@@ -548,11 +566,617 @@ describe("L1 authority — CAS restart × terminal (dimension 6, A12)", () => {
       definitions,
       time: createControlledClock(0),
       digest: deriveEmitDigest,
+      gates: gateCatalog,
       diag: noopDiagnosticsSink,
     });
     expect(await kernel.handle(envelope("r1", "PASS", 1, { ref: "d" }, "reviewer"))).toEqual({
       kind: "rejected",
       reason: "not_active",
     });
+  });
+});
+
+// ── packet ch11-P2b: the L2 gate rung — K/O lanes (test-composed
+// catalogs and stores; the shipped registry/store are never mutated) ──
+
+/** A review instance the gated CONVERGED lanes emit into. */
+const reviewInstance: WorkflowInstance = { ...baseInstance, currentStep: "review", version: 1 };
+
+/** local-pair-v0 with a pipeline bound at (review, CONVERGED). */
+function gatedReviewTemplate(pipeline: readonly GateBinding[]): WorkflowTemplate {
+  return {
+    ...template,
+    steps: {
+      implement: { role: "implementer", instruction: "build it", transitions: { PASS: "review" } },
+      review: {
+        role: "reviewer",
+        instruction: "review it",
+        transitions: { PASS: "implement", CONVERGED: "done" },
+        gates: { CONVERGED: pipeline },
+      },
+    },
+  };
+}
+
+/** An inline evaluator that logs its name (call order + count) and
+ * returns a scripted decision — the recording-catalog probe. */
+function scriptedInline(
+  name: string,
+  log: string[],
+  decide: (projection: GateProjection) => GateDecision,
+): InlineGateRegistration {
+  return {
+    implementation: "declarative",
+    execution: "inline",
+    requiresRuntimeContext: false,
+    validateAndNormalizeConfig: () => ({ ok: true, effective: {} }),
+    evaluate: (_config, projection) => {
+      log.push(name);
+      return decide(projection);
+    },
+  };
+}
+
+/** A process-implementation registration (no evaluate — the type
+ * discriminant forbids one); the rung rejects it before any evaluate. */
+const processReg: ProcessGateRegistration = {
+  implementation: "process",
+  execution: "inline",
+  requiresRuntimeContext: false,
+  validateAndNormalizeConfig: () => ({ ok: true, effective: {} }),
+};
+
+function catalogOf(map: Readonly<Record<string, GateRegistration>>): GateCatalog {
+  return {
+    resolve: (uses) =>
+      Object.prototype.hasOwnProperty.call(map, uses) ? (map[uses] ?? null) : null,
+  };
+}
+
+/** Admit the gated template with `admitCatalog`, arm the kernel with
+ * `kernelCatalog` (the two differ only for the drift/interplay lanes). */
+async function setupGatedReview(opts: {
+  pipeline: readonly GateBinding[];
+  admitCatalog: GateCatalog;
+  kernelCatalog: GateCatalog;
+  diag?: DiagnosticsSink;
+  store?: StorePort;
+  instance?: WorkflowInstance;
+}): Promise<{ kernel: Kernel; store: StorePort }> {
+  const admitted = admitTemplate(gatedReviewTemplate(opts.pipeline), opts.admitCatalog);
+  if (!admitted.ok) {
+    throw new Error(`gated setup admission failed: ${JSON.stringify(admitted.findings)}`);
+  }
+  const defs: DefinitionStore = { load: () => Promise.resolve(admitted.template) };
+  let store = opts.store;
+  if (store === undefined) {
+    const handle = openStore(":memory:", createControlledClock(0));
+    await handle.store.createInstance(opts.instance ?? reviewInstance);
+    store = handle.store;
+  }
+  const kernel = createKernel({
+    store,
+    definitions: defs,
+    time: createControlledClock(0),
+    digest: deriveEmitDigest,
+    diag: opts.diag ?? noopDiagnosticsSink,
+    gates: opts.kernelCatalog,
+  });
+  return { kernel, store };
+}
+
+/** A reviewer-claimed emit into inst-1 (the gated step is review). */
+function reviewEmit(opId: string, type: string, expectedVersion: number, payload: unknown = { ref: "d" }): EventEnvelope {
+  return { instanceId: "inst-1", opId, type, actorId: "claude", expectedVersion, expectedRole: "reviewer", payload };
+}
+
+describe("gate rung — dimension 1: placement grid (the rung never runs before its predecessors)", () => {
+  it("a WRONG role on a gated transition → role_not_authorized AND zero evaluator calls", async () => {
+    const log: string[] = [];
+    const cat = catalogOf({ "g.rec": scriptedInline("g.rec", log, () => ({ verdict: "allow" })) });
+    const { kernel, store } = await setupGatedReview({
+      pipeline: [{ uses: "g.rec" }],
+      admitCatalog: cat,
+      kernelCatalog: cat,
+    });
+    await expectNoStateChange(store, "inst-1", async () => {
+      expect(
+        await kernel.handle({ ...reviewEmit("wr1", "CONVERGED", 1), expectedRole: "implementer" }),
+      ).toEqual({ kind: "rejected", reason: "role_not_authorized" });
+    });
+    expect(log).toEqual([]);
+  });
+
+  it("a NONEXISTENT event type on a gated step → no_transition, zero evaluator calls", async () => {
+    const log: string[] = [];
+    const cat = catalogOf({ "g.rec": scriptedInline("g.rec", log, () => ({ verdict: "allow" })) });
+    const { kernel, store } = await setupGatedReview({
+      pipeline: [{ uses: "g.rec" }],
+      admitCatalog: cat,
+      kernelCatalog: cat,
+    });
+    await expectNoStateChange(store, "inst-1", async () => {
+      expect(await kernel.handle(reviewEmit("nx1", "NOPE", 1))).toEqual({
+        kind: "rejected",
+        reason: "no_transition",
+      });
+    });
+    expect(log).toEqual([]);
+  });
+
+  it("an UNGATED transition on a gated template commits with gateDecisions [] and zero evaluator calls", async () => {
+    const log: string[] = [];
+    const cat = catalogOf({ "g.rec": scriptedInline("g.rec", log, () => ({ verdict: "allow" })) });
+    const { kernel, store } = await setupGatedReview({
+      pipeline: [{ uses: "g.rec" }],
+      admitCatalog: cat,
+      kernelCatalog: cat,
+    });
+    // PASS on review is ungated (the gate is on CONVERGED).
+    expect((await kernel.handle(reviewEmit("ug1", "PASS", 1))).kind).toBe("committed");
+    const detail = await store.getInstanceDetail("inst-1");
+    expect(detail?.transcript[0]?.gateDecisions).toEqual([]);
+    expect(log).toEqual([]);
+  });
+});
+
+describe("gate rung — dimension 2: ordered, first-block-wins combination lanes", () => {
+  it("[block, recorder] → the second evaluator NEVER runs", async () => {
+    const log: string[] = [];
+    const cat = catalogOf({
+      "g.block": scriptedInline("g.block", log, () => ({ verdict: "block", reason: "x" })),
+      "g.rec": scriptedInline("g.rec", log, () => ({ verdict: "allow" })),
+    });
+    const { kernel, store } = await setupGatedReview({
+      pipeline: [{ uses: "g.block" }, { uses: "g.rec" }],
+      admitCatalog: cat,
+      kernelCatalog: cat,
+    });
+    await expectNoStateChange(store, "inst-1", async () => {
+      expect(await kernel.handle(reviewEmit("c1", "CONVERGED", 1))).toEqual({
+        kind: "rejected",
+        reason: "gate_blocked",
+        gateReason: "x",
+      });
+    });
+    expect(log).toEqual(["g.block"]);
+  });
+
+  it("[allow, block] → the first ran exactly once, nothing committed", async () => {
+    const log: string[] = [];
+    const cat = catalogOf({
+      "g.allow": scriptedInline("g.allow", log, () => ({ verdict: "allow" })),
+      "g.block": scriptedInline("g.block", log, () => ({ verdict: "block", reason: "x" })),
+    });
+    const { kernel, store } = await setupGatedReview({
+      pipeline: [{ uses: "g.allow" }, { uses: "g.block" }],
+      admitCatalog: cat,
+      kernelCatalog: cat,
+    });
+    expect((await kernel.handle(reviewEmit("c1", "CONVERGED", 1))).kind).toBe("rejected");
+    expect(log).toEqual(["g.allow", "g.block"]);
+    expect((await store.getInstanceDetail("inst-1"))?.transcript).toHaveLength(0);
+  });
+
+  it("[warn, block] → the block wins and the warn's retained decision is DISCARDED (no row appended)", async () => {
+    const cat = catalogOf({
+      "g.warn": scriptedInline("g.warn", [], () => ({ verdict: "warn", reason: "w" })),
+      "g.block": scriptedInline("g.block", [], () => ({ verdict: "block", reason: "x" })),
+    });
+    const { kernel, store } = await setupGatedReview({
+      pipeline: [{ uses: "g.warn" }, { uses: "g.block" }],
+      admitCatalog: cat,
+      kernelCatalog: cat,
+    });
+    expect((await kernel.handle(reviewEmit("c1", "CONVERGED", 1))).kind).toBe("rejected");
+    expect((await store.getInstanceDetail("inst-1"))?.transcript).toHaveLength(0);
+  });
+
+  it("[warn, allow] → commits with BOTH decisions retained in authored order", async () => {
+    const cat = catalogOf({
+      "g.warn": scriptedInline("g.warn", [], () => ({ verdict: "warn", reason: "w" })),
+      "g.allow": scriptedInline("g.allow", [], () => ({ verdict: "allow" })),
+    });
+    const { kernel, store } = await setupGatedReview({
+      pipeline: [{ uses: "g.warn" }, { uses: "g.allow" }],
+      admitCatalog: cat,
+      kernelCatalog: cat,
+    });
+    expect((await kernel.handle(reviewEmit("c1", "CONVERGED", 1))).kind).toBe("committed");
+    const detail = await store.getInstanceDetail("inst-1");
+    expect(detail?.transcript[0]?.gateDecisions).toEqual([
+      { uses: "g.warn", verdict: "warn", reason: "w" },
+      { uses: "g.allow", verdict: "allow" },
+    ]);
+  });
+});
+
+describe("gate rung — dimension 3: block-before-commit semantics", () => {
+  it("a block leaves the FULL instance unchanged and appends no row", async () => {
+    const cat = catalogOf({
+      "g.block": scriptedInline("g.block", [], () => ({ verdict: "block", reason: "nope" })),
+    });
+    const { kernel, store } = await setupGatedReview({
+      pipeline: [{ uses: "g.block" }],
+      admitCatalog: cat,
+      kernelCatalog: cat,
+    });
+    await expectNoStateChange(store, "inst-1", async () => {
+      expect(await kernel.handle(reviewEmit("x1", "CONVERGED", 1))).toEqual({
+        kind: "rejected",
+        reason: "gate_blocked",
+        gateReason: "nope",
+      });
+    });
+    expect((await store.getInstanceDetail("inst-1"))?.transcript).toHaveLength(0);
+  });
+});
+
+describe("gate rung — dimension 4: fail-closed backstop lanes", () => {
+  it("a DRIFTED kernel catalog (admitted, then vanished) → gate_evaluator_unavailable, zero evaluations, no commit", async () => {
+    const log: string[] = [];
+    const full = catalogOf({ "g.x": scriptedInline("g.x", log, () => ({ verdict: "allow" })) });
+    const drifted = catalogOf({});
+    const { kernel, store } = await setupGatedReview({
+      pipeline: [{ uses: "g.x" }],
+      admitCatalog: full,
+      kernelCatalog: drifted,
+    });
+    await expectNoStateChange(store, "inst-1", async () => {
+      expect(await kernel.handle(reviewEmit("d1", "CONVERGED", 1))).toEqual({
+        kind: "rejected",
+        reason: "gate_evaluator_unavailable",
+      });
+    });
+    expect(log).toEqual([]);
+  });
+
+  it("a process-implementation registration → gate_execution_not_supported, state unchanged", async () => {
+    const cat = catalogOf({ "g.proc": processReg });
+    const { kernel, store } = await setupGatedReview({
+      pipeline: [{ uses: "g.proc" }],
+      admitCatalog: cat,
+      kernelCatalog: cat,
+    });
+    await expectNoStateChange(store, "inst-1", async () => {
+      expect(await kernel.handle(reviewEmit("pr1", "CONVERGED", 1))).toEqual({
+        kind: "rejected",
+        reason: "gate_execution_not_supported",
+      });
+    });
+  });
+
+  it("order-interplay: [valid-allow, unresolvable] → the first EVALUATES once, the second rejects gate_evaluator_unavailable", async () => {
+    const log: string[] = [];
+    const allow = scriptedInline("g.allow", log, () => ({ verdict: "allow" }));
+    const admitCat = catalogOf({
+      "g.allow": allow,
+      "g.miss": scriptedInline("g.miss", log, () => ({ verdict: "allow" })),
+    });
+    const kernelCat = catalogOf({ "g.allow": allow });
+    const { kernel, store } = await setupGatedReview({
+      pipeline: [{ uses: "g.allow" }, { uses: "g.miss" }],
+      admitCatalog: admitCat,
+      kernelCatalog: kernelCat,
+    });
+    await expectNoStateChange(store, "inst-1", async () => {
+      expect(await kernel.handle(reviewEmit("o1", "CONVERGED", 1))).toEqual({
+        kind: "rejected",
+        reason: "gate_evaluator_unavailable",
+      });
+    });
+    expect(log).toEqual(["g.allow"]);
+  });
+
+  it("pre-read discipline: [unresolvable, …] over a throwing/counting store → the backstop rejection with ZERO read attempts", async () => {
+    const handle = openStore(":memory:", createControlledClock(0));
+    await handle.store.createInstance(reviewInstance);
+    let reads = 0;
+    const hostile: StorePort = {
+      ...handle.store,
+      getTimeline: () => {
+        reads += 1;
+        return Promise.reject(new Error("read boom"));
+      },
+    };
+    const admitCat = catalogOf({
+      "g.miss": scriptedInline("g.miss", [], () => ({ verdict: "allow" })),
+      "g.allow": scriptedInline("g.allow", [], () => ({ verdict: "allow" })),
+    });
+    const kernelCat = catalogOf({ "g.allow": scriptedInline("g.allow", [], () => ({ verdict: "allow" })) });
+    const { kernel } = await setupGatedReview({
+      pipeline: [{ uses: "g.miss" }, { uses: "g.allow" }],
+      admitCatalog: admitCat,
+      kernelCatalog: kernelCat,
+      store: hostile,
+    });
+    expect(await kernel.handle(reviewEmit("p1", "CONVERGED", 1))).toEqual({
+      kind: "rejected",
+      reason: "gate_evaluator_unavailable",
+    });
+    expect(reads).toBe(0);
+  });
+});
+
+describe("gate rung — dimension 6: retained-decision fidelity", () => {
+  it("a warn with ALL optional fields round-trips byte-equal through commit → BOTH read surfaces; [] on ungated rows", async () => {
+    const warn = (): GateDecision => ({
+      verdict: "warn",
+      reason: "needs-followup",
+      message: "minor",
+      evidenceRefs: ["ev-1", "ev-2"],
+    });
+    const cat = catalogOf({ "g.warn": scriptedInline("g.warn", [], warn) });
+    const handle = openStore(":memory:", createControlledClock(0));
+    await handle.store.createInstance(reviewInstance);
+    const { kernel } = await setupGatedReview({
+      pipeline: [{ uses: "g.warn" }],
+      admitCatalog: cat,
+      kernelCatalog: cat,
+      store: handle.store,
+    });
+    // Two ungated commits precede the gated one (proves decisions land
+    // ONLY on their own row).
+    expect((await kernel.handle(reviewEmit("w1", "PASS", 1))).kind).toBe("committed");
+    expect((await kernel.handle(envelope("w2", "PASS", 2, { ref: "d" }, "implementer"))).kind).toBe(
+      "committed",
+    );
+    expect((await kernel.handle(reviewEmit("w3", "CONVERGED", 3))).kind).toBe("committed");
+
+    const detail = await handle.store.getInstanceDetail("inst-1");
+    expect(detail?.transcript.map((r) => r.gateDecisions)).toEqual([
+      [],
+      [],
+      [
+        {
+          uses: "g.warn",
+          verdict: "warn",
+          reason: "needs-followup",
+          message: "minor",
+          evidenceRefs: ["ev-1", "ev-2"],
+        },
+      ],
+    ]);
+    // The one shared row mapper: getTimeline deep-equals the detail read.
+    expect(await handle.store.getTimeline("inst-1", 0)).toEqual(detail?.transcript);
+  });
+});
+
+describe("gate rung — dimension 9: gate_blocked outcome pass-through (both iff halves)", () => {
+  it("surfaces gateReason + evidenceRefs by VALUE", async () => {
+    const cat = catalogOf({
+      "g.b": scriptedInline("g.b", [], () => ({ verdict: "block", reason: "why", evidenceRefs: ["r1", "r2"] })),
+    });
+    const { kernel } = await setupGatedReview({ pipeline: [{ uses: "g.b" }], admitCatalog: cat, kernelCatalog: cat });
+    expect(await kernel.handle(reviewEmit("b1", "CONVERGED", 1))).toEqual({
+      kind: "rejected",
+      reason: "gate_blocked",
+      gateReason: "why",
+      evidenceRefs: ["r1", "r2"],
+    });
+  });
+
+  it("absence half: a reasonless block yields NO gateReason key and NO evidenceRefs key", async () => {
+    const cat = catalogOf({ "g.b": scriptedInline("g.b", [], () => ({ verdict: "block" })) });
+    const { kernel } = await setupGatedReview({ pipeline: [{ uses: "g.b" }], admitCatalog: cat, kernelCatalog: cat });
+    const outcome = await kernel.handle(reviewEmit("b1", "CONVERGED", 1));
+    expect(outcome).toEqual({ kind: "rejected", reason: "gate_blocked" });
+    expect("gateReason" in outcome).toBe(false);
+    expect("evidenceRefs" in outcome).toBe(false);
+  });
+
+  it("absence half: a refs-less block yields NO evidenceRefs key but carries gateReason", async () => {
+    const cat = catalogOf({ "g.b": scriptedInline("g.b", [], () => ({ verdict: "block", reason: "why" })) });
+    const { kernel } = await setupGatedReview({ pipeline: [{ uses: "g.b" }], admitCatalog: cat, kernelCatalog: cat });
+    const outcome = await kernel.handle(reviewEmit("b1", "CONVERGED", 1));
+    expect(outcome).toEqual({ kind: "rejected", reason: "gate_blocked", gateReason: "why" });
+    expect("evidenceRefs" in outcome).toBe(false);
+  });
+
+  it("an explicit-[] refs block rides an empty list verbatim (evidenceRefs: [])", async () => {
+    const cat = catalogOf({
+      "g.b": scriptedInline("g.b", [], () => ({ verdict: "block", reason: "why", evidenceRefs: [] })),
+    });
+    const { kernel } = await setupGatedReview({ pipeline: [{ uses: "g.b" }], admitCatalog: cat, kernelCatalog: cat });
+    expect(await kernel.handle(reviewEmit("b1", "CONVERGED", 1))).toEqual({
+      kind: "rejected",
+      reason: "gate_blocked",
+      gateReason: "why",
+      evidenceRefs: [],
+    });
+  });
+
+  it("the TYPE forbids gateReason/evidenceRefs on non-gate reasons (each probe otherwise well-typed)", () => {
+    // @ts-expect-error — a non-gate reason cannot carry gateReason (O1 exclusion)
+    const p1: Outcome = { kind: "rejected", reason: "not_active", gateReason: "x" };
+    // @ts-expect-error — a non-gate reason cannot carry evidenceRefs (O1 exclusion)
+    const p2: Outcome = { kind: "rejected", reason: "no_transition", evidenceRefs: ["r"] };
+    void p1;
+    void p2;
+    expect(true).toBe(true);
+  });
+});
+
+describe("gate rung — dimension 10: confinement", () => {
+  it("counting store: an UNGATED emit performs ZERO gated-path reads", async () => {
+    const handle = openStore(":memory:", createControlledClock(0));
+    await handle.store.createInstance(reviewInstance);
+    let reads = 0;
+    const counting: StorePort = {
+      ...handle.store,
+      getTimeline: (id, after) => {
+        reads += 1;
+        return handle.store.getTimeline(id, after);
+      },
+    };
+    const cat = catalogOf({ "g.allow": scriptedInline("g.allow", [], () => ({ verdict: "allow" })) });
+    const { kernel } = await setupGatedReview({
+      pipeline: [{ uses: "g.allow" }],
+      admitCatalog: cat,
+      kernelCatalog: cat,
+      store: counting,
+    });
+    expect((await kernel.handle(reviewEmit("ug1", "PASS", 1))).kind).toBe("committed");
+    expect(reads).toBe(0);
+  });
+
+  it("a gate rejection emits the EXISTING rejected diag keyset — registry name only, no gate reason/refs", async () => {
+    const rec = createRecordingDiagnosticsSink();
+    const cat = catalogOf({
+      "g.b": scriptedInline("g.b", [], () => ({ verdict: "block", reason: "why", evidenceRefs: ["r1"] })),
+    });
+    const { kernel } = await setupGatedReview({
+      pipeline: [{ uses: "g.b" }],
+      admitCatalog: cat,
+      kernelCatalog: cat,
+      diag: rec.sink,
+    });
+    await kernel.handle(reviewEmit("b1", "CONVERGED", 1));
+    expect(rec.events).toHaveLength(1);
+    const event = rec.events[0];
+    expect(event).toMatchObject({ source: "kernel", kind: "rejected", reason: "gate_blocked" });
+    expect(Object.keys(event ?? {})).not.toContain("gateReason");
+    expect(Object.keys(event ?? {})).not.toContain("evidenceRefs");
+  });
+});
+
+describe("gate rung — dimension 11: the packaged evaluator's first-arrival block e2e", () => {
+  it("pairflow.previous_reviewer_verdict blocks on empty history at the start step (no_previous_verdict)", async () => {
+    const realCat = createGateRegistry();
+    const gatedStart: WorkflowTemplate = {
+      ...template,
+      steps: {
+        implement: {
+          role: "implementer",
+          instruction: "build it",
+          transitions: { PASS: "review" },
+          gates: { PASS: [{ uses: "pairflow.previous_reviewer_verdict", config: { required: true } }] },
+        },
+        review: {
+          role: "reviewer",
+          instruction: "review it",
+          transitions: { PASS: "implement", CONVERGED: "done" },
+        },
+      },
+    };
+    const admitted = admitTemplate(gatedStart, realCat);
+    if (!admitted.ok) {
+      throw new Error(`dim11 admission failed: ${JSON.stringify(admitted.findings)}`);
+    }
+    const handle = openStore(":memory:", createControlledClock(0));
+    await handle.store.createInstance(baseInstance);
+    const kernel = createKernel({
+      store: handle.store,
+      definitions: { load: () => Promise.resolve(admitted.template) },
+      time: createControlledClock(0),
+      digest: deriveEmitDigest,
+      diag: noopDiagnosticsSink,
+      gates: realCat,
+    });
+    await expectNoStateChange(handle.store, "inst-1", async () => {
+      expect(await kernel.handle(envelope("f1", "PASS", 1, { ref: "d" }, "implementer"))).toEqual({
+        kind: "rejected",
+        reason: "gate_blocked",
+        gateReason: "no_previous_verdict",
+      });
+    });
+  });
+});
+
+describe("gate rung — dimension 12: CAS-restart re-derives the projection per attempt", () => {
+  it("one forced conflict → the projection read fires per attempt, decisions from FRESH state", async () => {
+    let reads = 0;
+    let commits = 0;
+    const store: StorePort = {
+      loadInstance: () => Promise.resolve(reviewInstance),
+      findOp: () => Promise.resolve(null),
+      createInstance: () => Promise.reject(new Error("unused")),
+      listInstances: () => Promise.reject(new Error("unused")),
+      getInstanceDetail: () => Promise.reject(new Error("unused")),
+      getTimeline: () => {
+        reads += 1;
+        return Promise.resolve([]);
+      },
+      commitTransition: () => {
+        commits += 1;
+        return Promise.resolve(commits === 1 ? { kind: "cas_conflict" } : { kind: "committed", version: 2 });
+      },
+    };
+    const cat = catalogOf({ "g.allow": scriptedInline("g.allow", [], () => ({ verdict: "allow" })) });
+    const { kernel } = await setupGatedReview({
+      pipeline: [{ uses: "g.allow" }],
+      admitCatalog: cat,
+      kernelCatalog: cat,
+      store,
+    });
+    expect((await kernel.handle(reviewEmit("c1", "CONVERGED", 1))).kind).toBe("committed");
+    // A cached cross-attempt projection would read ONCE — the rung re-derives.
+    expect(reads).toBe(2);
+    expect(commits).toBe(2);
+  });
+});
+
+describe("gate rung — the grid hostile-store lanes (integrity throws, not rejections)", () => {
+  function baseHostile(overrides: Partial<StorePort>): StorePort {
+    return {
+      loadInstance: () => Promise.resolve(reviewInstance),
+      findOp: () => Promise.resolve(null),
+      createInstance: () => Promise.reject(new Error("unused")),
+      listInstances: () => Promise.reject(new Error("unused")),
+      getInstanceDetail: () => Promise.reject(new Error("unused")),
+      getTimeline: () => Promise.reject(new Error("unused")),
+      commitTransition: () => Promise.reject(new Error("unused")),
+      ...overrides,
+    };
+  }
+
+  it("a rejecting projection read → internal_failure diag + rethrow (never a rejection)", async () => {
+    const rec = createRecordingDiagnosticsSink();
+    const boom = new Error("read boom");
+    const store = baseHostile({ getTimeline: () => Promise.reject(boom) });
+    const cat = catalogOf({ "g.allow": scriptedInline("g.allow", [], () => ({ verdict: "allow" })) });
+    const { kernel } = await setupGatedReview({
+      pipeline: [{ uses: "g.allow" }],
+      admitCatalog: cat,
+      kernelCatalog: cat,
+      store,
+      diag: rec.sink,
+    });
+    await expect(kernel.handle(reviewEmit("h1", "CONVERGED", 1))).rejects.toBe(boom);
+    expect(rec.events.some((e) => e.kind === "internal_failure")).toBe(true);
+  });
+
+  it("a null projection read (instance vanished) → a kernel-integrity throw", async () => {
+    const store = baseHostile({ getTimeline: () => Promise.resolve(null) });
+    const cat = catalogOf({ "g.allow": scriptedInline("g.allow", [], () => ({ verdict: "allow" })) });
+    const { kernel } = await setupGatedReview({
+      pipeline: [{ uses: "g.allow" }],
+      admitCatalog: cat,
+      kernelCatalog: cat,
+      store,
+    });
+    await expect(kernel.handle(reviewEmit("h2", "CONVERGED", 1))).rejects.toThrow(/kernel integrity/);
+  });
+
+  it("a throwing evaluator → internal_failure diag + rethrow, nothing committed", async () => {
+    const rec = createRecordingDiagnosticsSink();
+    const boom = new Error("evaluate boom");
+    const handle = openStore(":memory:", createControlledClock(0));
+    await handle.store.createInstance(reviewInstance);
+    const cat = catalogOf({
+      "g.throw": scriptedInline("g.throw", [], () => {
+        throw boom;
+      }),
+    });
+    const { kernel } = await setupGatedReview({
+      pipeline: [{ uses: "g.throw" }],
+      admitCatalog: cat,
+      kernelCatalog: cat,
+      store: handle.store,
+      diag: rec.sink,
+    });
+    await expect(kernel.handle(reviewEmit("h3", "CONVERGED", 1))).rejects.toBe(boom);
+    expect((await handle.store.getInstanceDetail("inst-1"))?.transcript).toHaveLength(0);
+    expect(rec.events.some((e) => e.kind === "internal_failure")).toBe(true);
   });
 });

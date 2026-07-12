@@ -29,6 +29,7 @@ function setup(template = fixtureTemplate()) {
     definitions: fixtureDefinitionStore(admit(template)),
     time: createControlledClock(0),
     digest: deriveEmitDigest,
+    gates: gateCatalog,
     diag: noopDiagnosticsSink,
   });
   return { kernel, store: handle.store };

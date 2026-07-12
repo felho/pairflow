@@ -8,6 +8,7 @@ import type {
   GateBinding,
   GateDecision,
   GatePipeline,
+  GateProjection,
   LifecycleStatus,
   RejectionName,
   RoleName,
@@ -70,6 +71,7 @@ interface RealizedTypeTable {
   readonly "l2/GateRegistration": GateRegistration;
   readonly "l2/GateDecision": GateDecision;
   readonly "l2/AdmittedDefinition": AdmittedTemplate;
+  readonly "l2/gate_projection": GateProjection;
 }
 
 export type RegistryEntry =
@@ -213,7 +215,7 @@ export const DOMAIN_REGISTRY: Readonly<Record<string, RegistryEntry>> = {
   "l2/GateDecision": { kind: "realized", typeName: "GateDecision" },
   "l2/AdmittedDefinition": { kind: "realized", typeName: "AdmittedTemplate" },
   "l2/WorkflowInstance": { kind: "pending" },
-  "l2/gate_projection": { kind: "pending" },
+  "l2/gate_projection": { kind: "realized", typeName: "GateProjection" },
   "l2/Rejected(gate_blocked(reason))": {
     kind: "realized",
     typeName: "RejectionName",
@@ -372,6 +374,7 @@ export const REALIZED_TYPE_TABLE_KEYS = [
   "l2/GateRegistration",
   "l2/GateDecision",
   "l2/AdmittedDefinition",
+  "l2/gate_projection",
 ] as const satisfies readonly (keyof RealizedTypeTable)[];
 
 type TypeTableFullyListed =

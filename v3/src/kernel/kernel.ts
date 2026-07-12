@@ -1,7 +1,9 @@
 import type {
   EventEnvelope,
+  GateProjection,
   LifecycleStatus,
   Outcome,
+  RetainedGateDecision,
   Started,
   WorkflowInstance,
   WorkflowTemplate,
@@ -9,11 +11,13 @@ import type {
 import type { DefinitionStore } from "../ports/definition.js";
 import type { DiagnosticEventBody, DiagnosticsSink } from "../ports/diagnostics.js";
 import type { DigestSource } from "../ports/digest.js";
+import type { GateCatalog } from "../ports/gate.js";
 import type { StorePort } from "../ports/store.js";
 import type { TimeSource } from "../ports/time.js";
 import { admitLoaded } from "./admission.js";
 import { capability } from "./capability.js";
 import { deriveDispatchIntent } from "./dispatchIntent.js";
+import { deriveGateProjection } from "./gateProjection.js";
 import { startInstance } from "./start.js";
 import type { StartInstanceInput } from "./start.js";
 
@@ -45,6 +49,13 @@ export interface KernelDeps {
   readonly digest: DigestSource;
   /** The non-authoritative diagnostic channel (ch7-P1; REQUIRED). */
   readonly diag: DiagnosticsSink;
+  /**
+   * The L2 gate catalog (ch11-P2b, T1; REQUIRED — the `diag` explicit-
+   * wiring culture): the SAME `createGateRegistry()` value the
+   * composition root injects into the definition store. An absent
+   * catalog would turn every gated evaluation into the drift backstop.
+   */
+  readonly gates: GateCatalog;
 }
 
 export interface Kernel {
@@ -95,7 +106,7 @@ function envelopeAttribution(
 }
 
 export function createKernel(deps: KernelDeps): Kernel {
-  const { store, definitions, digest, diag } = deps;
+  const { store, definitions, digest, diag, gates } = deps;
 
   async function handleOnce(
     envelope: EventEnvelope,
@@ -148,6 +159,69 @@ export function createKernel(deps: KernelDeps): Kernel {
       return { kind: "rejected", reason: "not_authorized" };
     }
 
+    // L2 policy gate pipeline (ch11-P2b, K1–K7): the transition exists
+    // (L0b) and is authorized (L1); do the authored policies allow it
+    // now? Ordered (authored order IS evaluation order), first-block-
+    // wins, BEFORE any commit-side work. ABSENT key / absent map = the
+    // empty pipeline (ungated). The projection read is LAZY (K6): it
+    // fires only at the FIRST evaluate need — after a binding's resolve +
+    // implementation checks pass, the model's own first
+    // `gate_projection(...)` call point — so the ungated path performs
+    // ZERO gated-path reads and a backstop rejection preceding the first
+    // evaluate reads nothing.
+    const pipeline = step.gates?.[envelope.type] ?? [];
+    const gateDecisions: RetainedGateDecision[] = [];
+    let projection: GateProjection | undefined;
+    for (const binding of pipeline) {
+      const registration = gates.resolve(binding.uses);
+      if (registration === null) {
+        // Runtime availability backstop (K2): admission resolved the id
+        // at load; this guards registry drift under a new process
+        // generation's composition.
+        return { kind: "rejected", reason: "gate_evaluator_unavailable" };
+      }
+      if (registration.implementation === "process") {
+        // The process contract is L2a (K3; P3 realizes its execution
+        // path). The unit's third check (`execution ≠ inline`) ships no
+        // code — the operand is type-unrepresentable.
+        return { kind: "rejected", reason: "gate_execution_not_supported" };
+      }
+      if (projection === undefined) {
+        // ONE snapshot serves the whole pipeline (every gate sees the
+        // same history); a CAS restart re-runs the rung on fresh state.
+        const committed = await store.getTimeline(instance.instanceId, 0);
+        if (committed === null) {
+          // The instance vanished between load and this read — a
+          // kernel-integrity failure (the `loadTemplate` class), never a
+          // rejection.
+          throw new Error(
+            `kernel integrity: instance '${instance.instanceId}' vanished during gate projection`,
+          );
+        }
+        projection = deriveGateProjection(instance, template, committed, envelope.type);
+      }
+      const decision = registration.evaluate(binding.config, projection);
+      if (decision.verdict === "block") {
+        // First-block-wins (K4): no commit ⇒ round not burned; the
+        // blocking decision's reason / evidence refs surface VERBATIM
+        // (O1's pass-through arm), later gates are NOT evaluated.
+        return {
+          kind: "rejected",
+          reason: "gate_blocked",
+          ...(decision.reason !== undefined ? { gateReason: decision.reason } : {}),
+          ...(decision.evidenceRefs !== undefined ? { evidenceRefs: decision.evidenceRefs } : {}),
+        };
+      }
+      // Allow / warn ⇒ retained in pipeline order (K5), riding the commit.
+      gateDecisions.push({
+        uses: binding.uses,
+        verdict: decision.verdict,
+        ...(decision.reason !== undefined ? { reason: decision.reason } : {}),
+        ...(decision.message !== undefined ? { message: decision.message } : {}),
+        ...(decision.evidenceRefs !== undefined ? { evidenceRefs: decision.evidenceRefs } : {}),
+      });
+    }
+
     const terminal = template.terminal.includes(target);
     const newStatus: LifecycleStatus = terminal ? "DONE" : instance.status;
     const newRound = target === template.start ? instance.round + 1 : instance.round;
@@ -157,6 +231,7 @@ export function createKernel(deps: KernelDeps): Kernel {
       expectedVersion: instance.version,
       envelope,
       payloadDigest,
+      gateDecisions,
       newCurrentStep: target,
       newRound,
       newStatus,

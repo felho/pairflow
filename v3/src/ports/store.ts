@@ -3,6 +3,7 @@ import type {
   InstanceId,
   LifecycleStatus,
   OpId,
+  RetainedGateDecision,
   StepId,
   TranscriptEntry,
   WorkflowInstance,
@@ -22,6 +23,13 @@ export interface CommitTransitionInput {
   readonly envelope: EventEnvelope;
   /** The type-inclusive emit digest (DigestSource; packet ch5-P4). */
   readonly payloadDigest: string;
+  /**
+   * S2/C27 (packet ch11-P2b): the kernel-derived ordered allow/warn
+   * decisions this transition ran — REQUIRED (`[]` is a statement,
+   * absence is not). The store writes it VERBATIM inside the SAME commit
+   * transaction and stamps nothing into the list.
+   */
+  readonly gateDecisions: readonly RetainedGateDecision[];
   readonly newCurrentStep: StepId;
   readonly newRound: number;
   readonly newStatus: LifecycleStatus;

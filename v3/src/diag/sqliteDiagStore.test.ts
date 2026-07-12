@@ -678,7 +678,8 @@ async function runFlow(diag: DiagnosticsSink, mainPath: string, clock: ReturnTyp
     definitions,
     time: clock,
     digest: deriveEmitDigest,
-    diag,
+
+    gates: gateCatalog,    diag,
   });
   const ingress = createIngress({ kernel, diag });
   const started = await kernel.startInstance({

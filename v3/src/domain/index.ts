@@ -18,6 +18,7 @@ export type {
   GatePipeline,
   GateProjection,
   GateProjectionEntry,
+  RetainedGateDecision,
 } from "./gate.js";
 export type { LifecycleStatus, TranscriptEntry, WorkflowInstance } from "./instance.js";
 export type { EventEnvelope } from "./envelope.js";

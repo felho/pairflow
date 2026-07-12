@@ -81,8 +81,8 @@ describe("trace harness — fake-seam negatives (packet ch5-P3)", () => {
         version: 3,
       },
       transcript: [
-        { seq: 1, envelope: envelope("a1", "PASS"), payloadDigest: "d-a1", committedAt: 1_001 },
-        { seq: 3, envelope: envelope("b2", "CONVERGED"), payloadDigest: "d-b2", committedAt: 1_002 },
+        { seq: 1, envelope: envelope("a1", "PASS"), payloadDigest: "d-a1", gateDecisions: [], committedAt: 1_001 },
+        { seq: 3, envelope: envelope("b2", "CONVERGED"), payloadDigest: "d-b2", gateDecisions: [], committedAt: 1_002 },
       ],
     };
     const fixture: TraceFixture = {
@@ -155,7 +155,7 @@ describe("trace harness — the typed mismatch contract (packet ch6-P4b)", () =>
       version: 2,
     },
     transcript: [
-      { seq: 1, envelope: envelope("a1", "PASS"), payloadDigest: "d-a1", committedAt: 1_001 },
+      { seq: 1, envelope: envelope("a1", "PASS"), payloadDigest: "d-a1", gateDecisions: [], committedAt: 1_001 },
     ],
   };
 
