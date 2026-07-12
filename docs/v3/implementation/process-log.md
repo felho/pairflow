@@ -2151,3 +2151,26 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   (partial-realization disposition, plan-visible) — a draft-side
   sibling of the built-types lesson (the row was checked against
   the model's EXHIBITED grammar, not its STATED capability set).
+
+- 2026-07-12 · ch11 gate-format reopen, the ratifier read (NO-GO on
+  the first close): two detector-miss classes for the boundary
+  review. (1) The C38 default's "behavior-preserving" rationale was
+  CIRCULAR — it treated the ch-4 provisional heuristic's realized
+  behavior as a preservation target, though nothing ratified it and
+  no installed template base exists; three internal lenses and the
+  agent arm accepted it. Candidate rule: a "behavior-preserving"
+  justification names WHAT ratified surface pins the behavior — a
+  provisional realization is never a preservation target in the
+  design phase (the never-live-is-not-retired vocabulary, default
+  grain). The ratifier re-decided: declared-only advancement
+  (absent ⇒ none), legal-but-inert misconfiguration accepted,
+  detection deferred as a named later decision. (2) The ratifier's
+  MANUAL arm caught a staging contradiction the panel + agent arm
+  passed: C39 opened direct authoring at P2c while C40 landed ALL
+  its lanes at P4 — semantically invalid direct declarations would
+  have passed admission for a whole packet window. Candidate class:
+  when a draft STAGES realization across packets, every
+  channel-open×lane-landing pair is checked as a matrix (who can
+  author on which channel in which window, and which lanes guard it
+  there) — resolved as C40's value-level/source-form realization
+  split.
