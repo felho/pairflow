@@ -535,7 +535,7 @@ the harness's `ExpectedOutcome` carries `reason` only — the
 | Id | Rule |
 |---|---|
 | T1 | `KernelDeps` gains REQUIRED `gates: GateCatalog` (the `diag` culture: explicit wiring, no silent default — an absent catalog would turn every gated evaluation into the backstop rejection); the composition roots (`cli/main.ts`, `cli/dev/main.ts`) wire the SAME `createGateRegistry()` VALUE into the definition store (P2a, built) AND the kernel — one composition per root, two injection points (two different catalogs would re-open the registry drift the C35 backstop guards) (anchored: contract:ch11-gate-format#C29, contract:ch11-gate-format#C8) |
-| T2 | The measured consumer set updates MECHANICALLY under three sanctioned change classes — kernel-deps wiring (every `createKernel` call site gains `gates`: the 13 measured test files + the 2 CLI roots), entry-shape completion (test-constructed `TranscriptEntry`/commit-input literals gain `gateDecisions: []`: the 5 measured `committedAt:`-constructing test files), and additive-field expectation updates (entry-equality asserts extended with `gateDecisions`) — zero lane-meaning changes; the testkit CONTRACT is unchanged (no new fixture type, no checker change, no harness field — gate asserts live in test files over `ReplayResult`); the build re-runs each sweep and treats a grown set as a boundary question, not a silent extension. DERIVATION: the P2a T3 sanctioned-change-class pattern applied to this packet's compile-enforced ripple (derived: prose:packet ch11-p2a T3, prose:v3/src/kernel/kernel.ts) |
+| T2 | The measured consumer set updates MECHANICALLY under three sanctioned change classes — kernel-deps wiring (every `createKernel` call site gains `gates`: the 13 measured test files + the 2 CLI roots), entry-shape completion (test-constructed `TranscriptEntry`/commit-input literals gain `gateDecisions: []`: the 5-file `committedAt:` sweep is the COVERING measurement — 4 of the 5 carried entry literals; `ingress/ingress.test.ts` hit on unknown-key probes and owed no edit, arm-gate-2 aftermath correction), and additive-field expectation updates (entry-equality asserts extended with `gateDecisions`) — zero lane-meaning changes; the testkit CONTRACT is unchanged (no new fixture type, no checker change, no harness field — gate asserts live in test files over `ReplayResult`); the build re-runs each sweep and treats a grown set as a boundary question, not a silent extension. DERIVATION: the P2a T3 sanctioned-change-class pattern applied to this packet's compile-enforced ripple (derived: prose:packet ch11-p2a T3, prose:v3/src/kernel/kernel.ts) |
 | T3 | The l2 golden trace ships as `v3/src/l2Trace.test.ts` — at-level (explicit roles + versions, no lift), the directly-constructed gated template admitted through `admitTemplate` + `createGateRegistry()` (tests legally import `gates/` — the G1 ban binds production modules); the FILE format carries no `gates` key until P4, so the load-channel confinement (P2a A8) stands untouched. DERIVATION: the trace needs the rung + a gated admitted template; the direct-construction route is the only P4-free channel, and the l1Trace at-level pattern is the built precedent (derived: prose:packet ch11-p2a A8, prose:v3/src/l1Trace.test.ts, prose:plan §11.4 P4 row) |
 
 ## Site × shape × phase grid (template §2 write-time discipline)
@@ -647,8 +647,12 @@ ch11-P1/P2a precedent): entries are dated decision snapshots.
   entry literals + the O4 negative), `diag/sqliteDiagStore.test.ts`,
   `emitLoop.test.ts`, `twoWorker.test.ts`, `l0aTrace.test.ts`,
   `l0bTrace.test.ts`, `l1Trace.test.ts` (wiring),
-  `ingress/ingress.test.ts`, `testkit/storeCheckers.test.ts`,
-  `testkit/traceHarness.test.ts` (entry-literal completion).
+  `testkit/storeCheckers.test.ts`, `testkit/traceHarness.test.ts`
+  (entry-literal completion), and `ingress/ingress.test.ts` carried
+  as MAY-change (its `committedAt:` sweep hits are unknown-key
+  probes, not entry literals — the build confirmed no edit was owed;
+  aftermath-corrected from the original "edited" listing, arm-gate-2
+  note).
 - **Untouched, explicitly:** `v3/src/gates/**` (the evaluators and
   registry are consumed AS BUILT — zero edits),
   `v3/src/definition/**` (admission as built; the load channel is
@@ -680,8 +684,9 @@ ch11-P1/P2a precedent): entries are dated decision snapshots.
   `grep -rln "committedAt:" v3/src --include="*.test.ts"` → 5 files
   (`ingress/ingress.test.ts`, `testkit/storeCheckers.test.ts`,
   `testkit/traceHarness.test.ts`, `floor/diagTail.test.ts`,
-  `floor/tail.test.ts`) — the entry-literal completion set, all
-  carried; `grep -rln "SCHEMA_VERSION\|schema_version" v3/src
+  `floor/tail.test.ts`) — the COVERING sweep for entry-literal
+  completion, all carried (4 of the 5 carried literals; the ingress
+  hits proved to be unknown-key probes — the aftermath correction); `grep -rln "SCHEMA_VERSION\|schema_version" v3/src
   --include="*.ts"` → 5 files, of which the store pair changes and
   the diag pair is a SEPARATE store (ADR-010) with its own version —
   untouched (`debugBundle.test.ts` hits on the diag marker, carried
@@ -951,13 +956,36 @@ confirmed at review: the rung hands evaluators (config, projection)
 only. Zero deviations from the packet; changed files ⊆ the declared
 boundary (the post-build audit is the mechanical witness).
 
+**Aftermath (2026-07-12, ARM GATE 2 — the build-close implementation
+review; pin-conform gpt-5.6-sol/high/never, verdict `refine` citing
+the build sha `9bc76da7`, byte guard clean):** three test-evidence
+findings + one packet-docs note, folded in ONE `fix(v3)` round: (1)
+**the [warn, block] discard lane was order-insensitive** — it proved
+the rejection and the empty transcript but not that the warn
+evaluator ran FIRST; a block-first evaluation order stayed green;
+fix: the lane's recording log asserts `["g.warn", "g.block"]`. (2)
+**the CAS-restart lane counted reads and commits but not
+re-evaluation** — a cross-attempt cache of the DECISION passed; fix:
+the two attempts now see different committed histories and the
+evaluator records what each call saw (`[0, 1]` + two evaluations —
+the fresh-state half of dimension 12 driven, not implied). (3) **the
+diag-confinement lane asserted a partial shape** — matchObject +
+two banned keys; ANY other new diag field passed; fix: the lane
+asserts the EXACT sorted keyset of the existing rejected-event
+contract. (4) note: the Embedding-gates prose listed
+`ingress/ingress.test.ts` as edited while the build correctly left
+it untouched — corrected to a carried-as-may-change entry. 705
+tests before and after (three lanes strengthened in place); full
+bridges re-verified green; the aftermath commit's post-build audit
+run against the packet at its own sha.
+
 ```json
 {
   "packet_metrics": {
     "class": "kernel-semantic",
     "prediction": { "predicted": "projection", "reasoning": "inherited from the ch11-P2 row through the sizing split (plan §11.4, recorded at the ch11 ratification): pure projection from l2-pseudocode + ledger + the ratified draft's rung/read-surface rows", "discovered": "projection" },
     "provenance": { "anchored": 12, "derived": 11, "new_decision": 0 },
-    "rounds": { "review": 2, "doc_refinement": 0, "implementation": 1 },
+    "rounds": { "review": 2, "doc_refinement": 0, "implementation": 2 },
     "stops": [],
     "detector_misses": [
       {
@@ -969,9 +997,14 @@ boundary (the post-build audit is the mechanical witness).
         "found_at": "approve",
         "what": "the arm's re-check found the fold's order-interplay lane still one-sided: it drove read-after-first-checks but nothing failed an EAGER pre-checks read — the pre-read discipline twin was missing",
         "why_missed": "the fold drove the direction the finding named; the complementary direction of the same discipline was not re-derived (the fix-scoped-to-the-finding class, at lane grain)"
+      },
+      {
+        "found_at": "arm-build-close",
+        "what": "three green-but-blind lanes in the BUILT tests: the [warn, block] discard lane proved discard but not order (a block-first evaluation passed); the CAS-restart lane counted reads/commits but never proved re-EVALUATION on fresh state (a cached decision passed); the diag-confinement lane asserted a partial shape (matchObject + two banned keys) instead of the exact keyset (any OTHER new field passed)",
+        "why_missed": "the packet's lane texts stated the right meanings but the build realized weaker asserts, and no internal pass re-derived the sensitivity question AGAINST THE BUILT TEST BODIES — R-LANE-SENSITIVITY was applied at packet-writing time, not re-applied at build close"
       }
     ],
-    "learned": "a derived row's obligations are checked against the BUILT sibling types it consumes, not only its model anchors; and every ordering/discipline claim needs BOTH directions driven — the lane that proves the read happens late is not the lane that fails an early read"
+    "learned": "a derived row's obligations are checked against the BUILT sibling types it consumes, not only its model anchors; every ordering/discipline claim needs BOTH directions driven; and R-LANE-SENSITIVITY binds twice — once against the packet's lane texts, once against the BUILT test bodies at close"
   }
 }
 ```

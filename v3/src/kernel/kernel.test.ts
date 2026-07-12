@@ -759,9 +759,12 @@ describe("gate rung — dimension 2: ordered, first-block-wins combination lanes
   });
 
   it("[warn, block] → the block wins and the warn's retained decision is DISCARDED (no row appended)", async () => {
+    // Order-sensitive (arm-gate-2 finding 1): the warn evaluator ran
+    // FIRST, exactly once — a block-first evaluation order fails this.
+    const log: string[] = [];
     const cat = catalogOf({
-      "g.warn": scriptedInline("g.warn", [], () => ({ verdict: "warn", reason: "w" })),
-      "g.block": scriptedInline("g.block", [], () => ({ verdict: "block", reason: "x" })),
+      "g.warn": scriptedInline("g.warn", log, () => ({ verdict: "warn", reason: "w" })),
+      "g.block": scriptedInline("g.block", log, () => ({ verdict: "block", reason: "x" })),
     });
     const { kernel, store } = await setupGatedReview({
       pipeline: [{ uses: "g.warn" }, { uses: "g.block" }],
@@ -769,6 +772,7 @@ describe("gate rung — dimension 2: ordered, first-block-wins combination lanes
       kernelCatalog: cat,
     });
     expect((await kernel.handle(reviewEmit("c1", "CONVERGED", 1))).kind).toBe("rejected");
+    expect(log).toEqual(["g.warn", "g.block"]);
     expect((await store.getInstanceDetail("inst-1"))?.transcript).toHaveLength(0);
   });
 
@@ -1035,8 +1039,19 @@ describe("gate rung — dimension 10: confinement", () => {
     expect(rec.events).toHaveLength(1);
     const event = rec.events[0];
     expect(event).toMatchObject({ source: "kernel", kind: "rejected", reason: "gate_blocked" });
-    expect(Object.keys(event ?? {})).not.toContain("gateReason");
-    expect(Object.keys(event ?? {})).not.toContain("evidenceRefs");
+    // EXACT keyset (arm-gate-2 finding 3): the existing rejected-event
+    // contract, nothing more — ANY new diag field fails, not just the
+    // two gate-payload names.
+    expect(Object.keys(event ?? {}).sort()).toEqual([
+      "actorId",
+      "instanceId",
+      "kind",
+      "opId",
+      "payloadDigest",
+      "reason",
+      "source",
+      "type",
+    ]);
   });
 });
 
@@ -1087,6 +1102,18 @@ describe("gate rung — dimension 12: CAS-restart re-derives the projection per 
   it("one forced conflict → the projection read fires per attempt, decisions from FRESH state", async () => {
     let reads = 0;
     let commits = 0;
+    // The two attempts see DIFFERENT committed histories: [] first,
+    // one committed PASS row second (the concurrent commit the CAS
+    // conflict models). The evaluator RECORDS what it saw per call
+    // (arm-gate-2 finding 2): a cross-attempt cache of the read OR of
+    // the decision would surface as a repeated history length.
+    const seedEntry = {
+      seq: 1,
+      envelope: envelope("seed-1", "PASS", 1, undefined, "implementer"),
+      payloadDigest: "seed-digest",
+      committedAt: 0,
+      gateDecisions: [],
+    };
     const store: StorePort = {
       loadInstance: () => Promise.resolve(reviewInstance),
       findOp: () => Promise.resolve(null),
@@ -1095,14 +1122,21 @@ describe("gate rung — dimension 12: CAS-restart re-derives the projection per 
       getInstanceDetail: () => Promise.reject(new Error("unused")),
       getTimeline: () => {
         reads += 1;
-        return Promise.resolve([]);
+        return Promise.resolve(reads === 1 ? [] : [seedEntry]);
       },
       commitTransition: () => {
         commits += 1;
         return Promise.resolve(commits === 1 ? { kind: "cas_conflict" } : { kind: "committed", version: 2 });
       },
     };
-    const cat = catalogOf({ "g.allow": scriptedInline("g.allow", [], () => ({ verdict: "allow" })) });
+    const seenHistoryLengths: number[] = [];
+    const evalLog: string[] = [];
+    const cat = catalogOf({
+      "g.allow": scriptedInline("g.allow", evalLog, (projection) => {
+        seenHistoryLengths.push(projection.history.length);
+        return { verdict: "allow" };
+      }),
+    });
     const { kernel } = await setupGatedReview({
       pipeline: [{ uses: "g.allow" }],
       admitCatalog: cat,
@@ -1113,6 +1147,10 @@ describe("gate rung — dimension 12: CAS-restart re-derives the projection per 
     // A cached cross-attempt projection would read ONCE — the rung re-derives.
     expect(reads).toBe(2);
     expect(commits).toBe(2);
+    // The evaluator ran per attempt AND each run saw ITS attempt's
+    // committed state — a cached decision or projection fails here.
+    expect(evalLog).toEqual(["g.allow", "g.allow"]);
+    expect(seenHistoryLengths).toEqual([0, 1]);
   });
 });
 
