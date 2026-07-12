@@ -2194,3 +2194,23 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   exercise (C38). The STOP-2 detector worked exactly as designed:
   the human overrode their own ratified rule by an explicit,
   recorded act.
+
+- 2026-07-12 · ch11-P2c authoring + build: three detector-miss
+  classes for the boundary review. (1) A confinement claim over a
+  COMPARISON test was verified against the compared SOURCE files,
+  not the comparison's STAGE — loadTemplate returns the ADMITTED
+  value since P2a, so admission's new all-false maps broke two
+  raw-vs-loaded round-trip pins the packet had declared untouched;
+  the builder's STOP-on-conflict caught it (candidate rule: a
+  pin/round-trip confinement claim names WHAT VALUE flows through
+  the comparison, per stage). (2) A shared input/output type's
+  PERMISSIVENESS (a pre-populatable field on the raw form once
+  admission became the sole legal producer) needed its own hostile
+  lane — the arm's producer-monopoly catch; the same arm round
+  demanded the C20-letter type-level narrowing over per-call-site
+  discipline. (3) Arm gate 2 re-found the P2b class — three
+  green-but-blind BUILT lanes (invalid-path purity undriven; the
+  gated rebuild branch unhostiled; one of two non-resolving replay
+  branches undriven): R-LANE-SENSITIVITY's per-branch/per-half
+  member enumeration still is not surviving the packet→build hop;
+  second occurrence, promotion candidate at the boundary.
