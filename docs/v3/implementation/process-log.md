@@ -2086,3 +2086,22 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   review. (4) The in-chapter split executed autonomously first time
   (P2 → P2a/P2b/P2c, hard stops 1+2); the round-format draft gap
   quarantined cleanly in P2c.
+
+- 2026-07-12 · ch11-P2a arm gate 2 aftermath: (1) a prose-asserted
+  "nonempty" the TYPE permitted to be empty (the GateConfigResult
+  failure arm) survived four panel rounds, two arm passes, and the
+  build — the arm's gate-2 code read caught it; candidate rule: a
+  canonical row asserting a cardinality ("nonempty", "exactly one")
+  over a TYPED surface must state whether the type CARRIES it, and a
+  type that permits what the row forbids is a finding at WRITE time.
+  (2) The "fix scoped to the finding" class recurred CROSS-VALIDATOR:
+  the own-__proto__ hostile lane was added to the threshold validator
+  (whose finding named it) but not its previous_reviewer_verdict twin
+  — a deepened lane inventory binds per RULE, not per the file the
+  finding named. (3) The approve-basis hash (the packet bytes arm gate
+  1 and the close certified) is not reproducible from the build commit:
+  the Build record lands between approve and commit BY DESIGN (template
+  §1), so the committed packet hashes differently — boundary-review
+  question: preserve the approve-ready bytes as a git object (e.g. a
+  refs/notes entry or a recorded pre-record hash file), or ratify the
+  current reconstruction-note convention.
