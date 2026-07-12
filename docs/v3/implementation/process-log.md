@@ -2133,3 +2133,21 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   prompt clause, before the gate-2 leg). The ingress carried-as-
   may-change correction also had to be PROPAGATED to T2 + the sweep
   label — the fix-scoped-to-the-finding class again, at prose grain.
+
+- 2026-07-12 · ch11 gate-format reopen (the P2c round surface): the
+  plan-pre-declared draft-routing STOP resolved by the user to
+  reopen/extend — the first LIVE reopen of a ratified draft (the
+  choreography executed to the template's letter; the loud-red
+  anchor window behaved as designed: 60 expected P2a/P2b anchor
+  errors, zero draft-form errors). The arm's substantive catch: C41
+  first framed the model's per-transition override as an "explicit
+  non-surface" (the C30 context_block_refs pattern) — but that
+  pattern fits ANOTHER chapter's semantics, while the override is
+  ratified model capability on THIS surface; the honest form is a
+  PARTIAL-REALIZATION disposition carried by name to the plan.
+  Candidate class for the boundary review: a DECIDED-HERE deferral
+  is classified against WHOSE capability it defers — another
+  surface's (non-surface pattern) vs the ratified model's own
+  (partial-realization disposition, plan-visible) — a draft-side
+  sibling of the built-types lesson (the row was checked against
+  the model's EXHIBITED grammar, not its STATED capability set).
