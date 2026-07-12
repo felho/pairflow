@@ -2065,3 +2065,24 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   scan misread a HAND-PROJECTION (the debug bundle's envelope meta)
   as pass-through — a scan row naming a projection surface should
   cite the projection's field list, not its module family.
+
+- 2026-07-12 · ch11-P2a (authoring + gates): (1) the "fix scoped to the
+  finding just caught" class recurred on an INVENTORY RULE — round 1
+  widened the inline-DefinitionStore sweep to the two files the finding
+  named, round 2 found the sweep pattern itself still channel-blind
+  (annotated-only; the un-annotated `definitions: { load: … }` literals
+  hid four more sites). The durable fix was re-deriving the rule
+  (receiving-type, not annotation) — a deepened inventory rule needs its
+  DEFINITION re-derived, not its member list patched. (2) The
+  narrowing-not-reclassification route worked as the P1 lesson
+  predicted: all four arm entailment attacks resolved by shrinking the
+  row to anchor-entailed semantics + declared build freedom, keeping the
+  flag-free path — but the arm's re-check then caught a narrowing
+  MINTING an inconsistency (the A5 freedom vs D6's already-pinned type):
+  a granted freedom needs a consistency check against sibling rows that
+  already pin the shape. (3) The arm attacked OUTWARD entailment (rows
+  obliging MORE than anchors force) — a direction the internal lens-2
+  attack never ran; candidate lens-2 duty amendment at the boundary
+  review. (4) The in-chapter split executed autonomously first time
+  (P2 → P2a/P2b/P2c, hard stops 1+2); the round-format draft gap
+  quarantined cleanly in P2c.
