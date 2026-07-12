@@ -222,13 +222,15 @@ describe("rejection branches", () => {
     });
   });
 
-  it("a DONE instance (terminal current step) → Rejected(not_active)", async () => {
-    const { kernel } = await setup();
+  it("a DONE instance (terminal current step) → Rejected(not_active); full-instance state unchanged", async () => {
+    const { kernel, store } = await setup();
     await kernel.handle(envelope("a1", "PASS", 1));
     await kernel.handle({ ...envelope("b2", "CONVERGED", 2, undefined, "reviewer"), actorId: "claude" });
-    expect(await kernel.handle(envelope("c3", "PASS", 3))).toEqual({
-      kind: "rejected",
-      reason: "not_active",
+    await expectNoStateChange(store, "inst-1", async () => {
+      expect(await kernel.handle(envelope("c3", "PASS", 3))).toEqual({
+        kind: "rejected",
+        reason: "not_active",
+      });
     });
   });
 });
