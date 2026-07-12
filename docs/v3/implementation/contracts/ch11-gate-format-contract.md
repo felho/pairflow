@@ -1,7 +1,7 @@
 # ch11 — gate-format contract
 
 ```json
-{"contract_draft": {"chapter": "ch11", "surface": "gate-format", "status": "reopened"}}
+{"contract_draft": {"chapter": "ch11", "surface": "gate-format", "status": "ratified"}}
 ```
 
 ## Context (non-normative by declaration)
@@ -114,7 +114,18 @@ STOP `2:meaning-changing-alignment` by ESTABLISHING §8.2 rule 2's
 general DEVIATION CLAUSE (a non-behavior-preserving default only as
 the ratifier's explicit per-key act — the plan amendment rides the
 re-ratification commit; C38 is the clause's first exercise).
-Re-ratification metrics are recorded at the act.
+**Reopen metrics** (template §5, recorded at the 2026-07-12
+re-ratification): rounds to re-ratify: 4 panel rounds (2 full + 2
+targeted) + 7 lens-4 reconciliation passes + 5 agent-invoked arm runs
+(1 refine with clean re-check; the rest clean re-checks on the
+ratifier-fold rounds, 1 carrying a timing finding dispositioned
+timing-by-design) + the ratifier's 3 manual-arm rounds (the C38
+declared-only re-decision + the staging split; the lifecycle/baseline
+precision + the wrapper-only clause; the STOP-2 deviation-clause
+resolution) + 3 top-level closes (the first two voided by
+ratifier-read content folds); reopen-delta new-decision rows: 3
+(C37, C38, C41 — cumulative 14); post-ratification reopenings: 1
+(closed by this act).
 
 ## Contract rows (every normative statement is a C-row)
 
@@ -166,6 +177,10 @@ Re-ratification metrics are recorded at the act.
 
 ```json
 {"ratification": {"date": "2026-07-12", "arms": ["agent-invoked codex gpt-5.6-sol/high — one review round + clean re-check"], "commit": "1748443f"}}
+```
+
+```json
+{"ratification": {"date": "2026-07-12", "arms": ["agent-invoked codex gpt-5.6-sol/high — five runs across the reopen (refine + clean re-check; three clean re-checks on the ratifier-fold rounds)", "the ratifier's manual arm — three rounds (NO-GO: the C38 declared-only re-decision + the C39/C40 staging split; refine: the lifecycle/baseline precision + the wrapper-only trace clause; NO-GO STOP 2: resolved by the §8.2 rule 2 deviation clause)"], "commit": "67bea60a"}}
 ```
 
 ## Realized map (empty until chapter close)
