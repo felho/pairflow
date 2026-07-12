@@ -2174,3 +2174,23 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   author on which channel in which window, and which lanes guard it
   there) — resolved as C40's value-level/source-form realization
   split.
+
+- 2026-07-12 · ch11 gate-format reopen, the ratifier's third arm
+  round (STOP `2:meaning-changing-alignment`): the declared-only
+  C38 default conflicted with the RATIFIED evolution rules (plan
+  §8.2 rule 2 + realized ch8-C7's unqualified behavior-preserving
+  default) — three internal layers (R3 full panel, lens-4 recons,
+  the agent arm) accepted it implicitly under the "no released
+  baseline" rationale, checking the default against the MODEL and
+  the owning chapter but never against the format's own ratified
+  EVOLUTION rules. Candidate rule: a new format-surface decision is
+  checked against the base format's ratified evolution/forward
+  rows (§8.2 + the ch8-C7 class), not only the model and plan §11.
+  Resolution (the user's, generalized on their own proposal):
+  §8.2 rule 2 gains a standing DEVIATION CLAUSE — a
+  non-behavior-preserving default only as the ratifier's explicit
+  per-key act, recorded in the realizing contract row — so future
+  deviations need no per-key rule edits; the round key is the first
+  exercise (C38). The STOP-2 detector worked exactly as designed:
+  the human overrode their own ratified rule by an explicit,
+  recorded act.
