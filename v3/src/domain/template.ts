@@ -28,6 +28,18 @@ export interface Step {
    * directly-constructed templates through admission.
    */
   readonly gates?: Readonly<Record<EventType, readonly GateBinding[]>>;
+  /**
+   * D2 (packet ch11-P2c): the model's "explicit per-transition
+   * advances_round flags" as a parallel step key (the `gates` C1-pattern
+   * precedent; transitions' scalar targets stay untouched). On an
+   * ADMITTED template the map is COMPLETE per step — every
+   * `keys(transitions)` member present with an explicit boolean; a step
+   * with no transitions carries an empty map. `admitTemplate` is the only
+   * producer of complete maps (D3); the kernel consumes ONLY these flags
+   * (C39's ban on inference). ABSENT on a raw directly-constructed
+   * template — admission expands the `round` declaration into it.
+   */
+  readonly advancesRound?: Readonly<Record<EventType, boolean>>;
 }
 
 /**
@@ -52,6 +64,15 @@ export interface WorkflowTemplate {
   readonly roles: Readonly<Record<RoleName, { readonly defaultActor?: ActorId }>>;
   /** L1 explicit restrictions (none in the baseline) — see CapabilityProfile. */
   readonly capabilityProfile?: CapabilityProfile;
+  /**
+   * D1 (packet ch11-P2c): the C37 authoring shape at the DOMAIN grain
+   * (the direct channel's input; the YAML key maps onto it at P4).
+   * ABSENT = C38's none-default (no advancing transition after
+   * activation). This is admission's INPUT — the flags (Step.advancesRound,
+   * D2) are the kernel's ONLY consumption surface (C39); admission
+   * validates and expands it but NEVER mutates it (A4).
+   */
+  readonly round?: { readonly advanceOnArrivalAt: readonly StepId[] };
 }
 
 /**

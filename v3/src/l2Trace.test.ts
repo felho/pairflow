@@ -46,6 +46,11 @@ const gatedTemplate: WorkflowTemplate = {
   },
   terminal: ["done"],
   roles: { implementer: { defaultActor: "codex" }, reviewer: { defaultActor: "claude" } },
+  // ch11-P2c T2/dimension 8: the inline declaration wrapper — the round
+  // advances on the pass-back to start, so the threshold gate blocks at
+  // round 1 and allows at round 2 (K3's projection round-consumption pin
+  // driven end-to-end). The golden table is unchanged; retires at P4.
+  round: { advanceOnArrivalAt: ["implement"] },
 };
 
 function admit(template: WorkflowTemplate): AdmittedTemplate {
@@ -137,9 +142,12 @@ const l2Fixture: TraceFixture = {
 describe("l2 golden trace — the gate rung + both evaluators end-to-end (08-l2 Runtime)", () => {
   it("replays the model's block-then-allow sequence and matches committed rows + gate provenance", async () => {
     const handle = openStore(":memory:", createControlledClock(1_000));
+    // ch11-P2c T1: ONE admitted value feeds BOTH the definition store and
+    // the narrowed harness seam (the checker reads the flags).
+    const admitted = admit(gatedTemplate);
     const kernel = createKernel({
       store: handle.store,
-      definitions: fixtureDefinitionStore(admit(gatedTemplate)),
+      definitions: fixtureDefinitionStore(admitted),
       time: createControlledClock(1_000),
       digest: deriveEmitDigest,
       diag: noopDiagnosticsSink,
@@ -153,7 +161,7 @@ describe("l2 golden trace — the gate rung + both evaluators end-to-end (08-l2 
       submit: (raw) => ingress.submit(raw),
       start: (input) => kernel.startInstance(input),
       store: handle.store,
-      template: gatedTemplate,
+      template: admitted,
     });
 
     // Supplemental (from finalDetail): the ungated rows carry [], the

@@ -71,6 +71,7 @@ interface RealizedTypeTable {
   readonly "l2/GateRegistration": GateRegistration;
   readonly "l2/GateDecision": GateDecision;
   readonly "l2/AdmittedDefinition": AdmittedTemplate;
+  readonly "l2/WorkflowInstance": WorkflowInstance;
   readonly "l2/gate_projection": GateProjection;
 }
 
@@ -214,7 +215,9 @@ export const DOMAIN_REGISTRY: Readonly<Record<string, RegistryEntry>> = {
   "l2/GateRegistration": { kind: "realized", typeName: "GateRegistration" },
   "l2/GateDecision": { kind: "realized", typeName: "GateDecision" },
   "l2/AdmittedDefinition": { kind: "realized", typeName: "AdmittedTemplate" },
-  "l2/WorkflowInstance": { kind: "pending" },
+  // ch11-P2c T4: the load-bearing half (the reconstructable-round claim,
+  // deferred by name at P2b) is realized by K1 + the checker (T1).
+  "l2/WorkflowInstance": { kind: "realized", typeName: "WorkflowInstance" },
   "l2/gate_projection": { kind: "realized", typeName: "GateProjection" },
   "l2/Rejected(gate_blocked(reason))": {
     kind: "realized",
@@ -374,6 +377,7 @@ export const REALIZED_TYPE_TABLE_KEYS = [
   "l2/GateRegistration",
   "l2/GateDecision",
   "l2/AdmittedDefinition",
+  "l2/WorkflowInstance",
   "l2/gate_projection",
 ] as const satisfies readonly (keyof RealizedTypeTable)[];
 

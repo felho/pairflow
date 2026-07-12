@@ -1,10 +1,19 @@
 import { describe, expect, it } from "vitest";
 
-import type { EventEnvelope, TranscriptEntry, WorkflowInstance } from "../domain/index.js";
+import { admitTemplate } from "../definition/index.js";
+import type {
+  AdmittedTemplate,
+  EventEnvelope,
+  TranscriptEntry,
+  WorkflowInstance,
+  WorkflowTemplate,
+} from "../domain/index.js";
+import type { GateCatalog } from "../ports/index.js";
 import type { InstanceDetail } from "../ports/store.js";
 import {
   checkEndStateConsistency,
   checkOpUniqueness,
+  checkRoundReconstruction,
   checkSeqContinuity,
   checkTerminalSink,
   checkVersionArithmetic,
@@ -114,5 +123,74 @@ describe("post-condition checker kit (packet ch5-P2)", () => {
     });
     const violations = runAllCheckers(bad, template);
     expect(violations.length).toBeGreaterThanOrEqual(3);
+  });
+});
+
+// ── packet ch11-P2c: checkRoundReconstruction — replay = stored round
+// (dimension 5). Admitted templates built with the INLINE stub catalog
+// (the G1 eslint ban covers src/testkit/** — no gates/ import). ────────
+
+function admit(t: WorkflowTemplate): AdmittedTemplate {
+  const result = admitTemplate(t, { resolve: () => null } satisfies GateCatalog);
+  if (!result.ok) {
+    throw new Error(`storeCheckers fixture admission failed: ${JSON.stringify(result.findings)}`);
+  }
+  return result.template;
+}
+
+// advance on arrival at the start step (the model's exhibited declaration)
+// — the loop-back review→implement advances the round.
+const admittedDeclared = admit({
+  ...fixtureTemplate(),
+  round: { advanceOnArrivalAt: ["implement"] },
+});
+const admittedAbsent = admit(fixtureTemplate());
+
+// Two loop-backs → stored round 3 (a DECLARATION-ABSENT fixture would be
+// blind to a raw-template regression here — this reconstructs > 1).
+const multiLoopRows = [
+  row(1, "a1", "PASS"), // implement → review        round 1
+  row(2, "b2", "PASS"), // review → implement (+1)   round 2
+  row(3, "c3", "PASS"), // implement → review        round 2
+  row(4, "d4", "PASS"), // review → implement (+1)   round 3
+  row(5, "e5", "PASS"), // implement → review        round 3
+  row(6, "f6", "CONVERGED"), // review → done        round 3
+];
+
+describe("checkRoundReconstruction — replay = stored (dimension 5, packet ch11-P2c)", () => {
+  it("a multi-loop-back committed history over a DECLARED-ADVANCING template reconstructs the stored round (green)", () => {
+    const green = detail(multiLoopRows, { round: 3 });
+    expect(checkRoundReconstruction(green, admittedDeclared)).toEqual([]);
+  });
+
+  it("a TAMPERED stored round → a violation whose message carries BOTH values", () => {
+    const tampered = detail(multiLoopRows, { round: 2 }); // reconstructed is 3
+    const violations = checkRoundReconstruction(tampered, admittedDeclared);
+    expect(violations).toHaveLength(1);
+    expect(violations[0]).toContain("stored round 2");
+    expect(violations[0]).toContain("reconstructed round 3");
+  });
+
+  it("a corrupt history (non-resolving replay) → a violation, never a skip", () => {
+    const corrupt = detail([row(1, "a1", "NOPE"), row(2, "b2", "CONVERGED")], { round: 1 });
+    const violations = checkRoundReconstruction(corrupt, admittedAbsent);
+    expect(violations).toHaveLength(1);
+    expect(violations[0]).toContain("corrupt history");
+  });
+
+  it("a declaration-absent loop-back history reconstructs 1", () => {
+    const absent = detail([row(1, "a1", "PASS"), row(2, "b2", "PASS")], {
+      currentStep: "review",
+      status: "RUNNING",
+      round: 1,
+    });
+    expect(checkRoundReconstruction(absent, admittedAbsent)).toEqual([]);
+  });
+
+  it("the aggregate carries the checker: a tampered round fails through runAllCheckers", () => {
+    const tampered = detail(multiLoopRows, { round: 2 });
+    const violations = runAllCheckers(tampered, admittedDeclared);
+    expect(violations).toHaveLength(1);
+    expect(violations[0]).toContain("round reconstruction");
   });
 });

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import type { EventEnvelope, Outcome, Started, WorkflowInstance } from "../domain/index.js";
+import { admitTemplate } from "../definition/index.js";
+import type { AdmittedTemplate, EventEnvelope, Outcome, Started, WorkflowInstance, WorkflowTemplate } from "../domain/index.js";
+import type { GateCatalog } from "../ports/index.js";
 import type { InstanceDetail, StorePort } from "../ports/store.js";
 import { fixtureTemplate } from "./templateFixture.js";
 import { replayTrace, TraceMismatchError } from "./traceHarness.js";
@@ -13,7 +15,23 @@ import type { TraceFixture, TraceSeams } from "./traceHarness.js";
  * live in src/l0aTrace.test.ts — the testkit lint bans wiring a real
  * kernel here, and that ban is the point (ADR-005).
  */
-const template = fixtureTemplate();
+
+/**
+ * ch11-P2c T1: the seam narrows to AdmittedTemplate, so admit the
+ * fixture through an INLINE never-resolving stub catalog (the G1 eslint
+ * ban covers src/testkit/** — no gates/ import; GateCatalog is a
+ * type-only import). The fixture is gate-free, so admission is vacuous —
+ * all-false flags, its round-1 histories stay green.
+ */
+function admit(template: WorkflowTemplate): AdmittedTemplate {
+  const result = admitTemplate(template, { resolve: () => null } satisfies GateCatalog);
+  if (!result.ok) {
+    throw new Error(`traceHarness fixture admission failed: ${JSON.stringify(result.findings)}`);
+  }
+  return result.template;
+}
+
+const template = admit(fixtureTemplate());
 
 function envelope(opId: string, type: string): EventEnvelope {
   return { instanceId: "i1", opId, type, actorId: "codex", expectedVersion: 1 };

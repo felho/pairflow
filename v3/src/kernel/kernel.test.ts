@@ -292,14 +292,90 @@ describe("committed path — intent derived from POST-commit state", () => {
     expect((await store.loadInstance("inst-1"))?.status).toBe("DONE");
   });
 
-  it("round increments exactly on the loop-back commit (target = template.start)", async () => {
-    const { kernel, store } = await setup();
-    await kernel.handle(envelope("a1", "PASS", 1));
+});
+
+// ── packet ch11-P2c: round advancement is DECLARED transition semantics
+// (dimensions 1–2) — the ch-4 `target === template.start` heuristic
+// retired; the kernel reads the admission-normalized `advancesRound`
+// flag for the committed event type (K1). ────────────────────────────
+
+/** Admit `tmpl` and wire a kernel over a fresh in-memory store seeded
+ * with `instance` (default: baseInstance at the start step, round 1). */
+async function setupRound(
+  tmpl: WorkflowTemplate,
+  instance: WorkflowInstance = baseInstance,
+): Promise<{ kernel: Kernel; store: StorePort }> {
+  const handle = openStore(":memory:", createControlledClock(0));
+  await handle.store.createInstance(instance);
+  const defs: DefinitionStore = { load: () => Promise.resolve(admit(tmpl)) };
+  const kernel = createKernel({
+    store: handle.store,
+    definitions: defs,
+    time: createControlledClock(0),
+    digest: deriveEmitDigest,
+    gates: gateCatalog,
+    diag: noopDiagnosticsSink,
+  });
+  return { kernel, store: handle.store };
+}
+
+const reviewerPass = (opId: string, v: number): EventEnvelope => ({
+  ...envelope(opId, "PASS", v, undefined, "reviewer"),
+  actorId: "claude",
+});
+
+describe("round advancement — declared transition semantics (dimension 1: both directions)", () => {
+  it("(a) a declared NON-start advancing target advances (+1) — the retired heuristic would NOT", async () => {
+    // advanceOnArrivalAt: [review]; the FIRST PASS is implement→review, a
+    // non-start target — the heuristic (target === start) would leave
+    // round 1. Declared semantics advance it.
+    const { kernel, store } = await setupRound({
+      ...template,
+      round: { advanceOnArrivalAt: ["review"] },
+    });
+    expect((await kernel.handle(envelope("a1", "PASS", 1))).kind).toBe("committed");
+    expect((await store.loadInstance("inst-1"))?.round).toBe(2);
+  });
+
+  it("(b) a declaration-absent loop-back arrival AT start does NOT advance — the heuristic WOULD", async () => {
+    // Declaration-absent ⇒ all-false flags (C38). The loop-back
+    // review→implement lands on start; the heuristic would advance it.
+    const { kernel, store } = await setupRound(template);
+    expect((await kernel.handle(envelope("a1", "PASS", 1))).kind).toBe("committed");
     expect((await store.loadInstance("inst-1"))?.round).toBe(1);
-    await kernel.handle({ ...envelope("b2", "PASS", 2, undefined, "reviewer"), actorId: "claude" });
+    expect((await kernel.handle(reviewerPass("b2", 2))).kind).toBe("committed");
+    expect((await store.loadInstance("inst-1"))?.round).toBe(1);
+  });
+
+  it("(c) a start-omitting list: arrival at the listed step advances, arrival at start does not (both halves)", async () => {
+    // advanceOnArrivalAt: [review] LISTS the non-start review and OMITS
+    // the start implement (C38's exhaustive-authored-list rule).
+    const { kernel, store } = await setupRound({
+      ...template,
+      round: { advanceOnArrivalAt: ["review"] },
+    });
+    // arrival at the listed step (review) advances → 2
+    expect((await kernel.handle(envelope("a1", "PASS", 1))).kind).toBe("committed");
     expect((await store.loadInstance("inst-1"))?.round).toBe(2);
-    await kernel.handle(envelope("c3", "PASS", 3));
+    // arrival at start (implement) via loop-back does NOT advance → stays 2
+    expect((await kernel.handle(reviewerPass("b2", 2))).kind).toBe("committed");
     expect((await store.loadInstance("inst-1"))?.round).toBe(2);
+  });
+});
+
+describe("round advancement — dimension 2: declaration-absent default (kernel grain)", () => {
+  it("a full loop-back run on a declaration-absent template ends round 1", async () => {
+    const { kernel, store } = await setupRound(template);
+    await kernel.handle(envelope("a1", "PASS", 1)); // implement → review
+    await kernel.handle(reviewerPass("b2", 2)); // review → implement (loop-back)
+    await kernel.handle(envelope("c3", "PASS", 3)); // implement → review
+    await kernel.handle({
+      ...envelope("d4", "CONVERGED", 4, undefined, "reviewer"),
+      actorId: "claude",
+    }); // review → done (terminal)
+    const instance = await store.loadInstance("inst-1");
+    expect(instance?.status).toBe("DONE");
+    expect(instance?.round).toBe(1);
   });
 });
 

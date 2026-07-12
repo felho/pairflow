@@ -224,7 +224,14 @@ export function createKernel(deps: KernelDeps): Kernel {
 
     const terminal = template.terminal.includes(target);
     const newStatus: LifecycleStatus = terminal ? "DONE" : instance.status;
-    const newRound = target === template.start ? instance.round + 1 : instance.round;
+    // K1 (packet ch11-P2c): round advancement is DECLARED transition
+    // semantics — the CURRENT step's admission-normalized flag for the
+    // committed event type, never inferred from target equality (the
+    // ch-4 heuristic retired, C39's ban). `=== true` is explicit-flag
+    // consumption (an admitted map is complete, D3); the `?.` exists only
+    // because the TYPE is shared with the raw pre-admission form.
+    const newRound =
+      step.advancesRound?.[envelope.type] === true ? instance.round + 1 : instance.round;
 
     const result = await store.commitTransition({
       instanceId: instance.instanceId,

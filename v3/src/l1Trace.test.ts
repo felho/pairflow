@@ -90,9 +90,13 @@ const l1Fixture: TraceFixture = {
 describe("l1 golden trace — role authority end-to-end (07-l1 Runtime)", () => {
   it("replays the model's three steps and matches the committed rows", async () => {
     const handle = openStore(":memory:", createControlledClock(1_000));
+    // ch11-P2c T1: the seam narrowed to AdmittedTemplate — the l1 golden
+    // is declaration-absent (round stays 1), so ONE admitted value (no
+    // round declaration) feeds BOTH the definition store and the seam.
+    const admitted = admit(fixtureTemplate());
     const kernel = createKernel({
       store: handle.store,
-      definitions: fixtureDefinitionStore(admit(fixtureTemplate())),
+      definitions: fixtureDefinitionStore(admitted),
       time: createControlledClock(1_000),
       digest: deriveEmitDigest,
       gates: gateCatalog,
@@ -104,7 +108,7 @@ describe("l1 golden trace — role authority end-to-end (07-l1 Runtime)", () => 
       submit: (raw) => ingress.submit(raw),
       start: (input) => kernel.startInstance(input),
       store: handle.store,
-      template: fixtureTemplate(),
+      template: admitted,
     });
 
     // Supplemental: the terminal commit returns NO dispatch intent, and

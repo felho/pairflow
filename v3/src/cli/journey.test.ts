@@ -108,4 +108,70 @@ describe("cli — the full-lifecycle journey smoke (packet ch8-P2: J1/J2)", () =
       expect(tailRows.every((r) => typeof r.envelope.opId === "string")).toBe(true);
     },
   );
+
+  it(
+    "ch11-P2c T3 pass-back: PASS → PASS (pass back to start) → PASS → CONVERGED → DONE, final round === 1",
+    { timeout: 30_000 },
+    async () => {
+      // The R-ACTIVATION-JOURNEY discharge: on the SHIPPED
+      // declaration-absent template the pass-back loop-back arrival at the
+      // start step does NOT advance the round (C38's default — the retired
+      // heuristic would end this run at round 2). This is the ONLY shipped
+      // scenario where the declared-only default is observable.
+      const tsxBin = join(process.cwd(), "..", "node_modules", ".bin", "tsx");
+      const mainPath = join(process.cwd(), "src", "cli", "main.ts");
+      const templatesDir = join(process.cwd(), "templates");
+      const dir = mkdtempSync(join(tmpdir(), "v3-journey-passback-"));
+      dirs.push(dir);
+      const db = join(dir, "store.db");
+      const cli = (...argv: string[]): Promise<{ stdout: string; stderr: string }> =>
+        execFileAsync(tsxBin, [mainPath, ...argv]); // rejects on nonzero exit
+
+      const started = await cli(
+        "start", "--db", db, "--task", "pass-back journey",
+        "--templates-dir", templatesDir,
+      );
+      const startDoc = JSON.parse(started.stdout.trim()) as { instanceId: string; version: number };
+      expect(startDoc.version).toBe(1);
+      const id = startDoc.instanceId;
+
+      const submit = (
+        type: string,
+        expectedVersion: number,
+        role: string,
+      ): Promise<{ stdout: string; stderr: string }> =>
+        cli(
+          "submit", "--db", db, "--instance", id, "--type", type,
+          "--expected-version", String(expectedVersion), "--expected-role", role,
+          "--templates-dir", templatesDir,
+        );
+
+      // implement →(PASS)→ review
+      expect(JSON.parse((await submit("PASS", 1, "implementer")).stdout.trim())).toMatchObject({
+        kind: "committed", version: 2,
+      });
+      // review →(PASS, pass back — arrival at start)→ implement; round stays 1
+      expect(JSON.parse((await submit("PASS", 2, "reviewer")).stdout.trim())).toMatchObject({
+        kind: "committed", version: 3,
+      });
+      // implement →(PASS)→ review
+      expect(JSON.parse((await submit("PASS", 3, "implementer")).stdout.trim())).toMatchObject({
+        kind: "committed", version: 4,
+      });
+      // review →(CONVERGED)→ done (terminal)
+      expect(JSON.parse((await submit("CONVERGED", 4, "reviewer")).stdout.trim())).toMatchObject({
+        kind: "committed", version: 5,
+      });
+
+      const detail = await cli("detail", id, "--db", db);
+      const detailDoc = JSON.parse(detail.stdout.trim()) as {
+        instance: { status: string; currentStep: string; round: number };
+      };
+      expect(detailDoc.instance.status).toBe("DONE");
+      expect(detailDoc.instance.currentStep).toBe("done");
+      // The declared-only default live end-to-end: round did NOT advance
+      // on the pass-back (the retired heuristic would report 2).
+      expect(detailDoc.instance.round).toBe(1);
+    },
+  );
 });

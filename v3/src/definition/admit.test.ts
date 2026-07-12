@@ -198,12 +198,20 @@ describe("admitTemplate — effective-config materialization (dimension 3, A5)",
 });
 
 describe("admitTemplate — the gate-free confinement (A8) and own-property write discipline (G8)", () => {
-  it("a gate-free template admits with a structurally-equal value (vacuous scan)", () => {
+  it("a gate-free template admits with a structurally-equal value plus all-false round flags (C38)", () => {
     const raw = template();
     const result = admitTemplate(raw, catalog);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.template).toEqual(raw);
+    // ch11-P2c A1: the only shape delta is the expanded per-step
+    // advancesRound map — declaration-absent ⇒ all-false (C38).
+    expect(result.template).toEqual({
+      ...raw,
+      steps: {
+        implement: { ...raw.steps["implement"], advancesRound: { PASS: false } },
+        review: { ...raw.steps["review"], advancesRound: { PASS: false, CONVERGED: false } },
+      },
+    });
   });
 
   it("a step named __proto__ survives admission as an OWN key (defineOwn write, not bracket assignment)", () => {
@@ -251,5 +259,182 @@ describe("admitTemplate — the injected catalog (A3, note 5)", () => {
     expect(findings[0]?.path).toBe("steps.review.gates.PASS[0].config");
     expect(findings[0]?.message).toContain("without findings");
     expect(findings[0]).not.toHaveProperty("code");
+  });
+});
+
+// ── packet ch11-P2c: the round declaration — value-level lanes (A2/A3),
+// the normalization completeness grid (A1/D2), producer monopoly (A1),
+// and input purity (A4). ──────────────────────────────────────────────
+
+/** `template()` + a `round` declaration (hostile shapes bypass the type). */
+function withRound(round: unknown, reviewGates?: unknown): WorkflowTemplate {
+  return { ...template(reviewGates), round } as unknown as WorkflowTemplate;
+}
+
+function admitRoundFail(round: unknown, reviewGates?: unknown): readonly ValidationFinding[] {
+  const result = admitTemplate(withRound(round, reviewGates), catalog);
+  expect(result.ok).toBe(false);
+  if (result.ok) {
+    throw new Error("expected admission to fail");
+  }
+  return result.findings;
+}
+
+describe("admitTemplate — round declaration value-level lanes (dimension 3, A2/A3)", () => {
+  it("an EMPTY advanceOnArrivalAt list → a finding at round.advanceOnArrivalAt", () => {
+    const findings = admitRoundFail({ advanceOnArrivalAt: [] });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.path).toBe("round.advanceOnArrivalAt");
+    expect(findings[0]).not.toHaveProperty("code");
+    expect(findings[0]?.message).toContain("empty");
+  });
+
+  it("an UNKNOWN member → a finding at round.advanceOnArrivalAt[<i>]", () => {
+    const findings = admitRoundFail({ advanceOnArrivalAt: ["nope"] });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.path).toBe("round.advanceOnArrivalAt[0]");
+    expect(findings[0]?.message).toContain("not a step");
+  });
+
+  it("a TERMINAL-id member BY NAME → the same membership lane (C37's exclusion)", () => {
+    // 'done' is terminal — it lives in template.terminal, NOT steps, so
+    // the keys(steps) membership lane catches it.
+    const findings = admitRoundFail({ advanceOnArrivalAt: ["done"] });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.path).toBe("round.advanceOnArrivalAt[0]");
+    expect(findings[0]?.message).toContain("'done'");
+    expect(findings[0]?.message).toContain("not a step");
+  });
+
+  it("DUPLICATE members → a finding at the duplicate's index", () => {
+    const findings = admitRoundFail({ advanceOnArrivalAt: ["implement", "implement"] });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.path).toBe("round.advanceOnArrivalAt[1]");
+    expect(findings[0]?.message).toContain("duplicated");
+  });
+
+  it("ACCUMULATION: a bad gate AND a bad round declaration report BOTH (C21/A3 one channel)", () => {
+    const findings = admitRoundFail({ advanceOnArrivalAt: [] }, { PASS: [{ uses: "no.such.gate" }] });
+    const paths = findings.map((f) => f.path).sort();
+    expect(paths).toEqual(["round.advanceOnArrivalAt", "steps.review.gates.PASS[0]"]);
+  });
+
+  it("a VALID declaration admits", () => {
+    const result = admitTemplate(withRound({ advanceOnArrivalAt: ["implement"] }), catalog);
+    expect(result.ok).toBe(true);
+  });
+});
+
+describe("admitTemplate — normalization completeness grid (dimension 4, A1/D2)", () => {
+  /** a, b both transition into the LISTED target c; d has no transitions. */
+  const gridTemplate = (round?: unknown): WorkflowTemplate =>
+    ({
+      ref: { id: "grid", version: 1 },
+      start: "a",
+      steps: {
+        a: { role: "r", instruction: "i", transitions: { GO: "c" } },
+        b: { role: "r", instruction: "i", transitions: { GO: "c" } },
+        c: { role: "r", instruction: "i", transitions: { DONE: "end" } },
+        d: { role: "r", instruction: "i", transitions: {} },
+      },
+      terminal: ["end"],
+      roles: { r: {} },
+      ...(round !== undefined ? { round } : {}),
+    }) as unknown as WorkflowTemplate;
+
+  it("two sources into one LISTED target → both flagged; empty-transitions step → empty map", () => {
+    const result = admitTemplate(gridTemplate({ advanceOnArrivalAt: ["c"] }), catalog);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.template.steps["a"]?.advancesRound).toEqual({ GO: true });
+    expect(result.template.steps["b"]?.advancesRound).toEqual({ GO: true });
+    expect(result.template.steps["c"]?.advancesRound).toEqual({ DONE: false });
+    expect(result.template.steps["d"]?.advancesRound).toEqual({});
+  });
+
+  it("absent declaration → all-false maps (asserted exactly)", () => {
+    const result = admitTemplate(gridTemplate(), catalog);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.template.steps["a"]?.advancesRound).toEqual({ GO: false });
+    expect(result.template.steps["b"]?.advancesRound).toEqual({ GO: false });
+    expect(result.template.steps["c"]?.advancesRound).toEqual({ DONE: false });
+    expect(result.template.steps["d"]?.advancesRound).toEqual({});
+  });
+});
+
+describe("admitTemplate — producer monopoly (dimension 4, A1: input flags never trusted)", () => {
+  it("a declared input with WRONG pre-populated maps → RECOMPUTED wholesale", () => {
+    const hostile = {
+      ...template(),
+      round: { advanceOnArrivalAt: ["implement"] },
+      steps: {
+        implement: {
+          role: "implementer",
+          instruction: "i",
+          transitions: { PASS: "review" },
+          advancesRound: { PASS: true }, // WRONG: review ∉ [implement] ⇒ false
+        },
+        review: {
+          role: "reviewer",
+          instruction: "r",
+          transitions: { PASS: "implement", CONVERGED: "done" },
+          advancesRound: { PASS: false, CONVERGED: true }, // WRONG on both
+        },
+      },
+    } as unknown as WorkflowTemplate;
+    const result = admitTemplate(hostile, catalog);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.template.steps["implement"]?.advancesRound).toEqual({ PASS: false });
+    expect(result.template.steps["review"]?.advancesRound).toEqual({ PASS: true, CONVERGED: false });
+  });
+
+  it("a declaration-ABSENT input with pre-populated TRUE maps → ALL-FALSE", () => {
+    const hostile = {
+      ...template(),
+      steps: {
+        implement: {
+          role: "implementer",
+          instruction: "i",
+          transitions: { PASS: "review" },
+          advancesRound: { PASS: true },
+        },
+        review: {
+          role: "reviewer",
+          instruction: "r",
+          transitions: { PASS: "implement", CONVERGED: "done" },
+          advancesRound: { PASS: true, CONVERGED: true },
+        },
+      },
+    } as unknown as WorkflowTemplate;
+    const result = admitTemplate(hostile, catalog);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.template.steps["implement"]?.advancesRound).toEqual({ PASS: false });
+    expect(result.template.steps["review"]?.advancesRound).toEqual({ PASS: false, CONVERGED: false });
+  });
+});
+
+describe("admitTemplate — input purity (dimension 4, A4)", () => {
+  function deepFreeze(value: unknown): void {
+    if (value !== null && typeof value === "object") {
+      for (const key of Object.keys(value)) {
+        deepFreeze((value as Record<string, unknown>)[key]);
+      }
+      Object.freeze(value);
+    }
+  }
+
+  it("a DEEP-FROZEN input template (incl. declaration + list) admits without throwing, declaration unmutated", () => {
+    const input = withRound({ advanceOnArrivalAt: ["implement"] });
+    const before = structuredClone(input.round);
+    deepFreeze(input);
+    // A mutating implementation throws in strict mode (ESM) on the frozen
+    // declaration/list; a pure expander does not.
+    const result = admitTemplate(input, catalog);
+    expect(result.ok).toBe(true);
+    // Before/after deep-equality on the declaration object (never mutated).
+    expect(input.round).toEqual(before);
   });
 });

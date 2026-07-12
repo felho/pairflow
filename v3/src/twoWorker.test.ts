@@ -61,9 +61,14 @@ interface Worker {
 
 function wireWorker(path: string): Worker {
   const handle = openStore(path, createControlledClock(1_000));
+  // ch11-P2c T2: the round-2 assertion (a bare kernel read — no harness
+  // seam here) preserved via the LOCAL declaration wrapper at this ONE
+  // definitions site; the wrapper retires at P4.
   const kernel = createKernel({
     store: handle.store,
-    definitions: fixtureDefinitionStore(admit(fixtureTemplate())),
+    definitions: fixtureDefinitionStore(
+      admit({ ...fixtureTemplate(), round: { advanceOnArrivalAt: ["implement"] } }),
+    ),
     time: createControlledClock(1_000),
     digest: deriveEmitDigest,
     gates: gateCatalog,

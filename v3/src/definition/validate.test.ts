@@ -748,11 +748,15 @@ roles:
           role: "implementer",
           instruction: "build it",
           transitions: { PASS: "review" },
+          // ch11-P2c A1: loadTemplate returns the ADMITTED value — the
+          // declaration-absent file yields all-false maps (C38).
+          advancesRound: { PASS: false },
         },
         review: {
           role: "reviewer",
           instruction: "review it",
           transitions: { PASS: "implement", CONVERGED: "done" },
+          advancesRound: { PASS: false, CONVERGED: false },
         },
       },
       terminal: ["done"],

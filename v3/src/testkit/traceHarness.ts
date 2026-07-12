@@ -1,5 +1,6 @@
 import type {
   ActorId,
+  AdmittedTemplate,
   EventType,
   InstanceId,
   LifecycleStatus,
@@ -9,7 +10,6 @@ import type {
   Started,
   StepId,
   TemplateRef,
-  WorkflowTemplate,
 } from "../domain/index.js";
 import type { InstanceDetail, StorePort } from "../ports/store.js";
 import { runAllCheckers } from "./storeCheckers.js";
@@ -37,7 +37,14 @@ export interface TraceSeams {
   readonly start: (input: HarnessStartInput) => Promise<Started>;
   /** The REAL store the kernel commits into (floor-read side). */
   readonly store: StorePort;
-  readonly template: WorkflowTemplate;
+  /**
+   * T1 (packet ch11-P2c): NARROWED to `AdmittedTemplate` — the checker
+   * (`checkRoundReconstruction`) consumes the admission-normalized
+   * `advancesRound` flags, and a raw template would reconstruct round 1
+   * against a stored 2 silently. Compile-enforcing the admitted form (the
+   * C20 letter) is what a per-call-site discipline would leave to review.
+   */
+  readonly template: AdmittedTemplate;
 }
 
 export type ExpectedOutcome =

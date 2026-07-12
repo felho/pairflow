@@ -66,9 +66,13 @@ const l0bFixture: TraceFixture = {
 describe("l0b golden trace — the walking skeleton end-to-end (on the harness)", () => {
   it("replays the model's six steps and matches the committed rows", async () => {
     const handle = openStore(":memory:", createControlledClock(1_000));
+    // ch11-P2c T2: the round-2 golden preserved via a LOCAL declaration
+    // wrapper — ONE admitted value feeds BOTH the definition store and the
+    // harness seam (T1); the wrapper retires at P4.
+    const admitted = admit({ ...fixtureTemplate(), round: { advanceOnArrivalAt: ["implement"] } });
     const kernel = createKernel({
       store: handle.store,
-      definitions: fixtureDefinitionStore(admit(fixtureTemplate())),
+      definitions: fixtureDefinitionStore(admitted),
       time: createControlledClock(1_000),
       digest: deriveEmitDigest,
       gates: gateCatalog,
@@ -81,7 +85,7 @@ describe("l0b golden trace — the walking skeleton end-to-end (on the harness)"
       submit: (raw) => ingress.submit(raw),
       start: (input) => kernel.startInstance(input),
       store: handle.store,
-      template: fixtureTemplate(),
+      template: admitted,
     });
 
     // ── Supplemental block (packet ch5-P3): everything the declarative

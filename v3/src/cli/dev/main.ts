@@ -502,7 +502,9 @@ async function verbReplay(ctx: VerbContext): Promise<number> {
       submit: (raw) => ingress.submit(raw),
       start: (input) => kernel.startInstance(input),
       store: handle.store,
-      template,
+      // ch11-P2c T1: the seam narrowed to AdmittedTemplate — hand it the
+      // admitted value already computed above (the checker reads the flags).
+      template: admitted.template,
     });
     ctx.sinks.out(JSON.stringify(result));
     return EXIT.ok;
