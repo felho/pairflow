@@ -271,8 +271,24 @@ function withRound(round: unknown, reviewGates?: unknown): WorkflowTemplate {
   return { ...template(reviewGates), round } as unknown as WorkflowTemplate;
 }
 
+/** Recursive Object.freeze — a mutating implementation throws in strict
+ * mode (ESM) on any frozen object it touches. */
+function deepFreeze(value: unknown): void {
+  if (value !== null && typeof value === "object") {
+    for (const key of Object.keys(value)) {
+      deepFreeze((value as Record<string, unknown>)[key]);
+    }
+    Object.freeze(value);
+  }
+}
+
+/** Every INVALID round lane runs on a DEEP-FROZEN input (arm-gate-2
+ * finding 1: A4's purity binds the FAILING path too — a validator that
+ * mutates rejected inputs throws here, not just on the valid lane). */
 function admitRoundFail(round: unknown, reviewGates?: unknown): readonly ValidationFinding[] {
-  const result = admitTemplate(withRound(round, reviewGates), catalog);
+  const input = withRound(round, reviewGates);
+  deepFreeze(input);
+  const result = admitTemplate(input, catalog);
   expect(result.ok).toBe(false);
   if (result.ok) {
     throw new Error("expected admission to fail");
@@ -414,18 +430,49 @@ describe("admitTemplate — producer monopoly (dimension 4, A1: input flags neve
     expect(result.template.steps["implement"]?.advancesRound).toEqual({ PASS: false });
     expect(result.template.steps["review"]?.advancesRound).toEqual({ PASS: false, CONVERGED: false });
   });
+
+  it("a GATED step with WRONG pre-populated maps → recomputed EXACTLY on the gated rebuild branch too", () => {
+    // Arm-gate-2 finding 2: the `{ ...step, gates: admittedGates }` branch
+    // needs its own exact-map/monopoly drive — a merge, stale key, or
+    // extra key on the gated path fails toStrictEqual here.
+    const hostile = {
+      ...template(),
+      round: { advanceOnArrivalAt: ["implement"] },
+      steps: {
+        implement: {
+          role: "implementer",
+          instruction: "i",
+          transitions: { PASS: "review" },
+        },
+        review: {
+          role: "reviewer",
+          instruction: "r",
+          transitions: { PASS: "implement", CONVERGED: "done" },
+          // VALID binding (the file's gate-lane pattern) — admission succeeds.
+          gates: { PASS: [{ uses: "declarative.threshold", config: { metric: "round", op: ">=", value: 2 } }] },
+          // WRONG on both keys: PASS→implement ∈ [implement] ⇒ true;
+          // CONVERGED→done ∉ ⇒ false. Plus a STALE key no transition has.
+          advancesRound: { PASS: false, CONVERGED: true, GHOST: true },
+        },
+      },
+    } as unknown as WorkflowTemplate;
+    const result = admitTemplate(hostile, catalog);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.template.steps["review"]?.advancesRound).toStrictEqual({
+      PASS: true,
+      CONVERGED: false,
+    });
+    // The gateless sibling recomputes too (PASS→review ∉ [implement]).
+    expect(result.template.steps["implement"]?.advancesRound).toStrictEqual({ PASS: false });
+    // The gated rebuild branch really ran: the effective config landed.
+    expect(result.template.steps["review"]?.gates?.["PASS"]).toEqual([
+      { uses: "declarative.threshold", config: { metric: "round", op: ">=", value: 2 } },
+    ]);
+  });
 });
 
 describe("admitTemplate — input purity (dimension 4, A4)", () => {
-  function deepFreeze(value: unknown): void {
-    if (value !== null && typeof value === "object") {
-      for (const key of Object.keys(value)) {
-        deepFreeze((value as Record<string, unknown>)[key]);
-      }
-      Object.freeze(value);
-    }
-  }
-
   it("a DEEP-FROZEN input template (incl. declaration + list) admits without throwing, declaration unmutated", () => {
     const input = withRound({ advanceOnArrivalAt: ["implement"] });
     const before = structuredClone(input.round);

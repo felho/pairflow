@@ -684,6 +684,29 @@ question); `advanceOnArrivalAt` hits = the new sites only. Every
 dimension 1–8 lane driven by a named test; changed files (19) ⊆ the
 declared boundary (the post-build audit is the mechanical witness).
 
+**Aftermath (2026-07-12, ARM GATE 2 — the build-close implementation
+review; pin-conform gpt-5.6-sol/high/never, verdict `refine` citing
+the build sha `3edab71f`, byte guard clean):** three test-evidence
+findings (green-but-blind lanes in the BUILT tests — the P2b
+R-LANE-SENSITIVITY-binds-twice class recurring), folded in ONE
+`fix(v3)` round: (1) **the invalid round admission lanes ran on
+MUTABLE inputs** — only the valid-declaration purity test froze; a
+validator mutating REJECTED inputs stayed green; fix: `admitRoundFail`
+deep-freezes the whole input (template, steps, declaration, list) —
+all five invalid lanes mutation-sensitive. (2) **the GATED rebuild
+branch had no exact-map/monopoly drive** — the completeness grid and
+both hostile pre-populated-map lanes used gateless steps; a
+gated-only merge/stale-key regression passed; fix: a gated step
+(valid threshold binding) + declaration + wrong pre-populated maps
+incl. a stale GHOST key → `toStrictEqual` on the whole recomputed
+map, both branches. (3) **the missing-STEP-ENTRY non-resolving
+replay branch was undriven** (only the missing-transition form had a
+lane); fix: a replay walking to a position with no step entry → a
+violation naming the position, never a skip. 725 → 727 tests (two
+new lanes; one strengthened in place); full bridges re-verified green
+(orchestrator-rerun); the aftermath commit's post-build audit run
+against the packet at its own sha.
+
 ```json
 {
   "packet_metrics": {
@@ -707,6 +730,11 @@ declared boundary (the post-build audit is the mechanical witness).
         "found_at": "implementation",
         "what": "loadTemplate returns the ADMITTED value (since P2a), so admission's new all-false maps broke two raw-vs-loaded round-trip pins OUTSIDE the boundary (templateFixture equality pin; the validate exact-load literal) — the packet claimed the pin green untouched",
         "why_missed": "the confinement claim was verified against the pin's SOURCE files (fixture + YAML untouched) but never against the pin TEST's comparison STAGE — no lens traced what loadTemplate returns through the admission change"
+      },
+      {
+        "found_at": "arm-build-close",
+        "what": "three green-but-blind lanes in the BUILT tests: the invalid admission lanes ran on mutable inputs (purity driven only on the valid path); the gated rebuild branch had no exact-map/monopoly drive (all hostile fixtures gateless); the missing-step-entry replay branch was undriven (only the missing-transition twin had a lane)",
+        "why_missed": "the packet's lane texts demanded the right meanings and the build realized weaker coverage on the halves/branches the texts did not enumerate member-by-member — R-LANE-SENSITIVITY re-applied at the BUILT bodies caught what write-time application missed (the P2b class recurring)"
       }
     ],
     "learned": "a confinement claim over a comparison test is checked against the comparison's STAGE (what flows), not the compared files; and a shared input/output type's permissiveness (pre-populatable fields) needs its own hostile lane the moment admission becomes the sole legal producer"

@@ -178,6 +178,29 @@ describe("checkRoundReconstruction — replay = stored (dimension 5, packet ch11
     expect(violations[0]).toContain("corrupt history");
   });
 
+  it("a replay position with NO step entry → a violation naming the position, never a skip", () => {
+    // Arm-gate-2 finding 3: the OTHER non-resolving branch (`step ===
+    // undefined`) — the walk lands on a position absent from `steps`
+    // (a transition targeting a non-step, non-terminal id; admission
+    // does not own structural well-formedness, so this admits).
+    const ghostly = admit({
+      ref: { id: "ghost", version: 1 },
+      start: "implement",
+      steps: {
+        implement: { role: "implementer", instruction: "i", transitions: { PASS: "ghost" } },
+      },
+      terminal: ["done"],
+      roles: { implementer: { defaultActor: "codex" } },
+    });
+    // Row 1 walks implement → ghost; row 2 replays FROM 'ghost', which
+    // has no step entry — the checker must violate, not skip.
+    const stranded = detail([row(1, "a1", "PASS"), row(2, "b2", "PASS")], { round: 1 });
+    const violations = checkRoundReconstruction(stranded, ghostly);
+    expect(violations).toHaveLength(1);
+    expect(violations[0]).toContain("'ghost'");
+    expect(violations[0]).toContain("no step entry");
+  });
+
   it("a declaration-absent loop-back history reconstructs 1", () => {
     const absent = detail([row(1, "a1", "PASS"), row(2, "b2", "PASS")], {
       currentStep: "review",
