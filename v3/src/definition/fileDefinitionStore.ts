@@ -1,8 +1,9 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import type { TemplateRef, WorkflowTemplate } from "../domain/index.js";
+import type { AdmittedTemplate, TemplateRef } from "../domain/index.js";
 import type { DefinitionStore } from "../ports/definition.js";
+import type { GateCatalog } from "../ports/index.js";
 import { TemplateLoadError } from "./errors.js";
 import { loadTemplate } from "./load.js";
 
@@ -29,9 +30,12 @@ function osCode(error: unknown): string {
   return "UNKNOWN";
 }
 
-export function createFileDefinitionStore(templatesDir: string): DefinitionStore {
+export function createFileDefinitionStore(
+  templatesDir: string,
+  catalog: GateCatalog,
+): DefinitionStore {
   return {
-    async load(ref: TemplateRef): Promise<WorkflowTemplate | null> {
+    async load(ref: TemplateRef): Promise<AdmittedTemplate | null> {
       let entries: string[];
       try {
         entries = await readdir(templatesDir);
@@ -71,7 +75,7 @@ export function createFileDefinitionStore(templatesDir: string): DefinitionStore
           ],
         });
       }
-      const result = loadTemplate(fileBytes, { path: filePath });
+      const result = loadTemplate(fileBytes, { path: filePath, catalog });
       if (!result.ok) {
         throw new TemplateLoadError(result.error);
       }

@@ -11,6 +11,18 @@ import {
   fixtureTemplate,
   replayTrace,
 } from "./testkit/index.js";
+import type { AdmittedTemplate, WorkflowTemplate } from "./domain/index.js";
+import { admitTemplate } from "./definition/index.js";
+import { createGateRegistry } from "./gates/index.js";
+
+const gateCatalog = createGateRegistry();
+function admit(template: WorkflowTemplate): AdmittedTemplate {
+  const result = admitTemplate(template, gateCatalog);
+  if (!result.ok) {
+    throw new Error(`test fixture admission failed: ${JSON.stringify(result.findings)}`);
+  }
+  return result.template;
+}
 import type { TraceFixture, TraceSeams } from "./testkit/index.js";
 import { noopDiagnosticsSink } from "./diag/index.js";
 
@@ -27,7 +39,7 @@ function wire(): { seams: TraceSeams; handle: StoreHandle } {
   const handle = openStore(":memory:", createControlledClock(1_000));
   const kernel = createKernel({
     store: handle.store,
-    definitions: fixtureDefinitionStore(fixtureTemplate()),
+    definitions: fixtureDefinitionStore(admit(fixtureTemplate())),
     time: createControlledClock(1_000),
     digest: deriveEmitDigest,
     diag: noopDiagnosticsSink,

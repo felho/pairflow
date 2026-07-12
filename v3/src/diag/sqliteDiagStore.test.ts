@@ -16,6 +16,18 @@ import {
   fixtureDefinitionStore,
   fixtureTemplate,
 } from "../testkit/index.js";
+import type { AdmittedTemplate, WorkflowTemplate } from "../domain/index.js";
+import { admitTemplate } from "../definition/index.js";
+import { createGateRegistry } from "../gates/index.js";
+
+const gateCatalog = createGateRegistry();
+function admit(template: WorkflowTemplate): AdmittedTemplate {
+  const result = admitTemplate(template, gateCatalog);
+  if (!result.ok) {
+    throw new Error(`test fixture admission failed: ${JSON.stringify(result.findings)}`);
+  }
+  return result.template;
+}
 import { noopDiagnosticsSink } from "./index.js";
 import { DiagUnavailableError, openDiagStore } from "./sqliteDiagStore.js";
 
@@ -644,7 +656,7 @@ describe("attribution routing + known-empty", () => {
 // WAL + separation + fail-open PRODUCT (dimensions 1, 8, 9).
 // ===========================================================================
 const template = fixtureTemplate();
-const definitions = fixtureDefinitionStore(template);
+const definitions = fixtureDefinitionStore(admit(template));
 
 function validEnvelope(opId: string, type: string, expectedVersion: number) {
   return { instanceId: "inst-1", opId, type, actorId: "codex", expectedVersion, expectedRole: "implementer", payload: { ref: "d1" } };

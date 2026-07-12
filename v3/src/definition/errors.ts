@@ -1,4 +1,4 @@
-import type { WorkflowTemplate } from "../domain/index.js";
+import type { AdmittedTemplate } from "../domain/index.js";
 
 /**
  * Packet ch8-P1 (E5): the typed load-error machine shape — the
@@ -28,10 +28,18 @@ export interface PipelineFinding {
  * The E2 (draft C21) accumulated form — validate stage, plus the
  * store's post-validate ref-check (S2: one entry at path "ref").
  * Paths are dotted; the root is the token "$".
+ *
+ * `code` (packet ch11-P2a, A9) is the C21 named-lane carrier: present on
+ * exactly the NAMED admission lanes (`gate_evaluator_unavailable` in
+ * this packet; the P3/P4 codes join with their lanes), ABSENT on every
+ * ch8 structural lane and every uncoded gate-config lane. An additive
+ * optional field — the CLI's `{stage, findings}` machine shape is
+ * unchanged in kind (C28).
  */
 export interface ValidationFinding {
   readonly path: string;
   readonly message: string;
+  readonly code?: string;
 }
 
 export type LoadFinding = PipelineFinding | ValidationFinding;
@@ -68,7 +76,13 @@ export class TemplateLoadError extends Error {
   }
 }
 
-/** E3 (draft C22): a template XOR an error result — nothing partial. */
+/**
+ * E3 (draft C22): a template XOR an error result — nothing partial. The
+ * `ok` arm carries the ADMITTED form (ch11-P2a, A1/A6): `loadTemplate`
+ * runs `admitTemplate` as the validate stage's second rung, so a
+ * successful load has passed admission and the store yields the branded
+ * type without a second assertion.
+ */
 export type TemplateLoadResult =
-  | { readonly ok: true; readonly template: WorkflowTemplate }
+  | { readonly ok: true; readonly template: AdmittedTemplate }
   | { readonly ok: false; readonly error: TemplateLoadErrorInfo };

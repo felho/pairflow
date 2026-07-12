@@ -6,10 +6,12 @@ import { createDebugBundleExporter, redactPayloadsPolicy } from "../../floor/ind
 import { createIngress } from "../../ingress/index.js";
 import { createKernel } from "../../kernel/index.js";
 import {
+  admitTemplate,
   createFileDefinitionStore,
   loadTemplate,
   TemplateLoadError,
 } from "../../definition/index.js";
+import { createGateRegistry } from "../../gates/index.js";
 import type { TraceFixture } from "../../testkit/index.js";
 import {
   devPassthroughRedactionPolicy,
@@ -224,6 +226,7 @@ async function verbInject(ctx: VerbContext): Promise<number> {
   const steps = validateInjectFile(await readJsonFile(ctx, "file"));
   const definitions = createFileDefinitionStore(
     resolveTemplatesDir(flagString(ctx, "templates-dir"), ctx.deps),
+    createGateRegistry(),
   );
   // W4 (packet ch8-P2): inject first touches the template INSIDE
   // kernel.handle — the typed error surfaces at the ingress.submit
@@ -474,9 +477,17 @@ async function verbReplay(ctx: VerbContext): Promise<number> {
     // the testkit fixture (itself equality-pinned to the canonical
     // file) and stays OUTSIDE the templates-dir lane (hermetic).
     const template = fixtureTemplate();
+    // The replay store now yields ADMITTED templates (ch11-P2a, T4):
+    // admit-wrap the canonical fixture with the same catalog the dev
+    // graph composes. The fixture carries no gates, so admission is
+    // vacuous — it never fails here.
+    const admitted = admitTemplate(template, createGateRegistry());
+    if (!admitted.ok) {
+      throw new Error("dev replay: the canonical fixture failed admission (unreachable)");
+    }
     const kernel = createKernel({
       store: handle.store,
-      definitions: fixtureDefinitionStore(template),
+      definitions: fixtureDefinitionStore(admitted.template),
       time: ctx.deps.time,
       digest: deriveEmitDigest,
       diag: noopDiagnosticsSink,
@@ -544,7 +555,7 @@ async function verbValidate(ctx: VerbContext): Promise<number> {
       `cannot read '${path}': ${error instanceof Error ? error.message : String(error)}`,
     );
   }
-  const result = loadTemplate(bytes, { path });
+  const result = loadTemplate(bytes, { path, catalog: createGateRegistry() });
   if (!result.ok) {
     // Lift the result info into the canonical carrier so the doc is
     // byte-identical in shape to the W-lane surfacing (C31: "the SAME

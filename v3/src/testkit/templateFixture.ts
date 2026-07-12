@@ -1,4 +1,4 @@
-import type { TemplateRef, WorkflowTemplate } from "../domain/index.js";
+import type { AdmittedTemplate, TemplateRef, WorkflowTemplate } from "../domain/index.js";
 import type { DefinitionStore } from "../ports/definition.js";
 
 /**
@@ -41,15 +41,20 @@ export function fixtureTemplate(): WorkflowTemplate {
  * In-memory pinned DefinitionStore fixture: loads exactly the
  * { id, version } asked, nothing else — the "separate store; pinned
  * immutable version" seam without a persistence substrate.
+ *
+ * NARROWS to AdmittedTemplate (ch11-P2a, T1/C20): the store's only
+ * output is the admitted form. The kit itself never imports definition/
+ * (ADR-005) — TESTS admit-wrap a raw `fixtureTemplate()` through
+ * `admitTemplate` + a catalog and hand the branded value here.
  */
 export function fixtureDefinitionStore(
-  ...templates: readonly WorkflowTemplate[]
+  ...templates: readonly AdmittedTemplate[]
 ): DefinitionStore {
-  const byRef = new Map<string, WorkflowTemplate>(
+  const byRef = new Map<string, AdmittedTemplate>(
     templates.map((template) => [refKey(template.ref), template]),
   );
   return {
-    load(ref: TemplateRef): Promise<WorkflowTemplate | null> {
+    load(ref: TemplateRef): Promise<AdmittedTemplate | null> {
       return Promise.resolve(byRef.get(refKey(ref)) ?? null);
     },
   };

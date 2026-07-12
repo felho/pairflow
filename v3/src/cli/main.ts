@@ -31,6 +31,7 @@ import { CliError, EXIT } from "./contract.js";
 import type { CliDeps } from "./runtime.js";
 import { productionDeps } from "./runtime.js";
 import { createFileDefinitionStore } from "../definition/index.js";
+import { createGateRegistry } from "../gates/index.js";
 
 /**
  * The operator CLI, normal entrypoint (plan §6.5, packet ch6-P4a): a
@@ -240,6 +241,7 @@ async function verbStart(ctx: VerbContext): Promise<number> {
   // the SAME file store feeds the pre-load and the kernel.
   const definitions = createFileDefinitionStore(
     resolveTemplatesDir(flagString(ctx, "templates-dir"), ctx.deps),
+    createGateRegistry(),
   );
   // The outer catch is TYPE-based (W4/note 2): it maps TemplateLoadError
   // from EVERY site in this verb body — the pre-load below AND the
@@ -335,6 +337,7 @@ async function verbSubmit(ctx: VerbContext): Promise<number> {
   };
   const definitions = createFileDefinitionStore(
     resolveTemplatesDir(flagString(ctx, "templates-dir"), ctx.deps),
+    createGateRegistry(),
   );
   // W4: submit first touches the template INSIDE kernel.handle — the
   // typed error surfaces at the ingress.submit await (ingress carries

@@ -7,8 +7,6 @@ export { createFakeEgress } from "./fakeEgress.js";
 export type { FakeEgress, RecordedEgressCall } from "./fakeEgress.js";
 export { createScriptedActor } from "./scriptedActor.js";
 export type { DeliverFn, ScriptedActor } from "./scriptedActor.js";
-export { createScriptedGateRunner, createScriptedProcessRunner } from "./fixtures.js";
-export type { ScriptedGateRunner, ScriptedProcessRunner } from "./fixtures.js";
 export { createScriptedTailWait } from "./tailWait.js";
 export type { ScriptedTailWait } from "./tailWait.js";
 export { devPassthroughRedactionPolicy } from "./redaction.js";

@@ -1,3 +1,4 @@
+import type { GateBinding } from "./gate.js";
 import type { ActorId, EventType, RoleName, StepId } from "./ids.js";
 
 /**
@@ -19,6 +20,14 @@ export interface Step {
   readonly transitions: Readonly<Record<EventType, StepId>>;
   /** Raw optional pass-through until L0c (dispatch_intent unit comment). */
   readonly agentConfig?: unknown;
+  /**
+   * D1 (packet ch11-P2a): the per-(event-type) gate pipeline realizing
+   * the model's `gates_for(step, event_type)`. ABSENT = ungated (C1).
+   * The FILE format never carries a `gates` key until P4 (it stays the
+   * ch8 unknown-key rejection); this domain field is reached only by
+   * directly-constructed templates through admission.
+   */
+  readonly gates?: Readonly<Record<EventType, readonly GateBinding[]>>;
 }
 
 /**
@@ -44,3 +53,15 @@ export interface WorkflowTemplate {
   /** L1 explicit restrictions (none in the baseline) — see CapabilityProfile. */
   readonly capabilityProfile?: CapabilityProfile;
 }
+
+/**
+ * D6 (packet ch11-P2a): the branded admitted template — the ledger's
+ * `AdmittedDefinition`, realized under the codebase's `WorkflowTemplate`
+ * naming. `admitTemplate` (definition/admit.ts) is the ONLY sanctioned
+ * producer; the brand is the store PORT CONTRACT's type expression, not
+ * a runtime mechanism. The unique-symbol brand is DECLARED (no runtime
+ * value exists — nothing to export, C20's "produced in one place and
+ * never re-checked"); a `DefinitionStore` yields only this form.
+ */
+declare const admittedBrand: unique symbol;
+export type AdmittedTemplate = WorkflowTemplate & { readonly [admittedBrand]: true };

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type {
   EventEnvelope,
   WorkflowInstance,
+  AdmittedTemplate,
   WorkflowTemplate,
 } from "../domain/index.js";
 import { deriveEmitDigest } from "../emit/index.js";
@@ -11,6 +12,17 @@ import type { DefinitionStore } from "../ports/definition.js";
 import type { StorePort } from "../ports/store.js";
 import { openStore } from "../store/index.js";
 import { createControlledClock } from "../testkit/index.js";
+import { admitTemplate } from "../definition/index.js";
+import { createGateRegistry } from "../gates/index.js";
+
+const gateCatalog = createGateRegistry();
+function admit(template: WorkflowTemplate): AdmittedTemplate {
+  const result = admitTemplate(template, gateCatalog);
+  if (!result.ok) {
+    throw new Error(`test fixture admission failed: ${JSON.stringify(result.findings)}`);
+  }
+  return result.template;
+}
 import { createKernel } from "./kernel.js";
 import { noopDiagnosticsSink } from "../diag/index.js";
 
@@ -33,7 +45,7 @@ const template: WorkflowTemplate = {
 
 const definitions: DefinitionStore = {
   load: (ref) =>
-    Promise.resolve(ref.id === "local-pair-v0" && ref.version === 1 ? template : null),
+    Promise.resolve(ref.id === "local-pair-v0" && ref.version === 1 ? admit(template) : null),
 };
 
 const baseInstance: WorkflowInstance = {
@@ -435,7 +447,7 @@ describe("L1 authority — the four new rejections through the real seam (A4/A7/
       ...template,
       capabilityProfile: { reviewer: { review: ["CONVERGED"] } },
     };
-    const defs: DefinitionStore = { load: () => Promise.resolve(profiled) };
+    const defs: DefinitionStore = { load: () => Promise.resolve(admit(profiled)) };
     const handle = openStore(":memory:", createControlledClock(0));
     await handle.store.createInstance({ ...baseInstance, currentStep: "review", version: 1 });
     const kernel = createKernel({
@@ -484,7 +496,7 @@ describe("L1 authority — the cross-boundary ordering combinations (dimension 1
       ...template,
       capabilityProfile: { implementer: { implement: [] } },
     };
-    const defs: DefinitionStore = { load: () => Promise.resolve(profiled) };
+    const defs: DefinitionStore = { load: () => Promise.resolve(admit(profiled)) };
     const handle = openStore(":memory:", createControlledClock(0));
     await handle.store.createInstance(baseInstance);
     const kernel = createKernel({

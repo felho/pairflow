@@ -9,6 +9,8 @@
  */
 export { loadTemplate } from "./load.js";
 export type { LoadTemplateOptions } from "./load.js";
+export { admitTemplate } from "./admit.js";
+export type { AdmitResult } from "./admit.js";
 export { createFileDefinitionStore } from "./fileDefinitionStore.js";
 export { TemplateLoadError } from "./errors.js";
 export type {

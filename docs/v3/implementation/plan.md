@@ -294,7 +294,7 @@ Under `v3/src/`, the dependency direction IS the rule:
 |---|---|
 | `domain/` | the type layer targeted by ledger §4 (51 aggregates / 122 entities at the ch11 alignment) + the rejection type (85 → 54 names at the ch11 model fix) |
 | `kernel/` | the **port-parametric kernel**: apply/commit logic and invariants, parameterized over the `ports/` interfaces; imports `domain/` and `ports/` ONLY |
-| `ports/` | injected dependency interfaces: `StorePort`, `ActorAdapter`, `EgressAdapter`, `GateRunner`, `TimeSource` (IC-D / IC-E as types) |
+| `ports/` | injected dependency interfaces: `StorePort`, `ActorAdapter`, `EgressAdapter`, `GateRegistration`/`GateCatalog` (the ch-3 `GateRunner` placeholder reconciled to the ledger shapes — ADR-013/C29; aligned at ch11-p2a pre-approval), `TimeSource` (IC-D / IC-E as types) |
 | `store/` | the SQLite `StorePort` implementation + schema (IC-A1 uniqueness, IC-C commit-boundary timestamps) |
 | `ingress/` | op-envelope validation → kernel; adapter-independent (IC-E) |
 | `emit/` | the emit-lib (`op_id` derivation) — content lands in ch 3 |
@@ -1939,7 +1939,7 @@ definition-issue codes at admission since the model fix) + `not_active`
 driven as a scoped extension + the admission issue-codes driven on the
 definition channel. Invariants: **15**, dispositions already fixed by
 the ch-5 map (8 `test` / 4 `type/schema` / 2 `checker` / 1 `review`);
-the two checkers — `l2/round-is-canonical-reconstructable` (P2) and
+the two checkers — `l2/round-is-canonical-reconstructable` (P2c — aligned at ch11-p2a pre-approval) and
 `l2a/evidence-on-every-run` (P3) — land as storeCheckers extensions
 with named packet owners. Chapter traces:
 **3 golden traces** (the l1, l2, and l2a section traces). The l2b
@@ -1974,20 +1974,26 @@ Draft reference (§1.3 convention): `contracts/ch11-gate-format-contract.md`,
 ratified 2026-07-12.
 Process note: the draft round runs FIRST, before any packet (README
 §4). P1's CONTENT is a pure ledger projection with no format surface;
-P2 anchors to the draft for the module home + the `ports/gate.ts`
-reconciliation; P3 and P4 anchor to ratified draft rows. P2 is the
-declared sizing split candidate (template §2 step 0; a split is the
-loop's — sizing, not scope).
+P2a anchors to the draft for the module home + the `ports/gate.ts`
+reconciliation (aligned at ch11-p2a pre-approval — the anchor moved
+with the split); P3 and P4 anchor to ratified draft rows. P2 was the
+declared sizing split candidate (template §2 step 0); the split
+EXECUTED at ch11-p2a authoring (autonomous in-chapter split, hard
+stops 1+2 tripped on the bundled row — sizing, not scope; the
+P2a/P2b/P2c rows below are the repartition, coverage union
+preserved).
 
 | Packet | Content | Mode |
 |---|---|---|
 | ch11-P0 | the model-registry sync — the ratified one-off bridge's single instance (`ch11-model-sync-delta.md` @ de33d245): the three mechanical mirrors re-derived from the ratified ledger (453d3be9) + the drift locks re-pinned as two-way exact-set (rejectionNames count sites 85→54); mutation boundary = the evidence file's CLOSED list | pre-approve — HUMAN approve MANDATORY (the bridge demands it; first-of-a-kind: model-sync class; at approve the three named drift lanes are red by EXACTLY the enumerated delta AND the `check_coverage --fold-time` gate by EXACTLY the Lane-4 addendum's 9 items, everything else green); predicted: projection (source: the ratified ledger @ 453d3be9 + the evidence file) |
 | ch11-P1 | the L1 authority slice: `expected_role` on the envelope (warrant), `admit_loaded` consolidation with the live state rung, `capability()`, the three L1 rejections + `not_active` driven, the l1 golden trace, the dev `inject` schema extension + the operator `submit` role flag (aligned at ch11-p1 pre-approval — the mandatory role's transport closure on the shipped write surface) | flag-free approve → autonomous build (measurement; the §5.5 fallbacks stand); predicted: projection (source: l1-pseudocode + ledger §2/§3) |
-| ch11-P2 | the L2 gate core: template gate bindings + static registry + the gate rung + `gate_projection` + the ch-4 provisional `round` aligned to its L2 contract (predicate declared, checker added) + the `gate_decisions` schema bump (fenced) + the two inline evaluators + the three L2 rejections + the l2 golden trace | flag-free approve → autonomous build (measurement; the §5.5 fallbacks stand); predicted: projection (basis: l2-pseudocode + ledger §2/§3/§4 + [module home, `ports/gate.ts` reconciliation] draft: `contracts/ch11-gate-format-contract.md`, ratified 2026-07-12) |
+| ch11-P2a | the gate admission foundation (the P2 row's foundation share; split executed at ch11-p2a authoring): `ports/gate.ts` reconciled to the ledger shapes (placeholder + scripted players retired; the runner half joins at P3), the `src/gates/` module (ADR-013) with the static registry + the two inline evaluator registrations, `admit_definition` realized as the single-authority admission (effective configs, issue accumulation, `AdmittedTemplate` as the definition store's only output, testkit-through-admission), the domain gate values | flag-free approve → autonomous build (measurement; the §5.5 fallbacks stand); predicted: projection (inherited from the P2 row: l2-pseudocode + ledger §2/§3/§4 + [module home, `ports/gate.ts` reconciliation] draft rows) |
+| ch11-P2b | the gate rung activation (the P2 row's activation share): the HANDLE pipeline rung (ordered, first-block-wins; the three L2 rejections behavioral; the C35 registry backstop), `gate_projection` derived, the `gate_decisions` transcript column (THE fenced schema bump) + the C27 read surface, the two evaluators driven end-to-end, the l2 golden trace (round machinery untouched — the rung reads `instance.round` as the ch-4 kernel maintains it) | flag-free approve → autonomous build (inherited); predicted: projection (inherited) |
+| ch11-P2c | the round alignment (the P2 row's alignment share): the `advances_round` predicate declared against transition semantics (the `target === template.start` heuristic assessed at projection), the `round-is-canonical-reconstructable` storeChecker, `gate_projection`'s round consumption pinned; the round-declaration FORMAT surface has no ratified draft row — the draft-routing decision (reopen/extend vs a transitional stance) is an EXPECTED human decision point at its authoring | inherited mode; the expected round-format STOP routes to the human at authoring; predicted: projection (inherited) |
 | ch11-P3 | the L2a contract: `validate_gate_config` as the process registration's admission validator (the ratified model fix), the `ProcessGateRunner` port + the ledger-shaped six-outcome testkit fixture drive, classification (`classify_process_result` / `runner_outcome`), the three L2a rejections, the minimal runtime-context representation, the l2a golden trace | flag-free approve → autonomous build; predicted: projection (basis: draft: `contracts/ch11-gate-format-contract.md`, ratified 2026-07-12) |
 | ch11-P4 | the format extension: YAML gate declarations + process-config keys + the `runtime_context` key + the validator lanes driven + the CLI validate extension + template-fixture updates | flag-free approve → autonomous build; predicted: projection (basis: draft: `contracts/ch11-gate-format-contract.md`, ratified 2026-07-12) |
 
-Order: draft → P0 → P1 → P2 → P3 → P4 (the chapter's draft-first rule sequences P0 after the draft ratification; P0 anchors no draft row). One packet = packet file + code +
+Order: draft → P0 → P1 → P2a → P2b → P2c → P3 → P4 (the chapter's draft-first rule sequences P0 after the draft ratification; P0 anchors no draft row; the P2a/P2b/P2c order is the split's foundation → activation → alignment shape — aligned at ch11-p2a pre-approval). One packet = packet file + code +
 tests in ONE commit.
 
 ### 11.5 Deliverables and DoD

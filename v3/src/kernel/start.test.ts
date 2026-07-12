@@ -7,6 +7,18 @@ import {
   fixtureDefinitionStore,
   fixtureTemplate,
 } from "../testkit/index.js";
+import type { AdmittedTemplate, WorkflowTemplate } from "../domain/index.js";
+import { admitTemplate } from "../definition/index.js";
+import { createGateRegistry } from "../gates/index.js";
+
+const gateCatalog = createGateRegistry();
+function admit(template: WorkflowTemplate): AdmittedTemplate {
+  const result = admitTemplate(template, gateCatalog);
+  if (!result.ok) {
+    throw new Error(`test fixture admission failed: ${JSON.stringify(result.findings)}`);
+  }
+  return result.template;
+}
 import { createKernel } from "./kernel.js";
 import { noopDiagnosticsSink } from "../diag/index.js";
 
@@ -14,7 +26,7 @@ function setup(template = fixtureTemplate()) {
   const handle = openStore(":memory:", createControlledClock(0));
   const kernel = createKernel({
     store: handle.store,
-    definitions: fixtureDefinitionStore(template),
+    definitions: fixtureDefinitionStore(admit(template)),
     time: createControlledClock(0),
     digest: deriveEmitDigest,
     diag: noopDiagnosticsSink,

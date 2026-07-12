@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type {
   EventEnvelope,
   WorkflowInstance,
+  AdmittedTemplate,
   WorkflowTemplate,
 } from "../domain/index.js";
 import { deriveEmitDigest } from "../emit/index.js";
@@ -10,6 +11,17 @@ import { createKernel } from "../kernel/index.js";
 import type { DefinitionStore } from "../ports/definition.js";
 import { openStore } from "../store/index.js";
 import { createControlledClock } from "../testkit/index.js";
+import { admitTemplate } from "../definition/index.js";
+import { createGateRegistry } from "../gates/index.js";
+
+const gateCatalog = createGateRegistry();
+function admit(template: WorkflowTemplate): AdmittedTemplate {
+  const result = admitTemplate(template, gateCatalog);
+  if (!result.ok) {
+    throw new Error(`test fixture admission failed: ${JSON.stringify(result.findings)}`);
+  }
+  return result.template;
+}
 import { createFloor } from "./floor.js";
 import { noopDiagnosticsSink } from "../diag/index.js";
 
@@ -42,7 +54,7 @@ const template: WorkflowTemplate = {
 
 const definitions: DefinitionStore = {
   load: (ref) =>
-    Promise.resolve(ref.id === "local-pair-v0" && ref.version === 1 ? template : null),
+    Promise.resolve(ref.id === "local-pair-v0" && ref.version === 1 ? admit(template) : null),
 };
 
 function env(

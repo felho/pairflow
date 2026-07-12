@@ -1,9 +1,13 @@
 import type {
   ActorId,
+  AdmittedTemplate,
   CapabilityProfile,
   ContextPacket,
   DispatchIntent,
   EventEnvelope,
+  GateBinding,
+  GateDecision,
+  GatePipeline,
   LifecycleStatus,
   RejectionName,
   RoleName,
@@ -12,6 +16,11 @@ import type {
   WorkflowInstance,
   WorkflowTemplate,
 } from "../domain/index.js";
+// ch11-P2a: the registration descriptor lives in ports/ (the injected
+// EXTENSION contract). ADR-007 allows type imports from any source in a
+// non-test drift module; witnessing `l2/GateRegistration` needs this
+// one new `import type` (the file otherwise imports domain/ only).
+import type { GateRegistration } from "../ports/gate.js";
 
 /**
  * The PI-3 domain-registry manifest (packet ch5-P1): every ledger §4
@@ -56,6 +65,11 @@ interface RealizedTypeTable {
   readonly "l1/EventEnvelope": EventEnvelope;
   readonly "l1/ContextPacket": ContextPacket;
   readonly "l1/CapabilityProfile": CapabilityProfile;
+  readonly "l2/GateBinding": GateBinding;
+  readonly "l2/GatePipeline": GatePipeline;
+  readonly "l2/GateRegistration": GateRegistration;
+  readonly "l2/GateDecision": GateDecision;
+  readonly "l2/AdmittedDefinition": AdmittedTemplate;
 }
 
 export type RegistryEntry =
@@ -193,11 +207,11 @@ export const DOMAIN_REGISTRY: Readonly<Record<string, RegistryEntry>> = {
     rejectionNames: ["not_authorized"],
   },
   // ── l2 (10) ─────────────────────────────────────────────────────────
-  "l2/GateBinding": { kind: "pending" },
-  "l2/GatePipeline": { kind: "pending" },
-  "l2/GateRegistration": { kind: "pending" },
-  "l2/GateDecision": { kind: "pending" },
-  "l2/AdmittedDefinition": { kind: "pending" },
+  "l2/GateBinding": { kind: "realized", typeName: "GateBinding" },
+  "l2/GatePipeline": { kind: "realized", typeName: "GatePipeline" },
+  "l2/GateRegistration": { kind: "realized", typeName: "GateRegistration" },
+  "l2/GateDecision": { kind: "realized", typeName: "GateDecision" },
+  "l2/AdmittedDefinition": { kind: "realized", typeName: "AdmittedTemplate" },
   "l2/WorkflowInstance": { kind: "pending" },
   "l2/gate_projection": { kind: "pending" },
   "l2/Rejected(gate_blocked(reason))": {
@@ -353,6 +367,11 @@ export const REALIZED_TYPE_TABLE_KEYS = [
   "l1/EventEnvelope",
   "l1/ContextPacket",
   "l1/CapabilityProfile",
+  "l2/GateBinding",
+  "l2/GatePipeline",
+  "l2/GateRegistration",
+  "l2/GateDecision",
+  "l2/AdmittedDefinition",
 ] as const satisfies readonly (keyof RealizedTypeTable)[];
 
 type TypeTableFullyListed =

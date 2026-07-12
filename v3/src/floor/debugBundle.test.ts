@@ -23,10 +23,22 @@ import {
   fixtureDefinitionStore,
   fixtureTemplate,
 } from "../testkit/index.js";
+import type { AdmittedTemplate, WorkflowTemplate } from "../domain/index.js";
+import { admitTemplate } from "../definition/index.js";
+import { createGateRegistry } from "../gates/index.js";
+
+const gateCatalog = createGateRegistry();
+function admit(template: WorkflowTemplate): AdmittedTemplate {
+  const result = admitTemplate(template, gateCatalog);
+  if (!result.ok) {
+    throw new Error(`test fixture admission failed: ${JSON.stringify(result.findings)}`);
+  }
+  return result.template;
+}
 import type { BundleDiagRow, DebugBundle, RejectedInputsSection } from "./debugBundle.js";
 import { createDebugBundleExporter, redactPayloadsPolicy } from "./debugBundle.js";
 
-const definitions = fixtureDefinitionStore(fixtureTemplate());
+const definitions = fixtureDefinitionStore(admit(fixtureTemplate()));
 
 const instance: WorkflowInstance = {
   instanceId: "inst-1",

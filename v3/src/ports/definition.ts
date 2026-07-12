@@ -1,4 +1,4 @@
-import type { TemplateRef, WorkflowTemplate } from "../domain/index.js";
+import type { AdmittedTemplate, TemplateRef } from "../domain/index.js";
 
 /**
  * The definition store — a SEPARATE port from StorePort (the model:
@@ -7,6 +7,11 @@ import type { TemplateRef, WorkflowTemplate } from "../domain/index.js";
  * Loads exactly the version asked; NO "latest" API — pinned-only by
  * the ch-8 ratification (plan §8.5): latest-resolution is L0f
  * semantics, re-homed to the future L0f chapter.
+ *
+ * The store's ONLY output is the ADMITTED form (A6/C20): every loaded
+ * definition has passed `admit_definition`, so its gate configs are
+ * EFFECTIVE and the raw authored form never travels behind this port.
+ * The brand is the contract's type expression (no runtime re-check).
  *
  * null at START = start-side failure (no state, no invented rejection
  * name); null at HANDLE = integrity error (the ref was pinned at
@@ -18,5 +23,5 @@ import type { TemplateRef, WorkflowTemplate } from "../domain/index.js";
  * propagate it; the mapping to an operator surface is the CLI's.
  */
 export interface DefinitionStore {
-  load(ref: TemplateRef): Promise<WorkflowTemplate | null>;
+  load(ref: TemplateRef): Promise<AdmittedTemplate | null>;
 }

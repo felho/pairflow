@@ -5,12 +5,23 @@ import type {
   CommitTransitionResult,
   StorePort,
 } from "../ports/store.js";
-import type { EventEnvelope, WorkflowInstance, WorkflowTemplate } from "../domain/index.js";
+import type { AdmittedTemplate, EventEnvelope, WorkflowInstance, WorkflowTemplate } from "../domain/index.js";
 import { deriveEmitDigest } from "../emit/index.js";
 import type { DefinitionStore } from "../ports/definition.js";
 import type { DiagnosticsSink } from "../ports/diagnostics.js";
 import { openStore } from "../store/index.js";
 import { createControlledClock, createRecordingDiagnosticsSink } from "../testkit/index.js";
+import { admitTemplate } from "../definition/index.js";
+import { createGateRegistry } from "../gates/index.js";
+
+const gateCatalog = createGateRegistry();
+function admit(template: WorkflowTemplate): AdmittedTemplate {
+  const result = admitTemplate(template, gateCatalog);
+  if (!result.ok) {
+    throw new Error(`test fixture admission failed: ${JSON.stringify(result.findings)}`);
+  }
+  return result.template;
+}
 import { createKernel } from "./kernel.js";
 
 // Packet ch7-P1: the canonical emission matrix + lane-inventory table,
@@ -35,7 +46,7 @@ const template: WorkflowTemplate = {
 
 const definitions: DefinitionStore = {
   load: (ref) =>
-    Promise.resolve(ref.id === "local-pair-v0" && ref.version === 1 ? template : null),
+    Promise.resolve(ref.id === "local-pair-v0" && ref.version === 1 ? admit(template) : null),
 };
 
 const baseInstance: WorkflowInstance = {
@@ -411,7 +422,7 @@ describe("handle internal_failure lanes — emit + rethrow unchanged", () => {
     await handle.store.createInstance(baseInstance);
     const kernel = createKernel({
       store: handle.store,
-      definitions: { load: () => Promise.resolve(corrupted) },
+      definitions: { load: () => Promise.resolve(admit(corrupted)) },
       time: createControlledClock(0),
       digest: deriveEmitDigest,
       diag: rec.sink,
@@ -476,7 +487,7 @@ describe("startInstance internal_failure lanes — {instanceId, error} keyset", 
     };
     const rec = createRecordingDiagnosticsSink();
     const kernel = await kernelWith({
-      definitions: { load: () => Promise.resolve(uncovered) },
+      definitions: { load: () => Promise.resolve(admit(uncovered)) },
       diag: rec,
     });
     await expect(kernel.startInstance(startInput)).rejects.toThrow(/binding coverage/);
@@ -512,7 +523,7 @@ describe("startInstance internal_failure lanes — {instanceId, error} keyset", 
     const handle = openStore(":memory:", createControlledClock(0));
     const kernel = createKernel({
       store: handle.store,
-      definitions: { load: () => Promise.resolve(corrupted) },
+      definitions: { load: () => Promise.resolve(admit(corrupted)) },
       time: createControlledClock(0),
       digest: deriveEmitDigest,
       diag: rec.sink,
@@ -695,7 +706,7 @@ describe("L1 rejection lanes — not_authorized (explicit profile, local wiring)
     const diag = createRecordingDiagnosticsSink();
     const kernel = createKernel({
       store: handle.store,
-      definitions: { load: () => Promise.resolve(profiled) },
+      definitions: { load: () => Promise.resolve(admit(profiled)) },
       time: createControlledClock(0),
       digest: deriveEmitDigest,
       diag: diag.sink,

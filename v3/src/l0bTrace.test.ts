@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { noopDiagnosticsSink } from "./diag/index.js";
-import type { Outcome, Started } from "./domain/index.js";
+import type { AdmittedTemplate, Outcome, Started, WorkflowTemplate } from "./domain/index.js";
 import { deriveEmitDigest } from "./emit/index.js";
 import { createFloor } from "./floor/index.js";
 import { createIngress } from "./ingress/index.js";
@@ -13,6 +13,17 @@ import {
   fixtureTemplate,
   replayTrace,
 } from "./testkit/index.js";
+import { admitTemplate } from "./definition/index.js";
+import { createGateRegistry } from "./gates/index.js";
+
+const gateCatalog = createGateRegistry();
+function admit(template: WorkflowTemplate): AdmittedTemplate {
+  const result = admitTemplate(template, gateCatalog);
+  if (!result.ok) {
+    throw new Error(`test fixture admission failed: ${JSON.stringify(result.findings)}`);
+  }
+  return result.template;
+}
 import type { TraceFixture } from "./testkit/index.js";
 
 /**
@@ -57,7 +68,7 @@ describe("l0b golden trace — the walking skeleton end-to-end (on the harness)"
     const handle = openStore(":memory:", createControlledClock(1_000));
     const kernel = createKernel({
       store: handle.store,
-      definitions: fixtureDefinitionStore(fixtureTemplate()),
+      definitions: fixtureDefinitionStore(admit(fixtureTemplate())),
       time: createControlledClock(1_000),
       digest: deriveEmitDigest,
       diag: noopDiagnosticsSink,

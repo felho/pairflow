@@ -1,6 +1,8 @@
 import { isAlias, isMap, isPair, isScalar, isSeq, LineCounter, parseDocument } from "yaml";
 import type { Document, ParsedNode, YAMLError } from "yaml";
 
+import type { GateCatalog } from "../ports/index.js";
+import { admitTemplate } from "./admit.js";
 import type { PipelineFinding, TemplateLoadResult, ValidationFinding } from "./errors.js";
 import { validateTemplate } from "./validate.js";
 
@@ -18,7 +20,19 @@ import { validateTemplate } from "./validate.js";
  */
 export interface LoadTemplateOptions {
   readonly path?: string;
+  /**
+   * The gate catalog admission resolves `uses` against (ch11-P2a, A1).
+   * OPTIONAL: absent it defaults to the empty catalog — vacuous for
+   * every loadable YAML today (a `gates` key stays the ch8 unknown-key
+   * rejection until P4, A8), so the FILE path is byte-identical. File
+   * callers (the store, the dev validate verb) pass the real catalog.
+   */
+  readonly catalog?: GateCatalog;
 }
+
+/** The empty catalog: every `uses` is unknown. Vacuous over zero
+ * bindings (every gate-free template) — A8's byte-identical default. */
+const EMPTY_CATALOG: GateCatalog = { resolve: () => null };
 
 function fail(stage: "read" | "parse" | "resolve", findings: readonly PipelineFinding[]): TemplateLoadResult;
 function fail(stage: "validate", findings: readonly ValidationFinding[]): TemplateLoadResult;
@@ -218,13 +232,20 @@ export function loadTemplate(bytes: Uint8Array, opts: LoadTemplateOptions = {}):
     return fail("resolve", [{ stage: "resolve", message: errorMessage(error) }]);
   }
 
-  // VALIDATE stage (E2 + the V lanes; cycle-safe per V15).
+  // VALIDATE stage (E2 + the V lanes; cycle-safe per V15), then the
+  // ADMISSION rung (ch11-P2a, A1): the SECOND rung behind structure,
+  // on the SAME channel/stage — gate semantics validate + normalize
+  // here, all-or-nothing. Vacuous over a gate-free template (A8).
   try {
     const outcome = validateTemplate(value, doc, text);
     if (outcome.findings.length > 0 || outcome.template === undefined) {
       return fail("validate", outcome.findings);
     }
-    return { ok: true, template: outcome.template };
+    const admitted = admitTemplate(outcome.template, opts.catalog ?? EMPTY_CATALOG);
+    if (!admitted.ok) {
+      return fail("validate", admitted.findings);
+    }
+    return { ok: true, template: admitted.template };
   } catch (error) {
     // The C22 every-stage belt: no known input reaches this (V15's
     // cycle rule is a FINDING, not a throw), but the stage still maps.

@@ -65,6 +65,38 @@ const cliWriteBoundarySelectors = [
   },
 ];
 
+// ch11-P2a A6 — the AdmittedTemplate producer MONOPOLY (owner guard):
+// the `as AdmittedTemplate` assertion is the only route to the brand,
+// so it is BANNED everywhere except `definition/admit.ts`, its one
+// sanctioned producer. The threat model is agent drift; a static lint IS
+// the right layer (a deliberate runtime bypass stays a contract
+// violation). Spread into every no-restricted-syntax scope below (flat
+// config REPLACES a rule id's config per matching file), with an
+// admit.ts exemption entry last.
+const admittedBrandGuardSelectors = [
+  {
+    selector: "TSAsExpression[typeAnnotation.typeName.name='AdmittedTemplate']",
+    message:
+      "ch11-P2a A6: `as AdmittedTemplate` is banned outside definition/admit.ts — admitTemplate is the ONLY sanctioned producer of the brand.",
+  },
+];
+
+// ch11-P2a G1 — the gates/ import boundary (both directions). gates/
+// imports domain/ + ports/ (+ relative siblings) at most; every OTHER
+// production module EXCEPT the CLI composition roots is banned from
+// importing gates/.
+const gatesBanImportPattern = {
+  group: ["**/gates/**"],
+  allowTypeImports: true,
+  message:
+    "ch11-P2a G1: gates/ is imported ONLY by the CLI composition roots — the catalog arrives injected through the DefinitionStore. No other module value-imports gates/ (type imports are compile-time only, allowed).",
+};
+const dynamicGatesBanSelector = {
+  selector: "ImportExpression[source.value=/\\u002Fgates\\u002F/]",
+  message:
+    "ch11-P2a G1: gates/ is imported ONLY by the CLI composition roots — dynamic import() included.",
+};
+
 export default tseslint.config(
   {
     ignores: ["node_modules/**", "eslint.config.mjs", "vitest.config.ts"],
@@ -110,7 +142,7 @@ export default tseslint.config(
         { object: "Math", property: "random", message: noRandomMessage },
         { object: "crypto", property: "randomUUID", message: noRandomMessage },
       ],
-      "no-restricted-syntax": ["error", ...testClockSyntaxSelectors],
+      "no-restricted-syntax": ["error", ...testClockSyntaxSelectors, ...admittedBrandGuardSelectors],
     },
   },
 
@@ -131,7 +163,7 @@ export default tseslint.config(
         { object: "Date", property: "now", message: noClockMessage },
         { object: "performance", property: "now", message: noClockMessage },
       ],
-      "no-restricted-syntax": ["error", ...noClockSyntaxSelectors],
+      "no-restricted-syntax": ["error", ...noClockSyntaxSelectors, ...admittedBrandGuardSelectors],
     },
   },
 
@@ -198,6 +230,7 @@ export default tseslint.config(
               message:
                 "ch7-P3 floor→diag boundary: floor/ never value-imports diag/ — match DiagUnavailableError by error.name; readers arrive injected (composition roots wire them).",
             },
+            gatesBanImportPattern,
           ],
         },
       ],
@@ -219,6 +252,8 @@ export default tseslint.config(
         // Merged (ch8-opening sweep): floor claims the rule id here, so the
         // production-wide dynamic testkit/drift ban rides in the same entry.
         ...dynamicTestkitDriftSelectors,
+        dynamicGatesBanSelector,
+        ...admittedBrandGuardSelectors,
       ],
     },
   },
@@ -254,6 +289,7 @@ export default tseslint.config(
           message:
             "ADR-007: non-test drift modules are static bookkeeping — dynamic import() is always a value import; none is legal here.",
         },
+        ...admittedBrandGuardSelectors,
       ],
     },
   },
@@ -275,6 +311,14 @@ export default tseslint.config(
           ],
         },
       ],
+      // ch11-P2a G1: the testkit's imports stop at ports/domain/emit — it
+      // never value-imports gates/. Distinct rule id from the base
+      // kernel/store ban above (they coexist); allowTypeImports keeps the
+      // type-only route green.
+      "@typescript-eslint/no-restricted-imports": [
+        "error",
+        { patterns: [gatesBanImportPattern] },
+      ],
       // Merged (ch8-opening sweep): this entry claims the rule id for
       // src/testkit/**, so the CHK-D-TESTCLOCK selector is repeated here
       // alongside the dynamic form of the kernel/store ban.
@@ -291,6 +335,8 @@ export default tseslint.config(
           message:
             "ADR-005: testkit never imports kernel/ or store/ — dynamic import() included.",
         },
+        dynamicGatesBanSelector,
+        ...admittedBrandGuardSelectors,
       ],
     },
   },
@@ -303,7 +349,7 @@ export default tseslint.config(
     files: ["src/cli/**"],
     ignores: ["src/**/*.test.ts"],
     rules: {
-      "no-restricted-syntax": ["error", ...cliWriteBoundarySelectors],
+      "no-restricted-syntax": ["error", ...cliWriteBoundarySelectors, ...admittedBrandGuardSelectors],
     },
   },
 
@@ -322,21 +368,48 @@ export default tseslint.config(
     files: ["src/ports/**", "src/store/**", "src/ingress/**", "src/emit/**", "src/diag/**", "src/definition/**"],
     ignores: ["src/**/*.test.ts"],
     rules: {
-      "no-restricted-syntax": ["error", ...dynamicTestkitDriftSelectors],
+      "no-restricted-syntax": [
+        "error",
+        ...dynamicTestkitDriftSelectors,
+        dynamicGatesBanSelector,
+        ...admittedBrandGuardSelectors,
+      ],
+      // ch11-P2a G1: the static rest→gates ban for these scopes (TS rule
+      // id — coexists with the base testkit/drift ban above);
+      // allowTypeImports keeps type-only imports green.
+      "@typescript-eslint/no-restricted-imports": [
+        "error",
+        { patterns: [gatesBanImportPattern] },
+      ],
     },
   },
   {
     files: ["src/domain/**"],
     ignores: ["src/**/*.test.ts"],
     rules: {
-      "no-restricted-syntax": ["error", ...noClockSyntaxSelectors, ...dynamicTestkitDriftSelectors],
+      "no-restricted-syntax": [
+        "error",
+        ...noClockSyntaxSelectors,
+        ...dynamicTestkitDriftSelectors,
+        dynamicGatesBanSelector,
+        ...admittedBrandGuardSelectors,
+      ],
+      "@typescript-eslint/no-restricted-imports": [
+        "error",
+        { patterns: [gatesBanImportPattern] },
+      ],
     },
   },
   {
     files: ["src/cli/**"],
     ignores: ["src/**/*.test.ts", "src/cli/dev/**"],
     rules: {
-      "no-restricted-syntax": ["error", ...cliWriteBoundarySelectors, ...dynamicTestkitDriftSelectors],
+      "no-restricted-syntax": [
+        "error",
+        ...cliWriteBoundarySelectors,
+        ...dynamicTestkitDriftSelectors,
+        ...admittedBrandGuardSelectors,
+      ],
     },
   },
 
@@ -379,7 +452,53 @@ export default tseslint.config(
           message:
             "ADR-001: the port-parametric kernel imports domain/ and ports/ ONLY — dynamic import() included; everything else arrives through ports.",
         },
+        ...admittedBrandGuardSelectors,
       ],
+    },
+  },
+
+  // ch11-P2a G1: the gates/ module home — imports domain/ + ports/ (+
+  // relative siblings) at most. ALLOWLIST like the kernel; allowTypeImports
+  // keeps the type-only route green. The dynamic form bans any non-allowed
+  // import() source.
+  {
+    files: ["src/gates/**"],
+    ignores: ["src/**/*.test.ts"],
+    rules: {
+      "@typescript-eslint/no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              regex: "^(?!\\./|\\.\\./domain/|\\.\\./ports/).*",
+              allowTypeImports: true,
+              message:
+                "ch11-P2a G1: gates/ value-imports domain/ + ports/ ONLY (type-only imports of anything are green).",
+            },
+          ],
+        },
+      ],
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector:
+            "ImportExpression[source.value=/^(?!\\.\\u002F|\\.\\.\\u002Fdomain\\u002F|\\.\\.\\u002Fports\\u002F)/]",
+          message:
+            "ch11-P2a G1: gates/ imports domain/ + ports/ ONLY — dynamic import() included.",
+        },
+        ...admittedBrandGuardSelectors,
+      ],
+    },
+  },
+
+  // ch11-P2a A6: the AdmittedTemplate producer monopoly's ONE exemption —
+  // definition/admit.ts is the sanctioned `as AdmittedTemplate` site. This
+  // last entry re-sets its no-restricted-syntax to the definition-scope
+  // base WITHOUT the owner guard (flat config replaces per rule id).
+  {
+    files: ["src/definition/admit.ts"],
+    rules: {
+      "no-restricted-syntax": ["error", ...dynamicTestkitDriftSelectors, dynamicGatesBanSelector],
     },
   },
 );

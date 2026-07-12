@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { noopDiagnosticsSink } from "./diag/index.js";
-import type { Outcome } from "./domain/index.js";
+import type { AdmittedTemplate, Outcome, WorkflowTemplate } from "./domain/index.js";
 import { deriveActorEmitOpId, deriveEmitDigest } from "./emit/index.js";
 import { createIngress } from "./ingress/index.js";
 import { createKernel } from "./kernel/index.js";
@@ -12,6 +12,17 @@ import {
   fixtureDefinitionStore,
   fixtureTemplate,
 } from "./testkit/index.js";
+import { admitTemplate } from "./definition/index.js";
+import { createGateRegistry } from "./gates/index.js";
+
+const gateCatalog = createGateRegistry();
+function admit(template: WorkflowTemplate): AdmittedTemplate {
+  const result = admitTemplate(template, gateCatalog);
+  if (!result.ok) {
+    throw new Error(`test fixture admission failed: ${JSON.stringify(result.findings)}`);
+  }
+  return result.template;
+}
 
 /**
  * CT-A3-RETRANS + CT-A3-EMITLIB-REFRESH (packet ch5-P5): the emit-lib's
@@ -26,7 +37,7 @@ function wire() {
   const handle = openStore(":memory:", createControlledClock(1_000));
   const kernel = createKernel({
     store: handle.store,
-    definitions: fixtureDefinitionStore(fixtureTemplate()),
+    definitions: fixtureDefinitionStore(admit(fixtureTemplate())),
     time: createControlledClock(1_000),
     digest: deriveEmitDigest,
     diag: noopDiagnosticsSink,
