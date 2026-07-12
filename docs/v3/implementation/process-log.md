@@ -2044,3 +2044,24 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   addendum + a five-site authority alignment (README §5.5 / plan P0 row /
   packet Flag 1 + S6 + Sizing); the dual act (addendum ratification + P0
   approve) landed on the fresh receipt set at 30fe3479.
+
+- 2026-07-12 · ch11-P1 (build + gates): (1) the discovered
+  classification drifted in TWO steps — the internal panel's round-1
+  fresh finder caught the missed WRITE SURFACE (the operator `submit`
+  envelope builder), then arm gate 1 caught the missed DECISION on it
+  (the O1 required-at-parse form: derived → new-decision, demoting
+  the flag-free autonomous approve to STOP 4). A finder attacks the
+  inventory, an adversarial arm attacks the entailments — the
+  prediction convention should expect classification drift from both
+  directions. (2) The "fix scoped to the finding just caught" class
+  recurred TWICE inside one packet: the R4 equality fold was applied
+  to the named lanes only (arm gate 2's re-check found the flipped
+  DONE lane still outcome-only), and the ch8-P1 own-property lesson
+  never crossed from the definition layer to the kernel-side record
+  lookups (`capability()` — arm gate 2's `__proto__` probe).
+  Candidate boundary-review question: should a deepened-rule fold
+  REQUIRE a named re-derivation sweep over the rule's full member
+  list as a checklist step, not an intention? (3) The consume-family
+  scan misread a HAND-PROJECTION (the debug bundle's envelope meta)
+  as pass-through — a scan row naming a projection surface should
+  cite the projection's field list, not its module family.
