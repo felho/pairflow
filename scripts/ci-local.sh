@@ -232,7 +232,7 @@ run_step() {
       exit "$exit_code"
     fi
   else
-    if "$@" >"$log_file" 2>&1; then
+    if "$@" </dev/null >"$log_file" 2>&1; then
       :
     else
       local exit_code=$?
@@ -281,7 +281,7 @@ run_quality_child() {
     "$@" 2>&1 | tee -a "$log_file"
     command_exit_code=${PIPESTATUS[0]}
   else
-    "$@" >>"$log_file" 2>&1
+    "$@" </dev/null >>"$log_file" 2>&1
     command_exit_code=$?
   fi
   set -e

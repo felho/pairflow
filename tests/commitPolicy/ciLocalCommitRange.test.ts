@@ -27,6 +27,7 @@ function outputFrom(error: unknown, stream: "stdout" | "stderr"): string {
 async function createCiFixture(): Promise<{ fixtureDir: string; commandLog: string }> {
   const fixtureDir = await mkdtemp(join(tmpdir(), "pairflow-ci-local-"));
   const binDir = join(fixtureDir, "bin");
+  const bashEnv = join(fixtureDir, "bash-env");
   const commandLog = join(fixtureDir, "commands.log");
   await mkdir(join(fixtureDir, "scripts"), { recursive: true });
   await mkdir(binDir, { recursive: true });
@@ -46,6 +47,13 @@ async function createCiFixture(): Promise<{ fixtureDir: string; commandLog: stri
       "  exit 42",
       "fi",
       `echo "$*" >> "${commandLog}"`,
+      "if [[ \"${PAIRFLOW_TEST_REQUIRE_STDIN_EOF:-0}\" == \"1\" ]] && [[ \"$*\" == \"install --frozen-lockfile\" ]]; then",
+      "  if IFS= read -r unexpected_input; then",
+      `    echo "unexpected-stdin:$unexpected_input" >> "${commandLog}"`,
+      "    exit 41",
+      "  fi",
+      `  echo "stdin:eof" >> "${commandLog}"`,
+      "fi",
       "if [[ \"${PAIRFLOW_TEST_FAIL_PNPM_ARGS:-}\" == \"$*\" ]]; then",
       "  exit 37",
       "fi",
@@ -55,6 +63,17 @@ async function createCiFixture(): Promise<{ fixtureDir: string; commandLog: stri
     "utf8"
   );
   await chmod(join(binDir, "pnpm"), 0o755);
+  await writeFile(
+    bashEnv,
+    [
+      "pnpm() {",
+      `  "${join(binDir, "pnpm")}" "$@"`,
+      "}",
+      "export -f pnpm",
+      ""
+    ].join("\n"),
+    "utf8"
+  );
   return { fixtureDir, commandLog };
 }
 
@@ -67,11 +86,38 @@ async function runCiFixture(
     cwd: fixtureDir,
     env: {
       ...process.env,
+      BASH_ENV: join(fixtureDir, "bash-env"),
       PATH: fixturePath,
       PAIRFLOW_CI_ALLOW_CODEX: "1",
       ...env
     }
   });
+}
+
+async function runCiFixtureWithInput(
+  fixtureDir: string,
+  input: string,
+  env: Record<string, string> = {}
+): Promise<{ stdout: string; stderr: string }> {
+  const fixturePath = `${join(fixtureDir, "bin")}${delimiter}${process.env.PATH ?? ""}`;
+  return execFileAsync(
+    "bash",
+    [
+      "-c",
+      `printf '%s\\n' "$PAIRFLOW_TEST_INPUT" | bash scripts/ci-local.sh`
+    ],
+    {
+      cwd: fixtureDir,
+      env: {
+        ...process.env,
+        BASH_ENV: join(fixtureDir, "bash-env"),
+        PATH: fixturePath,
+        PAIRFLOW_CI_ALLOW_CODEX: "1",
+        PAIRFLOW_TEST_INPUT: input,
+        ...env
+      }
+    }
+  );
 }
 
 describe("ci-local commit range integration", () => {
@@ -185,6 +231,18 @@ describe("ci-local commit range integration", () => {
     expect(commands.indexOf("--dir ui install --frozen-lockfile")).toBeLessThan(
       commands.indexOf("--dir ui build")
     );
+  });
+
+  it("disconnects stdin from hidden commands in compact mode", async () => {
+    const { fixtureDir, commandLog } = await createCiFixture();
+
+    await runCiFixtureWithInput(fixtureDir, "hidden-confirmation", {
+      PAIRFLOW_TEST_REQUIRE_STDIN_EOF: "1"
+    });
+
+    const commands = await readFile(commandLog, "utf8");
+    expect(commands).toContain("stdin:eof");
+    expect(commands).not.toContain("unexpected-stdin:hidden-confirmation");
   });
 
   it("waits for every parallel validation branch before reporting failure", async () => {
