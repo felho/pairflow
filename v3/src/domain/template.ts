@@ -73,6 +73,19 @@ export interface WorkflowTemplate {
    * validates and expands it but NEVER mutates it (A4).
    */
   readonly round?: { readonly advanceOnArrivalAt: readonly StepId[] };
+  /**
+   * D1 (packet ch11-P3a): the C18 runtime-context declaration at the DOMAIN
+   * grain — the sole legal value is the string literal `"required"` (the
+   * literal type forecloses every other value on the direct channel; the
+   * file-channel illegal-value lane lands at P4 with the YAML key). ABSENT =
+   * a context-free workflow. A template declaring any process gate (a
+   * `requiresRuntimeContext` registration) without this field FAILS admission
+   * (the C19 cross-rule, V5). `admitTemplate` carries the field through
+   * unchanged (the template-root spread). Named exclusions with homes: the
+   * instance-side field, start-input seam, and store column — P3b; the YAML
+   * authoring key + source-form lanes — P4.
+   */
+  readonly runtimeContext?: "required";
 }
 
 /**

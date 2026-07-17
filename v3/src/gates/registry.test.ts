@@ -2,20 +2,22 @@ import { describe, expect, it } from "vitest";
 
 import type { InlineGateRegistration, ProcessGateRegistration } from "../ports/index.js";
 import { previousReviewerVerdictRegistration } from "./previousReviewerVerdict.js";
+import { processRegistration } from "./process.js";
 import { createGateRegistry } from "./registry.js";
 import { thresholdRegistration } from "./threshold.js";
 
 /**
- * `createGateRegistry` (packet ch11-P2a, G2): the exact CURRENT member
- * set (both directions), resolution returning the registered descriptor,
- * unknown ids resolving null, and each member's G7 descriptor fields.
- * Plus the R1/R2 compile-negative type probes (isolation discipline: each
- * probe object is otherwise well-typed so its ONLY error is the target
- * field — an incomplete probe would satisfy `@ts-expect-error` through an
- * unrelated error, silently defeating the widening guard).
+ * `createGateRegistry` (packet ch11-P2a G2, ch11-P3a G1): the exact
+ * chapter-end THREE-member set (both directions), resolution returning the
+ * registered descriptor, unknown ids resolving null, and each member's G7
+ * descriptor fields. Plus the R1/R2/G2 compile-negative type probes
+ * (isolation discipline: each probe object is otherwise well-typed so its
+ * ONLY error is the target field — an incomplete probe would satisfy
+ * `@ts-expect-error` through an unrelated error, silently defeating the
+ * widening guard).
  */
 
-describe("createGateRegistry — the static Block A composition (G2)", () => {
+describe("createGateRegistry — the static Block A composition (G1/G2)", () => {
   const catalog = createGateRegistry();
 
   it("resolves declarative.threshold to its registration", () => {
@@ -28,17 +30,35 @@ describe("createGateRegistry — the static Block A composition (G2)", () => {
     );
   });
 
-  it("contains NOTHING else: every other id resolves null — including P3's staged external.process", () => {
-    for (const id of ["external.process", "declarative.Threshold", "pairflow.x", "", "nope"]) {
+  it("resolves external.process to its registration (ch11-P3a G1 — the null-probe FLIPS)", () => {
+    expect(catalog.resolve("external.process")).toBe(processRegistration);
+  });
+
+  it("G1 exact-set (two-way): EXACTLY the three members resolve; every other id resolves null", () => {
+    const members = ["declarative.threshold", "pairflow.previous_reviewer_verdict", "external.process"];
+    for (const id of members) {
+      expect(catalog.resolve(id), `resolve('${id}') must resolve`).not.toBeNull();
+    }
+    for (const id of ["external.Process", "declarative.Threshold", "pairflow.x", "process", "", "nope"]) {
       expect(catalog.resolve(id), `resolve('${id}') must be null`).toBeNull();
     }
   });
 
-  it("G7: each member is a context-free inline registration with its implementation axis", () => {
-    const threshold = catalog.resolve("declarative.threshold");
-    const packaged = catalog.resolve("pairflow.previous_reviewer_verdict");
-    expect(threshold).toMatchObject({ implementation: "declarative", execution: "inline", requiresRuntimeContext: false });
-    expect(packaged).toMatchObject({ implementation: "packaged", execution: "inline", requiresRuntimeContext: false });
+  it("G7: each member carries its implementation axis + context flag (threshold/packaged inline, process)", () => {
+    expect(catalog.resolve("declarative.threshold")).toMatchObject({ implementation: "declarative", execution: "inline", requiresRuntimeContext: false });
+    expect(catalog.resolve("pairflow.previous_reviewer_verdict")).toMatchObject({ implementation: "packaged", execution: "inline", requiresRuntimeContext: false });
+    expect(catalog.resolve("external.process")).toMatchObject({ implementation: "process", execution: "inline", requiresRuntimeContext: true });
+  });
+
+  it("G2: external.process is the sole implementation=process member; all three are execution=inline", () => {
+    const members = ["declarative.threshold", "pairflow.previous_reviewer_verdict", "external.process"].map(
+      (id) => catalog.resolve(id),
+    );
+    expect(members.filter((m) => m?.implementation === "process")).toHaveLength(1);
+    expect(members.every((m) => m?.execution === "inline")).toBe(true);
+    // The process arm carries NO evaluate (foreclosed by the union — the G2
+    // shipped-registration compile probe below proves it statically).
+    expect(catalog.resolve("external.process")).not.toHaveProperty("evaluate");
   });
 
   it("composition, not mutation: the catalog exposes no registration/mutation API (note 5)", () => {
@@ -76,3 +96,8 @@ export const __probeInlineMissingEvaluate: InlineGateRegistration = {
   requiresRuntimeContext: false,
   validateAndNormalizeConfig: () => ({ ok: true, effective: {} }),
 };
+
+// ── G2 (ch11-P3a): the standing process-arm probe extended to the SHIPPED
+// registration — the process registration exposes NO evaluate property. ──
+// @ts-expect-error G2: `evaluate` does not exist on the shipped process registration.
+export const __probeShippedProcessNoEvaluate: unknown = processRegistration.evaluate;

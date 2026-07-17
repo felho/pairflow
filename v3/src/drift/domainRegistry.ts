@@ -21,7 +21,7 @@ import type {
 // EXTENSION contract). ADR-007 allows type imports from any source in a
 // non-test drift module; witnessing `l2/GateRegistration` needs this
 // one new `import type` (the file otherwise imports domain/ only).
-import type { GateRegistration } from "../ports/gate.js";
+import type { GateRegistration, ProcessGateRunner, ProcessResult } from "../ports/gate.js";
 
 /**
  * The PI-3 domain-registry manifest (packet ch5-P1): every ledger §4
@@ -73,6 +73,9 @@ interface RealizedTypeTable {
   readonly "l2/AdmittedDefinition": AdmittedTemplate;
   readonly "l2/WorkflowInstance": WorkflowInstance;
   readonly "l2/gate_projection": GateProjection;
+  // ch11-P3a T2: the l2a port shapes — the runner and its result value.
+  readonly "l2a/ProcessGateRunner": ProcessGateRunner;
+  readonly "l2a/ProcessResult": ProcessResult;
 }
 
 export type RegistryEntry =
@@ -235,9 +238,11 @@ export const DOMAIN_REGISTRY: Readonly<Record<string, RegistryEntry>> = {
     rejectionNames: ["gate_execution_not_supported"],
   },
   // ── l2a (3) ────────────────────────────────────────────────────────
-  "l2a/ProcessGateRunner": { kind: "pending" },
+  // ch11-P3a T2: the port shapes flip with type witnesses; GateInvocation
+  // (the wire value) STAYS pending — P3b's.
+  "l2a/ProcessGateRunner": { kind: "realized", typeName: "ProcessGateRunner" },
   "l2a/GateInvocation": { kind: "pending" },
-  "l2a/ProcessResult": { kind: "pending" },
+  "l2a/ProcessResult": { kind: "realized", typeName: "ProcessResult" },
   // ── l2b (3) ────────────────────────────────────────────────────────
   "l2b/context_blocks catalog": { kind: "pending" },
   "l2b/ContextBlockRef": { kind: "pending" },
@@ -379,6 +384,8 @@ export const REALIZED_TYPE_TABLE_KEYS = [
   "l2/AdmittedDefinition",
   "l2/WorkflowInstance",
   "l2/gate_projection",
+  "l2a/ProcessGateRunner",
+  "l2a/ProcessResult",
 ] as const satisfies readonly (keyof RealizedTypeTable)[];
 
 type TypeTableFullyListed =

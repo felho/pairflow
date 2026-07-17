@@ -485,3 +485,146 @@ describe("admitTemplate — input purity (dimension 4, A4)", () => {
     expect(input.round).toEqual(before);
   });
 });
+
+// ── packet ch11-P3a: the external.process registration reached THROUGH
+// admission — the V4/A9 code propagation, the C19 cross-rule (V5, lane s)
+// in every direction, and the count member at its distinguishing arity. ──
+
+/** A valid exitCode-mode process config. */
+const validProcessConfig = {
+  command: "gate.sh",
+  timeoutMs: 1000,
+  output: { mode: "exitCode" },
+  onExit: { zero: "allow", nonzero: "block" },
+};
+/** The same config with `command` omitted → lane d (invalid_process_gate_config). */
+const processConfigNoCommand = {
+  timeoutMs: 1000,
+  output: { mode: "exitCode" },
+  onExit: { zero: "allow", nonzero: "block" },
+};
+
+/** `template()` + optional `runtimeContext` (hostile shapes bypass the type). */
+function withRuntimeContext(
+  runtimeContext: unknown,
+  reviewGates?: unknown,
+): WorkflowTemplate {
+  const base = template(reviewGates);
+  return (runtimeContext === undefined
+    ? base
+    : ({ ...base, runtimeContext } as unknown as WorkflowTemplate));
+}
+
+describe("admitTemplate — external.process code propagation (V4/A9) at the admission grain", () => {
+  it("a coded config lane propagates its code to the C7-prefixed ValidationFinding path", () => {
+    // command missing → lane d (invalid_process_gate_config). runtimeContext
+    // declared so the C19 cross-rule stays silent — the config lane is isolated.
+    const result = admitTemplate(
+      withRuntimeContext("required", { PASS: [{ uses: "external.process", config: processConfigNoCommand }] }),
+      catalog,
+    );
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0]).toMatchObject({
+      path: "steps.review.gates.PASS[0].config.command",
+      code: "invalid_process_gate_config",
+    });
+  });
+
+  it("an UNCODED config lane stays code-free through admission (own-property parity)", () => {
+    const result = admitTemplate(
+      withRuntimeContext("required", { PASS: [{ uses: "external.process", config: { ...validProcessConfig, bogus: 1 } }] }),
+      catalog,
+    );
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0]?.path).toBe("steps.review.gates.PASS[0].config.bogus");
+    expect(result.findings[0]).not.toHaveProperty("code");
+  });
+
+  it("a valid process gate WITH runtimeContext: required ADMITS, effective config materialized", () => {
+    const result = admitTemplate(
+      withRuntimeContext("required", { PASS: [{ uses: "external.process", config: validProcessConfig }] }),
+      catalog,
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.template.runtimeContext).toBe("required");
+    expect(result.template.steps["review"]?.gates?.["PASS"]?.[0]?.config).toEqual({
+      command: "gate.sh",
+      timeoutMs: 1000,
+      output: { mode: "exitCode" },
+      onExit: { zero: "allow", nonzero: "block" },
+      onRunnerError: "blockTransition",
+      onTimeout: "blockTransition",
+      reason: { zero: "exit_zero", nonzero: "exit_nonzero" },
+    });
+  });
+});
+
+describe("admitTemplate — the C19 cross-rule (V5, lane s), both directions", () => {
+  it("a process gate WITHOUT runtimeContext → EXACTLY ONE finding at the top-level runtimeContext path", () => {
+    const findings = admitFail({ PASS: [{ uses: "external.process", config: validProcessConfig }] });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.path).toBe("runtimeContext");
+    expect(findings[0]?.code).toBe("runtime_context_required_for_process_gate");
+  });
+
+  it("the count member: N ≥ 2 offending process gates → EXACTLY ONE finding (the collapse)", () => {
+    const findings = admitFail({
+      PASS: [
+        { uses: "external.process", config: validProcessConfig },
+        { uses: "external.process", config: validProcessConfig },
+      ],
+      CONVERGED: [{ uses: "external.process", config: validProcessConfig }],
+    });
+    const crossRule = findings.filter(
+      (f) => f.code === "runtime_context_required_for_process_gate",
+    );
+    expect(crossRule).toHaveLength(1);
+    expect(crossRule[0]?.path).toBe("runtimeContext");
+  });
+
+  it("negative direction: a declaring template (runtimeContext: required) with a process gate ADMITS", () => {
+    const result = admitTemplate(
+      withRuntimeContext("required", { PASS: [{ uses: "external.process", config: validProcessConfig }] }),
+      catalog,
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  it("negative direction: a process-gate-FREE template admits WITHOUT the declaration", () => {
+    const result = admitTemplate(
+      template({ PASS: [{ uses: "declarative.threshold", config: { metric: "round", op: ">=", value: 1 } }] }),
+      catalog,
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  it("negative direction: a process-gate-FREE template admits WITH the declaration present (C19 iff)", () => {
+    const result = admitTemplate(withRuntimeContext("required"), catalog);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.template.runtimeContext).toBe("required");
+  });
+
+  it("accumulation: an invalid process config AND a missing runtimeContext report BOTH", () => {
+    const findings = admitFail({ PASS: [{ uses: "external.process", config: processConfigNoCommand }] });
+    const codes = findings.map((f) => f.code).sort();
+    expect(codes).toEqual(["invalid_process_gate_config", "runtime_context_required_for_process_gate"]);
+  });
+
+  it("the cross-rule fires even when the offending gate's config is invalid (the gate IS declared)", () => {
+    const findings = admitFail({ PASS: [{ uses: "external.process", config: { command: "" } }] });
+    expect(
+      findings.some((f) => f.code === "runtime_context_required_for_process_gate" && f.path === "runtimeContext"),
+    ).toBe(true);
+  });
+});
+
+// ── D1 compile-negative probe: runtimeContext's sole legal value is the
+// string literal "required" (validated by v3:typecheck via TS2578). ──
+// @ts-expect-error D1: runtimeContext is the "required" literal — no other value is representable.
+export const __probeRuntimeContextLiteral: WorkflowTemplate["runtimeContext"] = "optional";

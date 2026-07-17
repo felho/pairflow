@@ -15,10 +15,17 @@ import type { GateDecision, GateProjection } from "../domain/index.js";
  * dotted key otherwise); admission PREFIXES it with the binding's C7
  * address (`steps.<stepId>.gates.<eventType>[<i>].config…`). The
  * message is unconstrained diagnostic text.
+ *
+ * `code` (packet ch11-P3a, V4/A9) is the named-lane carrier: present on
+ * exactly the registration's CODED lanes (`external.process`'s d/e/h/i/k/l
+ * → `invalid_process_gate_config`, o → `gate_config_not_supported`),
+ * ABSENT on every uncoded lane. Admission propagates it verbatim into the
+ * `ValidationFinding` code field.
  */
 export interface GateConfigFinding {
   readonly path: string;
   readonly message: string;
+  readonly code?: string;
 }
 
 /**
@@ -77,3 +84,78 @@ export type GateRegistration = InlineGateRegistration | ProcessGateRegistration;
 export interface GateCatalog {
   resolve(uses: string): GateRegistration | null;
 }
+
+/**
+ * ch11-P3a R2: `ProcessResult` — the runner's per-invocation outcome
+ * (C34's verbatim field list at the TS grain). `exitCode` (an integer)
+ * and `stdout` (the UTF-8-decoded text) are present IFF kind=`"ok"` —
+ * expressed by the discriminated union (both iff directions are
+ * type-level). `logRef` is a nonempty string addressing the durably
+ * persisted evidence record; `durationMs` a non-negative integer. `kind`
+ * records PROCESS EXECUTION independent of decision classification (a
+ * malformed-JSON run is still kind=`"ok"`). `stdout` is process-returned
+ * text — classified untrusted-confined (never re-parsed or interpreted at
+ * this packet; C25's consumption is P3b's).
+ */
+export type ProcessResult =
+  | {
+      readonly kind: "ok";
+      readonly exitCode: number;
+      readonly stdout: string;
+      readonly logRef: string;
+      readonly durationMs: number;
+    }
+  | { readonly kind: "timeout"; readonly logRef: string; readonly durationMs: number }
+  | { readonly kind: "runner_error"; readonly logRef: string; readonly durationMs: number };
+
+/**
+ * ch11-P3a R1: the `ProcessGateRunner` port — the executor that spawns an
+ * external gate process. The kernel owns the CONTRACT; the runner owns the
+ * spawn (ch9's realization; this packet declares the port and scripts it in
+ * the kit). `command` is C13's one POSIX shell line; `cwd` is the workspace
+ * root; `stdin` carries the invocation document (no argv payload); `timeoutMs`
+ * is the C13/C16/C18 rename culture over the model's `timeout_ms`. `run()`
+ * resolves only after its evidence record is durably persisted (R3).
+ */
+export interface ProcessGateRunner {
+  run(
+    command: string,
+    options: { readonly cwd: string; readonly stdin: string; readonly timeoutMs: number },
+  ): Promise<ProcessResult>;
+}
+
+/**
+ * ch11-P3a R3: the evidence record (C26's complete field list, realized IN
+ * FULL — only the measurement is ch9's). Addressed by the `ProcessResult`'s
+ * `logRef` (the ref addresses the WHOLE record); the record itself carries no
+ * back-ref. `exitCode` is present IFF kind=`"ok"` (the discriminated union).
+ * `durationMs` a non-negative integer; `headSha`/`gitStatusHash` are the
+ * runner's DECLARED workspace facts (the kit mints deterministic fakes; ch9
+ * measures them). `log` is captured output text — untrusted-confined, retained
+ * verbatim, never re-parsed nor policy/path input. PERSISTENCE GUARANTEE:
+ * `run()` has durably persisted this record BEFORE returning; timeout and
+ * runner_error runs are evidenced equally.
+ */
+export type ProcessGateEvidence =
+  | {
+      readonly log: string;
+      readonly kind: "ok";
+      readonly exitCode: number;
+      readonly durationMs: number;
+      readonly headSha: string;
+      readonly gitStatusHash: string;
+    }
+  | {
+      readonly log: string;
+      readonly kind: "timeout";
+      readonly durationMs: number;
+      readonly headSha: string;
+      readonly gitStatusHash: string;
+    }
+  | {
+      readonly log: string;
+      readonly kind: "runner_error";
+      readonly durationMs: number;
+      readonly headSha: string;
+      readonly gitStatusHash: string;
+    };

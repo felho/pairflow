@@ -1886,7 +1886,9 @@ trace) — a standalone chapter would be ceremony.
    (`ScriptedGateRunner`/`ScriptedProcessRunner`, pass|fail verdicts);
    the ledger-shaped six-outcome fixture drive
    (allow/warn/block/timeout/runner_error/malformed) lands HERE, in
-   P3 scope; `run_process_gate`; `classify_process_result`;
+   the P3 slot (split at the ch11-P3 findings round: the kit piece
+   at P3a, the end-to-end drive at P3b — aligned at ch11-p3a
+   pre-approval); `run_process_gate`; `classify_process_result`;
    `runner_outcome` (only `block_transition` realized;
    `fail_instance` → `gate_config_not_supported`);
    `GateInvocation`/`ProcessResult` values; the
@@ -1959,7 +1961,8 @@ driven as a scoped extension + the admission issue-codes driven on the
 definition channel. Invariants: **15**, dispositions already fixed by
 the ch-5 map (8 `test` / 4 `type/schema` / 2 `checker` / 1 `review`);
 the two checkers — `l2/round-is-canonical-reconstructable` (P2c — aligned at ch11-p2a pre-approval) and
-`l2a/evidence-on-every-run` (P3) — land as storeCheckers extensions
+`l2a/evidence-on-every-run` (P3b — the P3 split, aligned at
+ch11-p3a pre-approval) — land as storeCheckers extensions
 with named packet owners. Chapter traces:
 **3 golden traces** (the l1, l2, and l2a section traces). The l2b
 slice (4 units / 1 rejection / 6 invariants / 1 trace) stays unowned
@@ -2004,12 +2007,19 @@ Process note: the draft round runs FIRST, before any packet (README
 P2a anchors to the draft for the module home + the `ports/gate.ts`
 reconciliation (aligned at ch11-p2a pre-approval — the anchor moved
 with the split); P2c anchors to the re-ratified round rows (C38/C39 +
-C40's value-level share); P3 and P4 anchor to ratified draft rows. P2 was the
+C40's value-level share); the P3 parts and P4 anchor to ratified
+draft rows. P2 was the
 declared sizing split candidate (template §2 step 0); the split
 EXECUTED at ch11-p2a authoring (autonomous in-chapter split, hard
 stops 1+2 tripped on the bundled row — sizing, not scope; the
 P2a/P2b/P2c rows below are the repartition, coverage union
-preserved).
+preserved). The P3 split EXECUTED at the ch11-P3 findings round
+(2026-07-16): the panel-approved single-packet form carried a
+hard-stop-2 closure proof the RATIFIER rejected against the visible
+foundation→activation seam — the P3a/P3b rows are the repartition,
+coverage union preserved (aligned at ch11-p3a pre-approval; the
+ratified draft's "ch11-P3" references predate the split and denote
+the P3 slot).
 
 | Packet | Content | Mode |
 |---|---|---|
@@ -2018,10 +2028,11 @@ preserved).
 | ch11-P2a | the gate admission foundation (the P2 row's foundation share; split executed at ch11-p2a authoring): `ports/gate.ts` reconciled to the ledger shapes (placeholder + scripted players retired; the runner half joins at P3), the `src/gates/` module (ADR-013) with the static registry + the two inline evaluator registrations, `admit_definition` realized as the single-authority admission (effective configs, issue accumulation, `AdmittedTemplate` as the definition store's only output, testkit-through-admission), the domain gate values | flag-free approve → autonomous build (measurement; the §5.5 fallbacks stand); predicted: projection (inherited from the P2 row: l2-pseudocode + ledger §2/§3/§4 + [module home, `ports/gate.ts` reconciliation] draft rows) |
 | ch11-P2b | the gate rung activation (the P2 row's activation share): the HANDLE pipeline rung (ordered, first-block-wins; the three L2 rejections behavioral; the C35 registry backstop), `gate_projection` derived, the `gate_decisions` transcript column (THE fenced schema bump) + the C27 read surface, the two evaluators driven end-to-end, the l2 golden trace (round machinery untouched — the rung reads `instance.round` as the ch-4 kernel maintains it) | flag-free approve → autonomous build (inherited); predicted: projection (inherited) |
 | ch11-P2c | the round alignment (the P2 row's alignment share): the `advances_round` predicate declared against transition semantics — the ch-4 `target === template.start` heuristic assessed at projection and RETIRED (declared-only advancement: an absent declaration means NO advancing transitions — C38's ratifier-decided default under §8.2 rule 2's deviation clause, its first exercise) — realized as admission-normalized per-transition flags (the `admit_definition` P2a-built normalization touch included) + C40's value-level admission lanes (empty list, membership incl. the terminal exclusion, duplicates — every channel); the round-advancing trace set updates WRAPPER-ONLY: `l2Trace`'s direct-constructed template declares in-packet; `l0aTrace` (incl. its negative variant), `l0bTrace`, and `twoWorker` run through a LOCAL direct round-declaration wrapper — the round-2 golden expectations are NEVER temporarily rewritten, and the shared `fixtureTemplate()` + the shipped YAML stay declaration-absent and deep-equal until P4 (the ch8-P2 equality pin); the `round-is-canonical-reconstructable` storeChecker; `gate_projection`'s round consumption pinned; the model's per-transition-override half stays unrealized per C41's disposition (the round-format decision point RESOLVED at the 2026-07-12 reopen — reopen/extend, re-ratified; the STOP clause retired; anchors: `contract:ch11-gate-format#C38`/`#C39`/`#C40`; aligned at the ch11-gate-format reopen re-ratification) | flag-free approve → autonomous build (inherited); predicted: projection (inherited) |
-| ch11-P3 | the L2a contract: `validate_gate_config` as the process registration's admission validator (the ratified model fix), the `ProcessGateRunner` port + the ledger-shaped six-outcome testkit fixture drive, classification (`classify_process_result` / `runner_outcome`), the three L2a rejections, the minimal runtime-context representation, the l2a golden trace | flag-free approve → autonomous build; predicted: projection (basis: draft: `contracts/ch11-gate-format-contract.md`, ratified 2026-07-12) |
+| ch11-P3a | the process-admission foundation (the P3 slot's foundation share; split executed at the ch11-P3 findings round, 2026-07-16 — the ratifier rejected the single-packet closure proof against the visible foundation→activation seam): `validate_gate_config` as the `external.process` registration's validator body (the C13–C17 lane matrix, issue codes on the definition channel), the registration joins the static registry (C8's chapter-end three-member composition), the `ProcessGateRunner`/`ProcessResult`/evidence-record PORT shapes (C34/C26 contract + the ledger-shaped six-outcome scripted testkit runner — kit piece only, the end-to-end drive is P3b's), the template-side `runtimeContext` declaration key (C18 domain grain) + the C19 admission cross-rule; the kernel is byte-untouched — a process gate still rejects at run (the P2b `gate_execution_not_supported` lane stands until P3b) | flag-free approve → autonomous build (inherited; the §5.5 fallbacks stand — exercised at this packet: the F1/F2 new-decision flags route the approve to the human, STOP `4:flagged-approve`); predicted: projection (inherited from the P3 row: draft rows + the l2a units) |
+| ch11-P3b | the process-execution activation (the P3 slot's activation share): the instance-side runtime-context representation (the instance field + the start-input seam + the nullable store column — the chapter's SECOND store-schema change, riding the same ADR-003 fence; the §11.1 item 2 accounting sentence aligns with P3b) with the testkit-injected ready ref, the HANDLE process branch (the C36 runtime backstop behavioral; the P2b `gate_execution_not_supported` behavioral lane retires with the model's reject→run flip), `run_process_gate` / `classify_process_result` / `runner_outcome` + the C23/C24/C25 wire forms + C31's `gate_blocked(reason)` rejection surface + C33 evidence propagation + C32 confinement, the `l2a/evidence-on-every-run` storeChecker, the C26-compliant durable fail-closed composition slot, the l2a golden trace | flag-free approve → autonomous build (inherited); predicted: projection (inherited) |
 | ch11-P4 | the format extension: YAML gate declarations + process-config keys + the `runtime_context` key + the `round` declaration key (C37 + C40's source-form lanes — added at the 2026-07-12 gate-format reopen; the shipped template and `fixtureTemplate()` gain the round declaration TOGETHER under the ch8-P2 equality pin, and P2c's window wrappers retire here) + the validator lanes driven + the CLI validate extension + template-fixture updates | flag-free approve → autonomous build; predicted: projection (basis: draft: `contracts/ch11-gate-format-contract.md`, ratified 2026-07-12, re-ratified 2026-07-12) |
 
-Order: draft → P0 → P1 → P2a → P2b → P2c → P3 → P4 (the chapter's draft-first rule sequences P0 after the draft ratification; P0 anchors no draft row; the P2a/P2b/P2c order is the split's foundation → activation → alignment shape — aligned at ch11-p2a pre-approval). One packet = packet file + code +
+Order: draft → P0 → P1 → P2a → P2b → P2c → P3a → P3b → P4 (the chapter's draft-first rule sequences P0 after the draft ratification; P0 anchors no draft row; the P2a/P2b/P2c order is the P2 split's foundation → activation → alignment shape — aligned at ch11-p2a pre-approval; the P3a/P3b order is the P3 split's foundation → activation shape — aligned at ch11-p3a pre-approval). One packet = packet file + code +
 tests in ONE commit.
 
 ### 11.5 Deliverables and DoD

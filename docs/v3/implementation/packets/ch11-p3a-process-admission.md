@@ -1,63 +1,43 @@
-# Task Packet: ch11-P3a — the process-admission foundation (validate_gate_config · the external.process registration · the runner-port shapes · the runtimeContext declaration key)
+# Task Packet: ch11-P3a — the process-admission foundation (external.process registration · runner port + evidence contract · scripted kit runner · runtimeContext declaration)
 
-Plan step: plan.md §11.4 P3a row — the P3 slot's FOUNDATION share
-under the ch11-P3 findings-round split (2026-07-16: the ratifier
-rejected the single-packet closure proof against the visible
-foundation→activation seam; the P3a/P3b rows are the repartition,
-coverage union preserved). Realizes plan §11.1 item 3's
-admission/registration/port half and item 4's TEMPLATE half:
+Plan step: plan.md §11.4 P3a row — the P3 slot's FOUNDATION share under
+the ratified ch11-P3 split (foundation → activation; the P3a/P3b rows
+are the repartition, aligned at ch11-p3a pre-approval). Realizes §11.1
+item 3's admission-side half plus item 4's template-declaration grain:
 `validate_gate_config` as the `external.process` registration's
-admission validator (the ratified model fix), the registration
-joining the static registry, the `ProcessGateRunner`/`ProcessResult`/
-evidence-record PORT shapes + the ledger-shaped six-outcome scripted
-testkit runner (kit piece — the end-to-end kernel drive is P3b's),
-the template-side `runtimeContext` declaration key + the C19
-admission cross-rule. The rejection surface at this share
-(stated precisely — the plan row's "the three L2a rejections" is
-loose wording): the two DEFINITION-ISSUE codes
-(`invalid_process_gate_config`, `gate_config_not_supported`) + the
-`runtime_context_required_for_process_gate` ADMISSION-issue code
-(C19's declaration-level lane); the registry NAME's behavioral
-HANDLE lane is P3b's. Draft anchors (= the manifest's C-row ref
-union): `contract:ch11-gate-format` rows
-C5/C8/C9/C12/C13/C15/C18/C19/C20/C21/C26/C29/C34 (13 — C14/C16/C17/
-C23 left the ANCHOR union when V1 reclassified to new-decision at
-arm gate 1: those rows now appear as V1's in-row CONSTRAINT context,
-not as manifest refs — a new-decision row carries none).
-Plan alignment: the §11.4 repartition (the P3 row → the P3a/P3b
-rows + the order line) and the §11.1 item 3 / §11.2 pointer
-updates, marked "aligned at ch11-p3a pre-approval", ride THIS
-packet's commit. The §11.1 item 2 schema-bump alignment is P3b's
-(no store-schema change happens here). The ratified draft's
-"ch11-P3" references predate the split and denote the P3 slot.
-Commit choreography (stated so the build cannot trip the audit):
-`process-log.md` is OUTSIDE this packet's boundary — its capture
-entries land in a SEPARATE `docs(v3)` commit, never in the packet
-commit (the post-build audit binds the packet commit's changed
-files to the declared boundary).
-P3b's alignment set additionally covers the §11.1 item 4 wording and
-the §11.5 DoD's singular schema-bump phrase, which the second
-store-schema change touches (recorded here so it is not missed
-downstream — the lens-5 finding at this packet's panel).
-Autonomy stage: measurement — inherited from the P3 row through the
+validate-and-normalize body, run by `admit_definition` at definition
+load; the registration joins the static registry (C8's chapter-end
+three-member composition); the `ProcessGateRunner` / `ProcessResult` /
+evidence-record PORT shapes (C34/C26) with the ledger-shaped scripted
+testkit runner (kit piece only — the end-to-end six-outcome drive is
+P3b's); the template-side `runtimeContext` declaration key (C18,
+domain grain) and the C19 admission cross-rule. The kernel is
+byte-untouched (Claim 2's scoped statement) — a process gate reaching
+HANDLE still rejects `gate_execution_not_supported` until P3b (the
+P2b lane stands). Draft anchors (= the manifest's C-row ref union):
+`contract:ch11-gate-format` rows C5/C8/C9/C12–C21/C26/C29/C34 —
+admission-side shares; the C23–C25 wire forms, C31–C33, C36, and the
+l2a golden trace are P3b's; C37–C41 are P2c/P4's. Plan alignment:
+the P3-split alignment — the §11.4 P3a/P3b rows and the §11.1/§11.2
+P3-slot sentences, each marked "aligned at ch11-p3a pre-approval" —
+is PREPARED in the working tree and lands in the SAME commit as this
+packet (R-ALIGNED-UP); beyond it, no decision here contradicts
+ratified plan text.
+Autonomy stage: measurement — inherited from the P3 slot through the
 split (parts inherit mode, predicted class, watchpoints; fresh
-watchdog per part). Not first-of-a-kind: the registry-member
-extension class has precedent (ch11-P2a), the port + testkit-fake
-class has precedent (ch4-P1, ch7-P1), the admission-extension class
-has precedent (ch11-P2a/P2c).
-Classification: **projection** — manifest tally: 8 anchored /
-7 derived / 1 new-decision (machine-counted from the `packet_rows`
-block). The ONE new-decision row is V1's JSON-mode reason semantics
-(reclassified derived → new-decision at arm gate 1: the
-carried-verbatim-to-wire retention is a genuine decision the cited
-C-rows do not select among equally conform alternatives) — it is
-EXACTLY the decision flag F1 records, riding this HUMAN approve as
-approve-ratified; it touches config-value retention, NOT
-authority/separation/availability-class semantics, and one row is
-below the Case-B mass threshold — Case B not fired. Every other
-row anchors to the ratified draft rows, the l2a unit texts,
-ratified plan text, or the built P2a/P2b/P2c rows, or derives from
-them with an in-row note.
+watchdog per part). Not first-of-a-kind: the admission-extension
+class has precedent (ch11-P2a built `admitTemplate`; ch11-P2c
+extended its normalization), the port-declaration class has precedent
+(ch11-P2a reconciled `ports/gate.ts`), and the testkit-fake class has
+precedent (the ch3 scripted players, the ch5 kit packets).
+Classification: **projection** — manifest tally: 9 anchored /
+3 derived / 2 new-decision (machine-counted from the `packet_rows`
+block). The two new-decision rows (V1's JSON-mode authored-`reason`
+retention; V5's C19 finding granularity) are below the
+Case-B threshold and touch no
+authority/separation/availability-class semantics; they ride as
+flags F1/F2 to the approve — the approve is therefore FLAG-BEARING
+(STOP `4:flagged-approve`): the human's act, which ratifies them.
 
 ## Ledger slice (declared — feeds the coverage accounting)
 
@@ -83,259 +63,212 @@ them with an in-row note.
 }
 ```
 
-The EMPTY rejection list is a declaration, not an omission: this
-share drives NO registry rejection behaviorally —
-`runtime_context_required_for_process_gate` appears here ONLY as the
-C19 admission-issue CODE on the definition channel (the registry's
-dual name); its behavioral HANDLE lane, the l2a trace, and the three
-execution units (`run_process_gate`, `classify_process_result`,
-`runner_outcome` + the `HANDLE` alias) are P3b's slice — the split's
-coverage union restores the full P3 set. Disposition notes (the
-§11.2 reprint/inheritance chain): `CREATE_INSTANCE` is the l2
-reprint (admission-comment delta only) — alias to the built
-`start.ts#startInstance` chain; `GateRegistration`'s l2a delta (the
-process implementation axis, `requires_runtime_context`,
-process-has-no-evaluate) is ALREADY realized in `ports/gate.ts`
-since P2a — alias there (the process REGISTRATION VALUE realizes
-`validate_gate_config`, its own unit, here). `explicit-output-mode`'s
-type/schema half (the effective form's required resolved
-`output.mode`) is realized here; the behavioral output-mode-monopoly
-drive is P3b's classification lanes — a stated proof boundary.
+The EMPTY rejection list is a declaration, not an omission: no
+registry rejection changes hands here. The three codes this packet
+drives — `invalid_process_gate_config`, `gate_config_not_supported`,
+`runtime_context_required_for_process_gate` — are DEFINITION-ISSUE
+codes on ch8's load channel (C20; the tokens reuse the former
+rejection names). `runtime_context_required_for_process_gate`'s
+REJECTION half (the C36 HANDLE runtime backstop — the registry's
+dual name) is P3b-owned; the rejection registry stays 54 names,
+untouched. The l2a units NOT owned here — `HANDLE`,
+`run_process_gate`, `classify_process_result`, `runner_outcome` —
+and the l2a golden trace are P3b's (the activation share), as are
+the three remaining l2a invariants — `evidence-on-every-run`
+(checker), `runner-error-business-block` (test),
+`runs-in-the-workspace` (test): 4 owned here + 3 there = the §11.2
+l2a share of seven.
+Disposition notes: `validate_gate_config` is `implement` (realized
+in full AGAINST the canonical V-matrix — see the operative
+material's authority note); `ProcessGateRunner` is
+`type/schema` (the PORT shape and its values — the spawn is ch9's,
+the kit fake is testkit surface); `GateRegistration` is
+`alias/inherited` (the l2a unit EXTENDS the P2a-realized l2
+registration contract — the process arm already exists in
+`ports/gate.ts`; this packet instantiates the `external.process`
+member, adding no new contract shape); `CREATE_INSTANCE` is
+`alias/inherited` (the §11.2 reprint class: its text pins that CREATE
+consumes only admitted definitions — realized at P2a, byte-unchanged
+here).
 
 ## Sizing/risk (template §2 step 0 — materialized)
 
-Predicted class (plan §11.4 P3a row, inherited through the split):
-**projection**. Discovered at authoring: **projection** — agree.
+Axes:
 
-**The split record:** the parent P3 assessment tripped hard stop 2
-by letter (one contract across seven surfaces) and carried a
-closure proof; the RATIFIER's findings round (2026-07-16) rejected
-that proof against the visible foundation→activation seam — the
-split executed per the verdict-action matrix (parts inherit mode,
-predicted class, watchpoints; fresh watchdog per part; depth 1).
+- **authority movement: none.** Admission remains the single semantic
+  authority built at P2a (C20); this packet adds a registration UNDER
+  the existing `GateRegistration` contract and the cross-rule branch
+  `admit.ts`'s own A7 note reserves for this packet.
+- **surface spread:** one concept (the process-admission foundation)
+  across the gates module (the registration), the ports surface (the
+  runner port + evidence shapes), the domain grain (one optional
+  template field), the admission seam (the C19 branch), and the
+  testkit CONTRACT (a new fake seam — counts under the surface rule).
+  No kernel-logic, store-schema, ingress, read-projection, or CLI
+  surface changes.
+- **identity/join fragility: none** — no cross-seam identity joins
+  (`logRef` resolution is a single-port contract).
+- **foundation + activation coupling: none by construction** — the
+  ratified P3 split exists exactly to sever it; activation (the
+  HANDLE process branch, the wire forms, the storeChecker, the l2a
+  trace) is P3b's, and the P2b `gate_execution_not_supported` lane
+  stands.
+- **prerequisite coupling: none** — P2a/P2b/P2c are built; ch9's
+  spawn is explicitly out (port shape only).
+- **acceptance multiplicity:** one proof class — contract/unit tests
+  over the admission lanes, the type surfaces, and the kit runner's
+  own contract; no schema/CLI/migration proof.
 
-**This part's own six axes:**
+Consume-family scan (from the tree):
 
-- **authority movement:** ONE bounded EVIDENCE-surface move
-  (re-assessed at arm gate 1): runtime/semantic authority does not
-  move — admission stays the single semantic authority (C20,
-  P2a-built) and `validate_gate_config` JOINS it through the
-  P2a-built seam — but the composition's canonical STATEMENT moves
-  from registry.ts's inline Map literal to the exported
-  `blockARegistrations` record (G2's packet-added test-evidence
-  contract). Closure: the move is within ONE module, lands in the
-  same bounded change, and turns on NO runtime behavior (hard stop 1
-  needs movement + activation — activation is P3b's), so no hard
-  stop trips; stated, not glossed. CONSUME-FAMILY SCAN for the
-  move (mandatory once an authority axis is acknowledged; the
-  second arm re-check corrected the family accounting — a consumer
-  reached THROUGH an unchanged port is still a CONSUMER): producer
-  = gates/ (the record + the frozen exports, changed);
-  validator/gate = admission, PRESENT (it RESOLVES the composition
-  at definition load — the new member changes what admits);
-  execution consumer = HANDLE, PRESENT (it resolves at run — the
-  new member changes the shipped route to the interim reject);
-  testkit = PRESENT (contract change); persistence/replay,
-  read/presentation, recovery/cleanup, external/integration =
-  absent. The composition authority thus touches 3+ consume
-  families — HARD STOP 6 TRIPS BY LETTER, and the packet continues
-  on the explicit IMPLEMENTATION-CLOSURE PROOF (the P2c form): the
-  consumers reach the composition ONLY through the resolve-only
-  port whose CONTRACT is unchanged (no consumer code changes — the
-  admission and kernel call sites are byte-untouched, the boundary
-  is the witness); a missing or mis-keyed record entry is caught by
-  THREE independent lanes (the composition `toStrictEqual`, the
-  record↔catalog wiring lane, and the kernel interim-state lane
-  driving the SHIPPED composition); the whole move lands in one
-  bounded gates/-module change with one proof surface and no
-  per-family review loop — split would separate the record from its
-  only producer for no risk reduction. Hard stop 7's shared-shape
-  operand: the NEW runner/result port shapes have ZERO consumers
-  until P3b (nothing can fall out), so its two-fallout-family
-  condition is unsatisfiable here — stated, not assumed.
-- **surface spread:** NO trip. Against the gate's enumerated surface
-  classes: kernel logic UNCHANGED (byte-untouched), store schema
-  UNCHANGED, ingress-write seam UNCHANGED, read projection UNCHANGED,
-  CLI-human payload UNCHANGED (C28); the testkit CONTRACT changes
-  (the new scripted runner — counted), and the work otherwise lives
-  on the definition/validation surface (a new registry member + its
-  validator + one optional template field + port types). Two counted
-  surface classes — under the 3+ line.
-- **identity/join fragility:** NO — no cross-seam identity enters
-  (the evidence-ref join is P3b's, with the checker that binds it).
-- **foundation + activation coupling:** NO — this IS the foundation
-  share; nothing turns on (the kernel still rejects a process gate
-  at run — the P2b lane stands).
-- **prerequisite coupling:** NO — P2a/P2b/P2c built and committed;
-  P3b depends on THIS part, not the reverse.
-- **acceptance multiplicity:** re-stated honestly (arm gate 1: one
-  test COMMAND is not one success class): the packet closes FOUR
-  distinct success classes — admission lanes, registry
-  composition/immutability evidence, port/kit contract
-  (runner/record/persistence), drift flips. Closure argument (why
-  no split is owed on this axis alone): all four land in one
-  bounded change with no cross-class sequencing (none activates
-  runtime behavior; each is independently green-able within the
-  same build), the same builder owns all four, and no
-  per-class review loop is expected — the multiplicity is real, the
-  closure is the argument, not the shared command.
+| Family | State | Evidence |
+|---|---|---|
+| producer / validator-gate | present — extended | `v3/src/definition/admit.ts` (the A7 note reserves the branch); `v3/src/gates/registry.ts` (the composition) |
+| persistence / replay | absent | no store file in the mutation boundary; no schema change |
+| execution consumer | present — reached through an UNCHANGED port | the kernel reads effective configs via `AdmittedTemplate` (P2a); a consumer reached through an unchanged port is still a consumer; its process branch is P3b's |
+| read / presentation (floor + CLI) | absent | no floor/CLI file in the boundary; C28: no new verbs or flags |
+| recovery / cleanup | absent | no such surface exists on this slice |
+| external / integration | declared, not driven | the `ProcessGateRunner` port IS the future dispatch seam; the spawn is ch9's |
+| testkit | present — contract change | the scripted runner is a new kit seam (counts) |
 
-HARD STOP 6 TRIPS BY LETTER (the composition authority's 3+ consume
-families — the corrected scan above); single-packet allowed: YES
-solely on the stated IMPLEMENTATION-CLOSURE PROOF (the unchanged
-resolve-only port + the three independent catch lanes + one bounded
-gates/-module change — the P2c precedent form); no other hard stop
-trips. Conditional annexes: **closure-budget triage** —
-buckets touched: admission validation, testkit contract, the
-composition-EVIDENCE bucket (G2's exported record + definition-site
-freezes — closure: the same bounded gates/-module change), the
-CANONICAL-AUTHORITY bucket (the composition statement's move into
-the record — closure: the three independent lanes above), and the
-SHARED-CONTRACT bucket (the new runner/result/record port shapes —
-closure: zero consumers until P3b, so no migration or fallout
-exists to sequence); explicitly deferred: the kernel process branch + instance representation +
-store column + checker + trace + composition slot (P3b), the YAML
-format surface (P4), the real spawn (ch 9). **Proof-boundary
-triage** — N/A: no success/completion proof source moves.
-**Mutable-flow record** — N/A: no runtime behavior changes; the one
-runtime-adjacent surface (admission) admits nothing on any finding
-(all-or-nothing, P2a-built).
+**Hard stops:** hard stops 2 AND 6 trip BY LETTER — hard stop 2 on
+the surface-spread axis's own enumeration (one concept across the
+gates module, the ports surface, the domain grain, the admission
+seam, and the testkit contract — the testkit seam counts under the
+surface rule), hard stop 6 on the consume-family count (validator,
+execution-consumer-through-an-unchanged-port, testkit).
+`single-packet allowed: yes` — ONE implementation-closure proof
+covers both trips: one bounded code change (the registration + the
+port shapes + the kit runner + the A7 branch) closes every touched
+surface and family in the same build; one proof surface (the
+admission-lane, type-level, and kit-contract tests) validates all
+of it; the execution-consumer family's fallout is deferred WHOLE to
+P3b by the ratified split — no per-consumer-family review loop, no
+separate compatibility/diagnostics/read-projection/recovery/
+ordering risk. No further hard-stop or escalation combination is
+near (one success class; no store/floor/CLI surface). Conditional
+annexes: **closure-budget — the SHARED-CONTRACT bucket is touched**
+(compact record): the R1–R3 port/result/evidence shapes are NEW
+shared contracts with three consumers — the kit runner (closed
+HERE), the P3b execution path (deferred by the ratified split; the
+C34/C26 rows pin the shape for it), and the ch9 real runner
+(deferred by the chapter boundary; same pinned rows) — the two
+deferrals are the split's designed shape, safe because this
+packet's only live consumer is the kit and the contract rows fix
+the shape both successors must meet; the
+authority/runtime/read-projection buckets stay untouched (the
+mutation boundary contains no kernel/store/floor/cli file).
+**proof-boundary N/A** — no
+success/completion-proof semantics change (no existing proof
+contract is reused or moved; the new tests are the new surfaces'
+own). **mutable-flow N/A** — admission is a pure computation (the
+all-or-nothing A2 return commits nothing on any failure path,
+P2a-built); the kit runner's persist-before-return is its OWN
+declared contract (R3), not hard-stop-9 material (no
+rollback/retry/lock semantics change on any producer).
 
-**R-ACTIVATION-JOURNEY disposition (one-line N/A with evidence):**
-nothing is wired into any live path — the kernel is byte-untouched,
-the file channel cannot author gates until P4, and the shipped
-journey suite runs unchanged.
+## Claim + dimensions (enumerated BEFORE deriving test obligations)
 
-## Claim + dimensions (enumerated BEFORE deriving test rows)
+The Claim, stated wide; every completeness clause carries its closed
+form (R-CLAIM-GRAMMAR):
 
-**Claim (wide):**
-
-1. **Admission owns the process config, once:** every C13–C17 rule
-   on the process-gate config is validated and normalized at ONE
-   point — `admit_definition` through the `external.process`
-   registration's validator (`validate_gate_config`) — with defaults
-   (output mode, dispositions, per-bucket reasons) MATERIALIZED into
-   the effective config there and NOWHERE re-resolved; failures are
-   DEFINITION ISSUES on the load channel (the named lanes carrying
-   their issue codes); NO unadmitted or unnormalized process config
-   can admit, on ANY channel.
-2. **The composition is exactly C8's:** `createGateRegistry()` =
-   the THREE Block A members; the process member carries
-   `requiresRuntimeContext: true` and NO `evaluate` (type-level);
-   `execution` stays the `"inline"` singleton (the still-inline-only
-   pin) — deferred execution remains unrepresentable.
-3. **The process↔workspace rule holds at the declaration level
-   (C19):** a template binding ANY gate whose registration requires
-   a runtime context, without `runtimeContext: "required"`, is an
-   admission finding carrying the
-   `runtime_context_required_for_process_gate` code — flag-driven,
-   never name-driven; the runtime backstop (C36) is P3b's.
-4. **The runner port contract is fixed and kit-realized:** the
-   `ProcessGateRunner`/`ProcessResult`/evidence-record shapes are
-   C34/C26's field lists; the scripted testkit runner REALIZES the
-   persistence guarantee (one record durably on its substrate BEFORE
-   `run()` resolves; refs resolve; records independent of any kernel
-   commit) and can stage all six outcome classes — the kernel-side
-   consumer arrives at P3b.
-5. **Confinement:** the kernel is BYTE-UNTOUCHED — an admitted
-   process-gated template still rejects at run via the P2b
-   `gate_execution_not_supported` lane (behaviorally ALIVE through
-   this packet; it retires at P3b with the model's reject→run flip);
-   no store-schema change, no CLI change (C28), no `KernelDeps`
-   change, no harness change; `fixtureTemplate()` and the shipped
-   YAML stay byte-untouched.
+1. **Admission (PARAMETERIZED).** Every member of the declared lane
+   inventory (the V2 list; membership owner: row V2, projecting
+   C21's process-side subset) is decided by `admit_definition` at
+   definition load through the `external.process` registration: a
+   template carrying process gates either ADMITS with its effective
+   config fully materialized per V1, or reports every violated
+   lane's finding on ch8's load channel (issue accumulation,
+   all-or-nothing), the named lanes carrying their issue codes. No
+   process-gate config reaches any downstream surface in raw
+   authored form (C20 — the definition store's only output is the
+   admitted value).
+2. **Runtime non-change (SCOPED).** Outside the admission seam and
+   the new port/testkit/domain surfaces, shipped behavior is
+   unchanged: the kernel is byte-untouched — enforced by the
+   declared mutation boundary (no kernel file), machine-audited at
+   build close — and a process gate reaching HANDLE still rejects
+   `gate_execution_not_supported` (the P2b-built lane and its test
+   stand unedited). Named exclusion + deferral home: the
+   reject→run flip is P3b's.
+3. **Port (PARAMETERIZED).** The `ProcessGateRunner` port,
+   `ProcessResult`, and the evidence record carry C34/C26's exact
+   field lists (rows R1–R3): `run()` resolves only after its
+   evidence record is durably persisted on the runner's substrate; a
+   returned `logRef` resolves; timeout and runner_error runs are
+   evidenced equally (the run-level half of the l2a
+   evidence-on-every-run invariant — the storeChecker half is
+   P3b's).
+4. **Registry (MEASURED at build).** The shipped catalog resolves
+   exactly the three C8 members — the two-way exact-set test plus a
+   close-time untruncated sweep receipt over `gates/registry.ts`.
+5. **Declaration (PARAMETERIZED + SCOPED).** `WorkflowTemplate`
+   gains the optional `runtimeContext` field whose sole legal value
+   is the string literal `"required"` (C18 at the domain grain; the
+   literal type forecloses other values on the direct channel, with
+   its compile-negative probe per the probes discipline), and a
+   template declaring any process gate without it fails admission
+   per C19 (row V5, both iff directions). Named exclusions: the
+   YAML key and its source-form lanes are P4's; the instance field,
+   start-input seam, and store column are P3b's.
 
 Dimensions:
 
-1. **Admission config lanes (V2's matrix — each able to fail, each
-   at its C7-prefixed path, coded where C21 names a code):** `config`
-   missing entirely (C5); `command` missing / empty / non-string;
-   `timeoutMs` missing / invalid under the full NUMERIC LADDER —
-   V3's ten rungs, the canonical list, driven rung-by-rung (this
-   mirror defers; the enumeration lives in V3 alone); unknown
-   config key; config PRESENT-but-non-map (ONE container finding,
-   dependents suppressed — distinct from config-missing); `output`
-   non-map / unknown inner key / unknown `mode`; `onExit` missing in
-   exitCode mode / NON-MAP in exitCode mode (ONE container finding,
-   bucket lanes suppressed) / a bucket missing / a bucket value
-   non-allowlisted / surplus key / present in gateDecisionJson mode
-   (unconsumed — fires on the KEY's presence regardless of the
-   value's shape, V2's precedence pin);
-   `onRunnerError`/`onTimeout` = `failInstance` → the DISTINCT
-   `gate_config_not_supported` code; any other unknown disposition →
-   `invalid_process_gate_config`; `reason` non-map / unknown key /
-   token-grammar violation; the VALID forms admit with the effective
-   config asserted EXACTLY (defaulted mode, dispositions, per-bucket
-   reasons — V1, incl. the JSON-mode authored-reason letter case AND
-   the MIXED exitCode-mode reason case: one bucket authored, the
-   other defaulted — `reason: {nonzero: "x"}` ⇒ effective
-   `{zero: "exit_zero", nonzero: "x"}` — the per-bucket-not-
-   all-or-nothing crux driven as its own exact-effective lane);
-   hostile own-property lanes (`__proto__` pair, inherited-key
-   phantom — V4); accumulation with sibling findings on the one
-   channel (V7); input purity on frozen valid AND invalid inputs
-   (V8).
-2. **Cross-rule lanes (C19):** a process-gated template WITHOUT
-   `runtimeContext: "required"` → the coded finding at the binding's
-   C7 path (and WITH the declaration it admits); a hostile catalog's
-   requiring NON-process registration trips it too (flag-driven);
-   the two shipped inline members (`requiresRuntimeContext: false`)
-   never do; per-binding grain (a two-process-gate template yields
-   two findings).
-3. **Registry composition:** the exact THREE-member set, asserted on
-   the exported canonical composition record's own keys (G2's
-   mechanism — a fourth member and a missing member both fail); the
-   FOUR IMMUTABILITY mutation-negative lanes (add / delete / replace
-   / NESTED member-field overwrite — each throws AND the
-   composition/value asserted unchanged after the attempts; the
-   runtime freeze of the record AND its member values driven, not
-   presumed) PLUS the compile-negative pair for the readonly TYPE
-   half (G2's `@ts-expect-error` probes — probe A on the RECORD
-   type, probe B on the P2a port-field readonly at the nested
-   depth; the type layer driven independently of the freeze);
-   the record↔catalog wiring lane; `external.process` resolves;
-   `requiresRuntimeContext` driven across all three members; the
-   process registration carries no `evaluate` (type-discriminated —
-   the P2a union). The record-is-the-only-source property is G2's
-   named REVIEW-OWNED structural obligation (sweep-assisted), not a
-   test lane.
-4. **Port/kit contract lanes (each able to fail):** the record
-   persisted and RESOLVABLE before `run()` resolves; one record per
-   invocation; deterministic workspace-fact fields; the scripted
-   sequence honored; invocations recorded verbatim
-   (`{command, cwd, stdin, timeoutMs}`); a `run()` beyond the script
-   THROWS (exhaustion is a test defect — fail-loud); the
-   script-entry `exitCode` precondition driven over the FULL
-   `Number.isInteger` ladder in BOTH directions (T1's reject set +
-   the legal-accept narrowing-killers incl. `-1`, `-0`, `2**53`); the PER-KIND exact
-   result↔record field-for-field correspondence; the SCALAR-DOMAIN
-   lanes (`logRef` nonempty; `durationMs` non-negative integer;
-   `exitCode` integer on the OUTPUT); the `log`-per-kind rule (ok →
-   the entry's stdout verbatim; timeout/runner_error → `""`); the
-   `ProcessResult` union's kind-conditional fields hold by type; all
-   six outcome classes stageable (ok/0, ok/nonzero, timeout,
-   runner_error, ok+malformed stdout, ok+valid decision JSON).
-5. **Interim-state + confinement lanes:** an ADMITTED process-gated
-   template driven to HANDLE still yields
-   `Rejected(gate_execution_not_supported)` — the P2b lane RE-DRIVEN
-   through the SHIPPED composition (previously only a test-composed
-   hostile catalog could stage it; the kernel is byte-untouched);
-   the FULL existing suite green with zero golden-expectation edits;
-   zero diffs outside the declared boundary.
-6. **Type-ripple confinement:** `GateConfigFinding.code?` and
-   `WorkflowTemplate.runtimeContext?` are optional-additive — zero
-   forced literal updates (the measured sweeps); NO `KernelDeps`
-   change → NO test-composed-kernel ripple (the P3 single-packet
-   form's 12-file ripple does not exist here — it moves to P3b with
-   the dep); `v3:typecheck` is the closing backstop.
+1. config container states (absent-where-required / non-map / map);
+2. key presence per keyset — each required key's absence, each
+   unknown key, per container: `config`, `output`, `onExit`,
+   `reason`; plus own-property hostility: an inherited/`__proto__`
+   member is never read as config (the G8 discipline);
+3. value domains — `command` string/nonempty; `output.mode`
+   allowlist; `onExit` bucket verdict allowlist; disposition
+   allowlist with the `failInstance` DISTINCT lane; `reason` token
+   grammar;
+4. the numeric ladder on `timeoutMs` (value → descriptor → prototype
+   → numeric identity: non-integer, unsafe, zero, negative, `-0`
+   distinguished via `Object.is`, `NaN`/`Infinity`, non-number,
+   boxed Number);
+5. mode × keyset interaction — `onExit` required in exitCode mode
+   AND illegal in gateDecisionJson mode (both iff directions);
+6. defaults materialization — each V1 default driven in BOTH
+   directions (absent → materialized, authored → carried);
+   exitCode-mode `reason` completeness (authored-or-default per
+   bucket); JSON-mode `reason` verbatim carry, partial-stays-partial;
+7. the cross-rule plane — process gate × `runtimeContext` value:
+   declared-required admits; undeclared with a process gate fails;
+   undeclared with N ≥ 2 process gates fails with EXACTLY ONE
+   finding (the count member — N = 1 cannot distinguish
+   template-grain from per-gate); a process-gate-free template
+   admits regardless (C19's iff, both directions);
+8. issue-code assignment — each coded lane's code; uncoded lanes
+   stay code-free (the A9 carrier discipline);
+9. accumulation and suppression — a multi-fault template reports its
+   full lane set; a broken container suppresses only its own
+   dependent lanes;
+10. port result kinds × field presence — `exitCode`/`stdout` present
+    iff kind=`"ok"` (both directions);
+11. evidence timing and content — persist-before-return, a record
+    for every kind, deterministic workspace-fact fakes;
+12. registry membership — exact-set, two-way;
+13. type-level foreclosures — the process arm cannot carry
+    `evaluate`; `execution` is the `"inline"` singleton;
+    `runtimeContext` is the `"required"` literal — each carries its
+    own compile-negative probe.
 
 ## Operative material (full text — projection, not invention)
 
-### The unit pseudocode (verbatim)
+Authority note: the unit texts are the model floor, reprinted
+verbatim; the BUILD TARGET for the validator body is the canonical
+V-matrix. V1–V6 bind lanes the skeleton omits — the `reason` grammar
+and its exitCode-mode materialization, the unknown-key and
+container-kind checks, the V3 value ladder — and V2's o/p lanes are
+DISTINCT single-code lanes: the skeleton's disposition fall-through
+(a `failInstance` value also matching the `≠ block_transition` arm)
+is superseded — one finding per disposition value, never a double
+code.
 
-#### `l2a-pseudocode/validate_gate_config`
+`l2a-pseudocode/validate_gate_config` (disposition: implement):
 
-```
+```text
 # validate_gate_config — the external.process REGISTRATION's validate_and_normalize_config body
 # (GateRegistration contract). Invoked by ADMISSION (admit_definition) at definition load — never
 # by CREATE (instance admission owns only task/binding) and never mid-run. Failures are DEFINITION
@@ -360,9 +293,9 @@ validate_gate_config(raw) → effective | issues                       # the pro
   RETURN effective(raw with defaults materialized)                    # output.mode, dispositions resolved — the ONE config form downstream
 ```
 
-#### `l2a-pseudocode/GateRegistration` (reprint — the l2a delta over the P2a-built descriptor)
+`l2a-pseudocode/GateRegistration` (disposition: alias/inherited):
 
-```
+```text
 # GateRegistration — L2a adds the external.process registration to L2 core's declarative/packaged members
 INTERFACE GateRegistration:
   implementation: declarative | packaged | process      # L2a realizes inline process too; only DEFERRED execution stays out (later slice)
@@ -374,18 +307,20 @@ INTERFACE InlineGateEvaluator extends GateRegistration:  # declarative | package
 # the process registration has NO evaluate — a process gate runs via run_process_gate instead
 ```
 
-#### `l2a-pseudocode/ProcessGateRunner`
+`l2a-pseudocode/ProcessGateRunner` (disposition: type/schema):
 
-```
+```text
 # ProcessGateRunner — the executor that spawns an external gate process; the kernel owns the contract, the runner owns the spawn
 INTERFACE ProcessGateRunner:
   run(command, { cwd, stdin, timeout_ms }) → ProcessResult   # { kind: ok | timeout | runner_error, exit_code?, stdout?, log_ref, duration_ms }
 ```
 
-#### `l2a-pseudocode/CREATE_INSTANCE` (verbatim — a declared slice unit; alias to the built start chain, the admission-comment lines are the l2a delta)
+`l2a-pseudocode/CREATE_INSTANCE` (disposition: alias/inherited — the
+§11.2 reprint class; included for the one line this packet leans on:
+CREATE consumes only ADMITTED definitions, realized at P2a and
+byte-unchanged here):
 
-```
-
+```text
 # Convenience operator API, not a kernel primitive: a single "start workflow" command may
 # compose CREATE_INSTANCE(...) then START(instance). activation_mode controls what happens
 # after RUNTIME_CONTEXT_READY (activate vs WAITING(kickoff_pending)) — not whether CREATE dispatches.
@@ -401,244 +336,156 @@ CREATE_INSTANCE(template_ref, activation_mode, task, binding, run_overrides) →
   RETURN Created(instance.version)                             # no dispatch yet — not active
 ```
 
-### The definition-issue codes (NOT ledger §3 registry names — 54 post-fix)
-
-- `invalid_process_gate_config` — the generic invalid-config lane's
-  code (V2's coded lanes).
-- `gate_config_not_supported` — the reserved `failInstance`
-  disposition's DISTINCT code (its own lane).
-- `runtime_context_required_for_process_gate` — the C19
-  declaration-level ADMISSION code; the SAME spelling is a ledger §3
-  registry name whose behavioral HANDLE lane (C36) is P3b's — the
-  registry's dual name, stated so neither share claims the other's
-  half.
-
-### The invariant bodies (ledger §2 l2a — this share's disposition targets)
-
-| Invariant | Disposition | Body (model text, compact) |
-|---|---|---|
-| gate-config-validated-at-definition-load | test | `validate_gate_config(raw)` is the registration's validator body, run by ADMISSION at definition load; a process gate without a workspace (via `requires_runtime_context`), a `fail_instance` disposition (`gate_config_not_supported`), or an incomplete/invalid config (`invalid_process_gate_config`) is a DEFINITION ISSUE, never a mid-run surprise; defaults MATERIALIZE into the effective config — resolved once (the HANDLE ready(∅) runtime backstop is P3b's) |
-| bounded-timeout-mandatory | type/schema | every process gate carries a timeout; the effective-config type's REQUIRED `timeoutMs` realizes the schema half (the timeout-as-runner-outcome behavior is P3b's classification) |
-| explicit-output-mode | type/schema | verdict source is exit code or decision JSON BY CONFIG — the effective form's REQUIRED resolved `output.mode` realizes the schema half (the never-guess behavioral monopoly drive is P3b's) |
-| still-inline-only | type/schema | a deferred process gate is still rejected — the `execution: "inline"` singleton pin (P2a-built, re-declared by this registration) keeps the deferred axis unrepresentable |
-
-### Substrate probe record
-
-N/A — no lane or matrix cell in this share rests on driver/OS/
-filesystem/parser behavior: the validator runs over in-memory JS
-values (the threshold precedent's ground), the registry is a Map,
-and the kit runner's substrate is process memory by design (its
-DURABLE production counterpart is P3b's slot and ch 9's runner). The
-JSON.parse probes (C25) and the node:sqlite nullable-column probe
-travel with P3b, where those cells live.
+The exact issue-code tokens (data, not prose):
+`invalid_process_gate_config` · `gate_config_not_supported` ·
+`runtime_context_required_for_process_gate` — definition-issue codes
+on the load channel; the third is also the C36 rejection's name
+(P3b's half of the dual).
 
 ## Canonical domain matrix (D)
 
-| Id | Rule |
+| ID | Rule |
 |---|---|
-| D1 | `WorkflowTemplate` gains OPTIONAL `runtimeContext?: "required"` — C18's declaration key at the DOMAIN grain (the direct channel's input; the YAML key + its illegal-value source lane land at P4 with the format walk — the C39/C40 staging precedent). The singleton literal type forecloses illegal values on the direct channel — and that TYPE GUARANTEE is itself DRIVEN (the ratifier's eighth round: an undriven foreclosure is the compile-half gap the exitCode ladder already taught): an isolated `@ts-expect-error` probe on an otherwise type-correct template literal carrying `runtimeContext: "sometimes"` fails to compile, so a widening to `string` leaves the directive unused — TS2578 fails `v3:typecheck` (the `__probe` idiom, in admit.test.ts beside the cross-rule lanes); absent = a context-free workflow. Consumers: the C19 cross-rule HERE (V5); the instance-side representation and the C36 runtime backstop are P3b's. The value domain grows additively in the consuming chapter (ch 9's spec map), per C18's own clause (anchored: contract:ch11-gate-format#C18) |
+| D1 | `WorkflowTemplate` gains the OPTIONAL `readonly runtimeContext` field, typed as the string literal `"required"` (C18 at the domain grain). Absent = a context-free workflow. The literal type forecloses every other value on the direct channel (compile-negative probe per the probes discipline; the file-channel illegal-value lane lands at P4 with the YAML key). The admitted value carries the field through unchanged (`admitTemplate` spreads the template root). Named exclusions with homes: the instance-side field, start-input seam, and store column — P3b; the YAML authoring key + source-form lanes — P4. |
 
 ## Canonical admission/validator matrix (V)
 
-| Id | Rule |
+| ID | Rule |
 |---|---|
-| V1 | The EFFECTIVE process config (the admitted binding's single `config` surface, P2a A5): `{ command: string (nonempty), timeoutMs: number, output: { mode: "exitCode" \| "gateDecisionJson" }, onExit?: { zero: Verdict, nonzero: Verdict }, onRunnerError: "blockTransition", onTimeout: "blockTransition", reason?: { zero?: token, nonzero?: token } }` — every default MATERIALIZED once at admission: absent `output` ⇒ `{ mode: "exitCode" }` (C14); absent dispositions ⇒ `"blockTransition"` (C16). PRESENCE, stated once and precisely (the findings-round correction of the P3 form's self-contradiction): `onExit` is present IFF exitCode mode — REQUIRED there, ILLEGAL in gateDecisionJson mode (C15's hardening); `reason` in exitCode mode is ALWAYS present and COMPLETE — both buckets, authored-or-default (`exit_zero`/`exit_nonzero`, C17); `reason` in gateDecisionJson mode is present IFF AUTHORED — grammar-validated, carried VERBATIM as authored (partial maps stay partial: no default materializes there, because C17's defaults belong to exit-bucket decisions which that mode never produces), KERNEL-UNREAD but NOT system-inert (the ratifier's correction, second findings round): C23 puts the ENTIRE effective config on the process stdin (P3b's wire), so the authored value is WIRE-VISIBLE and the external gate process MAY observe it and condition its returned decision on it — authored pass-through data handed to the process, the `command` field's own class (flag F1 records this stronger meaning). DERIVATION NOTE (the letter followed, stated): C13 lists `reason` as a legal optional key UNSCOPED by mode and C21's closed lane list hardens only `onExit` against gateDecisionJson mode — rejecting such an authored `reason`, or stripping it AT the wire, would be a NEW admission/wire decision the draft did not take (C23 fixes the wire's `config` as the effective form itself — the one downstream form; a wire-time strip would make wire ≠ effective and fork that rule) (new-decision — reclassified at arm gate 1: C13/C14/C16/C17/C23 CONSTRAIN the space but do not select among equally conform alternatives (carry-verbatim vs an admission-time normalization drop); the retention choice is this packet's own, recorded by flag F1 and ratified by the human approve) |
-| V2 | The process ADMISSION lane matrix (C21's process share — every lane a `{path, message}` finding at the C7-prefixed path, the NAMED lanes carrying their CODE; each driven and able to fail): config MISSING where required → one finding, dependent lanes suppressed (C5; the registration requires config); config PRESENT but NOT A MAP (a string, a list, null) → ONE container finding at the config path, ALL dependent lanes suppressed (the C21 container rule at the top grain — a distinct lane from config-missing, driven by name); `command` missing/empty/non-string → code `invalid_process_gate_config`; `timeoutMs` missing or V3-invalid → code `invalid_process_gate_config`; config unknown key (uncoded); `output` not a map → ONE container finding, its inner lanes suppressed (C21's container rule at the config grain); `output` unknown inner key (uncoded); `output.mode` explicit-but-unknown → code `invalid_process_gate_config`; exitCode mode: `onExit` missing, or `onExit` present but NOT A MAP → ONE container finding suppressing its bucket lanes (code `invalid_process_gate_config` on the missing form; the container form is the C21 kind rule — both driven by name), or `zero`/`nonzero` bucket missing → code `invalid_process_gate_config`; a bucket value ∉ {allow, warn, block} → code `invalid_process_gate_config` (`route` never smuggles in); `onExit` surplus key (uncoded); gateDecisionJson mode: a present `onExit` (unconsumed, uncoded) — and the PRECEDENCE is PINNED: the unconsumed lane fires on the KEY's presence REGARDLESS of the value's shape (the key is illegal in that mode, so its content is never inspected — a non-map `onExit` in JSON mode yields exactly the ONE unconsumed finding, never a container finding and never a bucket cascade; driven as a combination lane); `onRunnerError`/`onTimeout` = `"failInstance"` → code `gate_config_not_supported` (its OWN distinct lane); any other non-`"blockTransition"` value → code `invalid_process_gate_config`; `reason` not a map / unknown key beside `zero`/`nonzero` / a value violating `^[a-z][a-z0-9_]*$` (uncoded). The authored camelCase tokens map to the model's snake_case (`blockTransition` ↔ `block_transition`, `exitCode` ↔ `exit_code`, `gateDecisionJson` ↔ `gate_decision_json` — the C13/C16 rename culture, both sides stated); the exit buckets are the WORDS `zero`/`nonzero` on BOTH the authoring and reading sides (C15's rename, stated so neither side forks) (anchored: contract:ch11-gate-format#C21, contract:ch11-gate-format#C13, contract:ch11-gate-format#C15, contract:ch11-gate-format#C5) |
-| V3 | `timeoutMs`'s VALUE grammar (C12's value half; the source-text half is P4's format walk): a safe integer ≥ 1 via the threshold precedent's one check (`typeof === "number" && Number.isSafeInteger(v) && v >= 1`) — the R-NUMERIC-LADDER dimensions all fail it: non-numbers, boxed `Number` objects (typeof "object"), numeric strings, non-integers, `NaN` and `Infinity` (number-typed, `Number.isSafeInteger` false — the threshold precedent's own named pair), unsafe integers, `0`, negatives, and `-0` (`-0 >= 1` is false); each driven as its own lane, staged as DIRECT object literals (the preserving channel — no stringify). The threshold `value` rule is UNTOUCHED (P2a-built, same grammar) (derived: contract:ch11-gate-format#C12, prose:v3/src/gates/threshold.ts) |
-| V4 | The validator treats raw config under the OWN-PROPERTY discipline (the P2a G8 rule applied at write time): member reads own-property only, the unknown-key scan over OWN enumerable string keys, non-map shapes ONE container finding — the container-kind check binds CONSUMED containers (for `onExit` that is exitCode mode alone: in gateDecisionJson mode the key is illegal and its content never inspected, so V2's unconsumed-presence pin fires instead — the fifth-round precedence, stated here so V4's grain list and V2's pin cannot be read against each other); the DRIVEN hostile set: a `__proto__` key pair, an inherited-key phantom (a config object whose prototype carries `command` — the member is NOT read), for the top config, `output`, `onExit` (exitCode mode), and `reason` grains (derived: prose:packet ch11-p2a, contract:ch11-gate-format#C21) |
-| V5 | The process↔workspace CROSS-RULE (C19, the P2a A7 branch realized WITH its template-side operand D1): after a binding's registration resolves, `admitTemplate` checks `registration.requiresRuntimeContext && template.runtimeContext !== "required"` → the finding `{path: <binding base>, code: "runtime_context_required_for_process_gate"}` — read by ADMISSION, never by the per-gate config validator (the rule crosses the template); one finding PER offending binding at that binding's C7 path (the actionable grain). Driven flag-wise: a hostile catalog's requiring non-process registration trips it; the shipped inline members never do; a process-gated template WITH the declaration admits. The INSTANCE-side operand (the ready ref) and the C36 runtime backstop are P3b's. The PER-BINDING finding grain rests on C21's placement of the lane among the per-gate C7-path lanes (C19's own text is template-grain — the disambiguation is C21's, cited) (anchored: contract:ch11-gate-format#C19, contract:ch11-gate-format#C21) |
-| V6 | `GateConfigFinding` gains OPTIONAL `code?: string` — the registration-side carrier of the C21 named-lane codes; `admitTemplate`'s C7 path-prefixing carries `code` through UNCHANGED onto the `ValidationFinding` (the P2a A9 carrier extended: the P3-slot codes join with their lanes — `invalid_process_gate_config` and `gate_config_not_supported` validator-emitted, `runtime_context_required_for_process_gate` admission-emitted per V5). Every ch8 lane and every uncoded gate lane stays code-less; the CLI `{stage, findings}` machine shape is unchanged in kind (C28) (derived: contract:ch11-gate-format#C21, prose:packet ch11-p2a) |
-| V7 | One channel, all-or-nothing, accumulation (the P2a A2/A3 rules JOINED, not re-decided): process-config findings, the V5 cross-rule finding, and sibling findings (threshold config, round lanes) ACCUMULATE in the SAME result; ANY finding ⇒ no admitted value. DRIVEN as THREE combinations, each pinning an independence the ratifier's sixth round named (an isolated-lane suite is blind to all three): (a) a bad process config AND a bad threshold config on sibling bindings → both report; (b) ONE binding with an invalid process config AND a missing `runtimeContext` declaration → BOTH the config findings and the V5 cross-rule finding report (kills the implementation that runs the cross-rule only after a clean config validation — the two rules are INDEPENDENT reads); (c) ONE process config with MULTIPLE independent defects (e.g. `command` missing AND `timeoutMs` invalid) → both findings accumulate (kills the first-error-only validator; the threshold validator's multi-finding idiom is the precedent) (derived: contract:ch11-gate-format#C20, prose:packet ch11-p2a) |
-| V8 | Input purity, mutation-sensitive on BOTH arms (the P2c arm-gate-2 lesson applied at write time — purity driven on valid AND invalid inputs) and on BOTH branches (the arm-gate-1 catch: validator purity alone does not witness the cross-rule): the process admission lanes run on DEEP-FROZEN inputs (template, steps, gates, config, nested maps — a mutating validator throws in strict mode) plus a before/after deep-equality assert on the raw config object; AND the V5 cross-rule lanes run through `admitTemplate` on a DEEP-FROZEN template whose `runtimeContext` field is covered by the before/after assert — a cross-rule that mutates or deletes `template.runtimeContext` fails, independent of the validator's own purity; defaults materialize into the EFFECTIVE value only, never into the input (derived: prose:packet ch11-p2c, prose:packet ch11-p2a) |
+| V1 | The EFFECTIVE process config (the admitted binding's single `config` surface, P2a's A5): `{ command: string (nonempty), timeoutMs: number, output: { mode: "exitCode" \| "gateDecisionJson" }, onExit?: { zero: Verdict, nonzero: Verdict }, onRunnerError: "blockTransition", onTimeout: "blockTransition", reason?: { zero?: token, nonzero?: token } }` — every default MATERIALIZED once at admission: absent `output` ⇒ `{ mode: "exitCode" }` (C14); absent dispositions ⇒ `"blockTransition"` (C16). Presence rules, stated once: `onExit` is present IFF exitCode mode — REQUIRED there, an admission finding when authored in gateDecisionJson mode (C15's hardening, lane n). `reason` in exitCode mode is ALWAYS present and COMPLETE — both buckets, authored-or-default `exit_zero`/`exit_nonzero` (C17). `reason` in gateDecisionJson mode is present IFF AUTHORED — grammar-validated, carried VERBATIM as authored (a partial map stays partial: C17's defaults belong to exit-bucket decisions, which that mode never produces), kernel-unread but NOT system-inert: C23 (P3b's wire) ships the ENTIRE effective config on the process stdin, so the authored value is WIRE-VISIBLE — the external gate process may observe it and condition its returned decision on it; authored pass-through data handed to the process, the `command` field's own class. Flag F1 is this decision's record (new-decision; the approve ratifies it). |
+| V2 | The admission lane inventory — the ONE channel (C20), C21's process-side subset; each lane fires per occurrence at its C7-addressed path in ch8-C21 `{path, message}` form, container preconditions joining ch8-C21's rule (a missing or wrong-kind container is ONE finding; its dependent lanes are suppressed); NAMED lanes additionally carry their CODE. The inventory as a LIST (membership owner: THIS row; named exclusions: the P2a-built structural/`uses`-grammar/threshold/verdict-config lanes stand unchanged; the C40 round lanes are P2c/P4's; the P4 source-form lanes are P4's): a. `config` missing where the registration requires it (C5) — uncoded, at the config path; dependent lanes suppressed. b. `config` not a map — container precondition, uncoded. c. process-config unknown key — uncoded. d. `command` missing / empty / non-string → `invalid_process_gate_config`. e. `timeoutMs` missing or value-invalid per V3 → `invalid_process_gate_config`. f. `output` not a map — container precondition, uncoded. g. `output` unknown inner key — uncoded. h. `output.mode` not in { `exitCode`, `gateDecisionJson` } (non-string included) → `invalid_process_gate_config`. i. `onExit` missing in exitCode mode (the defaulted form included) → `invalid_process_gate_config`. j. `onExit` not a map — container precondition, uncoded. k. an `onExit` bucket (`zero` / `nonzero`) missing → `invalid_process_gate_config`. l. an `onExit` bucket value outside { `allow`, `warn`, `block` } (`route` included) → `invalid_process_gate_config`. m. `onExit` surplus key — uncoded. n. `onExit` present in gateDecisionJson mode (unconsumed config) — uncoded. o. `onRunnerError` / `onTimeout` = `failInstance` → `gate_config_not_supported` (the DISTINCT reserved-disposition lane). p. `onRunnerError` / `onTimeout` any other non-`blockTransition` value → `invalid_process_gate_config`. q. `reason` violation — a non-map value is a CONTAINER PRECONDITION (one finding, its dependent sub-lanes suppressed — the `reason` map joins C21's container rule, symmetric with lanes b/f/j); on a map: unknown key beside `zero`/`nonzero`, or a token failing `^[a-z][a-z0-9_]*$` — uncoded. r. resolution: `external.process` now RESOLVES against the shipped catalog (the P2a `gate_evaluator_unavailable` lane's code path is unchanged; this packet drives the positive direction). s. the C19 cross-rule lane — the ONE declared exception to the per-occurrence rule: TEMPLATE-GRAIN, exactly one finding at the top-level `runtimeContext` path (V5's ratified granularity) → `runtime_context_required_for_process_gate`. |
+| V3 | `timeoutMs` value grammar — the C12 VALUE half at the domain grain: a safe integer ≥ 1, the full numeric ladder binding (dimension 4; `-0` fails the ≥ 1 bound and is still driven as its own ladder member, distinguished via `Object.is` where equality could mask it). DERIVATION NOTE: the same value-grain projection of C12's source regex that `threshold.ts` realizes for `value` — the one-grammar rule for authored integers; the source-text half is P4's (named exclusion). |
+| V4 | Finding addressing + code carrier: the registration's findings are config-relative `{path, message}` (`""` = the config itself); admission prefixes the C7 address `steps.<stepId>.gates.<eventType>[<i>].config…`; the `code` field rides per the A9 carrier rule — present on exactly the named lanes (d, e, h, i, k, l, o, p, s), absent on every uncoded lane. ADDRESSING EXCEPTION — lane s (a MIRROR of V5, the canonical home; this row decides nothing about it): not a registration finding (`admit_definition`-emitted, never the per-gate validator), addressed at the TOP-LEVEL template path `runtimeContext`, template-grain — never config-relative, never C7-prefixed; it appears in this roster as a CODE carrier only. DERIVATION NOTE: the P2a-built `GateConfigFinding`/`ValidationFinding` contract applied to this registration's lanes under C21's code assignments. |
+| V5 | The C19 cross-rule: read from the registration's `requiresRuntimeContext` flag by `admit_definition` — never by the per-gate config validator (the rule crosses the template). Fires IFF the template declares ≥ 1 process gate AND `template.runtimeContext` is not `"required"`; the negative directions: a declaring template admits, and a process-gate-free template admits with or without the declaration. EXACTLY ONE finding for the TEMPLATE, at the top-level path `runtimeContext`, code `runtime_context_required_for_process_gate`; the message MAY name the triggering bindings (message granularity is packet freedom — every triggering binding stays locatable). DECISION NOTE (new-decision, ratifier-selected): C19 phrases the outcome in the singular at the template grain while C21's matrix is per-occurrence — both a single template-level finding and one per offending binding conform, so the granularity is a decision. The TEMPLATE-GRAIN single finding is the selected form: one missing declaration is ONE defect with N causes (the author's fix is one top-level key, never a per-gate edit), the finding points at the fix site, no N-fold duplicate diagnostics, and the form stays stable as later process gates join the template. Flag F2 is the dated decision record; the approve ratifies it. |
+| V6 | Single-authority admission (C20): both channels — the file pipeline's validate stage and the direct-constructed testkit path — pass the SAME `admitTemplate` over the SAME injected catalog; the effective config is written into the binding at admission; no second validation point exists. Testing an invalid config asserts the compiler's issue list — a raw template is never handed to the kernel (C22's standing rule). |
 
 ## Canonical runner-port matrix (R)
 
-| Id | Rule |
+| ID | Rule |
 |---|---|
-| R1 | `ProcessGateRunner` (ports/gate.ts — the C29 runner half joining P2a's registration half): `run(command: string, opts: { cwd: string; stdin: string; timeoutMs: number }): Promise<ProcessResult>` — the kernel owns the contract, the runner owns the spawn. The `sh -c` shell interpretation is RATIFIED contract (C13's own letter — "ONE POSIX shell command line, interpreted with `sh -c`"), NOT open runner freedom: ch 9 REALIZES it but may not substitute a direct-exec/argv form (the arm-gate-1 correction — the earlier deferral list mis-filed it). Spawn mechanics genuinely beyond the contract — kill-signal semantics on timeout, environment inheritance, stdout size bounding — are NAMED ch-9 runner-contract territory: deferred explicitly, never realized here. The kernel-side CONSUMER (`run_process_gate`) is P3b's (anchored: prose:l2a-pseudocode/ProcessGateRunner, contract:ch11-gate-format#C34, contract:ch11-gate-format#C13) |
-| R2 | `ProcessResult` — C34's shape as a DISCRIMINATED union encoding the iffs type-level: `{ kind: "ok", exitCode: number, stdout: string, logRef: string, durationMs: number } \| { kind: "timeout", logRef, durationMs } \| { kind: "runner_error", logRef, durationMs }` — `exitCode`/`stdout` present iff kind=ok BY TYPE, and the iff's ABSENCE half is itself compile-negative-driven (the arm-gate-1 catch: a widened non-ok arm gaining `exitCode?: number` would pass every runtime test AND typecheck — so the non-ok arms exclude the ok-only fields structurally (the `?: never` exclusion or an equivalent), guarded by SIX `@ts-expect-error` probes covering BOTH iff directions (the ratifier's eighth round: absence-only probes leave the ok arm free to go optional): the ABSENCE half — assigning `exitCode` AND `stdout` on EACH non-ok arm (timeout and runner_error, four probes); the PRESENCE half — two ok-arm literals each OMITTING one required field (`{kind:"ok", stdout, logRef, durationMs}` without `exitCode`; `{kind:"ok", exitCode, logRef, durationMs}` without `stdout`) fail to compile, so an `exitCode?:`/`stdout?:` widening leaves those directives unused — TS2578 either way, the `__probe` idiom) (`stdout` is the UTF-8-decoded text C25's parser consumes at P3b — decoding is the runner's duty); `exitCode` is an INTEGER (C34's condition, carried in full — TS has no integer type, so the constraint is the runner's port contract: the kit passes the entry-authored value through unchanged and its contract test asserts `Number.isInteger` on the runner's OUTPUT, ch-9's real runner receives it from the OS); `logRef` nonempty, `durationMs` a non-negative integer — BOTH runner-OWNED values (minted deterministically by the kit, measured by ch-9). camelCase realization of the model's snake_case fields (the rename culture, stated) (anchored: contract:ch11-gate-format#C34) |
-| R3 | The evidence record + PERSISTENCE GUARANTEE (C26's port-contract half), ADDRESS and PAYLOAD separated (the internal-closure fix — C26's letter: the ref ADDRESSES the record): the record is ADDRESSED by `logRef` (the key — whether the implementation also stores it inside the record object is build freedom, the CONTRACT reads it as the address); the record's PAYLOAD field list is C26's verbatim: `{ log, kind ("ok" \| "timeout" \| "runner_error"), exitCode (present iff kind=ok), durationMs (non-negative integer), headSha, gitStatusHash }`. Field OWNERSHIP fixed: `log` is the CAPTURED OUTPUT TEXT for EVERY kind — C26's letter, restored at the ratifier's sixth findings round: the earlier "runner diagnostic for non-ok kinds" reading was NOT equivalent (a real runner's partial output produced BEFORE a timeout must not be dropped for a synthetic message; a separate diagnostic report would be a draft-level addition, deliberately not taken). The kit's no-spawn realization: kind=ok → the entry's `stdout`; timeout/runner_error → the deterministic EMPTY string `""` (no process output exists to capture in a scripted world — captured-nothing, not a substitute text); ch-9's real runner captures whatever output actually preceded the failure — through the runner's OWN capture-and-persist path, INDEPENDENT of the returned `ProcessResult.stdout` (which is ok-only by C34): the ok-only `stdout` field never forecloses a non-ok record's captured `log` (stated so the P3b/ch-9 builder cannot misread C34); `durationMs` and the workspace-fact fields (`headSha`, `gitStatusHash`) are RUNNER-owned declared values — the ch-11 testkit runner mints DETERMINISTIC fakes, the ch-9 real runner MEASURES them. Persistence: DURABLY on the runner's substrate BEFORE `run()` returns; a returned `logRef` MUST resolve; the record exists INDEPENDENTLY of any kernel commit. `kind` records PROCESS EXECUTION independent of decision classification (C26's bridge to the six-outcome drive). The record TYPE (`ProcessGateEvidenceRecord`) lives in ports/gate.ts beside the port; the records EXPOSURE is the testkit runner's surface (T1). The `evidence-on-every-run` CHECKER (both halves) and the durable PRODUCTION slot are P3b's — this share fixes the contract and its kit realization (anchored: contract:ch11-gate-format#C26) |
+| R1 | `INTERFACE ProcessGateRunner: run(command, { cwd, stdin, timeoutMs }) → Promise<ProcessResult>` — the model unit's signature at the TS grain (`timeout_ms` → `timeoutMs`, the C13/C16/C18 rename culture; snake_case belongs to P3b's wire forms). `command` is C13's one POSIX shell line; `cwd` is the workspace root; `stdin` carries the invocation document (no argv payload). The spawn realization is ch9's — this packet declares the port and scripts it in the kit. |
+| R2 | `ProcessResult` (C34's verbatim field list at the TS grain): `{ kind: "ok" \| "timeout" \| "runner_error", exitCode?, stdout?, logRef, durationMs }` — `exitCode` (an integer) and `stdout` (the UTF-8-decoded text) present IFF kind=`"ok"` (both iff directions driven); `logRef` a nonempty string; `durationMs` a non-negative integer. `stdout` is process-returned text: opaque at this packet, classified untrusted-confined (C25 consumes it at P3b under C32's culture — never re-parsed or interpreted here). |
+| R3 | The evidence record (C26's complete field list, realized IN FULL — only the measurement is ch9's, never the fields): addressed by `logRef` (the ref addresses the WHOLE record); fields `{ log, kind: "ok" \| "timeout" \| "runner_error", exitCode? (present iff kind="ok"), durationMs (non-negative integer), headSha, gitStatusHash }`. PERSISTENCE GUARANTEE (the port's contract): `run()` has DURABLY persisted the record on its substrate BEFORE returning — a returned `logRef` MUST resolve, and the record exists independently of any kernel commit (timeout and runner_error runs are evidenced too). The workspace-fact fields are the runner's DECLARED values: the kit runner mints deterministic fakes; the ch9 real runner measures them. `kind` records PROCESS EXECUTION independent of decision classification (a malformed-JSON run is kind=`"ok"` — the C25/C29 six-outcome bridge is P3b's to drive end-to-end). `log` is captured output text: untrusted-confined — retained verbatim in the record, never re-parsed, never policy or path input; at this packet its only consumers are kit assertions. |
 
 ## Canonical registry matrix (G)
 
-| Id | Rule |
+| ID | Rule |
 |---|---|
-| G1 | `external.process` (gates/process.ts — `implementation: "process"`, `execution: "inline"`, `requiresRuntimeContext: true`, `validateAndNormalizeConfig` = the validate_gate_config body, NO `evaluate` by type) JOINS `createGateRegistry()` — the C8 chapter-end THREE-member composition, `external.process` resolving, `requiresRuntimeContext` values driven across all three members. INTERIM STATE (stated, deliberate): with the member present and the kernel byte-untouched, an ADMITTED process-gated template reaching HANDLE still yields `Rejected(gate_execution_not_supported)` — the P2b lane becomes drivable through the SHIPPED composition (kernel.test.ts re-drives it on the real member; previously only a test-composed hostile catalog could) and RETIRES only at P3b with the model's reject→run flip (anchored: contract:ch11-gate-format#C8, contract:ch11-gate-format#C9, prose:packet ch11-p2a, prose:packet ch11-p2b) |
-| G2 | The composition-EVIDENCE mechanism (a PACKET-added test-evidence contract BEYOND the C8/C9 anchors — split out of G1 at arm gate 1: a C8/C9-faithful private Map would satisfy the anchors but not this mechanism, so the two must not share a row or a class; provenance: the ratifier's second-, third-, and fourth-findings-round prescriptions, human-directed): `gates/registry.ts` states the Block A composition ONCE as an exported canonical record (`blockARegistrations` — its keys ARE the composition inventory), and `createGateRegistry()` builds the catalog FROM that record and from NOTHING ELSE. IMMUTABILITY on BOTH layers AND at BOTH depths, with the freeze at the DEFINITION SITES (the arm-gate-1 product fix: a registry-init-time freeze leaves a pre-freeze mutation window — a consumer importing `thresholdRegistration` BEFORE the registry module evaluates could mutate it and the registry would freeze the compromised object; so `Object.freeze` is applied where each registration VALUE is defined — threshold.ts, previousReviewerVerdict.ts, process.ts export FROZEN objects — and the record itself is frozen in registry.ts at its own definition): the TYPE is readonly (compile-time half — driven by two isolated compile-negative probes on the P2a `__probe` precedent: probe A, a `@ts-expect-error`-guarded reassignment of a record member, guards the RECORD type's readonly; probe B, a `@ts-expect-error`-guarded overwrite of the process member's `requiresRuntimeContext`, re-guards the P2a-shipped PORT-field readonly at the nested depth — TS readonly is shallow; an accidental widening of either surface leaves its directive unused, TS2578 fails `v3:typecheck`); the runtime half is `Object.freeze` (a TS-only `as const` stays writable JavaScript). Guard scoping stated exactly: (a) the record's composition is mechanically falsifiable in both directions (`toStrictEqual` on its own keys: fourth/missing member both fail; the record↔catalog wiring lane); (b) immutability is test-driven by mutation-negative lanes covering ALL THREE members (the arm re-check catch: a process-member-only drive leaves the two inline registrations' freezes unfalsifiable): the record-level add / delete / replace trio, PLUS a nested member-field overwrite lane PER MEMBER (each of thresholdRegistration, previousReviewerVerdictRegistration, and the process registration: a field overwrite THROWS in strict mode AND the value is asserted unchanged), PLUS a per-member `Object.isFrozen` assert on all three exported values and the record itself; (c) record-is-the-only-source is a REVIEW-owned structural obligation (not test-drivable through the resolve-only port), sweep-assisted (exactly ONE `new Map(Object.entries(blockARegistrations))`, ZERO `.set(` in registry.ts). The `GateCatalog` PORT stays resolve-only (derived: prose:the ch11-P3a findings rounds 2–4 (the ratifier's mechanism prescriptions) + arm gate 1 (the definition-site freeze + the row split), contract:ch11-gate-format#C8) |
+| G1 | The shipped catalog composition becomes EXACTLY { `declarative.threshold`, `pairflow.previous_reviewer_verdict`, `external.process` } — C8/C9's chapter-end three-member set, MEASURED at build (the two-way exact-set test: the three resolve to their registrations, every probed other id resolves `null`; plus the close-time untruncated sweep receipt over `gates/registry.ts`). Static composition, no mutation API, injected at the composition roots (neither `kernel/` nor `definition/` imports `gates/` — the C29/ADR-013 import rule stands unchanged). |
+| G2 | The `external.process` registration: `{ implementation: "process", execution: "inline", requiresRuntimeContext: true, validateAndNormalizeConfig: <the validate_gate_config body> }`. The process arm carries NO `evaluate` — foreclosed by the P2a-built discriminated union, with its standing compile probe extended to the SHIPPED registration. It is the only registry member with implementation=`"process"` (C9); all three members are execution=`"inline"` (the `"inline"` singleton type — the still-inline-only invariant's type/schema disposition, with its compile probe). |
 
 ## Canonical testkit/drift matrix (T)
 
-| Id | Rule |
+| ID | Rule |
 |---|---|
-| T1 | `createScriptedProcessGateRunner(script)` (testkit/processGateRunner.ts — the C29 six-outcome re-shape, the retired ch-3 scripted players' ledger-shaped successor): consumes a scripted OUTCOME-per-run sequence whose entry shape is DISJOINT from the runner-minted fields (the internal-closure fix, fifth findings round): a script entry is `{kind: "ok", exitCode, stdout} | {kind: "timeout"} | {kind: "runner_error"}` — the test authors ONLY the outcome; the RUNNER mints `logRef` and `durationMs` (both runner-OWNED — deterministic here, ch-9's real runner measures them) plus the record's workspace-fact fields, and ASSEMBLES the C34 `ProcessResult` from entry + minted fields. Entry-borne EXTRA fields are IGNORED wholesale (the arm-gate-1 correction — under structural TypeScript a widened variable CAN smuggle `{kind: "timeout", logRef: "authored"}` into the entry type, so "can never carry" was false as stated): the runner mints `logRef`/`durationMs` REGARDLESS of any smuggled value — driven by a hostile lane staging ALL the smuggleable fields at once (the arm re-check catch: a logRef-only drive leaves durationMs/stdout smuggling green): the combined smuggling probe runs on EVERY kind — ok, timeout, AND runner_error (the ratifier's eighth round: the wholesale claim binds ALL arms and ALL runner-owned fields, so the drive enumerates the family): a widened entry of EACH kind carrying the FULL smuggleable set for that kind — authored `logRef`, `durationMs`, `headSha`, `gitStatusHash`, `log`, plus `exitCode`/`stdout` on the NON-ok kinds — and the lane asserts every runner-owned field is the runner-minted value on BOTH the result and the record (ref, durationMs, headSha, gitStatusHash), the non-ok result carries NO `exitCode`/`stdout`, and the record's `log` follows R3's per-kind rule regardless of any smuggled `log`. The script is consumed IN AUTHORED ORDER — driven by a multi-entry lane (a three-entry script with distinct kinds asserted in authored order; a `pop()`/reversed consumer fails). The record's `log` field is the CAPTURED OUTPUT for every kind (R3/C26): kind=ok → the entry's `stdout` text verbatim; kind=timeout/runner_error → the deterministic empty string `""` (nothing was captured — never a synthetic diagnostic; the `kind` field carries the failure semantics). A SCRIPT-ENTRY PRECONDITION is fail-loud (the exhaustion-throw culture): the predicate is EXACTLY `Number.isInteger(entry.exitCode)` — C34's domain, NOTHING narrower (the seventh-findings-round correction: a `Number.isSafeInteger` or `>= 0` narrowing would wrongly reject C34-legal integers — narrowing the accepted domain is a C34/draft-level decision, never packet freedom); a failing entry makes `run()` THROW as a script defect — the kit never forwards a C34-violating value. The lane is driven over the FULL R-NUMERIC-LADDER in BOTH directions: rejected by name — a fractional (`1.5`), `NaN`, `Infinity`, `-Infinity`, a numeric STRING (`"1"`), a boxed `Number` object, and the coercible non-numbers `true`, `null`, and `[]` (the arm-gate-1 complement closure: a coerce-then-check mutant — `Number(x)` maps all three to integers — passes the first six rungs and fails exactly these); accepted by name, each rung with ITS OWN killer — `0` and a positive integer (the baseline); `-1` (kills a `>= 0` narrowing); `-0` (kills the plausible V3-predicate COPY mutant — `-0 >= 1` is false — and a `-0`→`+0` coercion: its accept lane asserts `Object.is` identity, `toBe(-0)`, else it collapses into the `0` lane); `2**53` (kills an `isSafeInteger` narrowing — integer but not safe) — each passes through unchanged. RECORDS every SUCCESSFULLY CONSUMED invocation verbatim (`{command, cwd, stdin, timeoutMs}` — the wire-assert surface for P3b), and persists ONE evidence record per COMPLETED run BEFORE resolving (R3's guarantee, in-memory substrate) — the quantifier is scoped to completed runs (the arm-gate-1 precision: the two THROW paths are NOT runs): a `run()` call BEYOND the script THROWS (exhaustion — a test defect, fail-loud) and an invalid-entry call THROWS (the precondition below), and BOTH throw paths leave `invocations` AND `records` UNCHANGED (the post-throw state is pinned by its own lane — a throwing call neither records an invocation nor mints a record, so the one-record-per-invocation correspondence holds exactly); exposes `invocations`, `records`, and ref resolution for assertion. The persistence-BEFORE-resolve guarantee (R3) is asserted in its testable CONSEQUENCE form on an in-memory fake: at the moment `run()` resolves, the returned ref ALREADY resolves against the exposed records and the record count has grown by exactly one — a stronger direct ordering observation does not exist for an in-process substrate (stated, not glossed). TERMINOLOGY (stated so the P3b builder expects the right thing): the six classes here are ProcessResult-level STAGING classes (ok/0, ok/nonzero, timeout, runner_error, ok + malformed stdout, ok + valid decision JSON) — they map onto C29's six DECISION outcomes (allow/warn/block/timeout/runner_error/malformed) only through P3b's classification; the kit stages results and never emits decisions (anchored: contract:ch11-gate-format#C29, contract:ch11-gate-format#C26, contract:ch11-gate-format#C34) |
-| T2 | Drift flips: `unitMap.json` — the 4 slice ids flip `realized` (`validate_gate_config` → implement @ gates/process.ts; `GateRegistration` → alias @ ports/gate.ts; `ProcessGateRunner` → type/schema @ ports/gate.ts; `CREATE_INSTANCE` → alias @ kernel/start.ts); `domainRegistry.ts` — `l2a/ProcessGateRunner` and `l2a/ProcessResult` flip realized with their type witnesses; `l2a/GateInvocation` stays PENDING (the wire value is constructed at P3b — a deliberate non-flip); `rejectionNames` UNTOUCHED (54) (derived: prose:plan §11.2, prose:v3/src/drift/unitMap.json) |
+| T1 | `ScriptedProcessGateRunner` (testkit): implements the R1 port; plays scripted per-call `ProcessResult` outcomes with FAITHFUL QUEUED PLAYBACK — each call returns EXACTLY the next scripted result, field-for-field as scripted, in order (a runner normalizing, defaulting, or altering any scripted field violates this row). The six-outcome mapping (parameterized, THIS row is the membership owner — each C29 outcome member → its scriptable `ProcessResult` shape): allow/warn/block via the exit-bucket path ← kind=`"ok"` + `exitCode` 0 or nonzero (the bucket dispositions select the verdict); allow/warn/block via the JSON path ← kind=`"ok"` + `stdout` carrying a C25 `GateDecision` document; malformed ← kind=`"ok"` + `stdout` carrying non-C25 text (per R3's kind note); timeout ← kind=`"timeout"`; runner_error ← kind=`"runner_error"`. Mints deterministic workspace-fact fakes; PERSISTS its evidence record before resolving (R3's guarantee is the kit's own driven contract) and EXPOSES its persisted records for assertion. Script exhaustion is an explicit error (the scriptedActor idiom). Kit piece only — the end-to-end six-outcome drive through classification and HANDLE is P3b's (the deferral home). |
+| T2 | Drift flips at build: `unitMap.json` — the four owned unit ids flip pending → realized with their `codeRef` witnesses; the two `alias/inherited` flips witness their PRE-EXISTING realization sites (`CREATE_INSTANCE` → the kernel's create path; `GateRegistration` → `ports/gate.ts`) — existing files outside or inside this boundary, byte-untouched where outside (the `l2-pseudocode/CREATE_INSTANCE` → `kernel/start.ts` precedent: the map accepts existing-file witnesses); `domainRegistry.ts` — `l2a/ProcessGateRunner` and `l2a/ProcessResult` flip with witnesses; `l2a/GateInvocation` STAYS pending (P3b's wire value). The rejection registry is untouched (54 names). DERIVATION NOTE: plan §11.2's ownership arithmetic applied to the drift files' current pending markers. |
 
-## Site × shape × phase grid (template §2 write-time discipline)
+## Site × shape × phase grid
 
-N/A — one line with evidence: this share adds ZERO awaited sites to
-any phased seam. Admission is synchronous over in-memory values; the
-registry is a Map lookup; the scripted runner's async `run()` is a
-TESTKIT surface with no kernel caller until P3b (the kernel is
-byte-untouched — the diff surface at close is the witness).
+N/A with evidence: this packet's failure lanes live at ADMISSION — a
+pure, single-phase pre-state computation (the all-or-nothing A2
+return commits nothing) — and inside the kit runner's single-call
+contract. No seam with phases (stop/drain, pre/post-commit) gains a
+failure lane here; the HANDLE-side phases arrive with P3b.
 
 ## Mirrored surface map (one canonical statement per rule)
 
-| Rule | Canonical | Mirrors |
+| Rule | Canonical home | Named mirrors (summarize/defer only) |
 |---|---|---|
-| single-authority admission + defaults materialized once | V1 + V2 | Claim 1 · dimension 1 · the invariant table's validated-at-load row |
-| the C21 process lane set + codes | V2 | dimension 1 · V6's code list · the acceptance lane list |
-| the effective form's presence rules (onExit/reason by mode) | V1 | dimension 1's exact-config clause · flag F1 · the acceptance letter-case lane |
-| cross-rule at admission (declaration level; backstop deferred) | V5 | Claim 3 · dimension 2 · D1's consumer note · the header's rejection-surface sentence |
-| the composition's three members + interim reject state | G1 | Claim 2 · Claim 5's interim clause · dimensions 3 and 5 |
-| the composition record's immutability (both layers, both depths — freeze at the DEFINITION sites) | G2 | dimension 3's mutation-lane + compile-probe clauses · the acceptance registry bullet's lanes/probes · sweep (d) |
-| the runner port contract + result/record shapes + persistence guarantee | R1 + R2 + R3 | Claim 4 · dimension 4 · T1's kit realization |
-| the six-outcome kit drive (stageable here, driven at P3b) | T1 | Claim 4's staging clause · dimension 4 · the slice's proof-boundary note |
-| deferred-to-P3b set — the COMPLETE enumeration (the C36 runtime backstop + the behavioral rejection · the HANDLE process branch + run_process_gate/classify_process_result/runner_outcome · the C23/C24 wire forms + C25 parse + C32 confinement + C33 propagation · the instance field + start-input seam + store column/schema bump (+ its §11.1 item 2 / item 4 / §11.5 plan alignments) · the evidence checker (both halves) · the durable production slot · the l2a trace · the GateInvocation flip · the gate_execution_not_supported retirement) | the slice's disposition note + the plan §11.4 P3b row (canonical, arm-gate-1 correction — the header sentence covers only the alignment subset) | Claim 5 · the Sizing closure-budget annex · R3's deferral clause · G1's retire clause · T2's GateInvocation non-flip · the header's P3b-alignment note |
-| the in-context notes | the rows each note names (V1 · V2/C15 · R1/C13 · G1 · T1) | notes 1–5 (pointer-style, no independent restatement) |
+| kernel byte-untouched | Claim 2 | the header paragraph; the sizing surface-spread axis; the closure-budget annex; the mutation-boundary note ("Claim 2's machine face") |
+| the effective-config shape + presence | V1 | Claim 1's reference; R1's stdin mention (the wire is P3b's) |
+| the three-member composition | G1 | Claim 4; the header paragraph |
+| the six-outcome family | T1 | R3's kind note; the header's kit-piece sentence |
+| the P3b deferral set (HANDLE branch, wire forms, checker, trace, C36) | the slice notes | the header anchors sentence; Claim 2/5 exclusions; the sizing foundation-coupling axis; T1/T2 |
+| the issue-code tokens | the operative-material data line | V2's per-lane assignments; the slice note |
+| the C19 cross-rule | V5 | Claim 5; V2 lane s; V4's code-carrier roster + addressing exception; G2's flag mention; D1's exclusions; the header |
+| the runner/result/evidence field lists | R2/R3 | the header; the ProcessGateRunner unit's comment line |
+| persist-before-return | R3 | Claim 3; T1's guarantee mention; the acceptance kit-contract bullet |
+| the `runtimeContext` optional-`"required"` field | D1 | Claim 5; dimension 13 |
+| the 54-name rejection registry untouched | the slice note | T2; the acceptance drift bullet |
+| the own-property (G8) discipline | the in-context note | dimension 2's hostility member; the acceptance own-property bullet |
+
+Fold policy: a change to a canonical row updates every named mirror
+before handing back; a mirror discovered in review is added here.
 
 ## In-context notes (the scarce budget)
 
-1. **No re-defaulting anywhere downstream:** the effective config is
-   COMPLETE per V1's presence rules — if a `??` over `output.mode`
-   or a disposition appears outside `validate_gate_config`, the bug
-   is upstream. One config form after admission.
-2. **The zero/nonzero rename is BOTH-sided:** the authoring grammar
-   writes `zero`/`nonzero` — no `"0"` string key survives anywhere
-   in this repo's config path (V2; the model text's `on_exit["0"]`
-   is wire-history, not code). And the two issue codes are FINDING
-   `code` strings ONLY — they never enter `domain/rejections.ts`
-   (the registry stays 54; the file is outside the boundary, so a
-   "helpful" registry addition fails the post-build audit).
-3. **Do not build spawn or execution mechanics:** no kernel edit, no
-   `run_process_gate`, no classification, no production runner slot
-   — all P3b's; if a change wants `kernel/` or `store/` or `cli/`
-   production files, it is out of this packet's boundary.
-4. **The interim reject state is a feature, not a gap:** an admitted
-   process-gated template that reaches HANDLE and rejects
-   `gate_execution_not_supported` is the model's own L2-core
-   semantics with the registration present — do not "helpfully"
-   soften or special-case it.
-5. **The kit runner never spawns:** it is a scripted value machine —
-   deterministic refs, in-memory records, loud exhaustion; resist
-   adding real-subprocess convenience to it (ch 9's runner is the
-   spawning one).
+- Extend, don't fork: the registration lands as
+  `v3/src/gates/process.ts` beside `threshold.ts` /
+  `previousReviewerVerdict.ts`, following their shape (a module-level
+  registration value + local validator helpers); `admit.ts`'s A7
+  comment marks exactly where the cross-rule branch belongs —
+  realize it in place, minding the grain: DETECTION rides the
+  per-binding loop (the resolved registration's
+  `requiresRuntimeContext` flag observed as bindings resolve), and
+  the SINGLE template-grain finding emits ONCE, post-loop, against
+  `template.runtimeContext` (V5's form — never one per binding); no
+  second validator, no parallel port file.
+- The own-property discipline (P2a's G8) binds every config read:
+  own enumerable string keys only — `__proto__`/inherited members
+  are never config (`threshold.ts` is the pattern).
+- The C15 word-key rename applies on BOTH sides: the validator reads
+  the WORDS `zero`/`nonzero`; the model text's `"0"` bucket never
+  appears in code.
+- The kit runner follows `scriptedActor`'s scripting idiom —
+  deterministic queue, explicit exhaustion error; kit self-tests own
+  its contract.
+- Hostile numeric fixtures ride the direct channel as object
+  literals — the channel preserves `-0` (no stringify staging; the
+  R-RAW-FIXTURES watchpoint does not fire).
 
 ## Embedding gates (v1-inherited)
 
-- **Edited (production):** `v3/src/domain/template.ts` (D1),
-  `v3/src/ports/gate.ts` (R1/R2/R3 types + V6's `code`; the same
-  edit corrects the file's stale forward-pointer comment — line
-  ~43's "its cross-rule branch is P3" is realized HERE by V5),
-  `v3/src/ports/index.ts` (exports),
-  `v3/src/gates/process.ts` (NEW — G1's registration + V1–V4's
-  validator; exports its registration FROZEN, G2),
-  `v3/src/gates/registry.ts` (G1 + G2's record),
-  `v3/src/gates/threshold.ts` + `v3/src/gates/previousReviewerVerdict.ts`
-  (ONE-LINE edits each — `Object.freeze` at the DEFINITION site,
-  G2's arm-gate-1 fix: the pre-freeze mutation window closes only
-  where the values are born),
-  `v3/src/gates/index.ts` (export),
-  `v3/src/definition/admit.ts` (V5 cross-rule + V6 code
-  carry-through),
-  `v3/src/testkit/processGateRunner.ts` (NEW — T1),
-  `v3/src/testkit/index.ts` (exports),
+- Target files (verified against the live tree): NEW —
+  `v3/src/gates/process.ts` + test,
+  `v3/src/testkit/scriptedProcessGateRunner.ts` + test. EDITED —
+  `v3/src/gates/registry.ts` (composition) + `registry.test.ts` (the
+  exact-set test currently asserts `external.process` → `null`; it
+  flips), `v3/src/gates/index.ts`, `v3/src/ports/gate.ts` (the
+  runner port + result + evidence shapes join the reconciled port
+  file) + `v3/src/ports/index.ts`, `v3/src/domain/template.ts` (the
+  `runtimeContext` field) + `v3/src/domain/index.ts` (export ripple
+  if any), `v3/src/definition/admit.ts` (the A7 branch) +
+  `admit.test.ts`, `v3/src/testkit/index.ts`,
   `v3/src/drift/unitMap.json` + `v3/src/drift/domainRegistry.ts`
-  (T2), `docs/v3/implementation/plan.md` (the split repartition +
-  pointer alignments — applied, riding this commit).
-- **Edited (tests):** `v3/src/gates/process.test.ts` (NEW —
-  dimension 1: the V2 lane matrix, V3's ladder, V4's hostile
-  own-property set, V8's purity, V1's exact effective-config asserts
-  incl. the JSON-mode letter case),
-  `v3/src/gates/registry.test.ts` (dimension 3),
-  `v3/src/definition/admit.test.ts` (dimension 2's cross-rule lanes
-  + V6 code carry-through + V7 accumulation),
-  `v3/src/testkit/processGateRunner.test.ts` (NEW — dimension 4),
-  `v3/src/kernel/kernel.test.ts` (dimension 5's interim-state lane —
-  TEST-ONLY: `kernel.ts` production is byte-untouched).
-- **Untouched, explicitly:** `v3/src/kernel/**` PRODUCTION files
-  (`kernel.ts`, `start.ts`, `admission.ts`, `capability.ts`,
-  `gateProjection.ts`, `dispatchIntent.ts`, `index.ts`),
-  `v3/src/domain/instance.ts` (the instance field is P3b's — its
-  stale round doc-comment is corrected there with the field edit),
-  `v3/src/domain/gate.ts` + `outcome.ts` + `rejections.ts`,
-  `v3/src/store/**`, `v3/src/cli/**` (production AND tests — no
-  wiring change exists yet),
-  `v3/src/definition/load.ts` + `validate.ts` +
-  `fileDefinitionStore.ts`,
-  `v3/src/floor/**`, `v3/src/ingress/**`, `v3/src/diag/**`,
-  `v3/src/emit/**`,
-  `v3/src/testkit/traceHarness.ts` + `storeCheckers.ts` +
-  `templateFixture.ts` (+ their tests), all trace test files
-  (`l0aTrace`/`l0bTrace`/`l1Trace`/`l2Trace`/`twoWorker`,
-  `emitLoop.test.ts`) — NO `KernelDeps` change happens here, so NO
-  deps-literal ripple exists, `v3/templates/**`,
-  `v3/eslint.config.mjs`, `tools/**`, `v3/adr/**` (the gates module
-  is ADR-013's; no new module decision).
-- **Sweeps (measured 2026-07-17, current tree; untruncated; the
-  commands are LITERAL — the test exclusion is a flag, not prose;
-  fifth-findings-round correction):**
-  `grep -rn "gate_execution_not_supported" v3/src --include="*.ts"
-  --exclude="*.test.ts"` → 4 hits: `domainRegistry.ts:232`/`:235`
-  (drift rows), `domain/rejections.ts:25` (the 54-name registry
-  member), `kernel.ts:187` (the P2b early-reject — STAYS
-  byte-identical in this packet; the close re-runs the sweep and
-  asserts all 4 hits UNCHANGED);
-  `grep -rail "runtimecontext\|runtime_context" v3/src
-  --include="*.ts" --exclude="*.test.ts"` (case-INSENSITIVE; the
-  `-a` is LOAD-BEARING — `definition/admit.ts` carries two literal
-  NUL bytes in its `effectiveKey` separator (line ~83), so a
-  text-default grep classifies it BINARY and implementations
-  DIVERGE on skipping it; the sixth-findings-round catch) →
-  exactly 6 files: gates/threshold.ts + previousReviewerVerdict.ts
-  (`requiresRuntimeContext: false` fields), ports/gate.ts (the
-  flag), definition/admit.ts (the P2a A7 comment this packet
-  realizes), drift/domainRegistry.ts (quoted keys),
-  domain/rejections.ts (the `runtime_context_*` registry names) —
-  NO domain-template/instance/store/kernel hit: D1 is new, zero
-  forced literal updates;
-  `grep -rnl "ScriptedGate\|ScriptedProcess\|ProcessRunner\|GateRunner"
-  v3/src --include="*.ts" --exclude="*.test.ts"` →
-  drift/domainRegistry.ts only (quoted keys; the ch-3 players gone
-  since P2a — the runner half lands on clean ground);
-  `grep -ral "GateConfigFinding\|GateConfigResult" v3/src
-  --include="*.ts" --exclude="*.test.ts"` (`-a` for the same
-  admit.ts NUL reason) → 5 files (threshold,
-  previousReviewerVerdict, ports/gate.ts, ports/index.ts,
-  definition/admit.ts — a comment reference at its finding
-  carry-through) — V6's optional field forces none of them
-  (admit.ts is in the boundary regardless, V5/V6).
-- **Type-ripple targets:** D1 and V6 are optional-additive (zero
-  forced updates — the measured sweeps); NO `KernelDeps` change → NO
-  test-composed-kernel ripple; `v3:typecheck` is the closing
-  backstop.
+  (the T2 flips).
+- Entrypoints: `admitTemplate` (`v3/src/definition/admit.ts`) — the
+  single admission authority; `createGateRegistry`
+  (`v3/src/gates/registry.ts`) — the injected composition.
+- Mutation boundary: the files below; extend-don't-fork. No
+  `kernel/`, `store/`, `floor/`, or `cli/` file is in the boundary —
+  Claim 2's machine face.
 
 ```json
 {
   "mutation_boundary": {
     "files": [
-      "docs/v3/implementation/plan.md",
-      "v3/src/domain/template.ts",
-      "v3/src/ports/gate.ts",
-      "v3/src/ports/index.ts",
       "v3/src/gates/process.ts",
       "v3/src/gates/process.test.ts",
       "v3/src/gates/registry.ts",
       "v3/src/gates/registry.test.ts",
       "v3/src/gates/index.ts",
-      "v3/src/gates/threshold.ts",
-      "v3/src/gates/previousReviewerVerdict.ts",
+      "v3/src/ports/gate.ts",
+      "v3/src/ports/index.ts",
+      "v3/src/domain/template.ts",
+      "v3/src/domain/index.ts",
       "v3/src/definition/admit.ts",
       "v3/src/definition/admit.test.ts",
-      "v3/src/kernel/kernel.test.ts",
-      "v3/src/testkit/processGateRunner.ts",
-      "v3/src/testkit/processGateRunner.test.ts",
+      "v3/src/testkit/scriptedProcessGateRunner.ts",
+      "v3/src/testkit/scriptedProcessGateRunner.test.ts",
       "v3/src/testkit/index.ts",
       "v3/src/drift/unitMap.json",
-      "v3/src/drift/domainRegistry.ts"
+      "v3/src/drift/domainRegistry.ts",
+      "docs/v3/implementation/plan.md"
     ]
   }
 }
 ```
+
+(`plan.md` is the R-ALIGNED-UP carrier — the prepared §11 P3-split
+alignment lands in the build commit, so the boundary lists it; the
+P1/ch8-P2 precedent.)
 
 ## Row manifest (the D1 classification's machine face)
 
@@ -648,18 +495,16 @@ byte-untouched — the diff surface at close is the witness).
     "rows": [
       { "id": "D1", "class": "anchored", "refs": ["contract:ch11-gate-format#C18"] },
       { "id": "V1", "class": "new-decision", "refs": [] },
-      { "id": "V2", "class": "anchored", "refs": ["contract:ch11-gate-format#C21", "contract:ch11-gate-format#C13", "contract:ch11-gate-format#C15", "contract:ch11-gate-format#C5"] },
+      { "id": "V2", "class": "anchored", "refs": ["contract:ch11-gate-format#C21", "contract:ch11-gate-format#C13", "contract:ch11-gate-format#C14", "contract:ch11-gate-format#C15", "contract:ch11-gate-format#C16", "contract:ch11-gate-format#C17", "contract:ch11-gate-format#C5"] },
       { "id": "V3", "class": "derived", "refs": ["contract:ch11-gate-format#C12", "prose:v3/src/gates/threshold.ts"] },
       { "id": "V4", "class": "derived", "refs": ["prose:packet ch11-p2a", "contract:ch11-gate-format#C21"] },
-      { "id": "V5", "class": "anchored", "refs": ["contract:ch11-gate-format#C19", "contract:ch11-gate-format#C21"] },
-      { "id": "V6", "class": "derived", "refs": ["contract:ch11-gate-format#C21", "prose:packet ch11-p2a"] },
-      { "id": "V7", "class": "derived", "refs": ["contract:ch11-gate-format#C20", "prose:packet ch11-p2a"] },
-      { "id": "V8", "class": "derived", "refs": ["prose:packet ch11-p2c", "prose:packet ch11-p2a"] },
+      { "id": "V5", "class": "new-decision", "refs": [] },
+      { "id": "V6", "class": "anchored", "refs": ["contract:ch11-gate-format#C20"] },
       { "id": "R1", "class": "anchored", "refs": ["prose:l2a-pseudocode/ProcessGateRunner", "contract:ch11-gate-format#C34", "contract:ch11-gate-format#C13"] },
       { "id": "R2", "class": "anchored", "refs": ["contract:ch11-gate-format#C34"] },
       { "id": "R3", "class": "anchored", "refs": ["contract:ch11-gate-format#C26"] },
-      { "id": "G1", "class": "anchored", "refs": ["contract:ch11-gate-format#C8", "contract:ch11-gate-format#C9", "prose:packet ch11-p2a", "prose:packet ch11-p2b"] },
-      { "id": "G2", "class": "derived", "refs": ["prose:the ch11-P3a findings rounds (the ratifier's mechanism prescriptions + arm gate 1)", "contract:ch11-gate-format#C8"] },
+      { "id": "G1", "class": "anchored", "refs": ["contract:ch11-gate-format#C8", "contract:ch11-gate-format#C9", "contract:ch11-gate-format#C29"] },
+      { "id": "G2", "class": "anchored", "refs": ["prose:l2a-pseudocode/GateRegistration", "contract:ch11-gate-format#C9", "contract:ch11-gate-format#C19"] },
       { "id": "T1", "class": "anchored", "refs": ["contract:ch11-gate-format#C29", "contract:ch11-gate-format#C26", "contract:ch11-gate-format#C34"] },
       { "id": "T2", "class": "derived", "refs": ["prose:plan §11.2", "prose:v3/src/drift/unitMap.json"] }
     ]
@@ -670,202 +515,237 @@ byte-untouched — the diff surface at close is the witness).
 ## Pre-approval flags
 
 - **F1 — the JSON-mode authored `reason`: kernel-unread but
-  WIRE-VISIBLE pass-through (V1's letter reading, strengthened at
-  the ratifier's second findings round).** C13 lists `reason` as a
-  legal optional key unscoped by mode; C21's closed lane list
-  hardens only `onExit` against gateDecisionJson mode — so an
-  authored, grammar-valid `reason` in JSON mode ADMITS and rides the
-  effective config verbatim-as-authored. What that MEANS, stated in
-  full (the ratification covers THIS, not a weaker "inert" reading):
-  the kernel's own classification never reads it in that mode, BUT
-  C23 ships the ENTIRE effective config on the process stdin, so the
-  key is WIRE-VISIBLE — the external gate process can observe it and
-  may condition its returned decision on it; it is authored
-  pass-through data handed to the process (the `command` field's
-  class), not dead bytes. This is the one point where the
-  "unconsumed config = dead config" culture is not applied, and it
-  follows the draft's letter: rejecting the key would add an
-  admission lane C21's closed list omits, and a wire-time strip
-  would make the wire's `config` diverge from the effective form —
-  forking C23's one-downstream-form rule.
-  If TRUE inertness is ever wanted, that is a later additive
-  draft-level decision (e.g. an admission rejection lane, an
-  admission-time normalization DROP of the key in JSON mode — which
-  keeps wire ≡ effective, both without it — or a ratified wire
-  exclusion; the examples are illustrative, the draft decides),
-  named here so it stays visible. MANIFEST CLASS (arm gate 1): V1
-  is a NEW-DECISION row — the cited C-rows CONSTRAIN but do not
-  select the retention choice, so this flag IS the decision record
-  and the human approve is its ratification act (tally 8/7/1,
-  below the Case-B threshold; no authority/separation/
-  availability-class semantics touched).
-  `Route: approve-ratified` — the
-  approve ratifies the pass-through meaning.
+  WIRE-VISIBLE pass-through (V1's retention decision).** C13 lists
+  `reason` as a legal optional key unscoped by mode, and C21's
+  closed lane list hardens only `onExit` against gateDecisionJson
+  mode — so an authored, grammar-valid `reason` in JSON mode ADMITS
+  and rides the effective config verbatim-as-authored. What that
+  MEANS, stated in full (the ratification covers THIS reading, not a
+  weaker "inert" one): the kernel's own classification never reads
+  it in that mode, BUT C23 ships the ENTIRE effective config on the
+  process stdin, so the key is WIRE-VISIBLE — the external gate
+  process can observe it and may condition its returned decision on
+  it; it is authored pass-through data handed to the process (the
+  `command` field's class), not dead bytes. This is the one point
+  where the "unconsumed config = dead config" culture is not
+  applied. What the draft's letter actually forecloses, stated
+  precisely: REJECTING the key would add an admission lane C21's
+  closed list omits, and a WIRE-time strip would fork C23's
+  one-downstream-form rule (wire ≠ effective). An ADMISSION-TIME
+  normalization drop would CONFORM — the dropped form would BE the
+  effective config and the same bytes would ride the wire (wire ≡
+  effective, both without the key) — so carry-verbatim is NOT the
+  letter's only reading: the retention is a genuine selection among
+  conforming alternatives, which is exactly why V1 is a new-decision
+  row. If TRUE inertness is ever wanted, that is a later additive
+  draft-level decision (an admission rejection lane, the
+  admission-time drop, or a ratified wire exclusion; the examples
+  are illustrative, the draft decides), named here so it stays
+  visible. MANIFEST CLASS: V1 is a NEW-DECISION row — the
+  cited C-rows (C13/C14/C16/C17/C23) CONSTRAIN the space but do not
+  select among equally conforming alternatives (carry-verbatim vs an
+  admission-time normalization drop); the retention choice is this
+  packet's own. Decision provenance: accepted in the pre-reset
+  ch11-P3a rounds (2026-07-16/17; the record packet @ commit
+  ca4ea924) and carried by the recreation bootstrap note (the
+  process log) so it is not re-litigated; tally 9/3/2, below the
+  Case-B threshold; no authority/separation/availability-class
+  semantics touched. `Route: approve-ratified` — this packet's
+  human approve is the ratification act of the pass-through
+  meaning.
+
+- **F2 — the C19 finding granularity: template-grain, exactly one
+  finding (V5's new-decision, ratifier-selected).** C19 states the
+  cross-rule's outcome in the singular at the template grain; C21
+  places its lane in the per-occurrence admission matrix — both a
+  single template-level finding and one finding per offending
+  binding conform to the ratified rows, so the choice is this
+  packet's own. V5 selects the TEMPLATE-GRAIN form, the ratifier's
+  selection at this packet's findings round (2026-07-17,
+  superseding the panel-drafted per-binding form): if at least one
+  `requiresRuntimeContext` gate is declared and
+  `runtimeContext: required` is absent, EXACTLY ONE
+  `runtime_context_required_for_process_gate` finding is issued for
+  the template, at the top-level `runtimeContext` path. Rationale
+  (the ratifier's): the author's fix is ONE top-level declaration —
+  N offending gates are N causes of the same single template-level
+  defect, not N defects; the finding points directly at the fix
+  site; no N identical diagnostics for one missing key; the form
+  stays stable as further process gates join the template. The
+  message MAY name the triggering bindings (packet freedom — every
+  triggering binding stays locatable). Decision provenance: the
+  granularity question was minted at this packet's first panel
+  round (the derived-row entailment attack, two independent lenses
+  concurring); the ratifier resolved it template-grain at the
+  findings round. Tally 9/3/2, below the Case-B threshold; no
+  authority/separation/availability-class semantics touched.
+  `Route: approve-ratified` — this packet's human approve is the
+  ratification act of the template-grain form.
 
 ## Acceptance
 
-- **Dimensions 1–5 test-driven, with ONE named exception carved out
-  explicitly: G2's record-is-the-only-source property is a
-  REVIEW-OWNED structural obligation (the resolve-only port makes it
-  test-undrivable; sweep (d) is its mechanical assist) — every OTHER
-  declared lane driven BY NAME and ABLE TO FAIL
-  (R-LANE-SENSITIVITY — checked once against these lane texts and
-  once against the BUILT test bodies at close); dimension 6 is
-  typecheck+sweep-driven by its nature. FOUR NAMED CLOSE-TIME sweeps
-  are acceptance obligations: (a) the confinement sweep —
-  `grep -rn "gate_execution_not_supported" v3/src
-  --include="*.ts" --exclude="*.test.ts"` re-run at close: all 4
-  hits UNCHANGED
-  (`kernel.ts:187` byte-identical — the kernel is untouched); (b)
-  the testkit-in-production sweep — no production file imports
-  `testkit/`; (c) the composition sweep — the registry exact-set
-  assert covers EXACTLY the three C8 members; (d) the
-  single-source sweep — `grep -n "\.set(\|new Map(" 
-  v3/src/gates/registry.ts` yields exactly ONE
-  `new Map(Object.entries(blockARegistrations))` construction and
-  ZERO `.set(` calls (G2's textual assist; the review owns the
-  semantics):**
-  - `gates/process.test.ts` — dimension 1's full lane matrix (V2 —
-    every lane by name, the CONTAINER lanes included BY NAME: config
-    present-but-non-map → ONE finding, dependents suppressed, and
-    its MESSAGE differs from the config-missing lane's (the two
-    lanes assert different messages, never count alone);
-    `onExit` non-map in exitCode mode → ONE container finding,
-    bucket lanes suppressed; and the PRECEDENCE combination — a
-    non-map `onExit` in gateDecisionJson mode yields exactly the ONE
-    unconsumed finding, never a container finding or cascade), V3's
-    ladder (every rung its own case, `-0`
-    included, direct object literals), V4's hostile own-property
-    set, V8's frozen-input purity on valid AND invalid arms, V1's
-    exact effective-config asserts (defaulted and authored forms,
-    both modes, the JSON-mode authored-reason letter case asserted
-    verbatim-as-authored and complete-in-exitCode-mode, and the
-    MIXED exitCode-mode reason lane — one bucket authored, one
-    defaulted, exact-effective).
-  - `definition/admit.test.ts` — dimension 2's cross-rule lanes (V5:
-    without-declaration finding with code at the binding path;
-    with-declaration admits; the hostile requiring-registration
-    flag drive; per-binding grain on a two-process-gate template),
-    V6's code carry-through (a coded validator finding surfaces with
-    its code and C7-prefixed path), D1's type-guarantee probe (the
-    `runtimeContext: "sometimes"` invalid-literal `@ts-expect-error`
-    on a type-correct template — TS2578 on a widened field), V8's
-    CROSS-RULE purity half (the
-    V5 lanes run through `admitTemplate` on a deep-frozen template,
-    `runtimeContext` covered by the before/after assert — a
-    mutating or deleting cross-rule fails), V7's THREE accumulation
-    combinations by name (sibling process+threshold; same-binding
-    invalid-config + missing-runtimeContext with BOTH finding sets
-    present; one config with two independent defects — both
-    accumulate).
-  - `gates/registry.test.ts` — dimension 3: the exact three-member
-    set asserted on the exported `blockARegistrations` record's OWN
-    keys (`toStrictEqual` the three C8 ids — a fourth member or a
-    missing member both fail); the IMMUTABILITY
-    mutation-negative lanes across ALL THREE members (the
-    record-level add / delete / replace trio; a nested field
-    overwrite PER MEMBER — threshold, previousReviewerVerdict, and
-    the process registration each — every attempt THROWS in strict
-    mode AND the composition/value is asserted unchanged; plus
-    `Object.isFrozen` asserted on all three exported values and the
-    record); the TWO compile-negative probes for
-    the readonly type half (`@ts-expect-error` on a record-member
-    reassignment — the RECORD type's guard — and on a
-    `requiresRuntimeContext` overwrite — the P2a port-field
-    readonly's nested-depth guard; the P2a `__probe` idiom:
-    `export const`-anchored, type-valid RHS so the SOLE error is
-    the readonly write; an unused directive is TS2578 and fails
-    `v3:typecheck`);
-    the record↔catalog wiring lane (each record id resolves through
-    the built catalog to ITS registration); the flag values across
-    members; no evaluate on the process member by type.
-  - `testkit/processGateRunner.test.ts` — dimension 4 (persistence
-    before resolve; ref resolution; one record per invocation;
-    deterministic fields; verbatim invocations; the exhaustion-throw
-    negative; all six outcome classes staged) PLUS the
-    sixth-findings-round sensitivity set: PER-KIND exact
-    result↔record correspondence (for each staged kind, the returned
-    `ProcessResult` and the record it addresses asserted
-    FIELD-FOR-FIELD — `kind` equal; `exitCode` equal and present iff
-    ok on BOTH sides; `durationMs` EQUAL on both sides and
-    runner-minted (the ratifier's eighth round: two different
-    non-negative integers must fail); `log` = the entry's stdout
-    for ok, `""` for timeout/runner_error); the SCALAR-DOMAIN lanes driven by name
-    (`logRef !== ""`; `Number.isInteger(durationMs) && durationMs
-    >= 0`; `Number.isInteger(exitCode)` on the runner's OUTPUT); and
-    the script-entry `exitCode` precondition driven over the FULL
-    discriminating ladder (T1's rule, BOTH directions): REJECTED,
-    each its own lane — `1.5`, `NaN`, `Infinity`, `-Infinity`, the
-    string `"1"`, a boxed `Number` object — each makes `run()`
-    THROW (a pass-through implementation fails these); ACCEPTED,
-    each its own lane with its own killer — `0` and a positive
-    integer (baseline); `-1` (fails a `>= 0` narrowing); `-0`
-    (fails a `>= 1` V3-copy mutant and coercion — asserted
-    `toBe(-0)`, `Object.is` identity); `2**53` (fails an
-    `isSafeInteger` narrowing) — each passes through unchanged
-    (the accepted domain is exactly `Number.isInteger`, C34's — any
-    narrower domain would be a C34/draft-level decision); the
-    coercible-non-number rungs `true`, `null`, `[]` (each throws —
-    the coerce-then-check mutant killer); the SCRIPT-ORDER lane (a
-    three-entry script with distinct kinds consumed in authored
-    order — a reversed consumer fails); the SMUGGLED-FIELDS
-    hostile lanes, one PER kind — ok, timeout, AND runner_error (a
-    widened entry of each kind carrying the full smuggleable set:
-    `logRef`, `durationMs`, `headSha`, `gitStatusHash`, `log`, plus
-    `exitCode`/`stdout` on the non-ok kinds — every runner-owned
-    field asserted runner-minted on BOTH result and record; the
-    non-ok result carries no `exitCode`/`stdout`; the record's
-    `log` follows the per-kind rule regardless of a smuggled
-    `log`); the
-    POST-THROW-STATE lane (after an exhaustion throw AND an
-    invalid-entry throw, `invocations` and `records` asserted
-    UNCHANGED); and the R2 union compile-negative probes — SIX, both iff
-    directions: `@ts-expect-error` assigning `exitCode` and
-    `stdout` on EACH non-ok arm (four, the absence half) plus the
-    two ok-arm omission probes (`{kind:"ok"}` literals each missing
-    one required field, the presence half) — TS2578 on any widened
-    arm in either direction.
-  - `kernel/kernel.test.ts` — dimension 5's interim-state lane (an
-    ADMITTED process-gated template through the SHIPPED composition
-    → `Rejected(gate_execution_not_supported)`; production kernel
-    byte-untouched).
-- **Behavior-change honesty:** the claimed deltas are EXACTLY: the
-  admission process/cross-rule lanes (new findings on previously
-  unresolvable-`uses` templates — `external.process` now resolves),
-  the one optional template field, the optional finding-code field,
-  the port types, the kit runner, and the drift flips; everything
+Test obligations are stated as DISCIPLINE + FAMILY INVENTORY (the
+spec-vs-build altitude line, README §5.5): the discipline names the
+rule, the inventory declares the membership with its owner;
+fixture-level enumeration is BUILD work, verified member-by-member by
+the build-close arm gate's mandatory sensitivity pass against the
+BUILT test bodies (R-LANE-SENSITIVITY binds twice).
+
+- **Lane coverage:** every member of the V2 inventory (owner: V2) is
+  driven by a named test and ABLE TO FAIL on its row's meaning.
+- **Iff symmetry:** every declared presence-iff is driven in BOTH
+  directions — the presence direction and the absence/illegality
+  direction each have a member. Inventory (owners named): V1's
+  mode-conditional presences (`onExit`, exitCode-mode `reason`
+  completeness, JSON-mode `reason` verbatim carry); R2/R3's
+  kind-conditional fields (`exitCode`, `stdout`); V5's cross-rule
+  (both negative directions included).
+- **Defaults, both directions:** each V1 default (owner: V1 —
+  `output.mode`, `onRunnerError`, `onTimeout`, the exitCode-mode
+  `reason` buckets) driven absent → materialized AND authored →
+  carried.
+- **Numeric ladder:** dimension 4's members (owner: dimension 4)
+  each drive `timeoutMs`; the `-0` member asserts with
+  `Object.is`-grade distinction where equality could mask it.
+- **Compile probes:** every type-level foreclosure (owner: dimension
+  13 — the process arm's missing `evaluate`, the `"inline"`
+  singleton, the `"required"` literal) carries a compile-negative
+  probe (the `registry.test.ts` probe idiom).
+- **Accumulation + suppression:** dimension 9 driven — one
+  multi-fault template reports its full lane set; one broken
+  container suppresses exactly its own dependents.
+- **Own-property hostility:** dimension 2's G8 member driven — a
+  hostile inherited/`__proto__` fixture against the process-config
+  reads (the `threshold.ts` `ownGet` pattern is the built
+  precedent).
+- **Count claims driven at their distinguishing arity:** the C19
+  collapse — a template with N ≥ 2 offending process gates yields
+  EXACTLY ONE finding at the top-level `runtimeContext` path
+  (owner: V5; dimension 7's count member — a single-gate fixture
+  cannot falsify the collapse); and the disposition no-double rule —
+  an authored `failInstance` yields exactly ONE finding carrying
+  `gate_config_not_supported` (lane o), never the o+p double
+  (owner: V2 lanes o/p with the operative authority note).
+- **Kit contract:** T1's guarantees driven by kit self-tests —
+  persist-before-return (observable ordering), a record for every
+  scripted kind, deterministic workspace facts, explicit script
+  exhaustion, and FAITHFUL PLAYBACK across the six-outcome mapping:
+  every member of T1's parameterized mapping (owner: T1) scriptable
+  and returned exactly as scripted — a playback test able to fail on
+  any altered field.
+- **Port value contracts:** R2/R3's scalar refinements and value
+  preservation driven as a parameterized family (owners: R2/R3) —
+  `exitCode` an integer, `logRef` a nonempty string, `durationMs` a
+  non-negative integer, the evidence record's EXACT field set, and
+  the `log`/workspace-fact values retained as scripted/declared
+  (able to fail on a dropped, renamed, defaulted, or mutated
+  field).
+- **Registry exact-set:** G1 measured two-way, with the close-time
+  untruncated sweep receipt.
+- **Behavior-change honesty (SCOPED):** the claimed deltas are
+  exactly — the admission of process-gate-bearing templates (the new
+  lanes + effective configs), the registry membership, the new
+  port/testkit surfaces, and the optional domain field; everything
   else is proven unchanged by the FULL existing suite green with
-  zero golden-expectation edits.
-- Drift tests green (standing, unconditional — PI-3): rejection
-  registry untouched (54); `unitMap.json` +4 realized;
-  `domainRegistry.ts` +2 realized (GateInvocation deliberately
-  pending — T2).
-- Coverage validation green: units 21/159 (+4), invariants 20/116
-  (+4), traces 4/20 (unchanged).
+  zero golden-expectation edits (the l1/l2 trace tables and P2b's
+  `gate_execution_not_supported` lane byte-identical).
+- Coverage validation green at close: units 21/159 (+4), invariants
+  20/116 (+4), traces 4/20 (unchanged).
+- Drift tests green (standing, unconditional — PI-3): the rejection
+  registry untouched (54); the T2 flips with witnesses.
 - Bridges green at close: `v3:typecheck`, `v3:lint`, `v3:test`,
-  `v3:coverage`, `v3:packet-lint` (--forbid-reopened: 0 reopened),
-  `v3:adr-check` (14 ADRs, no new ADR).
-- Standing review rules in force: **REV-A1-TXN** (no commit-path
-  change), **REV-B-LOCAL-NOT-AUTHORITY** (the registry is injected
-  composition, never a mutable lookup; no process-local map gates
-  anything), **REV-C-PROJECTIONS-READONLY** (no read-model change),
-  **REV-E-NO-ADAPTER-BRANCH** (no kernel change at all),
-  **REV-DIAG-FAILOPEN** (diag untouched).
+  `v3:coverage`, `v3:packet-lint` (`--forbid-reopened`: 0 reopened),
+  `v3:adr-check` (no new ADR — ADR-013 is `accepted`; no trigger
+  fires).
+- Standing review rules in force: **REV-E-NO-ADAPTER-BRANCH** (the
+  catalog is injected; kernel/definition code never branches on a
+  concrete registration type beyond the contract's own
+  discriminant); **REV-B-LOCAL-NOT-AUTHORITY** (the kit runner's
+  record store is testkit surface, never authority — the store-side
+  evidence authority is P3b's storeChecker).
 
 ## Build record
 
-<Filled at build close.>
+Approved 2026-07-17 at STOP `4:flagged-approve` — the ratifier's act
+ratified F1 (JSON-mode `reason` verbatim carry), F2 (the C19
+template-grain single finding, the ratifier's re-decision over the
+panel-drafted per-binding form), and the 48 KB size-advisory
+accept-with-note. The hash chronicle (the first packet authored
+UNDER the 2026-07-17 process revision — recreation from ratified
+sources, the pre-reset record @ ca4ea924 consulted as quarry only):
+R1 FULL bound `eebd6a1f…` (nine findings folded — V5 minted
+new-decision/F2, the operative authority note, lane-q container
+symmetry, the G8 member, mirror/bookkeeping) → R2 FULL (mandatory
+escalation, manifest-class change) bound `0d6ccca3…` (one content
+finding: the plan Mode-cell clarification; bookkeeping batch) →
+reconciled `f3bf0d35…`, close CLEAN → the ratifier's findings round
+(the F1 foreclosure precision — the admission-time drop CONFORMS;
+F2 re-decided TEMPLATE-GRAIN) → R3 FULL (STOP-resolution
+escalation) bound `8fb543d1…` (the lens-3 P1 count-falsifiability
+catch + the V4 addressing P2 folded: the N≥2 count member, the
+count-claims acceptance bullet, the addressing exception, the A7
+grain note) → R3b targeted recheck PASS + reconciliation CLEAN,
+close CLEAN @ `6cd27852…` → the APPROVE → the flagged-path
+agent-invoked arm on the approved bytes (pin-conform
+gpt-5.6-sol/high/never, byte guards clean before+after): REFINE,
+five findings folded (hard-stop-2 letter-trip + the shared-contract
+annex; the V4 mirror precision; T1's six-outcome mapping + faithful
+playback; the R2/R3 value-contract family; V5 present-tense) → arm
+RE-CHECK CLEAN citing `f0d9cae0…` — the build basis. 4 counted
+panel rounds of the 8-round watchdog; reconciliations, closes, arm
+passes, and both fresh-implementer runs (zero divergences each)
+uncounted; every internal pass Opus-class. Yield curve 9 → 1 → 2 →
+0; the process-effectiveness comparison against the pre-reset
+record lives in the process log (2026-07-17).
+
+Built the same day (delegated build round, the packet as the
+binding contract @ `f0d9cae0…`). **727 → 796 tests** (+69; zero
+golden-expectation edits — the l1/l2 trace tables and the kernel
+`gate_execution_not_supported` lane byte-identical; the ONE
+declared flip: `registry.test.ts`'s `external.process` null-probe).
+Bridges at close (orchestrator-rerun, not builder-claimed):
+`v3:typecheck` clean · `v3:lint` clean · the v3 suite 796/796 · the
+root suite 3856/3856 · `v3:coverage` OK (21/159 · 20/116 · 4/20) ·
+`v3:packet-lint --forbid-reopened` 0 reopened / 0 errors ·
+`v3:adr-check` 14 consistent. Builder-run mutation probes at build:
+the C19 collapse broken to per-binding turned the count member red;
+the `failInstance` fall-through turned the no-double member red —
+both restored green (the write-time sensitivity half; arm gate 2
+owns the built-body pass). In-packet-freedom choices recorded: the
+C19 message names every triggering binding's C7 address inside the
+ONE template-grain finding; the kit's deterministic workspace fakes
+are exported, visibly non-authoritative constants; the cross-rule
+operand is recorded at registration RESOLUTION (before config
+validation — an invalid-config process gate still triggers the
+cross-rule, clean accumulation); the A9 code carrier realized by an
+optional `code` on `GateConfigFinding` propagated verbatim into
+`ValidationFinding` (uncoded lanes stay code-free); the kit
+runner's `run()` is implemented parameterless (queued playback —
+structurally assignable to the port). No deviations from the
+packet.
+
+Aftermath: the post-build audit's FIRST run was RED — the declared
+boundary omitted `docs/v3/implementation/plan.md`, the R-ALIGNED-UP
+alignment carrier riding the same commit (the P1/ch8-P2 boundary
+precedent; three panel rounds and the pre-build arm had cleared the
+boundary "complete and minimal" — the machine audit caught it on
+first contact, the tier-0-scoping principle working as designed).
+Fixed by the boundary addition above; the build commit amended; the
+audit green at the amended sha. Process-log carries the friction
+line and the candidate lens-5 sharpening.
 
 ```json
 {
   "packet_metrics": {
     "class": "kernel-semantic",
-    "prediction": { "predicted": "projection", "reasoning": "inherited from the P3 row through the findings-round split; the draft (ratified 2026-07-12) decided every open point of the process-admission contract — the packet projects C5–C21/C26/C29/C34's admission-side rows + the four foundation units", "discovered": "projection" },
-    "provenance": { "anchored": 8, "derived": 7, "new_decision": 1 },
-    "rounds": { "review": 0, "doc_refinement": 0, "implementation": 0 },
-    "stops": [],
+    "prediction": { "predicted": "projection", "reasoning": "inherited from the P3 row through the ratified findings-round split; the draft (ratified 2026-07-12) decided every open point of the process-admission contract — the packet projects C5–C21/C26/C29/C34's admission-side shares plus the four foundation units", "discovered": "projection" },
+    "provenance": { "anchored": 9, "derived": 3, "new_decision": 2 },
+    "rounds": { "review": 4, "doc_refinement": 0, "implementation": 1 },
+    "stops": [
+      { "type": "4:flagged-approve", "what": "two new-decision rows rode as flags — V1 (the JSON-mode authored-reason retention, F1) and V5 (the C19 finding granularity, F2)", "resolution": "the ratifier approved 2026-07-17: F1 ratified with its foreclosure reasoning precised (the admission-time drop conforms — carry is a genuine selection), F2 re-decided to the TEMPLATE-GRAIN single finding (superseding the panel-drafted per-binding form), and the 48 KB size advisory accept-with-note ratified in the same act" }
+    ],
     "detector_misses": [],
-    "learned": ""
+    "learned": "first packet under the 2026-07-17 revision: altitude line + claim grammar held (yield 9-1-2-0, -34% vs the pre-reset record; the old family-symmetry class recurred ONCE and closed in one fold) — while the external arm still earned its keep with five folds on close-clean bytes, three of them altitude-calibration items"
   }
 }
 ```

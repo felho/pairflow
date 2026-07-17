@@ -8,7 +8,10 @@ export type {
   GateConfigResult,
   GateRegistration,
   InlineGateRegistration,
+  ProcessGateEvidence,
   ProcessGateRegistration,
+  ProcessGateRunner,
+  ProcessResult,
 } from "./gate.js";
 export type {
   CommitTransitionInput,

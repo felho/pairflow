@@ -8,3 +8,4 @@
 export { createGateRegistry } from "./registry.js";
 export { thresholdRegistration } from "./threshold.js";
 export { previousReviewerVerdictRegistration } from "./previousReviewerVerdict.js";
+export { processRegistration } from "./process.js";

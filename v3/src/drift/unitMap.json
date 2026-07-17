@@ -292,16 +292,22 @@
     "status": "realized"
   },
   "l2a-pseudocode/CREATE_INSTANCE": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/start.ts#startInstance",
+    "disposition": "alias/inherited",
+    "status": "realized"
   },
   "l2a-pseudocode/GateRegistration": {
-    "status": "pending"
+    "codeRef": "v3/src/ports/gate.ts#GateRegistration",
+    "disposition": "alias/inherited",
+    "status": "realized"
   },
   "l2a-pseudocode/HANDLE": {
     "status": "pending"
   },
   "l2a-pseudocode/ProcessGateRunner": {
-    "status": "pending"
+    "codeRef": "v3/src/ports/gate.ts#ProcessGateRunner",
+    "disposition": "type/schema",
+    "status": "realized"
   },
   "l2a-pseudocode/classify_process_result": {
     "status": "pending"
@@ -313,7 +319,9 @@
     "status": "pending"
   },
   "l2a-pseudocode/validate_gate_config": {
-    "status": "pending"
+    "codeRef": "v3/src/gates/process.ts#validateAndNormalizeConfig",
+    "disposition": "implement",
+    "status": "realized"
   },
   "l2b-pseudocode/CREATE_INSTANCE": {
     "status": "pending"
