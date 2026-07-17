@@ -2669,3 +2669,55 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   spec-time enumeration churn (8+ rounds pre-build). Arm-yield
   ledger for the boundary: gate 1 five findings (three
   altitude-calibration), gate 2 seven (all built-body).
+
+- 2026-07-17 · ch11-P3b authoring + gate 1 (the second packet under
+  the 2026-07-17 revision): R1 FULL yielded ZERO content findings
+  (10 P3 bookkeeping watchpoints batch-folded — mirror-map rows,
+  wording precision, one reprint whitespace byte) — the first
+  zero-content first round of the study; the fresh-implementer lens
+  (§7 experiment, second run) returned a divergence-free restatement
+  with an ambiguity list fully triaged to blindness-rule artifacts
+  and declared build freedom (yield: 0 folds — two runs, zero
+  catches; boundary-review input for the scale/retire decision).
+  The human's flag round ratified F1 (the surplus-ref start-lane
+  THROW) with independent reasoning matching the packet's. Arm
+  gate 1 (pin-conform, byte guards clean): REFINE with FIVE folds
+  on close-clean bytes — two REAL catches the internal panel missed
+  (the S5 zero-side-effect bound over-wide for mixed pipelines —
+  an inline-first pipeline reads the shared snapshot before the
+  process arm; the W2 never-a-throw vs C26-durability conflict →
+  the persistence-failure THROW lane minted), one boundary ripple
+  (the two WorkflowInstance-literal fixture files — the REQUIRED
+  instance field's type ripple beyond the createKernel sweep: a
+  candidate lens-5 sharpening, "a REQUIRED field on a domain
+  aggregate sweeps LITERAL CONSTRUCTORS, not just dep-injection
+  sites"), one provenance narrowing (W2's placement demoted to
+  realization guidance), one live-tree transcription fix (the
+  read-surface trio). Arm re-check needed TWO passes (two residual
+  mirror items after the first fold — the fold-completeness class
+  at mirror grain). Build basis 4821271d; build commit f5f7cee1
+  (831 → 907, one declared golden flip, boundary containment
+  machine-clean, audit green FIRST run — the P3a plan.md lesson
+  held).
+
+- 2026-07-17 · ch11-P3b arm gate 2 (build-close, pin-conform,
+  byte guards clean): REFINE citing f5f7cee1 — EIGHT findings, ALL
+  test-evidence class, ZERO product gaps (vs P3a's two): the
+  green-but-blind classes again (full-document wire equality over
+  ordered history; the compile-negative family's missing members;
+  S4/W2 whole-value equality incl. the re-open read; the M1
+  bucket × verdict grid's three missing members; a JSON-key
+  `__proto__` fixture that was own-key-blind — the real
+  prototype-pollution form required; checker violation content +
+  every-ref universality; hostile confinement fixtures). One
+  aftermath round folded all eight (commit 1aa933b3, 907 → 917,
+  two export-only production touches, boundary unchanged, audit
+  green at its own sha); arm RE-CHECK CLEAN citing 1aa933b3 — the
+  packet is DONE. Build-round friction line: an early
+  sensitivity-probe revert via `git checkout` wiped uncommitted
+  kernel edits (recovered; copy-backup reverts thereafter) —
+  candidate build-loop rule: probe reverts on an UNCOMMITTED tree
+  never use git-checkout, always copy-backup. Arm-yield ledger for
+  the boundary: gate 1 five (two real content catches), gate 2
+  eight (all built-body test-evidence — the sensitivity pass's
+  load again, with the product-gap count falling 2 → 0).
