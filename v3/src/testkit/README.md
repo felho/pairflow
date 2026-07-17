@@ -28,4 +28,7 @@ IMPLEMENTS adapters and the clock; tests — not the kit — drive the kernel.
   (IC-A2's distinct non-terminal outcome).
 - `scriptedActor` — plays an ingress-op sequence against an injected
   deliver seam; the ch-5 golden-trace engine.
-- `fixtures` — deterministic scripted gate/process runners.
+- `scriptedProcessGateRunner` — the ch11-P3a kit runner: faithful
+  queued `ProcessResult` playback over the six-outcome mapping,
+  scripted-result validation at play, persist-before-return evidence
+  records with `resolve(logRef)` lookup.
