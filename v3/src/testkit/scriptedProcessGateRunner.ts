@@ -6,8 +6,12 @@ import type { ProcessGateEvidence, ProcessGateRunner, ProcessResult } from "../p
  * next scripted `ProcessResult`, field-for-field as scripted, in order (no
  * normalizing, defaulting, or altering). Before resolving, it MINTS a
  * deterministic evidence record (R3's persist-before-return guarantee is the
- * kit's own driven contract) and EXPOSES the persisted records for assertion.
- * Script exhaustion is an explicit error (the `scriptedActor` idiom).
+ * kit's own driven contract), KEYS it by the result's `logRef` so a returned
+ * ref resolves to its exact record, and EXPOSES the persisted records for
+ * assertion. Script exhaustion is an explicit error (the `scriptedActor`
+ * idiom); a scripted result violating R2's scalar refinements throws LOUDLY at
+ * play (the kit's scripted-exhaustible-loud culture) rather than persisting a
+ * malformed record.
  *
  * Kit piece only — the end-to-end six-outcome drive through classification and
  * HANDLE is P3b's. REV-B: the record array is testkit surface, NEVER authority.
@@ -21,6 +25,44 @@ export const SCRIPTED_GIT_STATUS_HASH = "scripted-git-status-hash";
 export interface ScriptedProcessGateRunner extends ProcessGateRunner {
   /** The evidence records persisted so far, in call order (live view). */
   readonly records: readonly ProcessGateEvidence[];
+  /** Resolve a returned `ProcessResult`'s `logRef` to its exact evidence record
+   * (R3: the ref addresses the WHOLE record). `undefined` for an unknown ref. */
+  resolve(logRef: string): ProcessGateEvidence | undefined;
+}
+
+/**
+ * R2's scalar refinements, enforced at play (a scripted violation throws
+ * loudly — the kit never persists or returns a malformed result): `logRef` a
+ * nonempty string; `durationMs` a non-negative integer; on an `ok` result
+ * `exitCode` an integer and `stdout` a string (both present); on a non-`ok`
+ * result NEITHER `exitCode` NOR `stdout` (present IFF kind=`"ok"`).
+ */
+function assertScriptedResultValid(result: ProcessResult, callNumber: number): void {
+  const where = `call #${String(callNumber)}`;
+  const asRecord = result as Record<string, unknown>;
+  if (typeof result.logRef !== "string" || result.logRef === "") {
+    throw new Error(`ScriptedProcessGateRunner: scripted result at ${where} has an empty/absent logRef`);
+  }
+  if (typeof result.durationMs !== "number" || !Number.isInteger(result.durationMs) || result.durationMs < 0) {
+    throw new Error(
+      `ScriptedProcessGateRunner: scripted result at ${where} has a durationMs that is not a non-negative integer`,
+    );
+  }
+  if (result.kind === "ok") {
+    if (typeof result.exitCode !== "number" || !Number.isInteger(result.exitCode)) {
+      throw new Error(`ScriptedProcessGateRunner: scripted ok result at ${where} must carry an integer exitCode`);
+    }
+    if (typeof result.stdout !== "string") {
+      throw new Error(`ScriptedProcessGateRunner: scripted ok result at ${where} must carry a string stdout`);
+    }
+    return;
+  }
+  if (Object.prototype.hasOwnProperty.call(asRecord, "exitCode")) {
+    throw new Error(`ScriptedProcessGateRunner: scripted ${result.kind} result at ${where} must NOT carry exitCode`);
+  }
+  if (Object.prototype.hasOwnProperty.call(asRecord, "stdout")) {
+    throw new Error(`ScriptedProcessGateRunner: scripted ${result.kind} result at ${where} must NOT carry stdout`);
+  }
 }
 
 /** Mint the deterministic evidence record for a scripted result. `log` is the
@@ -50,10 +92,14 @@ export function createScriptedProcessGateRunner(
   script: readonly ProcessResult[],
 ): ScriptedProcessGateRunner {
   const records: ProcessGateEvidence[] = [];
+  const recordByRef = new Map<string, ProcessGateEvidence>();
   let index = 0;
   return {
     get records(): readonly ProcessGateEvidence[] {
       return records;
+    },
+    resolve(logRef: string): ProcessGateEvidence | undefined {
+      return recordByRef.get(logRef);
     },
     // The scripted runner ignores command/options (playback is queued, not
     // computed) — the no-argument form is structurally assignable to the
@@ -66,10 +112,16 @@ export function createScriptedProcessGateRunner(
       }
       const result = script[index] as ProcessResult;
       index += 1;
+      // Loud validation BEFORE any persistence: a scripted violation of R2's
+      // scalar refinements throws rather than persisting a malformed record.
+      assertScriptedResultValid(result, index);
       // Persist the evidence record BEFORE resolving (R3): a returned logRef
-      // MUST resolve. `records` is appended synchronously, then the (already
-      // resolved) result is returned — so any awaiter observes the record.
-      records.push(toEvidence(result));
+      // MUST resolve. `records` and the by-ref index are written synchronously,
+      // then the (already resolved) result is returned — so any awaiter observes
+      // both the record and its `resolve(logRef)` association.
+      const evidence = toEvidence(result);
+      records.push(evidence);
+      recordByRef.set(result.logRef, evidence);
       return Promise.resolve(result);
     },
   };

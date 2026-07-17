@@ -734,13 +734,36 @@ Fixed by the boundary addition above; the build commit amended; the
 audit green at the amended sha. Process-log carries the friction
 line and the candidate lens-5 sharpening.
 
+Arm gate 2 (the build-close implementation review, pin-conform
+gpt-5.6-sol/high/never, byte guards clean): REFINE citing
+`3dd3343b` with SEVEN P2 findings — the mandatory sensitivity pass
+earning its promotion exactly as the ch11-P2b/P2c second occurrence
+predicted (green-but-blind lanes in the BUILT bodies under correct
+packet lane texts): two product gaps (a returned `logRef` had no
+lookup back to its record; the R2 scalar refinements were
+documentary — the kit now validates scripted results at play,
+throwing loudly per the kit culture) and five test-evidence gaps
+(JSON-mode full-row equality; the V2 grouped lanes' missing halves
+k/l/o/p/q + `warn` acceptance + lane-j LOCAL suppression + extended
+`__proto__` hostility + the V3 accessor rung; the R2/R3 union
+compile probes + exact whole-record asserts; the T1 six-outcome
+JSON warn/block members + runner_error log content; the G1
+exact-set made enumeration-sensitive — `REGISTRY_IDS` exported as
+the single source the Map is built from, so an undeclared fourth
+registration turns the test red). All seven folded in one aftermath
+round: **796 → 831 tests** (+35; the aftermath commit carries
+packet + code + tests per the §4 choreography; boundary unchanged —
+every touched file already declared). Bridges re-verified green
+(orchestrator-rerun): typecheck 0 · lint 0 · v3 suite 831/831 ·
+packet-lint 0/0.
+
 ```json
 {
   "packet_metrics": {
     "class": "kernel-semantic",
     "prediction": { "predicted": "projection", "reasoning": "inherited from the P3 row through the ratified findings-round split; the draft (ratified 2026-07-12) decided every open point of the process-admission contract — the packet projects C5–C21/C26/C29/C34's admission-side shares plus the four foundation units", "discovered": "projection" },
     "provenance": { "anchored": 9, "derived": 3, "new_decision": 2 },
-    "rounds": { "review": 4, "doc_refinement": 0, "implementation": 1 },
+    "rounds": { "review": 4, "doc_refinement": 0, "implementation": 2 },
     "stops": [
       { "type": "4:flagged-approve", "what": "two new-decision rows rode as flags — V1 (the JSON-mode authored-reason retention, F1) and V5 (the C19 finding granularity, F2)", "resolution": "the ratifier approved 2026-07-17: F1 ratified with its foreclosure reasoning precised (the admission-time drop conforms — carry is a genuine selection), F2 re-decided to the TEMPLATE-GRAIN single finding (superseding the panel-drafted per-binding form), and the 48 KB size advisory accept-with-note ratified in the same act" }
     ],

@@ -334,3 +334,155 @@ describe("external.process — accumulation + LOCAL suppression (dimension 9)", 
     expect(paths).toEqual(["command", "reason"]);
   });
 });
+
+describe("external.process — V1 JSON-mode effective-config FULL-ROW equality (whole object toEqual)", () => {
+  /** The gateDecisionJson base row (no onExit, no reason) every case shares —
+   * a dropped command/timeoutMs/output/disposition here turns the row red. */
+  const jsonBase = {
+    command: "run.sh",
+    timeoutMs: 5000,
+    output: { mode: "gateDecisionJson" },
+    onRunnerError: "blockTransition",
+    onTimeout: "blockTransition",
+  };
+
+  it("reason ABSENT → the whole row carries no reason", () => {
+    expect(effective(validJson)).toEqual(jsonBase);
+  });
+
+  it("reason authored EMPTY {} → stays {} (verbatim carry, the whole row)", () => {
+    expect(effective({ ...validJson, reason: {} })).toEqual({ ...jsonBase, reason: {} });
+  });
+
+  it("reason partial {zero} → carried verbatim (no nonzero default in JSON mode)", () => {
+    expect(effective({ ...validJson, reason: { zero: "seen" } })).toEqual({
+      ...jsonBase,
+      reason: { zero: "seen" },
+    });
+  });
+
+  it("reason partial {nonzero} → carried verbatim (no zero default in JSON mode)", () => {
+    expect(effective({ ...validJson, reason: { nonzero: "seen_nz" } })).toEqual({
+      ...jsonBase,
+      reason: { nonzero: "seen_nz" },
+    });
+  });
+
+  it("reason FULL → carried verbatim (the whole row)", () => {
+    expect(effective({ ...validJson, reason: { zero: "a", nonzero: "b" } })).toEqual({
+      ...jsonBase,
+      reason: { zero: "a", nonzero: "b" },
+    });
+  });
+
+  it("exitCode-mode partial {nonzero}: the ZERO bucket DEFAULTS inside the authored map (whole row)", () => {
+    expect(effective({ ...validExitCode, reason: { nonzero: "custom_nz" } })).toEqual({
+      command: "run.sh",
+      timeoutMs: 5000,
+      output: { mode: "exitCode" },
+      onExit: { zero: "allow", nonzero: "block" },
+      onRunnerError: "blockTransition",
+      onTimeout: "blockTransition",
+      reason: { zero: "exit_zero", nonzero: "custom_nz" },
+    });
+  });
+});
+
+describe("external.process — V2 member-by-member symmetry (the grouped members' missing halves)", () => {
+  it("lane k: the ZERO bucket missing (the nonzero-missing sibling already covered) → CODED at onExit.zero", () => {
+    const findings = fail({ ...validExitCode, onExit: { nonzero: "block" } });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({ path: "onExit.zero", code: INVALID });
+  });
+
+  it("lane l: an invalid NONZERO bucket value → CODED at onExit.nonzero", () => {
+    const findings = fail({ ...validExitCode, onExit: { zero: "allow", nonzero: "bogus" } });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({ path: "onExit.nonzero", code: INVALID });
+  });
+
+  it("lane l positive: `warn` is ACCEPTED as a bucket verdict (both buckets warn ADMIT)", () => {
+    expect(effective({ ...validExitCode, onExit: { zero: "warn", nonzero: "warn" } }).onExit).toEqual({
+      zero: "warn",
+      nonzero: "warn",
+    });
+  });
+
+  it("lane o: onTimeout = failInstance (the onRunnerError sibling already covered) → CODED gate_config_not_supported", () => {
+    const findings = fail({ ...validExitCode, onTimeout: "failInstance" });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({ path: "onTimeout", code: NOT_SUPPORTED });
+  });
+
+  it("lane p: an invalid onRunnerError (the onTimeout sibling already covered) → CODED invalid_process_gate_config", () => {
+    const findings = fail({ ...validExitCode, onRunnerError: "retry" });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({ path: "onRunnerError", code: INVALID });
+  });
+
+  it("lane q: an invalid token on the NONZERO entry → uncoded at reason.nonzero", () => {
+    const findings = fail({ ...validExitCode, reason: { nonzero: "Bad Token" } });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.path).toBe("reason.nonzero");
+    expect(findings[0]).not.toHaveProperty("code");
+  });
+
+  it("lane q: a token with a legal start but an illegal trailing char (`ok-token`) → uncoded at reason.<bucket>", () => {
+    const findings = fail({ ...validExitCode, reason: { zero: "ok-token" } });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.path).toBe("reason.zero");
+    expect(findings[0]).not.toHaveProperty("code");
+  });
+
+  it("lane j LOCAL suppression: a broken onExit container WITH a sibling fault → the sibling STILL reports", () => {
+    // onExit non-map suppresses k/l/m; the command sibling still fires — proving
+    // suppression is LOCAL to the broken container.
+    const findings = fail({ command: "", timeoutMs: 5000, output: { mode: "exitCode" }, onExit: 42 });
+    const paths = findings.map((f) => f.path).sort();
+    expect(paths).toEqual(["command", "onExit"]);
+    expect(findings.find((f) => f.path === "onExit")).not.toHaveProperty("code");
+    expect(findings.find((f) => f.path === "command")?.code).toBe(INVALID);
+  });
+});
+
+describe("external.process — own-property hostility extended (__proto__/inherited across members, G8)", () => {
+  it("an inherited output.mode is not read as config — the own read sees mode absent (defaults exitCode)", () => {
+    const output = Object.create({ mode: "gateDecisionJson" }) as object; // inherited mode
+    // mode read as absent → defaults to exitCode → onExit becomes REQUIRED and,
+    // being absent here, fires lane i. The inherited gateDecisionJson never wins.
+    const findings = fail({ command: "c", timeoutMs: 5, output });
+    expect(findings.some((f) => f.path === "onExit" && f.code === INVALID)).toBe(true);
+  });
+
+  it("an inherited disposition (onTimeout via prototype) is never read — the own read sees it absent (defaults blockTransition)", () => {
+    const raw = Object.create({ onTimeout: "failInstance" }) as Record<string, unknown>;
+    Object.assign(raw, validExitCode);
+    // The inherited failInstance would be lane o if read; own-only read ignores
+    // it, so onTimeout defaults to blockTransition and the config ADMITS.
+    expect(effective(raw).onTimeout).toBe("blockTransition");
+  });
+
+  it("an inherited reason entry is never read — the own read sees the bucket absent", () => {
+    const reason = Object.create({ zero: "Bad Token" }) as object; // inherited invalid token
+    // The inherited (invalid) token is never read; the own reason map is empty,
+    // so exitCode-mode defaults BOTH buckets and the config ADMITS.
+    expect(effective({ ...validExitCode, reason }).reason).toEqual({ zero: "exit_zero", nonzero: "exit_nonzero" });
+  });
+});
+
+describe("external.process — V3 descriptor rung: an accessor (getter) timeoutMs must not bypass the ladder", () => {
+  it("a getter-defined timeoutMs returning a non-integer is READ and REJECTED (own enumerable data semantics)", () => {
+    const raw: Record<string, unknown> = { ...validExitCode };
+    Object.defineProperty(raw, "timeoutMs", { get: () => 1.5, enumerable: true, configurable: true });
+    // The own read invokes the getter; its 1.5 return still runs the numeric
+    // ladder — the accessor does not smuggle a value past validation.
+    const findings = fail(raw);
+    expect(findings.some((f) => f.path === "timeoutMs" && f.code === INVALID)).toBe(true);
+  });
+
+  it("a getter-defined timeoutMs returning a valid integer ADMITS with that value", () => {
+    const raw: Record<string, unknown> = { ...validExitCode };
+    Object.defineProperty(raw, "timeoutMs", { get: () => 42, enumerable: true, configurable: true });
+    expect(effective(raw).timeoutMs).toBe(42);
+  });
+});

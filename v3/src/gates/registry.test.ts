@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { InlineGateRegistration, ProcessGateRegistration } from "../ports/index.js";
 import { previousReviewerVerdictRegistration } from "./previousReviewerVerdict.js";
 import { processRegistration } from "./process.js";
-import { createGateRegistry } from "./registry.js";
+import { createGateRegistry, REGISTRY_IDS } from "./registry.js";
 import { thresholdRegistration } from "./threshold.js";
 
 /**
@@ -65,6 +65,28 @@ describe("createGateRegistry — the static Block A composition (G1/G2)", () => 
     const surface = catalog as unknown as Record<string, unknown>;
     expect(typeof surface["register"]).toBe("undefined");
     expect(Object.keys(catalog)).toEqual(["resolve"]);
+  });
+});
+
+describe("REGISTRY_IDS — the exact-set single source (G1 enumerability)", () => {
+  const catalog = createGateRegistry();
+
+  it("equals EXACTLY the three C8 members (an undeclared fourth registration turns this red)", () => {
+    expect([...REGISTRY_IDS]).toEqual([
+      "declarative.threshold",
+      "pairflow.previous_reviewer_verdict",
+      "external.process",
+    ]);
+  });
+
+  it("has length 3 — the chapter-end catalog size, measured", () => {
+    expect(REGISTRY_IDS).toHaveLength(3);
+  });
+
+  it("every REGISTRY_IDS member resolves non-null (the catalog is built FROM this source)", () => {
+    for (const id of REGISTRY_IDS) {
+      expect(catalog.resolve(id), `resolve('${id}') must resolve`).not.toBeNull();
+    }
   });
 });
 
