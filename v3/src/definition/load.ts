@@ -22,10 +22,12 @@ export interface LoadTemplateOptions {
   readonly path?: string;
   /**
    * The gate catalog admission resolves `uses` against (ch11-P2a, A1).
-   * OPTIONAL: absent it defaults to the empty catalog — vacuous for
-   * every loadable YAML today (a `gates` key stays the ch8 unknown-key
-   * rejection until P4, A8), so the FILE path is byte-identical. File
-   * callers (the store, the dev validate verb) pass the real catalog.
+   * OPTIONAL: absent it defaults to the empty catalog — vacuous over a
+   * gate-free template (every `uses` resolves unknown). Since ch11-P4 a
+   * loadable YAML CAN author `gates`, so a file with gate bindings needs
+   * the real catalog to admit; the empty-catalog default stays exact for
+   * gate-free files. File callers (the store, the dev validate verb) pass
+   * the real catalog.
    */
   readonly catalog?: GateCatalog;
 }
@@ -236,14 +238,30 @@ export function loadTemplate(bytes: Uint8Array, opts: LoadTemplateOptions = {}):
   // ADMISSION rung (ch11-P2a, A1): the SECOND rung behind structure,
   // on the SAME channel/stage — gate semantics validate + normalize
   // here, all-or-nothing. Vacuous over a gate-free template (A8).
+  //
+  // F7 (ch11-P4): CROSS-RUNG ACCUMULATION. The walk hands a best-effort
+  // template EVEN with structural findings (undefined only for a non-map
+  // root — disposition a); the admission rung then runs and its findings
+  // ACCUMULATE with the walk's in ONE `validate` result (disposition
+  // b/b′/c/d/e — the walk's own SKIPs realize the local suppression).
+  // The result stays XOR: an admitted template escapes ONLY when BOTH
+  // the walk and admission are findings-free (ch8-C22 preserved).
   try {
     const outcome = validateTemplate(value, doc, text);
-    if (outcome.findings.length > 0 || outcome.template === undefined) {
+    if (outcome.template === undefined) {
+      // Disposition (a): non-map root — walk finding only, no operand
+      // for the admission rung.
       return fail("validate", outcome.findings);
     }
     const admitted = admitTemplate(outcome.template, opts.catalog ?? EMPTY_CATALOG);
     if (!admitted.ok) {
-      return fail("validate", admitted.findings);
+      return fail("validate", [...outcome.findings, ...admitted.findings]);
+    }
+    if (outcome.findings.length > 0) {
+      // The walk found structural defects but admission was clean (or
+      // vacuous) — the walk findings are the whole result; nothing
+      // partial escapes.
+      return fail("validate", outcome.findings);
     }
     return { ok: true, template: admitted.template };
   } catch (error) {

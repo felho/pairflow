@@ -1,15 +1,41 @@
 import { describe, expect, it } from "vitest";
 
-import { loadTemplate } from "./index.js";
+import type { WorkflowTemplate } from "../domain/index.js";
+import { createGateRegistry } from "../gates/index.js";
+import { admitTemplate, loadTemplate } from "./index.js";
 import type { TemplateLoadErrorInfo } from "./index.js";
 
 // Packet ch8-P1: the load pipeline over bytes — the G-gate lanes
 // (read/parse/resolve stages), the E1 ordering rules, the dimension-7
 // short-circuit combinations, and the E5 machine-shape assertions on
 // every error lane. Hostile fixtures are RAW text (R-RAW-FIXTURES).
+//
+// Packet ch11-P4: the gates subtree through the FILE channel + the F3
+// stringness lane (dimension 4), the F7 cross-rung accumulation
+// disposition list a/b/b′/c/d/e (dimension 5), the maximal-template
+// channel equivalence (dimension 6), and the F8 declaration-absent
+// default (dimension 8).
+
+const catalog = createGateRegistry();
 
 function bytes(text: string): Uint8Array {
   return new TextEncoder().encode(text);
+}
+
+function loadGated(text: string): ReturnType<typeof loadTemplate> {
+  return loadTemplate(bytes(text), { catalog });
+}
+
+function gatedErr(text: string): TemplateLoadErrorInfo {
+  const result = loadGated(text);
+  if (result.ok) {
+    throw new Error("expected a load error, got a template");
+  }
+  return result.error;
+}
+
+function gatedPaths(err: TemplateLoadErrorInfo): string[] {
+  return err.findings.map((f) => (f as { path?: string }).path ?? "<no-path>");
 }
 
 function expectErr(result: ReturnType<typeof loadTemplate>): TemplateLoadErrorInfo {
@@ -504,5 +530,297 @@ describe("E5 — the machine shape on error lanes", () => {
     for (const finding of err.findings) {
       expect((finding as { stage?: string }).stage).toBe(err.stage);
     }
+  });
+});
+
+// ── packet ch11-P4: the gates subtree through the FILE channel + the F3
+// stringness lane (dimension 4). Semantic gate lanes are admission's
+// (exhaustively driven direct-channel in admit.test.ts); here the
+// obligation is that the FILE channel REACHES each lane class. ─────────
+
+const gatedStep = (gatesBody: string, extras = ""): string => `ref:
+  id: t
+  version: 1
+start: s
+steps:
+  s:
+    role: r
+    instruction: i
+    transitions:
+      GO: done
+${gatesBody}terminal:
+  - done
+roles:
+  r: {}
+${extras}`;
+
+describe("ch11-P4 dimension 4 — the gates subtree through the file channel", () => {
+  it("a scalar gates value → ONE finding at steps.<id>.gates (container precondition)", () => {
+    const err = gatedErr(gatedStep("    gates: nope\n"));
+    expect(err.stage).toBe("validate");
+    expect(gatedPaths(err)).toContain("steps.s.gates");
+  });
+
+  it("a non-transition event key → the dead-config finding (C2)", () => {
+    const err = gatedErr(
+      gatedStep("    gates:\n      NOPE:\n        - uses: pairflow.previous_reviewer_verdict\n"),
+    );
+    expect(gatedPaths(err)).toContain("steps.s.gates.NOPE");
+  });
+
+  it("an empty gate list → a finding (C3)", () => {
+    const err = gatedErr(gatedStep("    gates:\n      GO: []\n"));
+    expect(gatedPaths(err)).toContain("steps.s.gates.GO");
+  });
+
+  it("A1: a binding UNKNOWN key → an uncoded finding at its C7 address", () => {
+    const err = gatedErr(
+      gatedStep(
+        "    gates:\n      GO:\n        - uses: pairflow.previous_reviewer_verdict\n          id: x\n",
+      ),
+    );
+    expect(gatedPaths(err)).toContain("steps.s.gates.GO[0].id");
+    const finding = err.findings.find((f) => (f as { path: string }).path === "steps.s.gates.GO[0].id");
+    expect(finding).not.toHaveProperty("code");
+  });
+
+  it("A2: a grammar-invalid uses → an UNCODED finding at .uses (distinct from the coded lane)", () => {
+    const err = gatedErr(gatedStep("    gates:\n      GO:\n        - uses: nodots\n"));
+    const finding = err.findings.find((f) => (f as { path: string }).path === "steps.s.gates.GO[0].uses");
+    expect(finding).toBeDefined();
+    expect(finding).not.toHaveProperty("code");
+  });
+
+  it("A2: an unknown-but-GRAMMATICAL uses → the CODED gate_evaluator_unavailable lane", () => {
+    const err = gatedErr(gatedStep("    gates:\n      GO:\n        - uses: no.such.gate\n"));
+    const finding = err.findings.find((f) => (f as { path: string }).path === "steps.s.gates.GO[0]");
+    expect(finding).toMatchObject({ code: "gate_evaluator_unavailable" });
+  });
+
+  it("a per-registration config lane (bad threshold metric) surfaces at .config.<key>", () => {
+    const err = gatedErr(
+      gatedStep(
+        '    gates:\n      GO:\n        - uses: declarative.threshold\n          config: { metric: spins, op: ">=", value: 2 }\n',
+      ),
+    );
+    expect(gatedPaths(err)).toContain("steps.s.gates.GO[0].config.metric");
+  });
+
+  it("onExit UNCONSUMED under gateDecisionJson mode → the coded config lane", () => {
+    const err = gatedErr(
+      gatedStep(
+        "    gates:\n      GO:\n        - uses: external.process\n          config:\n            command: \"echo hi\"\n            timeoutMs: 1000\n            output: { mode: gateDecisionJson }\n            onExit: { zero: allow, nonzero: block }\n",
+        "runtimeContext: required\n",
+      ),
+    );
+    expect(gatedPaths(err)).toContain("steps.s.gates.GO[0].config.onExit");
+  });
+
+  it("A3: an illegal runtimeContext value → an uncoded finding at runtimeContext", () => {
+    const err = gatedErr(
+      gatedStep("    gates:\n      GO:\n        - uses: pairflow.previous_reviewer_verdict\n", "runtimeContext: optional\n"),
+    );
+    const finding = err.findings.find((f) => (f as { path: string }).path === "runtimeContext");
+    expect(finding).toBeDefined();
+    expect(finding).not.toHaveProperty("code");
+  });
+
+  it("C19: a process gate WITHOUT runtimeContext → the coded cross-rule finding", () => {
+    const err = gatedErr(
+      gatedStep(
+        "    gates:\n      GO:\n        - uses: external.process\n          config:\n            command: \"echo hi\"\n            timeoutMs: 1000\n            onExit: { zero: allow, nonzero: block }\n",
+      ),
+    );
+    const finding = err.findings.find((f) => (f as { path: string }).path === "runtimeContext");
+    expect(finding).toMatchObject({ code: "runtime_context_required_for_process_gate" });
+  });
+
+  it("F3 STRINGNESS: a numeric map key in the gates subtree → a finding at the nearest addressable path", () => {
+    const err = gatedErr(
+      gatedStep("    gates:\n      0:\n        - uses: pairflow.previous_reviewer_verdict\n"),
+    );
+    expect(err.stage).toBe("validate");
+    expect(gatedPaths(err)).toContain("steps.s.gates");
+    expect(JSON.stringify(err.findings)).toMatch(/must be strings/);
+  });
+});
+
+// ── packet ch11-P4: F7 cross-rung ACCUMULATION (dimension 5) ───────────
+
+describe("ch11-P4 dimension 5 — the F7 accumulation disposition list a/b/b′/c/d/e", () => {
+  it("(a) a non-map root → ONE walk finding, the admission rung fully suppressed", () => {
+    const err = gatedErr(`- x\n- y\n`);
+    expect(err.stage).toBe("validate");
+    expect(err.findings).toHaveLength(1);
+    expect(gatedPaths(err)).toStrictEqual(["$"]);
+  });
+
+  it("(b) steps NOT-A-MAP suppresses the gate/C19/round lanes but the steps-INDEPENDENT A3 still runs", () => {
+    const err = gatedErr(
+      `ref:\n  id: t\n  version: 1\nstart: s\nsteps: nope\nterminal:\n  - done\nroles:\n  r: {}\nruntimeContext: bogus\n`,
+    );
+    const paths = gatedPaths(err);
+    expect(paths).toContain("steps");
+    expect(paths).toContain("runtimeContext"); // A3 accumulates (top-level read)
+    expect(paths).toHaveLength(2);
+  });
+
+  it("(b′) EMPTY steps + a round declaration: the C9 finding accumulates AND round MEMBERSHIP fires", () => {
+    const err = gatedErr(
+      `ref:\n  id: t\n  version: 1\nstart: s\nsteps: {}\nterminal:\n  - done\nroles: {}\nround:\n  advanceOnArrivalAt:\n    - s\n`,
+    );
+    const paths = gatedPaths(err);
+    expect(paths).toContain("steps"); // C9 nonemptiness
+    expect(paths).toContain("round.advanceOnArrivalAt[0]"); // membership FIRES (s ∉ ∅)
+  });
+
+  it("(c) a broken step container suppresses ITS gates; every OTHER step's gate lane still runs", () => {
+    const err = gatedErr(
+      `ref:\n  id: t\n  version: 1\nstart: good\nsteps:\n  good:\n    role: r\n    instruction: i\n    transitions:\n      GO: done\n    gates:\n      GO:\n        - uses: no.such.gate\n  bad: nope\nterminal:\n  - done\nroles:\n  r: {}\n`,
+    );
+    const paths = gatedPaths(err);
+    expect(paths).toContain("steps.bad"); // the broken container's own finding
+    expect(paths).toContain("steps.good.gates.GO[0]"); // the OTHER step's gate ran
+  });
+
+  it("(d) a round SOURCE-FORM defect suppresses the round value-level lanes; the gate lane is unaffected", () => {
+    const err = gatedErr(
+      `ref:\n  id: t\n  version: 1\nstart: s\nsteps:\n  s:\n    role: r\n    instruction: i\n    transitions:\n      GO: done\n    gates:\n      GO:\n        - uses: no.such.gate\nterminal:\n  - done\nroles:\n  r: {}\nround: 5\n`,
+    );
+    const paths = gatedPaths(err);
+    expect(paths).toContain("round"); // the source-form finding
+    expect(paths).toContain("steps.s.gates.GO[0]"); // the gate lane ran
+    // The round VALUE-LEVEL lanes are SUPPRESSED (no membership/empty finding).
+    expect(paths.some((p) => p.startsWith("round.advanceOnArrivalAt"))).toBe(false);
+  });
+
+  it("(e) an INDEPENDENT structural lane (bad start) accumulates with an admission gate lane", () => {
+    const err = gatedErr(
+      `ref:\n  id: t\n  version: 1\nstart: nope\nsteps:\n  s:\n    role: r\n    instruction: i\n    transitions:\n      GO: done\n    gates:\n      GO:\n        - uses: no.such.gate\nterminal:\n  - done\nroles:\n  r: {}\n`,
+    );
+    const paths = gatedPaths(err);
+    expect(paths).toContain("start");
+    expect(paths).toContain("steps.s.gates.GO[0]");
+  });
+
+  it("the parse short-circuit is UNCHANGED: a parse-defective gated file reports PARSE findings ONLY", () => {
+    const err = gatedErr(
+      `ref:\n  id: t\n  version: 1\nstart: s\nsteps:\n  s:\n    role: r\n    instruction: i\n    transitions:\n      GO: done\n    gates:\n      GO:\n        - uses: pairflow.previous_reviewer_verdict\n        - uses: pairflow.previous_reviewer_verdict\n  s:\n    role: r\n    instruction: i\n    transitions: {}\nterminal:\n  - done\nroles:\n  r: {}\n`,
+    );
+    expect(err.stage).toBe("parse");
+    for (const finding of err.findings) {
+      expect((finding as { stage?: string }).stage).toBe("parse");
+    }
+  });
+});
+
+// ── packet ch11-P4: channel equivalence (dimension 6) ──────────────────
+
+describe("ch11-P4 dimension 6 — the maximal gated template: file-loaded ≡ direct-admitted", () => {
+  const maximalYaml = `ref:
+  id: max
+  version: 1
+start: implement
+steps:
+  implement:
+    role: implementer
+    instruction: |-
+      build it
+    transitions:
+      PASS: review
+    gates:
+      PASS:
+        - uses: external.process
+          config:
+            command: "pnpm test"
+            timeoutMs: 600000
+            onExit: { zero: allow, nonzero: block }
+            reason: { nonzero: test_failed }
+  review:
+    role: reviewer
+    instruction: |-
+      review it
+    transitions:
+      PASS: implement
+      CONVERGED: done
+    gates:
+      CONVERGED:
+        - uses: declarative.threshold
+          config: { metric: round, op: ">=", value: 2 }
+        - uses: pairflow.previous_reviewer_verdict
+terminal:
+  - done
+roles:
+  implementer:
+    defaultActor: codex
+  reviewer:
+    defaultActor: claude
+runtimeContext: required
+round:
+  advanceOnArrivalAt:
+    - implement
+`;
+
+  const maximalDirect: WorkflowTemplate = {
+    ref: { id: "max", version: 1 },
+    start: "implement",
+    steps: {
+      implement: {
+        role: "implementer",
+        instruction: "build it",
+        transitions: { PASS: "review" },
+        gates: {
+          PASS: [
+            {
+              uses: "external.process",
+              config: {
+                command: "pnpm test",
+                timeoutMs: 600000,
+                onExit: { zero: "allow", nonzero: "block" },
+                reason: { nonzero: "test_failed" },
+              },
+            },
+          ],
+        },
+      },
+      review: {
+        role: "reviewer",
+        instruction: "review it",
+        transitions: { PASS: "implement", CONVERGED: "done" },
+        gates: {
+          CONVERGED: [
+            { uses: "declarative.threshold", config: { metric: "round", op: ">=", value: 2 } },
+            { uses: "pairflow.previous_reviewer_verdict" },
+          ],
+        },
+      },
+    },
+    terminal: ["done"],
+    roles: { implementer: { defaultActor: "codex" }, reviewer: { defaultActor: "claude" } },
+    runtimeContext: "required",
+    round: { advanceOnArrivalAt: ["implement"] },
+  } as unknown as WorkflowTemplate;
+
+  it("the whole admitted value is DEEP-EQUAL across channels (effective configs + advancesRound + every field)", () => {
+    const fileLoaded = loadGated(maximalYaml);
+    const direct = admitTemplate(maximalDirect, catalog);
+    expect(fileLoaded.ok).toBe(true);
+    expect(direct.ok).toBe(true);
+    if (!fileLoaded.ok || !direct.ok) return;
+    expect(fileLoaded.template).toEqual(direct.template);
+  });
+});
+
+// ── packet ch11-P4: F8 the declaration-absent default (dimension 8) ─────
+
+describe("ch11-P4 dimension 8 — the file-grain declaration-absent default (F8)", () => {
+  it("a declaration-absent YAML template admits with COMPLETE all-false advancesRound maps", () => {
+    const result = loadGated(
+      `ref:\n  id: t\n  version: 1\nstart: s\nsteps:\n  s:\n    role: r\n    instruction: i\n    transitions:\n      GO: done\nterminal:\n  - done\nroles:\n  r: {}\n`,
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.template.steps["s"]?.advancesRound).toStrictEqual({ GO: false });
+    expect(result.template.round).toBeUndefined();
   });
 });

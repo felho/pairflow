@@ -20,10 +20,11 @@ import type { TraceFixture } from "./testkit/index.js";
  * evaluators end-to-end (dimension 11). AT-LEVEL: `expectedRole` and
  * `expectedVersion` explicit on every emit, no lift (the l1Trace
  * precedent). The gated template is DIRECTLY CONSTRUCTED and admitted
- * through `admitTemplate` + `createGateRegistry()` — the FILE format
- * carries no `gates` key until P4 (the ch8 V8 unknown-key rejection
- * stands; T3), so this ingress-seam replay is the deepest shipped seam
- * a gated template can reach.
+ * through `admitTemplate` + `createGateRegistry()`. As of ch11-P4 the
+ * FILE channel carries the `gates` key too (the format walk lands the
+ * authoring surface); this trace keeps its DIRECT-constructed template
+ * deliberately — a gated template admitted straight through
+ * `admitTemplate` is the authoring form this golden fixes.
  */
 const catalog = createGateRegistry();
 
@@ -47,10 +48,12 @@ const gatedTemplate: WorkflowTemplate = {
   },
   terminal: ["done"],
   roles: { implementer: { defaultActor: "codex" }, reviewer: { defaultActor: "claude" } },
-  // ch11-P2c T2/dimension 8: the inline declaration wrapper — the round
-  // advances on the pass-back to start, so the threshold gate blocks at
-  // round 1 and allows at round 2 (K3's projection round-consumption pin
-  // driven end-to-end). The golden table is unchanged; retires at P4.
+  // ch11-P2c T2/dimension 8: the direct channel's authored round
+  // declaration — the round advances on the pass-back to start, so the
+  // threshold gate blocks at round 1 and allows at round 2 (K3's
+  // projection round-consumption pin driven end-to-end). This
+  // direct-constructed template keeps its inline declaration (never a
+  // fixture wrapper); the golden table is unchanged.
   round: { advanceOnArrivalAt: ["implement"] },
 };
 

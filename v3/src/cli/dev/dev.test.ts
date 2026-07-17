@@ -10,6 +10,7 @@ import { openDiagStore } from "../../diag/index.js";
 import type { DiagnosticEvent, DiagnosticEventBody } from "../../ports/diagnostics.js";
 import { openStore } from "../../store/index.js";
 import { loadTemplate } from "../../definition/index.js";
+import { createGateRegistry } from "../../gates/index.js";
 import { createControlledClock, createScriptedTailWait } from "../../testkit/index.js";
 import type { CliErrorDoc } from "../contract.js";
 import { EXIT } from "../contract.js";
@@ -435,6 +436,84 @@ describe("dev cli — validate: one file through the load pipeline (packet ch8-P
           findings: direct.error.findings,
         });
       }
+    }
+  });
+});
+
+// ── packet ch11-P4 Y7: dev validate over GATED template files (C28: no
+// new verbs/flags; the doc shapes ride unchanged, only finding content is
+// new). ──────────────────────────────────────────────────────────────
+
+const gatedFile = (defective: boolean): string => `ref:
+  id: gated-pair-v0
+  version: 1
+start: implement
+steps:
+  implement:
+    role: implementer
+    instruction: |-
+      build it
+    transitions:
+      PASS: review
+  review:
+    role: reviewer
+    instruction: |-
+      review it
+    transitions:
+      PASS: implement
+      CONVERGED: done
+    gates:
+      CONVERGED:
+        - uses: ${defective ? "no.such.gate" : "declarative.threshold"}
+          config: { metric: round, op: ">=", value: 2 }
+terminal:
+  - done
+roles:
+  implementer:
+    defaultActor: codex
+  reviewer:
+    defaultActor: claude
+round:
+  advanceOnArrivalAt:
+    - implement
+`;
+
+describe("dev cli — validate over gated files (packet ch11-P4 Y7)", () => {
+  it("a VALID gated file → exit 0, stdout EXACTLY {valid: true, ref}", async () => {
+    const dir = tempDir();
+    const path = join(dir, "gated.yaml");
+    writeFileSync(path, gatedFile(false));
+    const res = await runDev(["validate", path], testDeps());
+    expect(res.code).toBe(EXIT.ok);
+    expect(res.stderr).toEqual([]);
+    expect(JSON.parse(res.stdout[0] ?? "")).toEqual({
+      valid: true,
+      ref: { id: "gated-pair-v0", version: 1 },
+    });
+  });
+
+  it("a gate-DEFECTIVE file → exit 1, TemplateInvalid, stage validate, the CODED finding visible (path + code)", async () => {
+    const dir = tempDir();
+    const path = join(dir, "gated-bad.yaml");
+    writeFileSync(path, gatedFile(true));
+    const res = await runDev(["validate", path], testDeps());
+    expect(res.stdout).toEqual([]);
+    const err = assertError(res, "internal", EXIT.internal);
+    expect(err.name).toBe("TemplateInvalid");
+    const details = err.details as { stage: string; findings: { path: string; code?: string }[] };
+    expect(details.stage).toBe("validate");
+    const coded = details.findings.find((f) => f.code === "gate_evaluator_unavailable");
+    expect(coded).toBeDefined();
+    expect(coded?.path).toBe("steps.review.gates.CONVERGED[0]");
+    // VERBATIM: the doc's details deep-equal the pipeline's OWN result
+    // (same bytes, same catalog, same path).
+    const direct = loadTemplate(new Uint8Array(readFileSync(path)), {
+      path,
+      catalog: createGateRegistry(),
+    });
+    expect(direct.ok).toBe(false);
+    if (!direct.ok) {
+      expect(details).toEqual({ stage: direct.error.stage, findings: direct.error.findings });
     }
   });
 });

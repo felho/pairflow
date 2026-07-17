@@ -13,13 +13,34 @@ import type { ValidationFinding } from "./errors.js";
  * `{path, message}` in ONE result (E2/draft C21) with dependent-lane
  * suppression: a missing or wrong-kind container yields ITS OWN
  * finding and suppresses the lanes that presuppose it.
+ *
+ * Packet ch11-P4 (the format extension): the root keyset grows the
+ * OPTIONAL `runtimeContext` (F1/C18) and `round` (F1/C37) keys, the
+ * step keyset grows the OPTIONAL `gates` key (F2/C1), and three
+ * SOURCE-FORM walk lanes join — the gates-subtree key-STRINGNESS rule
+ * (F3/GP2), the round source-form lanes (F5/C40), and the C12 integer
+ * source ladder for `config.value`/`config.timeoutMs` (F6). Every
+ * gate/round/runtimeContext SEMANTIC check stays admission's (C20 —
+ * the walk adds no second validation home); the walk's residue is
+ * exactly the representability the typed domain slots need. The walk
+ * now ALWAYS returns a best-effort template alongside its findings
+ * (F7) — the load pipeline runs the admission rung on it and
+ * accumulates both stages' findings in one `validate` result.
  */
 export interface ValidateOutcome {
   readonly template?: WorkflowTemplate;
   readonly findings: readonly ValidationFinding[];
 }
 
+/** The five REQUIRED root keys (ch8-C9) — missing any is a finding. */
 const ROOT_KEYS = ["ref", "start", "steps", "terminal", "roles"] as const;
+/** F1 (ch11-P4): the two OPTIONAL root keys the format walk grows to —
+ * `runtimeContext` (C18) and `round` (C37). Legal but never required;
+ * `gates` at ROOT stays unknown (it is step surface). */
+const OPTIONAL_ROOT_KEYS = ["runtimeContext", "round"] as const;
+/** F2 (ch11-P4): the step keyset — the ch8 three required + optional
+ * `agentConfig` + optional `gates` (C1). */
+const STEP_KEYS = ["role", "instruction", "transitions", "agentConfig", "gates"] as const;
 const REF_ID = /^[a-z0-9][a-z0-9-]*$/;
 const VERSION_SOURCE = /^[1-9][0-9]*$/;
 
@@ -157,41 +178,119 @@ function findCycle(value: unknown, path: string, ancestors: Set<object>): Valida
 }
 
 /**
- * V3 (draft C8): the version rule's node-level half. Uses the node's
- * range slice / type / tag / anchor — NEVER `.source`, which strips
- * quotes (probe P11). Emits at most ONE finding for the field.
+ * V3 (draft C8) / F6 (ch11-P4, draft C12): the SHARED plain-decimal
+ * integer SOURCE rule over a YAML node — the range slice / type / tag /
+ * anchor, NEVER `.source` (which strips quotes, probe P11). `900.0`,
+ * `0x384`, `9e2`, and quoted/anchored/tagged forms all reject on the
+ * SOURCE form even where they resolve to an integral value (probe
+ * GP4/P11). Emits at most ONE finding for the field; an absent node
+ * (never reached for a present field) is nobody's source finding.
  */
-function versionFinding(doc: Document, source: string, resolved: unknown): ValidationFinding | undefined {
-  const path = "ref.version";
-  const node: unknown = doc.getIn(["ref", "version"], true);
+function plainIntegerSourceFinding(
+  node: unknown,
+  source: string,
+  path: string,
+): ValidationFinding | undefined {
+  if (node === undefined || node === null) {
+    return undefined;
+  }
   if (isAlias(node)) {
-    return { path, message: "version must not be an alias (probe P21: an alias hides the source form)" };
+    return { path, message: `${path} must not be an alias (an alias hides the source form, probe P21)` };
   }
   if (!isScalar(node)) {
-    return { path, message: "version must be a plain decimal integer scalar" };
+    return { path, message: `${path} must be a plain decimal integer scalar` };
   }
   if (node.anchor !== undefined) {
-    return { path, message: "version must not carry an anchor (the anchor token sits outside the range slice)" };
+    return { path, message: `${path} must not carry an anchor (the anchor token sits outside the range slice)` };
   }
   if (node.tag !== undefined) {
-    return { path, message: "version must not carry a tag (probe P22: a tag can flip the resolved type silently)" };
+    return { path, message: `${path} must not carry a tag (probe P22: a tag can flip the resolved type silently)` };
   }
   const range = node.range;
   const slice = range ? source.slice(range[0], range[1]) : "";
   if (!VERSION_SOURCE.test(slice)) {
     return {
       path,
-      message: `version must be written as a plain decimal integer >= 1; got source form ${JSON.stringify(slice)}`,
+      message: `${path} must be written as a plain decimal integer >= 1; got source form ${JSON.stringify(slice)}`,
     };
   }
+  const resolved = node.value;
   if (typeof resolved !== "number" || !Number.isSafeInteger(resolved) || resolved < 1) {
-    return { path, message: "version must resolve to a safe integer >= 1" };
+    return { path, message: `${path} must resolve to a safe integer >= 1` };
   }
   return undefined;
 }
 
+/** V3 (draft C8): the version rule's node-level half, over the shared
+ * source rule at the `ref.version` node. */
+function versionFinding(doc: Document, source: string): ValidationFinding | undefined {
+  const node: unknown = doc.getIn(["ref", "version"], true);
+  return plainIntegerSourceFinding(node, source, "ref.version");
+}
+
+/**
+ * F6 (ch11-P4, draft C12): the C12 integer source ladder at a gate
+ * config field, addressed through the YAML AST (`doc.getIn` with the
+ * numeric list index) so the SOURCE form is inspected, not the resolved
+ * value. Presence-conditional at the caller (an absent field is
+ * admission's missing lane, never a source finding).
+ */
+function configIntegerSourceFinding(
+  doc: Document,
+  source: string,
+  nodePath: readonly (string | number)[],
+  fieldPath: string,
+): ValidationFinding | undefined {
+  const node: unknown = doc.getIn(nodePath, true);
+  return plainIntegerSourceFinding(node, source, fieldPath);
+}
+
+/**
+ * F3 (ch11-P4, GP2): the gates subtree's ONE walk rule — every map KEY
+ * anywhere under `gates` must be a STRING. A non-string key (the GP2
+ * node-level numeric-key identity class) cannot become an own-property
+ * record and would blind admission's own-key scans (the silent-drop /
+ * silent-typo class), so it is a validate finding at the NEAREST
+ * addressable path (the containing map's path). `agentConfig` is
+ * EXEMPT (ch8-C14 raw pass-through) and is never scanned here. A
+ * permanent visited set keeps the scan finite on aliased/cyclic graphs
+ * without re-reporting shared subtrees.
+ */
+function scanGatesStringness(
+  value: unknown,
+  path: string,
+  findings: ValidationFinding[],
+  seen: WeakSet<object>,
+): void {
+  if (typeof value !== "object" || value === null) {
+    return;
+  }
+  if (seen.has(value)) {
+    return;
+  }
+  seen.add(value);
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => scanGatesStringness(item, `${path}[${String(index)}]`, findings, seen));
+    return;
+  }
+  if (isResolvedMap(value)) {
+    for (const [key, child] of mapEntries(value)) {
+      if (typeof key !== "string") {
+        findings.push({
+          path,
+          message: `map keys in the gates subtree must be strings; got ${describeValue(key)}`,
+        });
+        continue;
+      }
+      scanGatesStringness(child, joinPath(path, key), findings, seen);
+    }
+  }
+}
+
 export function validateTemplate(value: unknown, doc: Document, source: string): ValidateOutcome {
   // V1: the root container precondition — ONE finding for a non-map root.
+  // Disposition (a): with no map operand, no best-effort template exists
+  // and the admission rung is fully suppressed (F7).
   if (!isResolvedMap(value)) {
     return {
       findings: [{ path: "$", message: "the template root must be a map with exactly ref, start, steps, terminal, roles" }],
@@ -214,14 +313,16 @@ export function validateTemplate(value: unknown, doc: Document, source: string):
     findings.push(cycle);
   }
 
-  // V1: exact top-level keyset (missing at "$", unknown at its own path).
+  // V1/F1: exact top-level keyset (missing at "$", unknown at its own
+  // path) — the five REQUIRED keys plus the two OPTIONAL ch11-P4 keys.
   for (const key of ROOT_KEYS) {
     if (!mapHas(root, key)) {
       findings.push({ path: "$", message: `missing required key "${key}"` });
     }
   }
+  const legalRootKeys: readonly string[] = [...ROOT_KEYS, ...OPTIONAL_ROOT_KEYS];
   for (const key of mapKeys(root)) {
-    if (typeof key !== "string" || !(ROOT_KEYS as readonly string[]).includes(key)) {
+    if (typeof key !== "string" || !legalRootKeys.includes(key)) {
       findings.push({
         path: typeof key === "string" ? key : "$",
         message: `unknown key ${describeValue(key)} (fixed keysets grow only by ratified additive keys — V16 reserves "kind")`,
@@ -259,7 +360,7 @@ export function validateTemplate(value: unknown, doc: Document, source: string):
         findings.push({ path: "ref", message: 'missing required key "version"' });
       } else {
         const version = mapGet(ref, "version");
-        const finding = versionFinding(doc, source, version);
+        const finding = versionFinding(doc, source);
         if (finding) {
           findings.push(finding);
         } else {
@@ -276,7 +377,6 @@ export function validateTemplate(value: unknown, doc: Document, source: string):
   // one makes the used-role set unreliable (suppression, not a cascade).
   let usedRolesReliable = true;
   const transitionTargets: Array<{ readonly path: string; readonly target: unknown }> = [];
-  const builtSteps: Record<string, Step> = {};
   if (mapHas(root, "steps")) {
     const steps = mapGet(root, "steps");
     if (!isResolvedMap(steps)) {
@@ -294,12 +394,12 @@ export function validateTemplate(value: unknown, doc: Document, source: string):
         const stepPath = typeof id === "string" ? `steps.${id}` : "steps";
         const step = mapGet(steps, id);
         if (!isResolvedMap(step)) {
-          findings.push({ path: stepPath, message: "a step must be a map with exactly role, instruction, transitions (+ optional agentConfig)" });
+          findings.push({ path: stepPath, message: "a step must be a map with exactly role, instruction, transitions (+ optional agentConfig, gates)" });
           usedRolesReliable = false;
           continue;
         }
         for (const key of mapKeys(step)) {
-          if (typeof key !== "string" || !["role", "instruction", "transitions", "agentConfig"].includes(key)) {
+          if (typeof key !== "string" || !(STEP_KEYS as readonly string[]).includes(key)) {
             findings.push({
               path: typeof key === "string" ? `${stepPath}.${key}` : stepPath,
               message: `unknown key ${describeValue(key)}`,
@@ -354,6 +454,52 @@ export function validateTemplate(value: unknown, doc: Document, source: string):
           }
         }
         // agentConfig (V9): raw pass-through — no shape checks by contract.
+        // gates (F3 + F6): the walk's residue over the gates subtree —
+        // the key-STRINGNESS rule and the C12 source ladder. Every
+        // SEMANTIC gate check is admission's (C20/C21); the walk performs
+        // none. Runs only for a well-typed step id (broken ids skipped).
+        if (mapHas(step, "gates") && typeof id === "string") {
+          const gatesValue = mapGet(step, "gates");
+          const gatesBase = `steps.${id}.gates`;
+          scanGatesStringness(gatesValue, gatesBase, findings, new WeakSet());
+          if (isResolvedMap(gatesValue)) {
+            for (const [eventType, pipeline] of mapEntries(gatesValue)) {
+              if (typeof eventType !== "string" || !Array.isArray(pipeline)) {
+                continue;
+              }
+              pipeline.forEach((binding: unknown, index: number) => {
+                if (!isResolvedMap(binding)) {
+                  return;
+                }
+                const uses = mapGet(binding, "uses");
+                const config = mapGet(binding, "config");
+                if (!isResolvedMap(config)) {
+                  return;
+                }
+                // F6: SYNTACTIC uses-scoping — the authored string, no
+                // catalog resolution (the walk stays semantics-free). Under
+                // any OTHER authored `uses` the key names are admission's
+                // keyset business and the source check does NOT fire.
+                const checkField = (usesId: string, field: string): void => {
+                  if (uses !== usesId || !mapHas(config, field)) {
+                    return;
+                  }
+                  const finding = configIntegerSourceFinding(
+                    doc,
+                    source,
+                    ["steps", id, "gates", eventType, index, "config", field],
+                    `${gatesBase}.${eventType}[${String(index)}].config.${field}`,
+                  );
+                  if (finding) {
+                    findings.push(finding);
+                  }
+                };
+                checkField("declarative.threshold", "value");
+                checkField("external.process", "timeoutMs");
+              });
+            }
+          }
+        }
       }
     }
   } else {
@@ -479,40 +625,114 @@ export function validateTemplate(value: unknown, doc: Document, source: string):
     }
   }
 
-  if (findings.length > 0) {
-    return { findings };
+  // F5 (ch11-P4, C40's source-form share): the `round` source-form
+  // lanes. `round` present-but-not-a-map (scalar/list/present-null)
+  // lands HERE, never on C38's absent default; an unknown key, a
+  // missing `advanceOnArrivalAt`, a non-list value, and a non-string
+  // member are the remaining source-form lanes. A source-form-CLEAN
+  // declaration maps onto the typed `round` slot — the VALUE-LEVEL
+  // lanes (empty list, membership, duplicates) then run at admission
+  // on every channel (F8/P2c). Attached to the best-effort template
+  // ONLY when the steps operand exists (disposition b vs b′/d).
+  let roundDomain: { readonly advanceOnArrivalAt: readonly string[] } | undefined;
+  if (mapHas(root, "round")) {
+    const roundFindingsStart = findings.length;
+    const round = mapGet(root, "round");
+    if (!isResolvedMap(round)) {
+      findings.push({ path: "round", message: "round must be a map with the single key advanceOnArrivalAt" });
+    } else {
+      for (const key of mapKeys(round)) {
+        if (key !== "advanceOnArrivalAt") {
+          findings.push({
+            path: typeof key === "string" ? `round.${key}` : "round",
+            message: `unknown key ${describeValue(key)} (round's only key is advanceOnArrivalAt)`,
+          });
+        }
+      }
+      if (!mapHas(round, "advanceOnArrivalAt")) {
+        findings.push({ path: "round", message: 'missing required key "advanceOnArrivalAt"' });
+      } else {
+        const listed = mapGet(round, "advanceOnArrivalAt");
+        if (!Array.isArray(listed)) {
+          findings.push({ path: "round.advanceOnArrivalAt", message: "advanceOnArrivalAt must be a nonempty list of step ids" });
+        } else {
+          listed.forEach((member: unknown, index: number) => {
+            if (typeof member !== "string") {
+              findings.push({
+                path: `round.advanceOnArrivalAt[${String(index)}]`,
+                message: `advanceOnArrivalAt member must be a step id string; got ${describeValue(member)}`,
+              });
+            }
+          });
+          if (findings.length === roundFindingsStart) {
+            roundDomain = { advanceOnArrivalAt: listed as string[] };
+          }
+        }
+      }
+    }
   }
 
-  // E3: only a COMPLETE valid template escapes — built here, after zero findings.
-  // ONE materialization memo per template build: a cross-step aliased
-  // graph (two steps sharing one anchored agentConfig) must keep its
-  // referential identity in the returned domain — a per-step memo
-  // duplicated it (the integration re-check's catch; lossless/raw V9).
+  // F4 (ch11-P4, C18): `runtimeContext` passes through RAW — the
+  // illegal-value lane is ADMISSION's (A3, C21), so both channels share
+  // one authority. The walk neither legalizes nor rejects any value.
+  const runtimeContextPresent = mapHas(root, "runtimeContext");
+  const runtimeContextRaw = runtimeContextPresent ? mapGet(root, "runtimeContext") : undefined;
+
+  // F7 (ch11-P4): build the best-effort template ALWAYS (the root is a
+  // map at this point). The admission rung runs on it in the load
+  // pipeline and accumulates its findings with the walk's — the
+  // external load result stays XOR (only a findings-free walk AND a
+  // findings-free admission escape). Broken step containers are SKIPPED
+  // (disposition c — their own finding already fired); the round slot is
+  // attached only when source-form clean AND the steps operand exists.
+  // ONE materialization memo per build preserves cross-step aliased
+  // agentConfig identity (the V9 integration re-check's catch).
   const materializeMemo = new WeakMap<object, unknown>();
-  const steps = mapGet(root, "steps") as ResolvedMap;
-  for (const [id, stepValue] of mapEntries(steps)) {
-    const step = stepValue as ResolvedMap;
-    const transitionValues = mapGet(step, "transitions") as ResolvedMap;
-    const transitions: Record<string, string> = {};
-    for (const [eventType, target] of mapEntries(transitionValues)) {
-      defineOwn(transitions, eventType as string, target as string);
+  const builtSteps: Record<string, Step> = {};
+  const stepsValue = mapGet(root, "steps");
+  const stepsIsMap = isResolvedMap(stepsValue);
+  if (isResolvedMap(stepsValue)) {
+    for (const [id, stepValue] of mapEntries(stepsValue)) {
+      if (typeof id !== "string" || !isResolvedMap(stepValue)) {
+        continue;
+      }
+      const step = stepValue;
+      const transitions: Record<string, string> = {};
+      const transitionValues = mapGet(step, "transitions");
+      if (isResolvedMap(transitionValues)) {
+        for (const [eventType, target] of mapEntries(transitionValues)) {
+          if (typeof eventType === "string") {
+            defineOwn(transitions, eventType, target as string);
+          }
+        }
+      }
+      const builtStep: Step = {
+        role: mapGet(step, "role") as string,
+        instruction: mapGet(step, "instruction") as string,
+        transitions,
+        ...(mapHas(step, "agentConfig")
+          ? { agentConfig: materializeResolvedValue(mapGet(step, "agentConfig"), materializeMemo) }
+          : {}),
+        ...(mapHas(step, "gates")
+          ? {
+              gates: materializeResolvedValue(
+                mapGet(step, "gates"),
+                materializeMemo,
+              ) as NonNullable<Step["gates"]>,
+            }
+          : {}),
+      };
+      defineOwn(builtSteps, id, builtStep);
     }
-    const builtStep: Step = {
-      role: mapGet(step, "role") as string,
-      instruction: mapGet(step, "instruction") as string,
-      transitions,
-      ...(mapHas(step, "agentConfig")
-        ? { agentConfig: materializeResolvedValue(mapGet(step, "agentConfig"), materializeMemo) }
-        : {}),
-    };
-    defineOwn(builtSteps, id as string, builtStep);
   }
   const template: WorkflowTemplate = {
     ref: { id: refId as string, version: refVersion as number },
     start: mapGet(root, "start") as string,
     steps: builtSteps,
-    terminal: terminalIds as string[],
+    terminal: terminalIds ?? [],
     roles: builtRoles,
+    ...(runtimeContextPresent ? { runtimeContext: runtimeContextRaw as "required" } : {}),
+    ...(roundDomain !== undefined && stepsIsMap ? { round: roundDomain } : {}),
   };
-  return { template, findings: [] };
+  return { template, findings };
 }

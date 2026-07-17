@@ -269,6 +269,27 @@ async function verbStart(ctx: VerbContext): Promise<number> {
       Array.isArray(overrideFlags) ? overrideFlags.filter((v) => typeof v === "string") : [],
       template,
     );
+    // Y6 (ch11-P4): the EAGER required-context pre-check — a
+    // NON-AUTHORITATIVE CLI classification mirror on the verb's OWN
+    // pre-loaded template (the ch8-P2 A2 eager-gate culture). A
+    // `runtimeContext: "required"` template is UNSTARTABLE through this
+    // CLI: the shipped surface can supply no runtime-context ref until
+    // ch9's provisioning surface (C28 adds no flag). Fired HERE — after
+    // the pre-load, BEFORE withStoreAndDiag / the runner slot / the
+    // kernel — it is USAGE exit 2 with ZERO store/diag/kernel side
+    // effects. The kernel's S2 lane (P3b-built) stays the start-invariant
+    // AUTHORITY; its CLI reachability is the mid-invocation race only, and
+    // it rides INTERNAL by construction (the inner catch's allowlist keeps
+    // binding coverage as its SOLE member — no runtime-context mapping
+    // joins it).
+    if (template.runtimeContext === "required") {
+      throw usage(
+        "StartFailed",
+        `template '${templateRef.id}@${String(templateRef.version)}' declares ` +
+          `runtimeContext: "required" and cannot be started through this CLI until ` +
+          `ch9's provisioning surface supplies a runtime-context ref`,
+      );
+    }
     return await withStoreAndDiag(ctx, async (handle, diag) => {
       // W2 (ch11-P3b): the fail-closed process-gate runner on a derived-path
       // sibling beside the store DB — never spawns, never allows.

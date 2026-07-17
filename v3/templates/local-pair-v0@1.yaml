@@ -23,3 +23,6 @@ roles:
     defaultActor: codex
   reviewer:
     defaultActor: claude
+round:
+  advanceOnArrivalAt:
+    - implement

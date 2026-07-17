@@ -38,11 +38,11 @@ import { noopDiagnosticsSink } from "./diag/index.js";
  */
 function wire(): { seams: TraceSeams; handle: StoreHandle } {
   const handle = openStore(":memory:", createControlledClock(1_000));
-  // ch11-P2c T2: the round-2 golden preserved via a LOCAL declaration
-  // wrapper — the model's own exhibited declaration (advance on arrival at
-  // the start step). ONE admitted value feeds BOTH the definition store
-  // and the harness seam (T1); the wrapper retires at P4.
-  const admitted = admit({ ...fixtureTemplate(), round: { advanceOnArrivalAt: ["implement"] } });
+  // ch11-P4: the round-2 golden rides the fixture's OWN round declaration
+  // (Y2 — `fixtureTemplate()` now carries `advanceOnArrivalAt: [implement]`),
+  // so the P2c staging wrapper has collapsed. ONE admitted value feeds BOTH
+  // the definition store and the harness seam (T1).
+  const admitted = admit(fixtureTemplate());
   const kernel = createKernel({
       processRunner: createScriptedProcessGateRunner([]),
     store: handle.store,

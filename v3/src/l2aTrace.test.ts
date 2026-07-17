@@ -26,9 +26,10 @@ import type { TraceFixture } from "./testkit/index.js";
  * through the ingress seam; the scripted runner returns [ok/exit0, ok/exit1,
  * runner_error]. The "(a later round)" is realized by the review→implement
  * pass-back (round 2 on arrival at implement). AT-LEVEL (explicit roles +
- * versions). The FILE channel carries no `gates`/`runtimeContext` key until
- * P4, so this ingress-seam replay over a direct-constructed admitted template
- * is the deepest shipped seam a process-gated template can reach.
+ * versions). As of ch11-P4 the FILE channel carries the
+ * `gates`/`runtimeContext` keys too; this trace keeps its DIRECT-constructed
+ * admitted template deliberately — the authoring form this golden fixes over
+ * the ingress seam.
  */
 const catalog = createGateRegistry();
 const READY_REF = "/ws/l2a-inst";

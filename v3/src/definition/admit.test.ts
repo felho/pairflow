@@ -624,6 +624,93 @@ describe("admitTemplate — the C19 cross-rule (V5, lane s), both directions", (
   });
 });
 
+// ── packet ch11-P4: the admission extension lanes (A1/A2/A3) driven on
+// the DIRECT channel via `admitTemplate` on cast-forged values (the
+// A-rows' both-channels letter), plus the A3+C19 accumulation. ──────────
+
+describe("admitTemplate — A1 the gate-binding UNKNOWN-KEY lane (C4, direct channel)", () => {
+  it("a surplus own key is an UNCODED finding at its own C7 address", () => {
+    const findings = admitFail({
+      PASS: [{ uses: "declarative.threshold", config: { metric: "round", op: ">=", value: 1 }, id: "x" }],
+    });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.path).toBe("steps.review.gates.PASS[0].id");
+    expect(findings[0]).not.toHaveProperty("code");
+    expect(findings[0]?.message).toContain("unknown gate binding key");
+  });
+
+  it("the surplus-key lane ACCUMULATES with the config lanes (not a short-circuit)", () => {
+    // `implementation` surplus key AND a bad threshold metric → BOTH.
+    const findings = admitFail({
+      PASS: [{ uses: "declarative.threshold", config: { metric: "spins", op: ">=", value: 1 }, implementation: "process" }],
+    });
+    const paths = findings.map((f) => f.path).sort();
+    expect(paths).toEqual([
+      "steps.review.gates.PASS[0].config.metric",
+      "steps.review.gates.PASS[0].implementation",
+    ]);
+  });
+});
+
+describe("admitTemplate — A2 the `uses` GRAMMAR lane (C6, direct channel)", () => {
+  const grammarInvalid = ["nodots", "Bad.Case", "a.b.", ".a.b", "a..b", "a.b c", "_x.y", "1.a"];
+  for (const uses of grammarInvalid) {
+    it(`a grammar-invalid uses ${JSON.stringify(uses)} → an UNCODED finding at .uses, never the coded lane`, () => {
+      const findings = admitFail({ PASS: [{ uses }] });
+      expect(findings).toHaveLength(1);
+      expect(findings[0]?.path).toBe("steps.review.gates.PASS[0].uses");
+      expect(findings[0]).not.toHaveProperty("code");
+    });
+  }
+
+  it("the grammar check runs BEFORE resolve: a grammatical-but-unknown id stays the CODED lane", () => {
+    const findings = admitFail({ PASS: [{ uses: "no.such.gate" }] });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.path).toBe("steps.review.gates.PASS[0]");
+    expect(findings[0]?.code).toBe("gate_evaluator_unavailable");
+  });
+
+  it("the two-lane split, side by side: one grammar-invalid + one unknown-but-grammatical → uncoded AND coded", () => {
+    const findings = admitFail({
+      PASS: [{ uses: "nodots" }],
+      CONVERGED: [{ uses: "no.such.gate" }],
+    });
+    const byPath = new Map(findings.map((f) => [f.path, f]));
+    expect(byPath.get("steps.review.gates.PASS[0].uses")).not.toHaveProperty("code");
+    expect(byPath.get("steps.review.gates.CONVERGED[0]")).toMatchObject({ code: "gate_evaluator_unavailable" });
+  });
+});
+
+describe("admitTemplate — A3 the runtimeContext ILLEGAL-VALUE lane (C18, direct channel)", () => {
+  it("a present runtimeContext that is not 'required' → an UNCODED finding at runtimeContext", () => {
+    const result = admitTemplate(withRuntimeContext("optional"), catalog);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0]?.path).toBe("runtimeContext");
+    expect(result.findings[0]).not.toHaveProperty("code");
+    expect(result.findings[0]?.message).toContain("required");
+  });
+
+  it("A3 + C19 ACCUMULATE where both fire: an illegal value AND a process gate → BOTH at runtimeContext", () => {
+    const result = admitTemplate(
+      withRuntimeContext("optional", { PASS: [{ uses: "external.process", config: validProcessConfig }] }),
+      catalog,
+    );
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    const atRuntimeContext = result.findings.filter((f) => f.path === "runtimeContext");
+    expect(atRuntimeContext).toHaveLength(2);
+    expect(atRuntimeContext.some((f) => f.code === "runtime_context_required_for_process_gate")).toBe(true);
+    expect(atRuntimeContext.some((f) => f.code === undefined)).toBe(true);
+  });
+
+  it("the negative direction: an ABSENT runtimeContext on an ungated template does not fire A3", () => {
+    const result = admitTemplate(template(), catalog);
+    expect(result.ok).toBe(true);
+  });
+});
+
 // ── D1 compile-negative probe: runtimeContext's sole legal value is the
 // string literal "required" (validated by v3:typecheck via TS2578). ──
 // @ts-expect-error D1: runtimeContext is the "required" literal — no other value is representable.

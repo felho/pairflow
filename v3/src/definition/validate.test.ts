@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { WorkflowTemplate } from "../domain/index.js";
+import { createGateRegistry } from "../gates/index.js";
 import { loadTemplate } from "./index.js";
 import type { TemplateLoadErrorInfo } from "./index.js";
 
@@ -8,6 +9,12 @@ import type { TemplateLoadErrorInfo } from "./index.js";
 // accumulation + dependent-lane suppression rules, the V3 version
 // source-form ladder (dimension 2), and the canonical-example
 // round-trip (dimension 12). Every hostile fixture is RAW YAML text.
+//
+// Packet ch11-P4: F1/F2 keyset growth (dimension 1), F5 the round
+// SOURCE-FORM lanes (dimension 2), and F6 the C12 integer source ladder
+// (dimension 3), all driven through `loadTemplate`. F6's positives need
+// the REAL catalog so admission resolves the gate and the ONLY finding
+// is the source-form one.
 
 function bytes(text: string): Uint8Array {
   return new TextEncoder().encode(text);
@@ -15,6 +22,10 @@ function bytes(text: string): Uint8Array {
 
 function load(text: string): ReturnType<typeof loadTemplate> {
   return loadTemplate(bytes(text));
+}
+
+function loadGated(text: string): ReturnType<typeof loadTemplate> {
+  return loadTemplate(bytes(text), { catalog: createGateRegistry() });
 }
 
 function expectValidateErr(text: string): TemplateLoadErrorInfo {
@@ -739,6 +750,9 @@ roles:
     defaultActor: codex
   reviewer:
     defaultActor: claude
+round:
+  advanceOnArrivalAt:
+    - implement
 `;
     const expected: WorkflowTemplate = {
       ref: { id: "local-pair-v0", version: 1 },
@@ -748,15 +762,18 @@ roles:
           role: "implementer",
           instruction: "build it",
           transitions: { PASS: "review" },
-          // ch11-P2c A1: loadTemplate returns the ADMITTED value — the
-          // declaration-absent file yields all-false maps (C38).
+          // ch11-P4 (Y4): the authored `round` declaration (F5 source-form
+          // clean) expands to per-transition flags — a transition advances
+          // iff its TARGET ∈ advanceOnArrivalAt. implement.PASS → review
+          // (not listed) ⇒ false.
           advancesRound: { PASS: false },
         },
         review: {
           role: "reviewer",
           instruction: "review it",
           transitions: { PASS: "implement", CONVERGED: "done" },
-          advancesRound: { PASS: false, CONVERGED: false },
+          // review.PASS → implement (LISTED) ⇒ true; CONVERGED → done ⇒ false.
+          advancesRound: { PASS: true, CONVERGED: false },
         },
       },
       terminal: ["done"],
@@ -764,10 +781,310 @@ roles:
         implementer: { defaultActor: "codex" },
         reviewer: { defaultActor: "claude" },
       },
+      round: { advanceOnArrivalAt: ["implement"] },
     };
     const result = load(canonical);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.template).toStrictEqual(expected);
+  });
+});
+
+// ── packet ch11-P4: F1/F2 keyset growth (dimension 1) ──────────────────
+
+describe("ch11-P4 F1/F2 — keyset growth, both directions (dimension 1)", () => {
+  it("F1: root accepts the OPTIONAL runtimeContext key (driven positive)", () => {
+    expect(load(`${VALID}runtimeContext: required\n`).ok).toBe(true);
+  });
+
+  it("F1: root accepts the OPTIONAL round key (driven positive)", () => {
+    expect(load(`${VALID}round:\n  advanceOnArrivalAt:\n    - s\n`).ok).toBe(true);
+  });
+
+  it("F2: a step accepts the OPTIONAL gates key — an empty gates map is legal-and-inert", () => {
+    const result = load(
+      template({ steps: "steps:\n  s:\n    role: r\n    instruction: i\n    transitions: {}\n    gates: {}\n" }),
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  it("F1: gates at ROOT is UNKNOWN (it is step surface)", () => {
+    const err = expectValidateErr(`${VALID}gates: {}\n`);
+    expect(paths(err)).toStrictEqual(["gates"]);
+  });
+
+  it("F2: round at STEP grain is UNKNOWN", () => {
+    const err = expectValidateErr(
+      template({ steps: "steps:\n  s:\n    role: r\n    instruction: i\n    transitions: {}\n    round: {}\n" }),
+    );
+    expect(paths(err)).toContain("steps.s.round");
+  });
+
+  it("F2: runtimeContext at STEP grain is UNKNOWN", () => {
+    const err = expectValidateErr(
+      template({ steps: "steps:\n  s:\n    role: r\n    instruction: i\n    transitions: {}\n    runtimeContext: required\n" }),
+    );
+    expect(paths(err)).toContain("steps.s.runtimeContext");
+  });
+
+  it("kind is STILL reserved (unknown) after the growth", () => {
+    const err = expectValidateErr(`${VALID}kind: template\n`);
+    expect(paths(err)).toStrictEqual(["kind"]);
+  });
+});
+
+// ── packet ch11-P4: F5 the round SOURCE-FORM lanes (dimension 2) ────────
+
+describe("ch11-P4 F5 — the round source-form lanes (dimension 2)", () => {
+  it("a SCALAR round → ONE finding at round, dependents suppressed", () => {
+    const err = expectValidateErr(`${VALID}round: 5\n`);
+    expect(err.findings).toHaveLength(1);
+    expect(paths(err)).toStrictEqual(["round"]);
+  });
+
+  it("a LIST round → ONE finding at round", () => {
+    const err = expectValidateErr(`${VALID}round:\n  - x\n`);
+    expect(err.findings).toHaveLength(1);
+    expect(paths(err)).toStrictEqual(["round"]);
+  });
+
+  it("a PRESENT-NULL round (round: with nothing) → a finding at round (never the F8 absent default)", () => {
+    const err = expectValidateErr(`${VALID}round:\n`);
+    expect(err.findings).toHaveLength(1);
+    expect(paths(err)).toStrictEqual(["round"]);
+  });
+
+  it("an UNKNOWN key in the round map → a finding at round.<key>", () => {
+    const err = expectValidateErr(`${VALID}round:\n  foo: bar\n`);
+    expect(paths(err)).toContain("round.foo");
+  });
+
+  it("advanceOnArrivalAt MISSING (empty round map) → a finding at round", () => {
+    const err = expectValidateErr(`${VALID}round: {}\n`);
+    expect(paths(err)).toContain("round");
+  });
+
+  it("a NON-LIST advanceOnArrivalAt (string form) → a finding at round.advanceOnArrivalAt", () => {
+    const err = expectValidateErr(`${VALID}round:\n  advanceOnArrivalAt: s\n`);
+    expect(paths(err)).toStrictEqual(["round.advanceOnArrivalAt"]);
+  });
+
+  it("a NON-LIST advanceOnArrivalAt (map form) → a finding at round.advanceOnArrivalAt", () => {
+    const err = expectValidateErr(`${VALID}round:\n  advanceOnArrivalAt:\n    a: 1\n`);
+    expect(paths(err)).toStrictEqual(["round.advanceOnArrivalAt"]);
+  });
+
+  it("a NON-STRING member (unquoted numeric → a NUMBER) → a finding at round.advanceOnArrivalAt[<i>]", () => {
+    const err = expectValidateErr(`${VALID}round:\n  advanceOnArrivalAt:\n    - 0\n`);
+    expect(paths(err)).toContain("round.advanceOnArrivalAt[0]");
+  });
+
+  it("the F5/F8 split: present-null is a finding, ABSENT is the F8 default (admits all-false)", () => {
+    // absent — VALID has no round key.
+    const absent = load(VALID);
+    expect(absent.ok).toBe(true);
+    if (!absent.ok) return;
+    expect(absent.template.steps["s"]?.advancesRound).toStrictEqual({});
+  });
+
+  it("the positive: a source-form-clean declaration admits with the typed round field", () => {
+    const result = load(`${VALID}round:\n  advanceOnArrivalAt:\n    - s\n`);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.template.round).toStrictEqual({ advanceOnArrivalAt: ["s"] });
+  });
+});
+
+// ── packet ch11-P4: F6 the C12 integer source ladder (dimension 3) ──────
+
+const gatedThreshold = (valueSource: string): string => `ref:
+  id: t
+  version: 1
+start: s
+steps:
+  s:
+    role: r
+    instruction: i
+    transitions:
+      GO: done
+    gates:
+      GO:
+        - uses: declarative.threshold
+          config:
+            metric: round
+            op: ">="
+            value: ${valueSource}
+terminal:
+  - done
+roles:
+  r: {}
+`;
+
+const gatedProcess = (timeoutSource: string): string => `ref:
+  id: t
+  version: 1
+start: s
+steps:
+  s:
+    role: r
+    instruction: i
+    transitions:
+      GO: done
+    gates:
+      GO:
+        - uses: external.process
+          config:
+            command: "echo hi"
+            timeoutMs: ${timeoutSource}
+            onExit: { zero: allow, nonzero: block }
+terminal:
+  - done
+roles:
+  r: {}
+runtimeContext: required
+`;
+
+describe("ch11-P4 F6 — the C12 source ladder for config.value (dimension 3)", () => {
+  it("the plain-decimal positive admits", () => {
+    expect(loadGated(gatedThreshold("2")).ok).toBe(true);
+  });
+
+  const badForms = [
+    ["integral float", "900.0"],
+    ["hex", "0x384"],
+    ["exponent", "9e2"],
+    ["double-quoted", '"900"'],
+    ["single-quoted", "'900'"],
+    ["anchored", "&v 900"],
+    ["tagged !!int", "!!int 900"],
+    ["leading zero", "0900"],
+  ] as const;
+  for (const [label, src] of badForms) {
+    it(`rejects config.value source form: ${label}`, () => {
+      const result = loadGated(gatedThreshold(src));
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.error.findings.map((f) => (f as { path: string }).path)).toContain(
+        "steps.s.gates.GO[0].config.value",
+      );
+    });
+  }
+
+  it("an ALIASED config.value (anchor defined elsewhere) → a source finding", () => {
+    const aliased = `ref:
+  id: t
+  version: 1
+start: s
+steps:
+  s:
+    role: r
+    instruction: i
+    transitions:
+      GO: done
+    agentConfig:
+      anchor: &v 2
+    gates:
+      GO:
+        - uses: declarative.threshold
+          config:
+            metric: round
+            op: ">="
+            value: *v
+terminal:
+  - done
+roles:
+  r: {}
+`;
+    const result = loadGated(aliased);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.findings.map((f) => (f as { path: string }).path)).toContain(
+      "steps.s.gates.GO[0].config.value",
+    );
+  });
+
+  it("zero and negative forms fail the ^[1-9] source rule", () => {
+    for (const src of ["0", "-1"]) {
+      const result = loadGated(gatedThreshold(src));
+      expect(result.ok).toBe(false);
+      if (result.ok) continue;
+      expect(result.error.findings.map((f) => (f as { path: string }).path)).toContain(
+        "steps.s.gates.GO[0].config.value",
+      );
+    }
+  });
+});
+
+describe("ch11-P4 F6 — the C12 source ladder for config.timeoutMs (dimension 3)", () => {
+  it("the plain-decimal positive admits", () => {
+    expect(loadGated(gatedProcess("600000")).ok).toBe(true);
+  });
+
+  const badForms = [
+    ["integral float", "900.0"],
+    ["hex", "0x384"],
+    ["exponent", "9e2"],
+    ["quoted", '"600000"'],
+  ] as const;
+  for (const [label, src] of badForms) {
+    it(`rejects config.timeoutMs source form: ${label}`, () => {
+      const result = loadGated(gatedProcess(src));
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.error.findings.map((f) => (f as { path: string }).path)).toContain(
+        "steps.s.gates.GO[0].config.timeoutMs",
+      );
+    });
+  }
+});
+
+describe("ch11-P4 F6 — the source-ladder SCOPING iff, both directions", () => {
+  it("the matching authored uses FIRES the ladder (threshold + value 900.0)", () => {
+    const result = loadGated(gatedThreshold("900.0"));
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(
+      result.error.findings.some((f) => (f as { path: string }).path === "steps.s.gates.GO[0].config.value"),
+    ).toBe(true);
+  });
+
+  it("a C12-named key under a NON-matching authored uses yields NO source finding — only admission's keyset lane", () => {
+    // `timeoutMs` under declarative.threshold is NOT F6's field there
+    // (that field belongs to external.process); F6 does not fire, and
+    // admission reports it as an unknown threshold config key.
+    const withStrayTimeout = `ref:
+  id: t
+  version: 1
+start: s
+steps:
+  s:
+    role: r
+    instruction: i
+    transitions:
+      GO: done
+    gates:
+      GO:
+        - uses: declarative.threshold
+          config:
+            metric: round
+            op: ">="
+            value: 2
+            timeoutMs: "900.0"
+terminal:
+  - done
+roles:
+  r: {}
+`;
+    const result = loadGated(withStrayTimeout);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    const timeoutFindings = result.error.findings.filter(
+      (f) => (f as { path: string }).path === "steps.s.gates.GO[0].config.timeoutMs",
+    );
+    // Exactly ONE finding at that path, and it is admission's UNKNOWN-KEY
+    // lane (uncoded, keyset message) — NOT a source-form finding.
+    expect(timeoutFindings).toHaveLength(1);
+    expect(timeoutFindings[0]).not.toHaveProperty("code");
+    expect((timeoutFindings[0] as { message: string }).message).toContain("unknown config key");
   });
 });

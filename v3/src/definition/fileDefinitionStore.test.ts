@@ -189,6 +189,75 @@ describe("S4 — an unlistable templates directory is a typed rejection, never n
   });
 });
 
+// ── packet ch11-P4: a gated template loaded THROUGH the store (the file
+// channel reaching admission with the real catalog). ──────────────────
+
+function gatedTemplate(id: string, version: string): string {
+  return `ref:
+  id: ${id}
+  version: ${version}
+start: implement
+steps:
+  implement:
+    role: implementer
+    instruction: build it
+    transitions:
+      PASS: review
+  review:
+    role: reviewer
+    instruction: review it
+    transitions:
+      PASS: implement
+      CONVERGED: done
+    gates:
+      CONVERGED:
+        - uses: declarative.threshold
+          config: { metric: round, op: ">=", value: 2 }
+terminal:
+  - done
+roles:
+  implementer: {}
+  reviewer: {}
+round:
+  advanceOnArrivalAt:
+    - implement
+`;
+}
+
+describe("ch11-P4 — a gated template loads by ref through the store (file channel → admission)", () => {
+  it("admits with the effective gate config, the round declaration, and the expanded advancesRound flags", async () => {
+    const dir = tempDir();
+    writeFileSync(join(dir, "g@1.yaml"), gatedTemplate("g", "1"));
+    const store = createFileDefinitionStore(dir, createGateRegistry());
+    const template = await store.load({ id: "g", version: 1 });
+    expect(template).not.toBeNull();
+    if (template === null) return;
+    // the effective threshold config materialized through admission
+    expect(template.steps["review"]?.gates?.["CONVERGED"]?.[0]).toEqual({
+      uses: "declarative.threshold",
+      config: { metric: "round", op: ">=", value: 2 },
+    });
+    // the round declaration carried through, flags expanded (review.PASS →
+    // implement is the LISTED arrival ⇒ true)
+    expect(template.round).toStrictEqual({ advanceOnArrivalAt: ["implement"] });
+    expect(template.steps["review"]?.advancesRound).toStrictEqual({ PASS: true, CONVERGED: false });
+    expect(template.steps["implement"]?.advancesRound).toStrictEqual({ PASS: false });
+  });
+
+  it("a gate-defective template file rejects TYPED at the validate stage through the store", async () => {
+    const dir = tempDir();
+    // an unknown-but-grammatical evaluator id → the coded admission lane
+    writeFileSync(
+      join(dir, "bad@1.yaml"),
+      gatedTemplate("bad", "1").replace("declarative.threshold", "no.such.gate"),
+    );
+    const store = createFileDefinitionStore(dir, createGateRegistry());
+    const err = await expectReject(store.load({ id: "bad", version: 1 }));
+    expect(err.stage).toBe("validate");
+    expect(JSON.stringify(err.findings)).toContain("gate_evaluator_unavailable");
+  });
+});
+
 describe("E5 — the typed error's machine shape at the store surface", () => {
   it("carries {stage, findings} and read-stage entries keep the OS-half keyset", async () => {
     const dir = join(tempDir(), "missing");

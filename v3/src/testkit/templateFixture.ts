@@ -12,6 +12,12 @@ import type { DefinitionStore } from "../ports/definition.js";
  * Shape: the model's local-pair-v0 — implement ⇄ review with
  * PASS/CONVERGED navigation, defaults implementer→codex,
  * reviewer→claude (the l0b trace's binding snapshot).
+ *
+ * ch11-P4 (Y2): the `round` declaration is carried HERE together with
+ * the shipped `local-pair-v0@1.yaml` (Y1) — the model's own exhibited
+ * declaration (advance on arrival at the start step). Both gain it in
+ * the SAME commit so the ch8-P2 equality pin holds with ZERO edits to
+ * the pin test; a one-sided edit is mechanically red.
  */
 export function fixtureTemplate(): WorkflowTemplate {
   return {
@@ -34,6 +40,7 @@ export function fixtureTemplate(): WorkflowTemplate {
       implementer: { defaultActor: "codex" },
       reviewer: { defaultActor: "claude" },
     },
+    round: { advanceOnArrivalAt: ["implement"] },
   };
 }
 

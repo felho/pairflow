@@ -147,7 +147,12 @@ const admittedDeclared = admit({
   ...fixtureTemplate(),
   round: { advanceOnArrivalAt: ["implement"] },
 });
-const admittedAbsent = admit(fixtureTemplate());
+// The declaration-ABSENT fixture strips the round key: `fixtureTemplate()`
+// is declaration-PRESENT since ch11-P4 (the C38 restoration), and this
+// checker lane's meaning is reconstruct-1 over an ABSENT declaration.
+const { round: strippedDeclaration, ...declarationAbsentTemplate } = fixtureTemplate();
+void strippedDeclaration; // stripped by design — the fixture must be declaration-free
+const admittedAbsent = admit(declarationAbsentTemplate);
 
 // Two loop-backs → stored round 3 (a DECLARATION-ABSENT fixture would be
 // blind to a raw-template regression here — this reconstructs > 1).

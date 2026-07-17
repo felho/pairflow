@@ -23,9 +23,10 @@ export interface Step {
   /**
    * D1 (packet ch11-P2a): the per-(event-type) gate pipeline realizing
    * the model's `gates_for(step, event_type)`. ABSENT = ungated (C1).
-   * The FILE format never carries a `gates` key until P4 (it stays the
-   * ch8 unknown-key rejection); this domain field is reached only by
-   * directly-constructed templates through admission.
+   * Since ch11-P4 the FILE format carries a `gates` key (the format walk
+   * lands the authoring surface, F2/F3); the walk delivers the resolved
+   * value into this slot, and directly-constructed templates set it
+   * straight — both reach admission through the SAME function.
    */
   readonly gates?: Readonly<Record<EventType, readonly GateBinding[]>>;
   /**
@@ -66,24 +67,25 @@ export interface WorkflowTemplate {
   readonly capabilityProfile?: CapabilityProfile;
   /**
    * D1 (packet ch11-P2c): the C37 authoring shape at the DOMAIN grain
-   * (the direct channel's input; the YAML key maps onto it at P4).
-   * ABSENT = C38's none-default (no advancing transition after
-   * activation). This is admission's INPUT — the flags (Step.advancesRound,
-   * D2) are the kernel's ONLY consumption surface (C39); admission
-   * validates and expands it but NEVER mutates it (A4).
+   * (the direct channel's input; since ch11-P4 the YAML `round` key maps
+   * onto it through the format walk, F5). ABSENT = C38's none-default (no
+   * advancing transition after activation). This is admission's INPUT —
+   * the flags (Step.advancesRound, D2) are the kernel's ONLY consumption
+   * surface (C39); admission validates and expands it but NEVER mutates
+   * it (A4).
    */
   readonly round?: { readonly advanceOnArrivalAt: readonly StepId[] };
   /**
    * D1 (packet ch11-P3a): the C18 runtime-context declaration at the DOMAIN
    * grain — the sole legal value is the string literal `"required"` (the
-   * literal type forecloses every other value on the direct channel; the
-   * file-channel illegal-value lane lands at P4 with the YAML key). ABSENT =
-   * a context-free workflow. A template declaring any process gate (a
+   * literal type forecloses every other value on the direct channel; since
+   * ch11-P4 the file-channel illegal-value lane is admission's A3, guarding
+   * the raw YAML value the walk passes through F4). ABSENT = a context-free
+   * workflow. A template declaring any process gate (a
    * `requiresRuntimeContext` registration) without this field FAILS admission
    * (the C19 cross-rule, V5). `admitTemplate` carries the field through
-   * unchanged (the template-root spread). Named exclusions with homes: the
-   * instance-side field, start-input seam, and store column — P3b; the YAML
-   * authoring key + source-form lanes — P4.
+   * unchanged (the template-root spread). Named exclusion with home: the
+   * ref-supplying start/provisioning surface — ch9.
    */
   readonly runtimeContext?: "required";
 }

@@ -67,10 +67,10 @@ const l0bFixture: TraceFixture = {
 describe("l0b golden trace — the walking skeleton end-to-end (on the harness)", () => {
   it("replays the model's six steps and matches the committed rows", async () => {
     const handle = openStore(":memory:", createControlledClock(1_000));
-    // ch11-P2c T2: the round-2 golden preserved via a LOCAL declaration
-    // wrapper — ONE admitted value feeds BOTH the definition store and the
-    // harness seam (T1); the wrapper retires at P4.
-    const admitted = admit({ ...fixtureTemplate(), round: { advanceOnArrivalAt: ["implement"] } });
+    // ch11-P4: the round-2 golden rides the fixture's OWN round declaration
+    // (Y2) — the P2c staging wrapper has collapsed. ONE admitted value feeds
+    // BOTH the definition store and the harness seam (T1).
+    const admitted = admit(fixtureTemplate());
     const kernel = createKernel({
       processRunner: createScriptedProcessGateRunner([]),
       store: handle.store,

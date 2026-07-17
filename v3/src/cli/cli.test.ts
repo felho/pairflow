@@ -1130,3 +1130,67 @@ describe("submit --expected-role (packet ch11-P1, O1/O2)", () => {
     expect(wrongRole.stderr).toEqual([]);
   });
 });
+
+// ── packet ch11-P4: Y6 the eager required-context start pre-check + the
+// gate-defective write-lane drive ──────────────────────────────────────
+
+describe("cli — Y6 the eager required-context start pre-check (packet ch11-P4)", () => {
+  it("start on a runtimeContext: required template → EAGER usage 2 StartFailed, side-effect-free (no store DB, no diag file)", async () => {
+    // The template loads/admits fine (runtimeContext: required is legal
+    // without a process gate); the eager pre-check refuses to START it —
+    // the shipped CLI can supply no runtime-context ref until ch9.
+    const dir = stageTemplates({
+      "local-pair-v0@1.yaml": `${CANONICAL_BYTES()}runtimeContext: required\n`,
+    });
+    const db = tempDbPath();
+    const res = await run(
+      ["start", "--db", db, "--task", "t", "--templates-dir", dir],
+      testDeps(),
+    );
+    const err = errorDoc(res);
+    expect(res.code).toBe(EXIT.usage);
+    expect(err.name).toBe("StartFailed");
+    expect(err.class).toBe("usage");
+    expect(err.message).toMatch(/runtimeContext|runtime context/);
+    // The side-effect negative (the grid's required-shape cell): the eager
+    // gate fired BEFORE any store/diag/kernel construction — neither the
+    // run store nor the derived diag file was created.
+    expect(existsSync(db)).toBe(false);
+    expect(existsSync(diagPathOf(db))).toBe(false);
+    // The store DB's process-evidence sibling is likewise never minted.
+    expect(existsSync(`${db}.gate-evidence.sqlite`)).toBe(false);
+  });
+
+  it("a context-FREE template starts normally (the gate is silent — the no-throw baseline)", async () => {
+    // The default deps ride the repo canonical template (context-free).
+    const res = await run(["start", "--db", tempDbPath(), "--task", "t"], testDeps());
+    expect(res.code).toBe(EXIT.ok);
+  });
+});
+
+describe("cli — Y6/Y7 the gate-defective write-lane drive (packet ch11-P4)", () => {
+  const gateDefective = `${CANONICAL_BYTES()}`
+    .replace(
+      "    transitions:\n      PASS: implement\n      CONVERGED: done\n",
+      "    transitions:\n      PASS: implement\n      CONVERGED: done\n" +
+        "    gates:\n      CONVERGED:\n        - uses: no.such.gate\n",
+    );
+
+  it("start on a gate-defective template → TemplateInvalid 1 with the coded finding in the VERBATIM {stage, findings} doc", async () => {
+    const dir = stageTemplates({ "local-pair-v0@1.yaml": gateDefective });
+    const res = await run(
+      ["start", "--db", tempDbPath(), "--task", "t", "--templates-dir", dir],
+      testDeps(),
+    );
+    const err = errorDoc(res);
+    expect(res.code).toBe(EXIT.internal);
+    expect(err.name).toBe("TemplateInvalid");
+    const details = err.details as { stage: string; findings: unknown[] };
+    expect(details.stage).toBe("validate");
+    // the doc SHAPE is byte-unchanged in kind; only the finding CONTENT is
+    // new (a coded gate lane surfacing through the SAME {stage, findings}
+    // carrier the ch8 W-lane already tests).
+    expect(JSON.stringify(details.findings)).toContain("gate_evaluator_unavailable");
+    expect(JSON.stringify(details.findings)).toContain("steps.review.gates.CONVERGED[0]");
+  });
+});
