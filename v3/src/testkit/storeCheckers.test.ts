@@ -10,8 +10,10 @@ import type {
 } from "../domain/index.js";
 import type { GateCatalog } from "../ports/index.js";
 import type { InstanceDetail } from "../ports/store.js";
+import type { ProcessGateEvidence } from "../ports/gate.js";
 import {
   checkEndStateConsistency,
+  checkEvidenceResolution,
   checkOpUniqueness,
   checkRoundReconstruction,
   checkSeqContinuity,
@@ -54,6 +56,7 @@ function detail(
     round: 1,
     status: "DONE",
     version: 1 + rows.length,
+    runtimeContext: null,
     ...overrides,
   };
   return { instance, transcript: rows };
@@ -217,3 +220,75 @@ describe("checkRoundReconstruction — replay = stored (dimension 5, packet ch11
     expect(violations[0]).toContain("round reconstruction");
   });
 });
+
+describe("checkEvidenceResolution — the store-visible evidence half (packet ch11-P3b, T2)", () => {
+  const fakeRecord: ProcessGateEvidence = {
+    log: "ok",
+    kind: "ok",
+    exitCode: 0,
+    durationMs: 1,
+    headSha: "h",
+    gitStatusHash: "g",
+  };
+  function rowWithRefs(seq: number, refs: readonly string[]): TranscriptEntry {
+    return {
+      seq,
+      envelope: envelope(`op-${String(seq)}`, "CONVERGED"),
+      payloadDigest: `d-${String(seq)}`,
+      gateDecisions: [{ uses: "external.process", verdict: "allow", evidenceRefs: [...refs] }],
+      committedAt: 1_000 + seq,
+    };
+  }
+
+  it("a resolving trace is clean", () => {
+    const detail = { instance: {} as WorkflowInstance, transcript: [rowWithRefs(1, ["ev-1"])] };
+    const seam = (ref: string): ProcessGateEvidence | undefined =>
+      ref === "ev-1" ? fakeRecord : undefined;
+    expect(checkEvidenceResolution(detail, seam)).toEqual([]);
+  });
+
+  it("a NON-resolving ref is a violation naming the ref", () => {
+    const detail = { instance: {} as WorkflowInstance, transcript: [rowWithRefs(1, ["ev-x"])] };
+    const seam = (): ProcessGateEvidence | undefined => undefined;
+    const violations = checkEvidenceResolution(detail, seam);
+    expect(violations).toHaveLength(1);
+    expect(violations[0]).toContain("ev-x");
+  });
+
+  it("refs PRESENT with NO seam provided is a violation (fail-closed, never a skip)", () => {
+    const detail = { instance: {} as WorkflowInstance, transcript: [rowWithRefs(1, ["ev-1"])] };
+    expect(checkEvidenceResolution(detail)).toHaveLength(1);
+  });
+
+  it("a ref-FREE detail with no seam is clean (every pre-l2a trace passes unchanged)", () => {
+    const detail = {
+      instance: {} as WorkflowInstance,
+      transcript: [row(1, "op-1", "PASS")],
+    };
+    expect(checkEvidenceResolution(detail)).toEqual([]);
+  });
+
+  it("runAllCheckers threads the seam — a non-resolving committed ref surfaces through the aggregate", () => {
+    const detail = detailWith([rowWithRefs(1, ["ev-x"])]);
+    const seam = (): ProcessGateEvidence | undefined => undefined;
+    const violations = runAllCheckers(detail, template, seam);
+    expect(violations.some((v) => v.includes("ev-x"))).toBe(true);
+  });
+});
+
+function detailWith(rows: readonly TranscriptEntry[]): InstanceDetail {
+  return {
+    instance: {
+      instanceId: "i1",
+      templateRef: template.ref,
+      task: "t",
+      binding: { implementer: "codex", reviewer: "claude" },
+      currentStep: template.start,
+      round: 1,
+      status: "RUNNING",
+      version: 1 + rows.length,
+      runtimeContext: null,
+    },
+    transcript: rows,
+  };
+}

@@ -1,5 +1,7 @@
 import type {
+  EffectiveProcessConfig,
   EventEnvelope,
+  GateDecision,
   GateProjection,
   LifecycleStatus,
   Outcome,
@@ -11,13 +13,14 @@ import type {
 import type { DefinitionStore } from "../ports/definition.js";
 import type { DiagnosticEventBody, DiagnosticsSink } from "../ports/diagnostics.js";
 import type { DigestSource } from "../ports/digest.js";
-import type { GateCatalog } from "../ports/gate.js";
+import type { GateCatalog, ProcessGateRunner } from "../ports/gate.js";
 import type { StorePort } from "../ports/store.js";
 import type { TimeSource } from "../ports/time.js";
 import { admitLoaded } from "./admission.js";
 import { capability } from "./capability.js";
 import { deriveDispatchIntent } from "./dispatchIntent.js";
 import { deriveGateProjection } from "./gateProjection.js";
+import { runProcessGate } from "./processGate.js";
 import { startInstance } from "./start.js";
 import type { StartInstanceInput } from "./start.js";
 
@@ -56,6 +59,13 @@ export interface KernelDeps {
    * catalog would turn every gated evaluation into the drift backstop.
    */
   readonly gates: GateCatalog;
+  /**
+   * The L2a process-gate executor (ch11-P3b, W1; REQUIRED — the `diag`/`gates`
+   * explicit-wiring culture): an optional runner would turn a wiring omission
+   * into a silent runtime surprise. The kit/tests inject the scripted runner;
+   * the shipped CLI roots inject the fail-closed runner (W2).
+   */
+  readonly processRunner: ProcessGateRunner;
 }
 
 export interface Kernel {
@@ -106,7 +116,7 @@ function envelopeAttribution(
 }
 
 export function createKernel(deps: KernelDeps): Kernel {
-  const { store, definitions, digest, diag, gates } = deps;
+  const { store, definitions, digest, diag, gates, processRunner } = deps;
 
   async function handleOnce(
     envelope: EventEnvelope,
@@ -172,23 +182,13 @@ export function createKernel(deps: KernelDeps): Kernel {
     const pipeline = step.gates?.[envelope.type] ?? [];
     const gateDecisions: RetainedGateDecision[] = [];
     let projection: GateProjection | undefined;
-    for (const binding of pipeline) {
-      const registration = gates.resolve(binding.uses);
-      if (registration === null) {
-        // Runtime availability backstop (K2): admission resolved the id
-        // at load; this guards registry drift under a new process
-        // generation's composition.
-        return { kind: "rejected", reason: "gate_evaluator_unavailable" };
-      }
-      if (registration.implementation === "process") {
-        // The process contract is L2a (K3; P3 realizes its execution
-        // path). The unit's third check (`execution ≠ inline`) ships no
-        // code — the operand is type-unrepresentable.
-        return { kind: "rejected", reason: "gate_execution_not_supported" };
-      }
+    // ONE snapshot serves the whole pipeline (every gate sees the same
+    // history); the read is LAZY — it fires at the FIRST need, an inline
+    // `evaluate` OR a process invocation build (X2), and a backstop
+    // rejection preceding the first need reads nothing. A CAS restart
+    // re-runs the rung on fresh state.
+    const ensureProjection = async (): Promise<GateProjection> => {
       if (projection === undefined) {
-        // ONE snapshot serves the whole pipeline (every gate sees the
-        // same history); a CAS restart re-runs the rung on fresh state.
         const committed = await store.getTimeline(instance.instanceId, 0);
         if (committed === null) {
           // The instance vanished between load and this read — a
@@ -200,7 +200,39 @@ export function createKernel(deps: KernelDeps): Kernel {
         }
         projection = deriveGateProjection(instance, template, committed, envelope.type);
       }
-      const decision = registration.evaluate(binding.config, projection);
+      return projection;
+    };
+    for (const binding of pipeline) {
+      const registration = gates.resolve(binding.uses);
+      if (registration === null) {
+        // Runtime availability backstop (K2): admission resolved the id
+        // at load; this guards registry drift under a new process
+        // generation's composition.
+        return { kind: "rejected", reason: "gate_evaluator_unavailable" };
+      }
+      let decision: GateDecision;
+      if (registration.implementation === "process") {
+        // L2a: the inline process now RUNS (the model's reject→run flip).
+        // C36 runtime backstop (S5) — BEFORE any runner call and before
+        // this arm's projection read; a null runtime context on a drifted
+        // (store-constructed / cross-generation) instance rejects here.
+        if (instance.runtimeContext === null) {
+          return { kind: "rejected", reason: "runtime_context_required_for_process_gate" };
+        }
+        // The ready ref narrowed to a string — the runner `cwd` (X2).
+        const workspace: string = instance.runtimeContext;
+        decision = await runProcessGate(
+          binding.config as EffectiveProcessConfig,
+          instance,
+          workspace,
+          await ensureProjection(),
+          envelope,
+          processRunner,
+        );
+      } else {
+        // Declarative / packaged, in-process (byte-unchanged inline arm).
+        decision = registration.evaluate(binding.config, await ensureProjection());
+      }
       if (decision.verdict === "block") {
         // First-block-wins (K4): no commit ⇒ round not burned; the
         // blocking decision's reason / evidence refs surface VERBATIM

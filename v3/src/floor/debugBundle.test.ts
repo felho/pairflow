@@ -1,3 +1,4 @@
+import { createScriptedProcessGateRunner } from "../testkit/index.js";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -49,6 +50,7 @@ const instance: WorkflowInstance = {
   round: 1,
   status: "RUNNING",
   version: 1,
+  runtimeContext: null,
 };
 
 // Markers planted in committed payloads — the default-policy negative
@@ -90,6 +92,7 @@ async function seeded(): Promise<{ store: StorePort; close: () => void }> {
   const handle = openStore(":memory:", createControlledClock(0));
   await handle.store.createInstance(instance);
   const kernel = createKernel({
+      processRunner: createScriptedProcessGateRunner([]),
     store: handle.store,
     definitions,
     time: createControlledClock(0),
@@ -184,6 +187,10 @@ const INSTANCE_KEYS = [
   "round",
   "status",
   "version",
+  // ch11-P3b (S1/dimension 12): the instance's runtimeContext rides the
+  // INSTANCE-carrying read payloads verbatim — additive, every pre-existing
+  // key deep-equal.
+  "runtimeContext",
 ];
 const ROW_KEYS = ["seq", "committedAt", "payloadDigest", "envelope"];
 const ENVELOPE_REQUIRED = ["instanceId", "opId", "type", "actorId", "hasPayload"];

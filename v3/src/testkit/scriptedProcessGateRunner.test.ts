@@ -311,3 +311,33 @@ export const __probeEvidenceOkMissingExitCode: ProcessGateEvidence = {
   headSha: "h",
   gitStatusHash: "g",
 };
+
+describe("ScriptedProcessGateRunner — faithful call recording (packet ch11-P3b, T1)", () => {
+  const R1: ProcessResult = { kind: "ok", exitCode: 0, stdout: "", logRef: "c1", durationMs: 1 };
+  const R2: ProcessResult = { kind: "ok", exitCode: 0, stdout: "", logRef: "c2", durationMs: 1 };
+
+  it("records {command, cwd, stdin, timeoutMs} per run() call, in order", async () => {
+    const runner = createScriptedProcessGateRunner([R1, R2]);
+    await runner.run("first", { cwd: "/ws/a", stdin: '{"n":1}', timeoutMs: 500 });
+    await runner.run("second", { cwd: "/ws/b", stdin: '{"n":2}', timeoutMs: 900 });
+    expect(runner.calls).toEqual([
+      { command: "first", cwd: "/ws/a", stdin: '{"n":1}', timeoutMs: 500 },
+      { command: "second", cwd: "/ws/b", stdin: '{"n":2}', timeoutMs: 900 },
+    ]);
+  });
+
+  it("the call is recorded even when the script is exhausted (the invocation was received)", () => {
+    const runner = createScriptedProcessGateRunner([]);
+    expect(() => runner.run("x", { cwd: "/w", stdin: "{}", timeoutMs: 1 })).toThrow(/exhausted/);
+    expect(runner.calls).toEqual([{ command: "x", cwd: "/w", stdin: "{}", timeoutMs: 1 }]);
+  });
+
+  it("playback/records stay byte-unchanged alongside recording (both surfaces live)", async () => {
+    const runner = createScriptedProcessGateRunner([R1]);
+    const result = await runner.run("cmd", { cwd: "/w", stdin: "{}", timeoutMs: 7 });
+    expect(result).toEqual(R1);
+    expect(runner.records).toHaveLength(1);
+    expect(runner.calls).toHaveLength(1);
+    expect(runner.resolve("c1")).toBe(runner.records[0]);
+  });
+});

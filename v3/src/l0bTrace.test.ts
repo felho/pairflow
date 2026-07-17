@@ -1,3 +1,4 @@
+import { createScriptedProcessGateRunner } from "./testkit/index.js";
 import { describe, expect, it } from "vitest";
 
 import { noopDiagnosticsSink } from "./diag/index.js";
@@ -71,6 +72,7 @@ describe("l0b golden trace — the walking skeleton end-to-end (on the harness)"
     // harness seam (T1); the wrapper retires at P4.
     const admitted = admit({ ...fixtureTemplate(), round: { advanceOnArrivalAt: ["implement"] } });
     const kernel = createKernel({
+      processRunner: createScriptedProcessGateRunner([]),
       store: handle.store,
       definitions: fixtureDefinitionStore(admitted),
       time: createControlledClock(1_000),

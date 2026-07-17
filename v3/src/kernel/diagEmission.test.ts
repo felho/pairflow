@@ -1,3 +1,4 @@
+import { createScriptedProcessGateRunner } from "../testkit/index.js";
 import { describe, expect, it } from "vitest";
 
 import type {
@@ -58,6 +59,7 @@ const baseInstance: WorkflowInstance = {
   round: 1,
   status: "RUNNING",
   version: 1,
+  runtimeContext: null,
 };
 
 function envelope(
@@ -88,6 +90,7 @@ async function setup() {
   await handle.store.createInstance(baseInstance);
   const diag = createRecordingDiagnosticsSink();
   const kernel = createKernel({
+      processRunner: createScriptedProcessGateRunner([]),
     store: handle.store,
     definitions,
     time: createControlledClock(0),
@@ -271,6 +274,7 @@ describe("cas_restart — count discipline", () => {
     };
     const diag = createRecordingDiagnosticsSink();
     const kernel = createKernel({
+      processRunner: createScriptedProcessGateRunner([]),
       store,
       definitions,
       time: createControlledClock(0),
@@ -316,6 +320,7 @@ describe("cas_restart — count discipline", () => {
     };
     const diag = createRecordingDiagnosticsSink();
     const kernel = createKernel({
+      processRunner: createScriptedProcessGateRunner([]),
       store,
       definitions,
       time: createControlledClock(0),
@@ -424,6 +429,7 @@ describe("handle internal_failure lanes — emit + rethrow unchanged", () => {
     const handle = openStore(":memory:", createControlledClock(0));
     await handle.store.createInstance(baseInstance);
     const kernel = createKernel({
+      processRunner: createScriptedProcessGateRunner([]),
       store: handle.store,
       definitions: { load: () => Promise.resolve(admit(corrupted)) },
       time: createControlledClock(0),
@@ -507,6 +513,7 @@ describe("startInstance internal_failure lanes — {instanceId, error} keyset", 
       createInstance: () => Promise.reject(boom),
     };
     const kernel = createKernel({
+      processRunner: createScriptedProcessGateRunner([]),
       store: failing,
       definitions,
       time: createControlledClock(0),
@@ -527,6 +534,7 @@ describe("startInstance internal_failure lanes — {instanceId, error} keyset", 
     const rec = createRecordingDiagnosticsSink();
     const handle = openStore(":memory:", createControlledClock(0));
     const kernel = createKernel({
+      processRunner: createScriptedProcessGateRunner([]),
       store: handle.store,
       definitions: { load: () => Promise.resolve(admit(corrupted)) },
       time: createControlledClock(0),
@@ -561,6 +569,7 @@ async function kernelWith(overrides: {
   const handle = openStore(":memory:", createControlledClock(0));
   await handle.store.createInstance(baseInstance);
   return createKernel({
+      processRunner: createScriptedProcessGateRunner([]),
     store: handle.store,
     definitions: overrides.definitions ?? definitions,
     time: createControlledClock(0),
@@ -581,6 +590,7 @@ async function throwingStoreKernel(method: "loadInstance" | "findOp" | "commitTr
   };
   const diag = createRecordingDiagnosticsSink();
   const kernel = createKernel({
+      processRunner: createScriptedProcessGateRunner([]),
     store,
     definitions,
     time: createControlledClock(0),
@@ -609,6 +619,7 @@ async function commitResultKernel(result: CommitTransitionResult) {
   };
   const diag = createRecordingDiagnosticsSink();
   const kernel = createKernel({
+      processRunner: createScriptedProcessGateRunner([]),
     store,
     definitions,
     time: createControlledClock(0),
@@ -636,6 +647,7 @@ async function conflictThenRealKernel(conflicts: number) {
   };
   const diag = createRecordingDiagnosticsSink();
   const kernel = createKernel({
+      processRunner: createScriptedProcessGateRunner([]),
     store,
     definitions,
     time: createControlledClock(0),
@@ -715,6 +727,7 @@ describe("L1 rejection lanes — not_authorized (explicit profile, local wiring)
     await handle.store.createInstance(baseInstance);
     const diag = createRecordingDiagnosticsSink();
     const kernel = createKernel({
+      processRunner: createScriptedProcessGateRunner([]),
       store: handle.store,
       definitions: { load: () => Promise.resolve(admit(profiled)) },
       time: createControlledClock(0),

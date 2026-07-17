@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { admitTemplate } from "../definition/index.js";
 import type { AdmittedTemplate, EventEnvelope, Outcome, Started, WorkflowInstance, WorkflowTemplate } from "../domain/index.js";
-import type { GateCatalog } from "../ports/index.js";
+import type { GateCatalog, ProcessGateEvidence } from "../ports/index.js";
 import type { InstanceDetail, StorePort } from "../ports/store.js";
 import { fixtureTemplate } from "./templateFixture.js";
 import { replayTrace, TraceMismatchError } from "./traceHarness.js";
@@ -97,6 +97,7 @@ describe("trace harness — fake-seam negatives (packet ch5-P3)", () => {
         round: 1,
         status: "DONE",
         version: 3,
+        runtimeContext: null,
       },
       transcript: [
         { seq: 1, envelope: envelope("a1", "PASS"), payloadDigest: "d-a1", gateDecisions: [], committedAt: 1_001 },
@@ -137,6 +138,7 @@ describe("trace harness — fake-seam negatives (packet ch5-P3)", () => {
         round: 1,
         status: "RUNNING",
         version: 1,
+        runtimeContext: null,
       },
       transcript: [],
     };
@@ -171,6 +173,7 @@ describe("trace harness — the typed mismatch contract (packet ch6-P4b)", () =>
       round: 1,
       status: "RUNNING",
       version: 2,
+      runtimeContext: null,
     },
     transcript: [
       { seq: 1, envelope: envelope("a1", "PASS"), payloadDigest: "d-a1", gateDecisions: [], committedAt: 1_001 },
@@ -221,5 +224,133 @@ describe("trace harness — the typed mismatch contract (packet ch6-P4b)", () =>
     );
     expect(failure).toBeInstanceOf(Error);
     expect(failure).not.toBeInstanceOf(TraceMismatchError);
+  });
+});
+
+describe("trace harness — ch11-P3b seams (runtimeContextRef passthrough + evidence)", () => {
+  const startedAt = (instanceId: string): Started => ({
+    kind: "started",
+    instanceId,
+    version: 1,
+    intent: {
+      actor: "codex",
+      packet: {
+        instanceId,
+        expectedVersion: 1,
+        task: "t",
+        role: "implementer",
+        instruction: "build it",
+        availableOps: ["PASS"],
+      },
+    },
+  });
+
+  it("passes a start step's runtimeContextRef through to seams.start", async () => {
+    let received: string | undefined = "UNSET";
+    const detail: InstanceDetail = {
+      instance: {
+        instanceId: "i1",
+        templateRef: template.ref,
+        task: "t",
+        binding: { implementer: "codex", reviewer: "claude" },
+        currentStep: "implement",
+        round: 1,
+        status: "RUNNING",
+        version: 1,
+        runtimeContext: "/ws/ready",
+      },
+      transcript: [],
+    };
+    const created: WorkflowInstance = { ...detail.instance };
+    const seams: TraceSeams = {
+      submit: () => Promise.reject(new Error("unused")),
+      start: (input) => {
+        received = input.runtimeContextRef;
+        return Promise.resolve(startedAt("i1"));
+      },
+      store: fakeStore(detail, created),
+      template,
+    };
+    const fixture: TraceFixture = {
+      name: "ref passthrough",
+      steps: [
+        {
+          kind: "start",
+          instanceId: "i1",
+          task: "t",
+          runtimeContextRef: "/ws/ready",
+          expect: { currentStep: "implement", version: 1 },
+        },
+      ],
+      finalTranscript: [],
+      finalState: { currentStep: "implement", round: 1, status: "RUNNING", version: 1 },
+    };
+    await replayTrace(fixture, seams);
+    expect(received).toBe("/ws/ready");
+  });
+
+  it("threads the evidence seam to runAllCheckers: a committed ref FAILS with no seam, resolves clean with one", async () => {
+    const fakeRecord: ProcessGateEvidence = {
+      log: "ok",
+      kind: "ok",
+      exitCode: 0,
+      durationMs: 1,
+      headSha: "h",
+      gitStatusHash: "g",
+    };
+    const detailWithRef: InstanceDetail = {
+      instance: {
+        instanceId: "i1",
+        templateRef: template.ref,
+        task: "t",
+        binding: { implementer: "codex", reviewer: "claude" },
+        currentStep: "review",
+        round: 1,
+        status: "RUNNING",
+        version: 2,
+        runtimeContext: "/ws/ready",
+      },
+      transcript: [
+        {
+          seq: 1,
+          envelope: envelope("a1", "PASS"),
+          payloadDigest: "d-a1",
+          gateDecisions: [{ uses: "external.process", verdict: "allow", evidenceRefs: ["ev-1"] }],
+          committedAt: 1_001,
+        },
+      ],
+    };
+    const fixture: TraceFixture = {
+      name: "evidence seam probe",
+      steps: [
+        {
+          kind: "start",
+          instanceId: "i1",
+          task: "t",
+          expect: { currentStep: "implement", version: 1 },
+        },
+        {
+          kind: "emit",
+          opId: "a1",
+          type: "PASS",
+          actorId: "codex",
+          expectedVersion: 1,
+          expect: { kind: "committed", version: 2 },
+        },
+      ],
+      finalTranscript: [[1, "a1"]],
+      finalState: { currentStep: "review", round: 1, status: "RUNNING", version: 2 },
+    };
+    // No seam → the store-visible evidence half is fail-closed → checker fails.
+    await expect(replayTrace(fixture, fakeSeams(detailWithRef, [2]))).rejects.toThrow(
+      /post-condition checkers rejected/,
+    );
+    // A resolving seam → clean.
+    const seams: TraceSeams = {
+      ...fakeSeams(detailWithRef, [2]),
+      resolveEvidence: (ref) => (ref === "ev-1" ? fakeRecord : undefined),
+    };
+    const result = await replayTrace(fixture, seams);
+    expect(result.finalDetail.transcript).toHaveLength(1);
   });
 });

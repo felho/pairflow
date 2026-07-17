@@ -1,3 +1,4 @@
+import { createScriptedProcessGateRunner } from "../testkit/index.js";
 import { describe, expect, it } from "vitest";
 
 import type {
@@ -34,6 +35,7 @@ const instance: WorkflowInstance = {
   round: 1,
   status: "RUNNING",
   version: 1,
+  runtimeContext: null,
 };
 
 // Test-local fixtures (the kernel.test.ts / MD-1 precedent).
@@ -118,6 +120,7 @@ describe("floor.getTimeline — the §6.2 cursor read (packet ch6-P1)", () => {
     const handle = openStore(":memory:", createControlledClock(0));
     await handle.store.createInstance(instance);
     const kernel = createKernel({
+      processRunner: createScriptedProcessGateRunner([]),
       store: handle.store,
       definitions,
       time: createControlledClock(0),

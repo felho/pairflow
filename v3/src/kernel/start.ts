@@ -21,6 +21,51 @@ export interface StartInstanceInput {
   readonly templateRef: TemplateRef;
   readonly task: string;
   readonly startOverrides?: Readonly<Record<RoleName, ActorId>>;
+  /**
+   * S2 (packet ch11-P3b): the OPTIONAL ready workspace ref (a nonempty
+   * string — the testkit-injected ready ref; plan §11.1 item 4). The lane
+   * table (`resolveRuntimeContext`) is decided by `template.runtimeContext`.
+   */
+  readonly runtimeContextRef?: string;
+}
+
+/**
+ * S2/S3 (packet ch11-P3b): the start-seam runtime-context lane table, decided
+ * by `template.runtimeContext` (C18's declaration). Start-side throws carry NO
+ * invented rejection name (plan §4.1) — they fail at START, not mid-run.
+ *   declared "required" + ref present → `ready(ref)`
+ *   declared "required" + ref ABSENT  → THROW (binding-coverage culture)
+ *   undeclared + ref ABSENT           → `ready(∅)` (null)
+ *   undeclared + ref PRESENT          → THROW (surplus input, S3 — fail-closed)
+ *   an EMPTY-STRING ref               → THROW on EVERY lane ('' is not a ref
+ *                                       and not null; the value grammar)
+ */
+function resolveRuntimeContext(
+  template: WorkflowTemplate,
+  ref: string | undefined,
+): string | null {
+  if (ref === "") {
+    throw new Error(
+      "start failed (runtime context): runtimeContextRef must be a nonempty string — '' is not a ref and not null",
+    );
+  }
+  const declared = template.runtimeContext === "required";
+  if (declared) {
+    if (ref === undefined) {
+      throw new Error(
+        "start failed (runtime context): template declares runtimeContext 'required' but no runtimeContextRef was supplied — " +
+          "supply a ready ref at start; the invariant fails at start, not mid-run",
+      );
+    }
+    return ref;
+  }
+  if (ref !== undefined) {
+    throw new Error(
+      "start failed (runtime context): a runtimeContextRef was supplied for a context-free workflow (no runtimeContext declaration) — " +
+        "surplus input has zero consuming paths; fail-closed rather than silently drop it",
+    );
+  }
+  return null;
 }
 
 function resolveBinding(
@@ -60,6 +105,7 @@ export async function startInstance(
     );
   }
   const binding = resolveBinding(template, input.startOverrides);
+  const runtimeContext = resolveRuntimeContext(template, input.runtimeContextRef);
   const instance: WorkflowInstance = {
     instanceId: input.instanceId,
     templateRef: input.templateRef,
@@ -69,6 +115,7 @@ export async function startInstance(
     round: 1,
     status: "RUNNING",
     version: 1,
+    runtimeContext,
   };
   await deps.store.createInstance(instance);
   // Derive AFTER the commit — commit ≠ deliver; the intent is a value.

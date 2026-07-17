@@ -22,9 +22,21 @@ import type { ProcessGateEvidence, ProcessGateRunner, ProcessResult } from "../p
 export const SCRIPTED_HEAD_SHA = "scripted-head-sha";
 export const SCRIPTED_GIT_STATUS_HASH = "scripted-git-status-hash";
 
+/** ch11-P3b T1: one faithfully recorded `run()` invocation — the drive surface
+ * for the X2/X3 wire-content and runs-in-the-workspace assertions. */
+export interface RecordedRunnerCall {
+  readonly command: string;
+  readonly cwd: string;
+  readonly stdin: string;
+  readonly timeoutMs: number;
+}
+
 export interface ScriptedProcessGateRunner extends ProcessGateRunner {
   /** The evidence records persisted so far, in call order (live view). */
   readonly records: readonly ProcessGateEvidence[];
+  /** ch11-P3b T1: the ordered `{command, cwd, stdin, timeoutMs}` received per
+   * `run()` invocation (live view) — REV-B: testkit surface, never authority. */
+  readonly calls: readonly RecordedRunnerCall[];
   /** Resolve a returned `ProcessResult`'s `logRef` to its exact evidence record
    * (R3: the ref addresses the WHOLE record). `undefined` for an unknown ref. */
   resolve(logRef: string): ProcessGateEvidence | undefined;
@@ -92,19 +104,33 @@ export function createScriptedProcessGateRunner(
   script: readonly ProcessResult[],
 ): ScriptedProcessGateRunner {
   const records: ProcessGateEvidence[] = [];
+  const calls: RecordedRunnerCall[] = [];
   const recordByRef = new Map<string, ProcessGateEvidence>();
   let index = 0;
   return {
     get records(): readonly ProcessGateEvidence[] {
       return records;
     },
+    get calls(): readonly RecordedRunnerCall[] {
+      return calls;
+    },
     resolve(logRef: string): ProcessGateEvidence | undefined {
       return recordByRef.get(logRef);
     },
-    // The scripted runner ignores command/options (playback is queued, not
-    // computed) — the no-argument form is structurally assignable to the
-    // port's `run(command, options)` signature.
-    run(): Promise<ProcessResult> {
+    // Playback is QUEUED (not computed from the args), but the args are now
+    // RECORDED faithfully (T1): the call is captured BEFORE the exhaustion
+    // check — the invocation was received regardless of whether a result
+    // remains to return.
+    run(
+      command: string,
+      options: { readonly cwd: string; readonly stdin: string; readonly timeoutMs: number },
+    ): Promise<ProcessResult> {
+      calls.push({
+        command,
+        cwd: options.cwd,
+        stdin: options.stdin,
+        timeoutMs: options.timeoutMs,
+      });
       if (index >= script.length) {
         throw new Error(
           `ScriptedProcessGateRunner: script exhausted (no scripted ProcessResult for call #${String(index + 1)})`,

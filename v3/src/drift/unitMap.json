@@ -302,7 +302,9 @@
     "status": "realized"
   },
   "l2a-pseudocode/HANDLE": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/kernel.ts#createKernel",
+    "disposition": "implement",
+    "status": "realized"
   },
   "l2a-pseudocode/ProcessGateRunner": {
     "codeRef": "v3/src/ports/gate.ts#ProcessGateRunner",
@@ -310,13 +312,19 @@
     "status": "realized"
   },
   "l2a-pseudocode/classify_process_result": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/processGate.ts#classifyProcessResult",
+    "disposition": "implement",
+    "status": "realized"
   },
   "l2a-pseudocode/run_process_gate": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/processGate.ts#runProcessGate",
+    "disposition": "implement",
+    "status": "realized"
   },
   "l2a-pseudocode/runner_outcome": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/processGate.ts#runnerOutcome",
+    "disposition": "implement",
+    "status": "realized"
   },
   "l2a-pseudocode/validate_gate_config": {
     "codeRef": "v3/src/gates/process.ts#validateAndNormalizeConfig",

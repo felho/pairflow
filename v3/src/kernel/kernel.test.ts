@@ -1,3 +1,4 @@
+import { createScriptedProcessGateRunner } from "../testkit/index.js";
 import { describe, expect, it } from "vitest";
 
 import type {
@@ -19,7 +20,10 @@ import type {
   GateRegistration,
   InlineGateRegistration,
   ProcessGateRegistration,
+  ProcessGateRunner,
+  ProcessResult,
 } from "../ports/index.js";
+import type { EffectiveProcessConfig } from "../domain/index.js";
 import type { StorePort } from "../ports/store.js";
 import { openStore } from "../store/index.js";
 import { createControlledClock, createRecordingDiagnosticsSink } from "../testkit/index.js";
@@ -69,6 +73,7 @@ const baseInstance: WorkflowInstance = {
   round: 1,
   status: "RUNNING",
   version: 1,
+  runtimeContext: null,
 };
 
 function envelope(
@@ -93,6 +98,7 @@ async function setup() {
   const handle = openStore(":memory:", createControlledClock(0));
   await handle.store.createInstance(baseInstance);
   const kernel = createKernel({
+      processRunner: createScriptedProcessGateRunner([]),
     store: handle.store,
     definitions,
     time: createControlledClock(0),
@@ -174,6 +180,7 @@ describe("CAS restart — never re-commit a target computed from stale state", (
       },
     };
     const kernel = createKernel({
+      processRunner: createScriptedProcessGateRunner([]),
       store: double,
       definitions,
       time: createControlledClock(0),
@@ -203,6 +210,7 @@ describe("CAS restart — never re-commit a target computed from stale state", (
       },
     };
     const kernel = createKernel({
+      processRunner: createScriptedProcessGateRunner([]),
       store: double,
       definitions,
       time: createControlledClock(0),
@@ -309,6 +317,7 @@ async function setupRound(
   await handle.store.createInstance(instance);
   const defs: DefinitionStore = { load: () => Promise.resolve(admit(tmpl)) };
   const kernel = createKernel({
+      processRunner: createScriptedProcessGateRunner([]),
     store: handle.store,
     definitions: defs,
     time: createControlledClock(0),
@@ -542,6 +551,7 @@ describe("L1 authority — the four new rejections through the real seam (A4/A7/
     const handle = openStore(":memory:", createControlledClock(0));
     await handle.store.createInstance({ ...baseInstance, currentStep: "review", version: 1 });
     const kernel = createKernel({
+      processRunner: createScriptedProcessGateRunner([]),
       store: handle.store,
       definitions: defs,
       time: createControlledClock(0),
@@ -592,6 +602,7 @@ describe("L1 authority — the cross-boundary ordering combinations (dimension 1
     const handle = openStore(":memory:", createControlledClock(0));
     await handle.store.createInstance(baseInstance);
     const kernel = createKernel({
+      processRunner: createScriptedProcessGateRunner([]),
       store: handle.store,
       definitions: defs,
       time: createControlledClock(0),
@@ -638,6 +649,7 @@ describe("L1 authority — CAS restart × terminal (dimension 6, A12)", () => {
       },
     };
     const kernel = createKernel({
+      processRunner: createScriptedProcessGateRunner([]),
       store: contended,
       definitions,
       time: createControlledClock(0),
@@ -694,13 +706,45 @@ function scriptedInline(
 }
 
 /** A process-implementation registration (no evaluate — the type
- * discriminant forbids one); the rung rejects it before any evaluate. */
-const processReg: ProcessGateRegistration = {
-  implementation: "process",
-  execution: "inline",
-  requiresRuntimeContext: false,
-  validateAndNormalizeConfig: () => ({ ok: true, effective: {} }),
+ * discriminant forbids one). ch11-P3b: the process arm now RUNS via the
+ * injected runner; the admitted binding carries `effective` verbatim. */
+function processRegWith(effective: EffectiveProcessConfig): ProcessGateRegistration {
+  return {
+    implementation: "process",
+    execution: "inline",
+    requiresRuntimeContext: true,
+    validateAndNormalizeConfig: () => ({ ok: true, effective }),
+  };
+}
+
+/** The exitCode-mode effective config (onExit zero→allow / nonzero→block; a
+ * complete authored-or-default reason map). */
+const exitCodeEffective: EffectiveProcessConfig = {
+  command: "run the checks",
+  timeoutMs: 1000,
+  output: { mode: "exitCode" },
+  onExit: { zero: "allow", nonzero: "block" },
+  onRunnerError: "blockTransition",
+  onTimeout: "blockTransition",
+  reason: { zero: "exit_zero", nonzero: "test_failed" },
 };
+
+const jsonEffective: EffectiveProcessConfig = {
+  command: "emit a decision",
+  timeoutMs: 1000,
+  output: { mode: "gateDecisionJson" },
+  onRunnerError: "blockTransition",
+  onTimeout: "blockTransition",
+};
+
+/** A ready-ref review instance — the process arm's happy operand state. */
+const READY_REF = "/ws/inst-1";
+const reviewInstanceReady: WorkflowInstance = { ...reviewInstance, runtimeContext: READY_REF };
+
+/** An ok ProcessResult with the given exit code + stdout. */
+function okResult(exitCode: number, logRef: string, stdout = ""): ProcessResult {
+  return { kind: "ok", exitCode, stdout, logRef, durationMs: 3 };
+}
 
 function catalogOf(map: Readonly<Record<string, GateRegistration>>): GateCatalog {
   return {
@@ -718,8 +762,14 @@ async function setupGatedReview(opts: {
   diag?: DiagnosticsSink;
   store?: StorePort;
   instance?: WorkflowInstance;
+  processRunner?: ProcessGateRunner;
+  runtimeContext?: "required";
 }): Promise<{ kernel: Kernel; store: StorePort }> {
-  const admitted = admitTemplate(gatedReviewTemplate(opts.pipeline), opts.admitCatalog);
+  const baseTemplate = gatedReviewTemplate(opts.pipeline);
+  const template = opts.runtimeContext
+    ? { ...baseTemplate, runtimeContext: opts.runtimeContext }
+    : baseTemplate;
+  const admitted = admitTemplate(template, opts.admitCatalog);
   if (!admitted.ok) {
     throw new Error(`gated setup admission failed: ${JSON.stringify(admitted.findings)}`);
   }
@@ -731,6 +781,7 @@ async function setupGatedReview(opts: {
     store = handle.store;
   }
   const kernel = createKernel({
+    processRunner: opts.processRunner ?? createScriptedProcessGateRunner([]),
     store,
     definitions: defs,
     time: createControlledClock(0),
@@ -911,19 +962,31 @@ describe("gate rung — dimension 4: fail-closed backstop lanes", () => {
     expect(log).toEqual([]);
   });
 
-  it("a process-implementation registration → gate_execution_not_supported, state unchanged", async () => {
-    const cat = catalogOf({ "g.proc": processReg });
-    const { kernel, store } = await setupGatedReview({
+  it("THE reject→run flip (X1): a process-implementation registration now RUNS via the runner (no gate_execution_not_supported)", async () => {
+    // The ONE declared golden edit (Claim 5). Formerly this lane rejected
+    // `gate_execution_not_supported`; the model's reject→run flip retires it —
+    // a process binding reached with a ready ref invokes the injected runner
+    // and classifies its result (here: exit 0 → allow → commit).
+    const cat = catalogOf({ "g.proc": processRegWith(exitCodeEffective) });
+    const runner = createScriptedProcessGateRunner([okResult(0, "ev-1")]);
+    const handle = openStore(":memory:", createControlledClock(0));
+    await handle.store.createInstance(reviewInstanceReady);
+    const { kernel } = await setupGatedReview({
       pipeline: [{ uses: "g.proc" }],
       admitCatalog: cat,
       kernelCatalog: cat,
+      store: handle.store,
+      processRunner: runner,
+      runtimeContext: "required",
     });
-    await expectNoStateChange(store, "inst-1", async () => {
-      expect(await kernel.handle(reviewEmit("pr1", "CONVERGED", 1))).toEqual({
-        kind: "rejected",
-        reason: "gate_execution_not_supported",
-      });
-    });
+    const outcome = await kernel.handle(reviewEmit("pr1", "CONVERGED", 1));
+    expect(outcome.kind).toBe("committed");
+    expect(runner.calls).toHaveLength(1);
+    // The retained allow decision rides the committed entry (reason + refs).
+    const detail = await handle.store.getInstanceDetail("inst-1");
+    expect(detail?.transcript[0]?.gateDecisions).toEqual([
+      { uses: "g.proc", verdict: "allow", reason: "exit_zero", evidenceRefs: ["ev-1"] },
+    ]);
   });
 
   it("order-interplay: [valid-allow, unresolvable] → the first EVALUATES once, the second rejects gate_evaluator_unavailable", async () => {
@@ -1157,6 +1220,7 @@ describe("gate rung — dimension 11: the packaged evaluator's first-arrival blo
     const handle = openStore(":memory:", createControlledClock(0));
     await handle.store.createInstance(baseInstance);
     const kernel = createKernel({
+      processRunner: createScriptedProcessGateRunner([]),
       store: handle.store,
       definitions: { load: () => Promise.resolve(admitted.template) },
       time: createControlledClock(0),
@@ -1290,6 +1354,378 @@ describe("gate rung — the grid hostile-store lanes (integrity throws, not reje
       diag: rec.sink,
     });
     await expect(kernel.handle(reviewEmit("h3", "CONVERGED", 1))).rejects.toBe(boom);
+    expect((await handle.store.getInstanceDetail("inst-1"))?.transcript).toHaveLength(0);
+    expect(rec.events.some((e) => e.kind === "internal_failure")).toBe(true);
+  });
+});
+
+// ── ch11-P3b: the HANDLE process branch (S5/X1/X2/M1/E1) ─────────────
+
+describe("gate rung — the C36 runtime backstop plane (S5, dimension 3, both directions)", () => {
+  it("process binding × null runtime context → C36 reject, ZERO runner calls, ZERO records, no commit", async () => {
+    const cat = catalogOf({ "g.proc": processRegWith(exitCodeEffective) });
+    const runner = createScriptedProcessGateRunner([okResult(0, "ev-unused")]);
+    // reviewInstance carries runtimeContext: null.
+    const { kernel, store } = await setupGatedReview({
+      pipeline: [{ uses: "g.proc" }],
+      admitCatalog: cat,
+      kernelCatalog: cat,
+      processRunner: runner,
+      runtimeContext: "required",
+    });
+    await expectNoStateChange(store, "inst-1", async () => {
+      expect(await kernel.handle(reviewEmit("bs1", "CONVERGED", 1))).toEqual({
+        kind: "rejected",
+        reason: "runtime_context_required_for_process_gate",
+      });
+    });
+    expect(runner.calls).toEqual([]);
+    expect(runner.records).toEqual([]);
+  });
+
+  it("process-FIRST form: the backstop precedes the FIRST projection read (ZERO reads)", async () => {
+    const cat = catalogOf({ "g.proc": processRegWith(exitCodeEffective) });
+    const runner = createScriptedProcessGateRunner([]);
+    const handle = openStore(":memory:", createControlledClock(0));
+    await handle.store.createInstance(reviewInstance); // null ctx
+    let reads = 0;
+    const counting: StorePort = {
+      ...handle.store,
+      getTimeline: (id, after) => {
+        reads += 1;
+        return handle.store.getTimeline(id, after);
+      },
+    };
+    const { kernel } = await setupGatedReview({
+      pipeline: [{ uses: "g.proc" }],
+      admitCatalog: cat,
+      kernelCatalog: cat,
+      store: counting,
+      processRunner: runner,
+      runtimeContext: "required",
+    });
+    expect(await kernel.handle(reviewEmit("bs2", "CONVERGED", 1))).toEqual({
+      kind: "rejected",
+      reason: "runtime_context_required_for_process_gate",
+    });
+    expect(reads).toBe(0);
+    expect(runner.calls).toEqual([]);
+  });
+
+  it("mixed pipeline [inline-allow, process] × null: the EARLIER inline read the snapshot, the reject STILL fires pre-run", async () => {
+    const evalLog: string[] = [];
+    const cat = catalogOf({
+      "g.allow": scriptedInline("g.allow", evalLog, () => ({ verdict: "allow" })),
+      "g.proc": processRegWith(exitCodeEffective),
+    });
+    const runner = createScriptedProcessGateRunner([]);
+    const handle = openStore(":memory:", createControlledClock(0));
+    await handle.store.createInstance(reviewInstance); // null ctx
+    let reads = 0;
+    const counting: StorePort = {
+      ...handle.store,
+      getTimeline: (id, after) => {
+        reads += 1;
+        return handle.store.getTimeline(id, after);
+      },
+    };
+    const { kernel } = await setupGatedReview({
+      pipeline: [{ uses: "g.allow" }, { uses: "g.proc" }],
+      admitCatalog: cat,
+      kernelCatalog: cat,
+      store: counting,
+      processRunner: runner,
+      runtimeContext: "required",
+    });
+    expect(await kernel.handle(reviewEmit("bs3", "CONVERGED", 1))).toEqual({
+      kind: "rejected",
+      reason: "runtime_context_required_for_process_gate",
+    });
+    // The earlier inline evaluate already read the ONE shared snapshot; the
+    // process arm's backstop still fires without invoking the runner.
+    expect(evalLog).toEqual(["g.allow"]);
+    expect(reads).toBe(1);
+    expect(runner.calls).toEqual([]);
+  });
+
+  it("inline-only pipeline × null runtime context → evaluates NORMALLY (the backstop is process-scoped)", async () => {
+    const cat = catalogOf({ "g.allow": scriptedInline("g.allow", [], () => ({ verdict: "allow" })) });
+    const { kernel, store } = await setupGatedReview({
+      pipeline: [{ uses: "g.allow" }],
+      admitCatalog: cat,
+      kernelCatalog: cat,
+    });
+    expect((await kernel.handle(reviewEmit("bs4", "CONVERGED", 1))).kind).toBe("committed");
+    void store;
+  });
+});
+
+describe("gate rung — the six-outcome family end-to-end (M1, full-decision equality)", () => {
+  async function runProcess(
+    effective: EffectiveProcessConfig,
+    result: ProcessResult,
+  ): Promise<{ outcome: Outcome; runner: ReturnType<typeof createScriptedProcessGateRunner>; store: StorePort }> {
+    const cat = catalogOf({ "g.proc": processRegWith(effective) });
+    const runner = createScriptedProcessGateRunner([result]);
+    const handle = openStore(":memory:", createControlledClock(0));
+    await handle.store.createInstance(reviewInstanceReady);
+    const { kernel } = await setupGatedReview({
+      pipeline: [{ uses: "g.proc" }],
+      admitCatalog: cat,
+      kernelCatalog: cat,
+      store: handle.store,
+      processRunner: runner,
+      runtimeContext: "required",
+    });
+    const outcome = await kernel.handle(reviewEmit("p1", "CONVERGED", 1));
+    return { outcome, runner, store: handle.store };
+  }
+
+  async function retained(store: StorePort): Promise<unknown> {
+    const detail = await store.getInstanceDetail("inst-1");
+    return detail?.transcript[0]?.gateDecisions;
+  }
+
+  it("ok/exit 0 → allow → commit; retained decision carries reason=exit_zero + [logRef]", async () => {
+    const { outcome, runner, store } = await runProcess(exitCodeEffective, okResult(0, "e0"));
+    expect(outcome.kind).toBe("committed");
+    expect(runner.calls).toHaveLength(1);
+    expect(await retained(store)).toEqual([
+      { uses: "g.proc", verdict: "allow", reason: "exit_zero", evidenceRefs: ["e0"] },
+    ]);
+  });
+
+  it("ok/exit nonzero → block(test_failed) → Rejected with [logRef], no commit", async () => {
+    const { outcome, store } = await runProcess(exitCodeEffective, okResult(1, "e1"));
+    expect(outcome).toEqual({
+      kind: "rejected",
+      reason: "gate_blocked",
+      gateReason: "test_failed",
+      evidenceRefs: ["e1"],
+    });
+    expect((await store.getInstanceDetail("inst-1"))?.transcript).toHaveLength(0);
+  });
+
+  it("ok/exit nonzero warn bucket → warn → commit (warn-lane member)", async () => {
+    const warnEffective: EffectiveProcessConfig = {
+      ...exitCodeEffective,
+      onExit: { zero: "allow", nonzero: "warn" },
+      reason: { zero: "exit_zero", nonzero: "flaky" },
+    };
+    const { outcome, store } = await runProcess(warnEffective, okResult(2, "e2"));
+    expect(outcome.kind).toBe("committed");
+    expect(await retained(store)).toEqual([
+      { uses: "g.proc", verdict: "warn", reason: "flaky", evidenceRefs: ["e2"] },
+    ]);
+  });
+
+  it("timeout → block(timeout) → Rejected with [logRef]", async () => {
+    const { outcome } = await runProcess(exitCodeEffective, {
+      kind: "timeout",
+      logRef: "t1",
+      durationMs: 1000,
+    });
+    expect(outcome).toEqual({
+      kind: "rejected",
+      reason: "gate_blocked",
+      gateReason: "timeout",
+      evidenceRefs: ["t1"],
+    });
+  });
+
+  it("runner_error → block(runner_error) → Rejected with [logRef], DISTINCT from test_failed", async () => {
+    const { outcome } = await runProcess(exitCodeEffective, {
+      kind: "runner_error",
+      logRef: "r1",
+      durationMs: 0,
+    });
+    expect(outcome).toEqual({
+      kind: "rejected",
+      reason: "gate_blocked",
+      gateReason: "runner_error",
+      evidenceRefs: ["r1"],
+    });
+  });
+
+  it("ok/JSON allow → commit; logRef appended to the returned refs (E1 append)", async () => {
+    const { outcome, store } = await runProcess(
+      jsonEffective,
+      okResult(0, "j1", JSON.stringify({ verdict: "allow", evidence_refs: ["author-ref"] })),
+    );
+    expect(outcome.kind).toBe("committed");
+    expect(await retained(store)).toEqual([
+      { uses: "g.proc", verdict: "allow", evidenceRefs: ["author-ref", "j1"] },
+    ]);
+  });
+
+  it("ok/JSON block → Rejected(gate_blocked) with the process reason + refs verbatim + logRef", async () => {
+    const { outcome } = await runProcess(
+      jsonEffective,
+      okResult(0, "j2", JSON.stringify({ verdict: "block", reason: "policy_x", evidence_refs: ["a"] })),
+    );
+    expect(outcome).toEqual({
+      kind: "rejected",
+      reason: "gate_blocked",
+      gateReason: "policy_x",
+      evidenceRefs: ["a", "j2"],
+    });
+  });
+
+  it("ok/JSON-malformed → block(malformed_gate_decision_json), NEVER a business block", async () => {
+    const { outcome } = await runProcess(jsonEffective, okResult(0, "j3", "not json at all"));
+    expect(outcome).toEqual({
+      kind: "rejected",
+      reason: "gate_blocked",
+      gateReason: "malformed_gate_decision_json",
+      evidenceRefs: ["j3"],
+    });
+  });
+});
+
+describe("gate rung — process ordering + one-snapshot (X2, dimension 8)", () => {
+  it("inline block BEFORE a process gate → the runner is NEVER called and NO record exists", async () => {
+    const cat = catalogOf({
+      "g.block": scriptedInline("g.block", [], () => ({ verdict: "block", reason: "stop" })),
+      "g.proc": processRegWith(exitCodeEffective),
+    });
+    const runner = createScriptedProcessGateRunner([okResult(0, "never")]);
+    const handle = openStore(":memory:", createControlledClock(0));
+    await handle.store.createInstance(reviewInstanceReady);
+    const { kernel } = await setupGatedReview({
+      pipeline: [{ uses: "g.block" }, { uses: "g.proc" }],
+      admitCatalog: cat,
+      kernelCatalog: cat,
+      store: handle.store,
+      processRunner: runner,
+      runtimeContext: "required",
+    });
+    expect((await kernel.handle(reviewEmit("o1", "CONVERGED", 1))).kind).toBe("rejected");
+    expect(runner.calls).toEqual([]);
+    expect(runner.records).toEqual([]);
+  });
+
+  it("process block FIRST → later gates are NOT evaluated", async () => {
+    const evalLog: string[] = [];
+    const cat = catalogOf({
+      "g.proc": processRegWith(exitCodeEffective),
+      "g.after": scriptedInline("g.after", evalLog, () => ({ verdict: "allow" })),
+    });
+    const runner = createScriptedProcessGateRunner([okResult(1, "blk")]); // exit1 → block
+    const handle = openStore(":memory:", createControlledClock(0));
+    await handle.store.createInstance(reviewInstanceReady);
+    const { kernel } = await setupGatedReview({
+      pipeline: [{ uses: "g.proc" }, { uses: "g.after" }],
+      admitCatalog: cat,
+      kernelCatalog: cat,
+      store: handle.store,
+      processRunner: runner,
+      runtimeContext: "required",
+    });
+    expect((await kernel.handle(reviewEmit("o2", "CONVERGED", 1))).kind).toBe("rejected");
+    expect(runner.calls).toHaveLength(1);
+    expect(evalLog).toEqual([]); // g.after never ran
+  });
+
+  it("one-snapshot: the wire projection DEEP-EQUALS the inline evaluator's input in a mixed pipeline", async () => {
+    let seenProjection: unknown;
+    const cat = catalogOf({
+      "g.allow": scriptedInline("g.allow", [], (projection) => {
+        seenProjection = projection;
+        return { verdict: "allow" };
+      }),
+      "g.proc": processRegWith(exitCodeEffective),
+    });
+    const runner = createScriptedProcessGateRunner([okResult(0, "e0")]);
+    const handle = openStore(":memory:", createControlledClock(0));
+    await handle.store.createInstance(reviewInstanceReady);
+    let reads = 0;
+    const counting: StorePort = {
+      ...handle.store,
+      getTimeline: (id, after) => {
+        reads += 1;
+        return handle.store.getTimeline(id, after);
+      },
+    };
+    const { kernel } = await setupGatedReview({
+      pipeline: [{ uses: "g.allow" }, { uses: "g.proc" }],
+      admitCatalog: cat,
+      kernelCatalog: cat,
+      store: counting,
+      processRunner: runner,
+      runtimeContext: "required",
+    });
+    expect((await kernel.handle(reviewEmit("o3", "CONVERGED", 1))).kind).toBe("committed");
+    expect(reads).toBe(1); // ONE shared snapshot
+    // The recorded stdin's projection is the snake_case rename of the SAME
+    // domain projection the inline evaluator received.
+    const wire = JSON.parse(runner.calls[0]?.stdin ?? "{}") as {
+      projection: { round: number; current_step: string; event_type: string; history: unknown[] };
+    };
+    const seen = seenProjection as { round: number; currentStep: string; eventType: string; history: unknown[] };
+    expect(wire.projection.round).toBe(seen.round);
+    expect(wire.projection.current_step).toBe(seen.currentStep);
+    expect(wire.projection.event_type).toBe(seen.eventType);
+    expect(wire.projection.history).toEqual(seen.history);
+  });
+
+  it("EXACTLY ONE runner call per binding per attempt; the wire keyset + config verbatim (X3)", async () => {
+    const cat = catalogOf({ "g.proc": processRegWith(exitCodeEffective) });
+    const runner = createScriptedProcessGateRunner([okResult(0, "e0")]);
+    const handle = openStore(":memory:", createControlledClock(0));
+    await handle.store.createInstance(reviewInstanceReady);
+    const { kernel } = await setupGatedReview({
+      pipeline: [{ uses: "g.proc" }],
+      admitCatalog: cat,
+      kernelCatalog: cat,
+      store: handle.store,
+      processRunner: runner,
+      runtimeContext: "required",
+    });
+    await kernel.handle(reviewEmit("x1", "CONVERGED", 1));
+    expect(runner.calls).toHaveLength(1);
+    const call = runner.calls[0];
+    expect(call?.command).toBe("run the checks");
+    expect(call?.cwd).toBe(READY_REF);
+    expect(call?.timeoutMs).toBe(1000);
+    const invocation = JSON.parse(call?.stdin ?? "{}") as Record<string, unknown>;
+    expect(Object.keys(invocation).sort()).toEqual([
+      "config",
+      "event_type",
+      "expected_version",
+      "instance_id",
+      "projection",
+      "step_id",
+      "template_ref",
+    ]);
+    expect(invocation["instance_id"]).toBe("inst-1");
+    expect(invocation["step_id"]).toBe("review");
+    expect(invocation["event_type"]).toBe("CONVERGED");
+    expect(invocation["expected_version"]).toBe(1);
+    // wire ≡ effective: the config rides with its own camelCase keys, verbatim.
+    expect(invocation["config"]).toEqual(exitCodeEffective);
+  });
+
+  it("a THROWING runner → internal_failure path (rethrown, no commit, no state) — dimension 13", async () => {
+    const rec = createRecordingDiagnosticsSink();
+    const boom = new Error("persist boom");
+    const throwing: ProcessGateRunner = {
+      run: () => {
+        throw boom;
+      },
+    };
+    const cat = catalogOf({ "g.proc": processRegWith(exitCodeEffective) });
+    const handle = openStore(":memory:", createControlledClock(0));
+    await handle.store.createInstance(reviewInstanceReady);
+    const { kernel } = await setupGatedReview({
+      pipeline: [{ uses: "g.proc" }],
+      admitCatalog: cat,
+      kernelCatalog: cat,
+      store: handle.store,
+      processRunner: throwing,
+      runtimeContext: "required",
+      diag: rec.sink,
+    });
+    await expect(kernel.handle(reviewEmit("th1", "CONVERGED", 1))).rejects.toBe(boom);
     expect((await handle.store.getInstanceDetail("inst-1"))?.transcript).toHaveLength(0);
     expect(rec.events.some((e) => e.kind === "internal_failure")).toBe(true);
   });

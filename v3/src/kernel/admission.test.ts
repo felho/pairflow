@@ -24,6 +24,7 @@ function instance(over: Partial<WorkflowInstance> = {}): WorkflowInstance {
     round: 1,
     status: "RUNNING",
     version: 3,
+    runtimeContext: null,
     ...over,
   };
 }

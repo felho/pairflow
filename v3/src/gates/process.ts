@@ -1,3 +1,4 @@
+import type { EffectiveProcessConfig } from "../domain/index.js";
 import type {
   GateConfigFinding,
   GateConfigResult,
@@ -47,15 +48,9 @@ const BUCKETS = ["zero", "nonzero"] as const;
 type OutputMode = (typeof OUTPUT_MODES)[number];
 type Verdict = (typeof VERDICTS)[number];
 
-interface EffectiveProcessConfig {
-  readonly command: string;
-  readonly timeoutMs: number;
-  readonly output: { readonly mode: OutputMode };
-  readonly onExit?: { readonly zero: Verdict; readonly nonzero: Verdict };
-  readonly onRunnerError: "blockTransition";
-  readonly onTimeout: "blockTransition";
-  readonly reason?: { readonly zero?: string; readonly nonzero?: string };
-}
+// `EffectiveProcessConfig` HOME is `domain/gate.ts` (ch11-P3b): the kernel
+// branch and this validator share ONE shape. This module remains its sole
+// producer (materialize-once at admission); the kernel is a typed reader.
 
 function isConfigMap(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);

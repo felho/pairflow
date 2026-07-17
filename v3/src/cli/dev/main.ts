@@ -27,6 +27,7 @@ import {
   notFound,
   parseNonNegativeSafeInt,
   requireInstanceId,
+  resolveDbPath,
   resolveTemplatesDir,
   toTemplateInvalid,
   usage,
@@ -34,6 +35,10 @@ import {
   withStoreAndDiag,
 } from "../common.js";
 import { CliError, EXIT } from "../contract.js";
+import {
+  createFailClosedProcessGateRunner,
+  deriveProcessEvidenceDbPath,
+} from "../failClosedProcessGateRunner.js";
 import type { CliDeps } from "../runtime.js";
 import { productionDeps } from "../runtime.js";
 import { DiagUnavailableError, noopDiagnosticsSink } from "../../diag/index.js";
@@ -236,43 +241,53 @@ async function verbInject(ctx: VerbContext): Promise<number> {
   // await below; the type-based outer catch maps it there.
   try {
   return await withStoreAndDiag(ctx, async (handle, diag) => {
-    // V5 (ch7-P4): the store-backed sink on the derived path, BARE
-    // (REV-DIAG-FAILOPEN) — inject stages through the real channel.
-    const kernel = createKernel({
-      store: handle.store,
-      definitions,
-      time: ctx.deps.time,
-      digest: deriveEmitDigest,
-      diag: diag.sink,
-      gates,
-    });
-    const ingress = createIngress({ kernel, diag: diag.sink });
-    for (const step of steps) {
-      const opId =
-        step.opId ??
-        deriveActorEmitOpId({
+    // W2 (ch11-P3b): the fail-closed process-gate runner on the derived-path
+    // evidence sibling — never spawns, never allows.
+    const processRunner = createFailClosedProcessGateRunner(
+      deriveProcessEvidenceDbPath(resolveDbPath(flagString(ctx, "db"), ctx.deps)),
+    );
+    try {
+      // V5 (ch7-P4): the store-backed sink on the derived path, BARE
+      // (REV-DIAG-FAILOPEN) — inject stages through the real channel.
+      const kernel = createKernel({
+        store: handle.store,
+        definitions,
+        time: ctx.deps.time,
+        digest: deriveEmitDigest,
+        diag: diag.sink,
+        gates,
+        processRunner,
+      });
+      const ingress = createIngress({ kernel, diag: diag.sink });
+      for (const step of steps) {
+        const opId =
+          step.opId ??
+          deriveActorEmitOpId({
+            instanceId,
+            contextPacketId: `${instanceId}@v${String(step.expectedVersion)}`,
+            opType: step.type,
+            payload: step.payload,
+          }).opId;
+        const envelope: Record<string, unknown> = {
           instanceId,
-          contextPacketId: `${instanceId}@v${String(step.expectedVersion)}`,
-          opType: step.type,
-          payload: step.payload,
-        }).opId;
-      const envelope: Record<string, unknown> = {
-        instanceId,
-        opId,
-        type: step.type,
-        actorId: step.actorId,
-        ...(step.expectedVersion !== undefined
-          ? { expectedVersion: step.expectedVersion }
-          : {}),
-        ...(step.expectedRole !== undefined ? { expectedRole: step.expectedRole } : {}),
-        ...(step.hasPayload ? { payload: step.payload } : {}),
-      };
-      // Every outcome — rejections included — is a DATA row: a staging
-      // tool's rejection is often the intended state (exit stays 0).
-      const outcome = await ingress.submit(envelope);
-      ctx.sinks.out(JSON.stringify(outcome));
+          opId,
+          type: step.type,
+          actorId: step.actorId,
+          ...(step.expectedVersion !== undefined
+            ? { expectedVersion: step.expectedVersion }
+            : {}),
+          ...(step.expectedRole !== undefined ? { expectedRole: step.expectedRole } : {}),
+          ...(step.hasPayload ? { payload: step.payload } : {}),
+        };
+        // Every outcome — rejections included — is a DATA row: a staging
+        // tool's rejection is often the intended state (exit stays 0).
+        const outcome = await ingress.submit(envelope);
+        ctx.sinks.out(JSON.stringify(outcome));
+      }
+      return EXIT.ok;
+    } finally {
+      processRunner.close();
     }
-    return EXIT.ok;
   });
   } catch (error) {
     throw toTemplateInvalid(error);
@@ -476,6 +491,9 @@ async function verbReplay(ctx: VerbContext): Promise<number> {
   // HERMETIC: an ephemeral in-memory store per invocation — replay
   // neither reads nor pollutes a user DB (dev config matrix).
   const handle = ctx.deps.openStore(":memory:", ctx.deps.time);
+  // W2 (ch11-P3b): the fail-closed runner on an IN-MEMORY evidence substrate
+  // (the hermetic fixture carries no gates, so it is never invoked here).
+  const processRunner = createFailClosedProcessGateRunner(":memory:");
   try {
     // C37 (packet ch8-P2, M4): the builtin retired — replay repoints to
     // the testkit fixture (itself equality-pinned to the canonical
@@ -496,6 +514,7 @@ async function verbReplay(ctx: VerbContext): Promise<number> {
       digest: deriveEmitDigest,
       diag: noopDiagnosticsSink,
       gates,
+      processRunner,
     });
     const ingress = createIngress({ kernel, diag: noopDiagnosticsSink });
     const result = await replayTrace(fixture, {
@@ -522,6 +541,7 @@ async function verbReplay(ctx: VerbContext): Promise<number> {
     }
     throw error;
   } finally {
+    processRunner.close();
     handle.close();
   }
 }

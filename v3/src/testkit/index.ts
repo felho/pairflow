@@ -12,7 +12,10 @@ export {
   SCRIPTED_GIT_STATUS_HASH,
   SCRIPTED_HEAD_SHA,
 } from "./scriptedProcessGateRunner.js";
-export type { ScriptedProcessGateRunner } from "./scriptedProcessGateRunner.js";
+export type {
+  RecordedRunnerCall,
+  ScriptedProcessGateRunner,
+} from "./scriptedProcessGateRunner.js";
 export { createScriptedTailWait } from "./tailWait.js";
 export type { ScriptedTailWait } from "./tailWait.js";
 export { devPassthroughRedactionPolicy } from "./redaction.js";
@@ -21,12 +24,14 @@ export type { RecordingDiagnostics } from "./diagnostics.js";
 export { fixtureDefinitionStore, fixtureTemplate } from "./templateFixture.js";
 export {
   checkEndStateConsistency,
+  checkEvidenceResolution,
   checkOpUniqueness,
   checkSeqContinuity,
   checkTerminalSink,
   checkVersionArithmetic,
   runAllCheckers,
 } from "./storeCheckers.js";
+export type { EvidenceResolveSeam } from "./storeCheckers.js";
 export { replayTrace, TraceMismatchError } from "./traceHarness.js";
 export type {
   ExpectedOutcome,

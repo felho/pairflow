@@ -1872,8 +1872,10 @@ trace) — a standalone chapter would be ceremony.
    `round-is-canonical-reconstructable` checker,
    and makes `gate_projection` its first policy consumer; the
    transcript gains `gate_decisions` provenance (retained allow/warn
-   verdicts + evidence refs) — THAT column is the chapter's schema
-   bump, under the ADR-003 fenced-wipe stance; the two Block A
+   verdicts + evidence refs) — THAT column is the chapter's first
+   schema bump, under the ADR-003 fenced-wipe stance (the second is
+   P3b's nullable instance `runtime_context` column, riding the same
+   fence — aligned at ch11-p3b pre-approval); the two Block A
    evaluators: `declarative.threshold` and the packaged
    `pairflow.previous_reviewer_verdict`.
 3. **The L2a process-gate contract, kernel side.** The model's own

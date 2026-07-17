@@ -1,3 +1,4 @@
+import { createScriptedProcessGateRunner } from "./testkit/index.js";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -65,6 +66,7 @@ function wireWorker(path: string): Worker {
   // seam here) preserved via the LOCAL declaration wrapper at this ONE
   // definitions site; the wrapper retires at P4.
   const kernel = createKernel({
+      processRunner: createScriptedProcessGateRunner([]),
     store: handle.store,
     definitions: fixtureDefinitionStore(
       admit({ ...fixtureTemplate(), round: { advanceOnArrivalAt: ["implement"] } }),

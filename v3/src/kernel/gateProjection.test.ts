@@ -39,6 +39,7 @@ function instanceAt(currentStep: string, round: number): WorkflowInstance {
     round,
     status: "RUNNING",
     version: 1,
+    runtimeContext: null,
   };
 }
 

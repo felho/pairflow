@@ -1,3 +1,4 @@
+import { createScriptedProcessGateRunner } from "./testkit/index.js";
 import { describe, expect, it } from "vitest";
 
 import { deriveEmitDigest } from "./emit/index.js";
@@ -43,6 +44,7 @@ function wire(): { seams: TraceSeams; handle: StoreHandle } {
   // and the harness seam (T1); the wrapper retires at P4.
   const admitted = admit({ ...fixtureTemplate(), round: { advanceOnArrivalAt: ["implement"] } });
   const kernel = createKernel({
+      processRunner: createScriptedProcessGateRunner([]),
     store: handle.store,
     definitions: fixtureDefinitionStore(admitted),
     time: createControlledClock(1_000),

@@ -26,11 +26,11 @@ import type { TimeSource } from "../ports/time.js";
  * commit boundary (CHK-C-TS-SOURCE; IC-D's store binding) — deliberately
  * NOT a SQLite DEFAULT, so a frozen-clock test asserts the real path.
  */
-// v3 (packet ch11-P2b): transcript carries the retained gate decisions.
-// THE ch11 schema bump — it rides the SAME ADR-003 fenced wipe: a known
-// PROTOTYPE marker at "2" (or any other version) wipes on open; anything
+// v4 (packet ch11-P3b): instances carry the nullable runtime_context column
+// (S4 — the chapter's SECOND schema change). It rides the SAME ADR-003 fenced
+// wipe: a known PROTOTYPE marker at any other version wipes on open; anything
 // else still refuses. No migration path exists (no data carry).
-const SCHEMA_VERSION = "3";
+const SCHEMA_VERSION = "4";
 
 const SCHEMA = `
 CREATE TABLE meta (
@@ -47,6 +47,7 @@ CREATE TABLE instances (
   round            INTEGER NOT NULL,
   status           TEXT    NOT NULL,
   version          INTEGER NOT NULL,
+  runtime_context  TEXT,
   created_at       INTEGER NOT NULL
 ) STRICT;
 CREATE TABLE transcript (
@@ -77,6 +78,7 @@ interface InstanceRow {
   round: number;
   status: string;
   version: number;
+  runtime_context: string | null;
 }
 
 function rowToInstance(row: InstanceRow): WorkflowInstance {
@@ -89,6 +91,9 @@ function rowToInstance(row: InstanceRow): WorkflowInstance {
     round: row.round,
     status: row.status as LifecycleStatus,
     version: row.version,
+    // S4: NULL ↔ null (ready(∅)); a stored string ↔ its exact ref. The ONE
+    // row mapper serves every instance read surface identically.
+    runtimeContext: row.runtime_context,
   };
 }
 
@@ -203,8 +208,8 @@ export function openStore(path: string, time: TimeSource): StoreHandle {
         db.prepare(
           `INSERT INTO instances
              (instance_id, template_id, template_version, task, binding,
-              current_step, round, status, version, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              current_step, round, status, version, runtime_context, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         ).run(
           instance.instanceId,
           instance.templateRef.id,
@@ -215,6 +220,9 @@ export function openStore(path: string, time: TimeSource): StoreHandle {
           instance.round,
           instance.status,
           instance.version,
+          // S4: the field is written VERBATIM (null → NULL); create-time-only
+          // (CommitTransitionInput untouched — no post-create write path).
+          instance.runtimeContext,
           time.now(),
         );
       } catch (error) {

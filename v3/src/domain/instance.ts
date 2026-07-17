@@ -23,6 +23,18 @@ export interface WorkflowInstance {
   readonly round: number;
   readonly status: LifecycleStatus;
   readonly version: number;
+  /**
+   * S1 (packet ch11-P3b): the Block A runtime-context state compression.
+   * `null` IS the model's `ready(∅)` (a context-free run); a NONEMPTY string
+   * IS `ready(ref)` (the ready workspace ref). The `none`/`requested` states
+   * are UNREPRESENTABLE (activation is immediate — `startInstance` is the sole
+   * creator and only ever commits a ready state). The ref is KERNEL-OPAQUE
+   * (the provider-defined-locator rule: presence is guarded, the locator never
+   * validated) and is consumed at exactly ONE point — the runner call's `cwd`
+   * (X2). Set at start, never changing over the instance's lifetime (no
+   * post-create write path exists).
+   */
+  readonly runtimeContext: string | null;
 }
 
 /**

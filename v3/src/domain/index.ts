@@ -13,6 +13,7 @@ export type {
   WorkflowTemplate,
 } from "./template.js";
 export type {
+  EffectiveProcessConfig,
   GateBinding,
   GateDecision,
   GatePipeline,

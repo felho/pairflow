@@ -1,3 +1,4 @@
+import { createScriptedProcessGateRunner } from "./testkit/index.js";
 import { describe, expect, it } from "vitest";
 
 import { noopDiagnosticsSink } from "./diag/index.js";
@@ -95,6 +96,7 @@ describe("l1 golden trace — role authority end-to-end (07-l1 Runtime)", () => 
     // round declaration) feeds BOTH the definition store and the seam.
     const admitted = admit(fixtureTemplate());
     const kernel = createKernel({
+      processRunner: createScriptedProcessGateRunner([]),
       store: handle.store,
       definitions: fixtureDefinitionStore(admitted),
       time: createControlledClock(1_000),

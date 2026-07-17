@@ -1,3 +1,4 @@
+import { createScriptedProcessGateRunner } from "./testkit/index.js";
 import { describe, expect, it } from "vitest";
 
 import { admitTemplate } from "./definition/index.js";
@@ -146,6 +147,7 @@ describe("l2 golden trace — the gate rung + both evaluators end-to-end (08-l2 
     // the narrowed harness seam (the checker reads the flags).
     const admitted = admit(gatedTemplate);
     const kernel = createKernel({
+      processRunner: createScriptedProcessGateRunner([]),
       store: handle.store,
       definitions: fixtureDefinitionStore(admitted),
       time: createControlledClock(1_000),

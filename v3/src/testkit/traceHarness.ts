@@ -13,6 +13,7 @@ import type {
 } from "../domain/index.js";
 import type { InstanceDetail, StorePort } from "../ports/store.js";
 import { runAllCheckers } from "./storeCheckers.js";
+import type { EvidenceResolveSeam } from "./storeCheckers.js";
 
 /**
  * The chapter-trace golden harness (packet ch5-P3; plan §5.2). KIT
@@ -28,6 +29,9 @@ export interface HarnessStartInput {
   readonly instanceId: InstanceId;
   readonly templateRef: TemplateRef;
   readonly task: string;
+  /** ch11-P3b: the OPTIONAL ready-ref passthrough — the harness mirrors the
+   * kernel's start input structurally (extend the mirror, not a parallel seam). */
+  readonly runtimeContextRef?: string;
 }
 
 export interface TraceSeams {
@@ -45,6 +49,12 @@ export interface TraceSeams {
    * C20 letter) is what a per-call-site discipline would leave to review.
    */
   readonly template: AdmittedTemplate;
+  /**
+   * T2 (packet ch11-P3b): the OPTIONAL evidence-resolve seam threaded to
+   * `runAllCheckers` — structurally the kit runner's `resolve`. Absent for
+   * every pre-l2a trace (they carry no evidence refs and stay clean).
+   */
+  readonly resolveEvidence?: EvidenceResolveSeam;
 }
 
 export type ExpectedOutcome =
@@ -58,6 +68,8 @@ export type TraceStep =
       readonly kind: "start";
       readonly instanceId: InstanceId;
       readonly task: string;
+      /** ch11-P3b: the OPTIONAL ready ref passed through to `seams.start`. */
+      readonly runtimeContextRef?: string;
       readonly expect: { readonly currentStep: StepId; readonly version: 1 };
     }
   | {
@@ -204,6 +216,9 @@ export async function replayTrace(
         instanceId: step.instanceId,
         templateRef: seams.template.ref,
         task: step.task,
+        ...(step.runtimeContextRef !== undefined
+          ? { runtimeContextRef: step.runtimeContextRef }
+          : {}),
       });
       outcomes.push(started);
       if (started.version !== step.expect.version) {
@@ -311,7 +326,7 @@ export async function replayTrace(
     fail("state", undefined, `${fixture.name} (final state)`, expectedState, actualState);
   }
 
-  const violations = runAllCheckers(finalDetail, seams.template);
+  const violations = runAllCheckers(finalDetail, seams.template, seams.resolveEvidence);
   if (violations.length > 0) {
     throw new TraceMismatchError(
       "checker",

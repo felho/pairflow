@@ -19,6 +19,7 @@ const instance: WorkflowInstance = {
   round: 1,
   status: "RUNNING",
   version: 1,
+  runtimeContext: null,
 };
 
 function envelope(opId: string, expectedVersion: number): EventEnvelope {
@@ -379,15 +380,15 @@ describe("op_id_collision — the digest-aware idempotency rung (packet ch5-P4)"
   });
 });
 
-describe("schema v2 → v3 — THE ch11 fenced wipe (packet ch11-P2b, S1, ADR-003)", () => {
-  it("a known PROTOTYPE store at marker '2' wipes on open and re-marks as '3'", async () => {
+describe("schema → v4 — THE ch11-P3b fenced wipe (packet ch11-P3b, S4, ADR-003)", () => {
+  it("a known PROTOTYPE store at marker '3' wipes on open and re-marks as '4'", async () => {
     const path = tempDbPath();
     const first = openStore(path, createControlledClock(0));
     await first.store.createInstance(instance);
     first.close();
 
     const raw = new DatabaseSync(path);
-    raw.prepare("UPDATE meta SET value = '2' WHERE key = 'schema_version'").run();
+    raw.prepare("UPDATE meta SET value = '3' WHERE key = 'schema_version'").run();
     raw.close();
 
     const second = openStore(path, createControlledClock(0));
@@ -398,8 +399,38 @@ describe("schema v2 → v3 — THE ch11 fenced wipe (packet ch11-P2b, S1, ADR-00
     const marker = check
       .prepare("SELECT value FROM meta WHERE key = 'schema_version'")
       .get() as { value: string };
-    expect(marker.value).toBe("3");
+    expect(marker.value).toBe("4");
     check.close();
+  });
+
+  it("an incomplete marker (schema_version present, prototype missing) refuses at v4", () => {
+    const path = tempDbPath();
+    const first = openStore(path, createControlledClock(0));
+    first.close();
+    const raw = new DatabaseSync(path);
+    raw.prepare("DELETE FROM meta WHERE key = 'prototype'").run();
+    raw.close();
+    expect(() => openStore(path, createControlledClock(0))).toThrow(/fail closed|incomplete|refus/i);
+  });
+});
+
+describe("runtime_context — the nullable instance column (packet ch11-P3b, S4)", () => {
+  it("null runtimeContext round-trips as NULL across every instance read surface", async () => {
+    const handle = openStore(":memory:", createControlledClock(0));
+    await handle.store.createInstance({ ...instance, runtimeContext: null });
+    expect((await handle.store.loadInstance("inst-1"))?.runtimeContext).toBeNull();
+    expect((await handle.store.listInstances())[0]?.runtimeContext).toBeNull();
+    expect((await handle.store.getInstanceDetail("inst-1"))?.instance.runtimeContext).toBeNull();
+  });
+
+  it("a ready ref round-trips as its EXACT string across every instance read surface", async () => {
+    const handle = openStore(":memory:", createControlledClock(0));
+    await handle.store.createInstance({ ...instance, runtimeContext: "/ws/abc-123" });
+    expect((await handle.store.loadInstance("inst-1"))?.runtimeContext).toBe("/ws/abc-123");
+    expect((await handle.store.listInstances())[0]?.runtimeContext).toBe("/ws/abc-123");
+    expect((await handle.store.getInstanceDetail("inst-1"))?.instance.runtimeContext).toBe(
+      "/ws/abc-123",
+    );
   });
 });
 

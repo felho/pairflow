@@ -159,3 +159,44 @@ export type ProcessGateEvidence =
       readonly headSha: string;
       readonly gitStatusHash: string;
     };
+
+/**
+ * ch11-P3b C24: the wire projection — the compact snake_case rendering of the
+ * domain `GateProjection` the in-process evaluators read. A PURE key-rename
+ * projection over the SAME derived snapshot (no field added or dropped); each
+ * `history` entry's `step_id` is the step its transition was emitted FROM.
+ */
+export interface GateInvocationHistoryEntry {
+  readonly step_id: string;
+  readonly event_type: string;
+  readonly role: string;
+}
+export interface GateInvocationProjection {
+  readonly round: number;
+  readonly current_step: string;
+  readonly event_type: string;
+  readonly history: readonly GateInvocationHistoryEntry[];
+}
+
+/**
+ * ch11-P3b C23: the `GateInvocation` wire document — ONE UTF-8-encoded JSON
+ * value on the runner's stdin. The top-level keyset is snake_case
+ * model-verbatim `{instance_id, template_ref, step_id, event_type,
+ * expected_version, config, projection}`; `step_id` is the instance's current
+ * step, `event_type` the envelope's type, `expected_version` the instance's CAS
+ * version at evaluation. `config` is the admitted EFFECTIVE config VERBATIM —
+ * it rides with ITS OWN (camelCase) keys, deep-equal to the admitted binding's
+ * config (wire ≡ effective, the one-downstream-form rule; the envelope keyset
+ * snake_case, the config payload the effective form's — C23's letter).
+ * `projection` is the C24 compact form. The runner passes NOTHING else (no
+ * argv payload; C13's one-command-line + stdin contract).
+ */
+export interface GateInvocation {
+  readonly instance_id: string;
+  readonly template_ref: { readonly id: string; readonly version: number };
+  readonly step_id: string;
+  readonly event_type: string;
+  readonly expected_version: number;
+  readonly config: unknown;
+  readonly projection: GateInvocationProjection;
+}

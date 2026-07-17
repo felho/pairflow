@@ -74,3 +74,27 @@ export interface GateProjection {
   readonly eventType: EventType;
   readonly history: readonly GateProjectionEntry[];
 }
+
+/**
+ * The materialized effective `external.process` config (packet ch11-P3a's
+ * V-matrix; the type HOME MOVED here at ch11-P3b so the kernel branch and the
+ * `gates/process.ts` validator share ONE shape — never two homes). Admission
+ * produces it ONCE (`validateAndNormalizeConfig`); every downstream reader —
+ * including the P3b process wire — reads only this form (A5). Field presence
+ * per output mode: `exitCode` mode carries `onExit` AND a complete `reason`
+ * (both buckets, authored-or-default — V1); `gateDecisionJson` mode omits
+ * `onExit`, and `reason` rides IFF authored (carried verbatim). The kernel
+ * reads it through a typed cast, never re-validating (C20/C22 by-construction).
+ */
+export interface EffectiveProcessConfig {
+  readonly command: string;
+  readonly timeoutMs: number;
+  readonly output: { readonly mode: "exitCode" | "gateDecisionJson" };
+  readonly onExit?: {
+    readonly zero: "allow" | "warn" | "block";
+    readonly nonzero: "allow" | "warn" | "block";
+  };
+  readonly onRunnerError: "blockTransition";
+  readonly onTimeout: "blockTransition";
+  readonly reason?: { readonly zero?: string; readonly nonzero?: string };
+}

@@ -1,3 +1,4 @@
+import { createScriptedProcessGateRunner } from "./testkit/index.js";
 import { describe, expect, it } from "vitest";
 
 import { noopDiagnosticsSink } from "./diag/index.js";
@@ -36,6 +37,7 @@ function admit(template: WorkflowTemplate): AdmittedTemplate {
 function wire() {
   const handle = openStore(":memory:", createControlledClock(1_000));
   const kernel = createKernel({
+      processRunner: createScriptedProcessGateRunner([]),
     store: handle.store,
     definitions: fixtureDefinitionStore(admit(fixtureTemplate())),
     time: createControlledClock(1_000),

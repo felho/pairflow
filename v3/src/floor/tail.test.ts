@@ -1,3 +1,4 @@
+import { createScriptedProcessGateRunner } from "../testkit/index.js";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -47,6 +48,7 @@ const instance: WorkflowInstance = {
   round: 1,
   status: "RUNNING",
   version: 1,
+  runtimeContext: null,
 };
 
 function env(
@@ -69,6 +71,7 @@ function env(
 
 function makeKernel(store: StorePort): Kernel {
   return createKernel({
+      processRunner: createScriptedProcessGateRunner([]),
     store,
     definitions,
     time: createControlledClock(0),

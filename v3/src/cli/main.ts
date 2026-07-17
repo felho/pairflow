@@ -21,6 +21,7 @@ import {
   notFound,
   parseNonNegativeSafeInt,
   requireInstanceId,
+  resolveDbPath,
   resolveTemplatesDir,
   toTemplateInvalid,
   usage,
@@ -28,6 +29,10 @@ import {
   withStoreAndDiag,
 } from "./common.js";
 import { CliError, EXIT } from "./contract.js";
+import {
+  createFailClosedProcessGateRunner,
+  deriveProcessEvidenceDbPath,
+} from "./failClosedProcessGateRunner.js";
 import type { CliDeps } from "./runtime.js";
 import { productionDeps } from "./runtime.js";
 import { createFileDefinitionStore } from "../definition/index.js";
@@ -265,39 +270,49 @@ async function verbStart(ctx: VerbContext): Promise<number> {
       template,
     );
     return await withStoreAndDiag(ctx, async (handle, diag) => {
-      // V5 (ch7-P4): the store-backed sink on the derived path, passed
-      // BARE — no defensive wrapper (REV-DIAG-FAILOPEN).
-      const kernel = createKernel({
-        store: handle.store,
-        definitions,
-        time: ctx.deps.time,
-        digest: deriveEmitDigest,
-        diag: diag.sink,
-        gates,
-      });
+      // W2 (ch11-P3b): the fail-closed process-gate runner on a derived-path
+      // sibling beside the store DB — never spawns, never allows.
+      const processRunner = createFailClosedProcessGateRunner(
+        deriveProcessEvidenceDbPath(resolveDbPath(flagString(ctx, "db"), ctx.deps)),
+      );
       try {
-        const started = await kernel.startInstance({
-          instanceId: ctx.deps.instanceIdSource(),
-          templateRef,
-          task,
-          ...(Object.keys(overrides).length > 0 ? { startOverrides: overrides } : {}),
+        // V5 (ch7-P4): the store-backed sink on the derived path, passed
+        // BARE — no defensive wrapper (REV-DIAG-FAILOPEN).
+        const kernel = createKernel({
+          store: handle.store,
+          definitions,
+          time: ctx.deps.time,
+          digest: deriveEmitDigest,
+          diag: diag.sink,
+          gates,
+          processRunner,
         });
-        ctx.sinks.out(JSON.stringify(started));
-        return EXIT.ok;
-      } catch (error) {
-        // ONLY the start-INPUT lane is usage — binding coverage, the one
-        // reachable start-side input failure (the ref is pre-checked
-        // above). Everything else (store integrity such as a colliding
-        // minted id, unexpected errors) flows to the outer internal
-        // branch: the 2-vs-1 exit split must not collapse (P4a
-        // aftermath finding 1).
-        if (
-          error instanceof Error &&
-          error.message.startsWith("start failed (binding coverage)")
-        ) {
-          throw usage("StartFailed", error.message);
+        try {
+          const started = await kernel.startInstance({
+            instanceId: ctx.deps.instanceIdSource(),
+            templateRef,
+            task,
+            ...(Object.keys(overrides).length > 0 ? { startOverrides: overrides } : {}),
+          });
+          ctx.sinks.out(JSON.stringify(started));
+          return EXIT.ok;
+        } catch (error) {
+          // ONLY the start-INPUT lane is usage — binding coverage, the one
+          // reachable start-side input failure (the ref is pre-checked
+          // above). Everything else (store integrity such as a colliding
+          // minted id, unexpected errors) flows to the outer internal
+          // branch: the 2-vs-1 exit split must not collapse (P4a
+          // aftermath finding 1).
+          if (
+            error instanceof Error &&
+            error.message.startsWith("start failed (binding coverage)")
+          ) {
+            throw usage("StartFailed", error.message);
+          }
+          throw error;
         }
-        throw error;
+      } finally {
+        processRunner.close();
       }
     });
   } catch (error) {
@@ -355,20 +370,30 @@ async function verbSubmit(ctx: VerbContext): Promise<number> {
   // passes through unchanged.
   try {
     return await withStoreAndDiag(ctx, async (handle, diag) => {
-      // V5 (ch7-P4): kernel AND ingress emit into the derived-path store.
-      const kernel = createKernel({
-        store: handle.store,
-        definitions,
-        time: ctx.deps.time,
-        digest: deriveEmitDigest,
-        diag: diag.sink,
-        gates,
-      });
-      const outcome = await createIngress({ kernel, diag: diag.sink }).submit(envelope);
-      // The outcome IS the surface's answer — DATA on stdout, always;
-      // the exit code classifies it (duplicate = idempotent success).
-      ctx.sinks.out(JSON.stringify(outcome));
-      return outcomeExitCode(outcome);
+      // W2 (ch11-P3b): the fail-closed process-gate runner on the derived-path
+      // evidence sibling — never spawns, never allows.
+      const processRunner = createFailClosedProcessGateRunner(
+        deriveProcessEvidenceDbPath(resolveDbPath(flagString(ctx, "db"), ctx.deps)),
+      );
+      try {
+        // V5 (ch7-P4): kernel AND ingress emit into the derived-path store.
+        const kernel = createKernel({
+          store: handle.store,
+          definitions,
+          time: ctx.deps.time,
+          digest: deriveEmitDigest,
+          diag: diag.sink,
+          gates,
+          processRunner,
+        });
+        const outcome = await createIngress({ kernel, diag: diag.sink }).submit(envelope);
+        // The outcome IS the surface's answer — DATA on stdout, always;
+        // the exit code classifies it (duplicate = idempotent success).
+        ctx.sinks.out(JSON.stringify(outcome));
+        return outcomeExitCode(outcome);
+      } finally {
+        processRunner.close();
+      }
     });
   } catch (error) {
     throw toTemplateInvalid(error);
