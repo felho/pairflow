@@ -43,7 +43,7 @@ HANDLE envelope → Outcome
       THEN IF instance.runtime_context = ready(∅) THEN RETURN Rejected(runtime_context_required_for_process_gate)   # ready(∅) = context-free: ADMISSION flags the declaration-level case (admit_definition); this lane is the runtime backstop
            decision ← run_process_gate(gate, instance, template, envelope)                # spawn in the workspace, bounded timeout
       ELSE decision ← registration.evaluate(gate.effective_config, gate_projection(instance, template, envelope))   # declarative / packaged, in-process
-    IF decision.verdict = block     THEN RETURN Rejected(gate_blocked(decision.reason), decision.evidence_refs)   # no commit ⇒ round not burned; refs surfaced
+    IF decision.verdict = block     THEN RETURN Rejected(gate_blocked(decision.reason), gate: gate.uses, decision.evidence_refs)   # no commit ⇒ round not burned; refs + blocking gate surfaced
     gate_decisions.append(decision)                                                       # allow or warn ⇒ retained (verdict + evidence_refs + diagnostics)
     # allow or warn ⇒ next gate in the pipeline
 

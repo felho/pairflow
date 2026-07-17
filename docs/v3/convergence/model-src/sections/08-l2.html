@@ -27,7 +27,7 @@
           </div></div>
           <div class="trace-row"><div class="trace-n">2</div><div class="trace-c">
             <div class="ev">claude emits <code>CONVERGED</code> on <code>review</code> { expected_role: reviewer } (version=2, <b>round=1</b>)</div>
-            <div class="meta">role ✓ · transition ✓ · capability ✓ → gate pipeline: <code>declarative.threshold</code> (<code>round ≥ 2</code>) → round=1 → <b>block</b> → <b>Rejected(gate_blocked(round_below_min))</b>; no commit, version stays 2, <b>round not burned</b>, still on review</div>
+            <div class="meta">role ✓ · transition ✓ · capability ✓ → gate pipeline: <code>declarative.threshold</code> (<code>round ≥ 2</code>) → round=1 → <b>block</b> → <b>Rejected(gate_blocked(round_below_min), gate: declarative.threshold)</b>; no commit, version stays 2, <b>round not burned</b>, still on review</div>
           </div></div>
           <div class="trace-row"><div class="trace-n">3</div><div class="trace-c">
             <div class="ev">claude emits <code>PASS</code> on <code>review</code> (pass back) { expected_role: reviewer } (version=2)</div>
@@ -105,7 +105,7 @@
         <div class="agg" style="border-style:solid;border-color:var(--line);background:var(--panel)">
           <div class="agg-label" style="color:var(--runtime)">New rejections — before commit, no state change, no round burned</div>
           <div class="ents">
-            <div class="ent"><div class="en">Rejected(gate_blocked(reason))</div><div class="fields">a policy returned <code>block</code> for this state</div></div>
+            <div class="ent"><div class="en">Rejected(gate_blocked(reason))</div><div class="fields">a policy returned <code>block</code> for this state — carries the blocking binding's <code>uses</code> as <code>gate</code> beside the decision's <code>reason</code> / <code>evidence_refs</code>, so a multi-gate pipeline names WHICH gate blocked (the retained side's <code>uses</code> provenance, mirrored on the reject side)</div></div>
             <div class="ent"><div class="en">Rejected(gate_evaluator_unavailable)</div><div class="fields">the gate's <code>uses</code> name did not resolve — the runtime availability backstop (admission resolves at definition load; this lane guards registry drift)</div></div>
             <div class="ent"><div class="en">Rejected(gate_execution_not_supported)</div><div class="fields">a <code>process</code> implementation (⇒ <span class="at">L2a</span>) or a <code>deferred</code> evaluator (⇒ a later lifecycle slice) reached in L2 core — declarable, not executable here</div></div>
           </div>

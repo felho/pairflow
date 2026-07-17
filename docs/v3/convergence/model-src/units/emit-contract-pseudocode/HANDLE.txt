@@ -58,7 +58,7 @@ HANDLE envelope → Outcome
     # claim, never the summary), and its evidence must carry a currency binding to the state it
     # certifies — a stale-green result is a BLOCK (a gate_blocked reason, not a new rejection);
     # the inline process form is current BY CONSTRUCTION (it runs now, against this state)
-    IF decision.verdict = block     THEN RETURN Rejected(gate_blocked(decision.reason), decision.evidence_refs)   # no commit ⇒ round not burned; refs surfaced
+    IF decision.verdict = block     THEN RETURN Rejected(gate_blocked(decision.reason), gate: gate.uses, decision.evidence_refs)   # no commit ⇒ round not burned; refs + blocking gate surfaced
     gate_decisions.append(decision)                                                       # allow or warn ⇒ retained (verdict + evidence_refs + diagnostics)
     # allow or warn ⇒ next gate in the pipeline
 

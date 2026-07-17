@@ -36,7 +36,7 @@ HANDLE envelope → Outcome
     IF registration.implementation = process THEN RETURN Rejected(gate_execution_not_supported)  # process contract is L2a — even an inline process gate
     IF registration.execution ≠ inline       THEN RETURN Rejected(gate_execution_not_supported)  # deferred ⇒ a later lifecycle slice (gate_pending + GATE_RESULT)
     decision ← registration.evaluate(gate.effective_config, gate_projection(instance, template, envelope))
-    IF decision.verdict = block       THEN RETURN Rejected(gate_blocked(decision.reason), decision.evidence_refs)  # no commit ⇒ round not burned; refs surfaced
+    IF decision.verdict = block       THEN RETURN Rejected(gate_blocked(decision.reason), gate: gate.uses, decision.evidence_refs)  # no commit ⇒ round not burned; refs + blocking gate surfaced
     gate_decisions.append(decision)                                                       # allow or warn ⇒ retained (verdict + evidence_refs + diagnostics)
     # allow or warn ⇒ next gate in the pipeline
 

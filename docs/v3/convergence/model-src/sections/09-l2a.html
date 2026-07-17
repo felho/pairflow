@@ -24,11 +24,11 @@
           </div></div>
           <div class="trace-row"><div class="trace-n">2</div><div class="trace-c">
             <div class="ev">(a later round) codex emits <code>PASS</code> on <code>implement</code></div>
-            <div class="meta"><code>pnpm test</code> → exit <b>1</b> (a test failed) → <code>on_exit[nonzero] = block</code> → <b>Rejected(gate_blocked(reason=test_failed))</b>; no commit, <b>round not burned</b>, still on implement, evidence ref returned in the outcome</div>
+            <div class="meta"><code>pnpm test</code> → exit <b>1</b> (a test failed) → <code>on_exit[nonzero] = block</code> → <b>Rejected(gate_blocked(reason=test_failed), gate: external.process)</b>; no commit, <b>round not burned</b>, still on implement, evidence ref returned in the outcome</div>
           </div></div>
           <div class="trace-row"><div class="trace-n">3</div><div class="trace-c">
             <div class="ev">codex emits <code>PASS</code> with a mis-configured command path</div>
-            <div class="meta"><code>processRunner.run</code> → <code>kind=runner_error</code> (spawn failed) → <code>on_runner_error = block_transition</code> → <b>Rejected(gate_blocked(reason=runner_error))</b> — audited <em>distinctly</em> from <code>test_failed</code>; the transition is held back because the gate did not run reliably, not because the work is wrong</div>
+            <div class="meta"><code>processRunner.run</code> → <code>kind=runner_error</code> (spawn failed) → <code>on_runner_error = block_transition</code> → <b>Rejected(gate_blocked(reason=runner_error), gate: external.process)</b> — audited <em>distinctly</em> from <code>test_failed</code>; the transition is held back because the gate did not run reliably, not because the work is wrong</div>
           </div></div>
         </div>
         <div class="note runtime">

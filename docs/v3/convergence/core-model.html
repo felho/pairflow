@@ -2455,7 +2455,7 @@ dispatch_intent(instance, template, step_id) → DispatchIntent
           </div></div>
           <div class="trace-row"><div class="trace-n">2</div><div class="trace-c">
             <div class="ev">claude emits <code>CONVERGED</code> on <code>review</code> { expected_role: reviewer } (version=2, <b>round=1</b>)</div>
-            <div class="meta">role ✓ · transition ✓ · capability ✓ → gate pipeline: <code>declarative.threshold</code> (<code>round ≥ 2</code>) → round=1 → <b>block</b> → <b>Rejected(gate_blocked(round_below_min))</b>; no commit, version stays 2, <b>round not burned</b>, still on review</div>
+            <div class="meta">role ✓ · transition ✓ · capability ✓ → gate pipeline: <code>declarative.threshold</code> (<code>round ≥ 2</code>) → round=1 → <b>block</b> → <b>Rejected(gate_blocked(round_below_min), gate: declarative.threshold)</b>; no commit, version stays 2, <b>round not burned</b>, still on review</div>
           </div></div>
           <div class="trace-row"><div class="trace-n">3</div><div class="trace-c">
             <div class="ev">claude emits <code>PASS</code> on <code>review</code> (pass back) { expected_role: reviewer } (version=2)</div>
@@ -2670,7 +2670,7 @@ HANDLE envelope → Outcome
     IF registration.implementation = process THEN RETURN Rejected(gate_execution_not_supported)  # process contract is L2a — even an inline process gate
     IF registration.execution ≠ inline       THEN RETURN Rejected(gate_execution_not_supported)  # deferred ⇒ a later lifecycle slice (gate_pending + GATE_RESULT)
     decision ← registration.evaluate(gate.effective_config, gate_projection(instance, template, envelope))
-    IF decision.verdict = block       THEN RETURN Rejected(gate_blocked(decision.reason), decision.evidence_refs)  # no commit ⇒ round not burned; refs surfaced
+    IF decision.verdict = block       THEN RETURN Rejected(gate_blocked(decision.reason), gate: gate.uses, decision.evidence_refs)  # no commit ⇒ round not burned; refs + blocking gate surfaced
     gate_decisions.append(decision)                                                       # allow or warn ⇒ retained (verdict + evidence_refs + diagnostics)
     # allow or warn ⇒ next gate in the pipeline
 
@@ -2760,7 +2760,7 @@ dispatch_intent(instance, template, step_id) → DispatchIntent
         <div class="agg" style="border-style:solid;border-color:var(--line);background:var(--panel)">
           <div class="agg-label" style="color:var(--runtime)">New rejections — before commit, no state change, no round burned</div>
           <div class="ents">
-            <div class="ent"><div class="en">Rejected(gate_blocked(reason))</div><div class="fields">a policy returned <code>block</code> for this state</div></div>
+            <div class="ent"><div class="en">Rejected(gate_blocked(reason))</div><div class="fields">a policy returned <code>block</code> for this state — carries the blocking binding's <code>uses</code> as <code>gate</code> beside the decision's <code>reason</code> / <code>evidence_refs</code>, so a multi-gate pipeline names WHICH gate blocked (the retained side's <code>uses</code> provenance, mirrored on the reject side)</div></div>
             <div class="ent"><div class="en">Rejected(gate_evaluator_unavailable)</div><div class="fields">the gate's <code>uses</code> name did not resolve — the runtime availability backstop (admission resolves at definition load; this lane guards registry drift)</div></div>
             <div class="ent"><div class="en">Rejected(gate_execution_not_supported)</div><div class="fields">a <code>process</code> implementation (⇒ <span class="at">L2a</span>) or a <code>deferred</code> evaluator (⇒ a later lifecycle slice) reached in L2 core — declarable, not executable here</div></div>
           </div>
@@ -2909,11 +2909,11 @@ template:
           </div></div>
           <div class="trace-row"><div class="trace-n">2</div><div class="trace-c">
             <div class="ev">(a later round) codex emits <code>PASS</code> on <code>implement</code></div>
-            <div class="meta"><code>pnpm test</code> → exit <b>1</b> (a test failed) → <code>on_exit[nonzero] = block</code> → <b>Rejected(gate_blocked(reason=test_failed))</b>; no commit, <b>round not burned</b>, still on implement, evidence ref returned in the outcome</div>
+            <div class="meta"><code>pnpm test</code> → exit <b>1</b> (a test failed) → <code>on_exit[nonzero] = block</code> → <b>Rejected(gate_blocked(reason=test_failed), gate: external.process)</b>; no commit, <b>round not burned</b>, still on implement, evidence ref returned in the outcome</div>
           </div></div>
           <div class="trace-row"><div class="trace-n">3</div><div class="trace-c">
             <div class="ev">codex emits <code>PASS</code> with a mis-configured command path</div>
-            <div class="meta"><code>processRunner.run</code> → <code>kind=runner_error</code> (spawn failed) → <code>on_runner_error = block_transition</code> → <b>Rejected(gate_blocked(reason=runner_error))</b> — audited <em>distinctly</em> from <code>test_failed</code>; the transition is held back because the gate did not run reliably, not because the work is wrong</div>
+            <div class="meta"><code>processRunner.run</code> → <code>kind=runner_error</code> (spawn failed) → <code>on_runner_error = block_transition</code> → <b>Rejected(gate_blocked(reason=runner_error), gate: external.process)</b> — audited <em>distinctly</em> from <code>test_failed</code>; the transition is held back because the gate did not run reliably, not because the work is wrong</div>
           </div></div>
         </div>
         <div class="note runtime">
@@ -3175,7 +3175,7 @@ HANDLE envelope → Outcome
       THEN IF instance.runtime_context = ready(∅) THEN RETURN Rejected(runtime_context_required_for_process_gate)   # ready(∅) = context-free: ADMISSION flags the declaration-level case (admit_definition); this lane is the runtime backstop
            decision ← run_process_gate(gate, instance, template, envelope)                # spawn in the workspace, bounded timeout
       ELSE decision ← registration.evaluate(gate.effective_config, gate_projection(instance, template, envelope))   # declarative / packaged, in-process
-    IF decision.verdict = block     THEN RETURN Rejected(gate_blocked(decision.reason), decision.evidence_refs)   # no commit ⇒ round not burned; refs surfaced
+    IF decision.verdict = block     THEN RETURN Rejected(gate_blocked(decision.reason), gate: gate.uses, decision.evidence_refs)   # no commit ⇒ round not burned; refs + blocking gate surfaced
     gate_decisions.append(decision)                                                       # allow or warn ⇒ retained (verdict + evidence_refs + diagnostics)
     # allow or warn ⇒ next gate in the pipeline
 
@@ -3691,7 +3691,7 @@ HANDLE envelope → Outcome
       THEN IF instance.runtime_context = ready(∅) THEN RETURN Rejected(runtime_context_required_for_process_gate)   # ready(∅) = context-free: ADMISSION flags the declaration-level case (admit_definition); this lane is the runtime backstop
            decision ← run_process_gate(gate, instance, template, envelope)                # spawn in the workspace, bounded timeout
       ELSE decision ← registration.evaluate(gate.effective_config, gate_projection(instance, template, envelope))   # declarative / packaged, in-process
-    IF decision.verdict = block     THEN RETURN Rejected(gate_blocked(decision.reason), decision.evidence_refs)   # no commit ⇒ round not burned; refs surfaced
+    IF decision.verdict = block     THEN RETURN Rejected(gate_blocked(decision.reason), gate: gate.uses, decision.evidence_refs)   # no commit ⇒ round not burned; refs + blocking gate surfaced
     gate_decisions.append(decision)                                                       # allow or warn ⇒ retained (verdict + evidence_refs + diagnostics)
     # allow or warn ⇒ next gate in the pipeline
 
@@ -4476,7 +4476,7 @@ HANDLE envelope → Outcome
       THEN IF instance.runtime_context = ready(∅) THEN RETURN Rejected(runtime_context_required_for_process_gate)   # ready(∅) = context-free: ADMISSION flags the declaration-level case (admit_definition); this lane is the runtime backstop
            decision ← run_process_gate(gate, instance, template, envelope)                # spawn in the workspace, bounded timeout
       ELSE decision ← registration.evaluate(gate.effective_config, gate_projection(instance, template, envelope))   # declarative / packaged, in-process
-    IF decision.verdict = block     THEN RETURN Rejected(gate_blocked(decision.reason), decision.evidence_refs)   # no commit ⇒ round not burned; refs surfaced
+    IF decision.verdict = block     THEN RETURN Rejected(gate_blocked(decision.reason), gate: gate.uses, decision.evidence_refs)   # no commit ⇒ round not burned; refs + blocking gate surfaced
     gate_decisions.append(decision)                                                       # allow or warn ⇒ retained (verdict + evidence_refs + diagnostics)
     # allow or warn ⇒ next gate in the pipeline
 
@@ -5596,7 +5596,7 @@ HANDLE envelope → Outcome
       THEN IF instance.runtime_context = ready(∅) THEN RETURN Rejected(runtime_context_required_for_process_gate)   # ready(∅) = context-free: ADMISSION flags the declaration-level case (admit_definition); this lane is the runtime backstop
            decision ← run_process_gate(gate, instance, template, envelope)                # spawn in the workspace, bounded timeout
       ELSE decision ← registration.evaluate(gate.effective_config, gate_projection(instance, template, envelope))   # declarative / packaged, in-process
-    IF decision.verdict = block     THEN RETURN Rejected(gate_blocked(decision.reason), decision.evidence_refs)   # no commit ⇒ round not burned; refs surfaced
+    IF decision.verdict = block     THEN RETURN Rejected(gate_blocked(decision.reason), gate: gate.uses, decision.evidence_refs)   # no commit ⇒ round not burned; refs + blocking gate surfaced
     gate_decisions.append(decision)                                                       # allow or warn ⇒ retained (verdict + evidence_refs + diagnostics)
     # allow or warn ⇒ next gate in the pipeline
 
@@ -6507,7 +6507,7 @@ HANDLE envelope → Outcome
       THEN IF instance.runtime_context = ready(∅) THEN RETURN Rejected(runtime_context_required_for_process_gate)   # ready(∅) = context-free: ADMISSION flags the declaration-level case (admit_definition); this lane is the runtime backstop
            decision ← run_process_gate(gate, instance, template, envelope)                # spawn in the workspace, bounded timeout
       ELSE decision ← registration.evaluate(gate.effective_config, gate_projection(instance, template, envelope))   # declarative / packaged, in-process
-    IF decision.verdict = block     THEN RETURN Rejected(gate_blocked(decision.reason), decision.evidence_refs)   # no commit ⇒ round not burned; refs surfaced
+    IF decision.verdict = block     THEN RETURN Rejected(gate_blocked(decision.reason), gate: gate.uses, decision.evidence_refs)   # no commit ⇒ round not burned; refs + blocking gate surfaced
     gate_decisions.append(decision)                                                       # allow or warn ⇒ retained (verdict + evidence_refs + diagnostics)
     # allow or warn ⇒ next gate in the pipeline
 
@@ -7427,7 +7427,7 @@ HANDLE envelope → Outcome
       THEN IF instance.runtime_context = ready(∅) THEN RETURN Rejected(runtime_context_required_for_process_gate)   # ready(∅) = context-free: ADMISSION flags the declaration-level case (admit_definition); this lane is the runtime backstop
            decision ← run_process_gate(gate, instance, template, envelope)                # spawn in the workspace, bounded timeout
       ELSE decision ← registration.evaluate(gate.effective_config, gate_projection(instance, template, envelope))   # declarative / packaged, in-process
-    IF decision.verdict = block     THEN RETURN Rejected(gate_blocked(decision.reason), decision.evidence_refs)   # no commit ⇒ round not burned; refs surfaced
+    IF decision.verdict = block     THEN RETURN Rejected(gate_blocked(decision.reason), gate: gate.uses, decision.evidence_refs)   # no commit ⇒ round not burned; refs + blocking gate surfaced
     gate_decisions.append(decision)                                                       # allow or warn ⇒ retained (verdict + evidence_refs + diagnostics)
     # allow or warn ⇒ next gate in the pipeline
 
@@ -8339,7 +8339,7 @@ HANDLE envelope → Outcome
       THEN IF instance.runtime_context = ready(∅) THEN RETURN Rejected(runtime_context_required_for_process_gate)   # ready(∅) = context-free: ADMISSION flags the declaration-level case (admit_definition); this lane is the runtime backstop
            decision ← run_process_gate(gate, instance, template, envelope)                # spawn in the workspace, bounded timeout
       ELSE decision ← registration.evaluate(gate.effective_config, gate_projection(instance, template, envelope))   # declarative / packaged, in-process
-    IF decision.verdict = block     THEN RETURN Rejected(gate_blocked(decision.reason), decision.evidence_refs)   # no commit ⇒ round not burned; refs surfaced
+    IF decision.verdict = block     THEN RETURN Rejected(gate_blocked(decision.reason), gate: gate.uses, decision.evidence_refs)   # no commit ⇒ round not burned; refs + blocking gate surfaced
     gate_decisions.append(decision)                                                       # allow or warn ⇒ retained (verdict + evidence_refs + diagnostics)
     # allow or warn ⇒ next gate in the pipeline
 
@@ -9627,7 +9627,7 @@ HANDLE envelope → Outcome
       THEN IF instance.runtime_context = ready(∅) THEN RETURN Rejected(runtime_context_required_for_process_gate)   # ready(∅) = context-free: ADMISSION flags the declaration-level case (admit_definition); this lane is the runtime backstop
            decision ← run_process_gate(gate, instance, template, envelope)                # spawn in the workspace, bounded timeout
       ELSE decision ← registration.evaluate(gate.effective_config, gate_projection(instance, template, envelope))   # declarative / packaged, in-process
-    IF decision.verdict = block     THEN RETURN Rejected(gate_blocked(decision.reason), decision.evidence_refs)   # no commit ⇒ round not burned; refs surfaced
+    IF decision.verdict = block     THEN RETURN Rejected(gate_blocked(decision.reason), gate: gate.uses, decision.evidence_refs)   # no commit ⇒ round not burned; refs + blocking gate surfaced
     gate_decisions.append(decision)                                                       # allow or warn ⇒ retained (verdict + evidence_refs + diagnostics)
     # allow or warn ⇒ next gate in the pipeline
 
@@ -10576,7 +10576,7 @@ HANDLE envelope → Outcome
       THEN IF instance.runtime_context = ready(∅) THEN RETURN Rejected(runtime_context_required_for_process_gate)   # ready(∅) = context-free: ADMISSION flags the declaration-level case (admit_definition); this lane is the runtime backstop
            decision ← run_process_gate(gate, instance, template, envelope)                # spawn in the workspace, bounded timeout
       ELSE decision ← registration.evaluate(gate.effective_config, gate_projection(instance, template, envelope))   # declarative / packaged, in-process
-    IF decision.verdict = block     THEN RETURN Rejected(gate_blocked(decision.reason), decision.evidence_refs)   # no commit ⇒ round not burned; refs surfaced
+    IF decision.verdict = block     THEN RETURN Rejected(gate_blocked(decision.reason), gate: gate.uses, decision.evidence_refs)   # no commit ⇒ round not burned; refs + blocking gate surfaced
     gate_decisions.append(decision)                                                       # allow or warn ⇒ retained (verdict + evidence_refs + diagnostics)
     # allow or warn ⇒ next gate in the pipeline
 
@@ -11732,7 +11732,7 @@ HANDLE envelope → Outcome
     # claim, never the summary), and its evidence must carry a currency binding to the state it
     # certifies — a stale-green result is a BLOCK (a gate_blocked reason, not a new rejection);
     # the inline process form is current BY CONSTRUCTION (it runs now, against this state)
-    IF decision.verdict = block     THEN RETURN Rejected(gate_blocked(decision.reason), decision.evidence_refs)   # no commit ⇒ round not burned; refs surfaced
+    IF decision.verdict = block     THEN RETURN Rejected(gate_blocked(decision.reason), gate: gate.uses, decision.evidence_refs)   # no commit ⇒ round not burned; refs + blocking gate surfaced
     gate_decisions.append(decision)                                                       # allow or warn ⇒ retained (verdict + evidence_refs + diagnostics)
     # allow or warn ⇒ next gate in the pipeline
 
