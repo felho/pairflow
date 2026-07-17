@@ -1025,6 +1025,8 @@ describe("ch11-P4 F6 — the C12 source ladder for config.timeoutMs (dimension 3
     ["hex", "0x384"],
     ["exponent", "9e2"],
     ["quoted", '"600000"'],
+    ["anchored", "&a 900"],
+    ["tagged !!int", "!!int 900"],
   ] as const;
   for (const [label, src] of badForms) {
     it(`rejects config.timeoutMs source form: ${label}`, () => {
@@ -1036,6 +1038,51 @@ describe("ch11-P4 F6 — the C12 source ladder for config.timeoutMs (dimension 3
       );
     });
   }
+
+  it("an ALIASED config.timeoutMs (anchor defined elsewhere) → a source finding", () => {
+    const aliased = `ref:
+  id: t
+  version: 1
+start: s
+steps:
+  s:
+    role: r
+    instruction: i
+    transitions:
+      GO: done
+    agentConfig:
+      anchor: &a 900
+    gates:
+      GO:
+        - uses: external.process
+          config:
+            command: "echo hi"
+            timeoutMs: *a
+            onExit: { zero: allow, nonzero: block }
+terminal:
+  - done
+roles:
+  r: {}
+runtimeContext: required
+`;
+    const result = loadGated(aliased);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.findings.map((f) => (f as { path: string }).path)).toContain(
+      "steps.s.gates.GO[0].config.timeoutMs",
+    );
+  });
+
+  it("zero and negative timeoutMs forms fail the ^[1-9] source rule", () => {
+    for (const src of ["0", "-900"]) {
+      const result = loadGated(gatedProcess(src));
+      expect(result.ok).toBe(false);
+      if (result.ok) continue;
+      expect(result.error.findings.map((f) => (f as { path: string }).path)).toContain(
+        "steps.s.gates.GO[0].config.timeoutMs",
+      );
+    }
+  });
 });
 
 describe("ch11-P4 F6 — the source-ladder SCOPING iff, both directions", () => {
@@ -1086,5 +1133,47 @@ roles:
     expect(timeoutFindings).toHaveLength(1);
     expect(timeoutFindings[0]).not.toHaveProperty("code");
     expect((timeoutFindings[0] as { message: string }).message).toContain("unknown config key");
+  });
+
+  it("a `value` key under a NON-matching authored uses (external.process) yields NO source finding — only admission's keyset lane", () => {
+    // `value` under external.process is NOT F6's field there (that field
+    // belongs to declarative.threshold); F6 does not fire even for the
+    // GP4-trap `900.0`, and admission reports it as an unknown process
+    // config key. The reverse of the timeoutMs-under-threshold direction.
+    const withStrayValue = `ref:
+  id: t
+  version: 1
+start: s
+steps:
+  s:
+    role: r
+    instruction: i
+    transitions:
+      GO: done
+    gates:
+      GO:
+        - uses: external.process
+          config:
+            command: "echo hi"
+            timeoutMs: 1000
+            onExit: { zero: allow, nonzero: block }
+            value: "900.0"
+terminal:
+  - done
+roles:
+  r: {}
+runtimeContext: required
+`;
+    const result = loadGated(withStrayValue);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    const valueFindings = result.error.findings.filter(
+      (f) => (f as { path: string }).path === "steps.s.gates.GO[0].config.value",
+    );
+    // Exactly ONE finding at that path, admission's UNKNOWN-KEY lane
+    // (uncoded, keyset message) — NOT a source-form finding.
+    expect(valueFindings).toHaveLength(1);
+    expect(valueFindings[0]).not.toHaveProperty("code");
+    expect((valueFindings[0] as { message: string }).message).toContain("unknown config key");
   });
 });

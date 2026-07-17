@@ -781,13 +781,33 @@ realization); A1's unknown-key finding accumulates; `versionFinding`
 generalized into a shared plain-integer-source helper consumed by
 F6; the stringness scan uses a visited WeakSet.
 
+Arm gate 2 (the build-close implementation review; pin-conform
+gpt-5.6-sol/high/never; one infra-timeout retry per the §6 ladder,
+the retry citing the sha): REFINE citing `6365804f` with FOUR
+findings — ALL test-evidence class, zero product gaps (the mandatory
+sensitivity pass finding green-but-blind classes in the BUILT bodies
+under correct packet lane texts — the P2c/P3a/P3b pattern
+recurring): the file-channel C21 lane sweep completed (twelve
+YAML-staged `loadTemplate` lanes that had ridden only the direct
+admission grain); the F6 `timeoutMs` ladder's missing members
+(anchored/aliased/tagged/zero/negative) plus the REVERSE non-firing
+direction (`value` under `external.process` → keyset lane only); the
+F7(b) steps-MISSING + A3 accumulation combination; the stringness
+rule's RECURSIVE half (a numeric key deep inside a binding's
+`config`), its sensitivity probe-confirmed (neutralizing the
+recursion turned exactly the new lane red). All four folded in one
+aftermath round: **995 → 1013 tests** (+18; zero production
+changes; both touched files already declared). Bridges re-verified
+green (orchestrator-rerun): typecheck 0 · lint 0 · the v3 suite
+1013/1013 · packet-lint 0/0.
+
 ```json
 {
   "packet_metrics": {
     "class": "operability",
     "prediction": { "predicted": "projection", "reasoning": "the ratified gate-format draft (2026-07-12, incl. the reopen's C37-C41) decided every format-surface point; the packet projects the file-channel/source-form shares of C1-C21/C28/C37-C40 plus the ratified restoration", "discovered": "projection" },
     "provenance": { "anchored": 13, "derived": 5, "new_decision": 1 },
-    "rounds": { "review": 5, "doc_refinement": 1, "implementation": 1 },
+    "rounds": { "review": 5, "doc_refinement": 1, "implementation": 2 },
     "stops": [
       { "type": "4:flagged-approve", "what": "one new-decision row rode as flag F1 — Y6, the required-context START classification (arm-reclassified from derived: internal-1 proved equally anchor-conform)", "resolution": "the ratifier approved 2026-07-17: usage-2 ratified WITH the eager-pre-check realization their own arm round drove (a non-authoritative CLI mirror before store/kernel construction; the kernel S2 lane the authority; the inner-catch allowlist code-level; the two-load race riding internal by construction), the 56 KB size advisory accepted in the same act" }
     ],

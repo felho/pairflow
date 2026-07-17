@@ -643,6 +643,156 @@ describe("ch11-P4 dimension 4 — the gates subtree through the file channel", (
     expect(gatedPaths(err)).toContain("steps.s.gates");
     expect(JSON.stringify(err.findings)).toMatch(/must be strings/);
   });
+
+  it("F3 STRINGNESS (RECURSIVE): a numeric map key DEEP in a binding's config → a finding at the nearest addressable path", () => {
+    // The stringness rule is RECURSIVE: `config: { 0: x }` plants a
+    // node-level NUMBER key inside the gates subtree (mapAsMap preserves
+    // it). The scan must descend into the binding's config, not stop at
+    // the gates map — else admission's own-key scans silently drop it.
+    const err = gatedErr(
+      gatedStep(
+        "    gates:\n      GO:\n        - uses: pairflow.previous_reviewer_verdict\n          config:\n            0: x\n",
+      ),
+    );
+    expect(err.stage).toBe("validate");
+    // The nearest addressable path is the config map's own address.
+    expect(gatedPaths(err)).toContain("steps.s.gates.GO[0].config");
+    expect(JSON.stringify(err.findings)).toMatch(/must be strings/);
+  });
+});
+
+// ── packet ch11-P4: the remaining C21 admission lanes REACHED through
+// the FILE channel (arm-gate-2 fold). The semantic verdicts are driven
+// exhaustively on the direct channel in admit.test.ts / gates/*.test.ts;
+// the obligation here is that a YAML-staged loadTemplate call REACHES
+// each lane — asserting the row's OWN path (and code on coded lanes),
+// not mere rejection. ────────────────────────────────────────────────
+
+describe("ch11-P4 dimension 4 — the C21 admission lanes through the file channel", () => {
+  it("a NON-LIST gate pipeline value → the pipeline-kind finding at steps.<id>.gates.<evt>", () => {
+    const err = gatedErr(gatedStep("    gates:\n      GO: nope\n"));
+    expect(err.stage).toBe("validate");
+    expect(gatedPaths(err)).toContain("steps.s.gates.GO");
+    const finding = err.findings.find((f) => (f as { path: string }).path === "steps.s.gates.GO");
+    expect((finding as { message: string }).message).toContain("gate pipeline must be a list");
+  });
+
+  it("a NON-MAP binding → the binding-kind finding at steps.<id>.gates.<evt>[0]", () => {
+    const err = gatedErr(gatedStep("    gates:\n      GO:\n        - nope\n"));
+    expect(gatedPaths(err)).toContain("steps.s.gates.GO[0]");
+    const finding = err.findings.find((f) => (f as { path: string }).path === "steps.s.gates.GO[0]");
+    expect((finding as { message: string }).message).toContain("gate binding must be a map");
+  });
+
+  it("a MISSING uses → the uses finding at steps.<id>.gates.<evt>[0].uses", () => {
+    const err = gatedErr(
+      gatedStep("    gates:\n      GO:\n        - config: { required: true }\n"),
+    );
+    const finding = err.findings.find((f) => (f as { path: string }).path === "steps.s.gates.GO[0].uses");
+    expect(finding).toBeDefined();
+    expect(finding).not.toHaveProperty("code");
+    expect((finding as { message: string }).message).toContain("non-empty string");
+  });
+
+  it("a NON-MAP config (external.process) → the config container finding at ....config", () => {
+    const err = gatedErr(
+      gatedStep(
+        "    gates:\n      GO:\n        - uses: external.process\n          config: nope\n",
+        "runtimeContext: required\n",
+      ),
+    );
+    const finding = err.findings.find((f) => (f as { path: string }).path === "steps.s.gates.GO[0].config");
+    expect(finding).toBeDefined();
+    expect((finding as { message: string }).message).toContain("config must be a map");
+  });
+
+  it("a NON-MAP output → the output container finding at ....config.output", () => {
+    const err = gatedErr(
+      gatedStep(
+        "    gates:\n      GO:\n        - uses: external.process\n          config:\n            command: \"echo hi\"\n            timeoutMs: 1000\n            output: nope\n            onExit: { zero: allow, nonzero: block }\n",
+        "runtimeContext: required\n",
+      ),
+    );
+    const finding = err.findings.find((f) => (f as { path: string }).path === "steps.s.gates.GO[0].config.output");
+    expect(finding).toBeDefined();
+    expect((finding as { message: string }).message).toContain("output must be a map");
+  });
+
+  it("a NON-MAP onExit (exitCode mode) → the onExit container finding at ....config.onExit", () => {
+    const err = gatedErr(
+      gatedStep(
+        "    gates:\n      GO:\n        - uses: external.process\n          config:\n            command: \"echo hi\"\n            timeoutMs: 1000\n            onExit: nope\n",
+        "runtimeContext: required\n",
+      ),
+    );
+    const finding = err.findings.find((f) => (f as { path: string }).path === "steps.s.gates.GO[0].config.onExit");
+    expect(finding).toBeDefined();
+    expect((finding as { message: string }).message).toContain("onExit must be a map");
+  });
+
+  it("a NON-MAP reason → the reason container finding at ....config.reason", () => {
+    const err = gatedErr(
+      gatedStep(
+        "    gates:\n      GO:\n        - uses: external.process\n          config:\n            command: \"echo hi\"\n            timeoutMs: 1000\n            onExit: { zero: allow, nonzero: block }\n            reason: nope\n",
+        "runtimeContext: required\n",
+      ),
+    );
+    const finding = err.findings.find((f) => (f as { path: string }).path === "steps.s.gates.GO[0].config.reason");
+    expect(finding).toBeDefined();
+    expect((finding as { message: string }).message).toContain("reason must be a map");
+  });
+
+  it("a threshold config KEYSET violation (unknown key) → an uncoded finding at ....config.<key>", () => {
+    const err = gatedErr(
+      gatedStep(
+        '    gates:\n      GO:\n        - uses: declarative.threshold\n          config: { metric: round, op: ">=", value: 2, bogus: 1 }\n',
+      ),
+    );
+    const finding = err.findings.find((f) => (f as { path: string }).path === "steps.s.gates.GO[0].config.bogus");
+    expect(finding).toBeDefined();
+    expect(finding).not.toHaveProperty("code");
+    expect((finding as { message: string }).message).toContain("unknown config key");
+  });
+
+  it("a non-allowlisted threshold op → an uncoded finding at ....config.op", () => {
+    const err = gatedErr(
+      gatedStep(
+        '    gates:\n      GO:\n        - uses: declarative.threshold\n          config: { metric: round, op: ">", value: 2 }\n',
+      ),
+    );
+    const finding = err.findings.find((f) => (f as { path: string }).path === "steps.s.gates.GO[0].config.op");
+    expect(finding).toBeDefined();
+    expect(finding).not.toHaveProperty("code");
+    expect((finding as { message: string }).message).toContain("op must be");
+  });
+
+  it("a process DISPOSITION violation (onRunnerError: failInstance) → the CODED gate_config_not_supported lane", () => {
+    const err = gatedErr(
+      gatedStep(
+        "    gates:\n      GO:\n        - uses: external.process\n          config:\n            command: \"echo hi\"\n            timeoutMs: 1000\n            onExit: { zero: allow, nonzero: block }\n            onRunnerError: failInstance\n",
+        "runtimeContext: required\n",
+      ),
+    );
+    const finding = err.findings.find(
+      (f) => (f as { path: string }).path === "steps.s.gates.GO[0].config.onRunnerError",
+    );
+    expect(finding).toMatchObject({ code: "gate_config_not_supported" });
+  });
+
+  it("a reason-GRAMMAR violation (a bad token) → an uncoded finding at ....config.reason.<bucket>", () => {
+    const err = gatedErr(
+      gatedStep(
+        "    gates:\n      GO:\n        - uses: external.process\n          config:\n            command: \"echo hi\"\n            timeoutMs: 1000\n            onExit: { zero: allow, nonzero: block }\n            reason: { nonzero: \"Bad-Token\" }\n",
+        "runtimeContext: required\n",
+      ),
+    );
+    const finding = err.findings.find(
+      (f) => (f as { path: string }).path === "steps.s.gates.GO[0].config.reason.nonzero",
+    );
+    expect(finding).toBeDefined();
+    expect(finding).not.toHaveProperty("code");
+    expect((finding as { message: string }).message).toContain("must match");
+  });
 });
 
 // ── packet ch11-P4: F7 cross-rung ACCUMULATION (dimension 5) ───────────
@@ -662,6 +812,22 @@ describe("ch11-P4 dimension 5 — the F7 accumulation disposition list a/b/b′/
     const paths = gatedPaths(err);
     expect(paths).toContain("steps");
     expect(paths).toContain("runtimeContext"); // A3 accumulates (top-level read)
+    expect(paths).toHaveLength(2);
+  });
+
+  it("(b) steps MISSING ENTIRELY + an illegal runtimeContext: BOTH the ch8 missing-key AND the A3 lane accumulate", () => {
+    // The steps-DEPENDENT admission lanes have no operand (steps absent),
+    // but the steps-INDEPENDENT A3 runtimeContext lane (a top-level read)
+    // still runs — so the ch8 missing-key finding and A3 accumulate in
+    // ONE validate result (suppression stays LOCAL to the broken operand).
+    const err = gatedErr(
+      `ref:\n  id: t\n  version: 1\nstart: s\nterminal:\n  - done\nroles:\n  r: {}\nruntimeContext: "yes"\n`,
+    );
+    expect(err.stage).toBe("validate");
+    const paths = gatedPaths(err);
+    expect(paths).toContain("$"); // the ch8 missing-key finding
+    expect(paths).toContain("runtimeContext"); // A3 accumulates (top-level read)
+    expect(JSON.stringify(err.findings)).toContain("steps"); // the missing key named
     expect(paths).toHaveLength(2);
   });
 
