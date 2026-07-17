@@ -2721,3 +2721,51 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   the boundary: gate 1 five (two real content catches), gate 2
   eight (all built-body test-evidence — the sensitivity pass's
   load again, with the product-gap count falling 2 → 0).
+
+- 2026-07-17 · ch11-P3b post-close analysis (the user's request — the
+  interpretive layer OVER the two record entries above, captured as
+  boundary-review input; the records carry the facts, this carries
+  what they mean). (1) The internal zero-yield is AMBIGUOUS by
+  construction: it cannot distinguish "the prior catch-classes
+  migrated into authoring-time rules" (true — the P3a-born rules
+  visibly shaped the P3b text) from "the internal panel shares the
+  author's blind spots" (also true — same model family, duty lists
+  grown from the same learning history); the ARM is the
+  disambiguator, and its two content catches on close-clean bytes
+  prove the correlated-reviewer ceiling is real. The internal
+  zero therefore RAISES the transitional arms' value rather than
+  arguing retirement: the residual risk now lives entirely in the
+  band only a decorrelated reader reaches. (2) Catch-class
+  taxonomy (what the arm asks that the panel does not): (a)
+  OPERATIONAL SIMULATION — an ordering/side-effect claim verified
+  by walking the live loop's execution, not by text-vs-text
+  consistency (the S5 mixed-pipeline catch); (b) CONJUNCTION
+  SATISFIABILITY — strong claims audited in PAIRS per failure
+  mode, where two individually-clean sentences collide in a
+  failure neither names (the W2 never-throw × C26-durability
+  catch); (c) TYPE-CONSEQUENCE SWEEP over precedent-anchored
+  search — a REQUIRED field on a domain aggregate sweeps literal
+  constructors, not the prior packet's injection-site pattern
+  (the boundary-ripple catch). Candidate lens duties for the
+  boundary verdict: (a)→lens 3/5, (b)→lens 1, (c)→lens 5
+  embedding duty. (3) Gate 2's role is MORPHING, not maturing
+  away: its product-gap needle fell 2→0 (the spec→build bridge
+  tightening) while the green-but-blind needle held 7→8 — that
+  class is execution-undetectable in principle (green tests emit
+  no signal; only adversarial assert-body-vs-row-meaning reading
+  finds it) and scales with the test count, so gate 2 is becoming
+  a specialized sensitivity auditor rather than a general
+  reviewer. (4) The MEASURABLE prediction the boundary review
+  should pre-register: if the (a)/(b)/(c) duties are adopted,
+  gate 1's yield at P4 should FALL — a falling yield validates
+  the catch→rule→internal-detector loop and licenses gradually
+  narrowing the arm; a flat yield is evidence the
+  different-question-generator property is not reducible to
+  listed duties and the arm is load-bearing indefinitely. (5)
+  Build-side candidate: derive the builder's red-on-break
+  mutation-probe list SYSTEMATICALLY from the packet's family
+  inventories (≥1 probe per declared family) instead of ad hoc —
+  P3b's builder ran 3 ad hoc probes, gate 2 still found 8; a
+  derived list would shift part of gate 2's recurring load to
+  build time and make its residual yield the clean measure of
+  the adversarial-reading premium.
