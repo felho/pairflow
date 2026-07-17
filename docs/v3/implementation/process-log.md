@@ -2769,3 +2769,49 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   derived list would shift part of gate 2's recurring load to
   build time and make its residual yield the clean measure of
   the adversarial-reading premium.
+
+- 2026-07-18 · ch11-P4 build-close records · the flagged-approve path ran
+  its full arc: arm gate 1 RECLASSIFIED the Y6 CLI-classification row
+  derived→new-decision (internal-1 proved equally anchor-conform — the
+  entailment-vs-alternative-space lesson), demoting the predicted
+  flag-free approve to the human path; the ratifier's own arm round then
+  rejected the prefix-mapping MECHANISM against the two-load race
+  provenance (the not-found 3-vs-1 split's culture) and drove the
+  eager-pre-check realization (non-authoritative CLI mirror, kernel-S2
+  authority, code-level inner-catch allowlist); arm gate 2 yielded 4
+  test-evidence findings / 0 product (the green-but-blind class holding
+  across packets); the builder STOPPed on a real boundary gap (the
+  absence-consumer fixture) — resolved as a build-round packet
+  correction. Gate-1 yield at P4: 7 findings — the P3b pre-registered
+  falling-yield prediction is NOT yet testable (the candidate (a)/(b)/(c)
+  lens duties were not adopted before P4); the prediction stays
+  registered for the next chapter.
+- 2026-07-18 · ch11 dogfooding checkpoint · RUN, not waived: a
+  hand-authored gated template (threshold round>=2 on review/CONVERGED +
+  the round declaration) driven through the shipped CLI end-to-end —
+  validate ok; the gate BLOCKED at round 1 (rejected/gate_blocked/
+  round_below_min, exit 3, round not burned); pass-back advanced the
+  round; CONVERGED allowed at round 2 → DONE; detail/timeline carry
+  round 2 + the retained allow decision; the required-runtimeContext
+  start fails eagerly usage/2 with a clear message (the F1 decision
+  live); a float-form threshold in a file yields a precise source-form
+  finding. ONE observation → routed later-chapter (a ch9 map-row
+  watchpoint): the gate-block Rejected surface names only the REASON,
+  not the blocking gate's `uses` — a multi-gate operator cannot tell
+  which gate blocked.
+- 2026-07-18 · ch11 boundary review held · four verdicts: (1) the NUL-byte
+  incident → GATE — `v3/src/drift/sourceHygiene.test.ts` (no raw control
+  bytes in source files), which on its FIRST run caught a SECOND live
+  instance (`storeCheckers.ts`'s idempotency composite key, re-escaped
+  the same day) — the gate class validated instantly; (2) the
+  instrument-divergence lesson → RULE R-INSTRUMENT-PROBE (instrument-
+  robust sweep receipts; site lists over counts; divergent environments
+  re-measure); (3) the absence-consumer blind spot → RULE
+  R-ABSENCE-CONSUMERS (state-flipping fixtures sweep their CONSUMERS by
+  name); (4) the map-extension mechanism (first exercise, §11.5's
+  mandated verdict) → VALIDATED, with one minted duty (the extension act
+  updates the "Chapters present" header — found stale at this close).
+  The stale-header fix, the ch9 observability watchpoint, and the P3b
+  interpretive-layer candidates (arm catch-class lens duties; the
+  derived mutation-probe list) recorded; the latter two candidates go to
+  the user's process-revision decision.

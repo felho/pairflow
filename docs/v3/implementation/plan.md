@@ -102,7 +102,7 @@ convention is itself a chapter-1 rule.
 | 7 | Kernel diagnostics & structured logging: the named non-authoritative diagnostic channel's concrete form | PI-4 | realized |
 | 8 | Template file-format spec: the canonical authoring format; **migrates MD-1** | PI-5 | realized |
 | 11 | **Gate core** (appended chapter, build order: BEFORE ch 9 — §11): the L1 authority slice, the L2 gate pipeline + inline evaluators (the ch-4 provisional `round` aligned to its L2 contract), the L2a process-gate contract (kernel side — the spawn is ch 9's), a minimal runtime-context representation, the format's gate-declaration surface (§8.2 stance) | — (map-extension, §8.1) | realized |
-| 9 | Runner MVP: local worktree provider, one real actor adapter, process-gate runner, attach channel (tmux observe/takeover); sub-decision: local-worktree only vs headless/cloud | PI-8 | planned(ch 9) |
+| 9 | Runner MVP: local worktree provider, one real actor adapter, process-gate runner, attach channel (tmux observe/takeover); sub-decision: local-worktree only vs headless/cloud; watchpoint (proposed at the ch11 close dogfooding, 2026-07-18 — disposition at this chapter's ratification): the gate-block Rejected surface names only the REASON (`gate_blocked`/`round_below_min`), not the blocking gate's `uses` — a multi-gate operator cannot tell WHICH gate blocked; an additive observability candidate (model-plane touch: the Rejected outcome's field list) | PI-8 | planned(ch 9) |
 | 10 | Operator recourse card: one page (query via the floor, cancel, deleteRequested; no watchdog/retry until L9) | PI-9 | planned(ch 10) |
 
 **Predicted-class convention (process-v2, added at the Phase-1 flip;
@@ -156,6 +156,13 @@ semantics and its format keys (`context_blocks` catalog,
 `context_block_refs`, interpreted `prompt_concern_refs`) land
 together in their own appended chapter, naturally after ch 9 when a
 real actor adapter consumes dispatched packets.
+**Close verdict (the ch11 boundary, 2026-07-18 — §11.5's
+first-exercise verdict): VALIDATED** — the appended chapter ran the
+standard rails end-to-end (own ratification; contract-draft lifecycle
+incl. one sanctioned reopen; seven packets with two in-chapter
+splits; the standard DoD close). One minted duty: the extension act
+ALSO updates this header's "Chapters present" range (the ch8/ch11
+insertions left it stale — caught and fixed at the ch11 close).
 
 **Ordering note (walking-skeleton-first, README §3.4).** Chapter 3 before
 chapter 4 does not contradict the principle: ch 3 is the constraint-sink /
