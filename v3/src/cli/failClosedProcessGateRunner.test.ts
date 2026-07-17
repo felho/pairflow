@@ -6,12 +6,24 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { classifyProcessResult } from "../kernel/processGate.js";
 import type { EffectiveProcessConfig } from "../domain/index.js";
+import type { ProcessGateEvidence } from "../ports/index.js";
 import {
   createFailClosedProcessGateRunner,
   deriveProcessEvidenceDbPath,
   FAIL_CLOSED_GIT_STATUS_HASH,
   FAIL_CLOSED_HEAD_SHA,
+  FAIL_CLOSED_UNAVAILABLE_LOG,
 } from "./failClosedProcessGateRunner.js";
+
+/** The COMPLETE C26 record the fail-closed slot mints — exact field set, no
+ * extras (the deep-equality drive surface for both run-time and re-open). */
+const EXPECTED_RECORD: ProcessGateEvidence = {
+  log: FAIL_CLOSED_UNAVAILABLE_LOG,
+  kind: "runner_error",
+  durationMs: 0,
+  headSha: FAIL_CLOSED_HEAD_SHA,
+  gitStatusHash: FAIL_CLOSED_GIT_STATUS_HASH,
+};
 
 /**
  * The fail-closed composition slot (packet ch11-P3b, W2): never spawns, never
@@ -38,12 +50,9 @@ describe("failClosedProcessGateRunner — the W2 durable slot", () => {
     const result = await runner.run("cmd", OPTS);
     expect(result.kind).toBe("runner_error");
     expect(result.durationMs).toBe(0);
-    const record = runner.resolve(result.logRef);
-    expect(record?.kind).toBe("runner_error");
-    expect(record?.durationMs).toBe(0);
-    expect(record?.headSha).toBe(FAIL_CLOSED_HEAD_SHA);
-    expect(record?.gitStatusHash).toBe(FAIL_CLOSED_GIT_STATUS_HASH);
-    expect(record?.log).toContain("unavailable");
+    // The WHOLE record deep-equals the expected C26 shape — exact field set, no
+    // extras (a stray or renamed field turns this red).
+    expect(runner.resolve(result.logRef)).toEqual(EXPECTED_RECORD);
     runner.close();
   });
 
@@ -75,8 +84,9 @@ describe("failClosedProcessGateRunner — the W2 durable slot", () => {
     first.close();
 
     const second = createFailClosedProcessGateRunner(evidencePath);
-    const record = second.resolve(result.logRef);
-    expect(record?.kind).toBe("runner_error");
+    // The REOPENED record deep-equals the ORIGINAL whole record (not just kind)
+    // — durability is faithful across the process boundary, field-for-field.
+    expect(second.resolve(result.logRef)).toEqual(EXPECTED_RECORD);
     second.close();
   });
 

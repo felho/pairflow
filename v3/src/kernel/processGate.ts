@@ -175,6 +175,19 @@ function tryParseGateDecision(stdout: string): GateDecision | null {
   } catch {
     return null; // unparseable text / trailing content
   }
+  return validateGateDecisionObject(root);
+}
+
+/**
+ * The M2 schema/own-property validation over a PARSED root (split out of
+ * `tryParseGateDecision` so the own-property discipline is drivable directly:
+ * `JSON.parse` always mints own properties, so a prototype-polluted parsed
+ * object can only reach this helper through the direct channel — a probe that
+ * turns red the instant an own-property read is replaced by an inherited one).
+ * ALL member reads are own-property (G8): an inherited/`__proto__` member is
+ * never decision data.
+ */
+export function validateGateDecisionObject(root: unknown): GateDecision | null {
   if (typeof root !== "object" || root === null || Array.isArray(root)) {
     return null; // non-object root (scalar, list, null)
   }

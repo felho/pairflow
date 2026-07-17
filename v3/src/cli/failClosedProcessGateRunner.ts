@@ -30,7 +30,7 @@ import type { ProcessGateEvidence, ProcessGateRunner, ProcessResult } from "../p
 export const FAIL_CLOSED_HEAD_SHA = "unavailable-no-runner";
 export const FAIL_CLOSED_GIT_STATUS_HASH = "unavailable-no-runner";
 
-const UNAVAILABLE_LOG =
+export const FAIL_CLOSED_UNAVAILABLE_LOG =
   "process gate runner unavailable: no spawn capability is wired at this composition root (fail-closed; the real runner ships at ch9)";
 
 /** A textual-derivation sibling beside the store DB (the C1 / `deriveDiagDbPath`
@@ -58,7 +58,7 @@ export function createFailClosedProcessGateRunner(path: string): FailClosedProce
     run(): Promise<ProcessResult> {
       const logRef = randomUUID();
       const record: ProcessGateEvidence = {
-        log: UNAVAILABLE_LOG,
+        log: FAIL_CLOSED_UNAVAILABLE_LOG,
         kind: "runner_error",
         durationMs: 0,
         headSha: FAIL_CLOSED_HEAD_SHA,

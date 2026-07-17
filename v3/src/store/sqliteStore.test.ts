@@ -415,22 +415,25 @@ describe("schema → v4 — THE ch11-P3b fenced wipe (packet ch11-P3b, S4, ADR-0
 });
 
 describe("runtime_context — the nullable instance column (packet ch11-P3b, S4)", () => {
-  it("null runtimeContext round-trips as NULL across every instance read surface", async () => {
+  it("null runtimeContext: the WHOLE instance round-trips deep-equal across every read surface", async () => {
     const handle = openStore(":memory:", createControlledClock(0));
-    await handle.store.createInstance({ ...instance, runtimeContext: null });
-    expect((await handle.store.loadInstance("inst-1"))?.runtimeContext).toBeNull();
-    expect((await handle.store.listInstances())[0]?.runtimeContext).toBeNull();
-    expect((await handle.store.getInstanceDetail("inst-1"))?.instance.runtimeContext).toBeNull();
+    const created: WorkflowInstance = { ...instance, runtimeContext: null };
+    await handle.store.createInstance(created);
+    // FULL deep-equality (not just the runtimeContext field): the whole read
+    // value equals the created value on ALL THREE reads — a mapper divergence
+    // in ANY field turns this red.
+    expect(await handle.store.loadInstance("inst-1")).toEqual(created);
+    expect((await handle.store.listInstances())[0]).toEqual(created);
+    expect((await handle.store.getInstanceDetail("inst-1"))?.instance).toEqual(created);
   });
 
-  it("a ready ref round-trips as its EXACT string across every instance read surface", async () => {
+  it("a ready ref: the WHOLE instance round-trips deep-equal across every read surface", async () => {
     const handle = openStore(":memory:", createControlledClock(0));
-    await handle.store.createInstance({ ...instance, runtimeContext: "/ws/abc-123" });
-    expect((await handle.store.loadInstance("inst-1"))?.runtimeContext).toBe("/ws/abc-123");
-    expect((await handle.store.listInstances())[0]?.runtimeContext).toBe("/ws/abc-123");
-    expect((await handle.store.getInstanceDetail("inst-1"))?.instance.runtimeContext).toBe(
-      "/ws/abc-123",
-    );
+    const created: WorkflowInstance = { ...instance, runtimeContext: "/ws/abc-123" };
+    await handle.store.createInstance(created);
+    expect(await handle.store.loadInstance("inst-1")).toEqual(created);
+    expect((await handle.store.listInstances())[0]).toEqual(created);
+    expect((await handle.store.getInstanceDetail("inst-1"))?.instance).toEqual(created);
   });
 });
 

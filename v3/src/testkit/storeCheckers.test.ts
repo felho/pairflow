@@ -255,9 +255,40 @@ describe("checkEvidenceResolution — the store-visible evidence half (packet ch
     expect(violations[0]).toContain("ev-x");
   });
 
-  it("refs PRESENT with NO seam provided is a violation (fail-closed, never a skip)", () => {
+  it("refs PRESENT with NO seam provided is a violation naming the missing seam AND the ref", () => {
     const detail = { instance: {} as WorkflowInstance, transcript: [rowWithRefs(1, ["ev-1"])] };
-    expect(checkEvidenceResolution(detail)).toHaveLength(1);
+    const violations = checkEvidenceResolution(detail);
+    expect(violations).toHaveLength(1);
+    // The CONTENT, not just the length: the violation names the missing seam
+    // and the affected ref (a message that dropped either turns this red).
+    expect(violations[0]).toContain("ev-1");
+    expect(violations[0]).toContain("seam");
+  });
+
+  it("a LATER ref on a LATER decision that does NOT resolve is caught (every-decision-every-ref universality)", () => {
+    // A first-ref-only checker would pass this — the non-resolving ref is the
+    // SECOND ref of the SECOND decision on the SECOND row; everything before it
+    // resolves, so only a checker that walks every decision × every ref is red.
+    const laterDecisionRow: TranscriptEntry = {
+      seq: 2,
+      envelope: envelope("op-2", "CONVERGED"),
+      payloadDigest: "d-2",
+      gateDecisions: [
+        { uses: "external.process", verdict: "allow", evidenceRefs: ["ok-2"] },
+        { uses: "external.process", verdict: "warn", evidenceRefs: ["ok-3", "bad-ref"] },
+      ],
+      committedAt: 1_002,
+    };
+    const detail = {
+      instance: {} as WorkflowInstance,
+      transcript: [rowWithRefs(1, ["ok-1"]), laterDecisionRow],
+    };
+    const resolves = new Set(["ok-1", "ok-2", "ok-3"]);
+    const seam = (ref: string): ProcessGateEvidence | undefined =>
+      resolves.has(ref) ? fakeRecord : undefined;
+    const violations = checkEvidenceResolution(detail, seam);
+    expect(violations).toHaveLength(1);
+    expect(violations[0]).toContain("bad-ref");
   });
 
   it("a ref-FREE detail with no seam is clean (every pre-l2a trace passes unchanged)", () => {

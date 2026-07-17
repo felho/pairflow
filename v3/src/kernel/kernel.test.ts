@@ -17,6 +17,7 @@ import type { DefinitionStore } from "../ports/definition.js";
 import type {
   DiagnosticsSink,
   GateCatalog,
+  GateInvocationProjection,
   GateRegistration,
   InlineGateRegistration,
   ProcessGateRegistration,
@@ -740,6 +741,56 @@ const jsonEffective: EffectiveProcessConfig = {
 /** A ready-ref review instance — the process arm's happy operand state. */
 const READY_REF = "/ws/inst-1";
 const reviewInstanceReady: WorkflowInstance = { ...reviewInstance, runtimeContext: READY_REF };
+
+/**
+ * Seed inst-1 as a ready review instance whose committed transcript carries a
+ * MULTI-ENTRY `implement ↔ review` PASS path — so the derived gate projection's
+ * `history` is non-empty AND ordered:
+ *   [{implement,PASS,implementer}, {review,PASS,reviewer}, {implement,PASS,implementer}]
+ * The three alternating PASS commits leave the instance back at `review`,
+ * version 4 (round stays 1 — the gated-review template declares no advance),
+ * a state consistent with the replay. Used by the wire-content lanes so a
+ * history CONTENT **or ORDERING** regression can turn red (positions 0 and 1
+ * carry distinct step/role, so any reordering that touches them is caught; a
+ * single-entry history — a palindrome — would be blind to ordering).
+ */
+async function seedReviewWithHistory(store: StorePort): Promise<void> {
+  await store.createInstance({ ...baseInstance, runtimeContext: READY_REF });
+  // The alternating path: implement→review→implement→review (PASS each), so the
+  // committed replay is well-formed and lands at review.
+  const path: readonly [string, string][] = [
+    ["seed-1", "review"],
+    ["seed-2", "implement"],
+    ["seed-3", "review"],
+  ];
+  let version = 1;
+  for (const [opId, newCurrentStep] of path) {
+    const role = newCurrentStep === "review" ? "implementer" : "reviewer";
+    const actorId = newCurrentStep === "review" ? "codex" : "claude";
+    const seeded = await store.commitTransition({
+      instanceId: "inst-1",
+      expectedVersion: version,
+      envelope: {
+        instanceId: "inst-1",
+        opId,
+        type: "PASS",
+        actorId,
+        expectedVersion: version,
+        expectedRole: role,
+        payload: { ref: "d" },
+      },
+      payloadDigest: `seed-digest-${opId}`,
+      gateDecisions: [],
+      newCurrentStep,
+      newRound: 1,
+      newStatus: "RUNNING",
+    });
+    if (seeded.kind !== "committed") {
+      throw new Error(`history seed failed at ${opId}: ${seeded.kind}`);
+    }
+    version += 1;
+  }
+}
 
 /** An ok ProcessResult with the given exit code + stdout. */
 function okResult(exitCode: number, logRef: string, stdout = ""): ProcessResult {
@@ -1582,6 +1633,98 @@ describe("gate rung — the six-outcome family end-to-end (M1, full-decision equ
   });
 });
 
+describe("gate rung — E2 confinement: hostile opaque values retained VERBATIM end-to-end", () => {
+  // The confinement roster (E2): the runtimeContext ref (kernel-opaque, cwd-only)
+  // and the process-returned reason/message/evidence_refs (untrusted-confined)
+  // are NEVER trimmed / normalized / canonicalized — any such regression is red.
+  async function runProcessWithCtx(
+    effective: EffectiveProcessConfig,
+    result: ProcessResult,
+    runtimeContextRef: string,
+  ): Promise<{
+    outcome: Outcome;
+    runner: ReturnType<typeof createScriptedProcessGateRunner>;
+    store: StorePort;
+  }> {
+    const cat = catalogOf({ "g.proc": processRegWith(effective) });
+    const runner = createScriptedProcessGateRunner([result]);
+    const handle = openStore(":memory:", createControlledClock(0));
+    await handle.store.createInstance({ ...reviewInstance, runtimeContext: runtimeContextRef });
+    const { kernel } = await setupGatedReview({
+      pipeline: [{ uses: "g.proc" }],
+      admitCatalog: cat,
+      kernelCatalog: cat,
+      store: handle.store,
+      processRunner: runner,
+      runtimeContext: "required",
+    });
+    const outcome = await kernel.handle(reviewEmit("e2", "CONVERGED", 1));
+    return { outcome, runner, store: handle.store };
+  }
+
+  it("a runtimeContext ref with leading/trailing whitespace + path-like content reaches cwd VERBATIM", async () => {
+    const hostile = "  ../x  ";
+    const { runner } = await runProcessWithCtx(exitCodeEffective, okResult(0, "e0"), hostile);
+    // Exact — untrimmed, un-normalized, un-canonicalized.
+    expect(runner.calls[0]?.cwd).toBe(hostile);
+  });
+
+  it("a second path-like ref ('/ws/../etc') also reaches cwd verbatim (no path canonicalization)", async () => {
+    const hostile = "/ws/../etc";
+    const { runner } = await runProcessWithCtx(exitCodeEffective, okResult(0, "e0b"), hostile);
+    expect(runner.calls[0]?.cwd).toBe(hostile);
+  });
+
+  it("an ALLOW decision's hostile reason/message/evidence_refs are RETAINED verbatim on the committed entry", async () => {
+    const hostileReason = "  ../reason  ";
+    const hostileMessage = "  /ws/../etc message  ";
+    const hostileRefs = ["  ../ref-a  ", "/ws/../ref-b"];
+    const stdout = JSON.stringify({
+      verdict: "allow",
+      reason: hostileReason,
+      message: hostileMessage,
+      evidence_refs: hostileRefs,
+    });
+    const { outcome, store } = await runProcessWithCtx(
+      jsonEffective,
+      okResult(0, "log-ref", stdout),
+      READY_REF,
+    );
+    expect(outcome.kind).toBe("committed");
+    const detail = await store.getInstanceDetail("inst-1");
+    expect(detail?.transcript[0]?.gateDecisions).toEqual([
+      {
+        uses: "g.proc",
+        verdict: "allow",
+        reason: hostileReason,
+        message: hostileMessage,
+        evidenceRefs: [...hostileRefs, "log-ref"],
+      },
+    ]);
+  });
+
+  it("a BLOCK decision's hostile reason + evidence_refs surface verbatim on the Rejected outcome", async () => {
+    const hostileReason = "  ../blocked  ";
+    const hostileRefs = ["  /ws/../evidence  "];
+    const stdout = JSON.stringify({
+      verdict: "block",
+      reason: hostileReason,
+      evidence_refs: hostileRefs,
+    });
+    const { outcome } = await runProcessWithCtx(
+      jsonEffective,
+      okResult(0, "log-blk", stdout),
+      READY_REF,
+    );
+    expect(outcome).toEqual({
+      kind: "rejected",
+      reason: "gate_blocked",
+      gateReason: hostileReason,
+      evidenceRefs: [...hostileRefs, "log-blk"],
+    });
+  });
+});
+
 describe("gate rung — process ordering + one-snapshot (X2, dimension 8)", () => {
   it("inline block BEFORE a process gate → the runner is NEVER called and NO record exists", async () => {
     const cat = catalogOf({
@@ -1627,7 +1770,7 @@ describe("gate rung — process ordering + one-snapshot (X2, dimension 8)", () =
   });
 
   it("one-snapshot: the wire projection DEEP-EQUALS the inline evaluator's input in a mixed pipeline", async () => {
-    let seenProjection: unknown;
+    let seenProjection: GateProjection | undefined;
     const cat = catalogOf({
       "g.allow": scriptedInline("g.allow", [], (projection) => {
         seenProjection = projection;
@@ -1637,7 +1780,9 @@ describe("gate rung — process ordering + one-snapshot (X2, dimension 8)", () =
     });
     const runner = createScriptedProcessGateRunner([okResult(0, "e0")]);
     const handle = openStore(":memory:", createControlledClock(0));
-    await handle.store.createInstance(reviewInstanceReady);
+    // NON-EMPTY committed history (implement→review PASS) so a history-content
+    // or ordering regression in the shared snapshot turns red.
+    await seedReviewWithHistory(handle.store);
     let reads = 0;
     const counting: StorePort = {
       ...handle.store,
@@ -1654,25 +1799,41 @@ describe("gate rung — process ordering + one-snapshot (X2, dimension 8)", () =
       processRunner: runner,
       runtimeContext: "required",
     });
-    expect((await kernel.handle(reviewEmit("o3", "CONVERGED", 1))).kind).toBe("committed");
+    expect((await kernel.handle(reviewEmit("o3", "CONVERGED", 4))).kind).toBe("committed");
     expect(reads).toBe(1); // ONE shared snapshot
-    // The recorded stdin's projection is the snake_case rename of the SAME
-    // domain projection the inline evaluator received.
+    // The inline evaluator's input carries the MULTI-ENTRY history — the whole
+    // snapshot, order included.
+    const seen = seenProjection;
+    expect(seen?.history).toEqual([
+      { stepId: "implement", eventType: "PASS", role: "implementer" },
+      { stepId: "review", eventType: "PASS", role: "reviewer" },
+      { stepId: "implement", eventType: "PASS", role: "implementer" },
+    ]);
+    // The recorded stdin's projection is the pure snake_case rename of that SAME
+    // domain projection — deep-equal as a whole (a per-field drift OR a history
+    // reordering turns this red).
     const wire = JSON.parse(runner.calls[0]?.stdin ?? "{}") as {
-      projection: { round: number; current_step: string; event_type: string; history: unknown[] };
+      projection: GateInvocationProjection;
     };
-    const seen = seenProjection as { round: number; currentStep: string; eventType: string; history: unknown[] };
-    expect(wire.projection.round).toBe(seen.round);
-    expect(wire.projection.current_step).toBe(seen.currentStep);
-    expect(wire.projection.event_type).toBe(seen.eventType);
-    expect(wire.projection.history).toEqual(seen.history);
+    expect(wire.projection).toEqual({
+      round: seen?.round,
+      current_step: seen?.currentStep,
+      event_type: seen?.eventType,
+      history: (seen?.history ?? []).map((entry) => ({
+        step_id: entry.stepId,
+        event_type: entry.eventType,
+        role: entry.role,
+      })),
+    });
   });
 
-  it("EXACTLY ONE runner call per binding per attempt; the wire keyset + config verbatim (X3)", async () => {
+  it("EXACTLY ONE runner call per binding per attempt; the FULL invocation document (X3/X4 deep-equal)", async () => {
     const cat = catalogOf({ "g.proc": processRegWith(exitCodeEffective) });
     const runner = createScriptedProcessGateRunner([okResult(0, "e0")]);
     const handle = openStore(":memory:", createControlledClock(0));
-    await handle.store.createInstance(reviewInstanceReady);
+    // Seed a committed implement→review PASS so the projection history is
+    // NON-EMPTY (the instance is now at review, version 2).
+    await seedReviewWithHistory(handle.store);
     const { kernel } = await setupGatedReview({
       pipeline: [{ uses: "g.proc" }],
       admitCatalog: cat,
@@ -1681,28 +1842,36 @@ describe("gate rung — process ordering + one-snapshot (X2, dimension 8)", () =
       processRunner: runner,
       runtimeContext: "required",
     });
-    await kernel.handle(reviewEmit("x1", "CONVERGED", 1));
+    await kernel.handle(reviewEmit("x1", "CONVERGED", 4));
     expect(runner.calls).toHaveLength(1);
     const call = runner.calls[0];
     expect(call?.command).toBe("run the checks");
     expect(call?.cwd).toBe(READY_REF);
     expect(call?.timeoutMs).toBe(1000);
-    const invocation = JSON.parse(call?.stdin ?? "{}") as Record<string, unknown>;
-    expect(Object.keys(invocation).sort()).toEqual([
-      "config",
-      "event_type",
-      "expected_version",
-      "instance_id",
-      "projection",
-      "step_id",
-      "template_ref",
-    ]);
-    expect(invocation["instance_id"]).toBe("inst-1");
-    expect(invocation["step_id"]).toBe("review");
-    expect(invocation["event_type"]).toBe("CONVERGED");
-    expect(invocation["expected_version"]).toBe(1);
-    // wire ≡ effective: the config rides with its own camelCase keys, verbatim.
-    expect(invocation["config"]).toEqual(exitCodeEffective);
+    // FULL-document equality: parse the recorded stdin and deep-equal the ENTIRE
+    // GateInvocation — `template_ref` and the COMPLETE projection (a MULTI-ENTRY
+    // `history` whose entry `step_id`/`event_type`/`role` AND order are pinned)
+    // included — so a keyset, config-verbatim, template_ref, or history-content/
+    // ordering regression each turns red.
+    const invocation = JSON.parse(call?.stdin ?? "{}") as unknown;
+    expect(invocation).toEqual({
+      instance_id: "inst-1",
+      template_ref: { id: "local-pair-v0", version: 1 },
+      step_id: "review",
+      event_type: "CONVERGED",
+      expected_version: 4,
+      config: exitCodeEffective,
+      projection: {
+        round: 1,
+        current_step: "review",
+        event_type: "CONVERGED",
+        history: [
+          { step_id: "implement", event_type: "PASS", role: "implementer" },
+          { step_id: "review", event_type: "PASS", role: "reviewer" },
+          { step_id: "implement", event_type: "PASS", role: "implementer" },
+        ],
+      },
+    });
   });
 
   it("a THROWING runner → internal_failure path (rethrown, no commit, no state) — dimension 13", async () => {

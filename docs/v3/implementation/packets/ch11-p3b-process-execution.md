@@ -887,13 +887,37 @@ later probes switched to copy-backup reverts) — a candidate
 process-log line for the boundary review. No deviations from the
 packet.
 
+Arm gate 2 (the build-close implementation review, pin-conform
+gpt-5.6-sol/high/never, byte guards clean, index-clean tree): REFINE
+citing `f5f7cee1` with EIGHT findings — ALL test-evidence class,
+zero product gaps (the mandatory sensitivity pass finding the
+green-but-blind classes in the BUILT bodies under correct packet
+lane texts, the P3a pattern repeated): the X3/X4 wire evidence made
+FULL-document deep-equality over a multi-entry ordered history; the
+compile-negative family completed (the REQUIRED `runtimeContext`
+field's widening probes + the wire types' exact-keyset probes); S4
+full-instance equality on all three reads; the W2 record's
+whole-record equality at run AND across the re-open; the M1
+bucket × verdict grid's three missing members (zero→warn,
+zero→block, nonzero→allow); a REAL prototype-pollution G8 fixture
+(the JSON-key `__proto__` form was own-key-blind; the schema helper
+exported for direct drive); the T2 checker's violation-content
+assert + the every-decision-every-ref multi-fixture; hostile
+whitespace/path-like confinement fixtures end-to-end. All eight
+folded in one aftermath round: **907 → 917 tests** (+10; two
+export-only production touches, each demanded by its finding; the
+aftermath commit carries packet + code + tests per the §4
+choreography; boundary unchanged — every touched file already
+declared). Bridges re-verified green (orchestrator-rerun):
+typecheck 0 · lint 0 · the v3 suite 917/917 · packet-lint 0/0.
+
 ```json
 {
   "packet_metrics": {
     "class": "kernel-semantic",
     "prediction": { "predicted": "projection", "reasoning": "inherited from the P3 row through the ratified findings-round split; the draft (ratified 2026-07-12) decided every open point of the execution contract — the packet projects C9/C13–C17/C23–C27/C31–C33/C36's execution-side shares plus the four activation units", "discovered": "projection" },
     "provenance": { "anchored": 14, "derived": 7, "new_decision": 1 },
-    "rounds": { "review": 1, "doc_refinement": 0, "implementation": 1 },
+    "rounds": { "review": 1, "doc_refinement": 0, "implementation": 2 },
     "stops": [
       { "type": "4:flagged-approve", "what": "one new-decision row rode as flag F1 — S3, the surplus-ref start lane (context-free template + supplied ready ref)", "resolution": "the ratifier approved 2026-07-17: THROW ratified (the declaration is the single truth source; a dropped ref hides a wiring bug; pre-state failure, clean retry; the startOverrides ignore-precedent does not transfer), with the 66 KB size advisory accepted-with-note in the same act" }
     ],

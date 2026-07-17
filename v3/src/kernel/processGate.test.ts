@@ -1,8 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import type { EffectiveProcessConfig, GateDecision } from "../domain/index.js";
-import type { ProcessResult } from "../ports/index.js";
-import { classifyProcessResult, runnerOutcome } from "./processGate.js";
+import type { EffectiveProcessConfig, GateDecision, WorkflowInstance } from "../domain/index.js";
+import type {
+  GateInvocation,
+  GateInvocationHistoryEntry,
+  GateInvocationProjection,
+  ProcessResult,
+} from "../ports/index.js";
+import { classifyProcessResult, runnerOutcome, validateGateDecisionObject } from "./processGate.js";
 
 /**
  * The classification units at the TS grain (packet ch11-P3b, M1/M2/M3/E1):
@@ -60,6 +65,48 @@ describe("classifyProcessResult — the kind × mode grid (M1)", () => {
       verdict: "block",
       reason: "test_failed",
       evidenceRefs: ["e1"],
+    });
+  });
+
+  // The full bucket × verdict grid: every bucket must reach every verdict per
+  // its authored `onExit` mapping, so a bucket→verdict MISMAPPING turns red
+  // (full-decision equality per member — not verdict-only spot checks).
+  it("ok/exitCode zero bucket → WARN when onExit.zero = warn", () => {
+    const cfg: EffectiveProcessConfig = {
+      ...exitCode,
+      onExit: { zero: "warn", nonzero: "block" },
+      reason: { zero: "flaky_ok", nonzero: "test_failed" },
+    };
+    expect(classifyProcessResult(ok(0, "", "z"), cfg)).toEqual({
+      verdict: "warn",
+      reason: "flaky_ok",
+      evidenceRefs: ["z"],
+    });
+  });
+
+  it("ok/exitCode zero bucket → BLOCK when onExit.zero = block", () => {
+    const cfg: EffectiveProcessConfig = {
+      ...exitCode,
+      onExit: { zero: "block", nonzero: "allow" },
+      reason: { zero: "zero_blocks", nonzero: "nonzero_ok" },
+    };
+    expect(classifyProcessResult(ok(0, "", "z"), cfg)).toEqual({
+      verdict: "block",
+      reason: "zero_blocks",
+      evidenceRefs: ["z"],
+    });
+  });
+
+  it("ok/exitCode nonzero bucket → ALLOW when onExit.nonzero = allow", () => {
+    const cfg: EffectiveProcessConfig = {
+      ...exitCode,
+      onExit: { zero: "block", nonzero: "allow" },
+      reason: { zero: "zero_blocks", nonzero: "nonzero_ok" },
+    };
+    expect(classifyProcessResult(ok(7, "", "n"), cfg)).toEqual({
+      verdict: "allow",
+      reason: "nonzero_ok",
+      evidenceRefs: ["n"],
     });
   });
 });
@@ -153,6 +200,30 @@ describe("classifyProcessResult — the M2 malformed inventory (gateDecisionJson
       evidenceRefs: ["m"],
     });
   });
+
+  it("own-property discipline (G8): verdict carried ONLY on the PROTOTYPE is rejected", () => {
+    // `JSON.parse` always mints own properties, so a real prototype-pollution
+    // object can only reach the schema validator through the direct channel.
+    // Here `verdict` lives on the PROTOTYPE and only `reason` is an OWN field:
+    // the own-property reads must NOT see the inherited `verdict`, so the object
+    // is missing `verdict` and rejects. If an `ownGet` were regressed to a plain
+    // `record[key]` (inherited) read, it would surface {verdict:"allow"} and
+    // this assertion would flip — the test is red on exactly that regression.
+    const polluted = Object.create({ verdict: "allow" }) as Record<string, unknown>;
+    Object.defineProperty(polluted, "reason", {
+      value: "r",
+      enumerable: true,
+      writable: true,
+      configurable: true,
+    });
+    expect(validateGateDecisionObject(polluted)).toBeNull();
+  });
+
+  it("own-property discipline (G8): an OWN valid document still parses through the direct validator", () => {
+    // The positive control — the helper itself accepts a well-formed OWN object.
+    const own = { verdict: "allow", reason: "r" };
+    expect(validateGateDecisionObject(own)).toEqual({ verdict: "allow", reason: "r" });
+  });
 });
 
 describe("evidence propagation (E1) — append-iff-absent, both directions", () => {
@@ -199,3 +270,72 @@ describe("runner_outcome (M3)", () => {
     expect(true).toBe(true);
   });
 });
+
+// ── Compile-negative probes (packet ch11-P3b, dimension 11): validated by
+// v3:typecheck via TS2578 on an unused @ts-expect-error if a type ever widens.
+// Exported so the unused-variable lint treats them as consumed. ─────────────
+
+// (a) WorkflowInstance.runtimeContext is REQUIRED string | null.
+const __instanceNoRuntimeContext: Omit<WorkflowInstance, "runtimeContext"> = {
+  instanceId: "i",
+  templateRef: { id: "t", version: 1 },
+  task: "x",
+  binding: { implementer: "codex", reviewer: "claude" },
+  currentStep: "s",
+  round: 1,
+  status: "RUNNING",
+  version: 1,
+};
+
+// @ts-expect-error runtimeContext is REQUIRED — a literal WITHOUT the field is rejected.
+export const __probeInstanceMissingRuntimeContext: WorkflowInstance = {
+  ...__instanceNoRuntimeContext,
+};
+
+export const __probeInstanceBadRuntimeContext: WorkflowInstance = {
+  ...__instanceNoRuntimeContext,
+  // @ts-expect-error runtimeContext is `string | null` — a non-string/non-null value is rejected.
+  runtimeContext: 5,
+};
+
+// (b) GateInvocation + the wire projection/history types carry EXACT keysets.
+const __invocationBase: GateInvocation = {
+  instance_id: "i",
+  template_ref: { id: "t", version: 1 },
+  step_id: "s",
+  event_type: "E",
+  expected_version: 1,
+  config: {},
+  projection: { round: 1, current_step: "s", event_type: "E", history: [] },
+};
+
+export const __probeInvocationExtraKey: GateInvocation = {
+  ...__invocationBase,
+  // @ts-expect-error GateInvocation has an EXACT keyset — an unknown key is rejected.
+  surprise: 1,
+};
+
+// @ts-expect-error GateInvocation requires `step_id` — omitting a required key is rejected.
+export const __probeInvocationMissingKey: GateInvocation = {
+  instance_id: "i",
+  template_ref: { id: "t", version: 1 },
+  event_type: "E",
+  expected_version: 1,
+  config: {},
+  projection: { round: 1, current_step: "s", event_type: "E", history: [] },
+};
+
+export const __probeHistoryEntryExtraKey: GateInvocationHistoryEntry = {
+  step_id: "s",
+  event_type: "E",
+  role: "r",
+  // @ts-expect-error the wire history-entry keyset is EXACT — an unknown key is rejected.
+  extra: 1,
+};
+
+// @ts-expect-error the wire projection requires `history` — omitting a required key is rejected.
+export const __probeProjectionMissingHistory: GateInvocationProjection = {
+  round: 1,
+  current_step: "s",
+  event_type: "E",
+};
