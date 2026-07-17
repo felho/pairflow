@@ -113,6 +113,13 @@ Probe + contested-probe corollary; the strong-word inventories)*
    until re-measured: the saturated cut is itself the overflow
    signal. Scope: the canonical rows' completeness claims (cheap
    greps), not every measurement.
+6. **Conjunction satisfiability (adopted at the ch11 boundary,
+   2026-07-18 — the arm catch-class (b)):** strong claims are audited
+   in PAIRS per failure mode — two individually-clean sentences can
+   collide in a failure NEITHER names (the P3b catch: a "never
+   throws" slot × a durability guarantee met exactly where
+   persistence fails). For each pair of strong-word claims sharing a
+   seam, ask what happens when both must bind at once.
 
 **Lens 2 — projection / delegation closure** *(owns: the content
 floor; the derived-row entailment attack; draft→packet semantic
@@ -214,6 +221,13 @@ sweep)*
    the fix is a FORM choice, never content invention; a completeness
    finding against a CONFORMING claim must name which closure fails
    (stale measurement / wrong membership rule / wrong exclusion).
+8. **Operational simulation (adopted at the ch11 boundary,
+   2026-07-18 — the arm catch-class (a)):** an ordering/side-effect
+   claim is verified by WALKING the live execution order (which call
+   fires before which; what state exists at each point; what a
+   mid-flight change does), never by text-vs-text consistency — the
+   P3b mixed-pipeline catch and the P4 two-load-race catch were both
+   invisible to textual comparison and one walk deep.
 
 **Lens 4 — mirror / propagation** *(owns: the post-lint semantic
 remainder; the fresh-eyes function)*
@@ -254,6 +268,14 @@ consistency; the ergonomics floor)*
    cohesion); **embedding freshness** (target files/entrypoints
    verified against the live tree, type-ripple targets included, the
    mutation boundary exact — n/a for drafts).
+3. **Type-consequence sweep (adopted at the ch11 boundary,
+   2026-07-18 — the arm catch-class (c)):** a REQUIRED field joining
+   a domain aggregate sweeps ALL construction sites of that type
+   (search the TYPE's name and enumerate literals), never only the
+   prior packet's injection-site pattern — the P3b boundary-ripple
+   catch (two instance-literal fixture files outside the boundary)
+   is the driving precedent. Operational-simulation walks over
+   sibling seams bind here too when the claim crosses packets.
 
 ### 2a) The Gate Coverage Matrix
 

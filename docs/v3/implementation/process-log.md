@@ -2815,3 +2815,17 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   interpretive-layer candidates (arm catch-class lens duties; the
   derived mutation-probe list) recorded; the latter two candidates go to
   the user's process-revision decision.
+
+- 2026-07-18 · ch11 boundary — process-revision decision · the user ADOPTED
+  both P3b interpretive-layer candidates: (1) the three arm catch-classes
+  entered the internal panel's duty lists (conjunction satisfiability ->
+  lens 1; operational simulation -> lens 3; type-consequence sweep ->
+  lens 5); (2) R-DERIVED-PROBES minted — the builder's mutation-probe
+  list derives from the packet's family inventories (>=1 probe per
+  family, a build-report table; an unrunnable or green probe is a
+  build-time finding), replacing ad hoc picks; arm gate 2's prompt
+  audits the table henceforth. The P3b pre-registered prediction is now
+  ARMED for the next chapter: if the duties + derived probes work,
+  gate-1 and gate-2 yields should FALL; a flat yield is evidence the
+  decorrelated external reader is load-bearing indefinitely — either
+  outcome is a measurement, not a failure.
