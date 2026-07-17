@@ -2214,3 +2214,294 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   branches undriven): R-LANE-SENSITIVITY's per-branch/per-half
   member enumeration still is not surviving the packet→build hop;
   second occurrence, promotion candidate at the boundary.
+
+- 2026-07-16 · ch11-P3 findings round (the human's, on the panel's
+  flag-bearing approve-ready bytes @ 7dddfd1b): FOUR findings. (1)
+  The F2 flag tried to ratify a NARROWING of ratified contract row
+  C26 (the production runner slot's process-memory evidence
+  substrate) through a packet approve — rejected on principle: a
+  packet approve never silently rewrites a ratified contract row's
+  meaning; the legal routes are actual compliance or an explicit
+  reopen + re-ratification. Candidate rule: an approve-ratified
+  flag may record a DECISION the draft left open, never a deviation
+  from a ratified row's letter — deviation detection belongs to the
+  lens-2 draft→packet drift duty. (2) A canonical row (V1) carried
+  a self-contradiction between its presence clause and its own
+  derivation note — four internal panel passes and a close missed
+  an intra-row contradiction the human caught on read. (3) The
+  hard-stop-2 closure proof ("the ratified plan row IS this
+  bundle") was rejected as insufficient against a visible
+  foundation→activation cut — the plan-row-as-closure-proof pattern
+  (accepted at P2c) does NOT generalize: seven surfaces with a
+  natural interior seam need the split, and the sizing gate's
+  "split is not advisory" line was under-weighted by the authoring
+  loop; in-chapter split P3a/P3b executed at the findings fold. (4)
+  A header phrase ("the three L2a rejections", inherited from the
+  plan row's own loose wording) conflated registry rejection names
+  with definition-issue codes.
+
+- 2026-07-16 · ch11-P3a findings round (second — the human's, on the
+  close-clean bytes @ 18985d6d): TWO findings the nine internal
+  passes missed. (1) KERNEL-inert is not SYSTEM-inert: the packet
+  called the JSON-mode authored `reason` "inert (nothing reads it)"
+  after verifying only the KERNEL's reads — ratified C23 ships the
+  WHOLE effective config on the process stdin, so the value is
+  wire-visible and the external process can condition on it.
+  Candidate rule: an "unused/inert/dead" claim over a value closes
+  only with a FULL value-flow walk — every downstream carrier the
+  ratified rows name (wire rows included), not just in-repo reads;
+  the lens-2 delegation-closure duty should treat "X is unread" as
+  a delegating claim over every surface X reaches. (2) An exact-set
+  composition claim survived with a non-exhaustive negative-id
+  idiom re-labeled "precise" instead of being made mechanically
+  falsifiable — the fold's honesty (stating non-exhaustiveness) was
+  accepted as closure when the finding demanded a falsifiable
+  inventory (an exported canonical composition record any fourth
+  member fails). Candidate rule: for exact-set/only-these claims,
+  precision-about-weakness is not a substitute for a mechanized
+  inventory when one is cheaply constructible.
+
+- 2026-07-16 · ch11-P3a findings round (third — the human's, on the
+  second close-clean bytes @ 61479c5d): the G1 fold that mechanized
+  the composition inventory OPENED a new seam — the exported
+  evidence record was declared "never a mutation surface" while
+  nothing enforced it: a TS-only `as const` is readonly at compile
+  time and writable JavaScript at runtime, so the evidence export
+  itself would have become the P2a-banned registration/mutation
+  API. Also caught: the acceptance's blanket "every lane
+  test-driven" contradicted G1's own honest review-owned residual.
+  Candidate rules: (1) a fold that EXPORTS an artifact for evidence
+  carries that artifact's immutability discipline in the SAME fold
+  — runtime freeze + add/delete/replace mutation-negative lanes
+  (throw AND post-state asserted), never a type-level readonly
+  alone; (2) when a claim's guard set mixes test-driven and
+  review-owned members, the acceptance names the carve-out
+  explicitly — a blanket "all lanes driven" over a mixed set is the
+  same overclaim class the second round caught.
+
+- 2026-07-16 · ch11-P3a findings round (fourth — the human's, on the
+  third close-clean bytes @ 266ee1d2): the dual-layer immutability
+  claim's COMPILE-TIME half had no sensitive drive — the acceptance
+  drove the four runtime mutation lanes, but a builder shipping
+  the freeze while dropping/widening the readonly type would stay
+  green (typecheck alone cannot miss what no probe exercises).
+  Folded per the ratifier's own prescription: two isolated
+  `@ts-expect-error` compile-negative probes (record-member
+  reassignment; nested requiresRuntimeContext overwrite) on the P2a
+  `__probe` precedent — TS2578 fails typecheck on accidental
+  widening. Candidate rule: a BOTH-LAYERS claim (type + runtime)
+  needs BOTH layers driven independently — a runtime lane never
+  witnesses a type guarantee, and vice versa; when a claim
+  enumerates its guard layers, the acceptance enumerates one drive
+  per layer.
+
+- 2026-07-17 · ch11-P3a findings round (fifth — the human's
+  adversarial adjudication over the prior findings set): two
+  substantive groups the six prior passes missed. (1) A generic
+  container rule (V4's non-map discipline) was stated but its
+  MEMBER lanes were not driven by name (config non-map; onExit
+  non-map; and the PRECEDENCE of the unconsumed-key lane over the
+  container lane in the mode where the key is illegal) — a
+  validator could mishandle all three with every named test green.
+  Candidate rule: a container/kind discipline enumerates its lanes
+  PER CONFIG GRAIN and pins every precedence where two lanes can
+  fire on one input. (2) The runner/evidence contract was not
+  internally closed: the kit's script input overlapped the
+  runner-minted fields (a ProcessResult-shaped script vs a minted
+  logRef), field ownership (durationMs, the log source for non-ok
+  kinds) was undecided, and R3 conflated the record's ADDRESS
+  (logRef, per C26's letter) with its PAYLOAD. Candidate rule: a
+  port/kit contract closes only when every field has exactly one
+  OWNER and every input shape is DISJOINT from the minted fields —
+  two non-equivalent implementations passing the text means the
+  packet decided nothing. Bookkeeping batch alongside: literal
+  sweep flags (--exclude as a flag, not prose), a missing C23 ref,
+  a mirror-map immutability row, the full CREATE_INSTANCE reprint,
+  and the process-log-in-its-own-commit choreography made explicit.
+
+- 2026-07-17 · ch11-P3a findings round (sixth — the human's external
+  arm, on the fifth close-clean bytes @ 0ca4a920): three content
+  findings + one bookkeeping + one red approve-time gate. (1) The
+  fifth-round log-ownership fold OVERWROTE ratified C26's letter —
+  "captured output text" became "runner diagnostic for non-ok
+  kinds", dropping a real runner's partial pre-timeout output; the
+  same deviation class the FIRST round rejected (a packet fold
+  silently rewriting a ratified row's meaning), now introduced BY a
+  fold rather than a flag. Candidate rule: every fold that touches
+  a row anchored to a ratified C-row re-diffs the folded text
+  against the C-row's exact words before handing back — fold-time,
+  not review-time. (2) Stated scalar/payload guarantees (nonempty
+  logRef, non-negative integer durationMs, integer exitCode,
+  result↔record correspondence) had no per-guarantee lanes — the
+  positive fixture set was green while logRef:"" or exitCode:1.5
+  pass-through would survive. (3) The V7 accumulation claim named
+  three sources but drove one combination — first-error-only
+  validators and cross-rule-after-valid-config orderings passed.
+  (4) grep BINARY-SKIP: definition/admit.ts carries two literal NUL
+  bytes (the effectiveKey separator), so text-default greps
+  silently drop it from -l sweeps and implementations diverge —
+  receipts now carry `-a`; candidate rule: repo sweeps are
+  binary-safe by default (the invisible-byte class also fooled the
+  in-session Read rendering). (5) The machine-migration worktree
+  restored the deleted superseded P3 packet file → coverage
+  fold-time RED at the arm; re-removed (copy preserved). Candidate
+  rule: approve-time gates re-run on the CURRENT worktree at every
+  verdict presentation, not carried from the close.
+
+- 2026-07-17 · ch11-P3a findings round (seventh — the human's
+  external arm): the sixth-round fold's NEW validator (the kit's
+  script-entry exitCode precondition) shipped with a single
+  negative probe (1.5) instead of the mandatory full ladder —
+  R-NUMERIC-LADDER's own letter ("EVERY new validator over a
+  numeric domain") applied to a validator BORN IN A FOLD. A
+  narrower predicate (isSafeInteger, >= 0) would have passed every
+  named lane while wrongly rejecting C34-legal integers. Folded:
+  the predicate pinned to exactly Number.isInteger (C34's domain;
+  any narrowing is a draft-level decision), the ladder driven in
+  BOTH directions — six named rejects AND five named legal-accepts
+  (-1, -0, 2**53 among them) that kill the narrower predicates.
+  Candidate rule: fold-born validators inherit every write-time
+  discipline the original authoring pass carries — the fold path
+  needs the same checklist as the authoring path (this is the
+  second fold-introduced defect class after the round-3 mutable
+  export; folds are authoring).
+
+- 2026-07-17 · ch11-P3a ARM GATE 1 (pin-conform gpt-5.6-sol/high/
+  never, byte guard clean before+after, verdict refine citing
+  5d10da3f): TWELVE findings after seven human rounds — the arm's
+  distinct yield classes: (1) PRODUCT: the definition-site freeze
+  gap (a registry-init freeze leaves a pre-freeze import-order
+  mutation window — the fix moves Object.freeze to where the values
+  are born; the third consecutive round hardening the SAME exported
+  record: evidence artifacts attract defect classes in layers). (2)
+  The V1 reason-retention semantics reclassified derived →
+  NEW-DECISION (the C-rows constrain but do not select; the F1 flag
+  was already the decision record — the manifest class now matches
+  the flag's own logic; tally 8/7/1). (3) A deferral list mis-filed
+  a RATIFIED semantic (C13's sh -c) as open runner freedom —
+  candidate rule: a deferred-mechanics list is checked item-by-item
+  against the C-rows for already-ratified members. (4) A universal
+  quantifier ("one record per invocation") contradicted the
+  packet's own throw lanes — quantifiers are re-swept after every
+  fold that adds a failure path. (5) Structural-typing honesty: a
+  "can never carry" claim over a TS object type is false without an
+  exactness mechanism — excess-property freedom is part of the
+  value-flow walk. (6) The G1 anchored row was carrying a
+  packet-added mechanism the anchors do not select — split into
+  G1 (anchored composition) + G2 (derived mechanism), with the
+  sizing's authority axis and acceptance-multiplicity claims
+  re-stated honestly.
+
+- 2026-07-17 · ch11-P3a arm gate 1 re-check chronicle (four rounds
+  to clean): the re-checks kept finding SYMMETRY gaps in the folds
+  themselves — a process-member-only mutation drive (the two inline
+  members' freezes unfalsifiable), a timeout-arm-only compile probe
+  (runner_error free to widen), a single-arm smuggle lane, and a
+  Sizing summary line contradicting its own corrected scan. Same
+  shape each time: a fold driven at ONE member of a family where
+  the rule binds EVERY member. Candidate rule (joins the
+  folds-are-authoring rule): a fold that adds a lane over a
+  FAMILY (union arms, registry members, config grains) enumerates
+  the family and drives every member — the finding's named instance
+  is never the lane's extent. Also: the corrected consume-family
+  accounting (a consumer reached through an unchanged port is still
+  a consumer) flipped the packet's hard-stop-6 status to
+  letter-tripped-with-closure-proof — the honest form the P2c
+  precedent set.
+
+- 2026-07-17 · ch11-P3a findings round (eighth — the human's arm on
+  the arm-gate-1-clean bytes @ 4f346d10): THREE findings, all the
+  family-symmetry class AGAIN, one round after the candidate rule
+  named it: (1) the smuggle drive covered two of three kinds and
+  three of six runner-owned fields against a "wholesale" claim —
+  and the field-for-field correspondence omitted durationMs
+  equality; (2) the union-iff probes drove only the ABSENCE
+  direction (non-ok arms lose fields) and not the PRESENCE
+  direction (ok arm keeps them required); (3) a type-level
+  foreclosure claim (D1's singleton literal) carried no
+  compile-negative probe — the same gap the exitCode ladder and
+  the record-readonly rounds already taught, at a third site.
+  Sharpened candidate rule for the boundary: when a rule binds a
+  FAMILY or an IFF, the drive enumerates BOTH the family's members
+  AND the iff's two directions — and every type-level "forecloses"
+  claim carries its own probe; a grep for
+  "forecloses|by type|type-level" over a packet is a cheap
+  reviewer sweep for undriven compile-half claims.
+
+- 2026-07-17 · ch11-P3a retrospective observations (raised in the
+  session's own process-assessment exchange with the ratifier;
+  captured for the boundary review — two proposals the round
+  captures above do NOT yet carry): (1) PROPORTIONALITY GATE for
+  evidence machinery — the P3a churn's largest single source was
+  the evidence apparatus generating its own attack surface (an
+  exact-set finding → an exported record → its mutability → its
+  freeze → the freeze's compile half → per-member symmetry: a
+  three-member static Map ended up carrying a record export,
+  dual-layer/dual-depth freezing, a mutation-lane family, eight
+  compile probes, a sweep, and a review-owned obligation). The
+  fix-all default has no cost brake, and the existing
+  `declined: out of threat model` route was never invoked by
+  either side. Candidate rule: a fold that ADDS a mechanism
+  (an export, a freeze, a probe family, a sweep) states a
+  one-line proportionality record — the defect class guarded, its
+  plausibility, and the guard's spec-weight cost — and the
+  panel/ratifier legitimately answers `declined: out of threat
+  model`; mechanism restraint is the lever, because every added
+  mechanism multiplies against EVERY write-time discipline
+  (lanes = mechanisms × disciplines). (2) SPEC-TIME vs BUILD-TIME
+  middle path for test evidence — P3a enumerated fixture-grade
+  lane detail in prose for green-field code, making every
+  ambiguity a findings round; the opposite extreme (bare
+  discipline pointers) is the known packet→build loss class
+  (P2b/P2c). Candidate middle form: the packet states the
+  DISCIPLINE plus the family INVENTORY (which members, which iff
+  directions, which layers), and leaves fixture-level enumeration
+  to the build under arm-gate-2's built-body re-check — to be
+  weighed at the boundary against the P2b/P2c hop-loss evidence.
+
+- 2026-07-17 · PROCESS REVISION RATIFIED (mid-chapter, the user's
+  explicit act — the §7 "unless the issue blocks" clause: ch11-P3a
+  was dropped for recreation, so the revision precedes the packet
+  rather than waiting for the boundary). Basis: the P3a
+  retrospective above + a comparative study of the siphra-arch
+  PROCESS2 regime (the cycle-2 process that inherited this repo's
+  arm mechanics and evolved the review economics around them; its
+  L0 five-round arm phase supplied live evidence — yield curve
+  5→3→3→3→2, first-occurrence counting, prediction-test close).
+  Root-cause diagnosis accepted by the user: fix-all default +
+  exhaustivity claim grammar + no spec-vs-build altitude line + no
+  yield-based closure jointly produce a monotonically growing
+  attack surface and a mechanically non-convergent loop. SEVEN
+  items ratified one by one: (1) the spec-vs-build ALTITUDE LINE —
+  discipline + family inventory at spec time, fixture enumeration
+  at build, `deferred-to-build` by rule; bound condition:
+  R-LANE-SENSITIVITY promoted to BIND TWICE (the P2b/P2c second
+  occurrence), the arm gate-2 sensitivity pass now mandatory;
+  (2) the DISPOSITION REGIME — recorded per-finding disposition +
+  severity (the P0–P3 ontology), tally per round, ~100% fold rate
+  = triage-inspection signal; the proportionality gate adopted as
+  proposed above; (3) the PLATEAU stopping rule — `3:plateau`
+  STOP: two consecutive rounds ≤2 accepted CONTENT findings
+  (first-occurrence) AND zero P0/P1 AND no escalation trigger;
+  human closes on judgment; quality axis added on the user's
+  round (quantity alone insufficient — a blocker resets the
+  counter even at count 1); (4) CLAIM GRAMMAR — three closed forms
+  (measured / parameterized / scoped), bare wholesale rhetoric is
+  a finding; (5) SIZE TRIGGERS, advisory — 48 KB + 50%-growth v0
+  thresholds per round report (measured drift: ch4–ch6 packets
+  4–15 KB, ch8/ch11 53–84 KB); (6) the PRESENT-TENSE rule — edit
+  scars out of the operative path; (7) the FRESH-IMPLEMENTER LENS
+  as an explicit EXPERIMENT (once per packet, blind restatement,
+  evaluate-then-scale-or-retire at the boundary). Carriers:
+  README §5.5 (canonical), task-packet-template §1/§2, ReviewPacket
+  (mirror + new §7), LearnedRules (R-ALTITUDE-LINE,
+  R-CLAIM-GRAMMAR, R-PRESENT-TENSE, R-LANE-SENSITIVITY update).
+  Metrics-schema promotion deliberately deferred
+  (invariants-vs-tooling): the new telemetry lives in round
+  reports + Build-record prose until a boundary review moves the
+  lint. P3a itself: dropped for recreation under the revised
+  process; the pre-reset bytes are preserved at commit ca4ea924
+  (sha256 e15a6fd9…) — ACTION ITEM: after the recreated packet
+  closes, diff it against the record as a process-effectiveness
+  check. All v0 thresholds recalibrate after the first 2–3
+  packets under this regime.
