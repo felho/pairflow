@@ -2521,3 +2521,111 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   this line the fresh session's bootstrap is fully repo-bound — the
   starter prompt needs only the packet id and a pointer to this
   log's revision entry.
+
+- 2026-07-17 · ch11-P3a recreation, fresh-implementer lens run 1 (the
+  process-revision experiment, ReviewPacket §7; pin: agent-invoked
+  internal Opus-class): ZERO comprehension divergences — the blind
+  restatement (packet bytes only) reproduced the lane inventory with
+  its code assignments, the effective-config presence rules, the
+  port/evidence guarantees, and the thirteen test families
+  faithfully; its ten open items were all by-design repo-bridge
+  references (the embedding-gates-named files, the contract's raw
+  C-rows), declared packet freedom (the kit's deterministic fake
+  values), or the human-gated F1/F2 — none an operative-content gap.
+  First data point for the boundary's evaluate-then-scale-or-retire
+  verdict on this lens.
+
+- 2026-07-17 · ch11-P3a recreation — panel chronicle + CLOSE RECORD
+  (the ratifier's procedural finding folded: the clean close is
+  repo-bound from this packet on, not session-only). R1 FULL bound
+  eebd6a1f… → folds (V5 minted new-decision → flag F2; the
+  operative authority note; lane-q container symmetry; the G8
+  own-property member; mirror/bookkeeping) → R2 FULL (mandatory
+  escalation, manifest-class change) bound 0d6ccca3… → one content
+  fold (the plan Mode-cell clarification) + bookkeeping, reconciled
+  f3bf0d35…, close clean → the RATIFIER's findings round (F1
+  foreclosure precision — the admission-time drop CONFORMS, carry
+  is a genuine selection; F2 re-decided TEMPLATE-GRAIN: exactly one
+  finding at the top-level runtimeContext path) → R3 FULL
+  (STOP-resolution escalation) bound 8fb543d1… → the lens-3 P1
+  (the ratified count claim had NO falsifiable drive member — a
+  per-gate build would have passed every declared obligation) + P2
+  (V4 addressing over-reach) folded: the dimension-7 N≥2 count
+  member, the count-claims acceptance bullet (C19 collapse +
+  failInstance no-double), the V4 addressing exception, the A7
+  detect-in-loop/emit-once grain note → R3b targeted lens-3 recheck
+  PASS (all closed, none new) + lens-4 reconciliation CLEAN;
+  fresh-implementer lens re-run (post-semantics-change, per §7):
+  zero comprehension divergences on the three ratified areas.
+  FINAL CLOSE CLEAN @ sha256
+  6cd27852c865f0274821164aaf2e1420149f8d7caa10d8ed67c22552fdb3a1e5,
+  HEAD 27b22260 — tier-0 all green (packet-lint 0/0 reopened,
+  fold-time coverage, adr-check, drift 9/9). SIZE TRIGGER: 49,069 B
+  — the 48 KB v0 advisory TRIPPED (growth = drive-coverage armor:
+  count members, addressing carve-out); accept-with-note /
+  demote / split is on the approve agenda per the size rule. The
+  packet stands at STOP 4:flagged-approve (F1 + F2,
+  approve-ratified routes).
+
+- 2026-07-17 · ch11-P3a recreation — the APPROVE act + the flagged-path
+  arm round. The ratifier APPROVED at STOP 4:flagged-approve on basis
+  6cd27852… (ratifying F1 verbatim-carry, F2 template-grain, and the
+  size accept-with-note). Per the ch7-boundary flagged-path rule the
+  agent-invoked external arm ran on the approved bytes BEFORE build
+  (pin-conform gpt-5.6-sol/high/never; byte guard clean before+after):
+  verdict REFINE with FIVE findings, all folded — (1) hard stop 2
+  letter-trips beside 6 (one shared closure proof) + the
+  closure-budget SHARED-CONTRACT bucket record (R1–R3 as new shared
+  contracts, P3b/ch9 deferrals pinned by C34/C26); (2) V4's lane-s
+  clause remade an explicit MIRROR of canonical V5; (3) T1's
+  six-outcome membership materialized as a parameterized mapping +
+  FAITHFUL QUEUED PLAYBACK discipline; (4) the R2/R3 "Port value
+  contracts" acceptance family (scalar refinements + value
+  preservation); (5) V5's findings-round provenance moved to F2
+  (present-tense). Arm RE-CHECK: CLEAN citing the folded basis
+  f0d9cae0fe01a9ac4ab1f0583dd95111089357dea3108dcc5bf6f3e4d86a0e9d
+  (50,923 B; the size advisory remains accept-with-note per the
+  approve); lens-4 reconciliation CLEAN; tier-0 green throughout.
+  BUILD PRECONDITION MET — the build proceeds on this basis.
+
+- 2026-07-17 · ch11-P3a recreation vs the pre-reset record — the
+  process-effectiveness comparison (the revision entry's ACTION ITEM,
+  executed EARLY at the user's call: packet-bytes + loop telemetry
+  only; the build-close half — does arm gate 2's sensitivity pass
+  stay clean on the leaner spec? — is still owed, and the boundary
+  review should re-run this comparison with the build data in).
+  PRODUCT: 77,364 B / 871 lines (record @ ca4ea924) → 50,923 B /
+  678 lines (approved basis f0d9cae0…), −34% with the operative core
+  intact AND content ADDED meanwhile (the ratifier's F2 form, the
+  arm's value-contract families). Section shifts localize the loss
+  exactly where the revision predicted: Acceptance 149 → 81 lines
+  (the altitude line: discipline + inventory instead of fixture
+  enumeration), Embedding gates 116 → 46 (accumulated review armor
+  gone); Pre-approval flags 34 → 69 (decision records moved to their
+  proper home). The record's evidence-machinery cascade (export →
+  freeze → dual-layer → eight compile probes → sweep) never formed:
+  the compile-probe discipline is stated ONCE (dimension 13, three
+  members). PROCESS: pre-reset — 8+ findings rounds across days,
+  round 8 still yielding three content findings of the SAME
+  family-symmetry class one round after the candidate rule named it
+  (the non-convergence diagnosis); recreation — one session, yield
+  curve 9 → 1 → 2 → 0 across R1/R2/R3/R3b, termination at designed
+  decision points, no watchdog. The pre-reset recurring class was
+  ENCODED as write-time discipline, and its one live recurrence (the
+  lens-3 P1: the ratifier-selected template-grain form lacked an N≥2
+  falsifier) was caught in one round and closed in one fold. The
+  quarry rule held: F1/V1 carried without re-litigation, and fresh
+  projection IMPROVED the record's own reasoning (the ratifier's F1
+  precision: the admission-time drop also conforms — the record had
+  argued the letter forced carry). HONEST COUNTERPOINTS: (1) the
+  external arm still found FIVE real findings on close-clean bytes —
+  the internal panel is not self-sufficient and the layered defense
+  earns its keep; three of the five were altitude-CALIBRATION items
+  (membership rule vs fixture detail), the v0 line still settling as
+  the revision predicted; (2) the 48 KB size advisory tripped even
+  so (50.9 KB — drive-coverage armor, accept-with-note ratified);
+  (3) the decisive evidence is deferred: per the P2b/P2c lesson the
+  guarantee is only purchasable at the BUILT test bodies. Early
+  verdict: both revision theses (fix-all default + exhaustivity
+  grammar generating their own attack surface; fixture enumeration
+  mis-altitudinal at spec time) are SUPPORTED on this first sample.
