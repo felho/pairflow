@@ -1,7 +1,7 @@
 # ch11 — gate-format contract
 
 ```json
-{"contract_draft": {"chapter": "ch11", "surface": "gate-format", "status": "ratified"}}
+{"contract_draft": {"chapter": "ch11", "surface": "gate-format", "status": "realized"}}
 ```
 
 ## Context (non-normative by declaration)
@@ -127,6 +127,12 @@ ratifier-read content folds); reopen-delta new-decision rows: 3
 (C37, C38, C41 — cumulative 14); post-ratification reopenings: 1
 (closed by this act).
 
+**Close metrics (recorded at the ch11 close, 2026-07-18):**
+post-ratification reopenings: 1 (the 2026-07-12 round-declaration
+reopen — closed by re-ratification the same day); every row realized
+across ch11-P0…P4 per the realized map below — the `realized` flip +
+map in ONE act (this commit).
+
 ## Contract rows (every normative statement is a C-row)
 
 | ID | Rule |
@@ -184,3 +190,51 @@ ratifier-read content folds); reopen-delta new-decision rows: 3
 ```
 
 ## Realized map (empty until chapter close)
+
+```json
+{"realized_map": {
+"C1": "ch11-P2a D1 (domain Step.gates value) + ch11-P4 F2 (format-walk step keyset) — domain/gate.ts; definition/validate.ts F2 walk; admit.test.ts / validate.test.ts",
+"C2": "ch11-P2a A4 — definition/admit.ts event-type membership (gates bound to keys(transitions), the gates_for grain); admit.test.ts A4 lane (+ ch11-P4 F3 gates-subtree walk, validate.ts)",
+"C3": "ch11-P2a A4/D3 — definition/admit.ts nonempty-list admission + authored pipeline order; admit.test.ts (+ ch11-P2b K1 ordered first-block-wins eval, kernel/kernel.ts)",
+"C4": "ch11-P4 A1 — definition/admit.ts gate-binding fixed-keyset (uses + optional config), unknown-key fail-closed; admit.test.ts A1 lane",
+"C5": "ch11-P2a G3/A4 (threshold required, verdict optional) + ch11-P3a V2 (process required) — definition/admit.ts config-presence; gates/threshold.ts / gates/process.ts validate",
+"C6": "ch11-P4 A2 — definition/admit.ts `uses` grammar lane (^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$), distinct from resolution; admit.test.ts A2 lane",
+"C7": "ch11-P2a R4/A5 (+ ch11-P4 path forms) — definition/admit.ts list-index error paths steps.<id>.gates.<evt>[<i>]; admit.test.ts [<i>]-segment path asserts",
+"C8": "ch11-P2a R3/A3 + G2 — gates/registry.ts static Block-A catalog + definition/admit.ts uses-resolution (gate_evaluator_unavailable); registry.test.ts / admit.test.ts (HANDLE backstop is C35)",
+"C9": "ch11-P2a R1/R2 (inline members) + ch11-P3a G1/G2 (process member, no evaluate) — ports/gate.ts GateRegistration variants + gates/registry.ts; registry.test.ts compile-negatives",
+"C10": "ch11-P2a G3/G4 — gates/threshold.ts validateAndNormalize (metric/op/value allowlists) + round_below_min semantics; threshold.test.ts config + boundary grid",
+"C11": "ch11-P2a G5/G6 — gates/previousReviewerVerdict.ts config ({required:true}, absent-default, no_previous_verdict) + same-step semantics; previousReviewerVerdict.test.ts",
+"C12": "ch11-P2a G3 + ch11-P3a V3 (value-level: safe integer >= 1) + ch11-P4 F6 (ch8-C8 source ladder) — gates/threshold.ts / gates/process.ts; definition/validate.ts F6 lane",
+"C13": "ch11-P3a V2 (registration keyset) + ch11-P3b X2 (run) + ch11-P4 file forms — gates/process.ts validateAndNormalize; kernel/processGate.ts; admit.test.ts / process.test.ts",
+"C14": "ch11-P3a V2 (output.mode keyset + exitCode default) + ch11-P3b M1 (classify) — gates/process.ts; kernel/processGate.ts; process.test.ts M1 grid",
+"C15": "ch11-P3a V2 (onExit both-buckets keyset, zero/nonzero rename) + ch11-P3b M1 (bucket classify) — gates/process.ts; kernel/processGate.ts; process.test.ts",
+"C16": "ch11-P3a V2 (disposition keyset, failInstance distinct) + ch11-P3b M3 (runner_outcome) — gates/process.ts; kernel/processGate.ts; process.test.ts",
+"C17": "ch11-P3a V2 (reason per-bucket keyset + defaults materialized) + ch11-P3b M1/T3 (per-bucket reason on the wire) — gates/process.ts; kernel/processGate.ts; process.test.ts",
+"C18": "ch11-P3a D1 (declaration consumed) + ch11-P4 F1/A3 (root keyset + illegal-value lane) — definition/admit.ts / definition/validate.ts; admit.test.ts / validate.test.ts",
+"C19": "ch11-P3a G2/V5 — definition/admit.ts requiresRuntimeContext cross-rule (runtime_context_required_for_process_gate, template-grain single finding); admit.test.ts V5 lane",
+"C20": "ch11-P2a A1/A6 (+ ch11-P4 F7 file-channel accumulation) — definition/admit.ts single semantic-authority admission + DefinitionStore admitted-only contract; admit.test.ts all-or-nothing arm",
+"C21": "ch11-P2a A9 + ch11-P3a V2/V4 + ch11-P4 A1-A3/F4/F7 — definition/admit.ts one-channel lane matrix ({path,message} + code carrier); admit.test.ts path+code lanes + load.test.ts file-channel sweep",
+"C22": "RETIRED-IN-PLACE — no rule to realize; realized vacuously by the C20 single-admission form (ch11-P2a A1/A6, definition/admit.ts); ch11-P2b K4 carries the no-unadmitted-template kernel rule",
+"C23": "ch11-P3b X3 — kernel/processGate.ts GateInvocation stdin wire (effective config, snake_case keyset); processGate.test.ts X3 lane (+ ch11-P3a T1 kit)",
+"C24": "ch11-P2b V1-V3 — kernel/gateProjection.ts derive {round,current_step,event_type,history}; gateProjection.test.ts (+ ch11-P3b X4 same shape on the process wire)",
+"C25": "ch11-P3b M2 — kernel/processGate.ts GateDecision strict single-value JSON parse + malformed_gate_decision_json runner outcome; processGate.test.ts M2 lanes",
+"C26": "ch11-P3a R3/T1 + ch11-P3b W2/T2 — ports/gate.ts evidence record shape + cli/failClosedProcessGateRunner.ts durable persist + testkit/scriptedProcessGateRunner.ts fakes; storeCheckers.ts both-halves checker (only the measurement is ch 9's)",
+"C27": "ch11-P2b K5 + S1-S4/O2 — kernel/kernel.ts retained ordered gateDecisions on the committed transition + store/sqliteStore.ts schema bump (ADR-003); kernel.test.ts / sqliteStore.test.ts",
+"C28": "ch11-P4 Y7 (+ ch11-P2b K7/O3, ch11-P2a A9/T4) — cli/dev/main.ts validate + write-lane surface the same {stage,findings} docs, no new verbs/flags; dev/journey tests",
+"C29": "ch11-P2a G1/R5/T2 (+ ch11-P3a G1) — src/gates/ module + gates/registry.ts injected catalog + ports/gate.ts ledger-shape reconciliation; ADR-013 accepted; registry.test.ts",
+"C30": "growth STANCE — realized across the additive keyset implementations (ch11-P2a G5 threshold/verdict allowlists, gates/*.ts; ch11-P2c/P4 round keyset, admit.ts) + the §8.2 additive-evolution culture; context_block_refs is NOT a key (validate.ts unknown-key)",
+"C31": "ch11-P3b M4/X1 (+ ch11-P2b O1/O5) — kernel/processGate.ts gate_blocked(reason=<fixed token>) rejection, tokens disjoint from registry names; processGate.test.ts / kernel.test.ts",
+"C32": "ch11-P3b E2 — kernel/processGate.ts process-returned reason/message/evidence_refs retained verbatim, never re-parsed/interpolated; processGate.test.ts E2 lane",
+"C33": "ch11-P3b E1 (+ ch11-P2b K4/O1) — kernel/processGate.ts evidence_refs propagation (exit-bucket [log_ref], gateDecisionJson append-dedup, runner outcome) + Rejected(...,evidence_refs); processGate.test.ts E1 lanes",
+"C34": "ch11-P3a R1/R2 — ports/gate.ts ProcessResult shape ({kind, exit_code?, stdout?, log_ref, duration_ms}) + testkit/scriptedProcessGateRunner.ts six-outcome drive; scriptedProcessGateRunner.test.ts",
+"C35": "ch11-P2b K2 — kernel/kernel.ts gate rung gateRegistry.resolve backstop (gate_evaluator_unavailable, registry drift); kernel.test.ts K2 lane",
+"C36": "ch11-P3b S1/S5 — kernel/processGate.ts ready(0) workspace-emptiness backstop (runtime_context_required_for_process_gate); processGate.test.ts S5 lane",
+"C37": "ch11-P2c D1 (round keyset + advanceOnArrivalAt, membership/terminal exclusion) + ch11-P4 F1/F5 (root keyset + source-form) — definition/admit.ts / definition/validate.ts; admit.test.ts / validate.test.ts",
+"C38": "ch11-P2c A1/A4/K2 (empty-set default, round stays 1 after activation) + ch11-P4 F8/Y1/Y2 (file default + shipped template restoration) — definition/admit.ts, templates/local-pair-v0@1.yaml; admit.test.ts / journey.test.ts",
+"C39": "ch11-P2c A1/K1/D2 — definition/admit.ts advancesRound expansion + kernel consumes flags only (replaces target===start heuristic) + testkit/storeCheckers.ts reconstructable checker; admit.test.ts / kernel.test.ts",
+"C40": "ch11-P2c A2/A3 (value-level: empty list, member membership incl. terminal, duplicates) + ch11-P4 F5 (source-form lanes) — definition/admit.ts; definition/validate.ts F5 lane; admit.test.ts / validate.test.ts",
+"C41": "PARTIAL-REALIZATION disposition — the deferral is the ratified content: the per-transition override's authoring grammar stays unrealized, and C39's normalized advancesRound flags (ch11-P2c A1, definition/admit.ts) keep the override representable in the admitted form for an additive future row"
+}
+}
+```
+

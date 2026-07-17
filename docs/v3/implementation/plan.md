@@ -1,7 +1,7 @@
 # V3 Implementation Plan
 
 Written chapter by chapter, each chapter proposed → ratified → committed
-(process: [`README.md`](README.md) §3). Chapters present: 1–7.
+(process: [`README.md`](README.md) §3). Chapters present: 1–8, 11.
 
 **Genre note.** This is the implementation **master plan** — it is NOT a
 directly `ExecutePairflowPlan`-executable task list, and it carries no
@@ -101,7 +101,7 @@ convention is itself a chapter-1 rule.
 | 6 | Visibility floor + operator CLI: full floor (`listInstances` / `getInstanceDetail` / `getTimeline` committed-rows-only / live tail), debug bundle with redaction boundary, command + dev verbs, all writes through normal ingress | PI-2 | realized |
 | 7 | Kernel diagnostics & structured logging: the named non-authoritative diagnostic channel's concrete form | PI-4 | realized |
 | 8 | Template file-format spec: the canonical authoring format; **migrates MD-1** | PI-5 | realized |
-| 11 | **Gate core** (appended chapter, build order: BEFORE ch 9 — §11): the L1 authority slice, the L2 gate pipeline + inline evaluators (the ch-4 provisional `round` aligned to its L2 contract), the L2a process-gate contract (kernel side — the spawn is ch 9's), a minimal runtime-context representation, the format's gate-declaration surface (§8.2 stance) | — (map-extension, §8.1) | planned(ch 11) |
+| 11 | **Gate core** (appended chapter, build order: BEFORE ch 9 — §11): the L1 authority slice, the L2 gate pipeline + inline evaluators (the ch-4 provisional `round` aligned to its L2 contract), the L2a process-gate contract (kernel side — the spawn is ch 9's), a minimal runtime-context representation, the format's gate-declaration surface (§8.2 stance) | — (map-extension, §8.1) | realized |
 | 9 | Runner MVP: local worktree provider, one real actor adapter, process-gate runner, attach channel (tmux observe/takeover); sub-decision: local-worktree only vs headless/cloud | PI-8 | planned(ch 9) |
 | 10 | Operator recourse card: one page (query via the floor, cancel, deleteRequested; no watchdog/retry until L9) | PI-9 | planned(ch 10) |
 
