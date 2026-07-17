@@ -2505,3 +2505,19 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   closes, diff it against the record as a process-effectiveness
   check. All v0 thresholds recalibrate after the first 2–3
   packets under this regime.
+
+- 2026-07-17 · ch11-P3a recreation bootstrap note (repo-binding the
+  one session-borne instruction the starter-prompt audit surfaced —
+  everything else proved recoverable from committed surfaces): the
+  ca4ea924 record packet is a QUARRY, never an authoring base. The
+  recreation projects from the ratified sources — the ledger, the
+  ch11-gate-format contract rows, the plan — per projection-not-
+  invention; the record is consulted ONLY for the accepted
+  round-borne decisions (the F1 wire-visibility reading, the V1
+  new-decision reclassification — carried in its flags section and
+  row manifest) so they are not re-litigated. Never import its
+  enumerations, matrices, or prose: re-anchoring on the pre-reset
+  form is precisely the failure the reset exists to escape. With
+  this line the fresh session's bootstrap is fully repo-bound — the
+  starter prompt needs only the packet id and a pointer to this
+  log's revision entry.
