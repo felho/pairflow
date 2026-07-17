@@ -2829,3 +2829,13 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   gate-1 and gate-2 yields should FALL; a flat yield is evidence the
   decorrelated external reader is load-bearing indefinitely — either
   outcome is a measurement, not a failure.
+
+- 2026-07-18 · ch11 close — human-gate presentation discipline adopted · the
+  user's direct experience verdict: the FIRST close presentation (one dense
+  block, bundled decisions, codenames without meanings, implicit approval
+  semantics) made participation nearly impossible; the stepwise re-run (one
+  decision per message, self-contained stories, explicit role/risk
+  statements, recommendations attached, closed vocabulary, roadmap first,
+  one-word answers sufficient) was named a "super great experience" and
+  ratified as the standing discipline for EVERY human decision point →
+  canonical in README §6; AuthorPacket's presentation step points at it.

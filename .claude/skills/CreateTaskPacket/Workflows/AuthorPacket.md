@@ -311,7 +311,11 @@ ch7-P1 dangling-"flagged below" lesson).
    mirror map SHRINKS the propagation surface, the fresh pass VERIFIES
    the remainder (ch7-P1 rounds 4/6b/7 are the driving evidence —
    each was a propagation miss a fresh reader caught one round later).
-4. Present the summary in the session's chat language: the derivation
+4. Present the summary in the session's chat language, per README
+   §6's HUMAN-GATE PRESENTATION DISCIPLINE (one decision per message ·
+   self-contained context · role + risk statements · a recommendation
+   always · closed vocabulary · roadmap-then-steps · one-word answers
+   suffice): the derivation
    announcement (0a), the slice (or its declared emptiness), the
    classification verdict + manifest tally, the claim + dimensions,
    the matrices, the embedding gates, open risks — flags REFERENCED

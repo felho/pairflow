@@ -644,6 +644,29 @@ invariants-vs-tooling).
   ONE act, per `contract-draft-template.md` §4); and the draft-metrics
   close line recorded — both scoped to the chapter's drafts IF ANY.
   A chapter without these is not done regardless of code state.
+- **Human-gate presentation discipline (adopted 2026-07-18 at the
+  ch11 close — the user's experience verdict; the stepwise ch11-close
+  cadence is the template, the dense single-block first form its
+  anti-pattern).** Whenever a decision reaches the human — a STOP, a
+  flag-bearing approve, a ratification, a boundary verdict, a close
+  act — the presentation follows eight rules: (1) ONE decision per
+  message, independent decisions never bundled; (2) SELF-CONTAINED
+  context — every referenced artifact explained inline in plain
+  language, the reader assumed to hold NONE of the process state in
+  their head ("what is a realized map" is the calibration bar);
+  codenames, row ids, and hashes appear only WITH their meaning;
+  (3) the ROLE statement — explicitly: what the human must judge,
+  what the machines/agents already verified, and what the approval
+  MEANS; (4) the RISK statement — what happens if the decision is
+  wrong and how reversible it is; (5) a RECOMMENDATION with its
+  reasoning, always — the human adjudicates a proposal, never
+  composes from a blank page; (6) a CLOSED decision vocabulary
+  stated up front where one exists (gate / rule / non-issue / watch;
+  approve / rework); (7) a ROADMAP once at the start of a multi-step
+  act — where we are, what comes, at which steps the human is needed
+  — then step-by-step with a talk-point after each; (8) a ONE-WORD
+  answer must suffice — a question whose answer needs an essay is a
+  presentation defect, not a hard decision.
 
 ## 7. Process reflection
 
