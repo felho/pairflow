@@ -2629,3 +2629,43 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   verdict: both revision theses (fix-all default + exhaustivity
   grammar generating their own attack surface; fixture enumeration
   mis-altitudinal at spec time) are SUPPORTED on this first sample.
+
+- 2026-07-17 · ch11-P3a post-build audit, first contact: RED — the
+  packet's mutation boundary omitted docs/v3/implementation/plan.md,
+  the R-ALIGNED-UP alignment carrier riding the same commit (the
+  P1/ch8-P2 packets list it; the recreation missed it). THREE full
+  panel rounds and the pre-build arm cleared the boundary "complete
+  and minimal"; the deterministic audit caught it in seconds — the
+  tier-0-scoping principle exactly as designed (machines own hard
+  deterministic facts; lenses own prose). Candidate lens-5 duty
+  sharpening for the boundary review: a packet whose header declares
+  a prepared plan alignment MUST list plan.md in its boundary — a
+  mechanical iff a lens can check by cross-reading two sections (or
+  the packet lint could own it outright: header-alignment-declared ⇒
+  plan.md ∈ boundary). Resolution: boundary extended, build commit
+  amended, audit green at the amended sha.
+
+- 2026-07-17 · ch11-P3a arm gate 2 (build-close, pin-conform
+  gpt-5.6-sol/high/never, byte guards clean): REFINE citing 3dd3343b
+  — SEVEN P2 findings, ALL the green-but-blind class at the BUILT
+  bodies under correct packet lane texts (the P2b/P2c second
+  occurrence's prediction confirmed on the first revised-process
+  packet; the mandatory sensitivity pass earned its 2026-07-17
+  promotion): two product gaps (unresolvable logRef; documentary
+  R2 scalar refinements) + five test-evidence gaps (JSON full-row
+  equality; grouped-lane missing halves/warn/local-suppression/
+  __proto__/accessor rung; union compile probes + exact records;
+  T1 JSON warn/block members; enumeration-insensitive exact-set).
+  One aftermath round folded all seven (fix commit bd1a95c9,
+  796 → 831 tests, boundary unchanged, audit green at its own sha);
+  arm RE-CHECK CLEAN citing bd1a95c9 — the packet is DONE. This
+  COMPLETES the effectiveness comparison's owed build-close half:
+  the altitude line's spec-time lean form held (zero claim
+  weakenings needed — every fix strengthened tests/product INTO the
+  unchanged claims), and the build-close sensitivity pass carried
+  exactly the load the spec-time economy shifted onto it — the
+  two-sided evidence the boundary review should weigh: cheaper
+  spec + a materially loaded gate-2 (7 folds) vs the pre-reset's
+  spec-time enumeration churn (8+ rounds pre-build). Arm-yield
+  ledger for the boundary: gate 1 five findings (three
+  altitude-calibration), gate 2 seven (all built-body).
