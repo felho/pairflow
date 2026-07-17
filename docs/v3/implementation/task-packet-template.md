@@ -162,6 +162,11 @@ ch7 boundary)>
 ## Acceptance
 - Contract tests: <CT-* ids this packet must turn green>
 - Checks: <CHK-* ids in force>
+- Test disciplines + family inventories: <each test obligation stated
+  as a DISCIPLINE over a DECLARED family inventory — parameterized
+  membership with its owner named — never fixture-level enumeration;
+  the enumeration is build work, verified member-by-member by the
+  build-close arm gate's sensitivity pass (README §5.5 altitude line)>
 - Drift tests green (standing, unconditional — PI-3)
 - Standing review rules in force: <REV-* ids from §3 applicable here>
 
@@ -466,6 +471,41 @@ lane-by-lane across rounds):
   machinery); an injection-borne test seam is not. Real-LLM runs
   are a SEPARATE non-CI tier (the dogfooding class), never a CI
   journey lane.
+- **The spec-vs-build altitude line (adopted 2026-07-17 — the
+  ch11-P3a process reset; README §5.5 is canonical).** Test
+  obligations are authored as DISCIPLINE + FAMILY INVENTORY (the
+  Acceptance section's form): the discipline names the rule ("every
+  declared lane driven, both iff directions, full discriminating
+  ladders"), the inventory declares the family's membership as a
+  parameterized set with its owner named. Fixture-level enumeration
+  is BUILD work — at review, a finding demanding it at spec time is
+  `deferred-to-build` by rule (the build-close arm gate's
+  sensitivity pass owns the member-by-member check against the
+  BUILT test bodies). What remains spec-time: a missing family, a
+  missing discipline, a wrong membership rule, an intra-packet
+  contradiction, a ratified-row conflict.
+- **The claim-grammar rule (adopted 2026-07-17).** Every
+  completeness/universality claim takes one of three CLOSED forms:
+  MEASURED — the set is the current tree, riding its untruncated
+  sweep receipt (R-UNTRUNCATED-SWEEP); PARAMETERIZED — "every member
+  of the declared <set> satisfies X", the parameter marked and the
+  membership owner named (the packet's family inventory, a ratified
+  draft row, the plan); SCOPED — explicit named exclusions with
+  their deferral home. Bare wholesale rhetoric (*all / only / exact
+  / complete*) without one of the three closures is a review
+  finding. Exhaustivity rhetoric attracts completeness findings
+  indefinitely; a closed form converts them into checks against
+  declared sets — a completeness finding must name WHICH closure
+  fails.
+- **The present-tense rule (adopted 2026-07-17).** The operative
+  reading path speaks in the present, written for a reader who never
+  saw an earlier revision: zero round references, fold provenance,
+  or review residue (litmus: would the sentence survive had the
+  packet been authored this way on day one?). Provenance lives in
+  the machine blocks, the flags section (dated decision records),
+  the process log, and git. Present-tense intent notes (§5.3
+  in-context budget) are NOT scars. Scar findings are
+  bookkeeping-class.
 
 ## 3. Standing review rules (the `REV-*` registry)
 

@@ -159,6 +159,7 @@ STOP_TOKEN_REGISTRY = {
     "2:contested-ratified-vs-reality",
     "2:draft-split",
     "3:watchdog",
+    "3:plateau",
     "4:flagged-approve",
 }
 
@@ -1497,6 +1498,12 @@ def run_selftest() -> int:
         GREEN_PACKET.replace("3:watchdog", "9:made-up"),
         "not in the canonical",
     )
+    shared_packet.write_text(
+        GREEN_PACKET.replace("3:watchdog", "3:plateau"), encoding="utf-8"
+    )
+    errors, _ = lint(shared_root / "packets", shared_root / "contracts", ADR_DIR)
+    expect_green("metrics-plateau-stop-token", errors)
+    shared_packet.write_text(GREEN_PACKET, encoding="utf-8")
     expect_red_packet(
         "metrics-stop-type-not-string",
         GREEN_PACKET.replace('"type": "3:watchdog"', '"type": []'),

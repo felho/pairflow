@@ -298,10 +298,28 @@ records them):**
    OR a ratified draft row — and live behavior disagree AND more than
    one resolution direction exists) · `2:draft-split` (a draft that
    wants splitting is a chapter-structure question).
-3. **Watchdog exhaustion** — `3:watchdog`: 8 rounds without approve →
+3. **Loop economics** — `3:watchdog`: 8 rounds without approve →
    STOP with a diagnosis (churn composition → split vs draft
-   proposal). Auto-split-remedy is delegable LATER — a deferred,
-   evidence-based step, not a live delegation.
+   proposal); auto-split-remedy is delegable LATER — a deferred,
+   evidence-based step, not a live delegation. · `3:plateau`
+   (adopted 2026-07-17 — the ch11-P3a process reset): two
+   consecutive review rounds — panel, external-arm, and user rounds
+   all count — each with ≤2 accepted CONTENT findings
+   (FIRST-OCCURRENCE counted: a duplicate or a re-litigated
+   `declined` gets ONE carrier and never re-counts) AND zero
+   accepted blocker-grade (`P0`/`P1`) findings AND no mandatory
+   escalation trigger fired → STOP with the yield curve and a
+   severity-bucketed residual report; the human MAY close on
+   judgment, recorded as a one-line acknowledged close — the residual
+   items get DISPOSITIONS (declined / deferred), never folds, so the
+   bytes stabilize and the close still binds a clean final hash (the
+   clean-close mechanics are untouched). Any accepted
+   `P0`/`P1` finding or fired escalation trigger RESETS the plateau
+   counter regardless of count. Optional close evidence: a
+   prediction test — one more round with a pre-registered count +
+   class forecast. Thresholds are v0, recalibrated at the boundary
+   after the first 2–3 packets under this rule. The watchdog stays
+   the hard cap; the plateau is the earlier, softer signal.
 4. **Flag-bearing approve** — `4:flagged-approve`: the approve's
    substantive content is ratifying the flags.
 
@@ -324,15 +342,39 @@ manifest class ENTAILS the flags entry: a new-decision manifest row
 with no corresponding pre-approval flag is a packet defect (the rows
 RIDE as pre-approval flags).
 
-**Finding policy (fix-all):** every panel finding is fixed by default
+**Finding policy (fix-by-default, triaged — revised 2026-07-17, the
+ch11-P3a process reset):** every panel finding is fixed by default
 — Bayes (a fresh-context re-review re-finds unaddressed issues) and
 ambiguity transfer (the fresh reviewer is a proxy for the build-time
-implementer). Fix-all binds CONTENT findings and routes EFFORT, never
-truth: per-finding dispositions (folded / narrowed / declined, with
-reasons), conflicting feedback sources reconciled explicitly,
-genuinely open choices escalate as STOPs. TOOLING findings get a
-mandatory threat-model judgment; `declined: out of threat model` is a
-live route. A completeness or sweep claim ("all N occurrences", "the
+implementer). The default binds CONTENT findings and routes EFFORT,
+never truth — and the triage is an EXPLICIT act per finding: every
+finding (panel, external-arm, and user rounds alike) gets a RECORDED
+disposition — `folded` / `narrowed` / `declined` /
+`deferred-to-build` / an ownership route below — with a one-line why
+and its severity (`P0`–`P3` per `docs/reviewer-severity-ontology.md`;
+the ontology's evidence rules bind: blocker grades require concrete
+evidence, else downgrade). Conflicting feedback sources are
+reconciled explicitly; genuinely open choices escalate as STOPs. The
+round report carries the DISPOSITION TALLY, and a round that folds
+~everything is a triage-inspection signal, never a quality sign.
+**The spec-vs-build altitude line (binding from round 1):** the
+packet states test obligations as DISCIPLINE plus FAMILY INVENTORY
+(parameterized membership, owner named — template §2), never
+fixture-level enumeration; a finding demanding fixture-level
+enumeration at spec time is `deferred-to-build` BY RULE — the
+build-close arm gate's sensitivity pass verifies every inventory
+member against the BUILT test bodies (R-LANE-SENSITIVITY binds twice;
+the ch11-P2b/P2c evidence: correct packet lane texts still built weak
+asserts — the guarantee is only purchasable at the built bodies).
+Spec-time findings remain: a missing family, a missing discipline, a
+wrong membership rule, an intra-packet contradiction, a ratified-row
+conflict. **The proportionality gate:** a fold that ADDS a mechanism
+(a new validator, freeze, probe, or guard class) states a one-line
+proportionality record — the defect class guarded, its plausibility,
+the spec-weight cost; `declined: out of threat model` is a live,
+ROUTINE route for content-mechanism findings, extended from the
+TOOLING class (which keeps its mandatory threat-model judgment).
+A completeness or sweep claim ("all N occurrences", "the
 only element not carried") is admissible only WITH its measurement —
 the defined scope and the command output that proves it; enumeration
 from memory is not a measurement, and a TRUNCATED measurement is not
@@ -410,6 +452,29 @@ Fable-class models stay reserved for exceptional one-off planning at
 the user's explicit call — never business-as-usual packet review.
 The panel report records the re-run mode, skipped lenses with their
 proven-unaffected reasons, and any escalation trigger fired.
+
+**Size triggers (mandatory check, advisory outcome — adopted
+2026-07-17):** every round report states the packet's md size and its
+growth since the FIRST FULL round; v0 thresholds — 48 KB absolute,
++50% growth-under-review — a breach is a WARNING that puts split /
+demote (detail pulled back to discipline + inventory) /
+accept-with-note on the next human touchpoint's agenda, never an
+authoritative decision. The write-time risk gate (template §2 step 0)
+stays the only hard sizing rail. Ground: the measured drift — ch4–ch6
+packets ran 4–15 KB, the ch8/ch11 generation 53–84 KB, the growth
+fold-borne review armor, not operative content. Thresholds
+recalibrate after the first 2–3 packets under the revised process.
+
+**The fresh-implementer lens (EXPERIMENT — adopted 2026-07-17):**
+once per packet — after the plateau / before the close, on the
+approve-candidate bytes — a fresh-context agent fed ONLY the packet
+restates what it would build; divergences from the intended semantics
+are COMPREHENSION findings (triaged per the finding policy). It
+directly tests §5.3's self-containment claim: a restatement that
+needed outside knowledge is itself a finding. Evaluated at the
+chapter boundary after 2–3 uses — scaled, iterated, or retired on
+evidence; mechanics in the `CreateTaskPacket` ReviewPacket workflow
+§7.
 
 **Phase-2 obligation:** findings, flags, and routes stay EXPRESSIBLE
 in the severity ontology's language
@@ -515,7 +580,11 @@ the final hash with ZERO fold-now findings — arm findings fold as
 ordinary folds, and an arm-minted flag-bearing item DEMOTES the
 approve to the human path (the matrix's flag-bearing row). (2)
 BUILD-CLOSE gate: after the build commit and its audit, the arm
-reviews the IMPLEMENTATION against the packet contract; the packet is
+reviews the IMPLEMENTATION against the packet contract, and its
+MANDATORY SENSITIVITY PASS (promoted 2026-07-17 from the ch11-P2b/P2c
+second occurrence) verifies every packet-declared discipline and
+inventory member DRIVEN and ABLE TO FAIL in the built test bodies —
+R-LANE-SENSITIVITY's build-close half; the packet is
 DONE only on a clean, sha-citing verdict — substance findings fold
 per the §4 aftermath rules. Discipline: the diminishing-returns
 cutoff binds (find → fold → ONE hash-citing re-check per fold; a
@@ -539,7 +608,12 @@ late discoveries add a process-log line AND increment the block;
 `baseline_note` is the only home for unit/regime qualifiers. The block answers three questions — is the
 packet good (downstream rounds)? is the detector reliable (misses)?
 where is the bottleneck (round/lens distribution)? — and NO
-aggregation tooling is built until packet count justifies it.
+aggregation tooling is built until packet count justifies it. The
+2026-07-17 revision's disposition tally, yield curve, and close-time
+size live in the round reports and the Build record PROSE for now —
+promoting them into the `packet_metrics` machine schema is a
+boundary-review decision (the lint's deep schema moves with it;
+invariants-vs-tooling).
 
 ## 6. Cross-cutting protocols
 

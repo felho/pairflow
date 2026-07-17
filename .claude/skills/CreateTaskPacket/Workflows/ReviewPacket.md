@@ -165,6 +165,14 @@ sweep)*
    a single-form fixture blind to a split/ordering regression (the
    one-`@` refs); a rule's stated-but-undriven half (missing vs
    empty); a projected-field equality passing a full-row divergence.
+   **Spec-vs-build altitude (adopted 2026-07-17 — README §5.5):**
+   the packet drives lanes as DISCIPLINE + FAMILY INVENTORY
+   (parameterized membership, owner named); this lens verifies every
+   declared family carries BOTH and that the membership rule is
+   falsifiable — it does NOT demand fixture-level enumeration: a
+   finding demanding it at spec time is `deferred-to-build` BY RULE
+   (the build-close arm gate's sensitivity pass owns the
+   member-by-member check against the BUILT test bodies).
 3. **Matrix Symmetry Gate**: an entrypoint pulled in on any
    error/failure lane needs its SUCCESS lane as an explicit
    no-emit/no-effect negative — or a stated out-of-scope decision. A
@@ -195,6 +203,17 @@ sweep)*
    to lists; the same sweep covers conditional presence clauses (*iff
    / only when / present when*): a rule change sweeps every statement
    of the rule.
+7. **Claim grammar [R-CLAIM-GRAMMAR] (adopted 2026-07-17 — template
+   §2):** every completeness/universality claim takes ONE of three
+   closed forms — MEASURED (a current-tree set riding its
+   untruncated receipt, R-UNTRUNCATED-SWEEP), PARAMETERIZED ("every
+   member of the declared <set> satisfies X" — parameter marked,
+   membership owner named), or SCOPED (explicit named exclusions
+   with their deferral home). Bare wholesale rhetoric (*all, only,
+   exact, complete*) with none of the three closures is a finding —
+   the fix is a FORM choice, never content invention; a completeness
+   finding against a CONFORMING claim must name which closure fails
+   (stale measurement / wrong membership rule / wrong exclusion).
 
 **Lens 4 — mirror / propagation** *(owns: the post-lint semantic
 remainder; the fresh-eyes function)*
@@ -210,6 +229,15 @@ remainder; the fresh-eyes function)*
    un-updated mirrors, contradicted scalars/keysets) — the machine
    lint catches the declared-data mirrors; this lens owns the SEMANTIC
    remainder.
+3. **Edit-scar check (the present-tense rule, adopted 2026-07-17 —
+   template §2):** any operative-path sentence that only makes sense
+   relative to a prior revision or a review round (fold provenance,
+   round references, review residue) is a finding —
+   bookkeeping-class; provenance lives in the machine blocks, the
+   flags section (dated decision records), the process log, and git.
+   Present-tense intent notes (README §5.3's in-context budget) are
+   NOT scars. Litmus: would the sentence survive had the packet been
+   authored this way on day one?
 
 **Lens 5 — downstream viability** *(owns: sibling impact; plan
 consistency; the ergonomics floor)*
@@ -279,7 +307,7 @@ auditable without inference. Do not turn template availability into a
 detail demand: escalating from compact to full names the concrete
 risk trigger.
 
-### 3) Findings — taxonomy, fix-all, routes
+### 3) Findings — taxonomy, fix-by-default triage, routes
 
 Classify EVERY issue considered — nothing is dropped silently:
 
@@ -294,16 +322,24 @@ Classify EVERY issue considered — nothing is dropped silently:
   flag-bearing (a watchpoint routed `declined` flag-bears)
 - `considered_not_finding` — examined and cleared, one line why
 
-**Fix-all is the default** — two grounds: Bayes (a fresh-context
+**Fix-by-default, triaged (revised 2026-07-17 — README §5.5 is
+canonical):** fixing stays the default — Bayes (a fresh-context
 re-review will re-find an unaddressed issue, deferral saves nothing)
 and **ambiguity transfer** (the fresh-context reviewer is a proxy for
 the build-time implementer: what was ambiguous to one LLM in a clean
-context will be ambiguous to the next). Fix-all binds CONTENT findings
-and routes EFFORT, never truth: per-finding dispositions
-(folded / narrowed / declined, with reasons), conflicting feedback
-sources reconciled explicitly, genuinely open choices escalate as
-STOPs. TOOLING findings get a mandatory threat-model judgment —
-`declined: out of threat model` is a live route.
+context will be ambiguous to the next). The triage is an EXPLICIT act
+per finding: a RECORDED disposition — `folded` / `narrowed` /
+`declined` / `deferred-to-build` / an ownership route — with a
+one-line why and a severity (`P0`–`P3` per
+`docs/reviewer-severity-ontology.md`; its evidence rules bind). The
+report carries the disposition tally; a round folding ~everything is
+a triage-inspection signal, never a quality sign. A fold that ADDS a
+mechanism states its one-line proportionality record (defect class
+guarded / plausibility / spec-weight cost); `declined: out of threat
+model` is a ROUTINE route for content-mechanism findings too.
+TOOLING findings keep the mandatory threat-model judgment.
+Conflicting feedback sources are reconciled explicitly; genuinely
+open choices escalate as STOPs.
 
 Three routes exist for ownership misfit (README §5.5 carries the
 canonical table): `boundary-review` (process-log line; revisit = the
@@ -379,6 +415,20 @@ phase-2 obligation (README §5.5).
   but THREE consecutive non-clean reconciliation passes escalate to
   a targeted round (which counts): the cap covers silent
   reconciliation churn too.
+- **Plateau: `3:plateau` (adopted 2026-07-17 — README §5.5 is
+  canonical)** — two consecutive review rounds (panel, external-arm,
+  and user rounds all count) each with ≤2 accepted CONTENT findings
+  (FIRST-OCCURRENCE counted: duplicates and re-litigated `declined`
+  items get one carrier and never re-count), zero accepted
+  blocker-grade (`P0`/`P1`) findings, and no mandatory escalation
+  trigger fired → STOP with the yield curve and a severity-bucketed
+  residual report; the human MAY close on judgment (a one-line
+  acknowledged close — residual items get dispositions, never
+  folds, so the bytes stabilize and the close binds a clean hash).
+  Any accepted `P0`/`P1` or fired escalation trigger RESETS the
+  counter. Optional close evidence: a prediction-test round with a
+  pre-registered count + class forecast. Thresholds v0 (README
+  §5.5); the watchdog stays the hard cap.
 
 ### 5) Fold classes and re-run scoping
 
@@ -436,7 +486,11 @@ AUTONOMOUS flag-free path it is MANDATORY at two gates — the approve
 bytes before build and the implementation at build close (README
 §5.5's transitional autonomous-path rule, user-ratified 2026-07-11;
 unavailable arm = BLOCKER → STOP; a waive is the human's explicit
-act, per gate). Elsewhere it stays an option:
+act, per gate). The build-close gate carries a MANDATORY SENSITIVITY
+PASS (README §5.5, promoted 2026-07-17): the arm's prompt instructs
+it to verify every packet-declared discipline and inventory member
+DRIVEN and ABLE TO FAIL in the built test bodies —
+R-LANE-SENSITIVITY's build-close half. Elsewhere it stays an option:
 
 - **When:** at a pre-ratification/pre-approval STOP as an extra
   adversarial pass, or as the FINDER-LANE RERUN after an
@@ -545,6 +599,40 @@ act, per gate). Elsewhere it stays an option:
   session discovers the repo's own review machinery and uses it;
   ~5–10 min, ~70–130k tokens per run.
 
+### 7) The fresh-implementer lens — EXPERIMENT (adopted 2026-07-17)
+
+A COMPREHENSION lens, not a falsifier: the five lenses and the arm
+all subtract; this lens measures whether the packet TEACHES — can a
+fresh build agent execute it without misreading? Explicitly an
+EXPERIMENT: the first 2–3 packets under the revised process run it,
+the chapter boundary evaluates its yield against the falsifier
+lenses' (did it catch anything they missed?), then the lens is
+scaled, iterated, or retired on evidence; each use logs its yield as
+a process-log line.
+
+- **Blindness:** a fresh-context agent fed ONLY the packet bytes —
+  no review history, no ledger, no model corpus, no plan. Deliberate
+  and double-edged: README §5.3 claims the packet is self-contained
+  for its operative set, and this lens TESTS that claim — a
+  restatement that needed outside knowledge is itself a finding.
+- **Task shape — restatement, not review:** "state what you would
+  build; restate every obligation in your own words; sketch the test
+  families; list what remains undecided for you." A comparison pass
+  diffs the restatement against the intended semantics; divergences
+  are COMPREHENSION findings against the packet (the
+  ambiguity-transfer class made measurable BEFORE build), triaged
+  per §3 — never folded mechanically.
+- **Cadence — once per packet:** after the plateau / before the
+  close, on the approve-candidate bytes (the text is stable; the
+  remaining question is whether the meaning crosses the
+  packet→build bridge). Re-run only if a later CONTENT fold changes
+  canonical semantics. Never per-round — the diminishing-returns
+  lesson is inherited.
+- **Pin:** model + reasoning effort recorded at first use in the
+  report and the process-log line (the arm-pin.md pattern). An
+  internal Opus-class agent is fine — this lens is not the
+  cross-model arm; comprehension, not decorrelation, is its job.
+
 ## Report
 
 ```
@@ -557,6 +645,9 @@ Re-run mode: full | targeted (<lenses run>; skipped: <lens — proven-unaffected
 Gate Coverage Matrix: <complete | missing/unknown cells listed>
 Lens reports: 1 substrate | 2 projection | 3 negatives | 4 mirror | 5 downstream — each: pass | findings | skipped(<reason>)
 Findings by type: <taxonomy-tagged list, considered_not_finding included, dispositions + routes>
+Dispositions: folded <n> / narrowed <n> / declined <n> / deferred-to-build <n> / routed <n> · severity: P0/P1 <n> · P2 <n> · P3 <n>
+Yield: <accepted CONTENT findings this round, first-occurrence counted> · plateau counter: <k>/2
+Size: <md KB> (Δ <±%> since the first full round; v0 thresholds 48 KB / +50% — breach flagged, advisory)
 Verdict: approve | refine | split | STOP <member token>
 ```
 
@@ -572,7 +663,10 @@ of ANY class voids.
 
 **Report validity gate:** the report is INVALID without its
 `Skill source`, `Packet basis`, `Re-run mode` (with skipped-lens
-reasons and the ACTUAL models used), `Gate Coverage Matrix`, and
+reasons and the ACTUAL models used), `Gate Coverage Matrix`,
+`Yield` and `Size` (EVERY round — the size check is mandatory per
+round and a zero-yield round is exactly what drives the plateau
+counter), `Dispositions` (any round that considered findings), and
 verdict lines — each filled or carrying an explicit one-line reason.
 A verdict delivered in commentary without the report block is a
 workflow defect to fix BEFORE handing back.
