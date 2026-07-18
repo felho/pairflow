@@ -28,6 +28,7 @@ Integrity check: [`check.sh`](check.sh) — root bridge `pnpm v3:adr-check`.
 | [ADR-011](ADR-011-definition-module.md) | the definition module — authored-definition surface home | accepted | 2026-07-10 |
 | [ADR-012](ADR-012-yaml-runtime-dependency.md) | the yaml package — the first v3 runtime dependency | accepted | 2026-07-10 |
 | [ADR-013](ADR-013-gates-module-and-registry.md) | the gates module — evaluators, static registry, injected composition | accepted | 2026-07-11 |
+| [ADR-014](ADR-014-runtime-core-module-homes-and-provider-seam.md) | runtime-core module homes — lifecycle in the kernel, the provider seam as a port | proposed | 2026-07-18 |
 
 ## Trigger watch (dormant ADRs)
 

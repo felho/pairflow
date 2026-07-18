@@ -2152,12 +2152,14 @@ and the dogfooding real, not as a new operability deliverable).
    prescribes additive value-domain growth ("a spec map JOINS
    `required` as a legal value; existing files keep their exact
    meaning") — the ch12 draft ratification therefore INCLUDES the
-   NAMED reopen + re-ratification of ch11-gate-format C18/C19
-   (the contract-draft lifecycle's reopen mechanics), deciding
-   the bare `runtimeContext: required` string form's
-   compatibility/migration (does it stay legal, and how a
-   provider resolves for it) — a human act on named rows, never
-   inferred; the `RuntimeContextProvider` contract
+   NAMED reopen + re-ratification of ch11-gate-format C18/C19,
+   plus C21's two runtime-context lane texts (a consistency edit —
+   those lanes hard-code the value domain C18 owned; aligned at the
+   ch12 draft round, 2026-07-18) (the contract-draft lifecycle's
+   reopen mechanics), deciding the bare `runtimeContext: required`
+   string form's compatibility/migration (does it stay legal, and
+   how a provider resolves for it) — a human act on named rows,
+   never inferred; the `RuntimeContextProvider` contract
    (`provision(instance_id, request_id, spec)` async →
    `RUNTIME_CONTEXT_READY`, plus `project_for_actor(ref)`);
    `ProviderRegistry` (registry-stable-for-the-run); the
@@ -2202,8 +2204,11 @@ and the dogfooding real, not as a new operability deliverable).
 - **Provisioning-failure handling, teardown lifecycle, provider
   health, run-override cascade for the context, conditional
   per-step context** — declared Absents (`→ later`), unchanged;
-  a provider that accepts the name but fails to provision surfaces
-  as the kernel `FAIL` event, per the model.
+  provisioning failure has NO channel at ch 12 (a failed provision
+  simply never fires READY — the run stays floor-visible and
+  cancellable); the model's failure→`FAIL` routing arrives WITH
+  this Absent (aligned at the ch12 draft round, 2026-07-18 — the
+  draft's C15).
 - **Waits beyond `kickoff_pending`** — `human_decision` (L3),
   `child_workflow` (L4), `timeout` (L9) ride the same machinery
   later.
@@ -2246,10 +2251,11 @@ default + step override keys, the inline field set, the `*_refs`
 value classes and their relation to the ch-8 id grammar); the
 `activation` key (mode enum, absent-key default = `immediate`); the
 `runtime_context` requirement block's grammar VIA the NAMED reopen +
-re-ratification of the ratified ch-11 C18/C19 rows (ownership moves
-from C18's then-named consuming chapter to ch 12; the bare
-`runtimeContext: required` string form's compatibility/migration
-decision is part of the same human act — §12.1 item 3);
+re-ratification of the ratified ch-11 C18/C19 rows + C21's two
+runtime-context lane texts (ownership moves from C18's then-named
+consuming chapter to ch 12; the bare `runtimeContext: required`
+string form's compatibility/migration decision is part of the same
+human act — §12.1 item 3);
 the run-override start-input surface; the provider contract's wire
 shapes (provision inputs, the ready event, the projection JSON);
 the per-chapter registry composition (testkit provider here,
