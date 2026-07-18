@@ -223,7 +223,8 @@ ratifier's structuring verdict at the stepwise presentation,
    content; the acts A/B choreography runs as this act's resolved
    STOP either way — the patch decides whether the escape hatch
    becomes standing, codified lifecycle for FUTURE realized-chapter
-   reopens).
+   reopens). **APPROVED by the ratifier at the stepwise
+   presentation, 2026-07-18.**
 4. **The READY terminal-sink model fix — EXECUTED, `76e34413`** (the
    panel surfaced that the ratified `RUNTIME_CONTEXT_READY` units
    carried no terminal-sink rung — a post-CANCEL late READY would
