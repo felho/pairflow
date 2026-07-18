@@ -234,7 +234,13 @@ ratifier's structuring verdict at the stepwise presentation,
    mirroring FAIL — registry-neutral (ledger byte-identical), no new
    rejection name (bare-REQUIRE guard); C15 binds the post-fix
    semantics.)
-5. **Silently-contestable stances riding flag-free otherwise** (the
+5. **The ADR-014 accept** (C22: the runtime-core module homes — the
+   lifecycle in the kernel, the provider seam as a kernel-only
+   injected port, the scripted player in the testkit, `src/providers/`
+   born at ch 9 — `proposed` → `accepted` by the ratifying act, the
+   ADR-013 pattern). **APPROVED by the ratifier at the stepwise
+   presentation, 2026-07-18.**
+6. **Silently-contestable stances riding flag-free otherwise** (the
    panel's digest nominations): C3 (the INVENTED `kind` grammar — the
    model gives none — and the provider-grammar reuse foreclosing
    single-token ids), C13/C1 (the `activation_mode` relocation from
