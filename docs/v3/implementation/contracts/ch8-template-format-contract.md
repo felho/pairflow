@@ -233,6 +233,7 @@ VACUOUSLY — the successor semantics realize at ch12's own close.
 
 ```json
 {"ratification": {"date": "2026-07-19", "arms": ["the ch12 draft loop's agent-invoked codex arm (gpt-5.6-sol/high) — the prepared pointer text reviewed within the ch12 rounds (two full rounds + six re-checks, final clean)"], "commit": "1600f2f23a85938374846bdd4238736eac21e49a"}}
+```
 
 
 ## Realized map (empty until chapter close)
