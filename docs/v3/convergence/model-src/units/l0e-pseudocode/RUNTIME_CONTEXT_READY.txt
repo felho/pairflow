@@ -1,6 +1,8 @@
 
 RUNTIME_CONTEXT_READY(instance, request_id, runtime_context_ref) → Outcome   # kernel_event (v1: workspace/worktree ready)
-  REQUIRE admit_loaded(instance, expect: { correlate: runtime_context = requested(request_id) })   # ADMISSION correlation rung (L0d) — the readiness for the request WE issued
+  REQUIRE admit_loaded(instance, expect: {
+    state:     kernel_status ≠ TERMINAL,                       # ADMISSION state rung (L0d) — terminal is a sink (a late READY after CANCEL/FAIL must not resurrect the run)
+    correlate: runtime_context = requested(request_id) })      # correlation rung — the readiness for the request WE issued
   template ← definitionStore.load(instance.template_ref)
   requirement ← template.runtime_context
   REQUIRE requirement = required(spec)                       # a request was issued ⇒ a context is required (made explicit)
