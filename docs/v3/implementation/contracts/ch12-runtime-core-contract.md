@@ -103,8 +103,8 @@ every page; pointer form throughout):
 - C18 (reopened): *The template top level's OPTIONAL `runtimeContext`
   key (ch8-C7 additive growth). Its value domain and grammar are
   OWNED by `contract:ch12-runtime-core#C2–#C4` (ownership moved by
-  the ch12 ratification act, 2026-07-18 — the consuming chapter this
-  row named). The bare string `required` is RETIRED by that same act:
+  the ch12 ratification act — human-approved 2026-07-18, ratified
+  2026-07-19 — the consuming chapter this row named). The bare string `required` is RETIRED by that same act:
   the removed form fails LOUD with its migration text (the §8.2
   rule 3 mechanic, the act itself the authority) — the recorded
   exception to this row's original "existing files keep their exact
@@ -134,7 +134,8 @@ every page; pointer form throughout):
   *the list item "the `runtimeContext` value domain (C18)" reads "the
   `runtimeContext` value domain — ownership and growth stance moved
   to `contract:ch12-runtime-core#C2–#C4/#C23` by the ch12
-  ratification act (2026-07-18; the same act retired the bare
+  ratification act (human-approved 2026-07-18, ratified
+  2026-07-19; the same act retired the bare
   `required` form — this row's additive-only promise no longer binds
   that domain)"; every other keyset of the row grows only additively
   per plan §8.2, unchanged.*
@@ -144,7 +145,8 @@ every page; pointer form throughout):
   value passes through raw, subject to the document-wide C1–C6 gates
   and C5's acyclicity. Its VALUE DOMAIN is OWNED by
   `contract:ch12-runtime-core#C7` (map-only + canonical-JSON-safe —
-  moved by the ch12 ratification act, 2026-07-18; this row's original
+  moved by the ch12 ratification act — human-approved 2026-07-18,
+  ratified 2026-07-19; this row's original
   any-value pass-through named itself "the L0c pass-through", and
   L0c's realizing chapter now owns the domain)."*
 
