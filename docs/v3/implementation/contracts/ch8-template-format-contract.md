@@ -1,7 +1,7 @@
 # ch8 — template-format contract
 
 ```json
-{"contract_draft": {"chapter": "ch8", "surface": "template-format", "status": "realized"}}
+{"contract_draft": {"chapter": "ch8", "surface": "template-format", "status": "reopened"}}
 ```
 
 ## Context (non-normative by declaration)
@@ -185,7 +185,7 @@ legibility question: the depth-is-the-human's-risk-call clause
 | C11 | `instruction` is a nonempty string; multiline prose is first-class via block scalars and the format performs NO whitespace normalization — trailing-newline behavior is the author's, via the chomping indicator (probe P4). |
 | C12 | `transitions` is a map of event-type → target id and MAY be empty: a step with no transitions is semantically defined (at runtime every event yields the model's `no_transition` rejection) — the format does not forbid the shape. |
 | C13 | The shape has two kinds of map: FIXED-KEYSET maps (the top level, `ref`, each step, each roles entry — their legal keysets are C7/C8/C9/C15) and OPEN-KEY maps (`steps`, `transitions`, `roles` — their KEYS are data: step ids, event types, role names, governed by C10 and C16; their VALUES are governed by their own rows, e.g. C19 for transition targets). The unknown-key rule binds the FIXED-KEYSET maps only: an unknown key there is a validation error naming the exact path and the offending key (plan §8.2 rule 4, fail-closed); an open-key map has no "unknown" key by construction. `agentConfig` is exempt entirely (C14). |
-| C14 | `agentConfig` accepts any resolved value that SURVIVES the document-wide C1–C6 gates AND C5's acyclicity rule (a custom tag or duplicate key inside it still rejects the document; a cyclic value inside it is C5's validate-stage error) and passes through raw and uninterpreted (the L0c pass-through, domain `Step.agentConfig`); the exemption is from C13's unknown-key rule and the shape rows ONLY. |
+| C14 | `agentConfig` is exempt from C13's unknown-key rule and the shape rows; at the VALIDATE stage the value passes through raw, subject to the document-wide C1–C6 gates and C5's acyclicity (a custom tag or duplicate key inside it still rejects the document; a cyclic value inside it is C5's validate-stage error). Its VALUE DOMAIN is OWNED by `contract:ch12-runtime-core#C7` (map-only + canonical-JSON-safe — moved by the ch12 ratification act — human-approved 2026-07-18, ratified 2026-07-19; this row's original any-value pass-through named itself "the L0c pass-through", and L0c's realizing chapter now owns the domain). |
 | C15 | `roles` is a map of role-name → a map whose only legal key is the OPTIONAL `defaultActor`; when present, `defaultActor` is a nonempty string. |
 | C16 | Role-set discipline: `keys(roles)` equals EXACTLY the set of roles referenced by steps — an undeclared-but-used role AND a declared-but-unused role are both validation errors (strict start; any relaxation is additive later). This RESOLVES the `start.ts` forward pointer ("reachability-aware refinement is ch-8 territory"): the format layer fixes declared==used strictly; reachability-aware relaxation stays deferred-additive — the ch8-P2 sweep retires that comment (the §8.5 pointer-hygiene precedent). |
 | C17 | `terminal` is a nonempty list of unique ids, disjoint from `keys(steps)`. |
@@ -224,45 +224,4 @@ legibility question: the depth-is-the-human's-risk-call clause
 
 ## Realized map (empty until chapter close)
 
-```json
-{"realized_map": {
-  "C1": "ch8-P1 G2 — v3/src/definition/load.ts; load.test.ts G2 lane",
-  "C2": "ch8-P1 G4 — load.ts warnings promotion; load.test.ts G4 lanes",
-  "C3": "ch8-P1 G5 — load.ts; load.test.ts multi-document lane",
-  "C4": "ch8-P1 G6 (+ rounds 3-6: document-wide structural uniqueKeys, SameValueZero) — load.ts; load.test.ts G6 lanes",
-  "C5": "ch8-P1 G8 + V15 — load.ts resolve guard; validate.ts acyclicity; both suites' lanes",
-  "C6": "ch8-P1 G3 — load.ts strict TextDecoder; load.test.ts invalid-byte lane",
-  "C7": "ch8-P1 V1 — validate.ts root keyset; validate.test.ts V1 lanes",
-  "C8": "ch8-P1 V2 + V3 — validate.ts id regex + version source ladder; validate.test.ts dimension-2 ladder",
-  "C9": "ch8-P1 V4 — validate.ts; validate.test.ts",
-  "C10": "ch8-P1 V5 — validate.ts shared id grammar; validate.test.ts id-class × form grid",
-  "C11": "ch8-P1 V6 — validate.ts; validate.test.ts",
-  "C12": "ch8-P1 V7 — validate.ts; validate.test.ts empty-transitions positive",
-  "C13": "ch8-P1 V8 — validate.ts fixed-vs-open keysets; validate.test.ts unknown-key lanes",
-  "C14": "ch8-P1 V9 (+ rounds 3/6: own-property-safe records, lossless Map fallback, one-memo identity) — validate.ts; validate.test.ts V9 lanes",
-  "C15": "ch8-P1 V10 — validate.ts; validate.test.ts",
-  "C16": "ch8-P1 V11 (+ ch8-P2 M6: the start.ts pointer retirement) — validate.ts; validate.test.ts role-set lanes",
-  "C17": "ch8-P1 V12 — validate.ts; validate.test.ts",
-  "C18": "ch8-P1 V13 — validate.ts; validate.test.ts",
-  "C19": "ch8-P1 V14 — validate.ts; validate.test.ts",
-  "C20": "ch8-P1 E1 + S4 — errors.ts finding forms; load.ts; both suites' ordering/read lanes",
-  "C21": "ch8-P1 E2 — validate.ts accumulation + dependent-lane suppression; validate.test.ts dimensions 5-6",
-  "C22": "ch8-P1 E3 + G1 every-stage catch — load.ts/validate.ts; both suites",
-  "C23": "ch8-P1 E4 — errors.ts nameless load side; the close registry-name sweep",
-  "C24": "ch8-P1 V16 — validate.ts; validate.test.ts kind-reserved negative",
-  "C25": "ch8-P1 V17 — vacuously realized at v0 (empty appendix; the V8 lane stands in)",
-  "C26": "ch8-P1 S1 — fileDefinitionStore.ts byte-exact listing; fileDefinitionStore.test.ts dimension-9 lanes",
-  "C27": "ch8-P1 S2 — fileDefinitionStore.ts post-validate ref check; store suite",
-  "C28": "ch8-P1 S3 — fileDefinitionStore.ts + ports/definition.ts comment; store suite invalid-vs-absent lanes",
-  "C29": "ch8-P2 A1-A4 — cli/common.ts resolveTemplatesDir (eager gate); cli.test.ts A lanes + the breaking-sweep",
-  "C30": "ch8-P2 T1-T2 — cli/main.ts parseTemplateRef (C8-mirrored grammar); cli.test.ts T2 ladder",
-  "C31": "ch8-P2 D1-D5 — cli/dev/main.ts verbValidate; dev.test.ts D lanes",
-  "C32": "ch8-P2 M1-M3 + M7 — v3/templates/local-pair-v0@1.yaml; the builtin deleted; testkit/templateFixture.test.ts equality pin",
-  "C33": "ch8-P1 B3 — v3/package.json yaml@2 dependency; ADR-012",
-  "C34": "ch8-P1 G7 — load.ts two-mechanism directive union; load.test.ts G7 lanes",
-  "C35": "ch8-P1 G9 — merge-key non-feature; load.test.ts G9 lanes",
-  "C36": "ch8-P1 G1 — load.ts staged short-circuiting pipeline; both suites' combination lanes",
-  "C37": "ch8-P2 M4 — cli/dev/main.ts replay repoint to the testkit fixture; dev.test.ts replay lanes",
-  "C38": "ch8-P2 W1-W4 — cli/main.ts + cli/dev/main.ts type-based per-verb catches; cli.test.ts/dev.test.ts W lanes + journey.test.ts"
-}}
-```
+
