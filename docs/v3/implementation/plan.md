@@ -2153,13 +2153,16 @@ and the dogfooding real, not as a new operability deliverable).
    `required` as a legal value; existing files keep their exact
    meaning") — the ch12 draft ratification therefore INCLUDES the
    NAMED reopen + re-ratification of ch11-gate-format C18/C19,
-   plus C21's two runtime-context lane texts (a consistency edit —
-   those lanes hard-code the value domain C18 owned; aligned at the
-   ch12 draft round, 2026-07-18) (the contract-draft lifecycle's
-   reopen mechanics), deciding the bare `runtimeContext: required`
-   string form's compatibility/migration (does it stay legal, and
-   how a provider resolves for it) — a human act on named rows,
-   never inferred; the `RuntimeContextProvider` contract
+   plus C21's two runtime-context lane texts and C30's
+   runtimeContext growth item (consistency edits — those rows
+   hard-code or promise-bind the value domain C18 owned), plus
+   ch8-template-format C14 (the agentConfig value domain moves to
+   the ch12 draft's C7 — one owner on every page; the reopen set as
+   aligned at the ch12 draft rounds, 2026-07-18) (the contract-draft
+   lifecycle's reopen mechanics), deciding the bare
+   `runtimeContext: required` string form's compatibility/migration
+   (does it stay legal, and how a provider resolves for it) — a
+   human act on named rows, never inferred; the `RuntimeContextProvider` contract
    (`provision(instance_id, request_id, spec)` async →
    `RUNTIME_CONTEXT_READY`, plus `project_for_actor(ref)`);
    `ProviderRegistry` (registry-stable-for-the-run); the
@@ -2238,7 +2241,9 @@ Invariants: **15**, dispositions already fixed by the ch-5 map
 with a named packet owner. Chapter traces: **3 golden traces** (the
 l0c, l0d, and l0e section traces; the l0d trace exercises the
 deferred-kickoff hold + cancel, the l0e trace the provisioned
-immediate run + the unknown-provider variant). No IC/PI intake rows
+immediate run + the unknown-provider variant); ch12-P1 additionally
+ships a context-free deferred-hold JOURNEY trace (an acceptance
+vehicle, not a fourth golden trace — the draft's C25 staging). No IC/PI intake rows
 flip: the chapter is map-extension surface (the IC-A2 family and
 the CT-B two-worker re-run stay ch 9's).
 
@@ -2252,10 +2257,11 @@ value classes and their relation to the ch-8 id grammar); the
 `activation` key (mode enum, absent-key default = `immediate`); the
 `runtime_context` requirement block's grammar VIA the NAMED reopen +
 re-ratification of the ratified ch-11 C18/C19 rows + C21's two
-runtime-context lane texts (ownership moves from C18's then-named
-consuming chapter to ch 12; the bare `runtimeContext: required`
-string form's compatibility/migration decision is part of the same
-human act — §12.1 item 3);
+runtime-context lane texts + C30's runtimeContext growth item, and
+ch-8 C14 for the agentConfig value domain (ownership moves from the
+then-named consuming chapters to ch 12; the bare
+`runtimeContext: required` string form's compatibility/migration
+decision is part of the same human act — §12.1 item 3);
 the run-override start-input surface; the provider contract's wire
 shapes (provision inputs, the ready event, the projection JSON);
 the per-chapter registry composition (testkit provider here,
@@ -2276,9 +2282,9 @@ visibly conditional per the §1.3 granularity rule).
 | Packet | Content | Mode |
 |---|---|---|
 | ch12-P0 | the gate-field watchpoint realization: the `Outcome` gate_blocked arm + kernel emission + CLI rejection detail gain `gate` per the ratified model fix (`6dd8bd15`), test expectations updated | flag-free approve → autonomous build (measurement; the §5.5 fallbacks stand); predicted: projection (source: the ratified model @ `6dd8bd15` — anchors no draft row) |
-| ch12-P1 | the L0d lifecycle spine: the source-routed entry, the CREATE/START split (ch-4 `startInstance` retired as a named replacement), `kernel_status` + typed wait + terminal dispositions, KICKOFF/CANCEL/FAIL/COMPLETE, the lifecycle fact entries with `op_id`, `task_required` + `not_active` unit basis, THE schema bump (fenced), the `l0d/terminal-is-a-sink` storeChecker, the l0d golden trace | flag-free approve → autonomous build (inherited); predicted: projection (basis: l0d-pseudocode + ledger §2/§3/§4 + the chapter draft — pending ratification); **declared sizing-split candidate** (template §2 step 0 — 12 units; the expected seam: lifecycle axis first, activation machinery second) |
+| ch12-P1 | the L0d lifecycle spine: the source-routed entry, the CREATE/START split (ch-4 `startInstance` retired as a named replacement), `kernel_status` + typed wait + terminal dispositions, KICKOFF/CANCEL/FAIL/COMPLETE, the lifecycle fact entries with `op_id`, `task_required` + `not_active` unit basis, THE schema bump (fenced), the `l0d/terminal-is-a-sink` storeChecker, a context-free deferred-hold journey trace (the l0d golden trace's requested/READY legs need the provider machinery — it moves to P3; aligned at the ch12 draft refine round, 2026-07-18, the draft's C25 trace staging) | flag-free approve → autonomous build (inherited); predicted: projection (basis: l0d-pseudocode + ledger §2/§3/§4 + the chapter draft — pending ratification); **declared sizing-split candidate** (template §2 step 0 — 12 units; the expected seam: lifecycle axis first, activation machinery second) |
 | ch12-P2 | the L0c run profile: `AgentConfig` + the cascade + `resolve_agent_config`, the packet's `effective_agent_config`, the transcript's `issued_agent_config` recomputed-at-commit provenance, `run_overrides` at start, the l0c golden trace | flag-free approve → autonomous build (inherited); predicted: projection (basis: l0c-pseudocode + ledger §2/§4 + the chapter draft — pending ratification) |
-| ch12-P3 | the L0e provider contract: the requirement on the template (C18/C19 successor), the provider port + `ProviderRegistry` + the deterministic testkit provider, the kind-boundary readiness check, the packet projection, `runtime_context_provider_unavailable` behavioral, the ch11-P3b start-input seam reconciled, the l0e golden trace (incl. the unknown-provider variant) | flag-free approve → autonomous build (inherited); predicted: projection (basis: l0e-pseudocode + ledger §2/§3/§4 + the chapter draft — pending ratification) |
+| ch12-P3 | the L0e provider contract: the requirement on the template (C18/C19 successor), the provider port + `ProviderRegistry` + the deterministic testkit provider, the kind-boundary readiness check, the packet projection, `runtime_context_provider_unavailable` behavioral, the ch11-P3b start-input seam reconciled, the l0e golden trace (incl. the unknown-provider variant) + the l0d golden trace (the deferred hold + cancel — its requested/READY legs realized with the scripted provider; moved from P1, aligned 2026-07-18) | flag-free approve → autonomous build (inherited); predicted: projection (basis: l0e-pseudocode + ledger §2/§3/§4 + the chapter draft — pending ratification) |
 | ch12-P4 | the format + operator surface: the runtime YAML keys (agent_config / activation / runtime_context requirement) + validator lanes + CLI validate extension, the lifecycle CLI verbs, the floor extension (kernel_status / wait / runtime-context state), template-fixture updates under the ch8-P2 equality pin | flag-free approve → autonomous build (inherited); predicted: projection (basis: the chapter draft — pending ratification) |
 
 Order: draft ratification → P0 → P1 → P2 → P3 → P4 (the README §4
