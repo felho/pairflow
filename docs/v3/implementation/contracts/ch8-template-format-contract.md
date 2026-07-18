@@ -1,7 +1,7 @@
 # ch8 — template-format contract
 
 ```json
-{"contract_draft": {"chapter": "ch8", "surface": "template-format", "status": "reopened"}}
+{"contract_draft": {"chapter": "ch8", "surface": "template-format", "status": "realized"}}
 ```
 
 ## Context (non-normative by declaration)
@@ -162,11 +162,20 @@ full parse ("elég sok szem látta"); the draft's legibility for a
 human ratifier is boundary-review material.
 
 **Close metrics (recorded at the ch8 close, 2026-07-11):**
-post-ratification reopenings: 0; every row realized across ch8-P1
+post-ratification reopenings: 1 (the 2026-07-19 ch12-ratification pointer reopen — C14's value domain delegated to the ch12 successor, closed by re-ratification within the same act); every row realized across ch8-P1
 (C1–C28, C33–C36) and ch8-P2 (C29–C32, C37–C38) — the realized flip +
 map in ONE act (this commit). The boundary review resolved the queued
 legibility question: the depth-is-the-human's-risk-call clause
 (README §5.5) + the ratifier's digest (DraftContract §4).
+
+**Reopen record (2026-07-19, the ch12 ratification — act B of its
+decision set).** Reopened from `realized` (the post-close escape
+hatch, the ratifier's resolved STOP): C14 converted to its POINTER
+form — the `agentConfig` value domain (map-only + canonical-JSON-safe)
+delegated to `contract:ch12-runtime-core#C7`; the ch8 draft's FIRST
+reopen. Reopen-delta new-decision rows: 0 (a pointer conversion; the
+narrowing decision lives in the ch12 draft). The pointer row realizes
+VACUOUSLY — the successor semantics realize at ch12's own close.
 
 ## Contract rows (every normative statement is a C-row)
 
@@ -222,6 +231,53 @@ legibility question: the depth-is-the-human's-risk-call clause
 {"ratification": {"date": "2026-07-10", "arms": ["claude-opus-4-8 five-lens panel (8 full rounds) + close passes", "external codex arm, user's default config (5 rounds: 3 user-run, 2 agent-invoked)"], "commit": "9ea630a03936d45309e53a33771a705b99e744cd"}}
 ```
 
+```json
+{"ratification": {"date": "2026-07-19", "arms": ["the ch12 draft loop's agent-invoked codex arm (gpt-5.6-sol/high) — the prepared pointer text reviewed within the ch12 rounds (two full rounds + six re-checks, final clean)"], "commit": "1600f2f23a85938374846bdd4238736eac21e49a"}}
+
+
 ## Realized map (empty until chapter close)
+
+```json
+{"realized_map": {
+  "C1": "ch8-P1 G2 — v3/src/definition/load.ts; load.test.ts G2 lane",
+  "C2": "ch8-P1 G4 — load.ts warnings promotion; load.test.ts G4 lanes",
+  "C3": "ch8-P1 G5 — load.ts; load.test.ts multi-document lane",
+  "C4": "ch8-P1 G6 (+ rounds 3-6: document-wide structural uniqueKeys, SameValueZero) — load.ts; load.test.ts G6 lanes",
+  "C5": "ch8-P1 G8 + V15 — load.ts resolve guard; validate.ts acyclicity; both suites' lanes",
+  "C6": "ch8-P1 G3 — load.ts strict TextDecoder; load.test.ts invalid-byte lane",
+  "C7": "ch8-P1 V1 — validate.ts root keyset; validate.test.ts V1 lanes",
+  "C8": "ch8-P1 V2 + V3 — validate.ts id regex + version source ladder; validate.test.ts dimension-2 ladder",
+  "C9": "ch8-P1 V4 — validate.ts; validate.test.ts",
+  "C10": "ch8-P1 V5 — validate.ts shared id grammar; validate.test.ts id-class × form grid",
+  "C11": "ch8-P1 V6 — validate.ts; validate.test.ts",
+  "C12": "ch8-P1 V7 — validate.ts; validate.test.ts empty-transitions positive",
+  "C13": "ch8-P1 V8 — validate.ts fixed-vs-open keysets; validate.test.ts unknown-key lanes",
+  "C14": "ch8-P1 V9 (+ rounds 3/6: own-property-safe records, lossless Map fallback, one-memo identity) — validate.ts; validate.test.ts V9 lanes ; reopened at the ch12 ratification (human-approved 2026-07-18, ratified 2026-07-19) — successor contract:ch12-runtime-core#C7; realized vacuously (delegation — the successor realizes at ch12's close)",
+  "C15": "ch8-P1 V10 — validate.ts; validate.test.ts",
+  "C16": "ch8-P1 V11 (+ ch8-P2 M6: the start.ts pointer retirement) — validate.ts; validate.test.ts role-set lanes",
+  "C17": "ch8-P1 V12 — validate.ts; validate.test.ts",
+  "C18": "ch8-P1 V13 — validate.ts; validate.test.ts",
+  "C19": "ch8-P1 V14 — validate.ts; validate.test.ts",
+  "C20": "ch8-P1 E1 + S4 — errors.ts finding forms; load.ts; both suites' ordering/read lanes",
+  "C21": "ch8-P1 E2 — validate.ts accumulation + dependent-lane suppression; validate.test.ts dimensions 5-6",
+  "C22": "ch8-P1 E3 + G1 every-stage catch — load.ts/validate.ts; both suites",
+  "C23": "ch8-P1 E4 — errors.ts nameless load side; the close registry-name sweep",
+  "C24": "ch8-P1 V16 — validate.ts; validate.test.ts kind-reserved negative",
+  "C25": "ch8-P1 V17 — vacuously realized at v0 (empty appendix; the V8 lane stands in)",
+  "C26": "ch8-P1 S1 — fileDefinitionStore.ts byte-exact listing; fileDefinitionStore.test.ts dimension-9 lanes",
+  "C27": "ch8-P1 S2 — fileDefinitionStore.ts post-validate ref check; store suite",
+  "C28": "ch8-P1 S3 — fileDefinitionStore.ts + ports/definition.ts comment; store suite invalid-vs-absent lanes",
+  "C29": "ch8-P2 A1-A4 — cli/common.ts resolveTemplatesDir (eager gate); cli.test.ts A lanes + the breaking-sweep",
+  "C30": "ch8-P2 T1-T2 — cli/main.ts parseTemplateRef (C8-mirrored grammar); cli.test.ts T2 ladder",
+  "C31": "ch8-P2 D1-D5 — cli/dev/main.ts verbValidate; dev.test.ts D lanes",
+  "C32": "ch8-P2 M1-M3 + M7 — v3/templates/local-pair-v0@1.yaml; the builtin deleted; testkit/templateFixture.test.ts equality pin",
+  "C33": "ch8-P1 B3 — v3/package.json yaml@2 dependency; ADR-012",
+  "C34": "ch8-P1 G7 — load.ts two-mechanism directive union; load.test.ts G7 lanes",
+  "C35": "ch8-P1 G9 — merge-key non-feature; load.test.ts G9 lanes",
+  "C36": "ch8-P1 G1 — load.ts staged short-circuiting pipeline; both suites' combination lanes",
+  "C37": "ch8-P2 M4 — cli/dev/main.ts replay repoint to the testkit fixture; dev.test.ts replay lanes",
+  "C38": "ch8-P2 W1-W4 — cli/main.ts + cli/dev/main.ts type-based per-verb catches; cli.test.ts/dev.test.ts W lanes + journey.test.ts"
+}}
+```
 
 
