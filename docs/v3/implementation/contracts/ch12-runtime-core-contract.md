@@ -1,7 +1,7 @@
 # ch12 — runtime-core contract
 
 ```json
-{"contract_draft": {"chapter": "ch12", "surface": "runtime-core", "status": "draft"}}
+{"contract_draft": {"chapter": "ch12", "surface": "runtime-core", "status": "ratified"}}
 ```
 
 ## Context (non-normative by declaration)
@@ -296,7 +296,17 @@ deliberately NOT contract rows):**
   template-§2 step-0 sizing measurement re-checks the packet's load
   (the plan flags only P1 as the declared split candidate).
 
-**Draft metrics** (template §5 — recorded at ratification): —
+**Draft metrics** (template §5, recorded at the 2026-07-19
+ratification): rounds to ratify: 5 full five-lens panel rounds + 2
+top-level closes + delta reconciliations, the external codex arm (2
+full rounds + 6 re-checks, final clean), the ratifier's ordered
+refine round (6 steps — among its catches the READY terminal-sink
+model gap → the ratified fix `76e34413` + the §13 mirror
+`594c9c1e`), and the stepwise decision presentation (acts A/B/C +
+ADR-014 + the stance set — human-approved 2026-07-18/19);
+new-decision rows: 12 (C2, C3, C7, C8, C9, C11 — the ∅ encoding,
+C13, C15, C16, C18, C19, C25) + the act-carrier rows C26/C27;
+post-ratification reopenings: 0.
 
 ## Contract rows (every normative statement is a C-row)
 
@@ -331,5 +341,9 @@ deliberately NOT contract rows):**
 | C27 | The `contract-draft-template.md` §4 THREE-PART PATCH (the verbatim payload lives in the Context choreography note) is APPLIED BY the ratifying act — the amendment-rides-the-act carrier (the ch11-C38/§8.2-deviation-clause pattern: process authority amended by the same explicit human act that first exercises it); until applied, the realized-reopen path exists ONLY as this act's resolved STOP, never as standing lifecycle. |
 
 ## Ratification history (empty at `draft` — blocks are appended by the lifecycle acts)
+
+```json
+{"ratification": {"date": "2026-07-19", "arms": ["agent-invoked codex gpt-5.6-sol/high — two full rounds + six re-checks across the draft loop (final: clean re-check on the approve bytes)"], "commit": "d57a437f03a7ecce41eac5f49cdfab85807b4a6f"}}
+```
 
 ## Realized map (empty until chapter close)

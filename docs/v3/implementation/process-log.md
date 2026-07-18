@@ -2839,3 +2839,32 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   one-word answers sufficient) was named a "super great experience" and
   ratified as the standing discipline for EVERY human decision point →
   canonical in README §6; AuthorPacket's presentation step points at it.
+
+**2026-07-19 — the ch12 draft round + ratification act.** (1) The
+loop's yield curve: 5 full panel rounds + 2 closes + the codex arm (2
+full + 6 re-checks) + the ratifier's 6-step refine order; the arm's
+distinct catches (canonical-JSON-safe value domains incl. the
+`.nan`/`.inf` provenance crash; the early-READY loss → the
+ordered-after-commit seam; the ADR-014 byte gap) were classes the
+panel had not surfaced — arm-yield stays real at draft grain. (2) The
+READY terminal-sink model gap (a post-CANCEL late READY would have
+resurrected a cancelled run) was panel-found, user-ordered fix-first
+(`76e34413`) — and its ripple sweep MISSED the §13 recap-row mirror
+(caught by the ratifier; fixed `594c9c1e`): the R-ABSENCE-CONSUMERS
+class repeated on the MODEL plane — section-prose guard recaps are
+consumers too. (3) The first realized-chapter reopens ran (ch11
+C18/C19/C21/C30, ch8 C14): the template §4 escape-hatch patch ratified
+with the act; execution lesson — the choreography's "every commit
+lint-green" over-claimed against the template's own loud-red
+anchor-window rule, and one red intermediate state LANDED because the
+lint ran behind a pipe that swallowed its exit code (fixup 7468b8fa):
+a green-gate is EXECUTION (exit-code-gated), never narration —
+R-EXECUTION's commit-gate face. (4) The template-only activation
+stance survived 5 panel rounds + the arm and fell to the ratifier's
+v1-capability test (the ideation dual-run) — the lenses check model
+fidelity and internal consistency, but no lens owns "does this
+foreclose a known PRODUCT capability?"; boundary-review candidate: a
+v1-capability probe in lens 5's duty list. (5) The stepwise
+presentation carried its second live run (README §6): the ratifier
+split the bundled reopen into two semantic acts + a separate process
+act — the act-atomicity-matches-meaning refinement is now precedent.

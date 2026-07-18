@@ -140,8 +140,9 @@ violations; the lint guards only the C-row byte surface).
 
 ```
 draft ──(human ratification)──▶ ratified ──(chapter close)──▶ realized
-              ▲                     │
-              └──── reopened ◀──────┘   (from ratified ONLY; transient)
+              ▲                     │                             │
+              └──── reopened ◀──────┴─────────────────────────────┘
+        (from ratified; from realized only as a resolved STOP; transient)
 ```
 
 - **First ratification (two commits):** the content commit lands the
@@ -149,12 +150,28 @@ draft ──(human ratification)──▶ ratified ──(chapter close)──�
   commit appends the block recording that content commit AND flips
   status to `ratified` in one act (no C-row changes → equality holds
   — green).
-- **Reopen (from `ratified` ONLY):** a `realized` draft is
-  chapter-closed — a post-close change is a STOP, not a lifecycle.
-  Commit 1 edits the C-rows and flips status to `reopened` (equality
-  suspended — green); commit 2 appends the new block recording
-  commit 1 and flips back to `ratified`. Re-ratification is
-  permanently human, exactly like ratification.
+- **Reopen (from `ratified` directly; from `realized` ONLY as a
+  human-resolved STOP — the post-close escape hatch below):** from
+  `ratified`: commit 1 edits the C-rows and flips status to
+  `reopened` (equality suspended — green); commit 2 appends the new
+  block recording commit 1 and flips back to `ratified`.
+  Re-ratification is permanently human, exactly like ratification.
+  The `realized` path follows the post-close bullet's mechanics
+  EXCLUSIVELY — its commit 2 returns to `realized`, never `ratified`.
+- **Post-close (realized) reopen:** a post-close change remains a
+  STOP; when the human resolves it by ordering a reopen (first
+  exercise: the ch12 ratification's mandated reopen set — ch11
+  C18/C19/C21/C30 + ch8-C14), the draft passes
+  realized → reopened → realized — commit 1 removes the
+  `realized_map` with the row edits and the `reopened` flip, commit 2
+  restores the updated map with the new block and the `realized`
+  flip; a reopened-to-pointer row's map entry records the historical
+  landing plus the delegation, realizing VACUOUSLY (the successor
+  surface owns the new semantics' realization at its own close);
+  every commit green on the draft-form rules, the packet-anchor
+  surface loud-red for the window (this section's own rule — the
+  designed signal, closed at commit 2); the resolution is never
+  inferred.
 - **`reopened` is a transient STOP-artifact, never a resting state:**
   packet refs into a reopened draft go loud-red for the window;
   packet approve, chapter close, and process flips require ZERO

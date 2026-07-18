@@ -1,12 +1,13 @@
 # ADR-014: runtime-core module homes — lifecycle in the kernel, the provider seam as a port
 
-Status: proposed
+Status: accepted
 Date: 2026-07-18
 Links: supersedes — · amends ADR-001 · depends-on ADR-005 · related ADR-013
 
 Draft-lane ADR (README §4 step 5): rides the `ch12-runtime-core`
 contract-draft (row C22) — `proposed` with the draft's content
-commit; flipped `accepted` by the draft's human ratification act.
+commit; flipped `accepted` by the draft's human ratification act
+(2026-07-19, the ratifying commit).
 
 ## Context
 
