@@ -1,7 +1,7 @@
 # V3 Implementation Plan
 
 Written chapter by chapter, each chapter proposed → ratified → committed
-(process: [`README.md`](README.md) §3). Chapters present: 1–8, 11.
+(process: [`README.md`](README.md) §3). Chapters present: 1–8, 11–12.
 
 **Genre note.** This is the implementation **master plan** — it is NOT a
 directly `ExecutePairflowPlan`-executable task list, and it carries no
@@ -102,7 +102,8 @@ convention is itself a chapter-1 rule.
 | 7 | Kernel diagnostics & structured logging: the named non-authoritative diagnostic channel's concrete form | PI-4 | realized |
 | 8 | Template file-format spec: the canonical authoring format; **migrates MD-1** | PI-5 | realized |
 | 11 | **Gate core** (appended chapter, build order: BEFORE ch 9 — §11): the L1 authority slice, the L2 gate pipeline + inline evaluators (the ch-4 provisional `round` aligned to its L2 contract), the L2a process-gate contract (kernel side — the spawn is ch 9's), a minimal runtime-context representation, the format's gate-declaration surface (§8.2 stance) | — (map-extension, §8.1) | realized |
-| 9 | Runner MVP: local worktree provider, one real actor adapter, process-gate runner, attach channel (tmux observe/takeover); sub-decision: local-worktree only vs headless/cloud; watchpoint (proposed at the ch11 close dogfooding, 2026-07-18 — disposition at this chapter's ratification): the gate-block Rejected surface names only the REASON (`gate_blocked`/`round_below_min`), not the blocking gate's `uses` — a multi-gate operator cannot tell WHICH gate blocked; an additive observability candidate (model-plane touch: the Rejected outcome's field list) | PI-8 | planned(ch 9) |
+| 12 | **Runtime core** (appended chapter, build order: BEFORE ch 9 — §12): the L0c run profile (AgentConfig cascade + issued provenance), the L0d lifecycle/activation axis (kernel_status, source-routed entry, the CREATE/START split, typed waits, terminal dispositions, KICKOFF/CANCEL), the L0e runtime-context provider contract (requirement + registry + packet projection; testkit provider — the real worktree provider stays ch 9's), the gate-field watchpoint realization (model fix `6dd8bd15`), the format's runtime keys (§8.2 stance) + lifecycle operator verbs + floor extension | — (map-extension, §1.3) | planned(ch 12) |
+| 9 | Runner MVP: local worktree provider (`pairflow.worktree` — the ch-12 L0e contract's first real provider), one real actor adapter, process-gate runner spawn side, attach channel (tmux observe/takeover); **MVP scope RESOLVED (user, 2026-07-18): local-worktree only** — headless/cloud is a later provider behind the same contract (its async ready-event + opaque-ref shape keeps that additive; the deferred teardown/health/failure-handling Absents are the named rework surface); **watchpoint RESOLVED (user, 2026-07-18):** the gate-block observability fix landed as a model-plane change (ratified @ `6dd8bd15` — `Rejected(gate_blocked)` carries the blocking binding's `uses` as `gate`), code realization owned by ch12-P0; prerequisites: ch 11 (gate call site) + ch 12 (runtime core) | PI-8 | planned(ch 9) |
 | 10 | Operator recourse card: one page (query via the floor, cancel, deleteRequested; no watchdog/retry until L9) | PI-9 | planned(ch 10) |
 
 **Predicted-class convention (process-v2, added at the Phase-1 flip;
@@ -155,7 +156,14 @@ surface** — deliberately excluded from ch 11 (§11.1); its render
 semantics and its format keys (`context_blocks` catalog,
 `context_block_refs`, interpreted `prompt_concern_refs`) land
 together in their own appended chapter, naturally after ch 9 when a
-real actor adapter consumes dispatched packets.
+real actor adapter consumes dispatched packets. Fourth named
+candidate (raised at the ch11 close as ch-9's own map-extension
+question — §11.1's honest boundary; decided by the user at the
+ch9 scoping round, 2026-07-18): the **runtime core** — the L0c/L0d/
+L0e kernel slices the runner MVP presupposes. **ENTERED as chapter
+12 (ratified 2026-07-18, §12)**, build order before ch 9 — the
+second live use of the mechanism, numbering per the ch-11-minted
+convention.
 **Close verdict (the ch11 boundary, 2026-07-18 — §11.5's
 first-exercise verdict): VALIDATED** — the appended chapter ran the
 standard rails end-to-end (own ratification; contract-draft lifecycle
@@ -2068,3 +2076,230 @@ green; the module-home ADR `accepted` per its lane; the draft flipped
 flipped to `realized`; the dogfooding checkpoint run-or-waived
 (recorded); process-log review held at the boundary, including the
 first map-extension exercise verdict.
+
+## Chapter 12 — Runtime core: L0c run profile + L0d lifecycle/activation + L0e provider contract (ratified 2026-07-18)
+
+(autonomy stage: **measurement** — flag-free panel approves proceed
+to build autonomously THROUGH the two transitional external-arm gates
+(README §5.5, arm-pin.md); flags, STOPs, the draft ratification, and
+any first-of-a-kind reclassification route to the human. The ch11
+boundary's ARMED falling-yield prediction is measured on this
+chapter's arm gates — the adopted catch-class lens duties and
+R-DERIVED-PROBES run here for the first time.)
+
+The **second live use of the §1.3 map-extension mechanism** (the
+first, ch 11, closed VALIDATED), realizing the §11.1 honest-boundary
+mandate: the ch-9 runner MVP presupposes kernel-side runtime
+machinery the model carries at three levels and no chapter owns —
+the L0c run profile (which agent config a dispatch is issued), the
+L0d lifecycle/activation axis (a run that is created, provisioned,
+held, activated, and terminally disposed — without it the kernel
+cannot wait for a worktree to be built), and the L0e provider
+contract (how a runtime context is declared, provisioned, and
+projected to the actor). The user's scoping decision (2026-07-18):
+a separate appended kernel chapter BEFORE ch 9 — the ch-11 shape
+("the kernel owns the contract, the runner owns the spawn")
+extended one rung down: the kernel owns the provisioning contract
+and the activation machinery; the runner chapter owns the git
+mechanics, the real adapter, and the attach surface. Numbered 12
+(arrival order), ordered before ch 9 (build order). No PI item:
+model-ladder surface, not operability spine (the floor/CLI
+extension below exists to keep the chapter's own traces drivable
+and the dogfooding real, not as a new operability deliverable).
+
+### 12.1 Scope and boundaries
+
+**In scope:**
+
+1. **The L0d lifecycle/activation spine.** `kernel_status` as the
+   second stored axis (`CREATED | ACTIVE | WAITING | TERMINAL`)
+   beside `current_step`; the source-routed entry (`RECEIVE` —
+   `input.source`: actor / operator / kernel); the ch-4
+   `startInstance` one-shot RETIRED as a named replacement by the
+   L0d split — `CREATE_INSTANCE` (record + binding coverage, NO
+   dispatch) + `START` (provisioning request) + `activate` (the
+   first dispatch moves here); the operator intents `KICKOFF` /
+   `CANCEL` and the kernel event `FAIL` (with `COMPLETE` as the
+   internal helper it already is in ch-4 code); `ActivationMode`
+   (`immediate | deferred_kickoff`) and the typed wait
+   (`kickoff_pending` — the ONLY wait kind here); single-write
+   `terminal_disposition`; the lifecycle fact entries (`STARTED` /
+   `CANCELLED` / `TASK_SUPPLIED`) carrying `op_id` under the
+   uniform commit discipline (a replayed lifecycle op is
+   `Duplicate`); the `not_active` guard's L0d unit basis (the
+   name is BEHAVIORAL since ch11-P1 — this chapter lands the
+   lifecycle machinery under it); `task_required` behavioral. The
+   instance store gains the lifecycle columns (`kernel_status`,
+   `terminal_disposition`, `activation_mode`, `wait`,
+   `failure_reason`, `task` nullable, `runtime_context` state) —
+   THE chapter's schema bump, under the ADR-003 fenced-wipe stance.
+2. **The L0c run profile.** `AgentConfig` (portable run intent —
+   inline fields + declared refs) with the cascade `role default ⊕
+   step override ⊕ run override`; `resolve_agent_config` pure and
+   deterministic; `effective_agent_config` in the packet, computed
+   at dispatch and RECOMPUTED at commit into the transcript's
+   `issued_agent_config` provenance (never stored as instance
+   state); `run_overrides` snapshotted at start. The refs are
+   declared intent — resolution is the ch-9 adapter's (and later
+   ContextAssembly's) job, and `issued ≠ proven runtime` stays a
+   review-disposition truth.
+3. **The L0e provider contract.** `RuntimeContextRequirement`
+   (`none | required(spec { kind, provider, config })`) on the
+   template — RECONCILING the ch-11 minimal `runtimeContext`
+   declaration key (C18/C19) into the full requirement form. This
+   is an OWNERSHIP and meaning change, not a conditional touch:
+   the ratified C18 names the consuming chapter (then ch 9) and
+   prescribes additive value-domain growth ("a spec map JOINS
+   `required` as a legal value; existing files keep their exact
+   meaning") — the ch12 draft ratification therefore INCLUDES the
+   NAMED reopen + re-ratification of ch11-gate-format C18/C19
+   (the contract-draft lifecycle's reopen mechanics), deciding
+   the bare `runtimeContext: required` string form's
+   compatibility/migration (does it stay legal, and how a
+   provider resolves for it) — a human act on named rows, never
+   inferred; the `RuntimeContextProvider` contract
+   (`provision(instance_id, request_id, spec)` async →
+   `RUNTIME_CONTEXT_READY`, plus `project_for_actor(ref)`);
+   `ProviderRegistry` (registry-stable-for-the-run); the
+   kind-boundary check on readiness (the kernel validates kind +
+   correlation, NEVER the provider-defined locator); the packet's
+   `runtime_context` projection (the actor sees the projection or
+   an explicit `none`, never the raw ref);
+   `runtime_context_provider_unavailable` behavioral. This chapter
+   ships the CONTRACT + a deterministic testkit provider; the real
+   `pairflow.worktree` provider (git mechanics) is ch 9's — the
+   chapter's most-guarded boundary, the ch-11 pattern one level
+   down. The ch11-P3b start-input runtime-context seam is
+   RECONCILED into the real lifecycle (`none | requested(r) |
+   ready(ref)`) as a named replacement, never a parallel seam.
+4. **The gate-field watchpoint realization (ch12-P0).** The
+   ratified model fix (`6dd8bd15`: `Rejected(gate_blocked)`
+   carries the blocking binding's `uses` as `gate`) realized in
+   code: the `Outcome` gate_blocked arm, the kernel emission, the
+   CLI rejection detail, and the affected test expectations — a
+   pure projection from the ratified model, drift-lanes green
+   before AND after (the model fix was registry-neutral).
+5. **The format's runtime keys + operator verbs + floor extension.**
+   Per the §8.2 stance (a capability and its format surface land in
+   the same chapter): the role `default_agent_config` / step
+   `agent_config` override keys with the refs fields, the
+   `activation { mode }` key, and the `runtime_context` requirement
+   block (the C18 key's successor form via the §12.1 item 3
+   reopen + re-ratification) in the YAML template +
+   validator lanes + CLI validate extension; the operator CLI gains
+   the lifecycle verbs (`create` / `start` / `kickoff` / `cancel`
+   as thin ingress writers — the ch-6 pattern; a convenience
+   composition of CREATE+START may exist per the model's note);
+   the floor (`listInstances` / `getInstanceDetail` / timeline)
+   surfaces `kernel_status`, the wait, and the runtime-context
+   state so the chapter's own dogfooding can watch a held run.
+
+**Out of scope (deliberate):**
+
+- **The real spawn and everything runner** — the `pairflow.worktree`
+  provider's git mechanics, the real actor adapter, the process-gate
+  runner's real spawn, the attach channel: ch 9.
+- **Provisioning-failure handling, teardown lifecycle, provider
+  health, run-override cascade for the context, conditional
+  per-step context** — declared Absents (`→ later`), unchanged;
+  a provider that accepts the name but fails to provision surfaces
+  as the kernel `FAIL` event, per the model.
+- **Waits beyond `kickoff_pending`** — `human_decision` (L3),
+  `child_workflow` (L4), `timeout` (L9) ride the same machinery
+  later.
+- **Operator authority** (who may kickoff/cancel — L7/L10) —
+  dormant-until-restricted, per the model.
+- **The L0f pre-kernel resolution** (slots, workflow selection) —
+  the ch-4 start-path binding merge stays; L0f is unowned surface
+  for a later chapter.
+- **Retry on FAILED** (§18) — Absent.
+
+### 12.2 Coverage and intake impact
+
+Unit ownership: **21 ids** (4 l0c + 12 l0d + 5 l0e), a substantial
+share as `alias/inherited` / reprint dispositions (the HANDLE and
+`dispatch_intent` version chains — the live fold already carries
+several of these semantics via later levels; the packet projection
+declares per-unit dispositions, the authoring-time discovery being
+the authority). The ch-11 partial-realization dispositions on
+`l1-pseudocode/dispatch_intent` and `l1-pseudocode/RECEIVE` (their
+L0c/L0e-inherited branches) COMPLETE here — the completion is
+declared in the owning packets. Rejections: **2 new behavioral**
+(`task_required`, `runtime_context_provider_unavailable`) +
+`not_active`'s owning units land (behavioral since ch11-P1).
+Invariants: **15**, dispositions already fixed by the ch-5 map
+(7 `type/schema` / 5 `test` / 1 `checker` / 2 `review`); the checker
+— `l0d/terminal-is-a-sink` — lands as a storeCheckers extension
+with a named packet owner. Chapter traces: **3 golden traces** (the
+l0c, l0d, and l0e section traces; the l0d trace exercises the
+deferred-kickoff hold + cancel, the l0e trace the provisioned
+immediate run + the unknown-provider variant). No IC/PI intake rows
+flip: the chapter is map-extension surface (the IC-A2 family and
+the CT-B two-worker re-run stay ch 9's).
+
+### 12.3 The draft phase
+
+Before ANY packet (README §4): `contracts/ch12-runtime-core-contract.md`
+(surface: `runtime-core`). Indicative C-row set — the draft decides,
+this list only scopes it: the `agent_config` YAML grammar (role
+default + step override keys, the inline field set, the `*_refs`
+value classes and their relation to the ch-8 id grammar); the
+`activation` key (mode enum, absent-key default = `immediate`); the
+`runtime_context` requirement block's grammar VIA the NAMED reopen +
+re-ratification of the ratified ch-11 C18/C19 rows (ownership moves
+from C18's then-named consuming chapter to ch 12; the bare
+`runtimeContext: required` string form's compatibility/migration
+decision is part of the same human act — §12.1 item 3);
+the run-override start-input surface; the provider contract's wire
+shapes (provision inputs, the ready event, the projection JSON);
+the per-chapter registry composition (testkit provider here,
+`pairflow.worktree` joining at ch 9); the lifecycle verbs' CLI
+schemas + exit-code lanes; the store schema columns + the wait/
+runtime-context encodings; the module home ADR (the ADR-011/ADR-013
+pattern — where the lifecycle handlers and the provider seam live).
+Ratification is permanently human; packets anchor as
+`contract:ch12-runtime-core#Cn`.
+
+### 12.4 Packets and flow mode
+
+Draft reference (§1.3 convention): `contracts/ch12-runtime-core-contract.md`
+— pending ratification at chapter start (the draft round runs FIRST,
+before any packet; predictions below whose basis is the draft are
+visibly conditional per the §1.3 granularity rule).
+
+| Packet | Content | Mode |
+|---|---|---|
+| ch12-P0 | the gate-field watchpoint realization: the `Outcome` gate_blocked arm + kernel emission + CLI rejection detail gain `gate` per the ratified model fix (`6dd8bd15`), test expectations updated | flag-free approve → autonomous build (measurement; the §5.5 fallbacks stand); predicted: projection (source: the ratified model @ `6dd8bd15` — anchors no draft row) |
+| ch12-P1 | the L0d lifecycle spine: the source-routed entry, the CREATE/START split (ch-4 `startInstance` retired as a named replacement), `kernel_status` + typed wait + terminal dispositions, KICKOFF/CANCEL/FAIL/COMPLETE, the lifecycle fact entries with `op_id`, `task_required` + `not_active` unit basis, THE schema bump (fenced), the `l0d/terminal-is-a-sink` storeChecker, the l0d golden trace | flag-free approve → autonomous build (inherited); predicted: projection (basis: l0d-pseudocode + ledger §2/§3/§4 + the chapter draft — pending ratification); **declared sizing-split candidate** (template §2 step 0 — 12 units; the expected seam: lifecycle axis first, activation machinery second) |
+| ch12-P2 | the L0c run profile: `AgentConfig` + the cascade + `resolve_agent_config`, the packet's `effective_agent_config`, the transcript's `issued_agent_config` recomputed-at-commit provenance, `run_overrides` at start, the l0c golden trace | flag-free approve → autonomous build (inherited); predicted: projection (basis: l0c-pseudocode + ledger §2/§4 + the chapter draft — pending ratification) |
+| ch12-P3 | the L0e provider contract: the requirement on the template (C18/C19 successor), the provider port + `ProviderRegistry` + the deterministic testkit provider, the kind-boundary readiness check, the packet projection, `runtime_context_provider_unavailable` behavioral, the ch11-P3b start-input seam reconciled, the l0e golden trace (incl. the unknown-provider variant) | flag-free approve → autonomous build (inherited); predicted: projection (basis: l0e-pseudocode + ledger §2/§3/§4 + the chapter draft — pending ratification) |
+| ch12-P4 | the format + operator surface: the runtime YAML keys (agent_config / activation / runtime_context requirement) + validator lanes + CLI validate extension, the lifecycle CLI verbs, the floor extension (kernel_status / wait / runtime-context state), template-fixture updates under the ch8-P2 equality pin | flag-free approve → autonomous build (inherited); predicted: projection (basis: the chapter draft — pending ratification) |
+
+Order: draft ratification → P0 → P1 → P2 → P3 → P4 (the README §4
+draft-first rule binds without exception — P0 anchors no draft row
+but still follows the ratification). One packet = packet file +
+code + tests in ONE commit.
+
+### 12.5 Deliverables and DoD
+
+Shipped: this section; the ratified-then-realized `ch12-runtime-core`
+contract-draft; the lifecycle/activation spine + schema bump; the
+run-profile cascade + provenance; the provider contract + testkit
+provider + projection; the gate-field realization; the runtime
+format keys + lifecycle verbs + floor extension; the module-home
+ADR.
+
+DoD: the packets' contract tests green with claim-derived negatives
+EXECUTED; the three golden traces green; the drift suite green (the
+unit-map lock extends with the 21 ids; the two new rejection names
+BEHAVE); invariant dispositions realized per the ch-5 map (the
+`terminal-is-a-sink` checker in storeCheckers); the schema bump
+behind the ADR-003 fence; coverage validation green; all v3 bridges
++ the FULL `pnpm ci:local` gate green; the module-home ADR
+`accepted` per its lane; the draft flipped `realized`-in-place with
+its `realized_map`; the ch-12 map row flipped to `realized`; the
+dogfooding checkpoint run-or-waived (a hand-driven
+create → start → held → kickoff → cancel lifecycle on the CLI);
+process-log review held at the boundary, including the ARMED
+falling-yield measurement (gate-1/gate-2 yields vs the P3b
+prediction) and the second map-extension exercise verdict.
