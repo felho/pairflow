@@ -404,19 +404,21 @@ a lens-5 sweep miss) all arm-caught; final arm verdict CLEAN citing
 the approve hash. Code: the `outcome.ts` arm (`readonly gate:
 string` + doc-comment mirror), one `kernel.ts` emission line
 (`gate: binding.uses`), the `ingress.ts` comment mirror synced
-(anchor-free form). Tests: 14 full-document asserts gained `gate`
-with exact values; the dim-2 `[allow, block]` lane upgraded to a
-full-document combination assert (G3); one NEW dim-9 test carries
-the requiredness/value/immutability probes beside the extended
+(anchor-free form). Tests: 17 existing
+full-document asserts gained `gate` with exact values (13 in
+kernel.test.ts + 1 l2 trace + 2 l2a trace + 1 journey); the dim-2
+`[allow, block]` lane upgraded to the 18th — a NEW full-document
+combination assert (G3); one NEW dim-9 test carries the
+requiredness/value/immutability probes beside the extended
 exclusion probe. Test delta: 1015 → 1016, all green; typecheck
-clean. SENSITIVITY PROOF (R-DERIVED-PROBES) EXECUTED — 7/7 probe
+clean. SENSITIVITY PROOF (R-DERIVED-PROBES) EXECUTED — 8/8 probe
 mutations red, ≥1 per family, content-based restores:
 
 | Probe (family) | Mutation | Expected red | Observed |
 |---|---|---|---|
 | equality + end-to-end | drop `gate:` from the kernel emission | equality lanes + journey document | 17 tests red across 4 files + 1 type error |
 | combination (G3) | `gate: pipeline[0]!.uses` (first-binding mutant) | the `[allow, block]` lane | exactly 1 test red (the combination lane) |
-| equality (value) | `gate: "hardcoded.constant"` | every exact-value assert | 16 tests red across 3 files |
+| equality (value) | `gate: "hardcoded.constant"` | every exact-value assert in the probe's run scope | 16 tests red across the 3 unit-level files run (the journey lane's exact-value sensitivity is proven by the drop-field probe, whose run included it) |
 | confinement (G7) | `gate: "leak-probe"` added to the rejected diag emit | the dim-10 exact-keyset lane | exactly 1 test red (dim-10) + 1 type error |
 | type-probe (G8b) | `gate?: string` | requiredness directive unused | 2 type errors |
 | type-probe (G8c) | `gate: unknown` | assignability probe | 1 type error |
