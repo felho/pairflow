@@ -2868,3 +2868,37 @@ v1-capability probe in lens 5's duty list. (5) The stepwise
 presentation carried its second live run (README §6): the ratifier
 split the bundled reopen into two semantic acts + a separate process
 act — the act-atomicity-matches-meaning refinement is now precedent.
+
+**2026-07-19 — ch12-P0 authoring, panel round 1 (boundary-review
+route).** The ch11-gate-format C33 row's illustration quote
+(`Rejected(gate_blocked(reason), evidence_refs)`, "model-verbatim
+(the l2a HANDLE)") predates the `6dd8bd15` model fix and no longer
+reproduces the unit it cites (the emission line gained
+`gate: gate.uses`); C33's normative content (evidence propagation)
+is untouched and the 2026-07-19 re-ratification carried the citation
+forward unchanged (reopen scoped to C18/C19/C21/C30). Routed
+boundary-review: a future ch11-gate-format touch refreshes the
+C33/K4-class illustration quotes to the post-fix form (or marks them
+"illustrative, defers to unit"); no reopen, no packet impact — all
+five ch12-P0 lenses confirmed the additive field conflicts with no
+ratified row's meaning.
+
+**2026-07-19 — ch12-P0 build close (arm-yield data + a lens-duty
+candidate).** (1) The ARMED falling-yield measurement's first ch12
+data point: a CLEAN first-full-round five-lens panel was NOT
+arm-parity — the pinned arm (gpt-5.6-sol/high; 1 full + 4 delta
+re-checks) yielded 8 accepted content findings the panel and two
+targeted re-runs had not surfaced (the G8 type-probe directions:
+requiredness / value-type / immutability; the hard-stop-2 sizing
+letter-trip; the shared-contract triage bucket; the renderer
+inventory: the verbInject mislabel + verbReplay's EMBEDDED
+outcomes), before returning CLEAN on the approve hash. Gate-2 yield
+recorded at its own run. (2) Lens-duty candidate for the boundary
+review: lens-5's renderer sweep classified `JSON.stringify(result)`
+by its TOP-LEVEL argument type and missed the ReplayResult.outcomes
+EMBEDDING (arm-caught) — "a document EMBEDDING the value counts as
+a renderer" belongs in the type-consequence/sweep duty text. (3) The
+in-session probe-restore was content-based (perl in-place + verify),
+per the ch11-P0 lesson — zero uncommitted-work loss; one non-event:
+a drifted shell CWD silently no-op'd the first probe batch (caught
+by the 0-error tell — a probe that cannot have run is not a green).
