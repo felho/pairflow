@@ -2902,3 +2902,25 @@ in-session probe-restore was content-based (perl in-place + verify),
 per the ch11-P0 lesson — zero uncommitted-work loss; one non-event:
 a drifted shell CWD silently no-op'd the first probe batch (caught
 by the 0-error tell — a probe that cannot have run is not a green).
+
+**2026-07-19 — MODEL-TIER EXPERIMENT PRE-REGISTERED AND RATIFIED
+(owner, in-session; the README §5.5 "later, explicit act" executed).**
+Origin recovered from the v3-scoping transcript: the founding
+derivation ("contracts are CREATED at plan/template work — errors
+compound there → Fable-class; contract-consuming, machine-gated work
+→ Opus-class", plus the corollary that EARLY implementation rounds
+also warrant Fable-class because early code mints the idioms later
+packets pattern-match) had never been repo-bound — only the
+cost-framed reservation ("Fable-class reserved for exceptional
+one-off planning") was. Both halves are now carried by
+`model-tier-experiment.md`: a falsifiable, write-once protocol —
+scope pre-named (IN: ch12-P2/P3; OUT: ch12-P1, the idiom-minting
+split candidate, which stays Fable-class; EXTEND once: ch12-P4),
+single variable (main thread only; Opus lenses + pinned arm
+unchanged), baseline band frozen from ch11-P2a / ch11-P3b / ch12-P0
+metrics, K1 escaped-defect / K2 two-strikes / K3 process-integrity
+failure criteria with the adjudication default AGAINST the
+experiment, verdict ADOPT/REVERT/EXTEND mandatory at ch12-P3 close,
+ADOPT explicitly revocable. Capture-don't-fix note: this is an
+ADDITIVE, owner-initiated protocol, not a mid-chapter process edit —
+no ratified surface changed.
