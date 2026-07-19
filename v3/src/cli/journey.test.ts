@@ -272,6 +272,7 @@ round:
       expect(JSON.parse((blocked.stdout ?? "").trim())).toEqual({
         kind: "rejected",
         reason: "gate_blocked",
+        gate: "declarative.threshold",
         gateReason: "round_below_min",
       });
 

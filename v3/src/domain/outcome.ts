@@ -10,12 +10,14 @@ import type { RejectionName } from "./rejections.js";
  *
  * O1 (packet ch11-P2b): the rejected arm is DISCRIMINATED on `reason`.
  * `gate_blocked` alone carries the blocking decision's verbatim
- * pass-through — `gateReason?` present iff the decision carried
- * `reason`, `evidenceRefs?` present iff carried (an empty list rides as
- * an empty list). EVERY OTHER reason carries NEITHER field — the type
- * forbids what the row forbids (the P2a arm-gate-2 lesson at write
- * time): a `gateReason`/`evidenceRefs` on a non-gate reason is an excess
- * property.
+ * pass-through — `gate` REQUIRED (the blocking binding's `uses`, so a
+ * multi-gate pipeline names WHICH gate blocked — packet ch12-P0),
+ * `gateReason?` present iff the decision carried `reason`,
+ * `evidenceRefs?` present iff carried (an empty list rides as
+ * an empty list). EVERY OTHER reason carries NONE of the three — the
+ * type forbids what the row forbids (the P2a arm-gate-2 lesson at write
+ * time): a `gate`/`gateReason`/`evidenceRefs` on a non-gate reason is
+ * an excess property.
  */
 export type Outcome =
   | { readonly kind: "committed"; readonly version: number; readonly intent: DispatchIntent | null }
@@ -24,6 +26,7 @@ export type Outcome =
   | {
       readonly kind: "rejected";
       readonly reason: "gate_blocked";
+      readonly gate: string;
       readonly gateReason?: string;
       readonly evidenceRefs?: readonly string[];
     }

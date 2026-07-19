@@ -236,10 +236,13 @@ export function createKernel(deps: KernelDeps): Kernel {
       if (decision.verdict === "block") {
         // First-block-wins (K4): no commit ⇒ round not burned; the
         // blocking decision's reason / evidence refs surface VERBATIM
-        // (O1's pass-through arm), later gates are NOT evaluated.
+        // (O1's pass-through arm) with the blocking binding's `uses`
+        // as `gate` (ch12-P0 — the model fix 6dd8bd15), later gates
+        // are NOT evaluated.
         return {
           kind: "rejected",
           reason: "gate_blocked",
+          gate: binding.uses,
           ...(decision.reason !== undefined ? { gateReason: decision.reason } : {}),
           ...(decision.evidenceRefs !== undefined ? { evidenceRefs: decision.evidenceRefs } : {}),
         };

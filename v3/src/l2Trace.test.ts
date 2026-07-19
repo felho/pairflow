@@ -188,7 +188,12 @@ describe("l2 golden trace — the gate rung + both evaluators end-to-end (08-l2 
     // row — the harness ExpectedOutcome carries `reason` only, so the
     // gateReason assert reads the outcomes array).
     const blocked = result.outcomes[2] as Outcome;
-    expect(blocked).toEqual({ kind: "rejected", reason: "gate_blocked", gateReason: "round_below_min" });
+    expect(blocked).toEqual({
+      kind: "rejected",
+      reason: "gate_blocked",
+      gate: "declarative.threshold",
+      gateReason: "round_below_min",
+    });
 
     handle.close();
   });

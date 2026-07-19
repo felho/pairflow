@@ -914,6 +914,7 @@ describe("gate rung — dimension 2: ordered, first-block-wins combination lanes
       expect(await kernel.handle(reviewEmit("c1", "CONVERGED", 1))).toEqual({
         kind: "rejected",
         reason: "gate_blocked",
+        gate: "g.block",
         gateReason: "x",
       });
     });
@@ -931,7 +932,14 @@ describe("gate rung — dimension 2: ordered, first-block-wins combination lanes
       admitCatalog: cat,
       kernelCatalog: cat,
     });
-    expect((await kernel.handle(reviewEmit("c1", "CONVERGED", 1))).kind).toBe("rejected");
+    // ch12-P0 G3 combination lane: the field names the BLOCKING (second)
+    // binding — a "first binding's uses" implementation goes red here.
+    expect(await kernel.handle(reviewEmit("c1", "CONVERGED", 1))).toEqual({
+      kind: "rejected",
+      reason: "gate_blocked",
+      gate: "g.block",
+      gateReason: "x",
+    });
     expect(log).toEqual(["g.allow", "g.block"]);
     expect((await store.getInstanceDetail("inst-1"))?.transcript).toHaveLength(0);
   });
@@ -987,6 +995,7 @@ describe("gate rung — dimension 3: block-before-commit semantics", () => {
       expect(await kernel.handle(reviewEmit("x1", "CONVERGED", 1))).toEqual({
         kind: "rejected",
         reason: "gate_blocked",
+        gate: "g.block",
         gateReason: "nope",
       });
     });
@@ -1145,6 +1154,7 @@ describe("gate rung — dimension 9: gate_blocked outcome pass-through (both iff
     expect(await kernel.handle(reviewEmit("b1", "CONVERGED", 1))).toEqual({
       kind: "rejected",
       reason: "gate_blocked",
+      gate: "g.b",
       gateReason: "why",
       evidenceRefs: ["r1", "r2"],
     });
@@ -1154,7 +1164,7 @@ describe("gate rung — dimension 9: gate_blocked outcome pass-through (both iff
     const cat = catalogOf({ "g.b": scriptedInline("g.b", [], () => ({ verdict: "block" })) });
     const { kernel } = await setupGatedReview({ pipeline: [{ uses: "g.b" }], admitCatalog: cat, kernelCatalog: cat });
     const outcome = await kernel.handle(reviewEmit("b1", "CONVERGED", 1));
-    expect(outcome).toEqual({ kind: "rejected", reason: "gate_blocked" });
+    expect(outcome).toEqual({ kind: "rejected", reason: "gate_blocked", gate: "g.b" });
     expect("gateReason" in outcome).toBe(false);
     expect("evidenceRefs" in outcome).toBe(false);
   });
@@ -1163,7 +1173,7 @@ describe("gate rung — dimension 9: gate_blocked outcome pass-through (both iff
     const cat = catalogOf({ "g.b": scriptedInline("g.b", [], () => ({ verdict: "block", reason: "why" })) });
     const { kernel } = await setupGatedReview({ pipeline: [{ uses: "g.b" }], admitCatalog: cat, kernelCatalog: cat });
     const outcome = await kernel.handle(reviewEmit("b1", "CONVERGED", 1));
-    expect(outcome).toEqual({ kind: "rejected", reason: "gate_blocked", gateReason: "why" });
+    expect(outcome).toEqual({ kind: "rejected", reason: "gate_blocked", gate: "g.b", gateReason: "why" });
     expect("evidenceRefs" in outcome).toBe(false);
   });
 
@@ -1175,18 +1185,43 @@ describe("gate rung — dimension 9: gate_blocked outcome pass-through (both iff
     expect(await kernel.handle(reviewEmit("b1", "CONVERGED", 1))).toEqual({
       kind: "rejected",
       reason: "gate_blocked",
+      gate: "g.b",
       gateReason: "why",
       evidenceRefs: [],
     });
   });
 
-  it("the TYPE forbids gateReason/evidenceRefs on non-gate reasons (each probe otherwise well-typed)", () => {
+  it("the TYPE forbids gate/gateReason/evidenceRefs on non-gate reasons (each probe otherwise well-typed)", () => {
     // @ts-expect-error — a non-gate reason cannot carry gateReason (O1 exclusion)
     const p1: Outcome = { kind: "rejected", reason: "not_active", gateReason: "x" };
     // @ts-expect-error — a non-gate reason cannot carry evidenceRefs (O1 exclusion)
     const p2: Outcome = { kind: "rejected", reason: "no_transition", evidenceRefs: ["r"] };
+    // @ts-expect-error — a non-gate reason cannot carry gate (ch12-P0 G8a exclusion)
+    const p3: Outcome = { kind: "rejected", reason: "not_active", gate: "g.x" };
     void p1;
     void p2;
+    void p3;
+    expect(true).toBe(true);
+  });
+
+  it("the TYPE requires gate on the gate_blocked arm — readonly, exactly string (ch12-P0 G8b-d)", () => {
+    // G8(b) requiredness — a gate-less gate_blocked literal is a compile
+    // error; were the arm weakened to `gate?`, this directive goes UNUSED
+    // and tsc reds (TS2578) — the runtime lanes cannot catch that mutant.
+    // @ts-expect-error — the gate_blocked arm REQUIRES gate
+    const p4: Outcome = { kind: "rejected", reason: "gate_blocked" };
+    void p4;
+    const blocked: Outcome = { kind: "rejected", reason: "gate_blocked", gate: "g.b" };
+    if (blocked.kind === "rejected" && blocked.reason === "gate_blocked") {
+      // G8(c) value type — exactly `string`: reds if the field widens to
+      // `unknown` or admits `undefined`.
+      const v: string = blocked.gate;
+      void v;
+      // G8(d) immutability — assignment to the readonly field is TS2540;
+      // a mutable slip leaves this directive unused, tsc red.
+      // @ts-expect-error — gate is readonly
+      blocked.gate = "g.other";
+    }
     expect(true).toBe(true);
   });
 });
@@ -1283,6 +1318,7 @@ describe("gate rung — dimension 11: the packaged evaluator's first-arrival blo
       expect(await kernel.handle(envelope("f1", "PASS", 1, { ref: "d" }, "implementer"))).toEqual({
         kind: "rejected",
         reason: "gate_blocked",
+        gate: "pairflow.previous_reviewer_verdict",
         gateReason: "no_previous_verdict",
       });
     });
@@ -1551,6 +1587,7 @@ describe("gate rung — the six-outcome family end-to-end (M1, full-decision equ
     expect(outcome).toEqual({
       kind: "rejected",
       reason: "gate_blocked",
+      gate: "g.proc",
       gateReason: "test_failed",
       evidenceRefs: ["e1"],
     });
@@ -1579,6 +1616,7 @@ describe("gate rung — the six-outcome family end-to-end (M1, full-decision equ
     expect(outcome).toEqual({
       kind: "rejected",
       reason: "gate_blocked",
+      gate: "g.proc",
       gateReason: "timeout",
       evidenceRefs: ["t1"],
     });
@@ -1593,6 +1631,7 @@ describe("gate rung — the six-outcome family end-to-end (M1, full-decision equ
     expect(outcome).toEqual({
       kind: "rejected",
       reason: "gate_blocked",
+      gate: "g.proc",
       gateReason: "runner_error",
       evidenceRefs: ["r1"],
     });
@@ -1617,6 +1656,7 @@ describe("gate rung — the six-outcome family end-to-end (M1, full-decision equ
     expect(outcome).toEqual({
       kind: "rejected",
       reason: "gate_blocked",
+      gate: "g.proc",
       gateReason: "policy_x",
       evidenceRefs: ["a", "j2"],
     });
@@ -1627,6 +1667,7 @@ describe("gate rung — the six-outcome family end-to-end (M1, full-decision equ
     expect(outcome).toEqual({
       kind: "rejected",
       reason: "gate_blocked",
+      gate: "g.proc",
       gateReason: "malformed_gate_decision_json",
       evidenceRefs: ["j3"],
     });
@@ -1719,6 +1760,7 @@ describe("gate rung — E2 confinement: hostile opaque values retained VERBATIM 
     expect(outcome).toEqual({
       kind: "rejected",
       reason: "gate_blocked",
+      gate: "g.proc",
       gateReason: hostileReason,
       evidenceRefs: [...hostileRefs, "log-blk"],
     });

@@ -22,8 +22,8 @@ import type {
  * claim) and best-effort PER-FIELD attribution: valid non-empty string
  * fields of the raw record are carried; `not_plain_object` carries
  * none. No fingerprint — ingress has no digest authority. The public
- * Outcome is byte-identical to ch-4. `diag.emit` is BARE per the
- * port's fail-open contract.
+ * Outcome is the kernel's, returned verbatim — no reshaping. `diag.emit`
+ * is BARE per the port's fail-open contract.
  */
 const KNOWN_KEYS = new Set([
   "instanceId",

@@ -199,12 +199,14 @@ describe("l2a golden trace — the HANDLE process branch end-to-end (09-l2a Runt
     expect(blockedFail).toEqual({
       kind: "rejected",
       reason: "gate_blocked",
+      gate: "external.process",
       gateReason: "test_failed",
       evidenceRefs: ["ev-fail"],
     });
     expect(blockedError).toEqual({
       kind: "rejected",
       reason: "gate_blocked",
+      gate: "external.process",
       gateReason: "runner_error",
       evidenceRefs: ["ev-error"],
     });
