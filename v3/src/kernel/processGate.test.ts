@@ -504,3 +504,34 @@ export const __probeCreatedExact: __Created = {
   // @ts-expect-error Created carries no intent — genesis never dispatches (L1).
   intent: null,
 };
+
+// ── ch12-p1b gate-2 aftermath (finding 6): the G2/F3 narrowing probes —
+// a NON-narrowed read of a discriminated/nullable field is a compile
+// error, typecheck-armed ─────────────────────────────────────────────
+
+import type { TranscriptEntry as __Entry, WorkflowInstance as __Instance } from "../domain/index.js";
+
+export function __probeEntryEnvelopeNeedsNarrowing(entry: __Entry): void {
+  // @ts-expect-error entry.envelope does not exist on the union — narrow on entryKind first (F3/F4).
+  void entry.envelope;
+  if (entry.entryKind === "transition") {
+    void entry.envelope; // narrowed — legal.
+  }
+}
+
+export function __probeInstanceTaskNeedsNarrowing(instance: __Instance): string {
+  // @ts-expect-error instance.task is string | null — the nullable flip (G2) forces the narrow.
+  const direct: string = instance.task;
+  void direct;
+  if (instance.task === null) {
+    return "";
+  }
+  return instance.task; // narrowed — legal.
+}
+
+export function __probeInstanceCurrentStepNeedsNarrowing(instance: __Instance): string {
+  // @ts-expect-error instance.currentStep is StepId | null (G2).
+  const direct: string = instance.currentStep;
+  void direct;
+  return instance.currentStep ?? "";
+}

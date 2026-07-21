@@ -1049,7 +1049,104 @@ retired name remain.
     "rounds": { "review": 3, "doc_refinement": 0, "implementation": 3 },
     "stops": [],
     "detector_misses": [],
-    "learned": "the arm's gate-1 record-precision class repeated (8 findings on sizing letter-trips, manifest foreclosures, grid cells, receipts — zero product); R-DERIVED-PROBES caught its own blind lane at build (the T2 growth legs had no fabricated drivers until the probe stayed green)"
+    "learned": "the arm's gate-1 record-precision class repeated (8 findings on sizing letter-trips, manifest foreclosures, grid cells, receipts — zero product); R-DERIVED-PROBES caught its own blind lane at build (the T2 growth legs had no fabricated drivers until the probe stayed green); gate-2 out-caught with 2 product + 8 test-evidence items — the wire-descriptor hole and the sensitivity-altitude gap between declared disciplines and built assert strength"
   }
 }
 ```
+
+### Aftermath (build-close arm gate 2, 2026-07-21)
+
+The build-close external review found ELEVEN items — two product, eight
+test-evidence, one packet-docs — all folded in one aftermath pass on
+the built packet (build commit `6aec56d4`):
+
+1. **PRODUCT — the wire-descriptor gate (finding 1).** Accessor
+   properties could answer validation with one value and the dispatch
+   read with another (the nested `templateRef`/`runOverrides` objects
+   travelled BY REFERENCE), and a throwing getter could crash at the
+   store's canonical serialization. Fix: `asPlainRecord` now requires
+   every own property to be a PLAIN DATA property (descriptor-checked
+   at every wire level — the getter never runs), and the nested
+   payloads are SINGLE-READ COPIES (`parseTemplateRefWire` /
+   `parseStringMapWire` / `parseRunOverridesWire` return fresh
+   literals; the runOverrides copy rides a canonical-JSON round-trip),
+   so post-validation caller mutation cannot reach the kernel either.
+   Hostile lanes: top-level and nested accessors, a throwing getter
+   (proven never invoked), a non-enumerable smuggled key, and the
+   post-dispatch mutation-immunity lane. ADJACENT SURFACE, observed
+   not fixed: the ch-4 ACTOR envelope path reads values single-shot
+   into locals (safe) but shares the `payload` object by reference —
+   a pre-existing ch-4 surface outside this packet's findings
+   (Route: boundary-review).
+2. **PRODUCT — the dev replay start-step schema (finding 2).** The
+   W3 harness contract carries the OPTIONAL `runtimeContextRef`; the
+   validator's exact keyset refused it. Fix: the key joins the start
+   step's allowed set (nonempty-string when present) with an accept
+   lane (validator passes; the context-free replay then fails at the
+   kernel's surplus-input throw — the usage-vs-runtime split) and a
+   refusal lane (`""` → InvalidFixture usage 2).
+3. **TEST — per-op FULL-equality lanes (finding 3).** The deferred
+   hold, KICKOFF, CANCEL×3, FAIL, and immediate-START success lanes
+   re-asserted as COMPLETE `WorkflowInstance` equality literals; a
+   CAS-restart lane added (a pass-through store forcing one
+   `cas_conflict` — the restart-from-load discipline observable as
+   ≥2 commit attempts, one committed write); the L3 empty-string
+   lane added on the DECLARED variant too.
+4. **TEST — the A2 3×3 matrix (finding 4).** START/KICKOFF/CANCEL ×
+   {own-kind → Duplicate; other-fact-kind → collision; transition
+   reuse → collision} parameterized — all nine cells driven through
+   real kernel states; mutation-verified (a kind-blind rung reds all
+   six collision cells while the actor-mirror stays green).
+5. **TEST — the F4 reader branches driven (finding 5).** A MIXED
+   fact/transition transcript through the bundle asserts FULL
+   per-class content equality (pass-through fidelity: row count
+   equals the detail's); the gate projection's fact-invisibility lane
+   (projection over interleaved facts deep-equals the facts-removed
+   projection).
+6. **TEST — the G narrowing compile probes (finding 6).**
+   `@ts-expect-error`-armed probes: a non-narrowed `entry.envelope`
+   read, a non-narrowed `instance.task`/`instance.currentStep`
+   assignment — each red on a type revert (TS2578 on revival).
+7. **TEST — the bridge stdout FULL equality (finding 7).** The start
+   verb's activated document asserted COMPLETE (kind, minted id,
+   version 2, the full intent incl. the packet's task/role/
+   instruction/availableOps) in `cli.test.ts` and all three
+   subprocess journeys.
+8. **TEST — the journey's full-state legs (finding 8).** Every J1
+   leg asserts the COMPLETE instance literal and the final transcript
+   by FULL row equality (committedAt pinned by the controlled clock).
+9. **TEST — the T-family lane classes (finding 9).** A fact row
+   fabricated AFTER the terminal transition row; the post-FAIL replay
+   of a pre-FAIL op → Duplicate (rung order survives terminal); the
+   wait⇔WAITING iff extended to BOTH directions in the checker
+   (`checkTerminalSink` (d): a stale wait outside WAITING and a
+   WAITING hold without its typed wait both violate) with all three
+   direction lanes red-proven.
+10. **TEST — the D-family verbatim content locks (finding 10).** The
+    seven D1 unit-map rows, the four D4 re-points, and the four D2
+    registry rows pinned verbatim (the P1a aftermath's pin pattern) —
+    a wrong-but-resolving codeRef and a drifted typeName now red
+    where the resolver alone stayed green.
+11. **PACKET-DOCS — the Build record's evidence claims (finding 11).**
+    The record overstated assert strength (full equality, guard
+    coverage, journey states) relative to the pre-aftermath bodies;
+    with folds 3/8/9 the claims are now REPRODUCIBLE as written —
+    this aftermath section is the correction's record.
+
+**Checks after the fold.** `pnpm v3:test` 47 files / **1121**/1121
+(+26 over the close's 1095), `pnpm v3:typecheck` clean, `pnpm v3:lint`
+clean, `pnpm v3:packet-lint --forbid-reopened` 0 errors,
+`check_coverage.py` OK in both modes.
+
+**Aftermath sensitivity probes — applied → RED → restored → GREEN
+(restores byte-verified against scratchpad copies; final re-run
+1121/1121 + clean typecheck):**
+
+| # | Mutation | Expected red | Observed |
+|---|---|---|---|
+| 1 | unitMap START codeRef → `#kickoff` (resolves!) | the verbatim pin reds where resolution stays green | RED — unitMap.test 1/6 |
+| 2 | registry OperatorIntent typeName narrowed | the D2 pin reds while typecheck stays clean | RED — domainRegistry.test 1/6 |
+| 3 | the wait-iff's non-WAITING direction narrowed to TERMINAL-only | the ACTIVE-wait lane reds | RED — storeCheckers.test 1/37 |
+| 4 | (agent-verified) the CAS-restart `continue` → non-restart return | the CAS lane reds alone | RED (mutation-verified in-fold) |
+| 5 | (agent-verified) `admitLifecycle` made kind-blind | all six collision matrix cells red, the actor mirror green | RED (mutation-verified in-fold) |
+| 6 | (in-fold) the hostile getter's read counter | asserted ZERO reads — the descriptor gate precedes every value read | GREEN by design (the assert IS the lane) |

@@ -210,54 +210,90 @@ function asPlainRecord(raw: unknown): Record<string, unknown> | null {
   if (Object.getOwnPropertySymbols(raw).length > 0) {
     return null;
   }
+  // Gate-2 aftermath (finding 1): every own property must be a PLAIN
+  // DATA property — an accessor could answer validation with one value
+  // and the dispatch read with another (or throw mid-commit at the
+  // store's canonical serialization). Descriptor-checked at EVERY wire
+  // record level; nested payloads are additionally COPIED single-read
+  // below, so a post-validation caller mutation cannot reach the
+  // kernel either.
+  for (const key of Object.getOwnPropertyNames(raw)) {
+    const descriptor = Object.getOwnPropertyDescriptor(raw, key);
+    if (descriptor === undefined || descriptor.get !== undefined || descriptor.set !== undefined) {
+      return null;
+    }
+  }
   return raw as Record<string, unknown>;
 }
 
 /** The `templateRef.version` ladder (I3, R-NUMERIC-LADDER): integer,
  * ≥ 1, safe, `-0` rejected via Object.is; non-number forms fall to the
- * typeof gate. */
-function isTemplateRef(value: unknown): value is TemplateRef {
+ * typeof gate. Returns a FRESH literal (single-read copy) — the raw
+ * wire object never travels past the gate. */
+function parseTemplateRefWire(value: unknown): TemplateRef | null {
   const record = asPlainRecord(value);
   if (record === null) {
-    return false;
+    return null;
   }
   for (const key of Object.getOwnPropertyNames(record)) {
     if (key !== "id" && key !== "version") {
-      return false;
+      return null;
     }
   }
   const { id, version } = record;
-  return (
-    isNonEmptyString(id) &&
-    typeof version === "number" &&
-    Number.isSafeInteger(version) &&
-    version >= 1 &&
-    !Object.is(version, -0)
-  );
+  if (
+    !isNonEmptyString(id) ||
+    typeof version !== "number" ||
+    !Number.isSafeInteger(version) ||
+    version < 1 ||
+    Object.is(version, -0)
+  ) {
+    return null;
+  }
+  return { id, version };
 }
 
-function isStringMap(value: unknown): value is Record<string, string> {
+/** Single-read copy: validated values land in a FRESH map. */
+function parseStringMapWire(value: unknown): Record<string, string> | null {
   const record = asPlainRecord(value);
   if (record === null) {
-    return false;
+    return null;
   }
-  return Object.getOwnPropertyNames(record).every((key) => isNonEmptyString(record[key]));
+  const copy: Record<string, string> = {};
+  for (const key of Object.getOwnPropertyNames(record)) {
+    const entry = record[key];
+    if (!isNonEmptyString(entry)) {
+      return null;
+    }
+    copy[key] = entry;
+  }
+  return copy;
 }
 
 /** The C7 CREATE-input canonical-JSON-safe check (I3): a plain map of
  * step-id → PLAIN MAP, every entry canonicalizable — fail-closed HERE,
- * never a commit-time serialization crash. */
-function isRunOverrides(
+ * never a commit-time serialization crash. Deep-copies via a canonical
+ * JSON round-trip so the dispatched value is descriptor-free, plain,
+ * and immune to post-validation caller mutation. */
+function parseRunOverridesWire(
   value: unknown,
-): value is Record<string, Readonly<Record<string, unknown>>> {
+): Record<string, Readonly<Record<string, unknown>>> | null {
   const record = asPlainRecord(value);
   if (record === null) {
-    return false;
+    return null;
   }
-  return Object.getOwnPropertyNames(record).every((key) => {
+  for (const key of Object.getOwnPropertyNames(record)) {
     const entry = asPlainRecord(record[key]);
-    return entry !== null && isCanonicalizable(entry);
-  });
+    if (entry === null || !isCanonicalizable(entry)) {
+      return null;
+    }
+  }
+  // Canonicalizable ⇒ JSON-round-trip-faithful; the copy is the value
+  // the kernel snapshots.
+  return JSON.parse(JSON.stringify(record)) as Record<
+    string,
+    Readonly<Record<string, unknown>>
+  >;
 }
 
 type IntentParseFailure = {
@@ -336,7 +372,8 @@ export function createIngress(deps: IngressDeps): Ingress {
       }
       switch (intent) {
         case "create": {
-          if (!isTemplateRef(record["templateRef"])) {
+          const templateRef = parseTemplateRefWire(record["templateRef"]);
+          if (templateRef === null) {
             return rejectIntent(intentFailure("invalid_template_ref", record));
           }
           // Form-when-present ONLY (I3): absence is the KERNEL's
@@ -344,32 +381,32 @@ export function createIngress(deps: IngressDeps): Ingress {
           if ("task" in record && !isNonEmptyString(task)) {
             return rejectIntent(intentFailure("invalid_task", record));
           }
+          const wireMode = record["mode"];
           if ("mode" in record) {
-            const mode = record["mode"];
-            if (!isNonEmptyString(mode) || WIRE_MODES[mode] === undefined) {
+            if (!isNonEmptyString(wireMode) || WIRE_MODES[wireMode] === undefined) {
               return rejectIntent(intentFailure("invalid_mode", record));
             }
           }
-          if ("overrides" in record && !isStringMap(record["overrides"])) {
-            return rejectIntent(intentFailure("invalid_overrides", record));
+          let overrides: Record<string, string> | null = null;
+          if ("overrides" in record) {
+            overrides = parseStringMapWire(record["overrides"]);
+            if (overrides === null) {
+              return rejectIntent(intentFailure("invalid_overrides", record));
+            }
           }
-          if ("runOverrides" in record && !isRunOverrides(record["runOverrides"])) {
-            return rejectIntent(intentFailure("invalid_run_overrides", record));
+          let runOverrides: Record<string, Readonly<Record<string, unknown>>> | null = null;
+          if ("runOverrides" in record) {
+            runOverrides = parseRunOverridesWire(record["runOverrides"]);
+            if (runOverrides === null) {
+              return rejectIntent(intentFailure("invalid_run_overrides", record));
+            }
           }
-          const wireMode = record["mode"];
           return kernel.create({
             instanceId,
-            templateRef: record["templateRef"],
+            templateRef,
             ...(isNonEmptyString(task) ? { task } : {}),
-            ...(isStringMap(record["overrides"]) ? { overrides: record["overrides"] } : {}),
-            ...("runOverrides" in record
-              ? {
-                  runOverrides: record["runOverrides"] as Record<
-                    string,
-                    Readonly<Record<string, unknown>>
-                  >,
-                }
-              : {}),
+            ...(overrides !== null ? { overrides } : {}),
+            ...(runOverrides !== null ? { runOverrides } : {}),
             ...(isNonEmptyString(wireMode) && WIRE_MODES[wireMode] !== undefined
               ? { mode: WIRE_MODES[wireMode] }
               : {}),

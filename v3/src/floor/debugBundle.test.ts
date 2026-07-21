@@ -1002,3 +1002,119 @@ describe("bundle envelope meta — expectedRole fidelity (ch11-P1)", () => {
     close();
   });
 });
+
+// ── FOLD 5 (arm gate 2 aftermath): the bundle transcript is a
+// pass-through of the committed detail's rows — a MIXED transcript (fact
+// rows + transition rows) must round-trip with FULL fidelity: every fact
+// row as an exact {seq, entryKind, opId, committedAt} object, every
+// transition row in its built shape, and the row COUNT equal to the
+// detail's. `seeded()` builds transitions only, so the mix is staged on a
+// hand-built detail returned by a fake store (the S9 fake-store culture). ──
+
+/** A StorePort whose only live member is `getInstanceDetail`, returning
+ * the supplied detail — every other member is unused here. */
+function detailStore(detail: InstanceDetail | null): StorePort {
+  const unused = (): never => {
+    throw new Error("unused");
+  };
+  return {
+    loadInstance: unused,
+    findOp: unused,
+    createInstance: unused,
+    commitTransition: unused,
+    commitLifecycle: unused,
+    listInstances: unused,
+    getInstanceDetail: () => Promise.resolve(detail),
+    getTimeline: unused,
+  };
+}
+
+describe("bundle transcript pass-through fidelity — mixed fact + transition rows (packet ch12-p1b F4)", () => {
+  it("a mixed detail exports with FULL fidelity: fact rows exact, transition rows built, row count preserved", async () => {
+    const mixedDetail: InstanceDetail = {
+      instance,
+      transcript: [
+        { entryKind: "STARTED", seq: 1, opId: "op-start", committedAt: 100 },
+        {
+          entryKind: "transition",
+          seq: 2,
+          envelope: {
+            instanceId: "inst-1",
+            opId: "t2",
+            type: "PASS",
+            actorId: "codex",
+            expectedVersion: 2,
+            expectedRole: "implementer",
+            payload: { ref: MARKER_A },
+          },
+          payloadDigest: "dg-2",
+          gateDecisions: [],
+          committedAt: 200,
+        },
+        { entryKind: "TASK_SUPPLIED", seq: 3, opId: "op-kick", committedAt: 300 },
+        {
+          entryKind: "transition",
+          seq: 4,
+          envelope: {
+            instanceId: "inst-1",
+            opId: "t4",
+            type: "CONVERGED",
+            actorId: "claude",
+            expectedVersion: 3,
+            expectedRole: "reviewer",
+          },
+          payloadDigest: "dg-4",
+          gateDecisions: [],
+          committedAt: 400,
+        },
+        { entryKind: "CANCELLED", seq: 5, opId: "op-cancel", committedAt: 500 },
+      ],
+    };
+    const reader: DiagnosticsReader = {
+      getDiagnostics: () => Promise.resolve([]),
+      getGlobalDiagnostics: () => Promise.reject(new Error("unused")),
+    };
+    const exporter = createDebugBundleExporter(detailStore(mixedDetail), redactPayloadsPolicy, reader);
+    const bundle = await exporter.exportDebugBundle("inst-1");
+
+    // FULL-content equality on the transcript array — fact rows as exact
+    // {seq, entryKind, opId, committedAt} objects (transition-only fields
+    // absent by class), transition rows in their built shape (the payload
+    // redacted, hasPayload the surviving fingerprint).
+    expect(bundle?.transcript).toEqual([
+      { entryKind: "STARTED", seq: 1, opId: "op-start", committedAt: 100 },
+      {
+        seq: 2,
+        committedAt: 200,
+        payloadDigest: "dg-2",
+        envelope: {
+          instanceId: "inst-1",
+          opId: "t2",
+          type: "PASS",
+          actorId: "codex",
+          expectedVersion: 2,
+          expectedRole: "implementer",
+          hasPayload: true,
+        },
+      },
+      { entryKind: "TASK_SUPPLIED", seq: 3, opId: "op-kick", committedAt: 300 },
+      {
+        seq: 4,
+        committedAt: 400,
+        payloadDigest: "dg-4",
+        envelope: {
+          instanceId: "inst-1",
+          opId: "t4",
+          type: "CONVERGED",
+          actorId: "claude",
+          expectedVersion: 3,
+          expectedRole: "reviewer",
+          hasPayload: false,
+        },
+      },
+      { entryKind: "CANCELLED", seq: 5, opId: "op-cancel", committedAt: 500 },
+    ]);
+    // Pass-through fidelity: the bundle's row count equals the detail's.
+    expect(bundle?.transcript).toHaveLength(mixedDetail.transcript.length);
+  });
+});

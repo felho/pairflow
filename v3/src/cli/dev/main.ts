@@ -380,7 +380,15 @@ function validateStep(raw: unknown, index: number): void {
     // W3 (packet ch12-p1b): the start step follows the harness contract
     // re-base — the START intent's opId joins the keyset, and the
     // expected version is 2 (genesis v1 + the activation commit).
-    assertExactKeys(raw, ["kind", "instanceId", "opId", "task", "expect"], label);
+    // Gate-2 aftermath (finding 2): `runtimeContextRef` is the harness
+    // contract's OPTIONAL window key (W3/L3) — the exact keyset carries
+    // it, nonempty-string when present.
+    const allowedStart = ["kind", "instanceId", "opId", "task", "expect", "runtimeContextRef"];
+    for (const key of Object.keys(raw)) {
+      if (!allowedStart.includes(key)) {
+        fixtureError(`${label} has unknown field '${key}'`, { allowedFields: allowedStart });
+      }
+    }
     if (
       !isNonEmptyString(raw["instanceId"]) ||
       !isNonEmptyString(raw["opId"]) ||
@@ -389,6 +397,9 @@ function validateStep(raw: unknown, index: number): void {
       fixtureError(
         `${label} requires instanceId and opId (non-empty strings) and task (string)`,
       );
+    }
+    if ("runtimeContextRef" in raw && !isNonEmptyString(raw["runtimeContextRef"])) {
+      fixtureError(`${label}.runtimeContextRef must be a non-empty string when present`);
     }
     const expect = raw["expect"];
     if (!isPlainObject(expect)) {

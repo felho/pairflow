@@ -209,9 +209,16 @@ export function checkTerminalSink(
       `terminal sink: failure_reason present but the disposition is '${String(terminalDisposition)}'`,
     );
   }
-  // (d) wait is NULL at TERMINAL (S5's iff at the terminal cell).
-  if (kernelStatus === "TERMINAL" && wait !== null) {
-    violations.push("terminal sink: non-null wait on a TERMINAL instance (S5 iff)");
+  // (d) the FULL S5/T3 iff, both directions (gate-2 aftermath): `wait`
+  // is non-null IFF the instance is WAITING — a stale wait outside
+  // WAITING and a WAITING hold without its typed wait both violate.
+  if (kernelStatus !== "WAITING" && wait !== null) {
+    violations.push(
+      `terminal sink: non-null wait on a ${kernelStatus} instance (S5 iff — wait ⇔ WAITING)`,
+    );
+  }
+  if (kernelStatus === "WAITING" && wait === null) {
+    violations.push("terminal sink: WAITING instance without a typed wait (S5 iff)");
   }
   return violations;
 }

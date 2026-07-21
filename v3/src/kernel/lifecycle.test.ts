@@ -5,6 +5,7 @@ import { admitTemplate } from "../definition/index.js";
 import { deriveEmitDigest } from "../emit/index.js";
 import { createGateRegistry } from "../gates/index.js";
 import type { ProcessGateRunner } from "../ports/gate.js";
+import type { StorePort } from "../ports/store.js";
 import { openStore } from "../store/sqliteStore.js";
 import {
   createRecordingDiagnosticsSink,
@@ -33,6 +34,13 @@ interface Harness {
 
 function makeHarness(
   templateMutation?: (raw: ReturnType<typeof fixtureTemplate>) => ReturnType<typeof fixtureTemplate>,
+  /**
+   * The kernel-under-test's store seam — wraps the REAL store the
+   * harness still exposes as `store` (the assertions read committed
+   * truth). Used by the CAS-restart lane to inject a `cas_conflict`
+   * on the first commit and delegate afterward (L9).
+   */
+  storeWrap?: (real: StorePort) => StorePort,
 ): Harness {
   const clock = createControlledClock(1_000);
   const handle = openStore(":memory:", clock);
@@ -47,7 +55,7 @@ function makeHarness(
     run: () => Promise.reject(new Error("no process gates in lifecycle tests")),
   };
   const kernel = createKernel({
-    store: handle.store,
+    store: storeWrap ? storeWrap(handle.store) : handle.store,
     definitions: fixtureDefinitionStore(admitted.template),
     time: clock,
     digest: deriveEmitDigest,
@@ -56,6 +64,36 @@ function makeHarness(
     processRunner,
   });
   return { kernel, store: handle.store, diag, close: () => handle.close() };
+}
+
+/**
+ * A pass-through StorePort delegating every member to `real`, with
+ * `commitLifecycle` forced to report `cas_conflict` on its FIRST call
+ * (writing nothing) and delegating on every later call. `count()`
+ * exposes how many commitLifecycle attempts the kernel made — the
+ * restart-from-load discipline (L9) is observable as ≥2.
+ */
+function casOnceStore(real: StorePort): { readonly store: StorePort; count(): number } {
+  let calls = 0;
+  let injected = false;
+  const store: StorePort = {
+    loadInstance: (id) => real.loadInstance(id),
+    findOp: (id, opId) => real.findOp(id, opId),
+    createInstance: (instance) => real.createInstance(instance),
+    commitTransition: (input) => real.commitTransition(input),
+    commitLifecycle: (input) => {
+      calls += 1;
+      if (!injected) {
+        injected = true;
+        return Promise.resolve({ kind: "cas_conflict" });
+      }
+      return real.commitLifecycle(input);
+    },
+    listInstances: () => real.listInstances(),
+    getInstanceDetail: (id) => real.getInstanceDetail(id),
+    getTimeline: (id, afterSeq) => real.getTimeline(id, afterSeq),
+  };
+  return { store, count: () => calls };
 }
 
 function deferred(raw: ReturnType<typeof fixtureTemplate>): ReturnType<typeof fixtureTemplate> {
@@ -216,12 +254,22 @@ describe("START (L2/L3) — the fork and the window lanes", () => {
     expect(outcome.intent.packet.expectedVersion).toBe(2);
     expect(outcome.intent.packet.task).toBe("T");
     const instance = await loadOrThrow(h, "i1");
-    expect(instance.kernelStatus).toBe("ACTIVE");
-    expect(instance.currentStep).toBe("implement");
-    expect(instance.round).toBe(1);
-    expect(instance.wait).toBeNull();
-    expect(instance.runtimeContext).toEqual({ state: "ready", ref: null });
-    expect(instance.version).toBe(2);
+    expect(instance).toEqual({
+      instanceId: "i1",
+      templateRef: REF,
+      task: "T",
+      binding: { implementer: "codex", reviewer: "claude" },
+      currentStep: "implement",
+      round: 1,
+      kernelStatus: "ACTIVE",
+      terminalDisposition: null,
+      activationMode: "immediate",
+      wait: null,
+      runtimeContext: { state: "ready", ref: null },
+      failureReason: null,
+      runOverrides: {},
+      version: 2,
+    });
     expect(await transcriptOf(h, "i1")).toEqual([
       { entryKind: "STARTED", seq: 1, opId: "op-start", committedAt: 1_000 },
     ]);
@@ -234,17 +282,51 @@ describe("START (L2/L3) — the fork and the window lanes", () => {
     const outcome = await h.kernel.start({ instanceId: "i1", opId: "op-start" });
     expect(outcome).toEqual({ kind: "accepted" });
     const instance = await loadOrThrow(h, "i1");
-    expect(instance.kernelStatus).toBe("WAITING");
-    expect(instance.currentStep).toBeNull();
-    expect(instance.round).toBe(0);
-    expect(instance.wait).toEqual({
-      kind: "kickoff_pending",
-      requestedBy: "activation",
-      resumeEvents: ["KICKOFF"],
+    expect(instance).toEqual({
+      instanceId: "i1",
+      templateRef: REF,
+      task: null,
+      binding: { implementer: "codex", reviewer: "claude" },
+      currentStep: null,
+      round: 0,
+      kernelStatus: "WAITING",
+      terminalDisposition: null,
+      activationMode: "deferred_kickoff",
+      wait: { kind: "kickoff_pending", requestedBy: "activation", resumeEvents: ["KICKOFF"] },
+      runtimeContext: { state: "ready", ref: null },
+      failureReason: null,
+      runOverrides: {},
+      version: 2,
     });
-    expect(instance.runtimeContext).toEqual({ state: "ready", ref: null });
-    expect(instance.version).toBe(2);
     expect((await transcriptOf(h, "i1")).map((e) => e.entryKind)).toEqual(["STARTED"]);
+    h.close();
+  });
+
+  it("a CAS conflict on the first commit RESTARTS from load — one committed write, ≥2 attempts (L9)", async () => {
+    let counter: { count(): number } | undefined;
+    const h = makeHarness(undefined, (real) => {
+      const wrapped = casOnceStore(real);
+      counter = wrapped;
+      return wrapped.store;
+    });
+    await h.kernel.create({ instanceId: "i1", templateRef: REF, task: "T" });
+    const outcome = await h.kernel.start({ instanceId: "i1", opId: "op-start" });
+    // The injected conflict is invisible in the outcome — the restart
+    // re-admits on fresh state and activates correctly.
+    if (outcome.kind !== "activated") {
+      throw new Error(`expected activated, got ${outcome.kind}`);
+    }
+    expect(outcome.instanceId).toBe("i1");
+    expect(outcome.version).toBe(2);
+    // Exactly ONE lifecycle write landed (the conflict wrote nothing).
+    const instance = await loadOrThrow(h, "i1");
+    expect(instance.kernelStatus).toBe("ACTIVE");
+    expect(instance.version).toBe(2);
+    expect(await transcriptOf(h, "i1")).toEqual([
+      { entryKind: "STARTED", seq: 1, opId: "op-start", committedAt: 1_000 },
+    ]);
+    // …across ≥2 commit attempts — the restart-from-load discipline.
+    expect(counter?.count()).toBeGreaterThanOrEqual(2);
     h.close();
   });
 
@@ -367,6 +449,15 @@ describe("START (L2/L3) — the fork and the window lanes", () => {
       ).rejects.toThrow(/nonempty string/);
       h.close();
     });
+
+    it("an empty-string ref throws on the DECLARED variant too — '' is not a ref before the required branch", async () => {
+      const h = makeHarness(requiredContext);
+      await h.kernel.create({ instanceId: "i1", templateRef: REF, task: "T" });
+      await expect(
+        h.kernel.start({ instanceId: "i1", opId: "op", runtimeContextRef: "" }),
+      ).rejects.toThrow(/nonempty string/);
+      h.close();
+    });
   });
 });
 
@@ -391,11 +482,22 @@ describe("KICKOFF (L4)", () => {
     expect(outcome.version).toBe(3);
     expect(outcome.intent.packet.task).toBe("GO");
     const instance = await loadOrThrow(h, "i1");
-    expect(instance.kernelStatus).toBe("ACTIVE");
-    expect(instance.task).toBe("GO");
-    expect(instance.currentStep).toBe("implement");
-    expect(instance.round).toBe(1);
-    expect(instance.wait).toBeNull();
+    expect(instance).toEqual({
+      instanceId: "i1",
+      templateRef: REF,
+      task: "GO",
+      binding: { implementer: "codex", reviewer: "claude" },
+      currentStep: "implement",
+      round: 1,
+      kernelStatus: "ACTIVE",
+      terminalDisposition: null,
+      activationMode: "deferred_kickoff",
+      wait: null,
+      runtimeContext: { state: "ready", ref: null },
+      failureReason: null,
+      runOverrides: {},
+      version: 3,
+    });
     expect((await transcriptOf(h, "i1")).map((e) => e.entryKind)).toEqual([
       "STARTED",
       "TASK_SUPPLIED",
@@ -443,8 +545,22 @@ describe("CANCEL (L5) — any non-terminal state", () => {
     const outcome = await h.kernel.cancel({ instanceId: "i1", opId: "op-c" });
     expect(outcome).toEqual({ kind: "terminated", disposition: "cancelled" });
     const instance = await loadOrThrow(h, "i1");
-    expect(instance.kernelStatus).toBe("TERMINAL");
-    expect(instance.terminalDisposition).toBe("cancelled");
+    expect(instance).toEqual({
+      instanceId: "i1",
+      templateRef: REF,
+      task: null,
+      binding: { implementer: "codex", reviewer: "claude" },
+      currentStep: null,
+      round: 0,
+      kernelStatus: "TERMINAL",
+      terminalDisposition: "cancelled",
+      activationMode: "deferred_kickoff",
+      wait: null,
+      runtimeContext: { state: "none" },
+      failureReason: null,
+      runOverrides: {},
+      version: 2,
+    });
     expect((await transcriptOf(h, "i1")).map((e) => e.entryKind)).toEqual(["CANCELLED"]);
     h.close();
   });
@@ -455,9 +571,22 @@ describe("CANCEL (L5) — any non-terminal state", () => {
     await h.kernel.start({ instanceId: "i1", opId: "op-start" });
     await h.kernel.cancel({ instanceId: "i1", opId: "op-c" });
     const instance = await loadOrThrow(h, "i1");
-    expect(instance.kernelStatus).toBe("TERMINAL");
-    expect(instance.wait).toBeNull();
-    expect(instance.terminalDisposition).toBe("cancelled");
+    expect(instance).toEqual({
+      instanceId: "i1",
+      templateRef: REF,
+      task: null,
+      binding: { implementer: "codex", reviewer: "claude" },
+      currentStep: null,
+      round: 0,
+      kernelStatus: "TERMINAL",
+      terminalDisposition: "cancelled",
+      activationMode: "deferred_kickoff",
+      wait: null,
+      runtimeContext: { state: "ready", ref: null },
+      failureReason: null,
+      runOverrides: {},
+      version: 3,
+    });
     h.close();
   });
 
@@ -467,6 +596,23 @@ describe("CANCEL (L5) — any non-terminal state", () => {
     await h.kernel.start({ instanceId: "i1", opId: "op-start" });
     const outcome = await h.kernel.cancel({ instanceId: "i1", opId: "op-c" });
     expect(outcome).toEqual({ kind: "terminated", disposition: "cancelled" });
+    const instance = await loadOrThrow(h, "i1");
+    expect(instance).toEqual({
+      instanceId: "i1",
+      templateRef: REF,
+      task: "T",
+      binding: { implementer: "codex", reviewer: "claude" },
+      currentStep: "implement",
+      round: 1,
+      kernelStatus: "TERMINAL",
+      terminalDisposition: "cancelled",
+      activationMode: "immediate",
+      wait: null,
+      runtimeContext: { state: "ready", ref: null },
+      failureReason: null,
+      runOverrides: {},
+      version: 3,
+    });
     h.close();
   });
 
@@ -494,11 +640,22 @@ describe("FAIL (L6) — in-process kernel event, fact-less", () => {
     const outcome = await h.kernel.fail("i1", "provider exploded");
     expect(outcome).toEqual({ kind: "terminated", disposition: "failed" });
     const instance = await loadOrThrow(h, "i1");
-    expect(instance.kernelStatus).toBe("TERMINAL");
-    expect(instance.terminalDisposition).toBe("failed");
-    expect(instance.failureReason).toBe("provider exploded");
-    expect(instance.wait).toBeNull();
-    expect(instance.version).toBe(3);
+    expect(instance).toEqual({
+      instanceId: "i1",
+      templateRef: REF,
+      task: null,
+      binding: { implementer: "codex", reviewer: "claude" },
+      currentStep: null,
+      round: 0,
+      kernelStatus: "TERMINAL",
+      terminalDisposition: "failed",
+      activationMode: "deferred_kickoff",
+      wait: null,
+      runtimeContext: { state: "ready", ref: null },
+      failureReason: "provider exploded",
+      runOverrides: {},
+      version: 3,
+    });
     // NO fact row — the transcript still carries only the STARTED fact.
     expect((await transcriptOf(h, "i1")).map((e) => e.entryKind)).toEqual(["STARTED"]);
     h.close();
@@ -532,19 +689,149 @@ describe("FAIL (L6) — in-process kernel event, fact-less", () => {
     });
     h.close();
   });
-});
 
-describe("kind-aware idempotency across classes (A2)", () => {
-  it("a DIFFERENT fact kind reusing an op id is op_id_collision (cancel over the start op)", async () => {
+  it("a replay of an op consumed BEFORE the fail still answers Duplicate (idempotency survives terminal — rung order)", async () => {
     const h = makeHarness();
     await h.kernel.create({ instanceId: "i1", templateRef: REF, task: "T" });
-    await h.kernel.start({ instanceId: "i1", opId: "op-shared" });
-    expect(await h.kernel.cancel({ instanceId: "i1", opId: "op-shared" })).toEqual({
-      kind: "rejected",
-      reason: "op_id_collision",
+    await h.kernel.start({ instanceId: "i1", opId: "op-start" });
+    expect(await h.kernel.fail("i1", "boom")).toEqual({ kind: "terminated", disposition: "failed" });
+    // The instance is TERMINAL, yet the STARTED op's key still lives —
+    // the kind-aware idempotency rung fires BEFORE the terminal-sink guard.
+    expect(await h.kernel.start({ instanceId: "i1", opId: "op-start" })).toEqual({
+      kind: "duplicate",
     });
     h.close();
   });
+});
+
+describe("kind-aware idempotency across classes (A2)", () => {
+  const SHARED = "op-shared";
+
+  /** Commit an actor TRANSITION row under `opId` (leaves the run ACTIVE
+   * at review) — the cross-class hit source for the transition column. */
+  async function committedTransition(h: Harness, opId: string): Promise<void> {
+    await h.kernel.create({ instanceId: "i1", templateRef: REF, task: "T" });
+    await h.kernel.start({ instanceId: "i1", opId: "op-start" });
+    const committed = await h.kernel.handle({
+      instanceId: "i1",
+      opId,
+      type: "PASS",
+      actorId: "codex",
+      expectedVersion: 2,
+      expectedRole: "implementer",
+    });
+    if (committed.kind !== "committed") {
+      throw new Error(`test wiring: expected committed transition, got ${committed.kind}`);
+    }
+  }
+
+  // The 3×3 hit-class matrix per op-carrying intent (A2): own-kind
+  // replay → Duplicate; other-FACT-kind reuse and TRANSITION reuse →
+  // op_id_collision (the kind-aware rung fires FIRST — the prior op's
+  // state need not hold; the collision precedes the state guard, A3).
+  const matrix: ReadonlyArray<{
+    readonly op: string;
+    readonly hitClass: string;
+    readonly expected: { readonly kind: string; readonly reason?: string };
+    readonly drive: (h: Harness) => Promise<{ readonly kind: string; readonly reason?: string }>;
+  }> = [
+    {
+      op: "START",
+      hitClass: "own-kind replay → duplicate",
+      expected: { kind: "duplicate" },
+      drive: async (h) => {
+        await h.kernel.create({ instanceId: "i1", templateRef: REF, task: "T" });
+        await h.kernel.start({ instanceId: "i1", opId: SHARED });
+        return h.kernel.start({ instanceId: "i1", opId: SHARED });
+      },
+    },
+    {
+      op: "START",
+      hitClass: "other-fact-kind reuse → op_id_collision",
+      expected: { kind: "rejected", reason: "op_id_collision" },
+      drive: async (h) => {
+        await h.kernel.create({ instanceId: "i1", templateRef: REF, task: "T" });
+        await h.kernel.cancel({ instanceId: "i1", opId: SHARED }); // CANCELLED fact under SHARED
+        return h.kernel.start({ instanceId: "i1", opId: SHARED });
+      },
+    },
+    {
+      op: "START",
+      hitClass: "transition op reuse → op_id_collision",
+      expected: { kind: "rejected", reason: "op_id_collision" },
+      drive: async (h) => {
+        await committedTransition(h, SHARED);
+        return h.kernel.start({ instanceId: "i1", opId: SHARED });
+      },
+    },
+    {
+      op: "KICKOFF",
+      hitClass: "own-kind replay → duplicate",
+      expected: { kind: "duplicate" },
+      drive: async (h) => {
+        await h.kernel.create({ instanceId: "i1", templateRef: REF, mode: "deferred_kickoff" });
+        await h.kernel.start({ instanceId: "i1", opId: "op-start" });
+        await h.kernel.kickoff({ instanceId: "i1", opId: SHARED, task: "GO" });
+        return h.kernel.kickoff({ instanceId: "i1", opId: SHARED, task: "GO" });
+      },
+    },
+    {
+      op: "KICKOFF",
+      hitClass: "other-fact-kind reuse → op_id_collision",
+      expected: { kind: "rejected", reason: "op_id_collision" },
+      drive: async (h) => {
+        await h.kernel.create({ instanceId: "i1", templateRef: REF, mode: "deferred_kickoff" });
+        await h.kernel.start({ instanceId: "i1", opId: SHARED }); // STARTED fact under SHARED
+        return h.kernel.kickoff({ instanceId: "i1", opId: SHARED, task: "GO" });
+      },
+    },
+    {
+      op: "KICKOFF",
+      hitClass: "transition op reuse → op_id_collision",
+      expected: { kind: "rejected", reason: "op_id_collision" },
+      drive: async (h) => {
+        await committedTransition(h, SHARED);
+        return h.kernel.kickoff({ instanceId: "i1", opId: SHARED, task: "GO" });
+      },
+    },
+    {
+      op: "CANCEL",
+      hitClass: "own-kind replay → duplicate",
+      expected: { kind: "duplicate" },
+      drive: async (h) => {
+        await h.kernel.create({ instanceId: "i1", templateRef: REF, task: "T" });
+        await h.kernel.cancel({ instanceId: "i1", opId: SHARED });
+        return h.kernel.cancel({ instanceId: "i1", opId: SHARED });
+      },
+    },
+    {
+      op: "CANCEL",
+      hitClass: "other-fact-kind reuse → op_id_collision",
+      expected: { kind: "rejected", reason: "op_id_collision" },
+      drive: async (h) => {
+        await h.kernel.create({ instanceId: "i1", templateRef: REF, task: "T" });
+        await h.kernel.start({ instanceId: "i1", opId: SHARED }); // STARTED fact under SHARED
+        return h.kernel.cancel({ instanceId: "i1", opId: SHARED });
+      },
+    },
+    {
+      op: "CANCEL",
+      hitClass: "transition op reuse → op_id_collision",
+      expected: { kind: "rejected", reason: "op_id_collision" },
+      drive: async (h) => {
+        await committedTransition(h, SHARED);
+        return h.kernel.cancel({ instanceId: "i1", opId: SHARED });
+      },
+    },
+  ];
+
+  for (const cell of matrix) {
+    it(`${cell.op}: ${cell.hitClass}`, async () => {
+      const h = makeHarness();
+      expect(await cell.drive(h)).toEqual(cell.expected);
+      h.close();
+    });
+  }
 
   it("an ACTOR envelope reusing a lifecycle op id is op_id_collision (the actor-side mirror)", async () => {
     const h = makeHarness();
@@ -559,26 +846,6 @@ describe("kind-aware idempotency across classes (A2)", () => {
       expectedRole: "implementer",
     });
     expect(outcome).toEqual({ kind: "rejected", reason: "op_id_collision" });
-    h.close();
-  });
-
-  it("a LIFECYCLE op reusing a transition op id is op_id_collision", async () => {
-    const h = makeHarness();
-    await h.kernel.create({ instanceId: "i1", templateRef: REF, task: "T" });
-    await h.kernel.start({ instanceId: "i1", opId: "op-start" });
-    const committed = await h.kernel.handle({
-      instanceId: "i1",
-      opId: "op-t1",
-      type: "PASS",
-      actorId: "codex",
-      expectedVersion: 2,
-      expectedRole: "implementer",
-    });
-    expect(committed.kind).toBe("committed");
-    expect(await h.kernel.cancel({ instanceId: "i1", opId: "op-t1" })).toEqual({
-      kind: "rejected",
-      reason: "op_id_collision",
-    });
     h.close();
   });
 });

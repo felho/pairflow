@@ -93,6 +93,75 @@ describe("the unit→code manifest (v3/model/units ↔ drift/unitMap.json)", () 
     });
   });
 
+  it("pins the ch12-p1b D1 packet-owned mappings VERBATIM (build-close aftermath fold)", () => {
+    // The SEVEN D1 rows flip implement/realized at P1b. The generic
+    // resolution lane below stays green on a wrong-but-existing symbol
+    // (e.g. START pointed at #createInstance), so the packet-owned rows
+    // are pinned as exact strings here.
+    expect(unitMap["l0d-pseudocode/RECEIVE"]).toEqual({
+      codeRef: "v3/src/kernel/kernel.ts#createKernel",
+      disposition: "implement",
+      status: "realized",
+    });
+    expect(unitMap["l0d-pseudocode/CREATE_INSTANCE"]).toEqual({
+      codeRef: "v3/src/kernel/lifecycle.ts#createInstance",
+      disposition: "implement",
+      status: "realized",
+    });
+    expect(unitMap["l0d-pseudocode/START"]).toEqual({
+      codeRef: "v3/src/kernel/lifecycle.ts#start",
+      disposition: "implement",
+      status: "realized",
+    });
+    expect(unitMap["l0d-pseudocode/KICKOFF"]).toEqual({
+      codeRef: "v3/src/kernel/lifecycle.ts#kickoff",
+      disposition: "implement",
+      status: "realized",
+    });
+    expect(unitMap["l0d-pseudocode/CANCEL"]).toEqual({
+      codeRef: "v3/src/kernel/lifecycle.ts#cancel",
+      disposition: "implement",
+      status: "realized",
+    });
+    expect(unitMap["l0d-pseudocode/FAIL"]).toEqual({
+      codeRef: "v3/src/kernel/lifecycle.ts#fail",
+      disposition: "implement",
+      status: "realized",
+    });
+    expect(unitMap["l0d-pseudocode/activate"]).toEqual({
+      codeRef: "v3/src/kernel/lifecycle.ts#activate",
+      disposition: "implement",
+      status: "realized",
+    });
+  });
+
+  it("pins the ch12-p1b D4 one-shot re-points VERBATIM (the retirement fold)", () => {
+    // ALL FOUR rows whose codeRef was the deleted start.ts#startInstance
+    // re-point into the lifecycle successor's home. The l0b one-shot keeps
+    // `implement`; the three l2/l2a rows keep `alias/inherited`. None goes
+    // pending, none keeps the deleted start.ts ref.
+    expect(unitMap["l0b-pseudocode/START_INSTANCE"]).toEqual({
+      codeRef: "v3/src/kernel/lifecycle.ts#createInstance",
+      disposition: "implement",
+      status: "realized",
+    });
+    expect(unitMap["l2-pseudocode/CREATE_INSTANCE"]).toEqual({
+      codeRef: "v3/src/kernel/lifecycle.ts#createInstance",
+      disposition: "alias/inherited",
+      status: "realized",
+    });
+    expect(unitMap["l2a-pseudocode/CREATE_INSTANCE"]).toEqual({
+      codeRef: "v3/src/kernel/lifecycle.ts#createInstance",
+      disposition: "alias/inherited",
+      status: "realized",
+    });
+    expect(unitMap["l2-pseudocode/activate"]).toEqual({
+      codeRef: "v3/src/kernel/lifecycle.ts#activate",
+      disposition: "alias/inherited",
+      status: "realized",
+    });
+  });
+
   it("every realized codeRef resolves: the file exists and carries the symbol", () => {
     const realized = Object.entries(unitMap).filter(
       (pair): pair is [string, Extract<UnitMapEntry, { status: "realized" }>] =>

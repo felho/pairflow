@@ -58,15 +58,30 @@ describe("cli — the full-lifecycle journey smoke (packet ch8-P2: J1/J2)", () =
         "start", "--db", db, "--task", "journey",
         "--templates-dir", templatesDir,
       );
-      const startDoc = JSON.parse(started.stdout.trim()) as {
-        kind: string;
-        instanceId: string;
-        version: number;
-      };
-      // The C25 bridge: start emits the `activated` outcome — version 2
-      // (genesis v1 + the activation commit).
-      expect(startDoc.kind).toBe("activated");
-      expect(startDoc.version).toBe(2);
+      // FOLD 7 (arm gate 2 aftermath): the C25 bridge's `activated` stdout
+      // document asserted by FULL equality — the subprocess-minted
+      // instanceId read from the parsed doc, everything else pinned
+      // (version 2 = genesis v1 + the activation commit; the first
+      // dispatch's ContextPacket for the implement step).
+      const startDoc = JSON.parse(started.stdout.trim()) as { instanceId: string };
+      expect(typeof startDoc.instanceId).toBe("string");
+      expect(startDoc.instanceId).not.toBe("");
+      expect(startDoc).toEqual({
+        kind: "activated",
+        instanceId: startDoc.instanceId,
+        version: 2,
+        intent: {
+          actor: "codex",
+          packet: {
+            instanceId: startDoc.instanceId,
+            expectedVersion: 2,
+            task: "journey",
+            role: "implementer",
+            instruction: "build it",
+            availableOps: ["PASS"],
+          },
+        },
+      });
       const id = startDoc.instanceId;
 
       // submitted events driving implement →(PASS)→ review →(CONVERGED)→ done.
@@ -154,9 +169,28 @@ describe("cli — the full-lifecycle journey smoke (packet ch8-P2: J1/J2)", () =
         "start", "--db", db, "--task", "pass-back journey",
         "--templates-dir", templatesDir,
       );
-      const startDoc = JSON.parse(started.stdout.trim()) as { instanceId: string; version: number };
-      // The activation commit: genesis v1 + START ⇒ version 2.
-      expect(startDoc.version).toBe(2);
+      // FOLD 7: the pass-back journey's start document asserted by FULL
+      // equality (task "pass-back journey"; version 2 = genesis v1 + the
+      // activation commit).
+      const startDoc = JSON.parse(started.stdout.trim()) as { instanceId: string };
+      expect(typeof startDoc.instanceId).toBe("string");
+      expect(startDoc.instanceId).not.toBe("");
+      expect(startDoc).toEqual({
+        kind: "activated",
+        instanceId: startDoc.instanceId,
+        version: 2,
+        intent: {
+          actor: "codex",
+          packet: {
+            instanceId: startDoc.instanceId,
+            expectedVersion: 2,
+            task: "pass-back journey",
+            role: "implementer",
+            instruction: "build it",
+            availableOps: ["PASS"],
+          },
+        },
+      });
       const id = startDoc.instanceId;
 
       const submit = (
@@ -270,7 +304,29 @@ round:
         "start", "--db", db, "--task", "gated", "--template", "gated-pair-v0@1",
         "--templates-dir", templatesDir,
       );
-      const id = (JSON.parse(started.stdout.trim()) as { instanceId: string }).instanceId;
+      // FOLD 7: the gated file's start document asserted by FULL equality
+      // (task "gated" over the gated-pair-v0 template — same implement-step
+      // dispatch shape; version 2 = genesis v1 + the activation commit).
+      const startDoc = JSON.parse(started.stdout.trim()) as { instanceId: string };
+      expect(typeof startDoc.instanceId).toBe("string");
+      expect(startDoc.instanceId).not.toBe("");
+      expect(startDoc).toEqual({
+        kind: "activated",
+        instanceId: startDoc.instanceId,
+        version: 2,
+        intent: {
+          actor: "codex",
+          packet: {
+            instanceId: startDoc.instanceId,
+            expectedVersion: 2,
+            task: "gated",
+            role: "implementer",
+            instruction: "build it",
+            availableOps: ["PASS"],
+          },
+        },
+      });
+      const id = startDoc.instanceId;
 
       const submit = (
         type: string,

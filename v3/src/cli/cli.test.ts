@@ -136,15 +136,32 @@ function assertErrorContract(result: Run, expectedClass: string, expectedCode: n
 async function startOne(db: string, deps: CliDeps): Promise<string> {
   const started = await run(["start", "--db", db, "--task", "t"], deps);
   expect(started.code).toBe(EXIT.ok);
-  // The C25 bridge: start emits the START leg's `activated` outcome as the
-  // stdout data document — genesis v1 + the activation commit ⇒ version 2.
-  const doc = JSON.parse(started.stdout[0] ?? "") as {
-    kind: string;
-    instanceId: string;
-    version: number;
-  };
-  expect(doc.kind).toBe("activated");
-  expect(doc.version).toBe(2);
+  // FOLD 7 (arm gate 2 aftermath): the C25 bridge emits the START leg's
+  // `activated` outcome as the stdout data document — asserted by FULL
+  // equality. The minted instanceId is read from the parsed doc (asserted
+  // nonempty) and everything else is pinned exactly: genesis v1 + the
+  // activation commit ⇒ version 2, and the first dispatch's ContextPacket
+  // for the implement step (task "t", role implementer, the canonical
+  // template's instruction + availableOps).
+  const doc = JSON.parse(started.stdout[0] ?? "") as { instanceId: string };
+  expect(typeof doc.instanceId).toBe("string");
+  expect(doc.instanceId).not.toBe("");
+  expect(doc).toEqual({
+    kind: "activated",
+    instanceId: doc.instanceId,
+    version: 2,
+    intent: {
+      actor: "codex",
+      packet: {
+        instanceId: doc.instanceId,
+        expectedVersion: 2,
+        task: "t",
+        role: "implementer",
+        instruction: "build it",
+        availableOps: ["PASS"],
+      },
+    },
+  });
   return doc.instanceId;
 }
 

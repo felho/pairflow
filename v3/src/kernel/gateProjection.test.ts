@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type {
   EventEnvelope,
+  LifecycleFactEntry,
   TranscriptEntry,
   WorkflowInstance,
   WorkflowTemplate,
@@ -69,6 +70,12 @@ function committed(seq: number, opId: string, type: string): TranscriptEntry {
   };
 }
 
+/** A lifecycle fact row — carries no envelope and no gate decisions by
+ * class, so the projection replay must skip it (F4). */
+function fact(seq: number, kind: LifecycleFactEntry["entryKind"], opId: string): LifecycleFactEntry {
+  return { entryKind: kind, seq, opId, committedAt: seq };
+}
+
 describe("deriveGateProjection — V1 scalar pass-through", () => {
   it("round / currentStep / eventType come from the loaded instance and the current envelope", () => {
     const projection = deriveGateProjection(instanceAt("review", 5), template, [], "CONVERGED");
@@ -109,6 +116,30 @@ describe("deriveGateProjection — V3 two-grain negative (no raw transcript, no 
     expect(Object.keys(entry ?? {}).sort()).toEqual(["eventType", "role", "stepId"]);
     // No payload / digest / opId / committedAt / envelope leaks anywhere.
     expect(JSON.stringify(projection)).not.toMatch(/payload|Digest|opId|committedAt|envelope|op-1/);
+  });
+});
+
+describe("deriveGateProjection — fact rows are class-invisible to gate history (packet ch12-p1b F4)", () => {
+  it("interleaved fact rows yield the SAME projection as the list with them removed (deep-equal histories)", () => {
+    const withFacts: TranscriptEntry[] = [
+      fact(1, "STARTED", "f-start"),
+      committed(2, "op-1", "PASS"), // implement → review
+      fact(3, "TASK_SUPPLIED", "f-kick"),
+      committed(4, "op-2", "PASS"), // review → implement (loop-back)
+      fact(5, "CANCELLED", "f-cancel"),
+    ];
+    const withoutFacts = withFacts.filter(
+      (entry): entry is TranscriptEntry => entry.entryKind === "transition",
+    );
+    const instance = instanceAt("review", 2);
+    const withProjection = deriveGateProjection(instance, template, withFacts, "CONVERGED");
+    const withoutProjection = deriveGateProjection(instance, template, withoutFacts, "CONVERGED");
+    // Skipping the fact rows IS the faithful semantics — not data loss.
+    expect(withProjection).toEqual(withoutProjection);
+    expect(withProjection.history).toEqual([
+      { stepId: "implement", eventType: "PASS", role: "implementer" },
+      { stepId: "review", eventType: "PASS", role: "reviewer" },
+    ]);
   });
 });
 

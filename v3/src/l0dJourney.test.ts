@@ -59,14 +59,23 @@ describe("the context-free deferred-hold journey (J1)", () => {
     });
     expect(created).toEqual({ kind: "created", instanceId: "j1", version: 1 });
     const genesis = await handle.store.loadInstance("j1");
-    expect(genesis).toMatchObject({
-      kernelStatus: "CREATED",
+    // FULL instance equality (arm gate 2 aftermath, fold 8): the complete
+    // WorkflowInstance literal — a stray/dropped field is red, not silently
+    // tolerated by a shape match.
+    expect(genesis).toEqual({
+      instanceId: "j1",
+      templateRef: { id: "local-pair-v0", version: 1 },
+      task: null,
+      binding: { implementer: "codex", reviewer: "claude" },
       currentStep: null,
       round: 0,
-      task: null,
+      kernelStatus: "CREATED",
+      terminalDisposition: null,
       activationMode: "deferred_kickoff",
       wait: null,
       runtimeContext: { state: "none" },
+      failureReason: null,
+      runOverrides: {},
       version: 1,
     });
 
@@ -79,10 +88,20 @@ describe("the context-free deferred-hold journey (J1)", () => {
     });
     expect(started).toEqual({ kind: "accepted" });
     const held = await handle.store.loadInstance("j1");
-    expect(held).toMatchObject({
+    expect(held).toEqual({
+      instanceId: "j1",
+      templateRef: { id: "local-pair-v0", version: 1 },
+      task: null,
+      binding: { implementer: "codex", reviewer: "claude" },
+      currentStep: null,
+      round: 0,
       kernelStatus: "WAITING",
+      terminalDisposition: null,
+      activationMode: "deferred_kickoff",
       wait: { kind: "kickoff_pending", requestedBy: "activation", resumeEvents: ["KICKOFF"] },
       runtimeContext: { state: "ready", ref: null },
+      failureReason: null,
+      runOverrides: {},
       version: 2,
     });
     const heldTimeline = await handle.store.getTimeline("j1", 0);
@@ -126,12 +145,20 @@ describe("the context-free deferred-hold journey (J1)", () => {
     expect(kicked.intent.actor).toBe("codex");
     expect(kicked.intent.packet.task).toBe("ship the journey");
     const active = await handle.store.loadInstance("j1");
-    expect(active).toMatchObject({
-      kernelStatus: "ACTIVE",
+    expect(active).toEqual({
+      instanceId: "j1",
+      templateRef: { id: "local-pair-v0", version: 1 },
+      task: "ship the journey",
+      binding: { implementer: "codex", reviewer: "claude" },
       currentStep: "implement",
       round: 1,
-      task: "ship the journey",
+      kernelStatus: "ACTIVE",
+      terminalDisposition: null,
+      activationMode: "deferred_kickoff",
       wait: null,
+      runtimeContext: { state: "ready", ref: null },
+      failureReason: null,
+      runOverrides: {},
       version: 3,
     });
 
@@ -144,20 +171,32 @@ describe("the context-free deferred-hold journey (J1)", () => {
     });
     expect(cancelled).toEqual({ kind: "terminated", disposition: "cancelled" });
     const terminal = await handle.store.loadInstance("j1");
-    expect(terminal).toMatchObject({
+    expect(terminal).toEqual({
+      instanceId: "j1",
+      templateRef: { id: "local-pair-v0", version: 1 },
+      task: "ship the journey",
+      binding: { implementer: "codex", reviewer: "claude" },
+      currentStep: "implement",
+      round: 1,
       kernelStatus: "TERMINAL",
       terminalDisposition: "cancelled",
+      activationMode: "deferred_kickoff",
       wait: null,
+      runtimeContext: { state: "ready", ref: null },
+      failureReason: null,
+      runOverrides: {},
       version: 4,
     });
     const detail = await handle.store.getInstanceDetail("j1");
     if (detail === null) {
       throw new Error("journey wiring: detail vanished");
     }
-    expect(detail.transcript.map((entry) => [entry.seq, entry.entryKind])).toEqual([
-      [1, "STARTED"],
-      [2, "TASK_SUPPLIED"],
-      [3, "CANCELLED"],
+    // FULL row equality: every fact row's {entryKind, seq, opId,
+    // committedAt} exact — the controlled clock pins committedAt at 50_000.
+    expect(detail.transcript).toEqual([
+      { entryKind: "STARTED", seq: 1, opId: "op-start", committedAt: 50_000 },
+      { entryKind: "TASK_SUPPLIED", seq: 2, opId: "op-kick", committedAt: 50_000 },
+      { entryKind: "CANCELLED", seq: 3, opId: "op-cancel", committedAt: 50_000 },
     ]);
     expect(runAllCheckers(detail, admitted.template)).toEqual([]);
 

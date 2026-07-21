@@ -501,3 +501,70 @@ describe("checkTerminalSink — the ch12-p1b disposition growth (T2)", () => {
     expect(checkVersionArithmetic(wrong).join("\n")).toMatch(/version arithmetic/);
   });
 });
+
+// ── ch12-p1b gate-2 aftermath: the wait iff at the store boundary
+// BOTH directions (checkTerminalSink (d) is now the full wait⇔WAITING
+// iff) + a FACT row after the terminal TRANSITION row (the row-bearing
+// sink's second class, complementing the after-CANCELLED lane) ─────────
+
+describe("checkTerminalSink — the wait iff both directions + fact-after-terminal (gate-2 aftermath)", () => {
+  const KICKOFF_WAIT = {
+    kind: "kickoff_pending",
+    requestedBy: "activation",
+    resumeEvents: ["KICKOFF"],
+  } as const;
+
+  function lateFact(kind: "STARTED" | "CANCELLED", seq: number, opId: string): LifecycleFactEntry {
+    return { entryKind: kind, seq, opId, committedAt: 1_000 + seq };
+  }
+
+  it("a FACT row committed AFTER the terminal TRANSITION row → sink violation (complements the after-CANCELLED lane)", () => {
+    // greenRows reach `done` at seq 3; a STARTED fact fabricated at seq 4
+    // lands after the terminal transition row — the sink walk reds on the
+    // OTHER row-bearing writer (a fact after `done`, not after CANCELLED).
+    const afterDone = detail([
+      startedFact("s0"),
+      row(2, "a1", "PASS"),
+      row(3, "b2", "CONVERGED"),
+      lateFact("STARTED", 4, "late"),
+    ]);
+    expect(checkTerminalSink(afterDone, template).join("\n")).toMatch(
+      /committed AFTER the terminal row/,
+    );
+  });
+
+  it("(d) a WAITING instance with a NULL wait → violation (the iff's WAITING⇒wait direction)", () => {
+    const waitingNoWait = detail([startedFact("s0")], {
+      currentStep: null,
+      kernelStatus: "WAITING",
+      terminalDisposition: null,
+      wait: null,
+    });
+    expect(
+      checkTerminalSink(waitingNoWait, template).some((v) =>
+        v.includes("WAITING instance without a typed wait"),
+      ),
+    ).toBe(true);
+  });
+
+  it("(d) a non-null wait on an ACTIVE instance → violation (the iff's wait⇒WAITING direction)", () => {
+    const activeWithWait = detail([startedFact("s0"), row(2, "a1", "PASS")], {
+      currentStep: "review",
+      kernelStatus: "ACTIVE",
+      terminalDisposition: null,
+      wait: KICKOFF_WAIT,
+    });
+    expect(
+      checkTerminalSink(activeWithWait, template).some((v) =>
+        v.includes("non-null wait on a ACTIVE instance"),
+      ),
+    ).toBe(true);
+  });
+
+  it("(d) the existing TERMINAL + non-null wait lane still reds", () => {
+    const terminalWithWait = detail(greenRows, { wait: KICKOFF_WAIT });
+    expect(
+      checkTerminalSink(terminalWithWait, template).some((v) => v.includes("non-null wait")),
+    ).toBe(true);
+  });
+});

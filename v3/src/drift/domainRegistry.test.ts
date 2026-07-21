@@ -169,3 +169,31 @@ describe("the ch12-p1a superseded row (D2 — l0a/LifecycleStatus)", () => {
     expect(dispositionBound).toBe(true);
   });
 });
+
+// ── ch12-p1b D2 (build-close aftermath fold): the FOUR entry-class rows
+// flipping `realized` at P1b. The key-set lane above only proves the keys
+// EXIST; the compile-time `import type` binding proves the typeName maps
+// to a real type — but a wrong-but-existing typeName string (e.g.
+// l0d/Template pointing at "EventEnvelope") passes both. These lanes pin
+// the packet-owned CONTENT verbatim. ─────────────────────────────────────
+
+describe("the ch12-p1b D2 realized rows (l0d entry classes + Template)", () => {
+  it("pins the FOUR rows VERBATIM — a wrong-but-existing typeName is content-red", () => {
+    expect(DOMAIN_REGISTRY["l0d/OperatorIntent"]).toEqual({
+      kind: "realized",
+      typeName: "CreateInput | StartInput | KickoffInput | CancelInput",
+    });
+    expect(DOMAIN_REGISTRY["l0d/KernelEvent"]).toEqual({
+      kind: "realized",
+      typeName: 'Kernel["fail"]',
+    });
+    expect(DOMAIN_REGISTRY["l0d/ActorEnvelope"]).toEqual({
+      kind: "realized",
+      typeName: "EventEnvelope",
+    });
+    expect(DOMAIN_REGISTRY["l0d/Template"]).toEqual({
+      kind: "realized",
+      typeName: "WorkflowTemplate",
+    });
+  });
+});

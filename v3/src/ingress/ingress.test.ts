@@ -622,3 +622,85 @@ describe("submitIntent — refusal lanes (I3/I4): fail-closed, one token per gat
     );
   });
 });
+
+describe("submitIntent — hostile wire records (gate-2 aftermath, finding 1)", () => {
+  it("an ACCESSOR property on the top-level record → not_plain_object (descriptor gate)", async () => {
+    const cap = intentKernel();
+    const hostile: Record<string, unknown> = { intent: "cancel", opId: "op" };
+    Object.defineProperty(hostile, "instanceId", { get: () => "i1", enumerable: true, configurable: true });
+    expect(await ingressOf(cap.kernel).submitIntent(hostile)).toEqual({
+      kind: "rejected",
+      reason: "invalid_shape",
+    });
+    expect(cap.cancels).toEqual([]);
+  });
+
+  it("an ACCESSOR inside templateRef → invalid_template_ref (nested descriptor gate)", async () => {
+    const cap = intentKernel();
+    const ref: Record<string, unknown> = { id: "local-pair-v0" };
+    let reads = 0;
+    Object.defineProperty(ref, "version", {
+      get: () => {
+        reads += 1;
+        return 1;
+      },
+      enumerable: true,
+      configurable: true,
+    });
+    expect(
+      await ingressOf(cap.kernel).submitIntent({
+        intent: "create",
+        instanceId: "i1",
+        templateRef: ref,
+      }),
+    ).toEqual({ kind: "rejected", reason: "invalid_shape" });
+    expect(cap.creates).toEqual([]);
+    // The descriptor gate fires BEFORE any value read — the getter never ran.
+    expect(reads).toBe(0);
+  });
+
+  it("a THROWING getter never escapes as an exception — rejected fail-closed", async () => {
+    const cap = intentKernel();
+    const hostile: Record<string, unknown> = { intent: "start", instanceId: "i1" };
+    Object.defineProperty(hostile, "opId", {
+      get: () => {
+        throw new Error("hostile getter");
+      },
+      enumerable: true,
+      configurable: true,
+    });
+    // The descriptor gate fires BEFORE any value read — the getter never runs.
+    expect(await ingressOf(cap.kernel).submitIntent(hostile)).toEqual({
+      kind: "rejected",
+      reason: "invalid_shape",
+    });
+  });
+
+  it("a NON-ENUMERABLE unknown key still rejects (unknown_key — getOwnPropertyNames, not keys)", async () => {
+    const cap = intentKernel();
+    const hostile: Record<string, unknown> = { intent: "cancel", instanceId: "i1", opId: "op" };
+    Object.defineProperty(hostile, "smuggled", { value: 1, enumerable: false, configurable: true, writable: true });
+    expect(await ingressOf(cap.kernel).submitIntent(hostile)).toEqual({
+      kind: "rejected",
+      reason: "invalid_shape",
+    });
+  });
+
+  it("post-dispatch caller mutation cannot reach the kernel — runOverrides and templateRef are single-read COPIES", async () => {
+    const cap = intentKernel();
+    const runOverrides: Record<string, Record<string, unknown>> = { review: { mode: "strict" } };
+    const templateRef = { id: "local-pair-v0", version: 1 };
+    await ingressOf(cap.kernel).submitIntent({
+      intent: "create",
+      instanceId: "i1",
+      templateRef,
+      task: "T",
+      runOverrides,
+    });
+    // Mutate the caller-held objects AFTER dispatch resolved.
+    runOverrides["review"]!["mode"] = "hijacked";
+    (templateRef as { version: number }).version = 999;
+    expect(cap.creates[0]?.runOverrides).toEqual({ review: { mode: "strict" } });
+    expect(cap.creates[0]?.templateRef).toEqual({ id: "local-pair-v0", version: 1 });
+  });
+});
