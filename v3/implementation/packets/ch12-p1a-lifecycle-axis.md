@@ -953,10 +953,14 @@ aftermath pass on the built packet (commit `abaef93c`):
    composite shapes had only a spot-check readonly probe. Fold
    (`processGate.test.ts`): per-field `@ts-expect-error` assignment
    probes over `RuntimeContextRef.kind`/`.locator`, `WaitReason.kind`/
-   `.requestedBy`, and the narrowed `RuntimeContext` variants
-   (`state`/`requestId`/`ref`), plus an excess-property probe proving
-   `TranscriptEntry` does NOT accept `issuedAgentConfig` (the S11
-   type-staging boundary is now typecheck-armed, not just documented).
+   `.requestedBy`, and the narrowed `RuntimeContext` variants —
+   EVERY union arm's own `state` plus its payload field
+   (`none.state`; `requested.state`/`requestId`; `ready.state`/
+   `ref`) — the arm's re-check caught the two variant-`state`
+   probes missing (a per-arm readonly is separately weakenable) —
+   plus an excess-property probe proving `TranscriptEntry` does NOT
+   accept `issuedAgentConfig` (the S11 type-staging boundary is now
+   typecheck-armed, not just documented).
 6. **TEST — drift content locks.** The D1/D2 lanes proved key-set +
    resolution, not CONTENT: a wrong-but-resolving codeRef or a
    wrong-but-existing successor stayed green. Fold: `unitMap.test.ts`

@@ -430,10 +430,14 @@ export function __probeReadonlyCompositeFields(
     context.state = "none";
   }
   if (context.state === "requested") {
+    // @ts-expect-error the requested variant's `state` is readonly.
+    context.state = "requested";
     // @ts-expect-error the requested variant's requestId is readonly.
     context.requestId = "r";
   }
   if (context.state === "ready") {
+    // @ts-expect-error the ready variant's `state` is readonly.
+    context.state = "ready";
     // @ts-expect-error the ready variant's ref is readonly.
     context.ref = null;
   }
