@@ -655,6 +655,51 @@ describe("dev cli — replay (hermetic golden-trace diagnostics)", () => {
     // fixture whose content fails is STILL the harness's mismatch
     // (the existing mismatch test pins exit 1 + TraceMismatchError).
   });
+
+  it("build-close aftermath (ch12-p1a): finalState axis TOKEN DOMAINS are validated — an out-of-union kernelStatus/terminalDisposition is usage 2, never internal", async () => {
+    // The green-but-blind gap: any nonempty string passed the validator,
+    // so PAUSED/abandoned fixtures reached the harness as MISMATCH
+    // (internal 1). The token sets are the exact l0d unions.
+    const lanes: unknown[] = [
+      { ...greenFixture, finalState: { ...greenFixture.finalState, kernelStatus: "PAUSED" } },
+      // The RETIRED ch-4 spelling maps, never aliases (E1) — not a token.
+      { ...greenFixture, finalState: { ...greenFixture.finalState, kernelStatus: "RUNNING" } },
+      {
+        ...greenFixture,
+        finalState: { ...greenFixture.finalState, terminalDisposition: "abandoned" },
+      },
+    ];
+    for (const [index, fixture] of lanes.entries()) {
+      const file = writeJson(`token-domain-${String(index)}.json`, fixture);
+      const result = await runDev(["replay", "--file", file], testDeps());
+      expect(result.stdout).toEqual([]);
+      const error = assertError(result, "usage", EXIT.usage);
+      expect(error.name).toBe("InvalidFixture");
+    }
+  });
+
+  it("build-close aftermath (ch12-p1a): every IN-UNION token passes the validator — a content-wrong but token-valid finalState is the harness's mismatch (internal 1)", async () => {
+    // The boundary control from the other side: CREATED/WAITING/TERMINAL
+    // and done/failed/cancelled all clear the usage gate, so the run
+    // ends in TraceMismatchError — proving the token checks accept the
+    // full unions, not just the green fixture's ACTIVE/null.
+    const lanes: unknown[] = [
+      ...(["CREATED", "WAITING", "TERMINAL"] as const).map((kernelStatus) => ({
+        ...greenFixture,
+        finalState: { ...greenFixture.finalState, kernelStatus },
+      })),
+      ...(["done", "failed", "cancelled"] as const).map((terminalDisposition) => ({
+        ...greenFixture,
+        finalState: { ...greenFixture.finalState, terminalDisposition },
+      })),
+    ];
+    for (const [index, fixture] of lanes.entries()) {
+      const file = writeJson(`token-valid-${String(index)}.json`, fixture);
+      const result = await runDev(["replay", "--file", file], testDeps());
+      const error = assertError(result, "internal", EXIT.internal);
+      expect(error.name).toBe("TraceMismatchError");
+    }
+  });
 });
 
 describe("dev cli — the diag verb: the global cursor dump (packet ch7-P4: V3/F3/F4/M2/M9)", () => {

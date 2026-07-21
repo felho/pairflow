@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
+import type { KernelStatus, TerminalDisposition } from "../domain/index.js";
 import { DOMAIN_REGISTRY } from "./domainRegistry.js";
 
 /**
@@ -126,5 +127,45 @@ describe("the domain-registry manifest (ledger §4 ↔ drift/domainRegistry.ts)"
       .sort();
     const manifestKeys = Object.keys(DOMAIN_REGISTRY).sort();
     expect(manifestKeys).toEqual(ledgerKeys);
+  });
+});
+
+// ── ch12-p1a D2 (build-close aftermath fold): the superseded row's
+// CONTENT. The compile-time `satisfies` on `successors` only proves the
+// keys EXIST in the witness table — a wrong-but-existing successor
+// (e.g. l0d/WaitReason) compiles; these lanes make it red. ────────────
+
+/** Exact type equality (the invariance trick) — `true` only when A and B
+ * are mutually identical, not merely mutually assignable-ish. */
+type Equals<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2
+  ? true
+  : false;
+
+describe("the ch12-p1a superseded row (D2 — l0a/LifecycleStatus)", () => {
+  it("is superseded by EXACTLY [l0d/KernelStatus, l0d/TerminalDisposition] — a wrong-but-existing successor is content-red", () => {
+    expect(DOMAIN_REGISTRY["l0a/LifecycleStatus"]).toEqual({
+      kind: "superseded",
+      successors: ["l0d/KernelStatus", "l0d/TerminalDisposition"],
+    });
+    // The successor rows themselves carry the realized witnesses under
+    // the EXACT type names the retirement named (C24).
+    expect(DOMAIN_REGISTRY["l0d/KernelStatus"]).toEqual({
+      kind: "realized",
+      typeName: "KernelStatus",
+    });
+    expect(DOMAIN_REGISTRY["l0d/TerminalDisposition"]).toEqual({
+      kind: "realized",
+      typeName: "TerminalDisposition",
+    });
+  });
+
+  it("the successors' witness types are EXACTLY the axis unions (type-equality witness — a widened, narrowed, or swapped successor type is compile-red)", () => {
+    const kernelStatusBound: Equals<
+      KernelStatus,
+      "CREATED" | "ACTIVE" | "WAITING" | "TERMINAL"
+    > = true;
+    const dispositionBound: Equals<TerminalDisposition, "done" | "failed" | "cancelled"> = true;
+    expect(kernelStatusBound).toBe(true);
+    expect(dispositionBound).toBe(true);
   });
 });

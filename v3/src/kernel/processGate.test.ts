@@ -8,6 +8,7 @@ import type {
   RuntimeContext,
   RuntimeContextRef,
   TerminalDisposition,
+  TranscriptEntry,
   WaitReason,
   WorkflowInstance,
 } from "../domain/index.js";
@@ -404,3 +405,51 @@ export function __probeReadonlyAxisFields(instance: WorkflowInstance, wait: Wait
   // @ts-expect-error wait.resumeEvents is readonly.
   wait.resumeEvents = [];
 }
+
+// T4 (build-close aftermath fold): PER-FIELD readonly probes over the
+// composite shapes — every field individually rejects assignment, so
+// dropping `readonly` from any ONE field turns exactly its suppression
+// into a TS2578 red. Union-variant fields are probed NARROWED (and the
+// discriminant probed with its own literal), so only the readonly rule
+// can be the objection — never union non-assignability masking it.
+export function __probeReadonlyCompositeFields(
+  ref: RuntimeContextRef,
+  context: RuntimeContext,
+  wait: WaitReason,
+): void {
+  // @ts-expect-error RuntimeContextRef.kind is readonly.
+  ref.kind = "worktree";
+  // @ts-expect-error RuntimeContextRef.locator is readonly.
+  ref.locator = "elsewhere";
+  // @ts-expect-error WaitReason.kind is readonly.
+  wait.kind = "kickoff_pending";
+  // @ts-expect-error WaitReason.requestedBy is readonly.
+  wait.requestedBy = "activation";
+  if (context.state === "none") {
+    // @ts-expect-error the RuntimeContext discriminant `state` is readonly.
+    context.state = "none";
+  }
+  if (context.state === "requested") {
+    // @ts-expect-error the requested variant's requestId is readonly.
+    context.requestId = "r";
+  }
+  if (context.state === "ready") {
+    // @ts-expect-error the ready variant's ref is readonly.
+    context.ref = null;
+  }
+}
+
+// S11 (build-close aftermath fold): the type-staging boundary itself —
+// TranscriptEntry does NOT accept an `issuedAgentConfig` member at P1a
+// (the fact/config face is P1b/P2's). Adding the field to the type
+// turns this suppression into a TS2578 red — the boundary is armed,
+// not just documented.
+export const __probeTranscriptEntryNoIssuedAgentConfig: TranscriptEntry = {
+  seq: 1,
+  envelope: { instanceId: "i", opId: "o", type: "PASS", actorId: "a" },
+  payloadDigest: "d",
+  gateDecisions: [],
+  committedAt: 0,
+  // @ts-expect-error TranscriptEntry has no issuedAgentConfig field at P1a (S11 type-staging).
+  issuedAgentConfig: null,
+};

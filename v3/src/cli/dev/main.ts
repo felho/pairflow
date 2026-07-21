@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 
+import type { KernelStatus, TerminalDisposition } from "../../domain/index.js";
 import { deriveActorEmitOpId, deriveEmitDigest, isCanonicalizable } from "../../emit/index.js";
 import { createDebugBundleExporter, redactPayloadsPolicy } from "../../floor/index.js";
 import { createIngress } from "../../ingress/index.js";
@@ -298,6 +299,24 @@ async function verbInject(ctx: VerbContext): Promise<number> {
 
 const FIXTURE_KEYS = ["name", "lift", "steps", "finalTranscript", "finalState"];
 
+// W2 + build-close aftermath (packet ch12-p1a): the finalState axis
+// fields are validated against the EXACT l0d token sets — an
+// out-of-union token is a structural (usage 2) defect drawn HERE, like
+// every other shape rule; a nonempty string is NOT enough. The arrays
+// are typed against the domain unions so a union edit that misses this
+// list is a compile error (the sqliteStore token-domain culture).
+const FINAL_STATE_KERNEL_STATUS_TOKENS: readonly KernelStatus[] = [
+  "CREATED",
+  "ACTIVE",
+  "WAITING",
+  "TERMINAL",
+];
+const FINAL_STATE_TERMINAL_DISPOSITION_TOKENS: readonly TerminalDisposition[] = [
+  "done",
+  "failed",
+  "cancelled",
+];
+
 /**
  * FULL STRUCTURAL validation at the boundary (post-close aftermath
  * finding 2): a fixture whose SHAPE is wrong — keys, kinds, primitive
@@ -494,6 +513,23 @@ function validateFixtureShape(parsed: unknown): TraceFixture {
     fixtureError(
       "finalState requires currentStep/kernelStatus (non-empty strings), terminalDisposition (non-empty string or null), and round/version (nonnegative safe integers)",
     );
+  }
+  if (
+    !(FINAL_STATE_KERNEL_STATUS_TOKENS as readonly string[]).includes(finalState["kernelStatus"])
+  ) {
+    fixtureError("finalState.kernelStatus must be CREATED | ACTIVE | WAITING | TERMINAL", {
+      got: finalState["kernelStatus"],
+    });
+  }
+  if (
+    finalState["terminalDisposition"] !== null &&
+    !(FINAL_STATE_TERMINAL_DISPOSITION_TOKENS as readonly string[]).includes(
+      finalState["terminalDisposition"],
+    )
+  ) {
+    fixtureError("finalState.terminalDisposition must be done | failed | cancelled | null", {
+      got: finalState["terminalDisposition"],
+    });
   }
   return parsed as unknown as TraceFixture;
 }

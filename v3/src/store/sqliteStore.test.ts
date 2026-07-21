@@ -171,6 +171,67 @@ describe("commitTransition — atomic transition commit (l0a invariant)", () => 
     handle.close();
   });
 
+  it("build-close aftermath (ch12-p1a): a fault BETWEEN the instances UPDATE and the transcript INSERT rolls back BOTH halves", async () => {
+    // The atomicity lane made ABLE TO FAIL: a persistent SQLite trigger
+    // (visible to the store's own connection) aborts the transcript
+    // INSERT — i.e. fires AFTER the instances UPDATE already ran inside
+    // the same transaction. A non-transactional commit path would leave
+    // the advanced instances row behind; the rollback must take BOTH
+    // halves back.
+    const path = tempDbPath();
+    const handle = openStore(path, createControlledClock(0));
+    await handle.store.createInstance(instance);
+
+    const raw = new DatabaseSync(path);
+    raw.exec(
+      "CREATE TRIGGER fault_split_txn BEFORE INSERT ON transcript BEGIN SELECT RAISE(ABORT, 'fault: split transaction'); END",
+    );
+    raw.close();
+
+    await expect(
+      handle.store.commitTransition({
+        instanceId: "inst-1",
+        expectedVersion: 1,
+        envelope: envelope("a1", 1),
+        payloadDigest: DIGEST,
+        gateDecisions: [],
+        newCurrentStep: "review",
+        newRound: 1,
+        newKernelStatus: "ACTIVE",
+        newTerminalDisposition: null,
+      }),
+    ).rejects.toThrow(/fault: split transaction/);
+
+    // BOTH halves rolled back: the instances row did NOT advance…
+    const check = new DatabaseSync(path);
+    const row = check
+      .prepare("SELECT version, current_step FROM instances WHERE instance_id = 'inst-1'")
+      .get() as { version: number; current_step: string };
+    expect(row.version).toBe(1);
+    expect(row.current_step).toBe("implement");
+    // …and no transcript row survived.
+    const count = check.prepare("SELECT COUNT(*) AS n FROM transcript").get() as { n: number };
+    expect(count.n).toBe(0);
+    check.exec("DROP TRIGGER fault_split_txn");
+    check.close();
+
+    // No transaction leaked either: with the fault removed, the SAME
+    // commit goes through cleanly on the same handle.
+    const result = await handle.store.commitTransition({
+      instanceId: "inst-1",
+      expectedVersion: 1,
+      envelope: envelope("a1", 1),
+      payloadDigest: DIGEST,
+      gateDecisions: [],
+      newCurrentStep: "review",
+      newRound: 1,
+      newKernelStatus: "ACTIVE",
+      newTerminalDisposition: null,
+    });
+    expect(result).toEqual({ kind: "committed", version: 2 });
+    handle.close();
+  });
+
   it("createInstance on an existing id throws a store-integrity error", async () => {
     const handle = openStore(":memory:", createControlledClock(0));
     await handle.store.createInstance(instance);
@@ -880,14 +941,49 @@ describe("the axis columns — schema shape (packet ch12-p1a, S2–S11)", () => 
     handle.close();
   });
 
-  it("the mapper refuses a NULL task/current_step (S9's type-staging guard — the P1b readers have not landed)", async () => {
-    const path = tempDbPath();
-    const handle = openStore(path, createControlledClock(0));
-    await handle.store.createInstance(instance);
-    const raw = new DatabaseSync(path);
-    raw.prepare("UPDATE instances SET task = NULL WHERE instance_id = 'inst-1'").run();
-    raw.close();
-    expect(() => handle.store.loadInstance("inst-1")).toThrow(/NULL task\/current_step/);
-    handle.close();
-  });
+  // Build-close aftermath (ch12-p1a): the S11 refusal driven PER
+  // CONJUNCT — a real committed transition row with exactly ONE class
+  // field nulled, so each conjunct of the `||` is proven load-bearing
+  // alone (the all-three fixture above could green with a single-field
+  // check).
+  for (const column of ["envelope", "payload_digest", "gate_decisions"] as const) {
+    it(`S11 class iff, single conjunct: a transition row with ONLY ${column} NULL is refused`, async () => {
+      const path = tempDbPath();
+      const handle = openStore(path, createControlledClock(0));
+      await handle.store.createInstance(instance);
+      const committed = await handle.store.commitTransition({
+        instanceId: "inst-1",
+        expectedVersion: 1,
+        envelope: envelope("a1", 1),
+        payloadDigest: DIGEST,
+        gateDecisions: [],
+        newCurrentStep: "review",
+        newRound: 1,
+        newKernelStatus: "ACTIVE",
+        newTerminalDisposition: null,
+      });
+      expect(committed.kind).toBe("committed");
+      const raw = new DatabaseSync(path);
+      raw.prepare(`UPDATE transcript SET ${column} = NULL WHERE op_id = 'a1'`).run();
+      raw.close();
+      await expect(handle.store.getTimeline("inst-1", 0)).rejects.toThrow(/class-required field/);
+      handle.close();
+    });
+  }
+
+  // Build-close aftermath (ch12-p1a): the S9 guard driven PER COLUMN —
+  // task=NULL and current_step=NULL as SEPARATE cases, each alone, so a
+  // guard that dropped one disjunct goes red on exactly its lane.
+  for (const column of ["task", "current_step"] as const) {
+    it(`the mapper refuses a NULL ${column} ALONE (S9's type-staging guard — the P1b readers have not landed)`, async () => {
+      const path = tempDbPath();
+      const handle = openStore(path, createControlledClock(0));
+      await handle.store.createInstance(instance);
+      const raw = new DatabaseSync(path);
+      raw.prepare(`UPDATE instances SET ${column} = NULL WHERE instance_id = 'inst-1'`).run();
+      raw.close();
+      expect(() => handle.store.loadInstance("inst-1")).toThrow(/NULL task\/current_step/);
+      handle.close();
+    });
+  }
 });

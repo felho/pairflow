@@ -71,6 +71,28 @@ describe("the unit→code manifest (v3/model/units ↔ drift/unitMap.json)", () 
     }
   });
 
+  it("pins the ch12-p1a packet-owned mappings VERBATIM (D1 — build-close aftermath fold)", () => {
+    // Content, not just resolution: the generic codeRef-resolution lane
+    // below stays green on a WRONG-but-existing target (e.g. COMPLETE
+    // pointed at createKernel) — the packet-owned rows are therefore
+    // pinned as exact strings here.
+    expect(unitMap["l0d-pseudocode/admit_loaded"]).toEqual({
+      codeRef: "v3/src/kernel/admission.ts#admitLoaded",
+      disposition: "implement",
+      status: "realized",
+    });
+    expect(unitMap["l0d-pseudocode/COMPLETE"]).toEqual({
+      codeRef: "v3/src/kernel/kernel.ts#complete",
+      disposition: "implement",
+      status: "realized",
+    });
+    expect(unitMap["l0d-pseudocode/HANDLE"]).toEqual({
+      codeRef: "v3/src/kernel/kernel.ts#createKernel",
+      disposition: "implement",
+      status: "realized",
+    });
+  });
+
   it("every realized codeRef resolves: the file exists and carries the symbol", () => {
     const realized = Object.entries(unitMap).filter(
       (pair): pair is [string, Extract<UnitMapEntry, { status: "realized" }>] =>

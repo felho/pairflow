@@ -532,7 +532,7 @@ and no cell of theirs moves.
   three.
 - The status→axis MAP is canonical in E1; mirrors: W2 (fixture
   re-base), W3 (read-surface re-base), the plan §12.4 P1a row's
-  summary. 
+  summary.
 - The single-write terminal rule is canonical in T1; mirrors: S3's
   "written EXACTLY ONCE" clause, T2(a)–(c) (the checker lanes), E3's
   "non-null EXACTLY when" type clause.
@@ -580,7 +580,10 @@ and no cell of theirs moves.
   `kernel.startInstance`'s signature and the `Ingress.submit` surface
   stay as built (E2/X3).
 - Mutation boundary: the production files + the fixture-bearing test
-  files + `plan.md` (the repartition edit) + this packet.
+  files + `plan.md` (the repartition edit) + this packet. The two
+  drift TEST files are an AFTERMATH-scoped extension (README §4):
+  the build-close arm gate's D-family content locks land there,
+  riding the aftermath commit.
 - Sweep receipts (authoring-time; re-run UNTRUNCATED at build —
   R-UNTRUNCATED-SWEEP): the `status`-consumer inventory (W1) was
   measured from the tree 2026-07-21 — source consumers:
@@ -630,6 +633,8 @@ and no cell of theirs moves.
       "v3/src/testkit/index.ts",
       "v3/src/drift/domainRegistry.ts",
       "v3/src/drift/unitMap.json",
+      "v3/src/drift/domainRegistry.test.ts",
+      "v3/src/drift/unitMap.test.ts",
       "v3/src/kernel/kernel.test.ts",
       "v3/src/kernel/admission.test.ts",
       "v3/src/kernel/processGate.test.ts",
@@ -914,3 +919,74 @@ consumers of the retired value's names remain.
   }
 }
 ```
+
+### Aftermath (build-close arm gate 2, 2026-07-21)
+
+The build-close external review found seven items — six green-but-blind
+test gaps, one product fix, one whitespace nit — all folded in one
+aftermath pass on the built packet (commit `abaef93c`):
+
+1. **PRODUCT — replay finalState token domains.** The W2 validator
+   accepted ANY nonempty string for `kernelStatus`/`terminalDisposition`
+   (`PAUSED`/`abandoned` slipped through to the harness as MISMATCH,
+   internal 1). Fix: `cli/dev/main.ts` validates against the EXACT l0d
+   token sets (arrays typed against the domain unions) as usage 2;
+   `dev.test.ts` gains the negative lanes (PAUSED / RUNNING / abandoned
+   → `InvalidFixture` usage 2) and the boundary control from the other
+   side (every in-union token clears the gate → `TraceMismatchError`
+   internal 1).
+2. **TEST — atomicity able to fail.** The commit-atomicity lanes never
+   forced a fault BETWEEN the instances UPDATE and the transcript
+   INSERT. Fold: a persistent SQLite trigger aborts the INSERT mid-
+   transaction; the lane asserts BOTH halves rolled back (version/step
+   unmoved, zero transcript rows) and that the same handle commits
+   cleanly after the fault is dropped (`sqliteStore.test.ts`).
+3. **TEST — S9 guard parameterized.** The nullable-load guard was only
+   driven with `task = NULL`. Fold: `task` and `current_step` as
+   SEPARATE cases, each nulled alone → the loud mapper refusal.
+4. **TEST — S11 class-iff per conjunct.** The refusal was driven with
+   an all-three-NULL fixture (a single-field check would have stayed
+   green). Fold: three probes, each nulling exactly ONE of
+   `envelope`/`payload_digest`/`gate_decisions` on a real committed
+   transition row → each alone refuses.
+5. **TEST — per-field readonly + the S11 type boundary.** The T4
+   composite shapes had only a spot-check readonly probe. Fold
+   (`processGate.test.ts`): per-field `@ts-expect-error` assignment
+   probes over `RuntimeContextRef.kind`/`.locator`, `WaitReason.kind`/
+   `.requestedBy`, and the narrowed `RuntimeContext` variants
+   (`state`/`requestId`/`ref`), plus an excess-property probe proving
+   `TranscriptEntry` does NOT accept `issuedAgentConfig` (the S11
+   type-staging boundary is now typecheck-armed, not just documented).
+6. **TEST — drift content locks.** The D1/D2 lanes proved key-set +
+   resolution, not CONTENT: a wrong-but-resolving codeRef or a
+   wrong-but-existing successor stayed green. Fold: `unitMap.test.ts`
+   pins the three packet-owned rows verbatim (`admit_loaded` →
+   `v3/src/kernel/admission.ts#admitLoaded`, `COMPLETE` →
+   `v3/src/kernel/kernel.ts#complete`, `HANDLE` →
+   `v3/src/kernel/kernel.ts#createKernel`; implement/realized);
+   `domainRegistry.test.ts` pins `l0a/LifecycleStatus` superseded by
+   EXACTLY `[l0d/KernelStatus, l0d/TerminalDisposition]` (successor
+   rows + typeNames included) and adds a type-equality witness binding
+   the successor unions to their exact token sets.
+7. **WHITESPACE.** One trailing space (Mirrored surface map, the E1
+   mirror bullet); swept — `git diff --check` clean.
+
+**Checks after the fold.** `pnpm v3:test` 46 files / **1041**/1041
+(+10 over the close's 1031: dev +2, store +5, drift +3; the type folds
+are compile-probes), `pnpm v3:typecheck` clean, `pnpm v3:lint` clean,
+`pnpm v3:packet-lint` 0 errors, `git diff --check` clean.
+
+**Aftermath sensitivity probes — applied → RED → restored → GREEN
+(restores byte-verified against pre-probe scratchpad copies; final
+re-run 1041/1041 + clean typecheck):**
+
+| # | Mutation | Expected red | Observed |
+|---|---|---|---|
+| 1 | both finalState token checks neutered (`false &&`) | the token-domain usage lane reds | RED — dev.test 1/40 failed |
+| 2 | commit split (`COMMIT; BEGIN` between UPDATE and INSERT) | the trigger-fault lane sees the surviving instances half | RED — sqliteStore.test 1/42 failed |
+| 3 | S9 guard's `current_step` disjunct dropped | the `current_step`-alone lane reds, `task`-alone stays green | RED — sqliteStore.test 1/42 failed |
+| 4 | S11 guard's `gate_decisions` conjunct dropped | exactly its single-conjunct lane reds (the old all-three fixture stays green) | RED — sqliteStore.test 1/42 failed |
+| 5 | `readonly` dropped from `RuntimeContextRef.kind` + `WaitReason.requestedBy` | the two per-field probes' suppressions go unused | RED — typecheck 2× TS2578 |
+| 6 | `issuedAgentConfig?: string \| null` added to `TranscriptEntry` | the excess-property probe's suppression goes unused | RED — typecheck 1× TS2578 |
+| 7 | `COMPLETE` codeRef → `kernel.ts#createKernel` (resolves!) | the verbatim pin reds where the resolution lane stays green | RED — unitMap.test 1/4 failed |
+| 8 | successor swapped to `l0d/WaitReason` (exists — compiles) | the content lane reds while typecheck stays CLEAN | RED — domainRegistry.test 1/5 failed; typecheck 0 errors |
