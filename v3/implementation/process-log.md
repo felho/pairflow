@@ -2971,3 +2971,52 @@ code earns trust only by killing mutants. Boundary candidate: new
 checker/reconciliation tooling ships WITH adversarial negative
 fixtures (delete / duplicate / swap / typo mutations) in the same
 commit, on the checker-selftest precedent.
+
+**2026-07-21 — ch12-P1a: the first live 3:plateau, the arm's
+record-precision catch class, and gate-2's blind-lane harvest.**
+The ch12-P1 declared sizing split executed at ch12-p1a authoring
+(P1a/P1b on the plan's expected seam; hard stops 1/2/8 on the
+bundled row). Authoring ran 7 panel rounds + 4 reconciliations + 2
+closes; the loop's process observations, each a candidate for the
+ch12 boundary review:
+(1) **The first live `3:plateau` STOP fired** (rounds 2+3 each ≤2
+content, zero blockers) and was resolved "continue" by the user —
+correctly: the pending residual was a REAL out-of-boundary
+compile-break (the T3 TS-nullability ripple into three kernel
+readers), so a plateau residual can carry a genuine defect; the
+"close on judgment with dispositions" branch would have shipped it.
+(2) **Gate-1 arm yield after a clean internal close: 6 findings + 3
+record-precision re-check iterations** (a missing slice invariant,
+the T4 type-shape pins, the plan-row understatement, family owners,
+the header union — then sizing letter-trips 6/7/8 and
+closure-proof universals). The internal panel had run 7 rounds
+clean; the arm's catches were RECORD-level (sizing/claim-form
+precision) — record-precision is an arm-shaped catch class, and an
+internal reconciliation judging a universal "adequately scoped" is
+weaker evidence than an arm reading it cold.
+(3) **Gate-2 sensitivity harvest: 6 green-but-blind lanes + 1
+product gap + 1 re-check catch** (the dev replay validator accepted
+any token; split-transaction, per-column/per-conjunct, per-field
+readonly, and drift content-lock mutations all stayed green under
+the build's own 11-probe table). R-DERIVED-PROBES' ad-hoc-pick
+warning confirmed at full strength: a probe TABLE derived from the
+families still missed 8 blind mutations the arm's independent
+derivation found — probe DIVERSITY (a second derivation pass) is a
+boundary candidate.
+(4) **Build-agent restore incident (recovered):** a probe restore
+used `git checkout`, reverting a built file to its pre-packet
+state; caught and re-built in-session, and a later orchestrator
+spot-probe mis-pathed its backup and briefly left a mutation live
+(caught by the paired verify step). The scratchpad-copy
+restore-and-`cmp` discipline should be stated as a RULE for every
+probe runner, agent and orchestrator alike.
+(5) **The coverage both-ends rule surfaced:** `check_owners`
+requires RECIPROCAL shared_ownership declarations while a co_owner
+must be an existing packet — so a share with a future sibling is
+declared by the SIBLING's commit on BOTH slices (the P1b/P2 plan
+rows now carry the obligation; co_owner values are packet
+FILENAMES). Also probe-proven: `--fold-time` defers the
+owned==realized unit-map lock to default mode by design.
+Metrics: 21 anchored / 9 derived / 0 new-decision; 1016 → 1041
+tests; build commit `abaef93c`, aftermath `7294ae6b` + `1b0602a6`;
+gate-2 final CLEAN.
