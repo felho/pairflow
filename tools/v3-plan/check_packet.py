@@ -88,8 +88,7 @@ Packets (docs/v3/implementation/packets/*.md, README.md excluded):
       become machine data (they gate nothing downstream), so the
       no-semantics-from-free-text principle stands.
 
-Drafts (docs/v3/implementation/contracts/*.md, README.md excluded; a
-missing directory means zero drafts):
+Drafts (docs/v3/implementation/contracts/*.md, README.md excluded):
   D1. contract_draft = {chapter, surface, status}: exact keyset;
       status in draft|ratified|reopened|realized; filename
       ch<N>-<surface>-contract.md matches chapter/surface.
@@ -122,6 +121,29 @@ missing directory means zero drafts):
       landing site a nonempty string (a partial map, on any status, is
       red).
 
+History-audit continuity (ADR-015): D5 and P8 audit HISTORY against
+the CURRENT repo-relative path via `git show <commit>:<rel>`. Commits
+recorded before the ADR-015 plane consolidation store the
+implementation tree under its pre-migration home
+(docs/v3/implementation/...), so when the read fails, the rel starts
+with v3/implementation/, AND the audited commit is an ancestor of (or
+equal to) MIGRATION_PARENT (the migration commit's first parent), the
+read retries the legacy home. Whichever rel succeeds becomes the
+WHOLE audit frame (arm finding F1r): P8's change-list membership
+test, `allowed` set seed, and `outside` computation all run in that
+coordinate system, so a pre-migration build commit is audited
+entirely in its own (old-path) coordinates. Ancestry is exactly the
+pre-migration property — false for EVERY future commit regardless of
+tree content, unforgeable without rewriting published history — so a
+future tree that deletes the new path and reintroduces an old-path
+file can never false-green (arm finding F2-deep). MIGRATION_PARENT =
+None disables the alias entirely.
+
+Missing-directory guard (ADR-015, arm finding F1-deep2): a
+nonexistent packets or contracts directory is a LOUD error, never an
+empty exit-0 pass — after a path migration, a checker still pointed
+at a retired home would otherwise pass while checking nothing.
+
 The canonical STOP member-token registry is mirrored here from
 docs/v3/implementation/README.md §5.5 (the canonical home since the
 Phase-1 flip; this constant is the mechanical mirror and changes only
@@ -149,6 +171,17 @@ REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 PACKETS_DIR = REPO_ROOT / "docs" / "v3" / "implementation" / "packets"
 CONTRACTS_DIR = REPO_ROOT / "docs" / "v3" / "implementation" / "contracts"
 ADR_DIR = REPO_ROOT / "v3" / "adr"
+
+# ADR-015 legacy-path alias (see the History-audit continuity section
+# of the docstring). None = alias fully disabled; the ADR-015
+# migration commit pins this to its own parent's sha.
+MIGRATION_PARENT: str | None = None
+LEGACY_HOME_NEW = "v3/implementation/"
+LEGACY_HOME_OLD = "docs/v3/implementation/"  # the pre-ADR-015 home
+
+# Selftest seam: pass an explicit cutoff (or None) instead of the
+# module-level pin.
+_PINNED = object()
 
 STOP_TOKEN_REGISTRY = {
     "1:late-b-signal",
@@ -359,6 +392,48 @@ def git_root_and_rel(path: Path) -> tuple[Path, str] | None:
         return None
 
 
+def _legacy_alias_permitted(root: Path, commit: str, migration_parent: str | None) -> bool:
+    """The ADR-015 ancestry bound: the legacy retry fires ONLY when the
+    audited commit is an ancestor of (or equal to) the recorded
+    migration parent — true for every commit the history audits can
+    legitimately reach, false for every future commit."""
+    if migration_parent is None:
+        return False
+    return (
+        subprocess.run(
+            ["git", "-C", str(root), "merge-base", "--is-ancestor", commit, migration_parent],
+            capture_output=True,
+        ).returncode
+        == 0
+    )
+
+
+def show_at_commit(
+    root: Path, commit: str, rel: str, migration_parent: str | None
+) -> tuple[str, str] | None:
+    """`git show <commit>:<rel>` with the ADR-015 legacy-path alias.
+    Returns (frame_rel, text) — frame_rel is whichever rel succeeded
+    and becomes the audit frame's coordinate system — or None when
+    every permitted path fails."""
+    out = subprocess.run(
+        ["git", "-C", str(root), "show", f"{commit}:{rel}"],
+        capture_output=True,
+        text=True,
+    )
+    if out.returncode == 0:
+        return rel, out.stdout
+    if rel.startswith(LEGACY_HOME_NEW) and _legacy_alias_permitted(root, commit, migration_parent):
+        legacy = LEGACY_HOME_OLD + rel[len(LEGACY_HOME_NEW):]
+        out = subprocess.run(
+            ["git", "-C", str(root), "show", f"{commit}:{legacy}"],
+            capture_output=True,
+            text=True,
+        )
+        if out.returncode == 0:
+            return legacy, out.stdout
+    return None
+
+
 # ---------------------------------------------------------------- drafts
 
 
@@ -383,10 +458,19 @@ def check_ratification_shape(name: str, index: int, block: object, checker: Chec
         checker.error(f"{label}.commit must be a 7-40 lowercase-hex commit sha")
 
 
-def check_recorded_equality(path: Path, commit: str, current_rows: list[str], checker: Checker) -> None:
+def check_recorded_equality(
+    path: Path,
+    commit: str,
+    current_rows: list[str],
+    checker: Checker,
+    migration_parent: str | None | object = _PINNED,
+) -> None:
     """D5: the working tree's C-rows equal the C-rows at the recorded
     commit. Failures are LOUD — an unverifiable ratification record is
-    a broken record, never a skip."""
+    a broken record, never a skip. Reads through the ADR-015
+    legacy-path alias for pre-migration recorded commits."""
+    if migration_parent is _PINNED:
+        migration_parent = MIGRATION_PARENT
     located = git_root_and_rel(path)
     if located is None:
         checker.error(
@@ -411,18 +495,14 @@ def check_recorded_equality(path: Path, commit: str, current_rows: list[str], ch
             f"commit is an auditable ratification point"
         )
         return
-    out = subprocess.run(
-        ["git", "-C", str(root), "show", f"{commit}:{rel}"],
-        capture_output=True,
-        text=True,
-    )
-    if out.returncode != 0:
+    shown = show_at_commit(root, commit, rel, migration_parent)
+    if shown is None:
         checker.error(
             f"{path.name}: recorded commit '{commit}' does not yield a readable "
             f"draft (git show failed) — the ratification record is broken"
         )
         return
-    if c_row_lines(out.stdout) != current_rows:
+    if c_row_lines(shown[1]) != current_rows:
         checker.error(
             f"{path.name}: C-rows differ from the latest ratification's recorded "
             f"commit {commit[:12]} — a post-ratification row edit needs "
@@ -897,10 +977,22 @@ def check_packet_metrics(
                     type_err("detector_misses[].found_at", f"one of {sorted(FOUND_AT_VALUES)}")
 
 
-def check_post_build(packet_path: Path, commit: str, checker: Checker) -> None:
+def check_post_build(
+    packet_path: Path,
+    commit: str,
+    checker: Checker,
+    migration_parent: str | None | object = _PINNED,
+) -> None:
     """P8: the boundary is read from the PACKET'S BYTES AT THE COMMIT,
     never the working tree — an audit rerun must be stable: a later
-    boundary edit may not change an older commit's verdict."""
+    boundary edit may not change an older commit's verdict. The
+    ADR-015 legacy-path alias governs the WHOLE audit frame: whichever
+    rel resolves (current or pre-migration) is the frame's rel for the
+    change-list membership test, the allowed-set seed, and the outside
+    computation, so a pre-migration build commit is audited entirely
+    in its own coordinate system."""
+    if migration_parent is _PINNED:
+        migration_parent = MIGRATION_PARENT
     located = git_root_and_rel(packet_path)
     if located is None:
         checker.error(f"--post-build: {packet_path} is not inside a git repository")
@@ -928,15 +1020,11 @@ def check_post_build(packet_path: Path, commit: str, checker: Checker) -> None:
             f"(got '{obj_type}') — a tag object is not the build commit"
         )
         return
-    shown = subprocess.run(
-        ["git", "-C", str(root), "show", f"{commit}:{rel}"],
-        capture_output=True,
-        text=True,
-    )
-    if shown.returncode != 0:
+    shown = show_at_commit(root, commit, rel, migration_parent)
+    if shown is None:
         checker.error(f"--post-build: packet '{rel}' not found in commit '{commit}'")
         return
-    text = shown.stdout
+    frame_rel, text = shown
     blocks = json_blocks(text, packet_path.name, checker)
     boundaries = block_by_key(blocks, "mutation_boundary")
     if len(boundaries) != 1:
@@ -949,7 +1037,7 @@ def check_post_build(packet_path: Path, commit: str, checker: Checker) -> None:
     if files is None:
         return
     allowed = set(files)
-    allowed.add(rel)
+    allowed.add(frame_rel)
     # Merge commits yield an EMPTY diff-tree change list — a false-green
     # audit; reject them outright (build commits are single-parent by
     # the one-commit rule).
@@ -990,10 +1078,10 @@ def check_post_build(packet_path: Path, commit: str, checker: Checker) -> None:
     # …and the same invariant POSITIVELY: the empty-check rationale
     # already stated it, but only checking emptiness let a code-only or
     # follow-up commit green-light the audit (round 9, reproduced).
-    if rel not in changed:
+    if frame_rel not in changed:
         checker.error(
             f"--post-build: commit {commit} does not change the packet file "
-            f"'{rel}' — the build commit lands the packet WITH the build "
+            f"'{frame_rel}' — the build commit lands the packet WITH the build "
             f"(one-commit rule), so this is the wrong commit to audit"
         )
         return
@@ -1035,6 +1123,19 @@ def lint(
     """The full lint pass as data — the selftest asserts on the error
     LIST (per-dim message substrings), run_lint wraps it for the CLI."""
     checker = Checker()
+    # ADR-015 missing-directory guard: a nonexistent directory would
+    # lint EMPTY with exit 0 — green while checking nothing (exactly
+    # the false-green shape of a checker pointed at a retired home).
+    if not packets_dir.is_dir():
+        checker.error(
+            f"packets directory missing: {packets_dir} — an empty lint proves "
+            f"nothing; a nonexistent directory is an error, never a pass"
+        )
+    if not contracts_dir.is_dir():
+        checker.error(
+            f"contracts directory missing: {contracts_dir} — an empty lint "
+            f"proves nothing; a nonexistent directory is an error, never a pass"
+        )
     drafts, reopened = collect_drafts(contracts_dir, checker)
     if forbid_reopened and reopened:
         checker.error(
@@ -1885,6 +1986,113 @@ def run_selftest() -> int:
                 checker = Checker()
                 check_post_build(packet, _git_out(root, "rev-parse", "HEAD"), checker)
                 assert_red("post-build-empty-commit", checker.errors, "EMPTY change list")
+
+    # ---- ADR-015 missing-directory loud guard
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / "contracts").mkdir()
+        errors, _ = lint(root / "packets", root / "contracts", ADR_DIR)
+        assert_red("missing-packets-dir", errors, "packets directory missing")
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / "packets").mkdir()
+        errors, _ = lint(root / "packets", root / "contracts", ADR_DIR)
+        assert_red("missing-contracts-dir", errors, "contracts directory missing")
+
+    # ---- ADR-015 legacy-path alias: all three cutoff polarities on a
+    # synthetic repo enacting the migration — a packet BUILT at the old
+    # home, RELOCATED to the new home, then a FUTURE commit that
+    # deletes the new path and reintroduces an old-path file (the
+    # F2-deep false-green shape the ancestry bound exists to kill).
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        old_pdir = root / "docs" / "v3" / "implementation" / "packets"
+        old_pdir.mkdir(parents=True)
+        alias_packet_text = '# p\n\n```json\n{"mutation_boundary": {"files": ["x.txt"]}}\n```\n'
+        (old_pdir / "ch9-p1-test.md").write_text(alias_packet_text, encoding="utf-8")
+        (root / "x.txt").write_text("x", encoding="utf-8")
+        new_pdir = root / "v3" / "implementation" / "packets"
+        new_pdir.mkdir(parents=True)
+        new_packet = new_pdir / "ch9-p1-test.md"
+        ok = _git_ok(root, "init", "-q") and _git_ok(root, "add", "-A") and _git_ok(root, "commit", "-q", "-m", "build")
+        build_sha = _git_out(root, "rev-parse", "HEAD")
+        ok = (
+            ok
+            and _git_ok(root, "mv", "docs/v3/implementation/packets/ch9-p1-test.md", "v3/implementation/packets/ch9-p1-test.md")
+            and _git_ok(root, "commit", "-q", "-m", "migrate")
+        )
+        # the future false-green shape: new path gone, old path back
+        old_pdir.mkdir(parents=True, exist_ok=True)
+        ok = (
+            ok
+            and _git_ok(root, "mv", "v3/implementation/packets/ch9-p1-test.md", "docs/v3/implementation/packets/ch9-p1-test.md")
+            and _git_ok(root, "commit", "-q", "-m", "future-reintroduces-old-path")
+        )
+        future_sha = _git_out(root, "rev-parse", "HEAD")
+        new_pdir.mkdir(parents=True, exist_ok=True)  # frame anchor for git_root_and_rel
+        if not ok:
+            failures.append("selftest git fixture setup failed (adr-015 alias)")
+        else:
+            # polarity 1 — unset: MIGRATION_PARENT None, alias never fires
+            checker = Checker()
+            check_post_build(new_packet, build_sha, checker, migration_parent=None)
+            assert_red("alias-unset-never-fires", checker.errors, "not found in commit")
+            # polarity 2 — ancestor: the audited build commit IS the
+            # migration parent; the alias fires and the WHOLE audit
+            # frame (membership, allowed seed, outside) runs in old-path
+            # coordinates — the audit is green end-to-end
+            checker = Checker()
+            check_post_build(new_packet, build_sha, checker, migration_parent=build_sha)
+            if checker.errors:
+                failures.append(
+                    f"selftest green NOT green: alias-ancestor-audit ({checker.errors[0]})"
+                )
+            # polarity 3 — non-ancestor (injected cutoff): the future
+            # commit reintroduced the old path, but it is not an
+            # ancestor of the cutoff, so the alias may not fire — the
+            # missing new path stays the LOUD error it is today
+            checker = Checker()
+            check_post_build(new_packet, future_sha, checker, migration_parent=build_sha)
+            assert_red("alias-non-ancestor-loud", checker.errors, "not found in commit")
+
+    # ---- ADR-015 alias on the D5 side: a draft ratified at the old
+    # home, then relocated — the recorded-commit read goes THROUGH the
+    # alias when permitted, stays loud when the alias is unset
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        old_cdir = root / "docs" / "v3" / "implementation" / "contracts"
+        old_cdir.mkdir(parents=True)
+        old_draft = old_cdir / "ch9-test-surface-contract.md"
+        old_draft.write_text(DRAFT_V1, encoding="utf-8")
+        ok = _git_ok(root, "init", "-q") and _git_ok(root, "add", "-A") and _git_ok(root, "commit", "-q", "-m", "content")
+        content_sha = _git_out(root, "rev-parse", "HEAD")
+        ratified = DRAFT_V1.replace('"status": "draft"', '"status": "ratified"') + RATIFICATION_TMPL.replace(
+            "%DATE%", "2026-07-09"
+        ).replace("%COMMIT%", content_sha)
+        old_draft.write_text(ratified, encoding="utf-8")
+        ok = ok and _git_ok(root, "add", "-A") and _git_ok(root, "commit", "-q", "-m", "record")
+        record_sha = _git_out(root, "rev-parse", "HEAD")
+        new_cdir = root / "v3" / "implementation" / "contracts"
+        new_cdir.mkdir(parents=True)
+        ok = (
+            ok
+            and _git_ok(root, "mv", "docs/v3/implementation/contracts/ch9-test-surface-contract.md", "v3/implementation/contracts/ch9-test-surface-contract.md")
+            and _git_ok(root, "commit", "-q", "-m", "migrate")
+        )
+        if not ok:
+            failures.append("selftest git fixture setup failed (adr-015 alias d5)")
+        else:
+            new_draft = new_cdir / "ch9-test-surface-contract.md"
+            rows = c_row_lines(ratified)
+            checker = Checker()
+            check_recorded_equality(new_draft, content_sha, rows, checker, migration_parent=record_sha)
+            if checker.errors:
+                failures.append(
+                    f"selftest green NOT green: alias-d5-ancestor ({checker.errors[0]})"
+                )
+            checker = Checker()
+            check_recorded_equality(new_draft, content_sha, rows, checker, migration_parent=None)
+            assert_red("alias-d5-unset-loud", checker.errors, "ratification record is broken")
 
     # ---- the green pair must pass
     errors, _ = lint(shared_root / "packets", shared_root / "contracts", ADR_DIR)
