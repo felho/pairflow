@@ -2,6 +2,7 @@ import type {
   EpochMillis,
   EventEnvelope,
   InstanceId,
+  LifecycleFactKind,
   OpId,
   RejectionName,
   TranscriptEntry,
@@ -57,6 +58,23 @@ export interface BundleTranscriptRow {
 }
 
 /**
+ * F4 (packet ch12-p1b): a lifecycle fact row in the bundle — the
+ * ch6-P3 pass-through fidelity binds (every detail-transcript row
+ * appears), so fact rows map to this DISCRIMINATED shape: the
+ * class-shared fields in full, the transition-only fields ABSENT by
+ * class (never known-empty). Transition rows keep the built
+ * `BundleTranscriptRow` shape unchanged.
+ */
+export interface BundleFactRow {
+  readonly seq: number;
+  readonly entryKind: LifecycleFactKind;
+  readonly opId: OpId;
+  readonly committedAt: EpochMillis;
+}
+
+export type BundleRow = BundleTranscriptRow | BundleFactRow;
+
+/**
  * The bundle diag-row projection (the ch7-P3 J matrix): a COPY of
  * plan-enumerated fields from the read-face event — it derives nothing
  * and performs no fallible work beyond its own reads. `errorName` is
@@ -93,7 +111,7 @@ export interface DebugBundle {
   /** The RedactionPolicy id this bundle was produced under. */
   readonly policy: string;
   readonly instance: WorkflowInstance;
-  readonly transcript: readonly BundleTranscriptRow[];
+  readonly transcript: readonly BundleRow[];
   readonly rejectedInputs: RejectedInputsSection;
 }
 
@@ -211,7 +229,17 @@ function toDiagRow(event: DiagnosticEvent): BundleDiagRow {
   };
 }
 
-function toBundleRow(entry: TranscriptEntry, policy: RedactionPolicy): BundleTranscriptRow {
+function toBundleRow(entry: TranscriptEntry, policy: RedactionPolicy): BundleRow {
+  // F4: exhaustive discriminant — a fact row maps to its own shape,
+  // pass-through fidelity preserved (every detail row appears).
+  if (entry.entryKind !== "transition") {
+    return {
+      seq: entry.seq,
+      entryKind: entry.entryKind,
+      opId: entry.opId,
+      committedAt: entry.committedAt,
+    };
+  }
   const envelope: EventEnvelope = entry.envelope;
   const hasPayload = "payload" in envelope;
   return {

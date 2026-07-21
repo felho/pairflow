@@ -39,6 +39,7 @@ const instance: WorkflowInstance = {
   wait: null,
   runtimeContext: { state: "ready", ref: null },
   failureReason: null,
+  runOverrides: {},
   version: 1,
 };
 

@@ -43,6 +43,7 @@ function instanceAt(currentStep: string, round: number): WorkflowInstance {
     wait: null,
     runtimeContext: { state: "ready", ref: null },
     failureReason: null,
+    runOverrides: {},
     version: 1,
   };
 }
@@ -58,7 +59,14 @@ function committed(seq: number, opId: string, type: string): TranscriptEntry {
     actorId: "codex",
     payload: { note: opId },
   };
-  return { seq, envelope, payloadDigest: `d-${opId}`, gateDecisions: [], committedAt: seq };
+  return {
+    entryKind: "transition",
+    seq,
+    envelope,
+    payloadDigest: `d-${opId}`,
+    gateDecisions: [],
+    committedAt: seq,
+  };
 }
 
 describe("deriveGateProjection — V1 scalar pass-through", () => {

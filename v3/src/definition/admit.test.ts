@@ -203,10 +203,12 @@ describe("admitTemplate — the gate-free confinement (A8) and own-property writ
     const result = admitTemplate(raw, catalog);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    // ch11-P2c A1: the only shape delta is the expanded per-step
-    // advancesRound map — declaration-absent ⇒ all-false (C38).
+    // ch11-P2c A1 + ch12-p1b G3: the shape deltas are the expanded
+    // per-step advancesRound map (declaration-absent ⇒ all-false, C38)
+    // and the MATERIALIZED activation default (absent ⇒ immediate, C1).
     expect(result.template).toEqual({
       ...raw,
+      activation: { mode: "immediate" },
       steps: {
         implement: { ...raw.steps["implement"], advancesRound: { PASS: false } },
         review: { ...raw.steps["review"], advancesRound: { PASS: false, CONVERGED: false } },

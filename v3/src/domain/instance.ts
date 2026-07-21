@@ -1,6 +1,6 @@
 import type { EventEnvelope } from "./envelope.js";
 import type { RetainedGateDecision } from "./gate.js";
-import type { ActorId, InstanceId, RoleName, StepId } from "./ids.js";
+import type { ActorId, InstanceId, OpId, RoleName, StepId } from "./ids.js";
 import type { TemplateRef } from "./template.js";
 import type { EpochMillis } from "./time.js";
 
@@ -74,19 +74,20 @@ export type ActivationMode = "immediate" | "deferred_kickoff";
  * written exactly once. The ch-4 `status`/`LifecycleStatus` pair is
  * RETIRED (C24 named replacement; DONE ≡ TERMINAL(done)).
  *
- * TYPE-STAGING (S9/T3): the `task` and `current_step` STORE COLUMNS go
- * nullable at P1a, but no P1a writer produces NULL (the one-shot
- * requires the task and activates immediately), so the non-null TS
- * types here are the faithful image of the P1a inhabitant set; the
- * nullable flip and its reader narrowing enter with P1b's
- * genesis/deferred shapes.
+ * The nullable `task`/`currentStep` (packet ch12-p1b, G2 — the P1a
+ * S9/T3 staged flip, landed WITH its inhabitants): `task` is NULL
+ * until kickoff in deferred mode, `currentStep` is NULL until ACTIVE
+ * (position is meaningless before activation). `runOverrides` is the
+ * C9 create-snapshot face (step-id → agent-config-class map, each
+ * entry kernel-opaque per C7) — written at genesis, consumed only by
+ * P2's cascade.
  */
 export interface WorkflowInstance {
   readonly instanceId: InstanceId;
   readonly templateRef: TemplateRef;
-  readonly task: string;
+  readonly task: string | null;
   readonly binding: Readonly<Record<RoleName, ActorId>>;
-  readonly currentStep: StepId;
+  readonly currentStep: StepId | null;
   readonly round: number;
   readonly kernelStatus: KernelStatus;
   readonly terminalDisposition: TerminalDisposition | null;
@@ -100,26 +101,27 @@ export interface WorkflowInstance {
    * point — the process-gate backstop's runner `cwd` (X2).
    */
   readonly runtimeContext: RuntimeContext;
-  /** Written only by FAIL (P1b); always null at P1a (S6). */
+  /** Written only by FAIL (L6); non-null only at `failed`. */
   readonly failureReason: string | null;
+  /** The C9 snapshot (packet ch12-p1b, G2): frozen at CREATE; `{}` for
+   * an absent input. No production reader until P2's cascade. */
+  readonly runOverrides: Readonly<Record<StepId, Readonly<Record<string, unknown>>>>;
   readonly version: number;
 }
 
+/** The lifecycle fact names (C12) — the fact name IS the entry-kind
+ * discriminator value (packet ch12-p1a S11; the writers land at P1b). */
+export type LifecycleFactKind = "STARTED" | "CANCELLED" | "TASK_SUPPLIED";
+
 /**
- * A committed transcript row; `committedAt` is store-stamped
+ * An actor-transition transcript row; `committedAt` is store-stamped
  * (CHK-C-TS-SOURCE). `payloadDigest` rides the COMMITTED fact (packet
  * ch5-P4, the model's "recorded_digest_of reads the committed row") —
  * the type-inclusive emit digest the collision rung compares
  * (CHK-A1-DIGEST); rejected attempts record nothing.
- *
- * TYPE-STAGING (S11, packet ch12-p1a): the STORE gains the entry-kind
- * discriminator and per-class nullability, but at P1a only `transition`
- * rows are ever written, so this type keeps `envelope`/`payloadDigest`/
- * `gateDecisions` NON-NULL and gains no `issuedAgentConfig` field —
- * the discriminated fact-entry variant and its readers enter with
- * P1b's fact entries.
  */
-export interface TranscriptEntry {
+export interface TransitionEntry {
+  readonly entryKind: "transition";
   readonly seq: number;
   readonly envelope: EventEnvelope;
   readonly payloadDigest: string;
@@ -132,3 +134,22 @@ export interface TranscriptEntry {
   readonly gateDecisions: readonly RetainedGateDecision[];
   readonly committedAt: EpochMillis;
 }
+
+/**
+ * A lifecycle fact row (C12; packet ch12-p1b F3): the op_id
+ * consumption record of an op-carrying intent, committed in the SAME
+ * atomic move as its state change. The transition-only fields are
+ * ABSENT by entry class (C10) — never known-empty; NEITHER variant
+ * carries `issuedAgentConfig` (its writer is P2's).
+ */
+export interface LifecycleFactEntry {
+  readonly entryKind: LifecycleFactKind;
+  readonly seq: number;
+  readonly opId: OpId;
+  readonly committedAt: EpochMillis;
+}
+
+/** The discriminated transcript entry (S11's staged type face, landed
+ * at P1b with the fact writers). Narrow on `entryKind` — exhaustive
+ * switch/discriminant, never a cast (F4). */
+export type TranscriptEntry = TransitionEntry | LifecycleFactEntry;

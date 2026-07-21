@@ -1,5 +1,6 @@
 import type { GateBinding } from "./gate.js";
 import type { ActorId, EventType, RoleName, StepId } from "./ids.js";
+import type { ActivationMode } from "./instance.js";
 
 /**
  * Template aggregate (ledger §4 l0a + l0b) — the definition, immutable
@@ -88,6 +89,17 @@ export interface WorkflowTemplate {
    * ref-supplying start/provisioning surface — ch9.
    */
   readonly runtimeContext?: "required";
+  /**
+   * G3 (packet ch12-p1b): the C1 activation default at the DOMAIN
+   * grain — the per-workflow default mode. OPTIONAL on a raw
+   * directly-constructed template; `admitTemplate` MATERIALIZES an
+   * absent key to `{mode: "immediate"}` on the admitted value (the
+   * `advancesRound` admission-expansion pattern; C1's "materialized
+   * once at admission"). The FILE key stays unauthorable until P4
+   * (the ch8 unknown-key rejection stands — C25's window); the
+   * authored camelCase faces are the create wire and P4's walk.
+   */
+  readonly activation?: { readonly mode: ActivationMode };
 }
 
 /**

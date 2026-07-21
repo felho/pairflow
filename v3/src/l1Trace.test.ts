@@ -42,7 +42,8 @@ const l1Fixture: TraceFixture = {
       kind: "start",
       instanceId: "inst-l1",
       task: "ship the feature",
-      expect: { currentStep: "implement", version: 1 },
+      opId: "op-start",
+      expect: { currentStep: "implement", version: 2 },
     },
     // 1 · codex emits PASS on implement: role implementer = implement.role ✓
     //     · PASS is a transition ✓ · capability allows ✓ → commit → review
@@ -52,19 +53,19 @@ const l1Fixture: TraceFixture = {
       type: "PASS",
       actorId: "codex",
       payload: { note: "codex:op-1" },
-      expectedVersion: 1,
+      expectedVersion: 2,
       expectedRole: "implementer",
-      expect: { kind: "committed", version: 2 },
+      expect: { kind: "committed", version: 3 },
     },
     // 2 · a stray emit on review claims implementer: review.role is
-    //     reviewer → Rejected(role_not_authorized); no append, v stays 2.
+    //     reviewer → Rejected(role_not_authorized); no append, v stays 3.
     {
       kind: "emit",
       opId: "op-2",
       type: "PASS",
       actorId: "codex",
       payload: { note: "codex:op-2" },
-      expectedVersion: 2,
+      expectedVersion: 3,
       expectedRole: "implementer",
       expect: { kind: "rejected", reason: "role_not_authorized" },
     },
@@ -76,21 +77,22 @@ const l1Fixture: TraceFixture = {
       type: "CONVERGED",
       actorId: "claude",
       payload: { note: "claude:op-3" },
-      expectedVersion: 2,
+      expectedVersion: 3,
       expectedRole: "reviewer",
-      expect: { kind: "committed", version: 3 },
+      expect: { kind: "committed", version: 4 },
     },
   ],
   finalTranscript: [
-    [1, "op-1"],
-    [2, "op-3"],
+    [1, "op-start"],
+    [2, "op-1"],
+    [3, "op-3"],
   ],
   finalState: {
     currentStep: "done",
     round: 1,
     kernelStatus: "TERMINAL",
     terminalDisposition: "done",
-    version: 3,
+    version: 4,
   },
 };
 
@@ -114,7 +116,8 @@ describe("l1 golden trace — role authority end-to-end (07-l1 Runtime)", () => 
 
     const result = await replayTrace(l1Fixture, {
       submit: (raw) => ingress.submit(raw),
-      start: (input) => kernel.startInstance(input),
+      create: (input) => kernel.create(input),
+      start: (input) => kernel.start(input),
       store: handle.store,
       template: admitted,
     });
@@ -124,16 +127,16 @@ describe("l1 golden trace — role authority end-to-end (07-l1 Runtime)", () => 
     // dispatch_intent delta).
     const startOutcome = result.outcomes[0];
     expect(startOutcome).toMatchObject({
-      kind: "started",
-      intent: { actor: "codex", packet: { role: "implementer", expectedVersion: 1 } },
+      kind: "activated",
+      intent: { actor: "codex", packet: { role: "implementer", expectedVersion: 2 } },
     });
     const firstCommit = result.outcomes[1];
     expect(firstCommit).toMatchObject({
       kind: "committed",
-      version: 2,
-      intent: { actor: "claude", packet: { role: "reviewer", expectedVersion: 2 } },
+      version: 3,
+      intent: { actor: "claude", packet: { role: "reviewer", expectedVersion: 3 } },
     });
     const terminalCommit = result.outcomes[3];
-    expect(terminalCommit).toMatchObject({ kind: "committed", version: 3, intent: null });
+    expect(terminalCommit).toMatchObject({ kind: "committed", version: 4, intent: null });
   });
 });

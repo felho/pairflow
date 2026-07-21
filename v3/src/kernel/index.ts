@@ -4,4 +4,6 @@
 export { createKernel } from "./kernel.js";
 export type { Kernel, KernelDeps } from "./kernel.js";
 export { deriveDispatchIntent } from "./dispatchIntent.js";
-export type { StartInstanceInput } from "./start.js";
+// The lifecycle entry family (packet ch12-p1b) — the ch-4 one-shot's
+// StartInstanceInput retired with it (C24).
+export type { CancelInput, CreateInput, KickoffInput, StartInput } from "./lifecycle.js";

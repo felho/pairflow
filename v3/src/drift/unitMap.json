@@ -132,7 +132,7 @@
     "status": "realized"
   },
   "l0b-pseudocode/START_INSTANCE": {
-    "codeRef": "v3/src/kernel/start.ts#startInstance",
+    "codeRef": "v3/src/kernel/lifecycle.ts#createInstance",
     "disposition": "implement",
     "status": "realized"
   },
@@ -154,7 +154,9 @@
     "status": "pending"
   },
   "l0d-pseudocode/CANCEL": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/lifecycle.ts#cancel",
+    "disposition": "implement",
+    "status": "realized"
   },
   "l0d-pseudocode/COMPLETE": {
     "codeRef": "v3/src/kernel/kernel.ts#complete",
@@ -162,10 +164,14 @@
     "status": "realized"
   },
   "l0d-pseudocode/CREATE_INSTANCE": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/lifecycle.ts#createInstance",
+    "disposition": "implement",
+    "status": "realized"
   },
   "l0d-pseudocode/FAIL": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/lifecycle.ts#fail",
+    "disposition": "implement",
+    "status": "realized"
   },
   "l0d-pseudocode/HANDLE": {
     "codeRef": "v3/src/kernel/kernel.ts#createKernel",
@@ -173,19 +179,27 @@
     "status": "realized"
   },
   "l0d-pseudocode/KICKOFF": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/lifecycle.ts#kickoff",
+    "disposition": "implement",
+    "status": "realized"
   },
   "l0d-pseudocode/RECEIVE": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/kernel.ts#createKernel",
+    "disposition": "implement",
+    "status": "realized"
   },
   "l0d-pseudocode/RUNTIME_CONTEXT_READY": {
     "status": "pending"
   },
   "l0d-pseudocode/START": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/lifecycle.ts#start",
+    "disposition": "implement",
+    "status": "realized"
   },
   "l0d-pseudocode/activate": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/lifecycle.ts#activate",
+    "disposition": "implement",
+    "status": "realized"
   },
   "l0d-pseudocode/admit_loaded": {
     "codeRef": "v3/src/kernel/admission.ts#admitLoaded",
@@ -268,7 +282,7 @@
     "status": "realized"
   },
   "l2-pseudocode/CREATE_INSTANCE": {
-    "codeRef": "v3/src/kernel/start.ts#startInstance",
+    "codeRef": "v3/src/kernel/lifecycle.ts#createInstance",
     "disposition": "alias/inherited",
     "status": "realized"
   },
@@ -283,7 +297,7 @@
     "status": "realized"
   },
   "l2-pseudocode/activate": {
-    "codeRef": "v3/src/kernel/start.ts#startInstance",
+    "codeRef": "v3/src/kernel/lifecycle.ts#activate",
     "disposition": "alias/inherited",
     "status": "realized"
   },
@@ -298,7 +312,7 @@
     "status": "realized"
   },
   "l2a-pseudocode/CREATE_INSTANCE": {
-    "codeRef": "v3/src/kernel/start.ts#startInstance",
+    "codeRef": "v3/src/kernel/lifecycle.ts#createInstance",
     "disposition": "alias/inherited",
     "status": "realized"
   },

@@ -1,4 +1,9 @@
-import type { RoleName, WorkflowInstance } from "../domain/index.js";
+import type {
+  LifecycleFactKind,
+  RoleName,
+  TranscriptEntry,
+  WorkflowInstance,
+} from "../domain/index.js";
 
 /**
  * The consolidated ADMISSION ladder (l1-pseudocode/admit_loaded,
@@ -28,7 +33,10 @@ export type AdmitResult =
 
 export interface AdmitExpect {
   /** Idempotency rung input: the committed row under (instanceId, opId), or null. */
-  readonly existingOp: { readonly payloadDigest: string } | null;
+  readonly existingOp: {
+    readonly payloadDigest: string | null;
+    readonly entryKind: TranscriptEntry["entryKind"];
+  } | null;
   /** The attempt's computed digest the collision compare reads (threaded, never recomputed). */
   readonly payloadDigest: string;
   /** Version rungs: the envelope's expectedVersion (absence = the entry guard's missing_version). */
@@ -46,9 +54,13 @@ export interface AdmitExpect {
 }
 
 export function admitLoaded(instance: WorkflowInstance, expect: AdmitExpect): AdmitResult {
-  // Idempotency rung — digest-aware, FIRST: wins over state and everything later.
+  // Idempotency rung — digest-aware AND kind-aware (A2, packet
+  // ch12-p1b), FIRST: wins over state and everything later. A FACT row
+  // under an actor envelope's op_id is a collision — the digest compare
+  // is transition-only (fact rows carry no digest).
   if (expect.existingOp !== null) {
-    return expect.existingOp.payloadDigest === expect.payloadDigest
+    return expect.existingOp.entryKind === "transition" &&
+      expect.existingOp.payloadDigest === expect.payloadDigest
       ? { kind: "duplicate" }
       : { kind: "rejected", reason: "op_id_collision" };
   }
@@ -76,6 +88,49 @@ export function admitLoaded(instance: WorkflowInstance, expect: AdmitExpect): Ad
   }
   if (expect.expectedRole !== expect.grantedRole) {
     return { kind: "rejected", reason: "role_not_authorized" };
+  }
+  return { kind: "accepted" };
+}
+
+/**
+ * The LIFECYCLE parameterization of the same admission protocol
+ * (packet ch12-p1b, A1 — the l0d `expect.*` form: an absent expectation
+ * skips its rung). Rung order preserved: idempotency FIRST (kind-aware,
+ * A2 — a hit of the intent's OWN fact kind is a replay, any other kind
+ * a collision), then the caller-supplied STATE predicate. The state
+ * rung's rejection stays UNNAMED (bare-REQUIRE semantics, A4) — the
+ * `state_violation` result is an internal token the HANDLER converts
+ * into its own fail-loud guard throw, never a public outcome. No
+ * version or authority rung exists on any lifecycle path (the intents
+ * carry no expectedVersion/expectedRole).
+ */
+export interface LifecycleAdmitExpect {
+  /** null = no idempotency rung (FAIL — a kernel event carries no op_id). */
+  readonly op: {
+    readonly existing: {
+      readonly payloadDigest: string | null;
+      readonly entryKind: TranscriptEntry["entryKind"];
+    } | null;
+    readonly factKind: LifecycleFactKind;
+  } | null;
+  /** The op's state expectation, evaluated by the caller over the loaded instance. */
+  readonly stateHolds: boolean;
+}
+
+export type LifecycleAdmitResult =
+  | { readonly kind: "accepted" }
+  | { readonly kind: "duplicate" }
+  | { readonly kind: "rejected"; readonly reason: "op_id_collision" }
+  | { readonly kind: "state_violation" };
+
+export function admitLifecycle(expect: LifecycleAdmitExpect): LifecycleAdmitResult {
+  if (expect.op !== null && expect.op.existing !== null) {
+    return expect.op.existing.entryKind === expect.op.factKind
+      ? { kind: "duplicate" }
+      : { kind: "rejected", reason: "op_id_collision" };
+  }
+  if (!expect.stateHolds) {
+    return { kind: "state_violation" };
   }
   return { kind: "accepted" };
 }

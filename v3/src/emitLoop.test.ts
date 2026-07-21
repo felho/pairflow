@@ -61,11 +61,15 @@ function emitRaw(
 }
 
 async function started(kernel: ReturnType<typeof wire>["kernel"]) {
-  return kernel.startInstance({
+  const created = await kernel.create({
     instanceId: "inst-1",
     templateRef: { id: "local-pair-v0", version: 1 },
     task: "ship it",
   });
+  expect(created.kind).toBe("created");
+  const startOutcome = await kernel.start({ instanceId: "inst-1", opId: "op-start" });
+  expect(startOutcome.kind).toBe("activated");
+  return startOutcome;
 }
 
 describe("CT-A3-RETRANS — resend-without-ack reuses the op_id → Duplicate (IC-A3)", () => {
@@ -76,13 +80,13 @@ describe("CT-A3-RETRANS — resend-without-ack reuses the op_id → Duplicate (I
     const payload = { ref: "diff-1" };
     const first = deriveActorEmitOpId({
       instanceId: "inst-1",
-      contextPacketId: "inst-1@v1",
+      contextPacketId: "inst-1@v2",
       opType: "PASS",
       payload,
     });
     const retransmitted = deriveActorEmitOpId({
       instanceId: "inst-1",
-      contextPacketId: "inst-1@v1",
+      contextPacketId: "inst-1@v2",
       opType: "PASS",
       payload,
     });
@@ -90,15 +94,19 @@ describe("CT-A3-RETRANS — resend-without-ack reuses the op_id → Duplicate (I
 
     // The scripted actor plays the send and the ack-less resend.
     const actor = createScriptedActor([
-      emitRaw(first.opId, "PASS", "codex", 1, payload, "implementer"),
-      emitRaw(retransmitted.opId, "PASS", "codex", 1, payload, "implementer"),
+      emitRaw(first.opId, "PASS", "codex", 2, payload, "implementer"),
+      emitRaw(retransmitted.opId, "PASS", "codex", 2, payload, "implementer"),
     ]);
     const outcomes = (await actor.play((raw) => ingress.submit(raw))) as Outcome[];
     expect(outcomes.map((o) => o.kind)).toEqual(["committed", "duplicate"]);
 
+    // The transcript now opens with the seq-1 STARTED fact; the single
+    // committed transition follows at seq 2.
     const detail = await store.getInstanceDetail("inst-1");
-    expect(detail?.transcript).toHaveLength(1);
-    expect(detail?.transcript[0]?.envelope.opId).toBe(first.opId);
+    expect(detail?.transcript).toHaveLength(2);
+    expect(detail?.transcript[0]).toMatchObject({ entryKind: "STARTED", opId: "op-start" });
+    const commit = detail?.transcript[1];
+    expect(commit?.entryKind === "transition" && commit.envelope.opId).toBe(first.opId);
     handle.close();
   });
 });
@@ -108,47 +116,50 @@ describe("CT-A3-EMITLIB-REFRESH — a refresh after Stale is a NEW logical op (I
     const { kernel, ingress, store, handle } = wire();
     await started(kernel);
 
-    // Two actors derived their emits from the SAME v1 packet.
+    // Two actors derived their emits from the SAME v2 packet (the
+    // activation commit is v2; the first dispatch is expectedVersion 2).
     const winner = deriveActorEmitOpId({
       instanceId: "inst-1",
-      contextPacketId: "inst-1@v1",
+      contextPacketId: "inst-1@v2",
       opType: "PASS",
       payload: { ref: "winner" },
     });
     const loser = deriveActorEmitOpId({
       instanceId: "inst-1",
-      contextPacketId: "inst-1@v1",
+      contextPacketId: "inst-1@v2",
       opType: "PASS",
       payload: { ref: "loser" },
     });
 
-    expect((await ingress.submit(emitRaw(winner.opId, "PASS", "codex", 1, { ref: "winner" }, "implementer"))).kind).toBe(
+    expect((await ingress.submit(emitRaw(winner.opId, "PASS", "codex", 2, { ref: "winner" }, "implementer"))).kind).toBe(
       "committed",
     );
-    const stale = await ingress.submit(emitRaw(loser.opId, "PASS", "codex", 1, { ref: "loser" }, "implementer"));
-    expect(stale).toEqual({ kind: "stale", currentVersion: 2 });
+    const stale = await ingress.submit(emitRaw(loser.opId, "PASS", "codex", 2, { ref: "loser" }, "implementer"));
+    expect(stale).toEqual({ kind: "stale", currentVersion: 3 });
 
-    // Refresh: a NEW context packet (v2) → new op_id BY CONSTRUCTION.
+    // Refresh: a NEW context packet (v3) → new op_id BY CONSTRUCTION.
     const refreshed = deriveActorEmitOpId({
       instanceId: "inst-1",
-      contextPacketId: "inst-1@v2",
+      contextPacketId: "inst-1@v3",
       opType: "PASS",
       payload: { ref: "loser" },
     });
     expect(refreshed.opId).not.toBe(loser.opId);
 
     const committed = await ingress.submit(
-      emitRaw(refreshed.opId, "PASS", "claude", 2, { ref: "loser" }, "reviewer"),
+      emitRaw(refreshed.opId, "PASS", "claude", 3, { ref: "loser" }, "reviewer"),
     );
     expect(committed.kind).toBe("committed");
 
-    // The stale attempt never consumed its key: exactly the two commits.
+    // The stale attempt never consumed its key: the seq-1 STARTED fact
+    // then exactly the two commits.
     const detail = await store.getInstanceDetail("inst-1");
-    expect(detail?.transcript.map((entry) => entry.envelope.opId)).toEqual([
-      winner.opId,
-      refreshed.opId,
-    ]);
-    expect(detail?.instance.version).toBe(3);
+    expect(
+      detail?.transcript.map((entry) =>
+        entry.entryKind === "transition" ? entry.envelope.opId : entry.opId,
+      ),
+    ).toEqual(["op-start", winner.opId, refreshed.opId]);
+    expect(detail?.instance.version).toBe(4);
     handle.close();
   });
 });
@@ -162,7 +173,7 @@ describe("X4 — derived op_ids are role-independent", () => {
     await started(kernel);
     const identity = {
       instanceId: "inst-1",
-      contextPacketId: "inst-1@v1",
+      contextPacketId: "inst-1@v2",
       opType: "PASS",
       payload: { ref: "d" },
     };
@@ -170,16 +181,17 @@ describe("X4 — derived op_ids are role-independent", () => {
     const second = deriveActorEmitOpId(identity);
     expect(second.opId).toBe(first.opId);
     const committed = await kernel.handle(
-      emitRaw(first.opId, "PASS", "codex", 1, { ref: "d" }, "implementer"),
+      emitRaw(first.opId, "PASS", "codex", 2, { ref: "d" }, "implementer"),
     );
     expect(committed.kind).toBe("committed");
     // Retransmission under the SAME op_id with a DIFFERENT role claim:
     // the digest covers type+payload only → duplicate, never collision.
     const retransmitted = await kernel.handle(
-      emitRaw(first.opId, "PASS", "codex", 1, { ref: "d" }, "reviewer"),
+      emitRaw(first.opId, "PASS", "codex", 2, { ref: "d" }, "reviewer"),
     );
     expect(retransmitted).toEqual({ kind: "duplicate" });
+    // The seq-1 STARTED fact then the single committed transition.
     const detail = await store.getInstanceDetail("inst-1");
-    expect(detail?.transcript).toHaveLength(1);
+    expect(detail?.transcript).toHaveLength(2);
   });
 });

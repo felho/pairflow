@@ -2,11 +2,14 @@ import type {
   EventEnvelope,
   InstanceId,
   KernelStatus,
+  LifecycleFactKind,
   OpId,
   RetainedGateDecision,
+  RuntimeContext,
   StepId,
   TerminalDisposition,
   TranscriptEntry,
+  WaitReason,
   WorkflowInstance,
 } from "../domain/index.js";
 
@@ -64,6 +67,34 @@ export type CommitTransitionResult =
   | { readonly kind: "duplicate_op" }
   | { readonly kind: "op_id_collision" };
 
+/**
+ * F1 (packet ch12-p1b): the uniform-commit write member's input — the
+ * kernel derives EVERY written value, the store writes verbatim in ONE
+ * transaction (the instances UPDATE under CAS, version + 1, plus the
+ * fact INSERT when `fact` is non-null — REV-A1-TXN; `fact: null` is
+ * FAIL's fact-less commit). `newWait` is ALWAYS explicit (value or
+ * null — the S5 same-move clear made unforgettable at the type);
+ * absent optional fields leave their columns unchanged. No timestamp
+ * input (CHK-C-TS-SOURCE). The in-transaction idempotency re-check is
+ * KIND-AWARE (A2): an existing (instance_id, op_id) row of the fact's
+ * OWN kind → duplicate_op; any other kind → op_id_collision.
+ */
+export interface CommitLifecycleInput {
+  readonly instanceId: InstanceId;
+  readonly expectedVersion: number;
+  readonly fact: { readonly kind: LifecycleFactKind; readonly opId: OpId } | null;
+  readonly newKernelStatus: KernelStatus;
+  /** Non-null EXACTLY when the commit enters TERMINAL (T1's type face). */
+  readonly newTerminalDisposition: TerminalDisposition | null;
+  /** Always explicit — null clears; leaving WAITING clears in this same move (S5/T3). */
+  readonly newWait: WaitReason | null;
+  readonly newCurrentStep?: StepId;
+  readonly newRound?: number;
+  readonly newTask?: string;
+  readonly newRuntimeContext?: RuntimeContext;
+  readonly newFailureReason?: string;
+}
+
 export interface InstanceDetail {
   readonly instance: WorkflowInstance;
   /** Ordered by seq; committed rows only. */
@@ -77,9 +108,18 @@ export interface StorePort {
    * Transcript pre-check FAST PATH only; correctness comes from the
    * commit transaction (REV-A1-TXN). Returns the committed row's
    * digest so the rung can answer the collision question — a boolean
-   * cannot (packet ch5-P4; replaces ch-4's hasOp).
+   * cannot (packet ch5-P4; replaces ch-4's hasOp). KIND-AWARE since
+   * ch12-p1b (A2): fact rows carry a NULL digest, and the entry kind
+   * is what the lifecycle idempotency rung compares (same fact kind →
+   * Duplicate; any other kind under the key → op_id_collision).
    */
-  findOp(instanceId: InstanceId, opId: OpId): Promise<{ readonly payloadDigest: string } | null>;
+  findOp(
+    instanceId: InstanceId,
+    opId: OpId,
+  ): Promise<{
+    readonly payloadDigest: string | null;
+    readonly entryKind: TranscriptEntry["entryKind"];
+  } | null>;
   /**
    * The caller mints instanceId (tests: deterministic ids; production
    * minting lands with the ch-6 CLI — no randomness in kernel or store).
@@ -87,6 +127,9 @@ export interface StorePort {
    */
   createInstance(instance: WorkflowInstance): Promise<void>;
   commitTransition(input: CommitTransitionInput): Promise<CommitTransitionResult>;
+  /** The lifecycle write member (F1) — result vocabulary shared with
+   * commitTransition; every lifecycle commit advances version by one. */
+  commitLifecycle(input: CommitLifecycleInput): Promise<CommitTransitionResult>;
   /** Committed rows only (trivially: the store holds nothing else). */
   listInstances(): Promise<readonly WorkflowInstance[]>;
   getInstanceDetail(instanceId: InstanceId): Promise<InstanceDetail | null>;

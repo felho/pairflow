@@ -24,13 +24,27 @@ export type {
 export type {
   ActivationMode,
   KernelStatus,
+  LifecycleFactEntry,
+  LifecycleFactKind,
   RuntimeContext,
   RuntimeContextRef,
   TerminalDisposition,
   TranscriptEntry,
+  TransitionEntry,
   WaitReason,
   WorkflowInstance,
 } from "./instance.js";
 export type { EventEnvelope } from "./envelope.js";
 export type { ContextPacket, DispatchIntent } from "./dispatch.js";
-export type { Outcome, Started } from "./outcome.js";
+export type {
+  Accepted,
+  Activated,
+  CancelOutcome,
+  CreateOutcome,
+  Created,
+  FailOutcome,
+  KickoffOutcome,
+  Outcome,
+  StartOutcome,
+  Terminated,
+} from "./outcome.js";

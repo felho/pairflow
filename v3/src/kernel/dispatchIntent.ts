@@ -29,6 +29,14 @@ export function deriveDispatchIntent(
       `kernel integrity: role '${step.role}' unbound — the start invariant should have failed`,
     );
   }
+  // G2 (packet ch12-p1b): every dispatch site is task-guaranteed
+  // (activate REQUIREs the task; HANDLE dispatches only ACTIVE runs) —
+  // a NULL here is integrity drift, never a business state.
+  if (instance.task === null) {
+    throw new Error(
+      `kernel integrity: dispatch for instance '${instance.instanceId}' with a NULL task (readiness gates dispatch)`,
+    );
+  }
   const packet: ContextPacket = {
     instanceId: instance.instanceId,
     expectedVersion: instance.version,

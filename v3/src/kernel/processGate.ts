@@ -45,6 +45,13 @@ export function buildGateInvocation(
   projection: GateProjection,
   envelope: EventEnvelope,
 ): GateInvocation {
+  // G2 (packet ch12-p1b): process gates run only in ACTIVE execution —
+  // a NULL position is integrity drift (the type-level narrow).
+  if (instance.currentStep === null) {
+    throw new Error(
+      `kernel integrity: process-gate invocation for instance '${instance.instanceId}' with a NULL current_step`,
+    );
+  }
   return {
     instance_id: instance.instanceId,
     template_ref: { id: instance.templateRef.id, version: instance.templateRef.version },

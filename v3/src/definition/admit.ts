@@ -324,6 +324,16 @@ export function admitTemplate(template: WorkflowTemplate, catalog: GateCatalog):
     }
     defineOwn(admittedSteps, stepId, { ...step, gates: admittedGates, advancesRound });
   }
-  const admitted = { ...template, steps: admittedSteps } as AdmittedTemplate;
+  // G3 (packet ch12-p1b): the C1 activation default MATERIALIZED once
+  // at admission — an absent key becomes `{mode: "immediate"}` on the
+  // ADMITTED value (the advancesRound expansion pattern; the raw input
+  // is never mutated). The FILE key stays unauthorable until P4 (the
+  // ch8 unknown-key rejection stands — C25's window); an authored
+  // direct-channel value is carried verbatim.
+  const admitted = {
+    ...template,
+    steps: admittedSteps,
+    activation: template.activation ?? { mode: "immediate" },
+  } as AdmittedTemplate;
   return { ok: true, template: admitted };
 }

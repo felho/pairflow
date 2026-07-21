@@ -78,12 +78,21 @@ function wireWorker(path: string): Worker {
   return {
     handle,
     submit: (raw) => ingress.submit(raw),
-    start: () =>
-      kernel.startInstance({
+    start: async () => {
+      const created = await kernel.create({
         instanceId: "inst-1",
         templateRef: { id: "local-pair-v0", version: 1 },
         task: "two workers, one truth",
-      }),
+      });
+      if (created.kind !== "created") {
+        throw new Error(`two-worker wiring: create returned '${created.kind}'`);
+      }
+      const startOutcome = await kernel.start({ instanceId: "inst-1", opId: "op-start" });
+      if (startOutcome.kind !== "activated") {
+        throw new Error(`two-worker wiring: start returned '${startOutcome.kind}'`);
+      }
+      return startOutcome;
+    },
   };
 }
 
@@ -105,12 +114,14 @@ function raw(
   };
 }
 
-// The four-op run to DONE (the l0b shape, minus the stale probe).
+// The four-op run to DONE (the l0b shape, minus the stale probe). The
+// activation commit is v2 (CREATE→START), so the run's expectedVersions
+// open at 2.
 const OPS = [
-  raw("a1", "PASS", "codex", 1, "implementer"),
-  raw("b2", "PASS", "claude", 2, "reviewer"),
-  raw("c4", "PASS", "codex", 3, "implementer"),
-  raw("d5", "CONVERGED", "claude", 4, "reviewer"),
+  raw("a1", "PASS", "codex", 2, "implementer"),
+  raw("b2", "PASS", "claude", 3, "reviewer"),
+  raw("c4", "PASS", "codex", 4, "implementer"),
+  raw("d5", "CONVERGED", "claude", 5, "reviewer"),
 ];
 
 describe("CT-B-TWOWORKER — two workers, one instance stream, winner-independent (IC-B)", () => {
@@ -126,10 +137,11 @@ describe("CT-B-TWOWORKER — two workers, one instance stream, winner-independen
     // BOTH handles read the same truth back.
     const d1 = await w1.handle.store.getInstanceDetail("inst-1");
     const d2 = await w2.handle.store.getInstanceDetail("inst-1");
-    expect(d1?.transcript).toHaveLength(1);
-    expect(d2?.transcript).toHaveLength(1);
-    expect(d1?.instance.version).toBe(2);
-    expect(d2?.instance.version).toBe(2);
+    // The seq-1 STARTED fact plus the single committed transition.
+    expect(d1?.transcript).toHaveLength(2);
+    expect(d2?.transcript).toHaveLength(2);
+    expect(d1?.instance.version).toBe(3);
+    expect(d2?.instance.version).toBe(3);
     w1.handle.close();
     w2.handle.close();
   });
@@ -148,17 +160,23 @@ describe("CT-B-TWOWORKER — two workers, one instance stream, winner-independen
       }
 
       const detail = await workers[1].handle.store.getInstanceDetail("inst-1");
-      expect(detail?.transcript.map((entry) => [entry.seq, entry.envelope.opId])).toEqual([
-        [1, "a1"],
-        [2, "b2"],
-        [3, "c4"],
-        [4, "d5"],
+      expect(
+        detail?.transcript.map((entry) => [
+          entry.seq,
+          entry.entryKind === "transition" ? entry.envelope.opId : entry.opId,
+        ]),
+      ).toEqual([
+        [1, "op-start"],
+        [2, "a1"],
+        [3, "b2"],
+        [4, "c4"],
+        [5, "d5"],
       ]);
       expect(detail?.instance).toMatchObject({
         currentStep: "done",
         kernelStatus: "TERMINAL",
         terminalDisposition: "done",
-        version: 5,
+        version: 6,
         round: 2,
       });
       workers[0].handle.close();
@@ -177,9 +195,9 @@ describe("CT-B-TWOWORKER — two workers, one instance stream, winner-independen
     // w2 never saw w1's commit locally — its kernel reads the shared
     // store: the stale intent is visible, the committed op is a
     // duplicate, both THROUGH the other handle.
-    expect(await w2.submit(raw("x9", "PASS", "codex", 1, "implementer"))).toEqual({
+    expect(await w2.submit(raw("x9", "PASS", "codex", 2, "implementer"))).toEqual({
       kind: "stale",
-      currentVersion: 2,
+      currentVersion: 3,
     });
     expect((await w2.submit(OPS[0])).kind).toBe("duplicate");
 

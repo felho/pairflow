@@ -109,8 +109,9 @@ async function seedDb(): Promise<{ db: string; id: string }> {
   });
   expect(code).toBe(EXIT.ok);
   const id = (JSON.parse(started[0] ?? "") as { instanceId: string }).instanceId;
+  // The C25 bridge activates to version 2, so the first PASS targets v2.
   const submit = await runCli(
-    ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "1", "--expected-role", "implementer", "--payload", `{"secret":"${MARKER}"}`],
+    ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "2", "--expected-role", "implementer", "--payload", `{"secret":"${MARKER}"}`],
     deps,
     { out: () => undefined, err: () => undefined },
   );
@@ -189,7 +190,7 @@ describe("dev cli — bundle --passthrough (REV-BUNDLE-DEFAULT-POLICY closure)",
 
     // A real rejected submit through the NORMAL cli lands in the store.
     const reject = await runCli(
-      ["submit", "--db", db, "--instance", id, "--type", "NOPE", "--expected-version", "2", "--expected-role", "reviewer"],
+      ["submit", "--db", db, "--instance", id, "--type", "NOPE", "--expected-version", "3", "--expected-role", "reviewer"],
       testDeps(),
       { out: () => undefined, err: () => undefined },
     );
@@ -216,9 +217,9 @@ describe("dev cli — bundle --passthrough (REV-BUNDLE-DEFAULT-POLICY closure)",
 describe("dev cli — inject schema + derived/override paths", () => {
   it("derived path: canonicalizable payload + expectedVersion → outcome rows, exit 0", async () => {
     const { db, id } = await seedDb();
-    // The run is at version 2, currentStep review.
+    // The run is at version 3, currentStep review (start v2 + one PASS).
     const file = writeJson("ok.json", {
-      steps: [{ type: "PASS", expectedVersion: 2, expectedRole: "reviewer", payload: { ref: "d2" } }],
+      steps: [{ type: "PASS", expectedVersion: 3, expectedRole: "reviewer", payload: { ref: "d2" } }],
     });
     const result = await runDev(["inject", "--instance", id, "--file", file, "--db", db], testDeps());
     expect(result.code).toBe(EXIT.ok);
@@ -229,7 +230,7 @@ describe("dev cli — inject schema + derived/override paths", () => {
   it("derived + null payload derives fine (null IS canonicalizable)", async () => {
     const { db, id } = await seedDb();
     const file = writeJson("null.json", {
-      steps: [{ type: "PASS", expectedVersion: 2, expectedRole: "reviewer", payload: null }],
+      steps: [{ type: "PASS", expectedVersion: 3, expectedRole: "reviewer", payload: null }],
     });
     const result = await runDev(["inject", "--instance", id, "--file", file, "--db", db], testDeps());
     expect(result.code).toBe(EXIT.ok);
@@ -238,7 +239,7 @@ describe("dev cli — inject schema + derived/override paths", () => {
 
   it("derived + absent payload → 2; derived + -0 payload → 2 (the emit-lib contract, pre-ingress)", async () => {
     const { db, id } = await seedDb();
-    const absent = writeJson("absent.json", { steps: [{ type: "PASS", expectedVersion: 2 }] });
+    const absent = writeJson("absent.json", { steps: [{ type: "PASS", expectedVersion: 3 }] });
     assertError(
       await runDev(["inject", "--instance", id, "--file", absent, "--db", db], testDeps()),
       "usage",
@@ -249,7 +250,7 @@ describe("dev cli — inject schema + derived/override paths", () => {
     const negZero = join(tempDir(), "negzero.json");
     writeFileSync(
       negZero,
-      '{"steps":[{"type":"PASS","expectedVersion":2,"payload":-0}]}',
+      '{"steps":[{"type":"PASS","expectedVersion":3,"payload":-0}]}',
       "utf8",
     );
     assertError(
@@ -268,7 +269,7 @@ describe("dev cli — inject schema + derived/override paths", () => {
     const file = join(tempDir(), "override.json");
     writeFileSync(
       file,
-      '{"steps":[{"type":"PASS","opId":"dev-op-1"},{"type":"PASS","expectedVersion":2,"payload":-0,"opId":"dev-op-2"}]}',
+      '{"steps":[{"type":"PASS","opId":"dev-op-1"},{"type":"PASS","expectedVersion":3,"payload":-0,"opId":"dev-op-2"}]}',
       "utf8",
     );
     const result = await runDev(["inject", "--instance", id, "--file", file, "--db", db], testDeps());
@@ -296,7 +297,7 @@ describe("dev cli — inject schema + derived/override paths", () => {
   it("schema fail-closed lanes: unknown field / bad version type / malformed / missing file / empty steps", async () => {
     const { db, id } = await seedDb();
     const unknown = writeJson("unknown.json", {
-      steps: [{ type: "PASS", expectedVersion: 2, payload: {}, nope: 1 }],
+      steps: [{ type: "PASS", expectedVersion: 3, payload: {}, nope: 1 }],
     });
     const error = assertError(
       await runDev(["inject", "--instance", id, "--file", unknown, "--db", db], testDeps()),
@@ -527,7 +528,7 @@ describe("dev cli — inject/replay on the templates lane (packet ch8-P2: W-lane
       `${readFileSync(REPO_CANONICAL, "utf8")}kind: nope\n`,
     );
     const file = writeJson("w-lane-steps.json", {
-      steps: [{ type: "PASS", expectedVersion: 2, payload: {} }],
+      steps: [{ type: "PASS", expectedVersion: 3, payload: {} }],
     });
     const res = await runDev(
       ["inject", "--instance", id, "--file", file, "--db", db, "--templates-dir", badDir],
@@ -559,26 +560,30 @@ describe("dev cli — replay (hermetic golden-trace diagnostics)", () => {
         kind: "start",
         instanceId: "r1",
         task: "t",
-        expect: { currentStep: "implement", version: 1 },
+        // W3 (ch12-p1b): the start step carries the START intent's opId and
+        // the activation version (genesis v1 + START ⇒ version 2).
+        opId: "op-start",
+        expect: { currentStep: "implement", version: 2 },
       },
       {
         kind: "emit",
         opId: "a1",
         type: "PASS",
         actorId: "codex",
-        expectedVersion: 1,
+        expectedVersion: 2,
         expectedRole: "implementer",
         payload: { ref: "d" },
-        expect: { kind: "committed", version: 2 },
+        expect: { kind: "committed", version: 3 },
       },
     ],
-    finalTranscript: [[1, "a1"]],
+    // The STARTED fact rides seq 1; the PASS transition follows at seq 2.
+    finalTranscript: [[1, "op-start"], [2, "a1"]],
     finalState: {
       currentStep: "review",
       round: 1,
       kernelStatus: "ACTIVE",
       terminalDisposition: null,
-      version: 2,
+      version: 3,
     },
   };
 
@@ -591,7 +596,7 @@ describe("dev cli — replay (hermetic golden-trace diagnostics)", () => {
       finalDetail: { instance: { version: number } };
     };
     expect(doc.outcomes).toHaveLength(2);
-    expect(doc.finalDetail.instance.version).toBe(2);
+    expect(doc.finalDetail.instance.version).toBe(3);
   });
 
   it("a mismatch → exit 1 with the TYPE-discriminated doc (name + lane/stepIndex/expected/actual)", async () => {
@@ -600,13 +605,13 @@ describe("dev cli — replay (hermetic golden-trace diagnostics)", () => {
       name: "dev replay mismatch",
       steps: [
         greenFixture.steps[0],
-        { ...greenFixture.steps[1], expect: { kind: "committed", version: 3 } },
+        { ...greenFixture.steps[1], expect: { kind: "committed", version: 4 } },
       ],
     });
     const result = await runDev(["replay", "--file", file], testDeps());
     const error = assertError(result, "internal", EXIT.internal);
     expect(error.name).toBe("TraceMismatchError");
-    expect(error.details).toMatchObject({ lane: "outcome", stepIndex: 1, expected: 3, actual: 2 });
+    expect(error.details).toMatchObject({ lane: "outcome", stepIndex: 1, expected: 4, actual: 3 });
   });
 
   it("a malformed fixture → usage 2 (root keyset + required shapes)", async () => {
@@ -789,14 +794,14 @@ describe("dev cli — the diag verb: the global cursor dump (packet ch7-P4: V3/F
     const id = (JSON.parse(outs[0] ?? "") as { instanceId: string }).instanceId;
     expect(
       await runCli(
-        ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "1", "--expected-role", "implementer", "--payload", '{"ref":"d"}'],
+        ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "2", "--expected-role", "implementer", "--payload", '{"ref":"d"}'],
         deps,
         sink,
       ),
     ).toBe(EXIT.ok);
     expect(
       await runCli(
-        ["submit", "--db", db, "--instance", id, "--type", "CONVERGED", "--expected-version", "2", "--expected-role", "reviewer"],
+        ["submit", "--db", db, "--instance", id, "--type", "CONVERGED", "--expected-version", "3", "--expected-role", "reviewer"],
         deps,
         sink,
       ),
@@ -815,10 +820,10 @@ describe("dev cli — the diag verb: the global cursor dump (packet ch7-P4: V3/F
     );
     expect(closedDiagRows).toEqual([]);
 
-    // Post-close: a rejected submit against the DONE instance.
+    // Post-close: a rejected submit against the DONE instance (terminal at v4).
     expect(
       await runCli(
-        ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "3", "--expected-role", "implementer"],
+        ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "4", "--expected-role", "implementer"],
         testDeps(),
         { out: () => undefined, err: () => undefined },
       ),
@@ -846,25 +851,25 @@ describe("dev cli — wiring negatives (packet ch7-P4: C4/M11)", () => {
     const file = writeJson("green-c4.json", {
       name: "c4 hermetic",
       steps: [
-        { kind: "start", instanceId: "r1", task: "t", expect: { currentStep: "implement", version: 1 } },
+        { kind: "start", instanceId: "r1", task: "t", opId: "op-start", expect: { currentStep: "implement", version: 2 } },
         {
           kind: "emit",
           opId: "a1",
           type: "PASS",
           actorId: "codex",
-          expectedVersion: 1,
+          expectedVersion: 2,
           expectedRole: "implementer",
           payload: { ref: "d" },
-          expect: { kind: "committed", version: 2 },
+          expect: { kind: "committed", version: 3 },
         },
       ],
-      finalTranscript: [[1, "a1"]],
+      finalTranscript: [[1, "op-start"], [2, "a1"]],
       finalState: {
       currentStep: "review",
       round: 1,
       kernelStatus: "ACTIVE",
       terminalDisposition: null,
-      version: 2,
+      version: 3,
     },
     });
     const result = await runDev(["replay", "--file", file], deps);
@@ -884,7 +889,7 @@ describe("dev cli — wiring negatives (packet ch7-P4: C4/M11)", () => {
     writeFileSync(diagPathOf(corrupt.db), "garbage-not-a-database", "utf8");
 
     const file = writeJson("m11-steps.json", {
-      steps: [{ type: "PASS", expectedVersion: 2, expectedRole: "reviewer", payload: { ref: "d2" } }],
+      steps: [{ type: "PASS", expectedVersion: 3, expectedRole: "reviewer", payload: { ref: "d2" } }],
     });
     const h = await runDev(["inject", "--instance", healthy.id, "--file", file, "--db", healthy.db], testDeps());
     const c = await runDev(["inject", "--instance", corrupt.id, "--file", file, "--db", corrupt.db], testDeps());
@@ -932,7 +937,7 @@ describe("dev cli — inject expectedRole (X1–X3)", () => {
   it("X2: an empty expectedRole is an InvalidInjectStep usage error", async () => {
     const { db } = await seedDb();
     const file = writeJson("inject-empty-role.json", {
-      steps: [{ type: "PASS", expectedVersion: 2, expectedRole: "", payload: { ref: "d" } }],
+      steps: [{ type: "PASS", expectedVersion: 3, expectedRole: "", payload: { ref: "d" } }],
     });
     assertError(
       await runDev(["inject", "--db", db, "--instance", "inst-1", "--file", file], testDeps()),
@@ -944,7 +949,7 @@ describe("dev cli — inject expectedRole (X1–X3)", () => {
   it("X3: ABSENCE stages a missing_role probe — the rejection is a DATA row, exit 0", async () => {
     const { db, id } = await seedDb();
     const file = writeJson("inject-roleless.json", {
-      steps: [{ type: "PASS", expectedVersion: 2, payload: { ref: "probe" } }],
+      steps: [{ type: "PASS", expectedVersion: 3, payload: { ref: "probe" } }],
     });
     const result = await runDev(
       ["inject", "--db", db, "--instance", id, "--file", file],
@@ -963,24 +968,24 @@ describe("dev cli — replay role schema (X5)", () => {
     name: "x5 role lift round-trip",
     lift: { expectedRole: "supply-current-step-role" },
     steps: [
-      { kind: "start", instanceId: "x5a", task: "t", expect: { currentStep: "implement", version: 1 } },
+      { kind: "start", instanceId: "x5a", task: "t", opId: "op-start", expect: { currentStep: "implement", version: 2 } },
       {
         kind: "emit",
         opId: "a1",
         type: "PASS",
         actorId: "codex",
-        expectedVersion: 1,
+        expectedVersion: 2,
         payload: { ref: "d" },
-        expect: { kind: "committed", version: 2 },
+        expect: { kind: "committed", version: 3 },
       },
     ],
-    finalTranscript: [[1, "a1"]],
+    finalTranscript: [[1, "op-start"], [2, "a1"]],
     finalState: {
       currentStep: "review",
       round: 1,
       kernelStatus: "ACTIVE",
       terminalDisposition: null,
-      version: 2,
+      version: 3,
     },
   };
 
@@ -1015,25 +1020,27 @@ describe("dev cli — replay role schema (X5)", () => {
     const file = writeJson("x5-wrong-role.json", {
       name: "x5 wrong role",
       steps: [
-        { kind: "start", instanceId: "x5b", task: "t", expect: { currentStep: "implement", version: 1 } },
+        { kind: "start", instanceId: "x5b", task: "t", opId: "op-start", expect: { currentStep: "implement", version: 2 } },
         {
           kind: "emit",
           opId: "w1",
           type: "PASS",
           actorId: "codex",
-          expectedVersion: 1,
+          expectedVersion: 2,
           expectedRole: "reviewer",
           payload: { ref: "d" },
           expect: { kind: "rejected", reason: "role_not_authorized" },
         },
       ],
-      finalTranscript: [],
+      // The START commits the STARTED fact (seq 1); the wrong-role emit is
+      // rejected and commits nothing.
+      finalTranscript: [[1, "op-start"]],
       finalState: {
         currentStep: "implement",
         round: 1,
         kernelStatus: "ACTIVE",
         terminalDisposition: null,
-        version: 1,
+        version: 2,
       },
     });
     const result = await runDev(["replay", "--file", file], testDeps());

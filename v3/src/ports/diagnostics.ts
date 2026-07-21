@@ -26,7 +26,17 @@ export type IngressDetailToken =
   | "invalid_expected_version"
   | "invalid_expected_role"
   | "invalid_event_id"
-  | "payload_not_canonicalizable";
+  | "payload_not_canonicalizable"
+  // The operator-intent gate blocks (packet ch12-p1b, I4 — additive
+  // growth at BLOCK grain; `not_plain_object`, `unknown_key`, and
+  // `invalid_required_string` are REUSED by the intent surface):
+  | "unknown_intent"
+  | "invalid_template_ref"
+  | "invalid_task"
+  | "invalid_mode"
+  | "invalid_overrides"
+  | "invalid_run_overrides"
+  | "invalid_runtime_context_ref";
 
 /**
  * The emit-side face: NO timestamp, NO ordinal — the SINK stamps `at`
@@ -34,7 +44,7 @@ export type IngressDetailToken =
  * emitters carry no clock). Field presence per lane is CANONICAL in
  * the packet's lane-inventory table: attribution fields come from the
  * typed envelope (`handle`) / valid raw string fields (ingress) /
- * StartInstanceInput (`startInstance`); `payloadDigest` presence is
+ * the lifecycle inputs' instanceId+opId (the entry family); `payloadDigest` presence is
  * DIGEST-POINT-based (present on every post-digest lane, absent
  * payload included — never recomputed at emit: the emit path performs
  * NO fallible work); `error.message` is UNTRUSTED free text confined

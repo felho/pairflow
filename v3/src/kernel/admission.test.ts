@@ -28,6 +28,7 @@ function instance(over: Partial<WorkflowInstance> = {}): WorkflowInstance {
     wait: null,
     runtimeContext: { state: "ready", ref: null },
     failureReason: null,
+    runOverrides: {},
     version: 3,
     ...over,
   };
@@ -51,13 +52,13 @@ describe("admitLoaded — rung outcomes", () => {
 
   it("committed op_id + same digest → duplicate", () => {
     expect(
-      admitLoaded(instance(), expectation({ existingOp: { payloadDigest: "dg-1" } })),
+      admitLoaded(instance(), expectation({ existingOp: { payloadDigest: "dg-1", entryKind: "transition" } })),
     ).toEqual({ kind: "duplicate" });
   });
 
   it("committed op_id + different digest → op_id_collision", () => {
     expect(
-      admitLoaded(instance(), expectation({ existingOp: { payloadDigest: "dg-OTHER" } })),
+      admitLoaded(instance(), expectation({ existingOp: { payloadDigest: "dg-OTHER", entryKind: "transition" } })),
     ).toEqual({ kind: "rejected", reason: "op_id_collision" });
   });
 
@@ -118,7 +119,7 @@ describe("admitLoaded — the ladder-internal ordering combinations (dimension 1
     expect(
       admitLoaded(
         instance({ kernelStatus: "TERMINAL", terminalDisposition: "done", currentStep: "done" }),
-        expectation({ existingOp: { payloadDigest: "dg-1" }, grantedRole: undefined }),
+        expectation({ existingOp: { payloadDigest: "dg-1", entryKind: "transition" }, grantedRole: undefined }),
       ),
     ).toEqual({ kind: "duplicate" });
   });
@@ -127,7 +128,7 @@ describe("admitLoaded — the ladder-internal ordering combinations (dimension 1
     expect(
       admitLoaded(
         instance({ kernelStatus: "TERMINAL", terminalDisposition: "done", currentStep: "done" }),
-        expectation({ existingOp: { payloadDigest: "dg-OTHER" }, grantedRole: undefined }),
+        expectation({ existingOp: { payloadDigest: "dg-OTHER", entryKind: "transition" }, grantedRole: undefined }),
       ),
     ).toEqual({ kind: "rejected", reason: "op_id_collision" });
   });

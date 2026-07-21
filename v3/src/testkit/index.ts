@@ -35,7 +35,8 @@ export type { EvidenceResolveSeam } from "./storeCheckers.js";
 export { replayTrace, TraceMismatchError } from "./traceHarness.js";
 export type {
   ExpectedOutcome,
-  HarnessStartInput,
+  HarnessCreateInput,
+  HarnessStartOpInput,
   ReplayResult,
   TraceFixture,
   TraceSeams,

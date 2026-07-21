@@ -31,8 +31,12 @@ afterEach(() => {
 
 interface TimelineRow {
   seq: number;
-  envelope: { opId: string; type: string };
-  gateDecisions: unknown;
+  // The STARTED lifecycle fact row (seq 1) carries opId at the top level
+  // and no envelope/gateDecisions; transition rows carry the envelope pair.
+  entryKind: string;
+  opId?: string;
+  envelope?: { opId: string; type: string };
+  gateDecisions?: unknown;
 }
 
 describe("cli — the full-lifecycle journey smoke (packet ch8-P2: J1/J2)", () => {
@@ -55,24 +59,28 @@ describe("cli — the full-lifecycle journey smoke (packet ch8-P2: J1/J2)", () =
         "--templates-dir", templatesDir,
       );
       const startDoc = JSON.parse(started.stdout.trim()) as {
+        kind: string;
         instanceId: string;
         version: number;
       };
-      expect(startDoc.version).toBe(1);
+      // The C25 bridge: start emits the `activated` outcome — version 2
+      // (genesis v1 + the activation commit).
+      expect(startDoc.kind).toBe("activated");
+      expect(startDoc.version).toBe(2);
       const id = startDoc.instanceId;
 
       // submitted events driving implement →(PASS)→ review →(CONVERGED)→ done.
       const pass = await cli(
         "submit", "--db", db, "--instance", id, "--type", "PASS",
-        "--expected-version", "1", "--expected-role", "implementer", "--templates-dir", templatesDir,
+        "--expected-version", "2", "--expected-role", "implementer", "--templates-dir", templatesDir,
       );
-      expect(JSON.parse(pass.stdout.trim())).toMatchObject({ kind: "committed", version: 2 });
+      expect(JSON.parse(pass.stdout.trim())).toMatchObject({ kind: "committed", version: 3 });
 
       const converged = await cli(
         "submit", "--db", db, "--instance", id, "--type", "CONVERGED",
-        "--expected-version", "2", "--expected-role", "reviewer", "--templates-dir", templatesDir,
+        "--expected-version", "3", "--expected-role", "reviewer", "--templates-dir", templatesDir,
       );
-      expect(JSON.parse(converged.stdout.trim())).toMatchObject({ kind: "committed", version: 3 });
+      expect(JSON.parse(converged.stdout.trim())).toMatchObject({ kind: "committed", version: 4 });
 
       // terminal verified (detail — a shipped ch6 floor verb).
       const detail = await cli("detail", id, "--db", db);
@@ -90,15 +98,17 @@ describe("cli — the full-lifecycle journey smoke (packet ch8-P2: J1/J2)", () =
       expect(detailDoc.instance.task).toBe("journey");
 
       // floor reads — the ratified row's named pair, both driven:
-      // timeline (the cursor read) — exactly the two submitted events
-      // (START commits the instance, not a transcript row).
+      // timeline (the cursor read) — the STARTED fact (seq 1, the C25
+      // bridge's activation record) plus the two submitted transitions.
       const timeline = await cli("timeline", id, "--db", db);
       const timelineRows = JSON.parse(timeline.stdout.trim()) as TimelineRow[];
-      expect(timelineRows.map((r) => r.envelope.type)).toEqual(["PASS", "CONVERGED"]);
+      const timelineTx = timelineRows.filter((r) => r.entryKind === "transition");
+      expect(timelineRows[0]?.entryKind).toBe("STARTED");
+      expect(timelineTx.map((r) => r.envelope?.type)).toEqual(["PASS", "CONVERGED"]);
       // ch11-P2b R-ACTIVATION-JOURNEY discharge: the C27 read-surface
-      // delta end-to-end — an ungated lifecycle's rows carry
+      // delta end-to-end — an ungated lifecycle's transition rows carry
       // gateDecisions [] (a POSITIVE assert, not compile-survival).
-      expect(timelineRows.map((r) => r.gateDecisions)).toEqual([[], []]);
+      expect(timelineTx.map((r) => r.gateDecisions)).toEqual([[], []]);
 
       // …and tail --from 0 (NDJSON; completes on the terminal instance).
       const tail = await cli("tail", id, "--db", db, "--from", "0");
@@ -111,7 +121,13 @@ describe("cli — the full-lifecycle journey smoke (packet ch8-P2: J1/J2)", () =
       // equality, not a projected field pair (arm gate 2, aftermath
       // finding 3).
       expect(tailRows).toEqual(timelineRows);
-      expect(tailRows.every((r) => typeof r.envelope.opId === "string")).toBe(true);
+      // Every row carries an op_id: the fact row at the top level, a
+      // transition row inside its envelope.
+      expect(
+        tailRows.every(
+          (r) => typeof (r.entryKind === "transition" ? r.envelope?.opId : r.opId) === "string",
+        ),
+      ).toBe(true);
     },
   );
 
@@ -139,7 +155,8 @@ describe("cli — the full-lifecycle journey smoke (packet ch8-P2: J1/J2)", () =
         "--templates-dir", templatesDir,
       );
       const startDoc = JSON.parse(started.stdout.trim()) as { instanceId: string; version: number };
-      expect(startDoc.version).toBe(1);
+      // The activation commit: genesis v1 + START ⇒ version 2.
+      expect(startDoc.version).toBe(2);
       const id = startDoc.instanceId;
 
       const submit = (
@@ -154,20 +171,20 @@ describe("cli — the full-lifecycle journey smoke (packet ch8-P2: J1/J2)", () =
         );
 
       // implement →(PASS)→ review
-      expect(JSON.parse((await submit("PASS", 1, "implementer")).stdout.trim())).toMatchObject({
-        kind: "committed", version: 2,
-      });
-      // review →(PASS, pass back — arrival at start)→ implement; round → 2
-      expect(JSON.parse((await submit("PASS", 2, "reviewer")).stdout.trim())).toMatchObject({
+      expect(JSON.parse((await submit("PASS", 2, "implementer")).stdout.trim())).toMatchObject({
         kind: "committed", version: 3,
       });
-      // implement →(PASS)→ review
-      expect(JSON.parse((await submit("PASS", 3, "implementer")).stdout.trim())).toMatchObject({
+      // review →(PASS, pass back — arrival at start)→ implement; round → 2
+      expect(JSON.parse((await submit("PASS", 3, "reviewer")).stdout.trim())).toMatchObject({
         kind: "committed", version: 4,
       });
-      // review →(CONVERGED)→ done (terminal)
-      expect(JSON.parse((await submit("CONVERGED", 4, "reviewer")).stdout.trim())).toMatchObject({
+      // implement →(PASS)→ review
+      expect(JSON.parse((await submit("PASS", 4, "implementer")).stdout.trim())).toMatchObject({
         kind: "committed", version: 5,
+      });
+      // review →(CONVERGED)→ done (terminal)
+      expect(JSON.parse((await submit("CONVERGED", 5, "reviewer")).stdout.trim())).toMatchObject({
+        kind: "committed", version: 6,
       });
 
       const detail = await cli("detail", id, "--db", db);
@@ -267,14 +284,14 @@ round:
         );
 
       // implement →(PASS)→ review, round 1
-      expect(JSON.parse((await submit("PASS", 1, "implementer")).stdout.trim())).toMatchObject({
-        kind: "committed", version: 2,
+      expect(JSON.parse((await submit("PASS", 2, "implementer")).stdout.trim())).toMatchObject({
+        kind: "committed", version: 3,
       });
 
       // review →(CONVERGED)→ BLOCKED at round 1: the submit exits NONZERO
       // (execFileAsync rejects) with the rejected gate_blocked outcome on
       // stdout.
-      const blocked = await submit("CONVERGED", 2, "reviewer").then(
+      const blocked = await submit("CONVERGED", 3, "reviewer").then(
         () => {
           throw new Error("expected the CONVERGED at round 1 to be rejected (nonzero exit)");
         },
@@ -289,16 +306,16 @@ round:
       });
 
       // review →(PASS, pass back — arrival at start)→ implement; round → 2
-      expect(JSON.parse((await submit("PASS", 2, "reviewer")).stdout.trim())).toMatchObject({
-        kind: "committed", version: 3,
-      });
-      // implement →(PASS)→ review, round 2
-      expect(JSON.parse((await submit("PASS", 3, "implementer")).stdout.trim())).toMatchObject({
+      expect(JSON.parse((await submit("PASS", 3, "reviewer")).stdout.trim())).toMatchObject({
         kind: "committed", version: 4,
       });
-      // review →(CONVERGED)→ ALLOW → done: round 2 >= 2 clears the gate.
-      expect(JSON.parse((await submit("CONVERGED", 4, "reviewer")).stdout.trim())).toMatchObject({
+      // implement →(PASS)→ review, round 2
+      expect(JSON.parse((await submit("PASS", 4, "implementer")).stdout.trim())).toMatchObject({
         kind: "committed", version: 5,
+      });
+      // review →(CONVERGED)→ ALLOW → done: round 2 >= 2 clears the gate.
+      expect(JSON.parse((await submit("CONVERGED", 5, "reviewer")).stdout.trim())).toMatchObject({
+        kind: "committed", version: 6,
       });
 
       const detail = await cli("detail", id, "--db", db);
@@ -320,8 +337,12 @@ round:
       // CONVERGED-allow row carries the threshold allow decision.
       const timeline = await cli("timeline", id, "--db", db);
       const timelineRows = JSON.parse(timeline.stdout.trim()) as TimelineRow[];
-      expect(timelineRows.map((r) => r.envelope.type)).toEqual(["PASS", "PASS", "PASS", "CONVERGED"]);
-      expect(timelineRows.map((r) => r.gateDecisions)).toEqual([
+      // seq 1 is the STARTED fact; the four committed transitions follow
+      // (the blocked CONVERGED committed no row).
+      expect(timelineRows[0]?.entryKind).toBe("STARTED");
+      const timelineTx = timelineRows.filter((r) => r.entryKind === "transition");
+      expect(timelineTx.map((r) => r.envelope?.type)).toEqual(["PASS", "PASS", "PASS", "CONVERGED"]);
+      expect(timelineTx.map((r) => r.gateDecisions)).toEqual([
         [],
         [],
         [],

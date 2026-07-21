@@ -4,6 +4,7 @@ import { admitTemplate } from "../definition/index.js";
 import type {
   AdmittedTemplate,
   EventEnvelope,
+  LifecycleFactEntry,
   TranscriptEntry,
   WorkflowInstance,
   WorkflowTemplate,
@@ -35,12 +36,20 @@ function envelope(opId: string, type: string): EventEnvelope {
 
 function row(seq: number, opId: string, type: string): TranscriptEntry {
   return {
+    entryKind: "transition",
     seq,
     envelope: envelope(opId, type),
     payloadDigest: `digest-${opId}`,
     gateDecisions: [],
     committedAt: 1_000 + seq,
   };
+}
+
+/** packet ch12-p1b: the immediate-mode activation's STARTED fact at
+ * seq 1 — the round-reconstruction basis (C11: genesis round 0, the
+ * activation write sets 1). Position-inert to the terminal-sink walk. */
+function startedFact(opId: string): LifecycleFactEntry {
+  return { entryKind: "STARTED", seq: 1, opId, committedAt: 1_000 };
 }
 
 function detail(
@@ -60,13 +69,17 @@ function detail(
     wait: null,
     runtimeContext: { state: "ready", ref: null },
     failureReason: null,
+    runOverrides: {},
     version: 1 + rows.length,
     ...overrides,
   };
   return { instance, transcript: rows };
 }
 
-const greenRows = [row(1, "a1", "PASS"), row(2, "b2", "CONVERGED")];
+// The STARTED activation fact (seq 1) heads every green history so the
+// round reconstructs to 1 (the C11 activation basis); the transitions
+// follow at seq 2+.
+const greenRows = [startedFact("s0"), row(2, "a1", "PASS"), row(3, "b2", "CONVERGED")];
 
 describe("post-condition checker kit (packet ch5-P2)", () => {
   it("green fixture: every checker passes and the aggregator is empty", () => {
@@ -219,12 +232,13 @@ const admittedAbsent = admit(declarationAbsentTemplate);
 // Two loop-backs → stored round 3 (a DECLARATION-ABSENT fixture would be
 // blind to a raw-template regression here — this reconstructs > 1).
 const multiLoopRows = [
-  row(1, "a1", "PASS"), // implement → review        round 1
-  row(2, "b2", "PASS"), // review → implement (+1)   round 2
-  row(3, "c3", "PASS"), // implement → review        round 2
-  row(4, "d4", "PASS"), // review → implement (+1)   round 3
-  row(5, "e5", "PASS"), // implement → review        round 3
-  row(6, "f6", "CONVERGED"), // review → done        round 3
+  startedFact("s0"), //                              round 1 (activation)
+  row(2, "a1", "PASS"), // implement → review        round 1
+  row(3, "b2", "PASS"), // review → implement (+1)   round 2
+  row(4, "c3", "PASS"), // implement → review        round 2
+  row(5, "d4", "PASS"), // review → implement (+1)   round 3
+  row(6, "e5", "PASS"), // implement → review        round 3
+  row(7, "f6", "CONVERGED"), // review → done        round 3
 ];
 
 describe("checkRoundReconstruction — replay = stored (dimension 5, packet ch11-P2c)", () => {
@@ -272,7 +286,7 @@ describe("checkRoundReconstruction — replay = stored (dimension 5, packet ch11
   });
 
   it("a declaration-absent loop-back history reconstructs 1", () => {
-    const absent = detail([row(1, "a1", "PASS"), row(2, "b2", "PASS")], {
+    const absent = detail([startedFact("s0"), row(2, "a1", "PASS"), row(3, "b2", "PASS")], {
       currentStep: "review",
       kernelStatus: "ACTIVE",
       terminalDisposition: null,
@@ -300,6 +314,7 @@ describe("checkEvidenceResolution — the store-visible evidence half (packet ch
   };
   function rowWithRefs(seq: number, refs: readonly string[]): TranscriptEntry {
     return {
+      entryKind: "transition",
       seq,
       envelope: envelope(`op-${String(seq)}`, "CONVERGED"),
       payloadDigest: `d-${String(seq)}`,
@@ -338,6 +353,7 @@ describe("checkEvidenceResolution — the store-visible evidence half (packet ch
     // SECOND ref of the SECOND decision on the SECOND row; everything before it
     // resolves, so only a checker that walks every decision × every ref is red.
     const laterDecisionRow: TranscriptEntry = {
+      entryKind: "transition",
       seq: 2,
       envelope: envelope("op-2", "CONVERGED"),
       payloadDigest: "d-2",
@@ -390,8 +406,98 @@ function detailWith(rows: readonly TranscriptEntry[]): InstanceDetail {
       wait: null,
       runtimeContext: { state: "ready", ref: null },
       failureReason: null,
+      runOverrides: {},
       version: 1 + rows.length,
     },
     transcript: rows,
   };
 }
+
+// ── ch12-p1b T2: the per-disposition growth legs, each red-proven on a
+// fabricated violation (cancelled ⇔ CANCELLED fact; failed ⇔
+// failure_reason; the row-bearing sink) ───────────────────────────────
+
+describe("checkTerminalSink — the ch12-p1b disposition growth (T2)", () => {
+  function cancelledFact(seq: number, opId: string): LifecycleFactEntry {
+    return { entryKind: "CANCELLED", seq, opId, committedAt: 0 };
+  }
+
+  it("cancelled WITHOUT a CANCELLED fact row → violation (the cancel witness)", () => {
+    const fabricated = detail([startedFact("s0"), row(2, "a1", "PASS")], {
+      currentStep: "review",
+      terminalDisposition: "cancelled",
+      version: 4,
+    });
+    expect(checkTerminalSink(fabricated, template).join("\n")).toMatch(
+      /cancelled' without a CANCELLED fact|disposition 'cancelled' without/,
+    );
+  });
+
+  it("a CANCELLED fact with a NON-cancelled disposition → violation", () => {
+    const fabricated = detail(
+      [startedFact("s0"), row(2, "a1", "PASS"), cancelledFact(3, "c1")],
+      { currentStep: "review", terminalDisposition: "failed", failureReason: "x", version: 4 },
+    );
+    expect(checkTerminalSink(fabricated, template).join("\n")).toMatch(
+      /CANCELLED fact exists but the disposition/,
+    );
+  });
+
+  it("a clean cancel from mid-run passes (position-independent)", () => {
+    const clean = detail([startedFact("s0"), row(2, "a1", "PASS"), cancelledFact(3, "c1")], {
+      currentStep: "review",
+      terminalDisposition: "cancelled",
+      version: 4,
+    });
+    expect(checkTerminalSink(clean, template)).toEqual([]);
+  });
+
+  it("a committed row AFTER the CANCELLED fact → sink violation (the row-bearing scope)", () => {
+    const fabricated = detail(
+      [startedFact("s0"), cancelledFact(2, "c1"), row(3, "z9", "PASS")],
+      { currentStep: "implement", terminalDisposition: "cancelled", version: 4 },
+    );
+    expect(checkTerminalSink(fabricated, template).join("\n")).toMatch(
+      /committed AFTER the terminal row/,
+    );
+  });
+
+  it("failed WITHOUT a failure_reason → violation; a reason OUTSIDE failed → violation (both directions)", () => {
+    const noReason = detail([startedFact("s0")], {
+      currentStep: null,
+      terminalDisposition: "failed",
+      failureReason: null,
+      version: 3,
+    });
+    expect(checkTerminalSink(noReason, template).join("\n")).toMatch(
+      /'failed' without a failure_reason/,
+    );
+    const strayReason = detail([startedFact("s0"), row(2, "a1", "PASS")], {
+      currentStep: "review",
+      kernelStatus: "ACTIVE",
+      terminalDisposition: null,
+      failureReason: "stray",
+      version: 3,
+    });
+    expect(checkTerminalSink(strayReason, template).join("\n")).toMatch(
+      /failure_reason present but the disposition/,
+    );
+  });
+
+  it("a FAILED run's version arithmetic counts the row-less commit (checkVersionArithmetic)", () => {
+    const failed = detail([startedFact("s0")], {
+      currentStep: null,
+      terminalDisposition: "failed",
+      failureReason: "boom",
+      version: 3,
+    });
+    expect(checkVersionArithmetic(failed)).toEqual([]);
+    const wrong = detail([startedFact("s0")], {
+      currentStep: null,
+      terminalDisposition: "failed",
+      failureReason: "boom",
+      version: 2,
+    });
+    expect(checkVersionArithmetic(wrong).join("\n")).toMatch(/version arithmetic/);
+  });
+});

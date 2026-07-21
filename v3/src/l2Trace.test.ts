@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { admitTemplate } from "./definition/index.js";
 import { noopDiagnosticsSink } from "./diag/index.js";
-import type { AdmittedTemplate, Outcome, WorkflowTemplate } from "./domain/index.js";
+import type { AdmittedTemplate, Outcome, TransitionEntry, WorkflowTemplate } from "./domain/index.js";
 import { deriveEmitDigest } from "./emit/index.js";
 import { createGateRegistry } from "./gates/index.js";
 import { createIngress } from "./ingress/index.js";
@@ -72,7 +72,8 @@ const l2Fixture: TraceFixture = {
       kind: "start",
       instanceId: "inst-l2",
       task: "converge the pair",
-      expect: { currentStep: "implement", version: 1 },
+      opId: "op-start",
+      expect: { currentStep: "implement", version: 2 },
     },
     // 1 · codex PASS on implement (ungated) → commit → review; round 1.
     {
@@ -81,19 +82,19 @@ const l2Fixture: TraceFixture = {
       type: "PASS",
       actorId: "codex",
       payload: { note: "codex:op-1" },
-      expectedVersion: 1,
+      expectedVersion: 2,
       expectedRole: "implementer",
-      expect: { kind: "committed", version: 2 },
+      expect: { kind: "committed", version: 3 },
     },
     // 2 · claude CONVERGED on review: threshold round 1 < 2 → BLOCK.
-    //     No commit, version stays 2, still review, round 1, no row.
+    //     No commit, version stays 3, still review, round 1, no row.
     {
       kind: "emit",
       opId: "op-2",
       type: "CONVERGED",
       actorId: "claude",
       payload: { note: "claude:op-2" },
-      expectedVersion: 2,
+      expectedVersion: 3,
       expectedRole: "reviewer",
       expect: { kind: "rejected", reason: "gate_blocked" },
     },
@@ -105,9 +106,9 @@ const l2Fixture: TraceFixture = {
       type: "PASS",
       actorId: "claude",
       payload: { note: "claude:op-3" },
-      expectedVersion: 2,
+      expectedVersion: 3,
       expectedRole: "reviewer",
-      expect: { kind: "committed", version: 3 },
+      expect: { kind: "committed", version: 4 },
     },
     // 4 · codex PASS on implement (ungated) → commit → review; round 2.
     {
@@ -116,9 +117,9 @@ const l2Fixture: TraceFixture = {
       type: "PASS",
       actorId: "codex",
       payload: { note: "codex:op-4" },
-      expectedVersion: 3,
+      expectedVersion: 4,
       expectedRole: "implementer",
-      expect: { kind: "committed", version: 4 },
+      expect: { kind: "committed", version: 5 },
     },
     // 5 · claude CONVERGED on review: threshold round 2 >= 2 allow →
     //     previous_reviewer_verdict sees the step-3 review PASS in
@@ -129,23 +130,24 @@ const l2Fixture: TraceFixture = {
       type: "CONVERGED",
       actorId: "claude",
       payload: { note: "claude:op-5" },
-      expectedVersion: 4,
+      expectedVersion: 5,
       expectedRole: "reviewer",
-      expect: { kind: "committed", version: 5 },
+      expect: { kind: "committed", version: 6 },
     },
   ],
   finalTranscript: [
-    [1, "op-1"],
-    [2, "op-3"],
-    [3, "op-4"],
-    [4, "op-5"],
+    [1, "op-start"],
+    [2, "op-1"],
+    [3, "op-3"],
+    [4, "op-4"],
+    [5, "op-5"],
   ],
   finalState: {
     currentStep: "done",
     round: 2,
     kernelStatus: "TERMINAL",
     terminalDisposition: "done",
-    version: 5,
+    version: 6,
   },
 };
 
@@ -170,15 +172,20 @@ describe("l2 golden trace — the gate rung + both evaluators end-to-end (08-l2 
     // runs runAllCheckers at the end (the consistency belt green).
     const result = await replayTrace(l2Fixture, {
       submit: (raw) => ingress.submit(raw),
-      start: (input) => kernel.startInstance(input),
+      create: (input) => kernel.create(input),
+      start: (input) => kernel.start(input),
       store: handle.store,
       template: admitted,
     });
 
     // Supplemental (from finalDetail): the ungated rows carry [], the
     // final CONVERGED row carries EXACTLY the two allow decisions in
-    // authored order — allow carries no optional fields (G4/G6).
-    const rows = result.finalDetail.transcript;
+    // authored order — allow carries no optional fields (G4/G6). The
+    // gate-decision belt reads the TRANSITION rows only (the seq-1
+    // STARTED fact is a lifecycle row, no gate axis).
+    const rows = result.finalDetail.transcript.filter(
+      (r): r is TransitionEntry => r.entryKind === "transition",
+    );
     expect(rows.map((r) => r.gateDecisions)).toEqual([
       [],
       [],

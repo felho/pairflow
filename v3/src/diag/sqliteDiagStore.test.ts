@@ -684,14 +684,19 @@ async function runFlow(diag: DiagnosticsSink, mainPath: string, clock: ReturnTyp
     gates: gateCatalog,    diag,
   });
   const ingress = createIngress({ kernel, diag });
-  const started = await kernel.startInstance({
+  // ch12-p1b: startInstance is retired — CREATE (genesis) then START
+  // (activate) compose the old one-shot. Deterministic opId "op-start".
+  const created = await kernel.create({
     instanceId: "inst-1",
     templateRef: { id: "local-pair-v0", version: 1 },
     task: "build it",
   });
-  const committed = await ingress.submit(validEnvelope("op-1", "PASS", 1));
+  const started = await kernel.start({ instanceId: "inst-1", opId: "op-start" });
+  // +1: CREATE (v1) then START (v2) advance the version twice before the
+  // first actor transition — the PASS now expects version 2 (was 1).
+  const committed = await ingress.submit(validEnvelope("op-1", "PASS", 2));
   const rejected = await ingress.submit(42); // not an object → not_plain_object
-  return { storeHandle, outcomes: { started, committed, rejected } };
+  return { storeHandle, outcomes: { created, started, committed, rejected } };
 }
 
 describe("WAL + separation + fail-open product", () => {

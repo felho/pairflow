@@ -782,6 +782,8 @@ round:
         reviewer: { defaultActor: "claude" },
       },
       round: { advanceOnArrivalAt: ["implement"] },
+      // ch12-p1b G3: admission materializes the activation default.
+      activation: { mode: "immediate" },
     };
     const result = load(canonical);
     expect(result.ok).toBe(true);

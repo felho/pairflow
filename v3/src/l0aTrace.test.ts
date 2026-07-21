@@ -56,7 +56,8 @@ function wire(): { seams: TraceSeams; handle: StoreHandle } {
   return {
     seams: {
       submit: (raw) => ingress.submit(raw),
-      start: (input) => kernel.startInstance(input),
+      create: (input) => kernel.create(input),
+      start: (input) => kernel.start(input),
       store: handle.store,
       template: admitted,
     },
@@ -72,29 +73,31 @@ const l0aFixture: TraceFixture = {
       kind: "start",
       instanceId: "inst-a",
       task: "converge on the second review",
-      expect: { currentStep: "implement", version: 1 },
+      opId: "op-start",
+      expect: { currentStep: "implement", version: 2 },
     },
-    { kind: "emit", opId: "a1", type: "PASS", actorId: "codex", payload: { ref: "diff-1" }, expect: { kind: "committed", version: 2 } },
+    { kind: "emit", opId: "a1", type: "PASS", actorId: "codex", payload: { ref: "diff-1" }, expect: { kind: "committed", version: 3 } },
     // 3′ — the same PASS re-delivered (retry, op_id=a1): Duplicate,
     // no second row. The lift hands it the CURRENT version, and the
     // duplicate check still wins (order: duplicate before stale).
     { kind: "emit", opId: "a1", type: "PASS", actorId: "codex", payload: { ref: "diff-1" }, expect: { kind: "duplicate" } },
-    { kind: "emit", opId: "b2", type: "PASS", actorId: "claude", payload: { note: "findings" }, expect: { kind: "committed", version: 3 } },
-    { kind: "emit", opId: "c3", type: "PASS", actorId: "codex", expect: { kind: "committed", version: 4 } },
-    { kind: "emit", opId: "d4", type: "CONVERGED", actorId: "claude", expect: { kind: "committed", version: 5 } },
+    { kind: "emit", opId: "b2", type: "PASS", actorId: "claude", payload: { note: "findings" }, expect: { kind: "committed", version: 4 } },
+    { kind: "emit", opId: "c3", type: "PASS", actorId: "codex", expect: { kind: "committed", version: 5 } },
+    { kind: "emit", opId: "d4", type: "CONVERGED", actorId: "claude", expect: { kind: "committed", version: 6 } },
   ],
   finalTranscript: [
-    [1, "a1"],
-    [2, "b2"],
-    [3, "c3"],
-    [4, "d4"],
+    [1, "op-start"],
+    [2, "a1"],
+    [3, "b2"],
+    [4, "c3"],
+    [5, "d4"],
   ],
   finalState: {
     currentStep: "done",
     round: 2,
     kernelStatus: "TERMINAL",
     terminalDisposition: "done",
-    version: 5,
+    version: 6,
   },
 };
 
@@ -115,7 +118,7 @@ describe("harness negatives against the real kernel (claim dimensions 1–3, 5)"
   it("dimension 1: a wrong committed version fails red", async () => {
     const { seams, handle } = wire();
     const steps = [...l0aFixture.steps];
-    steps[1] = { ...steps[1], expect: { kind: "committed", version: 3 } } as (typeof steps)[1];
+    steps[1] = { ...steps[1], expect: { kind: "committed", version: 4 } } as (typeof steps)[1];
     await expect(replayTrace(variant({ steps }), seams)).rejects.toThrow(/committed version/);
     handle.close();
   });
@@ -123,7 +126,7 @@ describe("harness negatives against the real kernel (claim dimensions 1–3, 5)"
   it("dimension 1: a wrong outcome KIND fails red", async () => {
     const { seams, handle } = wire();
     const steps = [...l0aFixture.steps];
-    steps[1] = { ...steps[1], expect: { kind: "stale", currentVersion: 2 } } as (typeof steps)[1];
+    steps[1] = { ...steps[1], expect: { kind: "stale", currentVersion: 3 } } as (typeof steps)[1];
     await expect(replayTrace(variant({ steps }), seams)).rejects.toThrow(/outcome kind/);
     handle.close();
   });
@@ -132,9 +135,10 @@ describe("harness negatives against the real kernel (claim dimensions 1–3, 5)"
     const { seams, handle } = wire();
     const truncated = variant({
       finalTranscript: [
-        [1, "a1"],
-        [2, "b2"],
-        [3, "c3"],
+        [1, "op-start"],
+        [2, "a1"],
+        [3, "b2"],
+        [4, "c3"],
       ],
     });
     await expect(replayTrace(truncated, seams)).rejects.toThrow(/final transcript/);
@@ -153,7 +157,7 @@ describe("harness negatives against the real kernel (claim dimensions 1–3, 5)"
   it("dimension 5: the lift cannot weaken the redelivery — expecting committed there fails red", async () => {
     const { seams, handle } = wire();
     const steps = [...l0aFixture.steps];
-    steps[2] = { ...steps[2], expect: { kind: "committed", version: 3 } } as (typeof steps)[2];
+    steps[2] = { ...steps[2], expect: { kind: "committed", version: 4 } } as (typeof steps)[2];
     await expect(replayTrace(variant({ steps }), seams)).rejects.toThrow(/outcome kind/);
     handle.close();
   });

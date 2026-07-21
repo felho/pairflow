@@ -63,6 +63,7 @@ const baseInstance: WorkflowInstance = {
   wait: null,
   runtimeContext: { state: "ready", ref: null },
   failureReason: null,
+  runOverrides: {},
   version: 1,
 };
 
@@ -113,13 +114,14 @@ describe("separation negatives — success returns emit nothing", () => {
     expect(diag.events).toEqual([]);
   });
 
-  it("a successful startInstance emits ZERO events", async () => {
+  it("a successful create + start emits ZERO events", async () => {
     const { kernel, diag } = await setup();
-    await kernel.startInstance({
+    await kernel.create({
       instanceId: "inst-2",
       templateRef: { id: "local-pair-v0", version: 1 },
       task: "another",
     });
+    await kernel.start({ instanceId: "inst-2", opId: "start-inst-2" });
     expect(diag.events).toEqual([]);
   });
 });
@@ -455,7 +457,7 @@ describe("handle internal_failure lanes — emit + rethrow unchanged", () => {
   });
 });
 
-describe("startInstance internal_failure lanes — {instanceId, error} keyset", () => {
+describe("create/start internal_failure lanes — {instanceId, error} keyset", () => {
   const startInput = {
     instanceId: "born-1",
     templateRef: { id: "local-pair-v0", version: 1 },
@@ -469,7 +471,7 @@ describe("startInstance internal_failure lanes — {instanceId, error} keyset", 
       definitions: { load: () => Promise.reject(boom) },
       diag: rec,
     });
-    await expect(kernel.startInstance(startInput)).rejects.toBe(boom);
+    await expect(kernel.create(startInput)).rejects.toBe(boom);
     expect(rec.events).toEqual([
       {
         source: "kernel",
@@ -486,7 +488,7 @@ describe("startInstance internal_failure lanes — {instanceId, error} keyset", 
       definitions: { load: () => Promise.resolve(null) },
       diag: rec,
     });
-    await expect(kernel.startInstance(startInput)).rejects.toThrow(/not found/);
+    await expect(kernel.create(startInput)).rejects.toThrow(/not found/);
     expect(rec.events[0]).toMatchObject({
       kind: "internal_failure",
       instanceId: "born-1",
@@ -504,7 +506,7 @@ describe("startInstance internal_failure lanes — {instanceId, error} keyset", 
       definitions: { load: () => Promise.resolve(admit(uncovered)) },
       diag: rec,
     });
-    await expect(kernel.startInstance(startInput)).rejects.toThrow(/binding coverage/);
+    await expect(kernel.create(startInput)).rejects.toThrow(/binding coverage/);
     expect(rec.events[0]?.error?.message).toMatch(/binding coverage/);
   });
 
@@ -525,7 +527,7 @@ describe("startInstance internal_failure lanes — {instanceId, error} keyset", 
       gates: gateCatalog,
       diag: rec.sink,
     });
-    await expect(kernel.startInstance(startInput)).rejects.toBe(boom);
+    await expect(kernel.create(startInput)).rejects.toBe(boom);
     expect(rec.events[0]?.error).toEqual({ name: "Error", message: "disk full" });
   });
 
@@ -546,12 +548,19 @@ describe("startInstance internal_failure lanes — {instanceId, error} keyset", 
       gates: gateCatalog,
       diag: rec.sink,
     });
-    await expect(kernel.startInstance(startInput)).rejects.toThrow(/no definition/);
+    // CREATE persists the genesis record (emits nothing); the derive throw
+    // now lives on START's activation path (the create/start split, C24), so
+    // the internal_failure carries START's attribution — instanceId + opId.
+    await kernel.create(startInput);
+    await expect(kernel.start({ instanceId: "born-1", opId: "start-born-1" })).rejects.toThrow(
+      /no definition/,
+    );
     expect(rec.events).toEqual([
       {
         source: "kernel",
         kind: "internal_failure",
         instanceId: "born-1",
+        opId: "start-born-1",
         error: {
           name: "Error",
           message: "kernel integrity: dispatch target step 'phantom' has no definition",

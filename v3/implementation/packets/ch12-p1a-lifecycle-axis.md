@@ -51,7 +51,9 @@ or ratified plan text, or derives from those with an in-row note.
       { "id": "l0d/actor-routable-execution", "disposition": "test" }
     ],
     "traces": [],
-    "shared_ownership": []
+    "shared_ownership": [
+      { "item": "l0d/actor-routable-execution", "co_owner": "ch12-p1b-activation-machinery.md" }
+    ]
   }
 }
 ```
@@ -495,7 +497,7 @@ the post-commit intent guard reading `kernel_status = TERMINAL`.
 |---|---|
 | X1 | The P1a-reachable `runtime_context` VALUES: a context-free start stores `ready` with `ref: null` — `ready(∅)`, the context-free run's trivially-ready state (the one-shot composes CREATE+START, and the none-requirement START leg's post-state is ready(∅) per C18; C14 names it); a ch11-P3b seam start (`runtimeContextRef` supplied against a `required` template) stores `ready` with `ref: {kind: "worktree", locator: <the seam ref>}` — the TRANSITIONAL bridge encoding. `requested` has NO writer until P3. DERIVATION: the seam's ref IS the v1 workspace ref the model's RuntimeContextRef names `worktree` as its v1 kind for; no kernel code reads `.kind` until P3's kind-boundary rung, so the transitional kind is inert data; the alternative (a kindless ref) would violate the C11 ref shape `{kind, locator}` (derived: contract:ch12-runtime-core#C11, #C14, #C18 + the 04-l0d RuntimeContextRef field list; a transitional kind DISTINCT from `worktree` would contradict the model's own naming of the v1 workspace kind — the pin follows the exhibit, not preference) |
 | X2 | The C36/C14 backstop re-read: the kernel process-gate backstop reads the REAL field — a process gate reached with `runtime_context = ready(∅)` (ref null) rejects `runtime_context_required_for_process_gate`; `ready(ref)` supplies `workspace = ref.locator` to the runner. Behavior-preserving: today's `null` → reject and `string` → workspace lanes map one-to-one; the l2a golden trace drives the ready(ref) lane unchanged (anchored: contract:ch12-runtime-core#C14; the ch11-C36 backstop rule) |
-| X3 | The ch11-P3b seam pieces' STAGING disposition: `StartInstanceInput.runtimeContextRef`, `resolveRuntimeContext`'s lane table, and the CLI `runtimeContext: "required"` unstartable guard all STAY at P1a (the C25 window — their retirement is P3's, C24's inventory); ONLY the instance-field/store ENCODING flips, at the single write site (`resolveRuntimeContext`'s result maps onto X1 where the instance is constructed). No parallel encoding survives: the string\|null form has zero remaining readers — the COMPILER closes it (the T3 type flip breaks every reader of the old form: the kernel backstop, the store mapper; the W1 compiler leg is the same mechanism) (anchored: contract:ch12-runtime-core#C25, #C24, #C14) |
+| X3 | The ch11-P3b seam pieces' STAGING disposition: `StartInstanceInput.runtimeContextRef`, `resolveRuntimeContext`'s lane table, and the CLI `runtimeContext: "required"` unstartable guard all STAY at P1a (the C25 window — their retirement is P3's, C24's inventory; SEAM-grain: the observable pieces — the wire-key input, the CLI guard, the lane BEHAVIOR — retire at P3, while the `start.ts` SYMBOL carriers ride ch12-p1b's W1 with the one-shot's deletion, the lane table re-homed byte-for-byte onto START — aligned at ch12-p1b pre-approval); ONLY the instance-field/store ENCODING flips, at the single write site (`resolveRuntimeContext`'s result maps onto X1 where the instance is constructed). No parallel encoding survives: the string\|null form has zero remaining readers — the COMPILER closes it (the T3 type flip breaks every reader of the old form: the kernel backstop, the store mapper; the W1 compiler leg is the same mechanism) (anchored: contract:ch12-runtime-core#C25, #C24, #C14) |
 
 ## Canonical drift/coverage matrix (D)
 

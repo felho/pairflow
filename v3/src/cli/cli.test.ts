@@ -136,8 +136,15 @@ function assertErrorContract(result: Run, expectedClass: string, expectedCode: n
 async function startOne(db: string, deps: CliDeps): Promise<string> {
   const started = await run(["start", "--db", db, "--task", "t"], deps);
   expect(started.code).toBe(EXIT.ok);
-  const doc = JSON.parse(started.stdout[0] ?? "") as { instanceId: string; version: number };
-  expect(doc.version).toBe(1);
+  // The C25 bridge: start emits the START leg's `activated` outcome as the
+  // stdout data document — genesis v1 + the activation commit ⇒ version 2.
+  const doc = JSON.parse(started.stdout[0] ?? "") as {
+    kind: string;
+    instanceId: string;
+    version: number;
+  };
+  expect(doc.kind).toBe("activated");
+  expect(doc.version).toBe(2);
   return doc.instanceId;
 }
 
@@ -188,11 +195,17 @@ describe("cli — start / submit (write verbs through the sanctioned entrypoints
     expect(detail.code).toBe(EXIT.ok);
     const doc = JSON.parse(detail.stdout[0] ?? "") as {
       instance: { instanceId: string; kernelStatus: string; terminalDisposition: string | null };
-      transcript: unknown[];
+      transcript: { entryKind: string; seq: number; opId: string }[];
     };
     expect(doc.instance.kernelStatus).toBe("ACTIVE");
     expect(doc.instance.terminalDisposition).toBeNull();
-    expect(doc.transcript).toEqual([]);
+    // The C25 bridge stamps the STARTED lifecycle fact at seq 1 — every
+    // run's transcript begins with it (opId is the bridge-minted nonce).
+    expect(doc.transcript).toHaveLength(1);
+    expect(doc.transcript[0]?.entryKind).toBe("STARTED");
+    expect(doc.transcript[0]?.seq).toBe(1);
+    expect(typeof doc.transcript[0]?.opId).toBe("string");
+    expect(doc.transcript[0]?.opId).not.toBe("");
   });
 
   it("start parse contract: bad template ref → 2; unknown template → 3; bad/unknown override → 2 (+validRoles)", async () => {
@@ -227,7 +240,7 @@ describe("cli — start / submit (write verbs through the sanctioned entrypoints
     const id = await startOne(db, deps);
 
     const committed = await run(
-      ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "1", "--expected-role", "implementer", "--payload", '{"ref":"d1"}'],
+      ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "2", "--expected-role", "implementer", "--payload", '{"ref":"d1"}'],
       deps,
     );
     expect(committed.code).toBe(EXIT.ok);
@@ -235,7 +248,7 @@ describe("cli — start / submit (write verbs through the sanctioned entrypoints
     expect(committed.stderr).toEqual([]);
 
     const stale = await run(
-      ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "1", "--expected-role", "implementer", "--payload", '{"ref":"d2"}'],
+      ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "2", "--expected-role", "implementer", "--payload", '{"ref":"d2"}'],
       deps,
     );
     expect(stale.code).toBe(EXIT.notFound);
@@ -243,7 +256,7 @@ describe("cli — start / submit (write verbs through the sanctioned entrypoints
     expect(stale.stderr).toEqual([]);
 
     const rejected = await run(
-      ["submit", "--db", db, "--instance", id, "--type", "NOPE", "--expected-version", "2", "--expected-role", "reviewer"],
+      ["submit", "--db", db, "--instance", id, "--type", "NOPE", "--expected-version", "3", "--expected-role", "reviewer"],
       deps,
     );
     expect(rejected.code).toBe(EXIT.notFound);
@@ -252,10 +265,13 @@ describe("cli — start / submit (write verbs through the sanctioned entrypoints
 
   it("ADR-004 operator nonce: a fixed nonce re-derives the same op_id → duplicate = exit 0", async () => {
     const db = tempDbPath();
+    // The C25 bridge mints the START leg's op_id from the nonce source too,
+    // so start with a FRESH nonce — the fixed nonce is the artifice that
+    // makes the two SUBMITS collide onto one op_id (the lane under test).
+    const id = await startOne(db, testDeps());
     const deps = testDeps({ nonce: () => "nonce-fixed" });
-    const id = await startOne(db, deps);
     const args = [
-      "submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "1", "--expected-role", "implementer", "--payload", '{"ref":"d"}',
+      "submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "2", "--expected-role", "implementer", "--payload", '{"ref":"d"}',
     ];
     expect((await run(args, deps)).code).toBe(EXIT.ok);
     const second = await run(args, deps);
@@ -269,26 +285,28 @@ describe("cli — start / submit (write verbs through the sanctioned entrypoints
     const id = await startOne(db, deps);
 
     const noPayload = await run(
-      ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "1", "--expected-role", "implementer"],
+      ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "2", "--expected-role", "implementer"],
       deps,
     );
     expect(noPayload.code).toBe(EXIT.ok);
     const nullPayload = await run(
-      ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "2", "--expected-role", "reviewer", "--payload", "null"],
+      ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "3", "--expected-role", "reviewer", "--payload", "null"],
       deps,
     );
     expect(nullPayload.code).toBe(EXIT.ok);
 
     const detail = await run(["detail", id, "--db", db], deps);
     const doc = JSON.parse(detail.stdout[0] ?? "") as {
-      transcript: { envelope: Record<string, unknown> }[];
+      transcript: { envelope?: Record<string, unknown> }[];
     };
-    expect("payload" in (doc.transcript[0]?.envelope ?? {})).toBe(false);
-    expect(doc.transcript[1]?.envelope["payload"]).toBeNull();
+    // Transcript index 0 is the STARTED fact (no envelope); the two
+    // transition rows follow at indices 1 and 2.
+    expect("payload" in (doc.transcript[1]?.envelope ?? {})).toBe(false);
+    expect(doc.transcript[2]?.envelope?.["payload"]).toBeNull();
 
     assertErrorContract(
       await run(
-        ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "3", "--expected-role", "implementer", "--payload", "{bad"],
+        ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "4", "--expected-role", "implementer", "--payload", "{bad"],
         deps,
       ),
       "usage",
@@ -311,13 +329,14 @@ describe("cli — read verbs (the floor activated)", () => {
     const deps = testDeps();
     const id = await startOne(db, deps);
     await run(
-      ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "1", "--expected-role", "implementer", "--payload", '{"ref":"d"}'],
+      ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "2", "--expected-role", "implementer", "--payload", '{"ref":"d"}'],
       deps,
     );
 
     const rows = await run(["timeline", id, "--db", db], deps);
     expect(rows.code).toBe(EXIT.ok);
-    expect((JSON.parse(rows.stdout[0] ?? "") as { seq: number }[]).map((r) => r.seq)).toEqual([1]);
+    // seq 1 is the STARTED fact, seq 2 the PASS transition.
+    expect((JSON.parse(rows.stdout[0] ?? "") as { seq: number }[]).map((r) => r.seq)).toEqual([1, 2]);
 
     const beyond = await run(["timeline", id, "--db", db, "--after", "99"], deps);
     expect(JSON.parse(beyond.stdout[0] ?? "")).toEqual([]);
@@ -339,19 +358,25 @@ describe("cli — read verbs (the floor activated)", () => {
     const deps = testDeps();
     const id = await startOne(db, deps);
     await run(
-      ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "1", "--expected-role", "implementer", "--payload", '{"ref":"d"}'],
+      ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "2", "--expected-role", "implementer", "--payload", '{"ref":"d"}'],
       deps,
     );
 
+    // gateDecisions rides the transition rows only — the STARTED fact row
+    // carries no gate lane, so filter to the transition class.
     const detail = await run(["detail", id, "--db", db], deps);
     const detailDoc = JSON.parse(detail.stdout[0] ?? "") as {
-      transcript: { gateDecisions: unknown }[];
+      transcript: { entryKind: string; gateDecisions?: unknown }[];
     };
-    expect(detailDoc.transcript.map((r) => r.gateDecisions)).toEqual([[]]);
+    expect(
+      detailDoc.transcript.filter((r) => r.entryKind === "transition").map((r) => r.gateDecisions),
+    ).toEqual([[]]);
 
     const timeline = await run(["timeline", id, "--db", db], deps);
-    const rows = JSON.parse(timeline.stdout[0] ?? "") as { gateDecisions: unknown }[];
-    expect(rows.map((r) => r.gateDecisions)).toEqual([[]]);
+    const rows = JSON.parse(timeline.stdout[0] ?? "") as { entryKind: string; gateDecisions?: unknown }[];
+    expect(
+      rows.filter((r) => r.entryKind === "transition").map((r) => r.gateDecisions),
+    ).toEqual([[]]);
   });
 
   it("bundle: default policy — payload markers appear NOWHERE (REV-BUNDLE-DEFAULT-POLICY)", async () => {
@@ -359,7 +384,7 @@ describe("cli — read verbs (the floor activated)", () => {
     const deps = testDeps();
     const id = await startOne(db, deps);
     await run(
-      ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "1", "--expected-role", "implementer", "--payload", '{"secret":"MARKER_CLI_DELTA_4b"}'],
+      ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "2", "--expected-role", "implementer", "--payload", '{"secret":"MARKER_CLI_DELTA_4b"}'],
       deps,
     );
 
@@ -393,7 +418,7 @@ describe("cli — read verbs (the floor activated)", () => {
     // V5→V4 pass-through: a REAL rejected submit lands in the diag store
     // and surfaces as an attributed bundle row.
     const rejected = await run(
-      ["submit", "--db", db, "--instance", id, "--type", "NOPE", "--expected-version", "1", "--expected-role", "implementer"],
+      ["submit", "--db", db, "--instance", id, "--type", "NOPE", "--expected-version", "2", "--expected-role", "implementer"],
       deps,
     );
     expect(rejected.code).toBe(EXIT.notFound);
@@ -426,7 +451,7 @@ describe("cli — read verbs (the floor activated)", () => {
     const setupDeps = testDeps();
     const id = await startOne(db, setupDeps);
     await run(
-      ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "1", "--expected-role", "implementer", "--payload", '{"ref":"d1"}'],
+      ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "2", "--expected-role", "implementer", "--payload", '{"ref":"d1"}'],
       setupDeps,
     );
 
@@ -436,7 +461,7 @@ describe("cli — read verbs (the floor activated)", () => {
       tailSteps: [
         async () => {
           const converge = await run(
-            ["submit", "--db", db, "--instance", id, "--type", "CONVERGED", "--expected-version", "2", "--expected-role", "reviewer"],
+            ["submit", "--db", db, "--instance", id, "--type", "CONVERGED", "--expected-version", "3", "--expected-role", "reviewer"],
             testDeps(),
           );
           expect(converge.code).toBe(EXIT.ok);
@@ -446,8 +471,9 @@ describe("cli — read verbs (the floor activated)", () => {
     const tail = await run(["tail", id, "--db", db], tailDeps);
     expect(tail.code).toBe(EXIT.ok);
     expect(tail.stderr).toEqual([]);
+    // seq 1 STARTED, seq 2 PASS, seq 3 CONVERGED.
     const seqs = tail.stdout.map((line) => (JSON.parse(line) as { seq: number }).seq);
-    expect(seqs).toEqual([1, 2]);
+    expect(seqs).toEqual([1, 2, 3]);
 
     assertErrorContract(await run(["tail", "ghost", "--db", db], testDeps()), "not_found", EXIT.notFound);
     assertErrorContract(
@@ -501,7 +527,7 @@ describe("cli — P4a aftermath (post-commit review, 2026-07-08)", () => {
     const setupDeps = testDeps();
     const id = await startOne(db, setupDeps);
     await run(
-      ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "1", "--expected-role", "implementer", "--payload", '{"ref":"d"}'],
+      ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "2", "--expected-role", "implementer", "--payload", '{"ref":"d"}'],
       setupDeps,
     );
 
@@ -514,7 +540,9 @@ describe("cli — P4a aftermath (post-commit review, 2026-07-08)", () => {
     });
     const result = await run(["tail", id, "--db", db], deps);
     expect(result.code).toBe(EXIT.internal);
-    expect(result.stdout).toHaveLength(1);
+    // Both committed rows (STARTED seq 1, PASS seq 2) drain before the
+    // wait throws; they stay parseable on stdout.
+    expect(result.stdout).toHaveLength(2);
     expect((JSON.parse(result.stdout[0] ?? "") as { seq: number }).seq).toBe(1);
     expect(result.stderr).toHaveLength(1);
     expect((JSON.parse(result.stderr[0] ?? "") as CliErrorDoc).error.class).toBe("internal");
@@ -526,10 +554,10 @@ describe("cli — tail --diag (packet ch7-P4: V1/M1–M8/F1–F2)", () => {
   async function startAndConverge(db: string, deps: CliDeps): Promise<string> {
     const id = await startOne(db, deps);
     expect(
-      (await run(["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "1", "--expected-role", "implementer", "--payload", '{"ref":"d"}'], deps)).code,
+      (await run(["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "2", "--expected-role", "implementer", "--payload", '{"ref":"d"}'], deps)).code,
     ).toBe(EXIT.ok);
     expect(
-      (await run(["submit", "--db", db, "--instance", id, "--type", "CONVERGED", "--expected-version", "2", "--expected-role", "reviewer"], deps)).code,
+      (await run(["submit", "--db", db, "--instance", id, "--type", "CONVERGED", "--expected-version", "3", "--expected-role", "reviewer"], deps)).code,
     ).toBe(EXIT.ok);
     return id;
   }
@@ -539,12 +567,12 @@ describe("cli — tail --diag (packet ch7-P4: V1/M1–M8/F1–F2)", () => {
     const setupDeps = testDeps();
     const id = await startOne(db, setupDeps);
     await run(
-      ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "1", "--expected-role", "implementer", "--payload", '{"ref":"d1"}'],
+      ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "2", "--expected-role", "implementer", "--payload", '{"ref":"d1"}'],
       setupDeps,
     );
     // Pre-tail diag history: a REAL rejected submit through the wired sink.
     const preReject = await run(
-      ["submit", "--db", db, "--instance", id, "--type", "NOPE", "--expected-version", "2", "--expected-role", "reviewer"],
+      ["submit", "--db", db, "--instance", id, "--type", "NOPE", "--expected-version", "3", "--expected-role", "reviewer"],
       setupDeps,
     );
     expect(preReject.code).toBe(EXIT.notFound);
@@ -554,14 +582,14 @@ describe("cli — tail --diag (packet ch7-P4: V1/M1–M8/F1–F2)", () => {
         async () => {
           // Mid-tail LIVE diag event: another real rejected submit.
           const midReject = await run(
-            ["submit", "--db", db, "--instance", id, "--type", "NOPE", "--expected-version", "2", "--expected-role", "reviewer"],
+            ["submit", "--db", db, "--instance", id, "--type", "NOPE", "--expected-version", "3", "--expected-role", "reviewer"],
             testDeps(),
           );
           expect(midReject.code).toBe(EXIT.notFound);
         },
         async () => {
           expect(
-            (await run(["submit", "--db", db, "--instance", id, "--type", "CONVERGED", "--expected-version", "2", "--expected-role", "reviewer"], testDeps())).code,
+            (await run(["submit", "--db", db, "--instance", id, "--type", "CONVERGED", "--expected-version", "3", "--expected-role", "reviewer"], testDeps())).code,
           ).toBe(EXIT.ok);
         },
       ],
@@ -574,7 +602,8 @@ describe("cli — tail --diag (packet ch7-P4: V1/M1–M8/F1–F2)", () => {
     expect(lines.every((l) => l.lane === "committed" || l.lane === "diag")).toBe(true);
     const committed = lines.filter((l) => l.lane === "committed");
     const diag = lines.filter((l) => l.lane === "diag");
-    expect(committed.map((l) => (l as { row: { seq: number } }).row.seq)).toEqual([1, 2]);
+    // seq 1 STARTED, seq 2 PASS, seq 3 CONVERGED.
+    expect(committed.map((l) => (l as { row: { seq: number } }).row.seq)).toEqual([1, 2, 3]);
     expect(diag).toHaveLength(2);
     for (const line of diag) {
       const event = (line as { event: DiagnosticEvent }).event;
@@ -633,7 +662,7 @@ describe("cli — tail --diag (packet ch7-P4: V1/M1–M8/F1–F2)", () => {
     const setupDeps = testDeps();
     const id = await startOne(db, setupDeps);
     await run(
-      ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "1", "--expected-role", "implementer", "--payload", '{"ref":"d"}'],
+      ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "2", "--expected-role", "implementer", "--payload", '{"ref":"d"}'],
       setupDeps,
     );
 
@@ -654,7 +683,9 @@ describe("cli — tail --diag (packet ch7-P4: V1/M1–M8/F1–F2)", () => {
     const deps = testDeps({ openDiagStore: () => scripted, tailSteps: [() => undefined] });
     const result = await run(["tail", id, "--db", db, "--diag"], deps);
     expect(result.code).toBe(EXIT.internal);
-    expect(result.stdout).toHaveLength(1);
+    // Round 1 yields both committed rows (STARTED seq 1, PASS seq 2)
+    // before the second diag read rejects.
+    expect(result.stdout).toHaveLength(2);
     expect((JSON.parse(result.stdout[0] ?? "") as { lane: string }).lane).toBe("committed");
     expect(result.stderr).toHaveLength(1);
     const doc = (JSON.parse(result.stderr[0] ?? "") as CliErrorDoc).error;
@@ -716,7 +747,7 @@ describe("cli — tail --diag (packet ch7-P4: V1/M1–M8/F1–F2)", () => {
   it("dimension 3 RESUME COMBINATION (aftermath): --from + --from-ordinal together — each lane honors ITS cursor", async () => {
     const db = tempDbPath();
     const deps = testDeps();
-    const id = await startAndConverge(db, deps); // committed seq 1, 2
+    const id = await startAndConverge(db, deps); // committed seq 1 STARTED, 2 PASS, 3 CONVERGED
     stageDiagEvents(db, [
       { source: "kernel", kind: "internal_failure", instanceId: id, error: { name: "E1", message: "first" } },
       { source: "kernel", kind: "internal_failure", instanceId: id, error: { name: "E2", message: "second" } },
@@ -733,7 +764,8 @@ describe("cli — tail --diag (packet ch7-P4: V1/M1–M8/F1–F2)", () => {
     const lines = tailLines(resumed);
     const committed = lines.filter((l) => l.lane === "committed");
     const diag = lines.filter((l) => l.lane === "diag");
-    expect(committed.map((l) => (l as { row: { seq: number } }).row.seq)).toEqual([2]);
+    // --from 1 skips the STARTED fact (seq 1); the PASS/CONVERGED rows follow.
+    expect(committed.map((l) => (l as { row: { seq: number } }).row.seq)).toEqual([2, 3]);
     expect(diag).toHaveLength(1);
     expect((diag[0] as { event: DiagnosticEvent }).event.error?.name).toBe("E2");
   });
@@ -766,12 +798,12 @@ describe("cli — write-path wiring + separation (packet ch7-P4: V5/M11/C3/dimen
       const id = "inst-1";
       record(
         await run(
-          ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "1", "--expected-role", "implementer", "--payload", '{"ref":"d"}'],
+          ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "2", "--expected-role", "implementer", "--payload", '{"ref":"d"}'],
           deps,
         ),
       );
       record(
-        await run(["submit", "--db", db, "--instance", id, "--type", "NOPE", "--expected-version", "2", "--expected-role", "reviewer"], deps),
+        await run(["submit", "--db", db, "--instance", id, "--type", "NOPE", "--expected-version", "3", "--expected-role", "reviewer"], deps),
       );
       return { outs, codes };
     };
@@ -787,10 +819,10 @@ describe("cli — write-path wiring + separation (packet ch7-P4: V5/M11/C3/dimen
     const deps = testDeps();
     const id = await startOne(db, deps);
     await run(
-      ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "1", "--expected-role", "implementer", "--payload", '{"ref":"d"}'],
+      ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "2", "--expected-role", "implementer", "--payload", '{"ref":"d"}'],
       deps,
     );
-    await run(["submit", "--db", db, "--instance", id, "--type", "CONVERGED", "--expected-version", "2", "--expected-role", "reviewer"], deps);
+    await run(["submit", "--db", db, "--instance", id, "--type", "CONVERGED", "--expected-version", "3", "--expected-role", "reviewer"], deps);
     // The write verbs ARE diag verbs — remove their sibling so the
     // committed-only reads run against a diag-free path.
     rmSync(diagPathOf(db), { force: true });
@@ -808,10 +840,10 @@ describe("cli — write-path wiring + separation (packet ch7-P4: V5/M11/C3/dimen
       const deps = testDeps();
       const id = await startOne(db, deps);
       await run(
-        ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "1", "--expected-role", "implementer", "--payload", '{"ref":"d"}'],
+        ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "2", "--expected-role", "implementer", "--payload", '{"ref":"d"}'],
         deps,
       );
-      await run(["submit", "--db", db, "--instance", id, "--type", "CONVERGED", "--expected-version", "2", "--expected-role", "reviewer"], deps);
+      await run(["submit", "--db", db, "--instance", id, "--type", "CONVERGED", "--expected-version", "3", "--expected-role", "reviewer"], deps);
       return id;
     };
     const healthyDb = tempDbPath();
@@ -1025,7 +1057,7 @@ describe("cli — write-lane dispositions (packet ch8-P2: W1/W2/W3/W4)", () => {
     const res = await run(
       [
         "submit", "--db", db, "--instance", id, "--type", "PASS",
-        "--expected-version", "1", "--expected-role", "implementer", "--templates-dir", badDir,
+        "--expected-version", "2", "--expected-role", "implementer", "--templates-dir", badDir,
       ],
       testDeps(),
     );
@@ -1059,7 +1091,7 @@ describe("cli — write-lane dispositions (packet ch8-P2: W1/W2/W3/W4)", () => {
     const res = await run(
       [
         "submit", "--db", db, "--instance", id, "--type", "PASS",
-        "--expected-version", "1", "--expected-role", "implementer", "--templates-dir", dir,
+        "--expected-version", "2", "--expected-role", "implementer", "--templates-dir", dir,
       ],
       testDeps(),
     );
@@ -1088,7 +1120,7 @@ describe("cli — last-mile smoke: the SHIPPED entrypoint (root tsx bridge)", ()
       join(process.cwd(), "templates"),
     ]);
     const doc = JSON.parse(started.stdout.trim()) as { instanceId: string; version: number };
-    expect(doc.version).toBe(1);
+    expect(doc.version).toBe(2);
 
     const detail = await execFileAsync(tsxBin, [mainPath, "detail", doc.instanceId, "--db", db]);
     const parsed = JSON.parse(detail.stdout.trim()) as { instance: { task: string } };
@@ -1104,7 +1136,7 @@ describe("submit --expected-role (packet ch11-P1, O1/O2)", () => {
     const deps = testDeps();
     const id = await startOne(db, deps);
     const result = await run(
-      ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "1"],
+      ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "2"],
       deps,
     );
     const error = errorDoc(result);
@@ -1120,7 +1152,7 @@ describe("submit --expected-role (packet ch11-P1, O1/O2)", () => {
     const deps = testDeps();
     const id = await startOne(db, deps);
     const wrongRole = await run(
-      ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "1", "--expected-role", "reviewer", "--payload", '{"ref":"d"}'],
+      ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "2", "--expected-role", "reviewer", "--payload", '{"ref":"d"}'],
       deps,
     );
     expect(wrongRole.code).toBe(EXIT.notFound);
@@ -1160,6 +1192,29 @@ describe("cli — Y6 the eager required-context start pre-check (packet ch11-P4)
     expect(existsSync(diagPathOf(db))).toBe(false);
     // The store DB's process-evidence sibling is likewise never minted.
     expect(existsSync(`${db}.gate-evidence.sqlite`)).toBe(false);
+  });
+
+  it("start on a template with an unbound role → usage 2 StartFailed (the W2 bridge's binding-coverage lane, packet ch12-p1b)", async () => {
+    // The reviewer role carries NO defaultActor and the verb passes no
+    // override — CREATE's coverage REQUIRE throws, and the bridge maps
+    // the "create failed (binding coverage)" prefix to usage 2 (the
+    // 2-vs-1 exit split preserved).
+    const dir = stageTemplates({
+      "local-pair-v0@1.yaml": CANONICAL_BYTES().replace(
+        "  reviewer:\n    defaultActor: claude\n",
+        "  reviewer: {}\n",
+      ),
+    });
+    const db = tempDbPath();
+    const res = await run(
+      ["start", "--db", db, "--task", "t", "--templates-dir", dir],
+      testDeps(),
+    );
+    const err = errorDoc(res);
+    expect(res.code).toBe(EXIT.usage);
+    expect(err.name).toBe("StartFailed");
+    expect(err.class).toBe("usage");
+    expect(err.message).toMatch(/create failed \(binding coverage\): role 'reviewer'/);
   });
 
   it("a context-FREE template starts normally (the gate is silent — the no-throw baseline)", async () => {

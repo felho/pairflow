@@ -32,6 +32,10 @@ import type {
   ProcessGateRunner,
   ProcessResult,
 } from "../ports/gate.js";
+// ch12-p1b D2: the entry classes' witnesses — the typed kernel entry
+// family (the operator-intent inputs; the in-process FAIL member) live
+// in kernel/, the same ADR-007 type-import allowance.
+import type { CancelInput, CreateInput, Kernel, KickoffInput, StartInput } from "../kernel/index.js";
 
 /**
  * The PI-3 domain-registry manifest (packet ch5-P1): every ledger §4
@@ -99,6 +103,11 @@ interface RealizedTypeTable {
   readonly "l0d/RuntimeContext": RuntimeContext;
   readonly "l0d/RuntimeContextRef": RuntimeContextRef;
   readonly "l0d/ActivationMode": ActivationMode;
+  // ch12-p1b D2: the entry classes + the Template activation face.
+  readonly "l0d/OperatorIntent": CreateInput | StartInput | KickoffInput | CancelInput;
+  readonly "l0d/KernelEvent": Kernel["fail"];
+  readonly "l0d/ActorEnvelope": EventEnvelope;
+  readonly "l0d/Template": WorkflowTemplate;
 }
 
 export type RegistryEntry =
@@ -169,20 +178,24 @@ export const DOMAIN_REGISTRY: Readonly<Record<string, RegistryEntry>> = {
   // ── l0d (13) ───────────────────────────────────────────────────────
   // ch12-p1a D3: the lifecycle-axis value objects + the instance
   // aggregate flip realized (the axis fields land on WorkflowInstance).
-  // l0d/Template stays pending (the `activation` key — P1b's
-  // admission-default face + P4's format face); the entry classes are
-  // P1b's.
+  // ch12-p1b D2: the entry classes (the wire family + the typed kernel
+  // entries; ActorEnvelope's l0d face IS the joins-under-the-
+  // discriminator routing) and the Template activation face flip —
+  // every ledger §4 l0d row is realized after P1b.
   "l0d/WorkflowInstance": { kind: "realized", typeName: "WorkflowInstance" },
-  "l0d/Template": { kind: "pending" },
+  "l0d/Template": { kind: "realized", typeName: "WorkflowTemplate" },
   "l0d/KernelStatus": { kind: "realized", typeName: "KernelStatus" },
   "l0d/TerminalDisposition": { kind: "realized", typeName: "TerminalDisposition" },
   "l0d/WaitReason": { kind: "realized", typeName: "WaitReason" },
   "l0d/RuntimeContext": { kind: "realized", typeName: "RuntimeContext" },
   "l0d/RuntimeContextRef": { kind: "realized", typeName: "RuntimeContextRef" },
   "l0d/ActivationMode": { kind: "realized", typeName: "ActivationMode" },
-  "l0d/OperatorIntent": { kind: "pending" },
-  "l0d/KernelEvent": { kind: "pending" },
-  "l0d/ActorEnvelope": { kind: "pending" },
+  "l0d/OperatorIntent": {
+    kind: "realized",
+    typeName: "CreateInput | StartInput | KickoffInput | CancelInput",
+  },
+  "l0d/KernelEvent": { kind: "realized", typeName: "Kernel[\"fail\"]" },
+  "l0d/ActorEnvelope": { kind: "realized", typeName: "EventEnvelope" },
   "l0d/Rejected(not_active)": {
     kind: "realized",
     typeName: "RejectionName",
@@ -444,6 +457,10 @@ export const REALIZED_TYPE_TABLE_KEYS = [
   "l0d/RuntimeContext",
   "l0d/RuntimeContextRef",
   "l0d/ActivationMode",
+  "l0d/OperatorIntent",
+  "l0d/KernelEvent",
+  "l0d/ActorEnvelope",
+  "l0d/Template",
 ] as const satisfies readonly (keyof RealizedTypeTable)[];
 
 type TypeTableFullyListed =

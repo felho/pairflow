@@ -42,7 +42,7 @@ import { createGateRegistry } from "../gates/index.js";
  * The operator CLI, normal entrypoint (plan §6.5, packet ch6-P4a): a
  * THIN client — formatting, defaults, wiring; zero semantics. Verbs:
  * list / detail / timeline / tail / bundle (read-only floor) and
- * start / submit (writes — through kernel.startInstance and
+ * start / submit (writes — through the kernel's CREATE→START bridge and
  * ingress.submit ONLY; the src/cli lint boundary bans direct StorePort
  * writes). Dev verbs live behind the SEPARATE cli/dev entrypoint
  * (P4b; ADR-009 boundary).
@@ -255,7 +255,7 @@ async function verbStart(ctx: VerbContext): Promise<number> {
   );
   // The outer catch is TYPE-based (W4/note 2): it maps TemplateLoadError
   // from EVERY site in this verb body — the pre-load below AND the
-  // kernel's own load inside startInstance (the mid-invocation race).
+  // kernel's own load inside the CREATE leg (the mid-invocation race).
   try {
     const template = await definitions.load(templateRef);
     if (template === null) {
@@ -309,24 +309,50 @@ async function verbStart(ctx: VerbContext): Promise<number> {
           processRunner,
         });
         try {
-          const started = await kernel.startInstance({
-            instanceId: ctx.deps.instanceIdSource(),
+          // The C25 in-handler bridge (packet ch12-p1b, W2): the retired
+          // one-shot's call site rewired to an interim CREATE→START
+          // sequence — NOT the C19 convenience verb (P4 lands the
+          // four-verb surface and retires this). No CREATE-level mode
+          // (immediate default; the deferred path in the window is
+          // ingress/test-driven). `--task` is parse-required above, so
+          // `task_required` is unreachable through this verb; a
+          // CREATE-committed/START-rejected residue is unreachable on
+          // the business paths, and any non-business residue is an
+          // ordinary CREATED instance, resumable by a fresh START.
+          const instanceId = ctx.deps.instanceIdSource();
+          const created = await kernel.create({
+            instanceId,
             templateRef,
             task,
-            ...(Object.keys(overrides).length > 0 ? { startOverrides: overrides } : {}),
+            ...(Object.keys(overrides).length > 0 ? { overrides } : {}),
           });
-          ctx.sinks.out(JSON.stringify(started));
-          return EXIT.ok;
+          if (created.kind === "rejected") {
+            throw new Error(
+              `start failed: unexpected create rejection '${created.reason}' with a parse-required task`,
+            );
+          }
+          const startOutcome = await kernel.start({
+            instanceId,
+            opId: deriveOperatorOpId(ctx.deps.nonceSource()),
+          });
+          // The verb emits the START leg's outcome as the stdout data
+          // document (the CREATE leg's `Created` is interior — C25).
+          ctx.sinks.out(JSON.stringify(startOutcome));
+          return startOutcome.kind === "activated" || startOutcome.kind === "accepted"
+            ? EXIT.ok
+            : startOutcome.kind === "duplicate"
+              ? EXIT.ok
+              : EXIT.notFound;
         } catch (error) {
-          // ONLY the start-INPUT lane is usage — binding coverage, the one
-          // reachable start-side input failure (the ref is pre-checked
-          // above). Everything else (store integrity such as a colliding
-          // minted id, unexpected errors) flows to the outer internal
-          // branch: the 2-vs-1 exit split must not collapse (P4a
-          // aftermath finding 1).
+          // ONLY the create-INPUT lane is usage — binding coverage, the
+          // one reachable input failure (the ref is pre-checked above).
+          // Everything else (store integrity such as a colliding minted
+          // id, unexpected errors) flows to the outer internal branch:
+          // the 2-vs-1 exit split must not collapse (P4a aftermath
+          // finding 1).
           if (
             error instanceof Error &&
-            error.message.startsWith("start failed (binding coverage)")
+            error.message.startsWith("create failed (binding coverage)")
           ) {
             throw usage("StartFailed", error.message);
           }

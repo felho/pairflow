@@ -2,7 +2,7 @@ import { createScriptedProcessGateRunner } from "./testkit/index.js";
 import { describe, expect, it } from "vitest";
 
 import { noopDiagnosticsSink } from "./diag/index.js";
-import type { AdmittedTemplate, Outcome, Started, WorkflowTemplate } from "./domain/index.js";
+import type { Activated, AdmittedTemplate, Outcome, WorkflowTemplate } from "./domain/index.js";
 import { deriveEmitDigest } from "./emit/index.js";
 import { createFloor } from "./floor/index.js";
 import { createIngress } from "./ingress/index.js";
@@ -46,27 +46,29 @@ const l0bFixture: TraceFixture = {
       kind: "start",
       instanceId: "inst-1",
       task: "ship the feature",
-      expect: { currentStep: "implement", version: 1 },
+      opId: "op-start",
+      expect: { currentStep: "implement", version: 2 },
     },
-    { kind: "emit", opId: "a1", type: "PASS", actorId: "codex", payload: { note: "codex:a1" }, expectedVersion: 1, expect: { kind: "committed", version: 2 } },
-    { kind: "emit", opId: "b2", type: "PASS", actorId: "claude", payload: { note: "claude:b2" }, expectedVersion: 2, expect: { kind: "committed", version: 3 } },
-    // OLD packet, NEW op: actor-supplied stale intent → Stale(3), no row.
-    { kind: "emit", opId: "c3", type: "PASS", actorId: "codex", payload: { note: "codex:c3" }, expectedVersion: 2, expect: { kind: "stale", currentVersion: 3 } },
-    { kind: "emit", opId: "c4", type: "PASS", actorId: "codex", payload: { note: "codex:c4" }, expectedVersion: 3, expect: { kind: "committed", version: 4 } },
-    { kind: "emit", opId: "d5", type: "CONVERGED", actorId: "claude", payload: { note: "claude:d5" }, expectedVersion: 4, expect: { kind: "committed", version: 5 } },
+    { kind: "emit", opId: "a1", type: "PASS", actorId: "codex", payload: { note: "codex:a1" }, expectedVersion: 2, expect: { kind: "committed", version: 3 } },
+    { kind: "emit", opId: "b2", type: "PASS", actorId: "claude", payload: { note: "claude:b2" }, expectedVersion: 3, expect: { kind: "committed", version: 4 } },
+    // OLD packet, NEW op: actor-supplied stale intent → Stale(4), no row.
+    { kind: "emit", opId: "c3", type: "PASS", actorId: "codex", payload: { note: "codex:c3" }, expectedVersion: 3, expect: { kind: "stale", currentVersion: 4 } },
+    { kind: "emit", opId: "c4", type: "PASS", actorId: "codex", payload: { note: "codex:c4" }, expectedVersion: 4, expect: { kind: "committed", version: 5 } },
+    { kind: "emit", opId: "d5", type: "CONVERGED", actorId: "claude", payload: { note: "claude:d5" }, expectedVersion: 5, expect: { kind: "committed", version: 6 } },
   ],
   finalTranscript: [
-    [1, "a1"],
-    [2, "b2"],
-    [3, "c4"],
-    [4, "d5"],
+    [1, "op-start"],
+    [2, "a1"],
+    [3, "b2"],
+    [4, "c4"],
+    [5, "d5"],
   ],
   finalState: {
     currentStep: "done",
     round: 2,
     kernelStatus: "TERMINAL",
     terminalDisposition: "done",
-    version: 5,
+    version: 6,
   },
 };
 
@@ -91,7 +93,8 @@ describe("l0b golden trace — the walking skeleton end-to-end (on the harness)"
 
     const result = await replayTrace(l0bFixture, {
       submit: (raw) => ingress.submit(raw),
-      start: (input) => kernel.startInstance(input),
+      create: (input) => kernel.create(input),
+      start: (input) => kernel.start(input),
       store: handle.store,
       template: admitted,
     });
@@ -100,17 +103,17 @@ describe("l0b golden trace — the walking skeleton end-to-end (on the harness)"
     // fixture does not carry, on the RETURNED outcomes + finalDetail. ──
 
     // START: binding snapshot, intent derived AFTER the commit.
-    const started = result.outcomes[0] as Started;
+    const started = result.outcomes[0] as Activated;
     expect(started.intent.actor).toBe("codex");
     expect(started.intent.packet).toMatchObject({
-      expectedVersion: 1,
+      expectedVersion: 2,
       instruction: "build it",
       availableOps: ["PASS"],
     });
     expect(started.intent.packet).not.toHaveProperty("handoff");
 
     // The stale outcome is EXACTLY {kind, currentVersion} — no extras.
-    expect(result.outcomes[3]).toEqual({ kind: "stale", currentVersion: 3 });
+    expect(result.outcomes[3]).toEqual({ kind: "stale", currentVersion: 4 });
 
     // The dispatch loop: every non-terminal commit derives the next
     // intent from COMMITTED state; the terminal commit derives none.
@@ -119,7 +122,7 @@ describe("l0b golden trace — the walking skeleton end-to-end (on the harness)"
       .filter(
         (o): o is Extract<Outcome, { kind: "committed" }> => o.kind === "committed",
       );
-    expect(committed.map((o) => o.version)).toEqual([2, 3, 4, 5]);
+    expect(committed.map((o) => o.version)).toEqual([3, 4, 5, 6]);
     expect(committed.map((o) => o.intent?.actor ?? null)).toEqual([
       "claude",
       "codex",
@@ -127,15 +130,17 @@ describe("l0b golden trace — the walking skeleton end-to-end (on the harness)"
       null,
     ]);
     expect(committed[0]?.intent?.packet).toMatchObject({
-      expectedVersion: 2,
+      expectedVersion: 3,
       instruction: "review it",
       availableOps: ["PASS", "CONVERGED"],
       handoff: { note: "codex:a1" },
     });
 
     // commit ≠ deliver: intents were RETURN VALUES; the transcript holds
-    // envelopes only — the shape check rides finalDetail.transcript.
+    // envelopes only — the shape check rides finalDetail.transcript
+    // transition rows (the seq-1 STARTED fact carries no envelope).
     for (const entry of result.finalDetail.transcript) {
+      if (entry.entryKind !== "transition") continue;
       expect(Object.keys(entry.envelope).sort()).toEqual([
         "actorId",
         "expectedRole",

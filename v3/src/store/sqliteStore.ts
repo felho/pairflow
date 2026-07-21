@@ -5,6 +5,7 @@ import type {
   EventEnvelope,
   InstanceId,
   KernelStatus,
+  LifecycleFactKind,
   RetainedGateDecision,
   RuntimeContext,
   TerminalDisposition,
@@ -13,6 +14,7 @@ import type {
   WorkflowInstance,
 } from "../domain/index.js";
 import type {
+  CommitLifecycleInput,
   CommitTransitionInput,
   CommitTransitionResult,
   InstanceDetail,
@@ -266,14 +268,38 @@ interface InstanceRow {
   version: number;
 }
 
+/** G2 (packet ch12-p1b): the run_overrides round-trip — a canonical-JSON
+ * map of step-id → plain map; anything else is integrity drift. */
+function decodeRunOverrides(
+  text: string,
+): Readonly<Record<string, Readonly<Record<string, unknown>>>> {
+  const parsed = JSON.parse(text) as unknown;
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    throw new Error(`store integrity: malformed run_overrides value '${text}'`);
+  }
+  for (const value of Object.values(parsed as Record<string, unknown>)) {
+    if (typeof value !== "object" || value === null || Array.isArray(value)) {
+      throw new Error(`store integrity: malformed run_overrides entry in '${text}'`);
+    }
+  }
+  return parsed as Readonly<Record<string, Readonly<Record<string, unknown>>>>;
+}
+
 function rowToInstance(row: InstanceRow): WorkflowInstance {
-  // TYPE-STAGING (S9/T3): the task/current_step COLUMNS are nullable at
-  // v5 (P1b's genesis/deferred face), but no P1a writer produces NULL —
-  // the TS type keeps them non-null and a NULL here is drift from a
-  // sibling-packet writer that has not yet brought its readers.
-  if (row.task === null || row.current_step === null) {
+  // G2 (packet ch12-p1b): genesis/deferred NULLs are LEGAL now — the
+  // guards refuse only non-genesis-consistent corruption: an ACTIVE
+  // instance always has a position and a task (activate's REQUIRE),
+  // and a `done` disposition presupposes a run that was active.
+  const status = parseKernelStatus(row.kernel_status);
+  const disposition = parseTerminalDisposition(row.terminal_disposition);
+  if (status === "ACTIVE" && (row.current_step === null || row.task === null)) {
     throw new Error(
-      `store integrity: instance '${row.instance_id}' carries a NULL task/current_step — the P1b genesis readers have not landed (type-staging, packet ch12-p1a S9)`,
+      `store integrity: ACTIVE instance '${row.instance_id}' carries a NULL task/current_step (readiness gates dispatch)`,
+    );
+  }
+  if (disposition === "done" && (row.current_step === null || row.task === null)) {
+    throw new Error(
+      `store integrity: done instance '${row.instance_id}' carries a NULL task/current_step`,
     );
   }
   return {
@@ -283,21 +309,22 @@ function rowToInstance(row: InstanceRow): WorkflowInstance {
     binding: JSON.parse(row.binding) as Readonly<Record<string, string>>,
     currentStep: row.current_step,
     round: row.round,
-    kernelStatus: parseKernelStatus(row.kernel_status),
-    terminalDisposition: parseTerminalDisposition(row.terminal_disposition),
+    kernelStatus: status,
+    terminalDisposition: disposition,
     activationMode: parseActivationMode(row.activation_mode),
     wait: decodeWait(row.wait),
     // S7: the ONE row mapper decodes the discriminated state for every
-    // instance read surface identically (run_overrides has no P1a
-    // reader — its TS face is P1b/P2's).
+    // instance read surface identically.
     runtimeContext: decodeRuntimeContext(row.runtime_context),
     failureReason: row.failure_reason,
+    runOverrides: decodeRunOverrides(row.run_overrides),
     version: row.version,
   };
 }
 
 interface TranscriptRow {
   seq: number;
+  op_id: string;
   entry_kind: string;
   envelope: string | null;
   payload_digest: string | null;
@@ -305,32 +332,61 @@ interface TranscriptRow {
   committed_at: number;
 }
 
+const LIFECYCLE_FACT_KINDS: readonly LifecycleFactKind[] = [
+  "STARTED",
+  "CANCELLED",
+  "TASK_SUPPLIED",
+];
+
 /** One mapper for BOTH read surfaces (getInstanceDetail / getTimeline) —
  * the ch6-P1 cross-consistency dimension is structural, not incidental.
  * The gate_decisions column round-trips through JSON verbatim (S3).
- * S11 class iff, transition side: a `transition` row carries envelope /
- * payload_digest / gate_decisions NON-NULL; at P1a only transition rows
- * are ever written, so any other kind — or a transition row missing a
- * class field — is integrity drift, refused here (the fact-entry TS
- * variant and its readers enter with P1b's writers). */
+ * F5 (packet ch12-p1b): the mapper splits on entry_kind and REFUSES the
+ * S11 class iff loudly in BOTH directions, per conjunct — a transition
+ * row missing a class field, or a fact row carrying one, is integrity
+ * drift. */
 function toTranscriptEntry(row: TranscriptRow): TranscriptEntry {
-  if (row.entry_kind !== "transition") {
-    throw new Error(
-      `store integrity: transcript row seq ${String(row.seq)} carries entry_kind '${row.entry_kind}' — fact-entry readers land at P1b (type-staging, packet ch12-p1a S11)`,
-    );
+  if (row.entry_kind === "transition") {
+    if (row.envelope === null || row.payload_digest === null || row.gate_decisions === null) {
+      throw new Error(
+        `store integrity: transition row seq ${String(row.seq)} missing a class-required field (S11 class iff)`,
+      );
+    }
+    return {
+      entryKind: "transition",
+      seq: row.seq,
+      envelope: JSON.parse(row.envelope) as EventEnvelope,
+      payloadDigest: row.payload_digest,
+      gateDecisions: JSON.parse(row.gate_decisions) as readonly RetainedGateDecision[],
+      committedAt: row.committed_at,
+    };
   }
-  if (row.envelope === null || row.payload_digest === null || row.gate_decisions === null) {
-    throw new Error(
-      `store integrity: transition row seq ${String(row.seq)} missing a class-required field (S11 class iff)`,
-    );
+  if ((LIFECYCLE_FACT_KINDS as readonly string[]).includes(row.entry_kind)) {
+    if (row.envelope !== null) {
+      throw new Error(
+        `store integrity: fact row seq ${String(row.seq)} carries a non-null envelope (S11 class iff)`,
+      );
+    }
+    if (row.payload_digest !== null) {
+      throw new Error(
+        `store integrity: fact row seq ${String(row.seq)} carries a non-null payload_digest (S11 class iff)`,
+      );
+    }
+    if (row.gate_decisions !== null) {
+      throw new Error(
+        `store integrity: fact row seq ${String(row.seq)} carries non-null gate_decisions (S11 class iff)`,
+      );
+    }
+    return {
+      entryKind: row.entry_kind as LifecycleFactKind,
+      seq: row.seq,
+      opId: row.op_id,
+      committedAt: row.committed_at,
+    };
   }
-  return {
-    seq: row.seq,
-    envelope: JSON.parse(row.envelope) as EventEnvelope,
-    payloadDigest: row.payload_digest,
-    gateDecisions: JSON.parse(row.gate_decisions) as readonly RetainedGateDecision[],
-    committedAt: row.committed_at,
-  };
+  throw new Error(
+    `store integrity: transcript row seq ${String(row.seq)} carries unknown entry_kind '${row.entry_kind}'`,
+  );
 }
 
 function initSchema(db: DatabaseSync): void {
@@ -407,15 +463,37 @@ export function openStore(path: string, time: TimeSource): StoreHandle {
       return Promise.resolve(row === undefined ? null : rowToInstance(row));
     },
 
-    findOp(instanceId, opId): Promise<{ payloadDigest: string } | null> {
+    findOp(
+      instanceId,
+      opId,
+    ): Promise<{
+      payloadDigest: string | null;
+      entryKind: TranscriptEntry["entryKind"];
+    } | null> {
+      // A2 (packet ch12-p1b): kind-aware — a fact row's digest is NULL
+      // and the entry kind is what the lifecycle idempotency rung reads.
       const row = db
         .prepare(
-          "SELECT payload_digest FROM transcript WHERE instance_id = ? AND op_id = ?",
+          "SELECT payload_digest, entry_kind FROM transcript WHERE instance_id = ? AND op_id = ?",
         )
-        .get(instanceId, opId) as { payload_digest: string } | undefined;
-      return Promise.resolve(
-        row === undefined ? null : { payloadDigest: row.payload_digest },
-      );
+        .get(instanceId, opId) as
+        | { payload_digest: string | null; entry_kind: string }
+        | undefined;
+      if (row === undefined) {
+        return Promise.resolve(null);
+      }
+      if (
+        row.entry_kind !== "transition" &&
+        !(LIFECYCLE_FACT_KINDS as readonly string[]).includes(row.entry_kind)
+      ) {
+        return Promise.reject(
+          new Error(`store integrity: unknown entry_kind '${row.entry_kind}' under op lookup`),
+        );
+      }
+      return Promise.resolve({
+        payloadDigest: row.payload_digest,
+        entryKind: row.entry_kind as TranscriptEntry["entryKind"],
+      });
     },
 
     createInstance(instance: WorkflowInstance): Promise<void> {
@@ -443,10 +521,10 @@ export function openStore(path: string, time: TimeSource): StoreHandle {
           encodeWait(instance.wait),
           instance.failureReason,
           encodeRuntimeContext(instance.runtimeContext),
-          // S8: run_overrides is always `{}` at P1a — the one-shot has
-          // no runOverrides input (the CREATE input surface is P1b's
-          // C20 face, the cascade P2's C8/C9).
-          "{}",
+          // G1/G2 (packet ch12-p1b): the C9 snapshot is written from the
+          // instance VALUE (the P1a `{}` hardcode retired); canonical
+          // JSON, so stored bytes are deterministic and byte-testable.
+          canonicalJson(instance.runOverrides),
           instance.version,
           time.now(),
         );
@@ -464,20 +542,24 @@ export function openStore(path: string, time: TimeSource): StoreHandle {
     commitTransition(input: CommitTransitionInput): Promise<CommitTransitionResult> {
       db.exec("BEGIN IMMEDIATE");
       try {
-        // Idempotency beats CAS (plan §4.2 + §5.4), digest-aware: a
-        // matching digest is a retransmission, a differing one is a
-        // visible collision — neither writes anything.
+        // Idempotency beats CAS (plan §4.2 + §5.4), digest-aware AND
+        // kind-aware (A2, packet ch12-p1b): a matching-digest transition
+        // row is a retransmission; a differing digest — or ANY fact row
+        // under the key (the actor-side mirror: a digest compare is
+        // unanswerable against a digest-less fact row) — is a visible
+        // collision. Neither writes anything.
         const existing = db
           .prepare(
-            "SELECT payload_digest FROM transcript WHERE instance_id = ? AND op_id = ?",
+            "SELECT payload_digest, entry_kind FROM transcript WHERE instance_id = ? AND op_id = ?",
           )
           .get(input.instanceId, input.envelope.opId) as
-          | { payload_digest: string }
+          | { payload_digest: string | null; entry_kind: string }
           | undefined;
         if (existing !== undefined) {
           db.exec("ROLLBACK");
           return Promise.resolve(
-            existing.payload_digest === input.payloadDigest
+            existing.entry_kind === "transition" &&
+              existing.payload_digest === input.payloadDigest
               ? { kind: "duplicate_op" }
               : { kind: "op_id_collision" },
           );
@@ -530,6 +612,97 @@ export function openStore(path: string, time: TimeSource): StoreHandle {
       }
     },
 
+    commitLifecycle(input: CommitLifecycleInput): Promise<CommitTransitionResult> {
+      db.exec("BEGIN IMMEDIATE");
+      try {
+        // F1/A2: the in-transaction idempotency re-check, KIND-AWARE —
+        // an existing row of the fact's OWN kind is a replay, any other
+        // kind under the key is a visible collision. FAIL passes
+        // `fact: null` and consumes no key.
+        if (input.fact !== null) {
+          const existing = db
+            .prepare(
+              "SELECT entry_kind FROM transcript WHERE instance_id = ? AND op_id = ?",
+            )
+            .get(input.instanceId, input.fact.opId) as
+            | { entry_kind: string }
+            | undefined;
+          if (existing !== undefined) {
+            db.exec("ROLLBACK");
+            return Promise.resolve(
+              existing.entry_kind === input.fact.kind
+                ? { kind: "duplicate_op" }
+                : { kind: "op_id_collision" },
+            );
+          }
+        }
+
+        // ONE UPDATE, CAS on version (uniform commit discipline): the
+        // always-written axis trio (kernel_status, terminal_disposition,
+        // wait — F1's always-explicit rule) plus the op's optional
+        // fields; absent optionals leave their columns unchanged.
+        const sets: string[] = [
+          "kernel_status = ?",
+          "terminal_disposition = ?",
+          "wait = ?",
+          "version = version + 1",
+        ];
+        const params: (string | number | null)[] = [
+          input.newKernelStatus,
+          input.newTerminalDisposition,
+          encodeWait(input.newWait),
+        ];
+        if (input.newCurrentStep !== undefined) {
+          sets.push("current_step = ?");
+          params.push(input.newCurrentStep);
+        }
+        if (input.newRound !== undefined) {
+          sets.push("round = ?");
+          params.push(input.newRound);
+        }
+        if (input.newTask !== undefined) {
+          sets.push("task = ?");
+          params.push(input.newTask);
+        }
+        if (input.newRuntimeContext !== undefined) {
+          sets.push("runtime_context = ?");
+          params.push(encodeRuntimeContext(input.newRuntimeContext));
+        }
+        if (input.newFailureReason !== undefined) {
+          sets.push("failure_reason = ?");
+          params.push(input.newFailureReason);
+        }
+        const cas = db
+          .prepare(
+            `UPDATE instances SET ${sets.join(", ")} WHERE instance_id = ? AND version = ?`,
+          )
+          .run(...params, input.instanceId, input.expectedVersion);
+        if (cas.changes === 0) {
+          db.exec("ROLLBACK");
+          return Promise.resolve({ kind: "cas_conflict" });
+        }
+
+        // F2: the fact row rides the SAME transaction (REV-A1-TXN) —
+        // entry_kind = the fact name VERBATIM, the three class columns
+        // NULL by class, issued_agent_config NULL by class forever.
+        if (input.fact !== null) {
+          const next = db
+            .prepare(
+              "SELECT COALESCE(MAX(seq), 0) + 1 AS seq FROM transcript WHERE instance_id = ?",
+            )
+            .get(input.instanceId) as { seq: number };
+          db.prepare(
+            "INSERT INTO transcript (instance_id, seq, op_id, entry_kind, envelope, payload_digest, gate_decisions, issued_agent_config, committed_at) VALUES (?, ?, ?, ?, NULL, NULL, NULL, NULL, ?)",
+          ).run(input.instanceId, next.seq, input.fact.opId, input.fact.kind, time.now());
+        }
+        db.exec("COMMIT");
+        return Promise.resolve({ kind: "committed", version: input.expectedVersion + 1 });
+      } catch (error) {
+        db.exec("ROLLBACK");
+        return Promise.reject(error instanceof Error ? error : new Error(String(error)));
+      }
+    },
+
     listInstances(): Promise<readonly WorkflowInstance[]> {
       const rows = db
         .prepare("SELECT * FROM instances ORDER BY rowid")
@@ -546,7 +719,7 @@ export function openStore(path: string, time: TimeSource): StoreHandle {
       }
       const entries = db
         .prepare(
-          "SELECT seq, entry_kind, envelope, payload_digest, gate_decisions, committed_at FROM transcript WHERE instance_id = ? ORDER BY seq",
+          "SELECT seq, op_id, entry_kind, envelope, payload_digest, gate_decisions, committed_at FROM transcript WHERE instance_id = ? ORDER BY seq",
         )
         .all(instanceId) as unknown as TranscriptRow[];
       return Promise.resolve({
@@ -587,7 +760,7 @@ export function openStore(path: string, time: TimeSource): StoreHandle {
             ? null
             : (db
                 .prepare(
-                  "SELECT seq, entry_kind, envelope, payload_digest, gate_decisions, committed_at FROM transcript WHERE instance_id = ? AND seq > ? ORDER BY seq",
+                  "SELECT seq, op_id, entry_kind, envelope, payload_digest, gate_decisions, committed_at FROM transcript WHERE instance_id = ? AND seq > ? ORDER BY seq",
                 )
                 .all(instanceId, afterSeq) as unknown as TranscriptRow[]);
         db.exec("COMMIT");

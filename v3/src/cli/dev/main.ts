@@ -377,17 +377,26 @@ function validateStep(raw: unknown, index: number): void {
     fixtureError(`${label} must be an object`);
   }
   if (raw["kind"] === "start") {
-    assertExactKeys(raw, ["kind", "instanceId", "task", "expect"], label);
-    if (!isNonEmptyString(raw["instanceId"]) || typeof raw["task"] !== "string") {
-      fixtureError(`${label} requires instanceId (non-empty string) and task (string)`);
+    // W3 (packet ch12-p1b): the start step follows the harness contract
+    // re-base — the START intent's opId joins the keyset, and the
+    // expected version is 2 (genesis v1 + the activation commit).
+    assertExactKeys(raw, ["kind", "instanceId", "opId", "task", "expect"], label);
+    if (
+      !isNonEmptyString(raw["instanceId"]) ||
+      !isNonEmptyString(raw["opId"]) ||
+      typeof raw["task"] !== "string"
+    ) {
+      fixtureError(
+        `${label} requires instanceId and opId (non-empty strings) and task (string)`,
+      );
     }
     const expect = raw["expect"];
     if (!isPlainObject(expect)) {
       fixtureError(`${label}.expect must be an object`);
     }
     assertExactKeys(expect, ["currentStep", "version"], `${label}.expect`);
-    if (!isNonEmptyString(expect["currentStep"]) || expect["version"] !== 1) {
-      fixtureError(`${label}.expect requires currentStep (non-empty string) and version === 1`);
+    if (!isNonEmptyString(expect["currentStep"]) || expect["version"] !== 2) {
+      fixtureError(`${label}.expect requires currentStep (non-empty string) and version === 2`);
     }
     return;
   }
@@ -567,7 +576,10 @@ async function verbReplay(ctx: VerbContext): Promise<number> {
     const ingress = createIngress({ kernel, diag: noopDiagnosticsSink });
     const result = await replayTrace(fixture, {
       submit: (raw) => ingress.submit(raw),
-      start: (input) => kernel.startInstance(input),
+      // W2/W3 (packet ch12-p1b): the dev entrypoint's one-shot call site
+      // rewired to the lifecycle composition seams.
+      create: (input) => kernel.create(input),
+      start: (input) => kernel.start(input),
       store: handle.store,
       // ch11-P2c T1: the seam narrowed to AdmittedTemplate — hand it the
       // admitted value already computed above (the checker reads the flags).

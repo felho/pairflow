@@ -26,6 +26,14 @@ export function deriveGateProjection(
   committed: readonly TranscriptEntry[],
   eventType: EventType,
 ): GateProjection {
+  // G2 (packet ch12-p1b): gates evaluate only in ACTIVE execution —
+  // the state rung precedes every projection read, so a NULL position
+  // here is integrity drift (the type-level narrow).
+  if (instance.currentStep === null) {
+    throw new Error(
+      `kernel integrity: gate projection for instance '${instance.instanceId}' with a NULL current_step`,
+    );
+  }
   return {
     round: instance.round,
     currentStep: instance.currentStep,
@@ -53,6 +61,13 @@ function derivePolicyView(
   const history: GateProjectionEntry[] = [];
   let position = template.start;
   for (const entry of committed) {
+    // F4 (packet ch12-p1b): the projection walks TRANSITION rows only —
+    // fact rows carry no envelope and no gate decisions by class, so
+    // they are class-invisible to gate history (skipping IS the
+    // faithful semantics, not data loss).
+    if (entry.entryKind !== "transition") {
+      continue;
+    }
     const step = template.steps[position];
     if (step === undefined) {
       throw new Error(

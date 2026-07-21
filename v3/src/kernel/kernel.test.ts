@@ -7,6 +7,8 @@ import type {
   GateDecision,
   GateProjection,
   Outcome,
+  TranscriptEntry,
+  TransitionEntry,
   WorkflowInstance,
   AdmittedTemplate,
   WorkflowTemplate,
@@ -78,6 +80,7 @@ const baseInstance: WorkflowInstance = {
   wait: null,
   runtimeContext: { state: "ready", ref: null },
   failureReason: null,
+  runOverrides: {},
   version: 1,
 };
 
@@ -97,6 +100,23 @@ function envelope(
     ...(payload !== undefined ? { payload } : {}),
     expectedRole,
   };
+}
+
+/** These lanes commit only actor transitions (never lifecycle facts), so a
+ * committed transcript row narrows to its transition face (F4 discriminant
+ * narrowing). A fact row here would be a rebase-time bug, not a tolerated
+ * shape — it fails loud rather than silently reading `undefined`. */
+function asTransition(entry: TranscriptEntry): TransitionEntry {
+  if (entry.entryKind !== "transition") {
+    throw new Error(`expected a transition transcript row, got '${entry.entryKind}'`);
+  }
+  return entry;
+}
+
+/** The transition row's retained gate decisions, tolerating an absent row
+ * (the `detail?.transcript[0]?.gateDecisions` read shape). */
+function gatesOf(entry: TranscriptEntry | undefined) {
+  return entry === undefined ? undefined : asTransition(entry).gateDecisions;
 }
 
 async function setup() {
@@ -154,10 +174,11 @@ describe("CT-A1-DUP — op_id idempotency (IC-A1)", () => {
 describe("CAS restart — never re-commit a target computed from stale state", () => {
   function unusedStoreParts(): Pick<
     StorePort,
-    "createInstance" | "listInstances" | "getInstanceDetail" | "getTimeline"
+    "createInstance" | "commitLifecycle" | "listInstances" | "getInstanceDetail" | "getTimeline"
   > {
     return {
       createInstance: () => Promise.reject(new Error("unused")),
+      commitLifecycle: () => Promise.reject(new Error("unused")),
       listInstances: () => Promise.reject(new Error("unused")),
       getInstanceDetail: () => Promise.reject(new Error("unused")),
       getTimeline: () => Promise.reject(new Error("unused")),
@@ -168,7 +189,10 @@ describe("CAS restart — never re-commit a target computed from stale state", (
     let loads = 0;
     let findOpCalls = 0;
     let commits = 0;
-    const landed = { payloadDigest: deriveEmitDigest(envelope("a1", "PASS", 1)) };
+    const landed = {
+      payloadDigest: deriveEmitDigest(envelope("a1", "PASS", 1)),
+      entryKind: "transition" as const,
+    };
     const double: StorePort = {
       ...unusedStoreParts(),
       loadInstance: () => {
@@ -455,7 +479,8 @@ describe("CHK-A1-DIGEST — committed rows carry the emit digest; rejections rec
 
     const detail = await store.getInstanceDetail("inst-1");
     expect(detail?.transcript).toHaveLength(2);
-    for (const entry of detail?.transcript ?? []) {
+    for (const raw of detail?.transcript ?? []) {
+      const entry = asTransition(raw);
       expect(entry.payloadDigest).toBe(deriveEmitDigest(entry.envelope));
     }
   });
@@ -490,7 +515,7 @@ async function fullState(store: StorePort, id: string): Promise<FullState> {
   }
   return {
     instance: detail.instance,
-    rows: detail.transcript.map((entry) => [entry.seq, entry.envelope.opId] as const),
+    rows: detail.transcript.map((entry) => [entry.seq, asTransition(entry).envelope.opId] as const),
   };
 }
 
@@ -908,7 +933,7 @@ describe("gate rung — dimension 1: placement grid (the rung never runs before 
     // PASS on review is ungated (the gate is on CONVERGED).
     expect((await kernel.handle(reviewEmit("ug1", "PASS", 1))).kind).toBe("committed");
     const detail = await store.getInstanceDetail("inst-1");
-    expect(detail?.transcript[0]?.gateDecisions).toEqual([]);
+    expect(gatesOf(detail?.transcript[0])).toEqual([]);
     expect(log).toEqual([]);
   });
 });
@@ -989,7 +1014,7 @@ describe("gate rung — dimension 2: ordered, first-block-wins combination lanes
     });
     expect((await kernel.handle(reviewEmit("c1", "CONVERGED", 1))).kind).toBe("committed");
     const detail = await store.getInstanceDetail("inst-1");
-    expect(detail?.transcript[0]?.gateDecisions).toEqual([
+    expect(gatesOf(detail?.transcript[0])).toEqual([
       { uses: "g.warn", verdict: "warn", reason: "w" },
       { uses: "g.allow", verdict: "allow" },
     ]);
@@ -1059,7 +1084,7 @@ describe("gate rung — dimension 4: fail-closed backstop lanes", () => {
     expect(runner.calls).toHaveLength(1);
     // The retained allow decision rides the committed entry (reason + refs).
     const detail = await handle.store.getInstanceDetail("inst-1");
-    expect(detail?.transcript[0]?.gateDecisions).toEqual([
+    expect(gatesOf(detail?.transcript[0])).toEqual([
       { uses: "g.proc", verdict: "allow", reason: "exit_zero", evidenceRefs: ["ev-1"] },
     ]);
   });
@@ -1142,7 +1167,7 @@ describe("gate rung — dimension 6: retained-decision fidelity", () => {
     expect((await kernel.handle(reviewEmit("w3", "CONVERGED", 3))).kind).toBe("committed");
 
     const detail = await handle.store.getInstanceDetail("inst-1");
-    expect(detail?.transcript.map((r) => r.gateDecisions)).toEqual([
+    expect(detail?.transcript.map((r) => asTransition(r).gateDecisions)).toEqual([
       [],
       [],
       [
@@ -1350,6 +1375,7 @@ describe("gate rung — dimension 12: CAS-restart re-derives the projection per 
     // (arm-gate-2 finding 2): a cross-attempt cache of the read OR of
     // the decision would surface as a repeated history length.
     const seedEntry = {
+      entryKind: "transition" as const,
       seq: 1,
       envelope: envelope("seed-1", "PASS", 1, undefined, "implementer"),
       payloadDigest: "seed-digest",
@@ -1360,6 +1386,7 @@ describe("gate rung — dimension 12: CAS-restart re-derives the projection per 
       loadInstance: () => Promise.resolve(reviewInstance),
       findOp: () => Promise.resolve(null),
       createInstance: () => Promise.reject(new Error("unused")),
+      commitLifecycle: () => Promise.reject(new Error("unused")),
       listInstances: () => Promise.reject(new Error("unused")),
       getInstanceDetail: () => Promise.reject(new Error("unused")),
       getTimeline: () => {
@@ -1402,6 +1429,7 @@ describe("gate rung — the grid hostile-store lanes (integrity throws, not reje
       loadInstance: () => Promise.resolve(reviewInstance),
       findOp: () => Promise.resolve(null),
       createInstance: () => Promise.reject(new Error("unused")),
+      commitLifecycle: () => Promise.reject(new Error("unused")),
       listInstances: () => Promise.reject(new Error("unused")),
       getInstanceDetail: () => Promise.reject(new Error("unused")),
       getTimeline: () => Promise.reject(new Error("unused")),
@@ -1585,7 +1613,7 @@ describe("gate rung — the six-outcome family end-to-end (M1, full-decision equ
 
   async function retained(store: StorePort): Promise<unknown> {
     const detail = await store.getInstanceDetail("inst-1");
-    return detail?.transcript[0]?.gateDecisions;
+    return gatesOf(detail?.transcript[0]);
   }
 
   it("ok/exit 0 → allow → commit; retained decision carries reason=exit_zero + [logRef]", async () => {
@@ -1751,7 +1779,7 @@ describe("gate rung — E2 confinement: hostile opaque values retained VERBATIM 
     );
     expect(outcome.kind).toBe("committed");
     const detail = await store.getInstanceDetail("inst-1");
-    expect(detail?.transcript[0]?.gateDecisions).toEqual([
+    expect(gatesOf(detail?.transcript[0])).toEqual([
       {
         uses: "g.proc",
         verdict: "allow",

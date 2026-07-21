@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { admitTemplate } from "./definition/index.js";
 import { noopDiagnosticsSink } from "./diag/index.js";
-import type { AdmittedTemplate, Outcome, WorkflowTemplate } from "./domain/index.js";
+import type { AdmittedTemplate, Outcome, TransitionEntry, WorkflowTemplate } from "./domain/index.js";
 import { deriveEmitDigest } from "./emit/index.js";
 import { createGateRegistry } from "./gates/index.js";
 import { createIngress } from "./ingress/index.js";
@@ -91,8 +91,9 @@ const l2aFixture: TraceFixture = {
       kind: "start",
       instanceId: "inst-l2a",
       task: "run the gated pair",
+      opId: "op-start",
       runtimeContextRef: READY_REF,
-      expect: { currentStep: "implement", version: 1 },
+      expect: { currentStep: "implement", version: 2 },
     },
     // 1 · codex PASS on implement: pnpm test → exit 0 → allow → commit → review.
     {
@@ -101,9 +102,9 @@ const l2aFixture: TraceFixture = {
       type: "PASS",
       actorId: "codex",
       payload: { note: "codex:op-1" },
-      expectedVersion: 1,
+      expectedVersion: 2,
       expectedRole: "implementer",
-      expect: { kind: "committed", version: 2 },
+      expect: { kind: "committed", version: 3 },
     },
     // 2 · claude PASS on review (pass back, ungated) → commit → implement;
     //     target = template.start ⇒ round advances to 2 ("a later round").
@@ -113,9 +114,9 @@ const l2aFixture: TraceFixture = {
       type: "PASS",
       actorId: "claude",
       payload: { note: "claude:op-2" },
-      expectedVersion: 2,
+      expectedVersion: 3,
       expectedRole: "reviewer",
-      expect: { kind: "committed", version: 3 },
+      expect: { kind: "committed", version: 4 },
     },
     // 3 · codex PASS on implement (round 2): pnpm test → exit 1 (a test
     //     failed) → block → Rejected(gate_blocked(test_failed)); no commit.
@@ -125,7 +126,7 @@ const l2aFixture: TraceFixture = {
       type: "PASS",
       actorId: "codex",
       payload: { note: "codex:op-3" },
-      expectedVersion: 3,
+      expectedVersion: 4,
       expectedRole: "implementer",
       expect: { kind: "rejected", reason: "gate_blocked" },
     },
@@ -138,21 +139,22 @@ const l2aFixture: TraceFixture = {
       type: "PASS",
       actorId: "codex",
       payload: { note: "codex:op-4" },
-      expectedVersion: 3,
+      expectedVersion: 4,
       expectedRole: "implementer",
       expect: { kind: "rejected", reason: "gate_blocked" },
     },
   ],
   finalTranscript: [
-    [1, "op-1"],
-    [2, "op-2"],
+    [1, "op-start"],
+    [2, "op-1"],
+    [3, "op-2"],
   ],
   finalState: {
     currentStep: "implement",
     round: 2,
     kernelStatus: "ACTIVE",
     terminalDisposition: null,
-    version: 3,
+    version: 4,
   },
 };
 
@@ -174,7 +176,8 @@ describe("l2a golden trace — the HANDLE process branch end-to-end (09-l2a Runt
 
     const result = await replayTrace(l2aFixture, {
       submit: (raw) => ingress.submit(raw),
-      start: (input) => kernel.startInstance(input),
+      create: (input) => kernel.create(input),
+      start: (input) => kernel.start(input),
       store: handle.store,
       template: admitted,
       // The store-visible evidence half resolves through the kit runner (T2).
@@ -191,8 +194,12 @@ describe("l2a golden trace — the HANDLE process branch end-to-end (09-l2a Runt
     }
 
     // The committed op-1 entry retains the allow decision with reason exit_zero
-    // (the zero-bucket default) and its evidence ref.
-    const rows = result.finalDetail.transcript;
+    // (the zero-bucket default) and its evidence ref. The gate-decision belt
+    // reads the TRANSITION rows only (the seq-1 STARTED fact is a lifecycle
+    // row, no gate axis).
+    const rows = result.finalDetail.transcript.filter(
+      (r): r is TransitionEntry => r.entryKind === "transition",
+    );
     expect(rows.map((r) => r.gateDecisions)).toEqual([
       [{ uses: "external.process", verdict: "allow", reason: "exit_zero", evidenceRefs: ["ev-pass"] }],
       [],

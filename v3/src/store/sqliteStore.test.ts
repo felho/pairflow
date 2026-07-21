@@ -5,10 +5,26 @@ import { DatabaseSync } from "node:sqlite";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import type { EventEnvelope, WorkflowInstance } from "../domain/index.js";
+import type {
+  EventEnvelope,
+  TranscriptEntry,
+  TransitionEntry,
+  WorkflowInstance,
+} from "../domain/index.js";
 import { deriveEmitDigest } from "../emit/index.js";
 import { createControlledClock } from "../testkit/index.js";
 import { openStore } from "./sqliteStore.js";
+
+// ch12-p1b: transcript reads are now the discriminated union
+// TransitionEntry | LifecycleFactEntry. These commitTransition-only
+// lanes read transition rows exclusively — narrow (throwing on any
+// other class, so the assertion never silently weakens to a fact row).
+function asTransition(entry: TranscriptEntry | undefined): TransitionEntry {
+  if (entry?.entryKind !== "transition") {
+    throw new Error(`expected a transition entry, got ${String(entry?.entryKind)}`);
+  }
+  return entry;
+}
 
 const instance: WorkflowInstance = {
   instanceId: "inst-1",
@@ -23,6 +39,7 @@ const instance: WorkflowInstance = {
   wait: null,
   runtimeContext: { state: "ready", ref: null },
   failureReason: null,
+  runOverrides: {},
   version: 1,
 };
 
@@ -79,7 +96,7 @@ describe("commitTransition — atomic transition commit (l0a invariant)", () => 
     expect(detail?.instance.currentStep).toBe("review");
     expect(detail?.transcript).toHaveLength(1);
     expect(detail?.transcript[0]?.seq).toBe(1);
-    expect(detail?.transcript[0]?.envelope).toEqual(envelope("a1", 1));
+    expect(asTransition(detail?.transcript[0]).envelope).toEqual(envelope("a1", 1));
     handle.close();
   });
 
@@ -454,8 +471,11 @@ describe("op_id_collision — the digest-aware idempotency rung (packet ch5-P4)"
       newTerminalDisposition: null,
     });
     const detail = await handle.store.getInstanceDetail("inst-1");
-    expect(detail?.transcript[0]?.payloadDigest).toBe(DIGEST);
-    expect(await handle.store.findOp("inst-1", "a1")).toEqual({ payloadDigest: DIGEST });
+    expect(asTransition(detail?.transcript[0]).payloadDigest).toBe(DIGEST);
+    expect(await handle.store.findOp("inst-1", "a1")).toEqual({
+      payloadDigest: DIGEST,
+      entryKind: "transition",
+    });
     handle.close();
   });
 });
@@ -574,7 +594,7 @@ describe("getTimeline — the ch6-P1 cursor read", () => {
     const handle = await seeded();
     const full = await handle.store.getTimeline("inst-1", 0);
     expect(full?.map((r) => r.seq)).toEqual([1, 2, 3]);
-    expect(full?.map((r) => r.envelope.opId)).toEqual(["a1", "b2", "c3"]);
+    expect(full?.map((r) => asTransition(r).envelope.opId)).toEqual(["a1", "b2", "c3"]);
     const suffix = await handle.store.getTimeline("inst-1", 2);
     expect(suffix?.map((r) => r.seq)).toEqual([3]);
     // Exact-last-seq and beyond-end are both VALID and empty — never null.
@@ -698,7 +718,7 @@ describe("expectedRole round-trip (packet ch11-P1, W6)", () => {
     });
     expect(result.kind).toBe("committed");
     const detail = await handle.store.getInstanceDetail("inst-1");
-    expect(detail?.transcript[0]?.envelope).toEqual(roleEnvelope);
+    expect(asTransition(detail?.transcript[0]).envelope).toEqual(roleEnvelope);
   });
 });
 
@@ -734,8 +754,8 @@ describe("gate_decisions — the retained-decision column (packet ch11-P2b, S1�
     // and getTimeline fails this deep-equality.
     const detail = await handle.store.getInstanceDetail("inst-1");
     const timeline = await handle.store.getTimeline("inst-1", 0);
-    expect(detail?.transcript[0]?.gateDecisions).toEqual(decisions);
-    expect(timeline?.[0]?.gateDecisions).toEqual(decisions);
+    expect(asTransition(detail?.transcript[0]).gateDecisions).toEqual(decisions);
+    expect(asTransition(timeline?.[0]).gateDecisions).toEqual(decisions);
     expect(timeline).toEqual(detail?.transcript);
     handle.close();
   });
@@ -755,7 +775,7 @@ describe("gate_decisions — the retained-decision column (packet ch11-P2b, S1�
       newTerminalDisposition: null,
     });
     const detail = await handle.store.getInstanceDetail("inst-1");
-    expect(detail?.transcript[0]?.gateDecisions).toEqual([]);
+    expect(asTransition(detail?.transcript[0]).gateDecisions).toEqual([]);
     handle.close();
   });
 
@@ -920,23 +940,24 @@ describe("the axis columns — schema shape (packet ch12-p1a, S2–S11)", () => 
     handle.close();
   });
 
-  it("S11 class iff, read side: a staged fact-kind row (or a transition row with a NULL class field) is refused by the mapper", async () => {
+  it("S11 class iff, read side: a transition row with NULL class fields is refused by the mapper", async () => {
     const path = tempDbPath();
     const handle = openStore(path, createControlledClock(0));
     await handle.store.createInstance(instance);
+    // ch12-p1b RE-BASE: the fact reader HAS landed — a STARTED/CANCELLED/
+    // TASK_SUPPLIED row now maps to a LifecycleFactEntry (the transcript
+    // mapper returns BOTH classes; the packet owner's fact-reader family
+    // exercises that acceptance). What stays load-bearing on THIS lane is
+    // the transition-side class iff: a row DECLARED 'transition' but
+    // missing its class-required fields (envelope / payload_digest /
+    // gate_decisions all NULL) is refused loudly.
     const raw = new DatabaseSync(path);
-    // A fact row has NO reader until P1b — the transition-side mapper refuses it loudly.
     raw
       .prepare(
-        "INSERT INTO transcript (instance_id, seq, op_id, entry_kind, envelope, payload_digest, gate_decisions, issued_agent_config, committed_at) VALUES (?, ?, ?, ?, NULL, NULL, NULL, NULL, ?)",
+        "INSERT INTO transcript (instance_id, seq, op_id, entry_kind, envelope, payload_digest, gate_decisions, issued_agent_config, committed_at) VALUES (?, ?, ?, 'transition', NULL, NULL, NULL, NULL, ?)",
       )
-      .run("inst-1", 1, "fact-1", "STARTED", 0);
+      .run("inst-1", 1, "fact-1", 0);
     raw.close();
-    await expect(handle.store.getTimeline("inst-1", 0)).rejects.toThrow(/entry_kind 'STARTED'/);
-
-    const raw2 = new DatabaseSync(path);
-    raw2.prepare("UPDATE transcript SET entry_kind = 'transition' WHERE op_id = 'fact-1'").run();
-    raw2.close();
     await expect(handle.store.getTimeline("inst-1", 0)).rejects.toThrow(/class-required field/);
     handle.close();
   });
@@ -971,11 +992,15 @@ describe("the axis columns — schema shape (packet ch12-p1a, S2–S11)", () => 
     });
   }
 
-  // Build-close aftermath (ch12-p1a): the S9 guard driven PER COLUMN —
-  // task=NULL and current_step=NULL as SEPARATE cases, each alone, so a
-  // guard that dropped one disjunct goes red on exactly its lane.
+  // ch12-p1b RE-BASE (G2): the S9 guard is now STATUS-AWARE — a NULL
+  // task/current_step is LEGAL at genesis (CREATED/WAITING) and REFUSED
+  // only when the row is ACTIVE (or terminal-done). Driven PER COLUMN
+  // over an ACTIVE row — task=NULL and current_step=NULL as SEPARATE
+  // cases, each alone, so a guard that dropped one disjunct goes red on
+  // exactly its lane. (`instance` is ACTIVE, so the fabricated row is
+  // the refused ACTIVE+NULL shape, not a legal genesis NULL.)
   for (const column of ["task", "current_step"] as const) {
-    it(`the mapper refuses a NULL ${column} ALONE (S9's type-staging guard — the P1b readers have not landed)`, async () => {
+    it(`the mapper refuses a NULL ${column} ALONE on an ACTIVE row (S9's status-aware guard)`, async () => {
       const path = tempDbPath();
       const handle = openStore(path, createControlledClock(0));
       await handle.store.createInstance(instance);
@@ -986,4 +1011,264 @@ describe("the axis columns — schema shape (packet ch12-p1a, S2–S11)", () => 
       handle.close();
     });
   }
+});
+
+describe("commitLifecycle — the uniform-commit write member (packet ch12-p1b, F1/F2)", () => {
+  const genesis: WorkflowInstance = {
+    instanceId: "lc-1",
+    templateRef: { id: "local-pair-v0", version: 1 },
+    task: null,
+    binding: { implementer: "codex", reviewer: "claude" },
+    currentStep: null,
+    round: 0,
+    kernelStatus: "CREATED",
+    terminalDisposition: null,
+    activationMode: "deferred_kickoff",
+    wait: null,
+    runtimeContext: { state: "none" },
+    failureReason: null,
+    runOverrides: {},
+    version: 1,
+  };
+  const HOLD_WAIT = {
+    kind: "kickoff_pending" as const,
+    requestedBy: "activation",
+    resumeEvents: ["KICKOFF"],
+  };
+
+  it("writes the state change + the fact row in ONE commit; the fact row is all-three-NULL by class", async () => {
+    const path = tempDbPath();
+    const handle = openStore(path, createControlledClock(7));
+    await handle.store.createInstance(genesis);
+    const result = await handle.store.commitLifecycle({
+      instanceId: "lc-1",
+      expectedVersion: 1,
+      fact: { kind: "STARTED", opId: "op-s" },
+      newKernelStatus: "WAITING",
+      newTerminalDisposition: null,
+      newWait: HOLD_WAIT,
+      newRuntimeContext: { state: "ready", ref: null },
+    });
+    expect(result).toEqual({ kind: "committed", version: 2 });
+    const detail = await handle.store.getInstanceDetail("lc-1");
+    expect(detail?.instance.kernelStatus).toBe("WAITING");
+    expect(detail?.instance.wait).toEqual(HOLD_WAIT);
+    expect(detail?.instance.version).toBe(2);
+    // The mapped fact entry — the class-shared fields in full (F3).
+    expect(detail?.transcript).toEqual([
+      { entryKind: "STARTED", seq: 1, opId: "op-s", committedAt: 7 },
+    ]);
+    // The RAW row: the three class columns AND issued_agent_config all
+    // NULL by class (F2 — per-column assert, not keyset-only).
+    const raw = new DatabaseSync(path);
+    const row = raw
+      .prepare(
+        "SELECT entry_kind, envelope, payload_digest, gate_decisions, issued_agent_config FROM transcript WHERE instance_id = 'lc-1'",
+      )
+      .get() as Record<string, unknown>;
+    raw.close();
+    expect(row).toEqual({
+      entry_kind: "STARTED",
+      envelope: null,
+      payload_digest: null,
+      gate_decisions: null,
+      issued_agent_config: null,
+    });
+    handle.close();
+  });
+
+  it("rolls back BOTH halves on a fault between the instances UPDATE and the fact INSERT", async () => {
+    const path = tempDbPath();
+    const handle = openStore(path, createControlledClock(0));
+    await handle.store.createInstance(genesis);
+    const raw = new DatabaseSync(path);
+    raw.exec(
+      "CREATE TRIGGER fault_lc BEFORE INSERT ON transcript BEGIN SELECT RAISE(ABORT, 'fault: lifecycle split'); END",
+    );
+    raw.close();
+    await expect(
+      handle.store.commitLifecycle({
+        instanceId: "lc-1",
+        expectedVersion: 1,
+        fact: { kind: "STARTED", opId: "op-s" },
+        newKernelStatus: "WAITING",
+        newTerminalDisposition: null,
+        newWait: HOLD_WAIT,
+      }),
+    ).rejects.toThrow(/fault: lifecycle split/);
+    const check = new DatabaseSync(path);
+    const row = check
+      .prepare("SELECT version, kernel_status, wait FROM instances WHERE instance_id = 'lc-1'")
+      .get() as { version: number; kernel_status: string; wait: string | null };
+    expect(row).toEqual({ version: 1, kernel_status: "CREATED", wait: null });
+    expect(
+      (check.prepare("SELECT COUNT(*) AS n FROM transcript").get() as { n: number }).n,
+    ).toBe(0);
+    check.exec("DROP TRIGGER fault_lc");
+    check.close();
+    // The same handle commits cleanly after the fault is dropped.
+    const after = await handle.store.commitLifecycle({
+      instanceId: "lc-1",
+      expectedVersion: 1,
+      fact: { kind: "STARTED", opId: "op-s" },
+      newKernelStatus: "WAITING",
+      newTerminalDisposition: null,
+      newWait: HOLD_WAIT,
+    });
+    expect(after.kind).toBe("committed");
+    handle.close();
+  });
+
+  it("re-checks idempotency IN the transaction, kind-aware: own kind → duplicate_op, other kind → op_id_collision", async () => {
+    const handle = openStore(":memory:", createControlledClock(0));
+    await handle.store.createInstance(genesis);
+    const first = await handle.store.commitLifecycle({
+      instanceId: "lc-1",
+      expectedVersion: 1,
+      fact: { kind: "STARTED", opId: "op-s" },
+      newKernelStatus: "WAITING",
+      newTerminalDisposition: null,
+      newWait: HOLD_WAIT,
+    });
+    expect(first.kind).toBe("committed");
+    expect(
+      await handle.store.commitLifecycle({
+        instanceId: "lc-1",
+        expectedVersion: 2,
+        fact: { kind: "STARTED", opId: "op-s" },
+        newKernelStatus: "WAITING",
+        newTerminalDisposition: null,
+        newWait: HOLD_WAIT,
+      }),
+    ).toEqual({ kind: "duplicate_op" });
+    expect(
+      await handle.store.commitLifecycle({
+        instanceId: "lc-1",
+        expectedVersion: 2,
+        fact: { kind: "CANCELLED", opId: "op-s" },
+        newKernelStatus: "TERMINAL",
+        newTerminalDisposition: "cancelled",
+        newWait: null,
+      }),
+    ).toEqual({ kind: "op_id_collision" });
+    handle.close();
+  });
+
+  it("reports cas_conflict and writes NOTHING on a stale expectedVersion", async () => {
+    const handle = openStore(":memory:", createControlledClock(0));
+    await handle.store.createInstance(genesis);
+    const result = await handle.store.commitLifecycle({
+      instanceId: "lc-1",
+      expectedVersion: 9,
+      fact: { kind: "STARTED", opId: "op-s" },
+      newKernelStatus: "WAITING",
+      newTerminalDisposition: null,
+      newWait: HOLD_WAIT,
+    });
+    expect(result).toEqual({ kind: "cas_conflict" });
+    const detail = await handle.store.getInstanceDetail("lc-1");
+    expect(detail?.instance.version).toBe(1);
+    expect(detail?.transcript).toEqual([]);
+    handle.close();
+  });
+
+  it("FAIL's fact-less commit: version advances with ZERO transcript rows; absent optionals leave columns unchanged", async () => {
+    const handle = openStore(":memory:", createControlledClock(0));
+    await handle.store.createInstance(genesis);
+    const result = await handle.store.commitLifecycle({
+      instanceId: "lc-1",
+      expectedVersion: 1,
+      fact: null,
+      newKernelStatus: "TERMINAL",
+      newTerminalDisposition: "failed",
+      newWait: null,
+      newFailureReason: "boom",
+    });
+    expect(result).toEqual({ kind: "committed", version: 2 });
+    const detail = await handle.store.getInstanceDetail("lc-1");
+    expect(detail?.instance.kernelStatus).toBe("TERMINAL");
+    expect(detail?.instance.terminalDisposition).toBe("failed");
+    expect(detail?.instance.failureReason).toBe("boom");
+    // Absent optionals unchanged: task/currentStep/round/runtimeContext
+    // keep their genesis values.
+    expect(detail?.instance.task).toBeNull();
+    expect(detail?.instance.currentStep).toBeNull();
+    expect(detail?.instance.round).toBe(0);
+    expect(detail?.instance.runtimeContext).toEqual({ state: "none" });
+    expect(detail?.transcript).toEqual([]);
+    handle.close();
+  });
+
+  it("refuses a fact row carrying a class-forbidden column — per conjunct (the S11 iff, fact side)", async () => {
+    const path = tempDbPath();
+    const handle = openStore(path, createControlledClock(0));
+    await handle.store.createInstance(genesis);
+    await handle.store.commitLifecycle({
+      instanceId: "lc-1",
+      expectedVersion: 1,
+      fact: { kind: "STARTED", opId: "op-s" },
+      newKernelStatus: "WAITING",
+      newTerminalDisposition: null,
+      newWait: HOLD_WAIT,
+    });
+    const conjuncts = [
+      ["envelope", "'{}'", /non-null envelope/],
+      ["payload_digest", "'sha:fake'", /non-null payload_digest/],
+      ["gate_decisions", "'[]'", /non-null gate_decisions/],
+    ] as const;
+    for (const [column, value, pattern] of conjuncts) {
+      const raw = new DatabaseSync(path);
+      raw.exec(`UPDATE transcript SET ${column} = ${value} WHERE instance_id = 'lc-1'`);
+      raw.close();
+      // The mapper refusal surfaces as a SYNCHRONOUS throw (the P1a
+      // rowToInstance culture).
+      expect(() => handle.store.getInstanceDetail("lc-1")).toThrow(pattern);
+      const restore = new DatabaseSync(path);
+      restore.exec(`UPDATE transcript SET ${column} = NULL WHERE instance_id = 'lc-1'`);
+      restore.close();
+    }
+    handle.close();
+  });
+
+  it("refuses an unknown entry_kind token at the mapper", async () => {
+    const path = tempDbPath();
+    const handle = openStore(path, createControlledClock(0));
+    await handle.store.createInstance(genesis);
+    await handle.store.commitLifecycle({
+      instanceId: "lc-1",
+      expectedVersion: 1,
+      fact: { kind: "STARTED", opId: "op-s" },
+      newKernelStatus: "WAITING",
+      newTerminalDisposition: null,
+      newWait: HOLD_WAIT,
+    });
+    const raw = new DatabaseSync(path);
+    raw.exec("UPDATE transcript SET entry_kind = 'PAUSED' WHERE instance_id = 'lc-1'");
+    raw.close();
+    expect(() => handle.store.getInstanceDetail("lc-1")).toThrow(
+      /unknown entry_kind 'PAUSED'/,
+    );
+    handle.close();
+  });
+
+  it("round-trips a non-empty runOverrides snapshot through the RAW column (G1's red-on-drop)", async () => {
+    const path = tempDbPath();
+    const handle = openStore(path, createControlledClock(0));
+    await handle.store.createInstance({
+      ...genesis,
+      instanceId: "lc-ro",
+      runOverrides: { review: { budget: 2, mode: "strict" } },
+    });
+    const raw = new DatabaseSync(path);
+    const row = raw
+      .prepare("SELECT run_overrides FROM instances WHERE instance_id = 'lc-ro'")
+      .get() as { run_overrides: string };
+    raw.close();
+    // Canonical bytes (sorted keys) — a regression to the retired "{}"
+    // hardcode reds here.
+    expect(row.run_overrides).toBe('{"review":{"budget":2,"mode":"strict"}}');
+    const loaded = await handle.store.loadInstance("lc-ro");
+    expect(loaded?.runOverrides).toEqual({ review: { budget: 2, mode: "strict" } });
+    handle.close();
+  });
 });

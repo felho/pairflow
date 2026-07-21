@@ -1,7 +1,16 @@
 import { describe, expect, it } from "vitest";
 
 import { admitTemplate } from "../definition/index.js";
-import type { AdmittedTemplate, EventEnvelope, Outcome, Started, WorkflowInstance, WorkflowTemplate } from "../domain/index.js";
+import type {
+  Activated,
+  AdmittedTemplate,
+  Created,
+  EventEnvelope,
+  LifecycleFactEntry,
+  Outcome,
+  WorkflowInstance,
+  WorkflowTemplate,
+} from "../domain/index.js";
 import type { GateCatalog, ProcessGateEvidence } from "../ports/index.js";
 import type { InstanceDetail, StorePort } from "../ports/store.js";
 import { fixtureTemplate } from "./templateFixture.js";
@@ -37,12 +46,19 @@ function envelope(opId: string, type: string): EventEnvelope {
   return { instanceId: "i1", opId, type, actorId: "codex", expectedVersion: 1 };
 }
 
+/** W3 (packet ch12-p1b): the activation's STARTED fact — seq 1, the
+ * op_id consumption record of the START intent. */
+function startedFact(opId: string, committedAt = 1_000): LifecycleFactEntry {
+  return { entryKind: "STARTED", seq: 1, opId, committedAt };
+}
+
 function fakeStore(detail: InstanceDetail, created: WorkflowInstance): StorePort {
   return {
     loadInstance: () => Promise.resolve(created),
     findOp: () => Promise.reject(new Error("unused")),
     createInstance: () => Promise.reject(new Error("unused")),
     commitTransition: () => Promise.reject(new Error("unused")),
+    commitLifecycle: () => Promise.reject(new Error("unused")),
     listInstances: () => Promise.reject(new Error("unused")),
     getInstanceDetail: () => Promise.resolve(detail),
     getTimeline: () => Promise.reject(new Error("unused")),
@@ -51,16 +67,23 @@ function fakeStore(detail: InstanceDetail, created: WorkflowInstance): StorePort
 
 function fakeSeams(detail: InstanceDetail, committedVersions: readonly number[]): TraceSeams {
   const created: WorkflowInstance = { ...detail.instance, currentStep: "implement" };
-  const started: Started = {
-    kind: "started",
+  // W3 (packet ch12-p1b): the CREATE→START composition — CREATE mints
+  // genesis (v1), START activates (v2) and returns the first dispatch.
+  const createdOutcome: Created = {
+    kind: "created",
     instanceId: detail.instance.instanceId,
     version: 1,
+  };
+  const activated: Activated = {
+    kind: "activated",
+    instanceId: detail.instance.instanceId,
+    version: 2,
     intent: {
       actor: "codex",
       packet: {
         instanceId: detail.instance.instanceId,
         expectedVersion: 1,
-        task: detail.instance.task,
+        task: detail.instance.task ?? "t",
         role: "implementer",
         instruction: "build it",
         availableOps: ["PASS"],
@@ -77,7 +100,8 @@ function fakeSeams(detail: InstanceDetail, committedVersions: readonly number[])
       const outcome: Outcome = { kind: "committed", version, intent: null };
       return Promise.resolve(outcome);
     },
-    start: () => Promise.resolve(started),
+    create: () => Promise.resolve(createdOutcome),
+    start: () => Promise.resolve(activated),
     store: fakeStore(detail, created),
     template,
   };
@@ -101,11 +125,15 @@ describe("trace harness — fake-seam negatives (packet ch5-P3)", () => {
         wait: null,
         runtimeContext: { state: "ready", ref: null },
         failureReason: null,
-        version: 3,
+        runOverrides: {},
+        version: 4,
       },
+      // W3: STARTED fact at seq 1; the seq gap now rides the transitions
+      // (2→4, missing 3) so only the post-condition checkers catch it.
       transcript: [
-        { seq: 1, envelope: envelope("a1", "PASS"), payloadDigest: "d-a1", gateDecisions: [], committedAt: 1_001 },
-        { seq: 3, envelope: envelope("b2", "CONVERGED"), payloadDigest: "d-b2", gateDecisions: [], committedAt: 1_002 },
+        startedFact("s1"),
+        { entryKind: "transition", seq: 2, envelope: envelope("a1", "PASS"), payloadDigest: "d-a1", gateDecisions: [], committedAt: 1_001 },
+        { entryKind: "transition", seq: 4, envelope: envelope("b2", "CONVERGED"), payloadDigest: "d-b2", gateDecisions: [], committedAt: 1_002 },
       ],
     };
     const fixture: TraceFixture = {
@@ -115,24 +143,26 @@ describe("trace harness — fake-seam negatives (packet ch5-P3)", () => {
           kind: "start",
           instanceId: "i1",
           task: "corrupt fixture",
-          expect: { currentStep: "implement", version: 1 },
+          opId: "s1",
+          expect: { currentStep: "implement", version: 2 },
         },
-        { kind: "emit", opId: "a1", type: "PASS", actorId: "codex", expectedVersion: 1, expect: { kind: "committed", version: 2 } },
-        { kind: "emit", opId: "b2", type: "CONVERGED", actorId: "claude", expectedVersion: 2, expect: { kind: "committed", version: 3 } },
+        { kind: "emit", opId: "a1", type: "PASS", actorId: "codex", expectedVersion: 2, expect: { kind: "committed", version: 3 } },
+        { kind: "emit", opId: "b2", type: "CONVERGED", actorId: "claude", expectedVersion: 3, expect: { kind: "committed", version: 4 } },
       ],
       finalTranscript: [
-        [1, "a1"],
-        [3, "b2"],
+        [1, "s1"],
+        [2, "a1"],
+        [4, "b2"],
       ],
       finalState: {
         currentStep: "done",
         round: 1,
         kernelStatus: "TERMINAL",
         terminalDisposition: "done",
-        version: 3,
+        version: 4,
       },
     };
-    await expect(replayTrace(fixture, fakeSeams(corrupt, [2, 3]))).rejects.toThrow(
+    await expect(replayTrace(fixture, fakeSeams(corrupt, [3, 4]))).rejects.toThrow(
       /post-condition checkers rejected/,
     );
   });
@@ -152,6 +182,7 @@ describe("trace harness — fake-seam negatives (packet ch5-P3)", () => {
         wait: null,
         runtimeContext: { state: "ready", ref: null },
         failureReason: null,
+        runOverrides: {},
         version: 1,
       },
       transcript: [],
@@ -163,7 +194,8 @@ describe("trace harness — fake-seam negatives (packet ch5-P3)", () => {
           kind: "start",
           instanceId: "i1",
           task: "t",
-          expect: { currentStep: "implement", version: 1 },
+          opId: "s1",
+          expect: { currentStep: "implement", version: 2 },
         },
         { kind: "emit", opId: "a1", type: "PASS", actorId: "codex", expect: { kind: "committed", version: 2 } },
       ],
@@ -197,10 +229,11 @@ describe("trace harness — the typed mismatch contract (packet ch6-P4b)", () =>
       wait: null,
       runtimeContext: { state: "ready", ref: null },
       failureReason: null,
+      runOverrides: {},
       version: 2,
     },
     transcript: [
-      { seq: 1, envelope: envelope("a1", "PASS"), payloadDigest: "d-a1", gateDecisions: [], committedAt: 1_001 },
+      { entryKind: "transition", seq: 1, envelope: envelope("a1", "PASS"), payloadDigest: "d-a1", gateDecisions: [], committedAt: 1_001 },
     ],
   };
 
@@ -212,10 +245,11 @@ describe("trace harness — the typed mismatch contract (packet ch6-P4b)", () =>
           kind: "start",
           instanceId: "i1",
           task: "t",
-          expect: { currentStep: "implement", version: 1 },
+          opId: "s1",
+          expect: { currentStep: "implement", version: 2 },
         },
-        // The fake seam commits version 2; the fixture demands 3.
-        { kind: "emit", opId: "a1", type: "PASS", actorId: "codex", expectedVersion: 1, expect: { kind: "committed", version: 3 } },
+        // The fake seam commits version 3; the fixture demands 4.
+        { kind: "emit", opId: "a1", type: "PASS", actorId: "codex", expectedVersion: 2, expect: { kind: "committed", version: 4 } },
       ],
       finalTranscript: [[1, "a1"]],
       finalState: {
@@ -226,7 +260,7 @@ describe("trace harness — the typed mismatch contract (packet ch6-P4b)", () =>
         version: 2,
       },
     };
-    const failure = await replayTrace(fixture, fakeSeams(detail, [2])).then(
+    const failure = await replayTrace(fixture, fakeSeams(detail, [3])).then(
       () => null,
       (error: unknown) => error,
     );
@@ -234,8 +268,8 @@ describe("trace harness — the typed mismatch contract (packet ch6-P4b)", () =>
     if (failure instanceof TraceMismatchError) {
       expect(failure.lane).toBe("outcome");
       expect(failure.stepIndex).toBe(1);
-      expect(failure.expected).toBe(3);
-      expect(failure.actual).toBe(2);
+      expect(failure.expected).toBe(4);
+      expect(failure.actual).toBe(3);
     }
   });
 
@@ -264,10 +298,10 @@ describe("trace harness — the typed mismatch contract (packet ch6-P4b)", () =>
 });
 
 describe("trace harness — ch11-P3b seams (runtimeContextRef passthrough + evidence)", () => {
-  const startedAt = (instanceId: string): Started => ({
-    kind: "started",
+  const activatedAt = (instanceId: string): Activated => ({
+    kind: "activated",
     instanceId,
-    version: 1,
+    version: 2,
     intent: {
       actor: "codex",
       packet: {
@@ -297,16 +331,20 @@ describe("trace harness — ch11-P3b seams (runtimeContextRef passthrough + evid
         wait: null,
         runtimeContext: { state: "ready", ref: { kind: "worktree", locator: "/ws/ready" } },
         failureReason: null,
-        version: 1,
+        runOverrides: {},
+        version: 2,
       },
-      transcript: [],
+      // W3: a bare start yields the STARTED activation fact at seq 1.
+      transcript: [startedFact("s1")],
     };
     const created: WorkflowInstance = { ...detail.instance };
     const seams: TraceSeams = {
       submit: () => Promise.reject(new Error("unused")),
+      create: () =>
+        Promise.resolve({ kind: "created", instanceId: "i1", version: 1 }),
       start: (input) => {
         received = input.runtimeContextRef;
-        return Promise.resolve(startedAt("i1"));
+        return Promise.resolve(activatedAt("i1"));
       },
       store: fakeStore(detail, created),
       template,
@@ -318,17 +356,18 @@ describe("trace harness — ch11-P3b seams (runtimeContextRef passthrough + evid
           kind: "start",
           instanceId: "i1",
           task: "t",
+          opId: "s1",
           runtimeContextRef: "/ws/ready",
-          expect: { currentStep: "implement", version: 1 },
+          expect: { currentStep: "implement", version: 2 },
         },
       ],
-      finalTranscript: [],
+      finalTranscript: [[1, "s1"]],
       finalState: {
         currentStep: "implement",
         round: 1,
         kernelStatus: "ACTIVE",
         terminalDisposition: null,
-        version: 1,
+        version: 2,
       },
     };
     await replayTrace(fixture, seams);
@@ -358,11 +397,14 @@ describe("trace harness — ch11-P3b seams (runtimeContextRef passthrough + evid
         wait: null,
         runtimeContext: { state: "ready", ref: { kind: "worktree", locator: "/ws/ready" } },
         failureReason: null,
-        version: 2,
+        runOverrides: {},
+        version: 3,
       },
       transcript: [
+        startedFact("s1"),
         {
-          seq: 1,
+          entryKind: "transition",
+          seq: 2,
           envelope: envelope("a1", "PASS"),
           payloadDigest: "d-a1",
           gateDecisions: [{ uses: "external.process", verdict: "allow", evidenceRefs: ["ev-1"] }],
@@ -377,36 +419,40 @@ describe("trace harness — ch11-P3b seams (runtimeContextRef passthrough + evid
           kind: "start",
           instanceId: "i1",
           task: "t",
-          expect: { currentStep: "implement", version: 1 },
+          opId: "s1",
+          expect: { currentStep: "implement", version: 2 },
         },
         {
           kind: "emit",
           opId: "a1",
           type: "PASS",
           actorId: "codex",
-          expectedVersion: 1,
-          expect: { kind: "committed", version: 2 },
+          expectedVersion: 2,
+          expect: { kind: "committed", version: 3 },
         },
       ],
-      finalTranscript: [[1, "a1"]],
+      finalTranscript: [
+        [1, "s1"],
+        [2, "a1"],
+      ],
       finalState: {
         currentStep: "review",
         round: 1,
         kernelStatus: "ACTIVE",
         terminalDisposition: null,
-        version: 2,
+        version: 3,
       },
     };
     // No seam → the store-visible evidence half is fail-closed → checker fails.
-    await expect(replayTrace(fixture, fakeSeams(detailWithRef, [2]))).rejects.toThrow(
+    await expect(replayTrace(fixture, fakeSeams(detailWithRef, [3]))).rejects.toThrow(
       /post-condition checkers rejected/,
     );
     // A resolving seam → clean.
     const seams: TraceSeams = {
-      ...fakeSeams(detailWithRef, [2]),
+      ...fakeSeams(detailWithRef, [3]),
       resolveEvidence: (ref) => (ref === "ev-1" ? fakeRecord : undefined),
     };
     const result = await replayTrace(fixture, seams);
-    expect(result.finalDetail.transcript).toHaveLength(1);
+    expect(result.finalDetail.transcript).toHaveLength(2);
   });
 });

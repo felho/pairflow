@@ -55,6 +55,7 @@ const instance: WorkflowInstance = {
   wait: null,
   runtimeContext: { state: "ready", ref: null },
   failureReason: null,
+  runOverrides: {},
   version: 1,
 };
 
@@ -103,6 +104,12 @@ async function collectAll(rows: AsyncIterable<DiagTailRow>): Promise<DiagTailRow
 
 function committedRows(rows: readonly DiagTailRow[]): TranscriptEntry[] {
   return rows.flatMap((r) => (r.lane === "committed" ? [r.row] : []));
+}
+
+/** [seq, opId] per class (C12): a transition's op id rides its
+ * envelope, a fact's rides the row itself. */
+function opIdOf(entry: TranscriptEntry): string {
+  return entry.entryKind === "transition" ? entry.envelope.opId : entry.opId;
 }
 
 function diagEvents(rows: readonly DiagTailRow[]): DiagnosticEvent[] {
@@ -156,7 +163,14 @@ function fakeEvent(ordinal: number): DiagnosticEvent {
 }
 
 function fakeRow(seq: number): TranscriptEntry {
-  return { seq, envelope: env(`op-${String(seq)}`, "PASS", seq), payloadDigest: "d", gateDecisions: [], committedAt: 0 };
+  return {
+    entryKind: "transition",
+    seq,
+    envelope: env(`op-${String(seq)}`, "PASS", seq),
+    payloadDigest: "d",
+    gateDecisions: [],
+    committedAt: 0,
+  };
 }
 
 type Thunk<T> = () => Promise<T>;
@@ -188,6 +202,7 @@ function scriptedStore(
     findOp: () => Promise.reject(new Error("unused")),
     createInstance: () => Promise.reject(new Error("unused")),
     commitTransition: () => Promise.reject(new Error("unused")),
+    commitLifecycle: () => Promise.reject(new Error("unused")),
     listInstances: () => Promise.reject(new Error("unused")),
     getInstanceDetail: () => Promise.reject(new Error("unused")),
     getTimeline: () => {
@@ -272,7 +287,7 @@ describe("tailWithDiagnostics — committed-lane parity (dimension 1)", () => {
     const rows = await collectAll(tail.tailWithDiagnostics("inst-1", 0, 0));
 
     expect(committedRows(rows).map((row) => row.seq)).toEqual([1, 2]);
-    expect(committedRows(rows).map((row) => row.envelope.opId)).toEqual(["a1", "b2"]);
+    expect(committedRows(rows).map(opIdOf)).toEqual(["a1", "b2"]);
     expect(diagEvents(rows)).toEqual([]);
     expect(scripted.calls()).toBe(0);
     r.close();
@@ -294,7 +309,7 @@ describe("tailWithDiagnostics — committed-lane parity (dimension 1)", () => {
     // completion after the terminal commit — the ch6-P2 expectations,
     // unchanged by the diag lane's presence (which stays empty here).
     expect(committedRows(rows).map((row) => row.seq)).toEqual([1, 2, 3, 4]);
-    expect(committedRows(rows).map((row) => row.envelope.opId)).toEqual(["a1", "b2", "c3", "d4"]);
+    expect(committedRows(rows).map(opIdOf)).toEqual(["a1", "b2", "c3", "d4"]);
     expect(diagEvents(rows)).toEqual([]);
     expect(scripted.calls()).toBe(3);
     r.close();
@@ -354,7 +369,7 @@ describe("diag-lane delivery (dimension 2)", () => {
 
     expect(diagEvents(rows).map((event) => event.opId)).toEqual(["e1", "e2", "e3"]);
     expect(diagEvents(rows).map((event) => event.ordinal)).toEqual([1, 2, 3]);
-    expect(committedRows(rows).map((row) => row.envelope.opId)).toEqual(["a1", "b2"]);
+    expect(committedRows(rows).map(opIdOf)).toEqual(["a1", "b2"]);
     expect(scripted.calls()).toBe(2);
     r.close();
   });
@@ -413,7 +428,7 @@ describe("attribution scope + separation at the consumer (dimension 3)", () => {
     const tail = createDiagTail(r.store, r.diag.reader, scripted.wait);
     const rows = await collectAll(tail.tailWithDiagnostics("inst-1", 0, 0));
 
-    expect(committedRows(rows).map((row) => row.envelope.opId)).toEqual(["a1", "b2"]);
+    expect(committedRows(rows).map(opIdOf)).toEqual(["a1", "b2"]);
     const events = diagEvents(rows);
     expect(events).toHaveLength(1);
     expect(events[0]?.kind).toBe("stale");
@@ -772,7 +787,7 @@ describe("tail error contract (dimension 6 / the E matrix)", () => {
 
     // (i) The failing round's committed rows were NOT yielded before the
     // error (T3: fetches precede yields).
-    expect(committedRows(yielded).map((row) => row.envelope.opId)).toEqual(["a1"]);
+    expect(committedRows(yielded).map(opIdOf)).toEqual(["a1"]);
     expect(diagEvents(yielded).map((event) => event.opId)).toEqual(["e1"]);
 
     // (ii) A new tail from the last yielded cursors delivers everything
@@ -781,7 +796,7 @@ describe("tail error contract (dimension 6 / the E matrix)", () => {
     const lastOrdinal = diagEvents(yielded).at(-1)?.ordinal ?? 0;
     const tail2 = createDiagTail(r.store, r.diag.reader, createScriptedTailWait([]).wait);
     const resumed = await collectAll(tail2.tailWithDiagnostics("inst-1", lastSeq, lastOrdinal));
-    expect(committedRows(resumed).map((row) => row.envelope.opId)).toEqual(["b2"]);
+    expect(committedRows(resumed).map(opIdOf)).toEqual(["b2"]);
     expect(diagEvents(resumed).map((event) => event.opId)).toEqual(["e2"]);
     r.close();
   });

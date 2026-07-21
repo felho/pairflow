@@ -1,12 +1,18 @@
 import type {
+  CancelOutcome,
+  CreateOutcome,
   EffectiveProcessConfig,
   EventEnvelope,
+  FailOutcome,
   GateDecision,
   GateProjection,
+  InstanceId,
   KernelStatus,
+  KickoffOutcome,
   Outcome,
+  RejectionName,
   RetainedGateDecision,
-  Started,
+  StartOutcome,
   TerminalDisposition,
   WorkflowInstance,
   WorkflowTemplate,
@@ -22,8 +28,8 @@ import { capability } from "./capability.js";
 import { deriveDispatchIntent } from "./dispatchIntent.js";
 import { deriveGateProjection } from "./gateProjection.js";
 import { runProcessGate } from "./processGate.js";
-import { startInstance } from "./start.js";
-import type { StartInstanceInput } from "./start.js";
+import { cancel, createInstance, fail, kickoff, start } from "./lifecycle.js";
+import type { CancelInput, CreateInput, KickoffInput, StartInput } from "./lifecycle.js";
 
 /**
  * The port-parametric L1 kernel (packets ch4-P3 · ch11-P1). The check
@@ -69,10 +75,21 @@ export interface KernelDeps {
   readonly processRunner: ProcessGateRunner;
 }
 
+/**
+ * The kernel entry object IS the l0d source-routed entry (RECEIVE,
+ * packet ch12-p1b I1/D1): `handle` is the actor_envelope class, the
+ * four intent handlers the operator_intent class, `fail` the
+ * kernel_event class (in-process only — C13; RUNTIME_CONTEXT_READY
+ * joins at P3). The ch-4 one-shot `startInstance` is RETIRED (C24) —
+ * the CREATE/START/activate split is its named replacement.
+ */
 export interface Kernel {
   handle(envelope: EventEnvelope): Promise<Outcome>;
-  /** Bootstrap (l0b START_INSTANCE, packet ch4-P4). */
-  startInstance(input: StartInstanceInput): Promise<Started>;
+  create(input: CreateInput): Promise<CreateOutcome>;
+  start(input: StartInput): Promise<StartOutcome>;
+  kickoff(input: KickoffInput): Promise<KickoffOutcome>;
+  cancel(input: CancelInput): Promise<CancelOutcome>;
+  fail(instanceId: InstanceId, reason: string): Promise<FailOutcome>;
 }
 
 async function loadTemplate(
@@ -146,12 +163,14 @@ export function createKernel(deps: KernelDeps): Kernel {
     }
     const template = await loadTemplate(definitions, instance);
 
-    // Hoisted positional read (l1 HANDLE) — TOLERATES undefined: a
-    // terminal current-step id resolves no Step (terminal ids live
-    // outside `steps`); its `role` is consumed only at the authority
-    // rung, which the state rung guards (RUNNING ⇒ currentStep ∈
-    // steps by construction). Never a rejection source.
-    const step = template.steps[instance.currentStep];
+    // Hoisted positional read (l1 HANDLE) — TOLERATES undefined AND the
+    // pre-activation NULL position (G2, packet ch12-p1b): a terminal
+    // current-step id resolves no Step, and a CREATED/WAITING run HAS
+    // no position; the `role` is consumed only at the authority rung,
+    // which the state rung guards (ACTIVE ⇒ currentStep ∈ steps by
+    // construction). Never a rejection source.
+    const step =
+      instance.currentStep === null ? undefined : template.steps[instance.currentStep];
 
     // Computed ONCE per attempt (the model's HANDLE: the rung compares
     // it, the commit records it) and threaded into ctx for the diag
@@ -181,6 +200,14 @@ export function createKernel(deps: KernelDeps): Kernel {
       return { kind: "rejected", reason: "no_transition" };
     }
 
+    // Past the ACTIVE state rung the position is non-null (the two-axis
+    // truth; the store mapper refuses ACTIVE+NULL) — the type-level
+    // narrow only (G2).
+    if (instance.currentStep === null) {
+      throw new Error(
+        `kernel integrity: ACTIVE instance '${instance.instanceId}' with a NULL current_step`,
+      );
+    }
     // L1 action authorization: the action EXISTS as a transition, but
     // may this role emit it here? Dormant under default derivation.
     if (!capability(template, step.role, instance.currentStep).includes(envelope.type)) {
@@ -409,18 +436,59 @@ export function createKernel(deps: KernelDeps): Kernel {
         throw error;
       }
     },
-    startInstance: async (input) => {
-      try {
-        return await startInstance({ store, definitions }, input);
-      } catch (error) {
-        diag.emit({
-          source: "kernel",
-          kind: "internal_failure",
-          instanceId: input.instanceId,
-          error: errorFields(error),
-        });
-        throw error;
-      }
-    },
+    create: (input) =>
+      lifecycleOp(() => createInstance({ store, definitions }, input), {
+        instanceId: input.instanceId,
+      }),
+    start: (input) =>
+      lifecycleOp(() => start({ store, definitions }, input), {
+        instanceId: input.instanceId,
+        opId: input.opId,
+      }),
+    kickoff: (input) =>
+      lifecycleOp(() => kickoff({ store, definitions }, input), {
+        instanceId: input.instanceId,
+        opId: input.opId,
+      }),
+    cancel: (input) =>
+      lifecycleOp(() => cancel({ store, definitions }, input), {
+        instanceId: input.instanceId,
+        opId: input.opId,
+      }),
+    fail: (instanceId, reason) =>
+      lifecycleOp(() => fail({ store, definitions }, instanceId, reason), { instanceId }),
   };
+
+  /**
+   * L9 (packet ch12-p1b): the lifecycle entry family rides the SAME
+   * ch7-P1 diag classification — one classified event per non-success
+   * final outcome (duplicate / rejected with reason), NOTHING on
+   * success, `internal_failure` on any throw; attribution instanceId +
+   * opId where present, no payload digest (intents carry no payload);
+   * every emit BARE (REV-DIAG-FAILOPEN).
+   */
+  async function lifecycleOp<
+    T extends { readonly kind: string; readonly reason?: RejectionName },
+  >(
+    op: () => Promise<T>,
+    attribution: Pick<DiagnosticEventBody, "instanceId" | "opId">,
+  ): Promise<T> {
+    try {
+      const outcome = await op();
+      if (outcome.kind === "duplicate") {
+        diag.emit({ source: "kernel", kind: "duplicate", ...attribution });
+      } else if (outcome.kind === "rejected" && outcome.reason !== undefined) {
+        diag.emit({ source: "kernel", kind: "rejected", reason: outcome.reason, ...attribution });
+      }
+      return outcome;
+    } catch (error) {
+      diag.emit({
+        source: "kernel",
+        kind: "internal_failure",
+        ...attribution,
+        error: errorFields(error),
+      });
+      throw error;
+    }
+  }
 }

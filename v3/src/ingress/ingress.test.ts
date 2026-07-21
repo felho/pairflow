@@ -13,13 +13,18 @@ function ingressOf(kernel: Kernel) {
 
 function capturingKernel(): { kernel: Kernel; seen: EventEnvelope[] } {
   const seen: EventEnvelope[] = [];
+  const unused = () => Promise.reject(new Error("unused in ingress tests"));
   const kernel: Kernel = {
     handle: (envelope) => {
       seen.push(envelope);
       const outcome: Outcome = { kind: "committed", version: 2, intent: null };
       return Promise.resolve(outcome);
     },
-    startInstance: () => Promise.reject(new Error("unused in ingress tests")),
+    create: unused,
+    start: unused,
+    kickoff: unused,
+    cancel: unused,
+    fail: unused,
   };
   return { kernel, seen };
 }
@@ -359,5 +364,261 @@ describe("ingress — expectedRole (packet ch11-P1)", () => {
     const outcome = await ingressOf(kernel).submit({ ...validRaw });
     expect(outcome).toEqual({ kind: "committed", version: 2, intent: null });
     expect(seen[0]).not.toHaveProperty("expectedRole");
+  });
+});
+
+// ── The operator-intent wire family (packet ch12-p1b, I1–I4) ─────────
+
+import type {
+  CancelInput,
+  CreateInput,
+  KickoffInput,
+  StartInput,
+} from "../kernel/index.js";
+
+interface IntentCapture {
+  kernel: Kernel;
+  creates: CreateInput[];
+  starts: StartInput[];
+  kickoffs: KickoffInput[];
+  cancels: CancelInput[];
+}
+
+function intentKernel(): IntentCapture {
+  const creates: CreateInput[] = [];
+  const starts: StartInput[] = [];
+  const kickoffs: KickoffInput[] = [];
+  const cancels: CancelInput[] = [];
+  const kernel: Kernel = {
+    handle: () => Promise.reject(new Error("unused")),
+    create: (input) => {
+      creates.push(input);
+      return Promise.resolve({ kind: "created", instanceId: input.instanceId, version: 1 });
+    },
+    start: (input) => {
+      starts.push(input);
+      return Promise.resolve({ kind: "accepted" });
+    },
+    kickoff: (input) => {
+      kickoffs.push(input);
+      return Promise.resolve({ kind: "duplicate" });
+    },
+    cancel: (input) => {
+      cancels.push(input);
+      return Promise.resolve({ kind: "terminated", disposition: "cancelled" });
+    },
+    fail: () => Promise.reject(new Error("kernel events have no ingress endpoint (C13)")),
+  };
+  return { kernel, creates, starts, kickoffs, cancels };
+}
+
+const REF_WIRE = { id: "local-pair-v0", version: 1 };
+
+describe("submitIntent — accept lanes (I1/I2): the typed intent reaches the kernel VERBATIM", () => {
+  it("create: full keyset, camelCase mode maps to the DOMAIN token exactly once (C1/C13)", async () => {
+    const cap = intentKernel();
+    const outcome = await ingressOf(cap.kernel).submitIntent({
+      intent: "create",
+      instanceId: "i1",
+      templateRef: REF_WIRE,
+      task: "T",
+      overrides: { implementer: "human" },
+      runOverrides: { review: { mode: "strict" } },
+      mode: "deferredKickoff",
+    });
+    expect(outcome).toEqual({ kind: "created", instanceId: "i1", version: 1 });
+    expect(cap.creates).toEqual([
+      {
+        instanceId: "i1",
+        templateRef: REF_WIRE,
+        task: "T",
+        overrides: { implementer: "human" },
+        runOverrides: { review: { mode: "strict" } },
+        mode: "deferred_kickoff",
+      },
+    ]);
+  });
+
+  it("create: minimal keyset — absent task/mode/overrides stay ABSENT (the kernel decides task_required)", async () => {
+    const cap = intentKernel();
+    await ingressOf(cap.kernel).submitIntent({
+      intent: "create",
+      instanceId: "i1",
+      templateRef: REF_WIRE,
+    });
+    expect(cap.creates).toEqual([{ instanceId: "i1", templateRef: REF_WIRE }]);
+  });
+
+  it("start: opId + the interim runtimeContextRef pass through (L3's wire key)", async () => {
+    const cap = intentKernel();
+    const outcome = await ingressOf(cap.kernel).submitIntent({
+      intent: "start",
+      instanceId: "i1",
+      opId: "op-s",
+      runtimeContextRef: "/ws",
+    });
+    expect(outcome).toEqual({ kind: "accepted" });
+    expect(cap.starts).toEqual([{ instanceId: "i1", opId: "op-s", runtimeContextRef: "/ws" }]);
+  });
+
+  it("kickoff and cancel: exact keysets, outcomes verbatim", async () => {
+    const cap = intentKernel();
+    const ingress = ingressOf(cap.kernel);
+    expect(
+      await ingress.submitIntent({ intent: "kickoff", instanceId: "i1", opId: "op-k", task: "GO" }),
+    ).toEqual({ kind: "duplicate" });
+    expect(
+      await ingress.submitIntent({ intent: "cancel", instanceId: "i1", opId: "op-c" }),
+    ).toEqual({ kind: "terminated", disposition: "cancelled" });
+    expect(cap.kickoffs).toEqual([{ instanceId: "i1", opId: "op-k", task: "GO" }]);
+    expect(cap.cancels).toEqual([{ instanceId: "i1", opId: "op-c" }]);
+  });
+});
+
+describe("submitIntent — refusal lanes (I3/I4): fail-closed, one token per gate block", () => {
+  async function refuse(
+    raw: unknown,
+    detail: IngressDetailToken,
+  ): Promise<void> {
+    const cap = intentKernel();
+    const diag = createRecordingDiagnosticsSink();
+    const ingress = createIngress({ kernel: cap.kernel, diag: diag.sink });
+    expect(await ingress.submitIntent(raw)).toEqual({
+      kind: "rejected",
+      reason: "invalid_shape",
+    });
+    // The kernel was never touched (I4: the kernel receives only typed intents).
+    expect(cap.creates.length + cap.starts.length + cap.kickoffs.length + cap.cancels.length).toBe(
+      0,
+    );
+    expect(diag.events).toHaveLength(1);
+    expect(diag.events[0]).toMatchObject({
+      source: "ingress",
+      kind: "rejected",
+      reason: "invalid_shape",
+      detail,
+    });
+  }
+
+  it("not a plain object / hostile prototypes → not_plain_object", async () => {
+    await refuse(null, "not_plain_object");
+    await refuse([], "not_plain_object");
+    await refuse(Object.create({ intent: "create" }), "not_plain_object");
+  });
+
+  it("missing or non-member intent → unknown_intent", async () => {
+    await refuse({ instanceId: "i1" }, "unknown_intent");
+    await refuse({ intent: "reboot", instanceId: "i1" }, "unknown_intent");
+  });
+
+  it("an unknown key on ANY intent → unknown_key (per-intent keysets are exact)", async () => {
+    await refuse(
+      { intent: "cancel", instanceId: "i1", opId: "op", task: "smuggled" },
+      "unknown_key",
+    );
+    await refuse(
+      { intent: "start", instanceId: "i1", opId: "op", templateRef: REF_WIRE },
+      "unknown_key",
+    );
+  });
+
+  it("missing/empty required strings → invalid_required_string (instanceId, opId, the kickoff task)", async () => {
+    await refuse({ intent: "create", templateRef: REF_WIRE }, "invalid_required_string");
+    await refuse({ intent: "start", instanceId: "i1" }, "invalid_required_string");
+    await refuse({ intent: "cancel", instanceId: "i1", opId: "" }, "invalid_required_string");
+    await refuse(
+      { intent: "kickoff", instanceId: "i1", opId: "op" },
+      "invalid_required_string",
+    );
+    await refuse(
+      { intent: "kickoff", instanceId: "i1", opId: "op", task: "" },
+      "invalid_required_string",
+    );
+  });
+
+  it("the create-side task is form-when-present → invalid_task (its ABSENCE is the kernel's)", async () => {
+    await refuse(
+      { intent: "create", instanceId: "i1", templateRef: REF_WIRE, task: "" },
+      "invalid_task",
+    );
+    await refuse(
+      { intent: "create", instanceId: "i1", templateRef: REF_WIRE, task: 42 },
+      "invalid_task",
+    );
+  });
+
+  it("templateRef: shape + the FULL version ladder (R-NUMERIC-LADDER) → invalid_template_ref", async () => {
+    const cases: unknown[] = [
+      "local-pair-v0@1",
+      { id: "", version: 1 },
+      { id: "t" },
+      { id: "t", version: 1, extra: true },
+      { id: "t", version: "1" },
+      { id: "t", version: 0 },
+      { id: "t", version: 1.5 },
+      { id: "t", version: -0 },
+      { id: "t", version: Number.MAX_SAFE_INTEGER + 2 },
+      { id: "t", version: Number.NaN },
+    ];
+    for (const templateRef of cases) {
+      await refuse(
+        { intent: "create", instanceId: "i1", templateRef },
+        "invalid_template_ref",
+      );
+    }
+  });
+
+  it("mode outside the two authored tokens → invalid_mode (the STORED token is NOT a wire token)", async () => {
+    await refuse(
+      { intent: "create", instanceId: "i1", templateRef: REF_WIRE, mode: "deferred_kickoff" },
+      "invalid_mode",
+    );
+    await refuse(
+      { intent: "create", instanceId: "i1", templateRef: REF_WIRE, mode: "eager" },
+      "invalid_mode",
+    );
+  });
+
+  it("overrides: non-map or non-string values → invalid_overrides", async () => {
+    await refuse(
+      { intent: "create", instanceId: "i1", templateRef: REF_WIRE, overrides: ["x"] },
+      "invalid_overrides",
+    );
+    await refuse(
+      { intent: "create", instanceId: "i1", templateRef: REF_WIRE, overrides: { r: "" } },
+      "invalid_overrides",
+    );
+  });
+
+  it("runOverrides: non-map entries and non-canonicalizable values fail CLOSED here (C7) → invalid_run_overrides", async () => {
+    await refuse(
+      { intent: "create", instanceId: "i1", templateRef: REF_WIRE, runOverrides: { s: "flat" } },
+      "invalid_run_overrides",
+    );
+    await refuse(
+      {
+        intent: "create",
+        instanceId: "i1",
+        templateRef: REF_WIRE,
+        runOverrides: { s: { budget: Number.POSITIVE_INFINITY } },
+      },
+      "invalid_run_overrides",
+    );
+    await refuse(
+      {
+        intent: "create",
+        instanceId: "i1",
+        templateRef: REF_WIRE,
+        runOverrides: { s: { when: new Date(0) } },
+      },
+      "invalid_run_overrides",
+    );
+  });
+
+  it("runtimeContextRef present-but-empty → invalid_runtime_context_ref", async () => {
+    await refuse(
+      { intent: "start", instanceId: "i1", opId: "op", runtimeContextRef: "" },
+      "invalid_runtime_context_ref",
+    );
   });
 });

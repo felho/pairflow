@@ -7,7 +7,7 @@ import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { noopDiagnosticsSink, openDiagStore } from "../diag/index.js";
-import type { EventEnvelope, WorkflowInstance } from "../domain/index.js";
+import type { EventEnvelope, TransitionEntry, WorkflowInstance } from "../domain/index.js";
 import { deriveEmitDigest } from "../emit/index.js";
 import { createKernel } from "../kernel/index.js";
 import type { Kernel } from "../kernel/index.js";
@@ -16,7 +16,7 @@ import type {
   DiagnosticEventBody,
   DiagnosticsReader,
 } from "../ports/diagnostics.js";
-import type { StorePort } from "../ports/store.js";
+import type { InstanceDetail, StorePort } from "../ports/store.js";
 import { openStore } from "../store/index.js";
 import {
   createControlledClock,
@@ -36,7 +36,12 @@ function admit(template: WorkflowTemplate): AdmittedTemplate {
   }
   return result.template;
 }
-import type { BundleDiagRow, DebugBundle, RejectedInputsSection } from "./debugBundle.js";
+import type {
+  BundleDiagRow,
+  BundleTranscriptRow,
+  DebugBundle,
+  RejectedInputsSection,
+} from "./debugBundle.js";
 import { createDebugBundleExporter, redactPayloadsPolicy } from "./debugBundle.js";
 
 const definitions = fixtureDefinitionStore(admit(fixtureTemplate()));
@@ -54,6 +59,7 @@ const instance: WorkflowInstance = {
   wait: null,
   runtimeContext: { state: "ready", ref: null },
   failureReason: null,
+  runOverrides: {},
   version: 1,
 };
 
@@ -178,6 +184,22 @@ function rowsOf(bundle: DebugBundle | null): readonly BundleDiagRow[] {
   return section.status === "present" ? section.rows : [];
 }
 
+/** F4 (packet ch12-p1b): narrow the bundle transcript to its
+ * transition rows — a transition's envelope/payloadDigest ride the row;
+ * fact rows carry neither (the class-shared fields only). `seeded()`
+ * builds via `createInstance` + kernel emits, so every row is a
+ * transition, but the union demands the narrow. */
+function bundleTx(bundle: DebugBundle | null): readonly BundleTranscriptRow[] {
+  return (bundle?.transcript ?? []).filter((r): r is BundleTranscriptRow => "envelope" in r);
+}
+
+/** The detail-side twin: narrow committed rows to transition entries. */
+function detailTx(detail: InstanceDetail | null): readonly TransitionEntry[] {
+  return (detail?.transcript ?? []).filter(
+    (e): e is TransitionEntry => e.entryKind === "transition",
+  );
+}
+
 // ── The canonical bundle schema matrix (the packet's K matrix — the
 // single source; supersedes ch6-P3's rejectedInputs row, every other
 // level inherited unchanged) ─────────────────────────────────────────
@@ -197,6 +219,9 @@ const INSTANCE_KEYS = [
   "activationMode",
   "wait",
   "failureReason",
+  // ch12-p1b (G2): the C9 create-snapshot rides the INSTANCE-carrying
+  // read payloads verbatim — additive, every pre-existing key deep-equal.
+  "runOverrides",
   "version",
   // ch11-P3b (S1/dimension 12): the instance's runtimeContext rides the
   // INSTANCE-carrying read payloads verbatim — additive, every pre-existing
@@ -204,6 +229,9 @@ const INSTANCE_KEYS = [
   "runtimeContext",
 ];
 const ROW_KEYS = ["seq", "committedAt", "payloadDigest", "envelope"];
+// F4 (packet ch12-p1b): a lifecycle fact row's closed keyset — the
+// class-shared fields only; the transition-only fields ABSENT by class.
+const FACT_ROW_KEYS = ["seq", "entryKind", "opId", "committedAt"];
 const ENVELOPE_REQUIRED = ["instanceId", "opId", "type", "actorId", "hasPayload"];
 const ENVELOPE_OPTIONAL = ["expectedVersion", "expectedRole", "eventId", "payload"];
 const PRESENT_KEYS = ["status", "rows"];
@@ -243,8 +271,15 @@ function assertBundleSchema(bundle: DebugBundle): void {
   assertExactKeys(bundle.instance, INSTANCE_KEYS);
   assertSectionSchema(bundle.rejectedInputs);
   for (const row of bundle.transcript) {
-    assertExactKeys(row, ROW_KEYS);
-    assertKeysWithin(row.envelope, ENVELOPE_REQUIRED, ENVELOPE_OPTIONAL);
+    // F4: assert the closed keyset per class — a fact row carries the
+    // class-shared fields only, a transition row keeps its EXACT built
+    // keyset (no entryKind, envelope present).
+    if ("entryKind" in row) {
+      assertExactKeys(row, FACT_ROW_KEYS);
+    } else {
+      assertExactKeys(row, ROW_KEYS);
+      assertKeysWithin(row.envelope, ENVELOPE_REQUIRED, ENVELOPE_OPTIONAL);
+    }
   }
 }
 
@@ -258,7 +293,7 @@ describe("debug bundle — the §6.4 export + redaction boundary (packet ch6-P3)
     expect(text).not.toContain(MARKER_A);
     expect(text).not.toContain(MARKER_B);
     expect(text).not.toContain(MARKER_C);
-    for (const row of bundle?.transcript ?? []) {
+    for (const row of bundleTx(bundle)) {
       expect("payload" in row.envelope).toBe(false);
     }
     expect(bundle?.policy).toBe("redact-payloads");
@@ -275,21 +310,21 @@ describe("debug bundle — the §6.4 export + redaction boundary (packet ch6-P3)
     expect(bundle?.formatVersion).toBe(1);
     expect(bundle?.instance).toEqual(detail?.instance);
     expect(bundle?.transcript.map((r) => r.seq)).toEqual([1, 2, 3]);
-    expect(bundle?.transcript.map((r) => r.envelope.opId)).toEqual(["a1", "b2", "c3"]);
-    expect(bundle?.transcript.map((r) => r.payloadDigest)).toEqual(
-      detail?.transcript.map((e) => e.payloadDigest),
+    expect(bundleTx(bundle).map((r) => r.envelope.opId)).toEqual(["a1", "b2", "c3"]);
+    expect(bundleTx(bundle).map((r) => r.payloadDigest)).toEqual(
+      detailTx(detail).map((e) => e.payloadDigest),
     );
     expect(bundle?.transcript.map((r) => r.committedAt)).toEqual(
       detail?.transcript.map((e) => e.committedAt),
     );
-    expect(bundle?.transcript.map((r) => r.envelope.hasPayload)).toEqual([true, true, false]);
-    expect(bundle?.transcript.map((r) => r.envelope.expectedVersion)).toEqual([1, 2, 3]);
-    expect(bundle?.transcript.map((r) => r.envelope.eventId)).toEqual([
+    expect(bundleTx(bundle).map((r) => r.envelope.hasPayload)).toEqual([true, true, false]);
+    expect(bundleTx(bundle).map((r) => r.envelope.expectedVersion)).toEqual([1, 2, 3]);
+    expect(bundleTx(bundle).map((r) => r.envelope.eventId)).toEqual([
       undefined,
       "evt-42",
       undefined,
     ]);
-    expect("eventId" in (bundle?.transcript[0]?.envelope ?? {})).toBe(false);
+    expect("eventId" in (bundleTx(bundle)[0]?.envelope ?? {})).toBe(false);
     diag.close();
     close();
   });
@@ -301,7 +336,7 @@ describe("debug bundle — the §6.4 export + redaction boundary (packet ch6-P3)
     // that detail/timeline expose); the bundle is its OWN projected
     // surface and drops it (an added key would fail this).
     const detail = await store.getInstanceDetail("inst-1");
-    expect(detail?.transcript.every((e) => Array.isArray(e.gateDecisions))).toBe(true);
+    expect(detailTx(detail).every((e) => Array.isArray(e.gateDecisions))).toBe(true);
     const bundle = await exportWith(store, diag.reader);
     for (const row of bundle?.transcript ?? []) {
       expect("gateDecisions" in row).toBe(false);
@@ -320,11 +355,11 @@ describe("debug bundle — the §6.4 export + redaction boundary (packet ch6-P3)
     const bundle = await exportWith(store, diag.reader, devPassthroughRedactionPolicy);
 
     expect(bundle?.policy).toBe("dev-passthrough");
-    expect(bundle?.transcript.map((r) => r.envelope.payload)).toEqual(
-      detail?.transcript.map((e) => e.envelope.payload),
+    expect(bundleTx(bundle).map((r) => r.envelope.payload)).toEqual(
+      detailTx(detail).map((e) => e.envelope.payload),
     );
     // A payload-less op stays payload-less even under pass-through.
-    expect("payload" in (bundle?.transcript[2]?.envelope ?? {})).toBe(false);
+    expect("payload" in (bundleTx(bundle)[2]?.envelope ?? {})).toBe(false);
     diag.close();
     close();
   });
@@ -519,6 +554,7 @@ describe("bundle section-state matrix (S) — packet ch7-P3", () => {
       findOp: () => Promise.reject(new Error("unused")),
       createInstance: () => Promise.reject(new Error("unused")),
       commitTransition: () => Promise.reject(new Error("unused")),
+      commitLifecycle: () => Promise.reject(new Error("unused")),
       listInstances: () => Promise.reject(new Error("unused")),
       getInstanceDetail: () => Promise.reject(new Error("detail-boom")),
       getTimeline: () => Promise.reject(new Error("unused")),
@@ -958,9 +994,9 @@ describe("bundle envelope meta — expectedRole fidelity (ch11-P1)", () => {
     const { store, close } = await seeded();
     const diag = emptyDiag();
     const bundle = await exportWith(store, diag.reader);
-    const row = bundle?.transcript.find((r) => r.envelope.opId === "b2");
+    const row = bundleTx(bundle).find((r) => r.envelope.opId === "b2");
     expect(row?.envelope.expectedRole).toBe("reviewer");
-    const first = bundle?.transcript.find((r) => r.envelope.opId === "a1");
+    const first = bundleTx(bundle).find((r) => r.envelope.opId === "a1");
     expect(first?.envelope.expectedRole).toBe("implementer");
     diag.close();
     close();

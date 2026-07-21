@@ -29,12 +29,17 @@ export function checkSeqContinuity(detail: InstanceDetail): string[] {
   return violations;
 }
 
-/** version === 1 + committed transitions (start at 1, +1 per commit). */
+/** Uniform commit discipline (packet ch12-p1b): genesis is version 1
+ * and EVERY commit advances by one. Every commit writes a row EXCEPT
+ * FAIL (deliberately row-less, L6) — and `failed` implies exactly ONE
+ * FAIL commit (the sink guard forecloses a second), so the arithmetic
+ * stays decidable over floor reads. */
 export function checkVersionArithmetic(detail: InstanceDetail): string[] {
-  const expected = 1 + detail.transcript.length;
+  const failCommits = detail.instance.terminalDisposition === "failed" ? 1 : 0;
+  const expected = 1 + detail.transcript.length + failCommits;
   if (detail.instance.version !== expected) {
     return [
-      `version arithmetic: version ${String(detail.instance.version)} ≠ 1 + ${String(detail.transcript.length)} committed transitions`,
+      `version arithmetic: version ${String(detail.instance.version)} ≠ 1 + ${String(detail.transcript.length)} committed rows + ${String(failCommits)} fail commits`,
     ];
   }
   return [];
@@ -45,11 +50,14 @@ export function checkOpUniqueness(detail: InstanceDetail): string[] {
   const violations: string[] = [];
   const seen = new Set<string>();
   for (const entry of detail.transcript) {
-    const key = `${entry.envelope.instanceId}\u0000${entry.envelope.opId}`;
-    if (seen.has(key)) {
-      violations.push(`op uniqueness: duplicated op '${entry.envelope.opId}' in the transcript`);
+    // BOTH classes consume the ONE (instance_id, op_id) uniqueness
+    // (C12): a transition's op id rides its envelope, a fact's rides
+    // the row itself.
+    const opId = entry.entryKind === "transition" ? entry.envelope.opId : entry.opId;
+    if (seen.has(opId)) {
+      violations.push(`op uniqueness: duplicated op '${opId}' in the transcript`);
     }
-    seen.add(key);
+    seen.add(opId);
   }
   return violations;
 }
@@ -65,17 +73,25 @@ export function checkEndStateConsistency(
   detail: InstanceDetail,
   template: WorkflowTemplate,
 ): string[] {
-  const atTerminal = template.terminal.includes(detail.instance.currentStep);
-  const terminal = detail.instance.kernelStatus === "TERMINAL";
-  if (terminal && !atTerminal) {
+  // T2 (packet ch12-p1b): the DONE-era equivalence scoped per
+  // disposition — `done` presupposes a terminal position; `cancelled`/
+  // `failed` are position-independent (cancel/fail fire from any
+  // non-terminal state, position parked wherever the run reached).
+  const position = detail.instance.currentStep;
+  const atTerminal = position !== null && template.terminal.includes(position);
+  const { kernelStatus, terminalDisposition } = detail.instance;
+  if (terminalDisposition === "done" && !atTerminal) {
     return [
-      `end-state consistency: kernel_status TERMINAL but currentStep '${detail.instance.currentStep}' is not terminal`,
+      `end-state consistency: disposition 'done' but currentStep '${String(position)}' is not terminal`,
     ];
   }
-  if (!terminal && atTerminal) {
+  if (kernelStatus !== "TERMINAL" && atTerminal) {
     return [
-      `end-state consistency: currentStep '${detail.instance.currentStep}' is terminal but kernel_status is '${detail.instance.kernelStatus}'`,
+      `end-state consistency: currentStep '${String(position)}' is terminal but kernel_status is '${kernelStatus}'`,
     ];
+  }
+  if (kernelStatus === "ACTIVE" && position === null) {
+    return ["end-state consistency: ACTIVE instance with a NULL currentStep"];
   }
   return [];
 }
@@ -101,8 +117,29 @@ export function checkTerminalSink(
   detail: InstanceDetail,
   template: WorkflowTemplate,
 ): string[] {
+  // (c) scoped to the ROW-BEARING terminal writers (packet ch12-p1b,
+  // T2): `done`'s terminal transition row and `cancelled`'s CANCELLED
+  // fact — NO committed row of EITHER class follows that row. FAIL's
+  // write is deliberately row-less (L6): its sink proof is structural
+  // and lane-driven, never checker-located. The position walk moves on
+  // TRANSITION rows only — facts are position-inert.
   let position = template.start;
+  let terminalRowSeq: number | null = null;
+  let sawCancelledFact = false;
   for (const entry of detail.transcript) {
+    if (terminalRowSeq !== null) {
+      return [
+        `terminal sink: row seq ${String(entry.seq)} committed AFTER the terminal row seq ${String(terminalRowSeq)} (terminal-is-a-sink)`,
+      ];
+    }
+    if (entry.entryKind === "CANCELLED") {
+      sawCancelledFact = true;
+      terminalRowSeq = entry.seq;
+      continue;
+    }
+    if (entry.entryKind !== "transition") {
+      continue;
+    }
     if (template.terminal.includes(position)) {
       return [
         `terminal sink: row seq ${String(entry.seq)} commits FROM terminal position '${position}' (terminal-is-a-sink)`,
@@ -121,10 +158,13 @@ export function checkTerminalSink(
       ];
     }
     position = target;
+    if (template.terminal.includes(position)) {
+      terminalRowSeq = entry.seq;
+    }
   }
 
   const violations: string[] = [];
-  const { kernelStatus, terminalDisposition, wait } = detail.instance;
+  const { kernelStatus, terminalDisposition, wait, failureReason } = detail.instance;
   // (a) TERMINAL ⇔ non-null disposition.
   if (kernelStatus === "TERMINAL" && terminalDisposition === null) {
     violations.push(
@@ -136,7 +176,10 @@ export function checkTerminalSink(
       `terminal sink: terminal_disposition '${terminalDisposition}' on a non-TERMINAL instance (kernel_status '${kernelStatus}')`,
     );
   }
-  // (b) done ⇔ the replayed position is terminal (the P1a inventory).
+  // (b) per-disposition reconstruction consistency (the T2 growth):
+  // done ⇔ the replayed position is terminal; cancelled ⇔ a CANCELLED
+  // fact exists (position-independent); failed ⇔ failure_reason
+  // non-null (both directions — FAIL is the only reason writer, L6).
   const replayedTerminal = template.terminal.includes(position);
   if (terminalDisposition === "done" && !replayedTerminal) {
     violations.push(
@@ -146,6 +189,24 @@ export function checkTerminalSink(
   if (replayedTerminal && terminalDisposition !== "done") {
     violations.push(
       `terminal sink: replayed position '${position}' is terminal but the disposition is '${String(terminalDisposition)}' (expected 'done')`,
+    );
+  }
+  if (terminalDisposition === "cancelled" && !sawCancelledFact) {
+    violations.push(
+      "terminal sink: disposition 'cancelled' without a CANCELLED fact row (the cancel witness)",
+    );
+  }
+  if (sawCancelledFact && terminalDisposition !== "cancelled") {
+    violations.push(
+      `terminal sink: a CANCELLED fact exists but the disposition is '${String(terminalDisposition)}'`,
+    );
+  }
+  if (terminalDisposition === "failed" && failureReason === null) {
+    violations.push("terminal sink: disposition 'failed' without a failure_reason");
+  }
+  if (failureReason !== null && terminalDisposition !== "failed") {
+    violations.push(
+      `terminal sink: failure_reason present but the disposition is '${String(terminalDisposition)}'`,
     );
   }
   // (d) wait is NULL at TERMINAL (S5's iff at the terminal cell).
@@ -159,9 +220,10 @@ export function checkTerminalSink(
  * l2/round-is-canonical-reconstructable (packet ch11-P2c, T1): the stored
  * round must equal the round reconstructed by replaying the committed
  * transcript over the admitted template's `advancesRound` flags. Replay
- * from template.start (the checkTerminalSink walk); round starts at 1 —
- * the post-activation value (an InstanceDetail exists only for started
- * instances; `startInstance` is the sole creator and sets round 1). Each
+ * from template.start (the checkTerminalSink walk); the round BASE is
+ * activation-observable (packet ch12-p1b): genesis is 0, and the
+ * activation write sets 1 — witnessed by an immediate-mode STARTED
+ * fact or a TASK_SUPPLIED fact. Each
  * committed row whose replayed-position step carries
  * `advancesRound[type] === true` adds one. A divergent stored round is a
  * violation naming BOTH values (the checkVersionArithmetic idiom); a
@@ -175,9 +237,21 @@ export function checkRoundReconstruction(
   detail: InstanceDetail,
   template: WorkflowTemplate,
 ): string[] {
+  // Activation basis (packet ch12-p1b): genesis is round 0; the
+  // activation write sets 1 (C11). Activation is floor-observable —
+  // an immediate-mode STARTED fact, or a TASK_SUPPLIED fact (the
+  // kickoff activation); facts are position-inert to the replay.
+  const activated = detail.transcript.some(
+    (entry) =>
+      (entry.entryKind === "STARTED" && detail.instance.activationMode === "immediate") ||
+      entry.entryKind === "TASK_SUPPLIED",
+  );
   let position = template.start;
-  let round = 1;
+  let round = activated ? 1 : 0;
   for (const entry of detail.transcript) {
+    if (entry.entryKind !== "transition") {
+      continue;
+    }
     const step = template.steps[position];
     if (step === undefined) {
       return [
@@ -219,6 +293,9 @@ export function checkEvidenceResolution(
 ): string[] {
   const violations: string[] = [];
   for (const entry of detail.transcript) {
+    if (entry.entryKind !== "transition") {
+      continue;
+    }
     for (const decision of entry.gateDecisions) {
       for (const ref of decision.evidenceRefs ?? []) {
         if (resolveEvidence === undefined) {

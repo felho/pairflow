@@ -1,13 +1,14 @@
 import type {
   ActorId,
   AdmittedTemplate,
+  CreateOutcome,
   EventType,
   InstanceId,
   KernelStatus,
   OpId,
   Outcome,
   RejectionName,
-  Started,
+  StartOutcome,
   StepId,
   TemplateRef,
   TerminalDisposition,
@@ -25,21 +26,29 @@ import type { EvidenceResolveSeam } from "./storeCheckers.js";
  * harness is vitest-agnostic.
  */
 
-/** Port-local mirror of the kernel's start input (structural match). */
-export interface HarnessStartInput {
+/** Port-local mirrors of the kernel's lifecycle inputs (structural
+ * match — packet ch12-p1b W3: the one-shot's HarnessStartInput retired
+ * with it; the start seam is the CREATE→START composition). */
+export interface HarnessCreateInput {
   readonly instanceId: InstanceId;
   readonly templateRef: TemplateRef;
-  readonly task: string;
-  /** ch11-P3b: the OPTIONAL ready-ref passthrough — the harness mirrors the
-   * kernel's start input structurally (extend the mirror, not a parallel seam). */
+  readonly task?: string;
+}
+
+export interface HarnessStartOpInput {
+  readonly instanceId: InstanceId;
+  readonly opId: OpId;
+  /** The interim window carrier (L3) — rides the START leg; retires at P3. */
   readonly runtimeContextRef?: string;
 }
 
 export interface TraceSeams {
   /** The wired ingress entry — the ingress submit bound to the kernel under test. */
   readonly submit: (raw: unknown) => Promise<Outcome>;
-  /** startInstance, bound to the kernel under test. */
-  readonly start: (input: HarnessStartInput) => Promise<Started>;
+  /** kernel.create, bound to the kernel under test. */
+  readonly create: (input: HarnessCreateInput) => Promise<CreateOutcome>;
+  /** kernel.start, bound to the kernel under test. */
+  readonly start: (input: HarnessStartOpInput) => Promise<StartOutcome>;
   /** The REAL store the kernel commits into (floor-read side). */
   readonly store: StorePort;
   /**
@@ -69,9 +78,13 @@ export type TraceStep =
       readonly kind: "start";
       readonly instanceId: InstanceId;
       readonly task: string;
-      /** ch11-P3b: the OPTIONAL ready ref passed through to `seams.start`. */
+      /** W3 (packet ch12-p1b): the START intent's op_id — fixture-declared,
+       * deterministic; the STARTED fact appears as [1, opId]. */
+      readonly opId: OpId;
+      /** The OPTIONAL ready ref, re-homed onto the START leg (L3). */
       readonly runtimeContextRef?: string;
-      readonly expect: { readonly currentStep: StepId; readonly version: 1 };
+      /** Genesis is v1; the activation commit is v2 (W3's arithmetic). */
+      readonly expect: { readonly currentStep: StepId; readonly version: 2 };
     }
   | {
       readonly kind: "emit";
@@ -121,8 +134,10 @@ export interface TraceFixture {
 }
 
 export interface ReplayResult {
-  /** One entry per fixture step, the ACTUAL outcome/Started value. */
-  readonly outcomes: readonly (Outcome | Started)[];
+  /** One entry per fixture step, the ACTUAL outcome value (a start
+   * step contributes its START-leg outcome; the CREATE leg is
+   * interior — the W2 bridge culture). */
+  readonly outcomes: readonly (Outcome | CreateOutcome | StartOutcome)[];
   /**
    * The final store read the harness itself asserted against —
    * returned so supplemental blocks assert transcript-side shapes
@@ -213,37 +228,56 @@ export async function replayTrace(
   fixture: TraceFixture,
   seams: TraceSeams,
 ): Promise<ReplayResult> {
-  const outcomes: (Outcome | Started)[] = [];
+  const outcomes: (Outcome | CreateOutcome | StartOutcome)[] = [];
   let instanceId: InstanceId | null = null;
   let runningVersion = 0;
 
   for (const [index, step] of fixture.steps.entries()) {
     const label = `${fixture.name} · step ${String(index + 1)}`;
     if (step.kind === "start") {
-      const started = await seams.start({
+      // W3 (packet ch12-p1b): the CREATE→START composition — the
+      // one-shot is retired (C24); the CREATE leg is interior, the
+      // START leg's outcome is the step's outcome (the W2 culture).
+      const created = await seams.create({
         instanceId: step.instanceId,
         templateRef: seams.template.ref,
         task: step.task,
+      });
+      if (created.kind !== "created") {
+        throw new Error(`${label}: create leg returned '${created.kind}' (fixture wiring)`);
+      }
+      const startOutcome = await seams.start({
+        instanceId: step.instanceId,
+        opId: step.opId,
         ...(step.runtimeContextRef !== undefined
           ? { runtimeContextRef: step.runtimeContextRef }
           : {}),
       });
-      outcomes.push(started);
-      if (started.version !== step.expect.version) {
-        fail("outcome", index, `${label} (start version)`, step.expect.version, started.version);
+      outcomes.push(startOutcome);
+      if (startOutcome.kind !== "activated") {
+        throw new Error(`${label}: start leg returned '${startOutcome.kind}' (fixture wiring)`);
       }
-      const created = await seams.store.loadInstance(step.instanceId);
-      if (created === null || created.currentStep !== step.expect.currentStep) {
+      if (startOutcome.version !== step.expect.version) {
+        fail(
+          "outcome",
+          index,
+          `${label} (start version)`,
+          step.expect.version,
+          startOutcome.version,
+        );
+      }
+      const startedInstance = await seams.store.loadInstance(step.instanceId);
+      if (startedInstance === null || startedInstance.currentStep !== step.expect.currentStep) {
         fail(
           "outcome",
           index,
           `${label} (start currentStep)`,
           step.expect.currentStep,
-          created?.currentStep,
+          startedInstance?.currentStep,
         );
       }
       instanceId = step.instanceId;
-      runningVersion = started.version;
+      runningVersion = startOutcome.version;
       continue;
     }
     if (instanceId === null) {
@@ -268,6 +302,9 @@ export async function replayTrace(
       const current = await seams.store.loadInstance(instanceId);
       if (current === null) {
         throw new Error(`${label}: instance vanished before the role lift`);
+      }
+      if (current.currentStep === null) {
+        throw new Error(`${label}: role lift on a pre-activation (null) position`);
       }
       const role = seams.template.steps[current.currentStep]?.role;
       if (role === undefined) {
@@ -309,8 +346,11 @@ export async function replayTrace(
     throw new Error(`${fixture.name}: final read found no instance '${instanceId}'`);
   }
 
+  // [seq, opId] per class (C12): a transition's op id rides its
+  // envelope, a fact's rides the row itself.
   const rows = finalDetail.transcript.map(
-    (entry) => [entry.seq, entry.envelope.opId] as const,
+    (entry) =>
+      [entry.seq, entry.entryKind === "transition" ? entry.envelope.opId : entry.opId] as const,
   );
   const expectedRows = fixture.finalTranscript;
   const rowsMatch =

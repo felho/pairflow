@@ -32,10 +32,60 @@ export type Outcome =
     }
   | { readonly kind: "rejected"; readonly reason: Exclude<RejectionName, "gate_blocked"> };
 
-/** START_INSTANCE's return — not an Outcome arm. */
-export interface Started {
-  readonly kind: "started";
+/**
+ * The lifecycle outcome vocabulary (packet ch12-p1b, V1) — the l0d
+ * units' RETURN forms, model-verbatim kinds. HANDLE's `Outcome` above
+ * is untouched: the actor vocabulary is closed, and no lifecycle arm
+ * joins it. `Activated` carries the FULL ch-4 `Started` continuity set
+ * (instanceId + version + the first dispatch — the shipped stdout doc's
+ * fields); `Accepted` is bare (lifecycle intents carry no
+ * expectedVersion, so no caller consumes a hold's version — the floor
+ * is the state read).
+ */
+export interface Created {
+  readonly kind: "created";
+  readonly instanceId: InstanceId;
+  readonly version: number;
+}
+
+export interface Accepted {
+  readonly kind: "accepted";
+}
+
+export interface Activated {
+  readonly kind: "activated";
   readonly instanceId: InstanceId;
   readonly version: number;
   readonly intent: DispatchIntent;
 }
+
+export interface Terminated {
+  readonly kind: "terminated";
+  readonly disposition: "cancelled" | "failed";
+}
+
+/** The per-op unions — the kernel entry family's precise signatures
+ * (V1). The shared arms reuse the existing Outcome arm forms verbatim. */
+export type CreateOutcome =
+  | Created
+  | { readonly kind: "rejected"; readonly reason: "task_required" };
+
+export type StartOutcome =
+  | Activated
+  | Accepted
+  | { readonly kind: "duplicate" }
+  | { readonly kind: "rejected"; readonly reason: "unknown_instance" | "op_id_collision" };
+
+export type KickoffOutcome =
+  | Activated
+  | { readonly kind: "duplicate" }
+  | { readonly kind: "rejected"; readonly reason: "unknown_instance" | "op_id_collision" };
+
+export type CancelOutcome =
+  | Terminated
+  | { readonly kind: "duplicate" }
+  | { readonly kind: "rejected"; readonly reason: "unknown_instance" | "op_id_collision" };
+
+export type FailOutcome =
+  | Terminated
+  | { readonly kind: "rejected"; readonly reason: "unknown_instance" };

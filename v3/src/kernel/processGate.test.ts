@@ -299,6 +299,7 @@ const __instanceNoRuntimeContext: Omit<WorkflowInstance, "runtimeContext"> = {
   activationMode: "immediate",
   wait: null,
   failureReason: null,
+  runOverrides: {},
   version: 1,
 };
 
@@ -449,6 +450,7 @@ export function __probeReadonlyCompositeFields(
 // turns this suppression into a TS2578 red — the boundary is armed,
 // not just documented.
 export const __probeTranscriptEntryNoIssuedAgentConfig: TranscriptEntry = {
+  entryKind: "transition",
   seq: 1,
   envelope: { instanceId: "i", opId: "o", type: "PASS", actorId: "a" },
   payloadDigest: "d",
@@ -456,4 +458,49 @@ export const __probeTranscriptEntryNoIssuedAgentConfig: TranscriptEntry = {
   committedAt: 0,
   // @ts-expect-error TranscriptEntry has no issuedAgentConfig field at P1a (S11 type-staging).
   issuedAgentConfig: null,
+};
+
+// ── ch12-p1b compile probes: the retirement sweep (W1) + the outcome
+// vocabulary (V1) ─────────────────────────────────────────────────────
+
+// W1: the `Started` type retired with the one-shot (C24 named
+// replacement — `Activated` carries the continuity set). Reviving the
+// export turns this suppression into a TS2578 red.
+// @ts-expect-error Started no longer exists on domain/index (retired at ch12-p1b, C24).
+export type __ProbeRetiredStarted = import("../domain/index.js").Started; // eslint-disable-line @typescript-eslint/consistent-type-imports
+
+// V1: the lifecycle outcome arms are EXACT — cross-arm fields are
+// excess properties, out-of-union kinds and dispositions red.
+import type {
+  Activated as __Activated,
+  Created as __Created,
+  Terminated as __Terminated,
+} from "../domain/index.js";
+
+export const __probeTerminatedExact: __Terminated = {
+  kind: "terminated",
+  disposition: "cancelled",
+  // @ts-expect-error Terminated carries NO reason field (the rejected arm's field never crosses arms).
+  reason: "cancelled",
+};
+
+export const __probeTerminatedDispositionUnion: __Terminated = {
+  kind: "terminated",
+  // @ts-expect-error `done` is not a Terminated disposition — done originates only from COMPLETE, never a lifecycle op.
+  disposition: "done",
+};
+
+// @ts-expect-error Activated REQUIRES the full Started continuity set — instanceId is not optional.
+export const __probeActivatedRequiresContinuitySet: __Activated = {
+  kind: "activated",
+  version: 2,
+  intent: { actor: "a", packet: {} as never },
+};
+
+export const __probeCreatedExact: __Created = {
+  kind: "created",
+  instanceId: "i",
+  version: 1,
+  // @ts-expect-error Created carries no intent — genesis never dispatches (L1).
+  intent: null,
 };

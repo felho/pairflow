@@ -1,4 +1,13 @@
-import type { EventEnvelope, Outcome } from "../domain/index.js";
+import type {
+  ActivationMode,
+  CancelOutcome,
+  CreateOutcome,
+  EventEnvelope,
+  KickoffOutcome,
+  Outcome,
+  StartOutcome,
+  TemplateRef,
+} from "../domain/index.js";
 import { isCanonicalizable } from "../emit/index.js";
 import type { Kernel } from "../kernel/index.js";
 import type {
@@ -131,8 +140,25 @@ function parseEnvelope(raw: unknown): ParseResult {
   };
 }
 
+/** The operator-intent entry's return: the per-op unions plus the
+ * `invalid_shape` rejected arm (packet ch12-p1b, I1/V1). */
+export type IntentOutcome =
+  | CreateOutcome
+  | StartOutcome
+  | KickoffOutcome
+  | CancelOutcome
+  | { readonly kind: "rejected"; readonly reason: "invalid_shape" };
+
 export interface Ingress {
   submit(raw: unknown): Promise<Outcome>;
+  /**
+   * The operator-intent write family (packet ch12-p1b, I1 — the l0d
+   * RECEIVE source routing at the wire: `submit` IS the actor_envelope
+   * class, this the operator_intent class; kernel events have NO
+   * external endpoint at ch12, C13). Strict, fail-closed, hand-rolled
+   * validation; the kernel outcome returns VERBATIM.
+   */
+  submitIntent(raw: unknown): Promise<IntentOutcome>;
 }
 
 export interface IngressDeps {
@@ -141,8 +167,132 @@ export interface IngressDeps {
   readonly diag: DiagnosticsSink;
 }
 
+// ── The operator-intent wire family (packet ch12-p1b, I1–I4) ─────────
+// Per-intent keysets EXACT (I2, camelCase — the C13 rename culture);
+// validation strict fail-closed at BLOCK grain (I3/I4): every gate
+// block carries its own detail token; the CREATE-side task is
+// form-when-present (`invalid_task` — its ABSENCE is the kernel's
+// `task_required`, never an ingress lane).
+
+const INTENT_KINDS = new Set(["create", "start", "kickoff", "cancel"]);
+
+const INTENT_KEYS: Record<string, ReadonlySet<string>> = {
+  create: new Set([
+    "intent",
+    "instanceId",
+    "templateRef",
+    "task",
+    "overrides",
+    "runOverrides",
+    "mode",
+  ]),
+  start: new Set(["intent", "instanceId", "opId", "runtimeContextRef"]),
+  kickoff: new Set(["intent", "instanceId", "opId", "task"]),
+  cancel: new Set(["intent", "instanceId", "opId"]),
+};
+
+/** The authored↔stored mode mapping (C1/C13) — the wire is camelCase,
+ * the domain carries the MODEL token; the mapping happens exactly once,
+ * here. */
+const WIRE_MODES: Record<string, ActivationMode> = {
+  immediate: "immediate",
+  deferredKickoff: "deferred_kickoff",
+};
+
+function asPlainRecord(raw: unknown): Record<string, unknown> | null {
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
+    return null;
+  }
+  const proto: unknown = Object.getPrototypeOf(raw);
+  if (proto !== Object.prototype && proto !== null) {
+    return null;
+  }
+  if (Object.getOwnPropertySymbols(raw).length > 0) {
+    return null;
+  }
+  return raw as Record<string, unknown>;
+}
+
+/** The `templateRef.version` ladder (I3, R-NUMERIC-LADDER): integer,
+ * ≥ 1, safe, `-0` rejected via Object.is; non-number forms fall to the
+ * typeof gate. */
+function isTemplateRef(value: unknown): value is TemplateRef {
+  const record = asPlainRecord(value);
+  if (record === null) {
+    return false;
+  }
+  for (const key of Object.getOwnPropertyNames(record)) {
+    if (key !== "id" && key !== "version") {
+      return false;
+    }
+  }
+  const { id, version } = record;
+  return (
+    isNonEmptyString(id) &&
+    typeof version === "number" &&
+    Number.isSafeInteger(version) &&
+    version >= 1 &&
+    !Object.is(version, -0)
+  );
+}
+
+function isStringMap(value: unknown): value is Record<string, string> {
+  const record = asPlainRecord(value);
+  if (record === null) {
+    return false;
+  }
+  return Object.getOwnPropertyNames(record).every((key) => isNonEmptyString(record[key]));
+}
+
+/** The C7 CREATE-input canonical-JSON-safe check (I3): a plain map of
+ * step-id → PLAIN MAP, every entry canonicalizable — fail-closed HERE,
+ * never a commit-time serialization crash. */
+function isRunOverrides(
+  value: unknown,
+): value is Record<string, Readonly<Record<string, unknown>>> {
+  const record = asPlainRecord(value);
+  if (record === null) {
+    return false;
+  }
+  return Object.getOwnPropertyNames(record).every((key) => {
+    const entry = asPlainRecord(record[key]);
+    return entry !== null && isCanonicalizable(entry);
+  });
+}
+
+type IntentParseFailure = {
+  readonly detail: IngressDetailToken;
+  readonly attribution: Pick<DiagnosticEventBody, "instanceId" | "opId">;
+};
+
+function intentFailure(
+  detail: IngressDetailToken,
+  record: Record<string, unknown>,
+): IntentParseFailure {
+  const { instanceId, opId } = record;
+  return {
+    detail,
+    attribution: {
+      ...(isNonEmptyString(instanceId) ? { instanceId } : {}),
+      ...(isNonEmptyString(opId) ? { opId } : {}),
+    },
+  };
+}
+
 export function createIngress(deps: IngressDeps): Ingress {
   const { kernel, diag } = deps;
+
+  function rejectIntent(failure: IntentParseFailure): Promise<IntentOutcome> {
+    diag.emit({
+      source: "ingress",
+      kind: "rejected",
+      reason: "invalid_shape",
+      detail: failure.detail,
+      ...failure.attribution,
+    });
+    return Promise.resolve({ kind: "rejected", reason: "invalid_shape" });
+  }
+
   return {
     submit(raw: unknown): Promise<Outcome> {
       const parsed = parseEnvelope(raw);
@@ -157,6 +307,93 @@ export function createIngress(deps: IngressDeps): Ingress {
         return Promise.resolve(INVALID_SHAPE);
       }
       return kernel.handle(parsed.envelope);
+    },
+
+    submitIntent(raw: unknown): Promise<IntentOutcome> {
+      const record = asPlainRecord(raw);
+      if (record === null) {
+        return rejectIntent({ detail: "not_plain_object", attribution: {} });
+      }
+      const intent = record["intent"];
+      if (!isNonEmptyString(intent) || !INTENT_KINDS.has(intent)) {
+        return rejectIntent(intentFailure("unknown_intent", record));
+      }
+      const keys = INTENT_KEYS[intent];
+      if (keys === undefined) {
+        return rejectIntent(intentFailure("unknown_intent", record));
+      }
+      for (const key of Object.getOwnPropertyNames(record)) {
+        if (!keys.has(key)) {
+          return rejectIntent(intentFailure("unknown_key", record));
+        }
+      }
+      const { instanceId, opId, task, runtimeContextRef } = record;
+      if (!isNonEmptyString(instanceId)) {
+        return rejectIntent(intentFailure("invalid_required_string", record));
+      }
+      if (intent !== "create" && !isNonEmptyString(opId)) {
+        return rejectIntent(intentFailure("invalid_required_string", record));
+      }
+      switch (intent) {
+        case "create": {
+          if (!isTemplateRef(record["templateRef"])) {
+            return rejectIntent(intentFailure("invalid_template_ref", record));
+          }
+          // Form-when-present ONLY (I3): absence is the KERNEL's
+          // `task_required` decision, never an ingress shape lane.
+          if ("task" in record && !isNonEmptyString(task)) {
+            return rejectIntent(intentFailure("invalid_task", record));
+          }
+          if ("mode" in record) {
+            const mode = record["mode"];
+            if (!isNonEmptyString(mode) || WIRE_MODES[mode] === undefined) {
+              return rejectIntent(intentFailure("invalid_mode", record));
+            }
+          }
+          if ("overrides" in record && !isStringMap(record["overrides"])) {
+            return rejectIntent(intentFailure("invalid_overrides", record));
+          }
+          if ("runOverrides" in record && !isRunOverrides(record["runOverrides"])) {
+            return rejectIntent(intentFailure("invalid_run_overrides", record));
+          }
+          const wireMode = record["mode"];
+          return kernel.create({
+            instanceId,
+            templateRef: record["templateRef"],
+            ...(isNonEmptyString(task) ? { task } : {}),
+            ...(isStringMap(record["overrides"]) ? { overrides: record["overrides"] } : {}),
+            ...("runOverrides" in record
+              ? {
+                  runOverrides: record["runOverrides"] as Record<
+                    string,
+                    Readonly<Record<string, unknown>>
+                  >,
+                }
+              : {}),
+            ...(isNonEmptyString(wireMode) && WIRE_MODES[wireMode] !== undefined
+              ? { mode: WIRE_MODES[wireMode] }
+              : {}),
+          });
+        }
+        case "start": {
+          if ("runtimeContextRef" in record && !isNonEmptyString(runtimeContextRef)) {
+            return rejectIntent(intentFailure("invalid_runtime_context_ref", record));
+          }
+          return kernel.start({
+            instanceId,
+            opId: opId as string,
+            ...(isNonEmptyString(runtimeContextRef) ? { runtimeContextRef } : {}),
+          });
+        }
+        case "kickoff": {
+          if (!isNonEmptyString(task)) {
+            return rejectIntent(intentFailure("invalid_required_string", record));
+          }
+          return kernel.kickoff({ instanceId, opId: opId as string, task });
+        }
+        default:
+          return kernel.cancel({ instanceId, opId: opId as string });
+      }
     },
   };
 }

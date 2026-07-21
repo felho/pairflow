@@ -52,6 +52,7 @@ const instance: WorkflowInstance = {
   wait: null,
   runtimeContext: { state: "ready", ref: null },
   failureReason: null,
+  runOverrides: {},
   version: 1,
 };
 
@@ -107,7 +108,20 @@ async function nextRow(iterator: AsyncIterator<TranscriptEntry>): Promise<Transc
 }
 
 function fakeRow(seq: number): TranscriptEntry {
-  return { seq, envelope: env(`op-${String(seq)}`, "PASS", seq), payloadDigest: "d", gateDecisions: [], committedAt: 0 };
+  return {
+    entryKind: "transition",
+    seq,
+    envelope: env(`op-${String(seq)}`, "PASS", seq),
+    payloadDigest: "d",
+    gateDecisions: [],
+    committedAt: 0,
+  };
+}
+
+/** [seq, opId] per class (C12): a transition's op id rides its
+ * envelope, a fact's rides the row itself. */
+function opIdOf(entry: TranscriptEntry): string {
+  return entry.entryKind === "transition" ? entry.envelope.opId : entry.opId;
 }
 
 /** Engine-probe double (the traceHarness dim-4 precedent): scripted
@@ -130,6 +144,7 @@ function scriptedStore(
     findOp: () => Promise.reject(new Error("unused")),
     createInstance: () => Promise.reject(new Error("unused")),
     commitTransition: () => Promise.reject(new Error("unused")),
+    commitLifecycle: () => Promise.reject(new Error("unused")),
     listInstances: () => Promise.reject(new Error("unused")),
     getInstanceDetail: () => Promise.reject(new Error("unused")),
     getTimeline: () => {
@@ -168,7 +183,7 @@ describe("tailCommittedTimeline — the committed floor-tail seed (packet ch6-P2
     const rows = await collect(tail.tailCommittedTimeline("inst-1", 0));
 
     expect(rows.map((r) => r.seq)).toEqual([1, 2]);
-    expect(rows.map((r) => r.envelope.opId)).toEqual(["a1", "b2"]);
+    expect(rows.map(opIdOf)).toEqual(["a1", "b2"]);
     expect(scripted.calls()).toBe(0);
     handle.close();
   });
@@ -192,7 +207,7 @@ describe("tailCommittedTimeline — the committed floor-tail seed (packet ch6-P2
     // Replay (a1) + every mid-tail commit, each exactly once, in seq
     // order, then completion after the cross-handle terminal commit.
     expect(rows.map((r) => r.seq)).toEqual([1, 2, 3, 4]);
-    expect(rows.map((r) => r.envelope.opId)).toEqual(["a1", "b2", "c3", "d4"]);
+    expect(rows.map(opIdOf)).toEqual(["a1", "b2", "c3", "d4"]);
     expect(scripted.calls()).toBe(3);
     reader.close();
     writer.close();
@@ -258,7 +273,7 @@ describe("tailCommittedTimeline — the committed floor-tail seed (packet ch6-P2
     const rows = await collect(tail.tailCommittedTimeline("inst-1", 0));
 
     expect(rejectedOutcomes.map((o) => o.kind)).toEqual(["stale", "rejected"]);
-    expect(rows.map((r) => r.envelope.opId)).toEqual(["a1", "b2"]);
+    expect(rows.map(opIdOf)).toEqual(["a1", "b2"]);
     expect(scripted.calls()).toBe(2);
     handle.close();
   });
