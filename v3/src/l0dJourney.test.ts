@@ -121,6 +121,12 @@ describe("the context-free deferred-hold journey (J1)", () => {
       expectedRole: "implementer",
     });
     expect(probe).toEqual({ kind: "rejected", reason: "not_active" });
+    // The probe leg's floor state: byte-identical to the held literal —
+    // a rejected envelope mutates NOTHING (zero side effects).
+    expect(await handle.store.loadInstance("j1")).toEqual(held);
+    expect(await handle.store.getTimeline("j1", 0)).toEqual([
+      { entryKind: "STARTED", seq: 1, opId: "op-start", committedAt: 50_000 },
+    ]);
 
     // Leg 4 — the SAME start replayed → Duplicate (no second entry).
     const replay = await ingress.submitIntent({
@@ -129,6 +135,12 @@ describe("the context-free deferred-hold journey (J1)", () => {
       opId: "op-start",
     });
     expect(replay).toEqual({ kind: "duplicate" });
+    // The replay leg's floor state: still the held literal — a Duplicate
+    // is a no-op, no second entry (C12).
+    expect(await handle.store.loadInstance("j1")).toEqual(held);
+    expect(await handle.store.getTimeline("j1", 0)).toEqual([
+      { entryKind: "STARTED", seq: 1, opId: "op-start", committedAt: 50_000 },
+    ]);
 
     // Leg 5 — kickoff: Activated + ACTIVE + round 1 + the task set +
     // the TASK_SUPPLIED fact + wait NULL.
