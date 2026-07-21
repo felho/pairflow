@@ -3020,3 +3020,68 @@ owned==realized unit-map lock to default mode by design.
 Metrics: 21 anchored / 9 derived / 0 new-decision; 1016 → 1041
 tests; build commit `abaef93c`, aftermath `7294ae6b` + `1b0602a6`;
 gate-2 final CLEAN.
+
+## 2026-07-21 — ch12-P1b (activation machinery): the delegation-altitude gap, the ref-sync lint candidate, and the rule-accretion governance question
+
+(1) **The delegation-altitude gap — the aftermath's dominant cost.**
+The packet declared FULL-equality disciplines (per-op complete
+instance literals, full journey legs); the test re-base was delegated
+to build agents under a "do NOT weaken any assertion" rule — and the
+agents faithfully PRESERVED the old suite's assert strength instead
+of RAISING it to the declared level, while the Build record claimed
+the declared level. Gate-2 caught the spec-vs-built gap as 8
+test-evidence findings (the largest aftermath batch). Boundary
+candidate (a PROMPT rule, zero new mechanism): when a packet declares
+a discipline STRONGER than the existing suite embodies, the
+delegation prompt QUOTES the discipline lines verbatim and states
+"raise to the declared level" — preserve-don't-weaken is
+insufficient exactly when the packet's whole point is stronger
+proof.
+(2) **Prose↔manifest ref drift — a mechanizable class.** Twice in
+one loop a contract ref named in a row's prose closure was missing
+from the machine face (the C9 anchor from G1/G2's manifest refs +
+the header union; then C10 from the header union) — each cost a
+fold+re-run. The class is exactly the packet-lint's existing
+cross-lock pattern one step wider: verify every `contract:...#Cn`
+cited in a row's anchored/derived closure appears in that row's
+manifest refs and in the header union. Boundary candidate: LINT
+extension (constraint → environment), retiring the finding class
+from human review.
+(3) **Enumeration completeness worked as designed — no rule.** The
+T3 leaving-WAITING set missed FAIL; lens-3's text sweep caught it in
+round one. Existing machinery sufficient; candidate declined at
+capture time to avoid duplicating a lens duty.
+(4) **WATCH: full-object-equality tests as hidden consumers.** The
+G3 admission materialization structurally broke
+`definition/validate.test.ts` (a canonical-example round-trip
+asserting the ADMITTED value) OUTSIDE the declared boundary — caught
+cheaply by the suite, boundary amended in-build. One occurrence,
+tiny cost: WATCH only — a repeat promotes "equality-asserting tests
+over changed functions' outputs join the type-ripple sweep" at a
+boundary.
+(5) **Arm timeout config note.** Both gate-2-class codex runs
+exceeded the 10-minute foreground window (test-running sensitivity
+passes are slower than doc reviews) and were backgrounded by the
+harness — no loss, wall-clock only. Candidate: 20-minute timeout for
+build-close arm runs in ReviewPacket §6's invocation note.
+(6) **The rule-accretion governance question (user, 2026-07-21).**
+Raised at the P1b close: evidence-gated addition still accretes —
+every rule is individually justified by a real event, yet the
+aggregate can drift toward scar tissue, and "stronger vs
+Frankenstein" is hard to SEE statically. Captured as a boundary
+agenda item with the session's candidate instruments: (a) RETIREMENT
+as a first-class boundary verdict with the same standing as addition
+(each boundary asks which rules fired zero times, got mechanized, or
+duplicate a lens duty); (b) per-rule YIELD accounting reusing the
+packet_metrics/detector-miss data the process already collects (the
+arm gates' falling-yield experiment applied to the rule registry
+itself); (c) admission bias: WATCH-first as the DEFAULT for
+single-occurrence candidates (severity-weighted exceptions only),
+and mechanize-or-decline preferred over new prose (prose rules carry
+per-read attention cost; lint rules do not — the cap that matters is
+the PROSE registry's size, not the rule count).
+Metrics: 23 anchored / 18 derived / 0 new-decision; 1041 → 1121
+tests; panel 3 rounds + clean close; gate-1 8 findings (2 re-checks
+to CLEAN), gate-2 11 findings (2 product) + 1 re-check residual;
+build commit `6aec56d4`, aftermath `fb1adcfa` + `db452cda`; gate-2
+final CLEAN.
