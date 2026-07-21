@@ -89,7 +89,13 @@ const l0aFixture: TraceFixture = {
     [3, "c3"],
     [4, "d4"],
   ],
-  finalState: { currentStep: "done", round: 2, status: "DONE", version: 5 },
+  finalState: {
+    currentStep: "done",
+    round: 2,
+    kernelStatus: "TERMINAL",
+    terminalDisposition: "done",
+    version: 5,
+  },
 };
 
 function variant(patch: Partial<TraceFixture>): TraceFixture {

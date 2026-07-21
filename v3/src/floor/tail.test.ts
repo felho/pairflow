@@ -46,9 +46,13 @@ const instance: WorkflowInstance = {
   binding: { implementer: "codex", reviewer: "claude" },
   currentStep: "implement",
   round: 1,
-  status: "RUNNING",
+  kernelStatus: "ACTIVE",
+  terminalDisposition: null,
+  activationMode: "immediate",
+  wait: null,
+  runtimeContext: { state: "ready", ref: null },
+  failureReason: null,
   version: 1,
-  runtimeContext: null,
 };
 
 function env(
@@ -200,7 +204,7 @@ describe("tailCommittedTimeline — the committed floor-tail seed (packet ch6-P2
     // no-wait final drain picks up row 2, then the empty batch closes.
     const store = scriptedStore(
       [[fakeRow(1)], [fakeRow(2)], []],
-      [{ ...instance, status: "DONE", version: 3 }],
+      [{ ...instance, kernelStatus: "TERMINAL", terminalDisposition: "done", version: 3 }],
     );
     const scripted = createScriptedTailWait([]);
     const tail = createTail(store, scripted.wait);

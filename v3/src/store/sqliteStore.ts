@@ -1,11 +1,15 @@
 import { DatabaseSync } from "node:sqlite";
 
 import type {
+  ActivationMode,
   EventEnvelope,
   InstanceId,
-  LifecycleStatus,
+  KernelStatus,
   RetainedGateDecision,
+  RuntimeContext,
+  TerminalDisposition,
   TranscriptEntry,
+  WaitReason,
   WorkflowInstance,
 } from "../domain/index.js";
 import type {
@@ -19,18 +23,26 @@ import type { TimeSource } from "../ports/time.js";
 /**
  * The SQLite StorePort implementation (ADR-003 substrate, ADR-006
  * driver; packet ch4-P2). The store owns atomicity and stamping; the
- * kernel owns semantics — newCurrentStep / newRound / newStatus arrive
- * kernel-derived and are written verbatim.
+ * kernel owns semantics — newCurrentStep / newRound / the axis fields
+ * arrive kernel-derived and are written verbatim.
  *
  * Timestamps come from the INJECTED TimeSource, stamped inside the
  * commit boundary (CHK-C-TS-SOURCE; IC-D's store binding) — deliberately
  * NOT a SQLite DEFAULT, so a frozen-clock test asserts the real path.
  */
-// v4 (packet ch11-P3b): instances carry the nullable runtime_context column
-// (S4 — the chapter's SECOND schema change). It rides the SAME ADR-003 fenced
-// wipe: a known PROTOTYPE marker at any other version wipes on open; anything
-// else still refuses. No migration path exists (no data carry).
-const SCHEMA_VERSION = "4";
+// v5 (packet ch12-p1a): THE ch12 schema bump — the full C11 column set
+// in ONE fenced bump (S1): the two-axis lifecycle truth
+// (kernel_status + terminal_disposition; the ch-4 `status` column
+// RETIRED, S10), activation_mode, wait, failure_reason, the
+// discriminated runtime_context (NOT NULL canonical JSON, S7),
+// run_overrides, the nullable task/current_step faces (S9), and the
+// transcript entry-kind face (S11: entry_kind + per-class nullability +
+// issued_agent_config, P2's writer). Sibling ch12 packets consume these
+// columns; no second DDL change this chapter. It rides the SAME ADR-003
+// fenced wipe: a known PROTOTYPE marker at any other version wipes on
+// open; anything else still refuses. No migration path exists (no data
+// carry — the bump recreates, never converts).
+const SCHEMA_VERSION = "5";
 
 const SCHEMA = `
 CREATE TABLE meta (
@@ -38,26 +50,33 @@ CREATE TABLE meta (
   value TEXT NOT NULL
 ) STRICT;
 CREATE TABLE instances (
-  instance_id      TEXT PRIMARY KEY,
-  template_id      TEXT    NOT NULL,
-  template_version INTEGER NOT NULL,
-  task             TEXT    NOT NULL,
-  binding          TEXT    NOT NULL,
-  current_step     TEXT    NOT NULL,
-  round            INTEGER NOT NULL,
-  status           TEXT    NOT NULL,
-  version          INTEGER NOT NULL,
-  runtime_context  TEXT,
-  created_at       INTEGER NOT NULL
+  instance_id          TEXT PRIMARY KEY,
+  template_id          TEXT    NOT NULL,
+  template_version     INTEGER NOT NULL,
+  task                 TEXT,
+  binding              TEXT    NOT NULL,
+  current_step         TEXT,
+  round                INTEGER NOT NULL,
+  kernel_status        TEXT    NOT NULL,
+  terminal_disposition TEXT,
+  activation_mode      TEXT    NOT NULL,
+  wait                 TEXT,
+  failure_reason       TEXT,
+  runtime_context      TEXT    NOT NULL,
+  run_overrides        TEXT    NOT NULL,
+  version              INTEGER NOT NULL,
+  created_at           INTEGER NOT NULL
 ) STRICT;
 CREATE TABLE transcript (
-  instance_id    TEXT    NOT NULL,
-  seq            INTEGER NOT NULL,
-  op_id          TEXT    NOT NULL,
-  envelope       TEXT    NOT NULL,
-  payload_digest TEXT    NOT NULL,
-  gate_decisions TEXT    NOT NULL,
-  committed_at   INTEGER NOT NULL,
+  instance_id         TEXT    NOT NULL,
+  seq                 INTEGER NOT NULL,
+  op_id               TEXT    NOT NULL,
+  entry_kind          TEXT    NOT NULL,
+  envelope            TEXT,
+  payload_digest      TEXT,
+  gate_decisions      TEXT,
+  issued_agent_config TEXT,
+  committed_at        INTEGER NOT NULL,
   PRIMARY KEY (instance_id, seq),
   UNIQUE (instance_id, op_id)
 ) STRICT;
@@ -68,20 +87,195 @@ export interface StoreHandle {
   close(): void;
 }
 
+// ── Canonical JSON (the emit-lib culture: sorted keys, strict) ───────
+// The stored value-object encodings (wait, runtime_context,
+// run_overrides) are byte-deterministic: object keys sorted, no
+// undefined members, no non-finite numbers — so stored bytes are
+// byte-testable (packet ch12-p1a, In-context notes).
+
+function canonicalJson(value: unknown): string {
+  if (value === null || typeof value === "boolean" || typeof value === "string") {
+    return JSON.stringify(value);
+  }
+  if (typeof value === "number") {
+    if (!Number.isFinite(value) || Object.is(value, -0)) {
+      throw new Error(`store integrity: non-canonical number ${String(value)} in a stored value object`);
+    }
+    return JSON.stringify(value);
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => canonicalJson(item)).join(",")}]`;
+  }
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    const parts = Object.keys(record)
+      .sort()
+      .map((key) => {
+        if (record[key] === undefined) {
+          throw new Error(`store integrity: undefined property '${key}' in a stored value object`);
+        }
+        return `${JSON.stringify(key)}:${canonicalJson(record[key])}`;
+      });
+    return `{${parts.join(",")}}`;
+  }
+  throw new Error(`store integrity: non-canonicalizable ${typeof value} in a stored value object`);
+}
+
+// ── Token domains (S2/S3/S4) — refusal at the mapper ─────────────────
+// The STORED tokens are the MODEL's; a row carrying an out-of-domain
+// token is a store-integrity failure, never silently widened.
+
+const KERNEL_STATUS_TOKENS: readonly KernelStatus[] = ["CREATED", "ACTIVE", "WAITING", "TERMINAL"];
+const TERMINAL_DISPOSITION_TOKENS: readonly TerminalDisposition[] = ["done", "failed", "cancelled"];
+const ACTIVATION_MODE_TOKENS: readonly ActivationMode[] = ["immediate", "deferred_kickoff"];
+
+function parseKernelStatus(value: string): KernelStatus {
+  if (!(KERNEL_STATUS_TOKENS as readonly string[]).includes(value)) {
+    throw new Error(`store integrity: unknown kernel_status token '${value}'`);
+  }
+  return value as KernelStatus;
+}
+
+function parseTerminalDisposition(value: string | null): TerminalDisposition | null {
+  if (value === null) {
+    return null;
+  }
+  if (!(TERMINAL_DISPOSITION_TOKENS as readonly string[]).includes(value)) {
+    throw new Error(`store integrity: unknown terminal_disposition token '${value}'`);
+  }
+  return value as TerminalDisposition;
+}
+
+function parseActivationMode(value: string): ActivationMode {
+  if (!(ACTIVATION_MODE_TOKENS as readonly string[]).includes(value)) {
+    throw new Error(`store integrity: unknown activation_mode token '${value}'`);
+  }
+  return value as ActivationMode;
+}
+
+// ── The wait encoding (S5) — stored snake keys, TS camelCase (T4) ────
+
+function encodeWait(wait: WaitReason | null): string | null {
+  if (wait === null) {
+    return null;
+  }
+  return canonicalJson({
+    kind: wait.kind,
+    requested_by: wait.requestedBy,
+    resume_events: wait.resumeEvents,
+  });
+}
+
+function decodeWait(text: string | null): WaitReason | null {
+  if (text === null) {
+    return null;
+  }
+  const parsed = JSON.parse(text) as {
+    kind?: unknown;
+    requested_by?: unknown;
+    resume_events?: unknown;
+  };
+  if (
+    parsed.kind !== "kickoff_pending" ||
+    typeof parsed.requested_by !== "string" ||
+    !Array.isArray(parsed.resume_events) ||
+    parsed.resume_events.some((event) => typeof event !== "string")
+  ) {
+    throw new Error(`store integrity: malformed wait value '${text}'`);
+  }
+  return {
+    kind: parsed.kind,
+    requestedBy: parsed.requested_by,
+    resumeEvents: parsed.resume_events as readonly string[],
+  };
+}
+
+// ── The runtime_context encoding (S7/X1) — the discriminated state ───
+// Stored canonical JSON carries the MODEL's snake keys (`request_id`,
+// C11's requested{request_id} spelling); TS fields are camelCase — the
+// rowToInstance mapper culture (T4), stated so neither side forks.
+
+function encodeRuntimeContext(context: RuntimeContext): string {
+  switch (context.state) {
+    case "none":
+      return canonicalJson({ state: "none" });
+    case "requested":
+      return canonicalJson({ request_id: context.requestId, state: "requested" });
+    case "ready":
+      return canonicalJson({
+        ref:
+          context.ref === null
+            ? null
+            : { kind: context.ref.kind, locator: context.ref.locator },
+        state: "ready",
+      });
+  }
+}
+
+function decodeRuntimeContext(text: string): RuntimeContext {
+  const parsed = JSON.parse(text) as Record<string, unknown>;
+  if (typeof parsed !== "object" || parsed === null) {
+    throw new Error(`store integrity: malformed runtime_context value '${text}'`);
+  }
+  switch (parsed["state"]) {
+    case "none":
+      return { state: "none" };
+    case "requested": {
+      const requestId = parsed["request_id"];
+      if (typeof requestId !== "string") {
+        throw new Error(`store integrity: malformed runtime_context value '${text}'`);
+      }
+      return { state: "requested", requestId };
+    }
+    case "ready": {
+      const ref = parsed["ref"];
+      if (ref === null) {
+        return { state: "ready", ref: null };
+      }
+      if (typeof ref !== "object" || Array.isArray(ref)) {
+        throw new Error(`store integrity: malformed runtime_context value '${text}'`);
+      }
+      const record = ref as Record<string, unknown>;
+      if (typeof record["kind"] !== "string" || !("locator" in record)) {
+        throw new Error(`store integrity: malformed runtime_context value '${text}'`);
+      }
+      // The locator is OPAQUE and kernel-uninterpreted (T4/C15) — it
+      // round-trips verbatim, never validated here.
+      return { state: "ready", ref: { kind: record["kind"], locator: record["locator"] } };
+    }
+    default:
+      throw new Error(`store integrity: malformed runtime_context value '${text}'`);
+  }
+}
+
 interface InstanceRow {
   instance_id: string;
   template_id: string;
   template_version: number;
-  task: string;
+  task: string | null;
   binding: string;
-  current_step: string;
+  current_step: string | null;
   round: number;
-  status: string;
+  kernel_status: string;
+  terminal_disposition: string | null;
+  activation_mode: string;
+  wait: string | null;
+  failure_reason: string | null;
+  runtime_context: string;
+  run_overrides: string;
   version: number;
-  runtime_context: string | null;
 }
 
 function rowToInstance(row: InstanceRow): WorkflowInstance {
+  // TYPE-STAGING (S9/T3): the task/current_step COLUMNS are nullable at
+  // v5 (P1b's genesis/deferred face), but no P1a writer produces NULL —
+  // the TS type keeps them non-null and a NULL here is drift from a
+  // sibling-packet writer that has not yet brought its readers.
+  if (row.task === null || row.current_step === null) {
+    throw new Error(
+      `store integrity: instance '${row.instance_id}' carries a NULL task/current_step — the P1b genesis readers have not landed (type-staging, packet ch12-p1a S9)`,
+    );
+  }
   return {
     instanceId: row.instance_id,
     templateRef: { id: row.template_id, version: row.template_version },
@@ -89,26 +283,47 @@ function rowToInstance(row: InstanceRow): WorkflowInstance {
     binding: JSON.parse(row.binding) as Readonly<Record<string, string>>,
     currentStep: row.current_step,
     round: row.round,
-    status: row.status as LifecycleStatus,
+    kernelStatus: parseKernelStatus(row.kernel_status),
+    terminalDisposition: parseTerminalDisposition(row.terminal_disposition),
+    activationMode: parseActivationMode(row.activation_mode),
+    wait: decodeWait(row.wait),
+    // S7: the ONE row mapper decodes the discriminated state for every
+    // instance read surface identically (run_overrides has no P1a
+    // reader — its TS face is P1b/P2's).
+    runtimeContext: decodeRuntimeContext(row.runtime_context),
+    failureReason: row.failure_reason,
     version: row.version,
-    // S4: NULL ↔ null (ready(∅)); a stored string ↔ its exact ref. The ONE
-    // row mapper serves every instance read surface identically.
-    runtimeContext: row.runtime_context,
   };
 }
 
 interface TranscriptRow {
   seq: number;
-  envelope: string;
-  payload_digest: string;
-  gate_decisions: string;
+  entry_kind: string;
+  envelope: string | null;
+  payload_digest: string | null;
+  gate_decisions: string | null;
   committed_at: number;
 }
 
 /** One mapper for BOTH read surfaces (getInstanceDetail / getTimeline) —
  * the ch6-P1 cross-consistency dimension is structural, not incidental.
- * The gate_decisions column round-trips through JSON verbatim (S3). */
+ * The gate_decisions column round-trips through JSON verbatim (S3).
+ * S11 class iff, transition side: a `transition` row carries envelope /
+ * payload_digest / gate_decisions NON-NULL; at P1a only transition rows
+ * are ever written, so any other kind — or a transition row missing a
+ * class field — is integrity drift, refused here (the fact-entry TS
+ * variant and its readers enter with P1b's writers). */
 function toTranscriptEntry(row: TranscriptRow): TranscriptEntry {
+  if (row.entry_kind !== "transition") {
+    throw new Error(
+      `store integrity: transcript row seq ${String(row.seq)} carries entry_kind '${row.entry_kind}' — fact-entry readers land at P1b (type-staging, packet ch12-p1a S11)`,
+    );
+  }
+  if (row.envelope === null || row.payload_digest === null || row.gate_decisions === null) {
+    throw new Error(
+      `store integrity: transition row seq ${String(row.seq)} missing a class-required field (S11 class iff)`,
+    );
+  }
   return {
     seq: row.seq,
     envelope: JSON.parse(row.envelope) as EventEnvelope,
@@ -208,8 +423,10 @@ export function openStore(path: string, time: TimeSource): StoreHandle {
         db.prepare(
           `INSERT INTO instances
              (instance_id, template_id, template_version, task, binding,
-              current_step, round, status, version, runtime_context, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              current_step, round, kernel_status, terminal_disposition,
+              activation_mode, wait, failure_reason, runtime_context,
+              run_overrides, version, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         ).run(
           instance.instanceId,
           instance.templateRef.id,
@@ -218,11 +435,19 @@ export function openStore(path: string, time: TimeSource): StoreHandle {
           JSON.stringify(instance.binding),
           instance.currentStep,
           instance.round,
-          instance.status,
+          // The axis fields are written VERBATIM (kernel-derived); the
+          // stored tokens are the MODEL's (S2/S3/S4).
+          instance.kernelStatus,
+          instance.terminalDisposition,
+          instance.activationMode,
+          encodeWait(instance.wait),
+          instance.failureReason,
+          encodeRuntimeContext(instance.runtimeContext),
+          // S8: run_overrides is always `{}` at P1a — the one-shot has
+          // no runOverrides input (the CREATE input surface is P1b's
+          // C20 face, the cascade P2's C8/C9).
+          "{}",
           instance.version,
-          // S4: the field is written VERBATIM (null → NULL); create-time-only
-          // (CommitTransitionInput untouched — no post-create write path).
-          instance.runtimeContext,
           time.now(),
         );
       } catch (error) {
@@ -258,16 +483,20 @@ export function openStore(path: string, time: TimeSource): StoreHandle {
           );
         }
 
+        // E3: both axis fields ride the SAME transaction the commit
+        // always used (REV-A1-TXN unchanged).
         const cas = db
           .prepare(
             `UPDATE instances
-               SET current_step = ?, round = ?, status = ?, version = version + 1
+               SET current_step = ?, round = ?, kernel_status = ?,
+                   terminal_disposition = ?, version = version + 1
              WHERE instance_id = ? AND version = ?`,
           )
           .run(
             input.newCurrentStep,
             input.newRound,
-            input.newStatus,
+            input.newKernelStatus,
+            input.newTerminalDisposition,
             input.instanceId,
             input.expectedVersion,
           );
@@ -279,8 +508,11 @@ export function openStore(path: string, time: TimeSource): StoreHandle {
         const next = db
           .prepare("SELECT COALESCE(MAX(seq), 0) + 1 AS seq FROM transcript WHERE instance_id = ?")
           .get(input.instanceId) as { seq: number };
+        // S11: the commit path writes `transition` rows — the three
+        // class fields non-null, issued_agent_config NULL (its writer is
+        // P2's C10 face; fact rows are P1b's).
         db.prepare(
-          "INSERT INTO transcript (instance_id, seq, op_id, envelope, payload_digest, gate_decisions, committed_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+          "INSERT INTO transcript (instance_id, seq, op_id, entry_kind, envelope, payload_digest, gate_decisions, issued_agent_config, committed_at) VALUES (?, ?, ?, 'transition', ?, ?, ?, NULL, ?)",
         ).run(
           input.instanceId,
           next.seq,
@@ -314,7 +546,7 @@ export function openStore(path: string, time: TimeSource): StoreHandle {
       }
       const entries = db
         .prepare(
-          "SELECT seq, envelope, payload_digest, gate_decisions, committed_at FROM transcript WHERE instance_id = ? ORDER BY seq",
+          "SELECT seq, entry_kind, envelope, payload_digest, gate_decisions, committed_at FROM transcript WHERE instance_id = ? ORDER BY seq",
         )
         .all(instanceId) as unknown as TranscriptRow[];
       return Promise.resolve({
@@ -355,7 +587,7 @@ export function openStore(path: string, time: TimeSource): StoreHandle {
             ? null
             : (db
                 .prepare(
-                  "SELECT seq, envelope, payload_digest, gate_decisions, committed_at FROM transcript WHERE instance_id = ? AND seq > ? ORDER BY seq",
+                  "SELECT seq, entry_kind, envelope, payload_digest, gate_decisions, committed_at FROM transcript WHERE instance_id = ? AND seq > ? ORDER BY seq",
                 )
                 .all(instanceId, afterSeq) as unknown as TranscriptRow[]);
         db.exec("COMMIT");

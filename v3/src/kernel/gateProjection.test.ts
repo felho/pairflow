@@ -37,9 +37,13 @@ function instanceAt(currentStep: string, round: number): WorkflowInstance {
     binding: { implementer: "codex", reviewer: "claude" },
     currentStep,
     round,
-    status: "RUNNING",
+    kernelStatus: "ACTIVE",
+    terminalDisposition: null,
+    activationMode: "immediate",
+    wait: null,
+    runtimeContext: { state: "ready", ref: null },
+    failureReason: null,
     version: 1,
-    runtimeContext: null,
   };
 }
 

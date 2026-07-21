@@ -2241,9 +2241,10 @@ Invariants: **15**, dispositions already fixed by the ch-5 map
 with a named packet owner. Chapter traces: **3 golden traces** (the
 l0c, l0d, and l0e section traces; the l0d trace exercises the
 deferred-kickoff hold + cancel, the l0e trace the provisioned
-immediate run + the unknown-provider variant); ch12-P1 additionally
+immediate run + the unknown-provider variant); ch12-P1b additionally
 ships a context-free deferred-hold JOURNEY trace (an acceptance
-vehicle, not a fourth golden trace — the draft's C25 staging). No IC/PI intake rows
+vehicle, not a fourth golden trace — the draft's C25 staging; the
+P1a/P1b partition aligned at ch12-p1a pre-approval). No IC/PI intake rows
 flip: the chapter is map-extension surface (the IC-A2 family and
 the CT-B two-worker re-run stay ch 9's).
 
@@ -2277,19 +2278,28 @@ Ratification is permanently human; packets anchor as
 Draft reference (§1.3 convention): `contracts/ch12-runtime-core-contract.md`
 — RATIFIED 2026-07-19 (the draft round ran first, before any packet;
 the prediction bases below are unconditional now).
+Process note: P1 was the declared sizing-split candidate (template §2
+step 0); the split EXECUTED at ch12-p1a authoring (autonomous
+in-chapter split — sizing, not scope; hard stops 1, 2, and 8 tripped
+on the bundled row and the single-packet closure proof failed on the
+separately-sequenceable foundation→activation buckets; the P1a/P1b
+rows below are the repartition on the row's own expected seam,
+coverage union preserved — aligned at ch12-p1a pre-approval).
 
 | Packet | Content | Mode |
 |---|---|---|
 | ch12-P0 | the gate-field watchpoint realization: the `Outcome` gate_blocked arm + kernel emission + CLI rejection detail gain `gate` per the ratified model fix (`6dd8bd15`), test expectations updated | flag-free approve → autonomous build (measurement; the §5.5 fallbacks stand); predicted: projection (source: the ratified model @ `6dd8bd15` — anchors no draft row) |
-| ch12-P1 | the L0d lifecycle spine: the source-routed entry, the CREATE/START split (ch-4 `startInstance` retired as a named replacement), `kernel_status` + typed wait + terminal dispositions, KICKOFF/CANCEL/FAIL/COMPLETE, the lifecycle fact entries with `op_id`, `task_required` + `not_active` unit basis, THE schema bump (fenced), the `l0d/terminal-is-a-sink` storeChecker, a context-free deferred-hold journey trace (the l0d golden trace's requested/READY legs need the provider machinery — it moves to P3; aligned at the ch12 draft refine round, 2026-07-18, the draft's C25 trace staging) | flag-free approve → autonomous build (inherited); predicted: projection (basis: l0d-pseudocode + ledger §2/§3/§4 + the ratified chapter draft); **declared sizing-split candidate** (template §2 step 0 — 12 units; the expected seam: lifecycle axis first, activation machinery second) |
-| ch12-P2 | the L0c run profile: `AgentConfig` + the cascade + `resolve_agent_config`, the packet's `effective_agent_config`, the transcript's `issued_agent_config` recomputed-at-commit provenance, `run_overrides` at start, the l0c golden trace | flag-free approve → autonomous build (inherited); predicted: projection (basis: l0c-pseudocode + ledger §2/§4 + the ratified chapter draft) |
-| ch12-P3 | the L0e provider contract: the requirement on the template (C18/C19 successor), the provider port + `ProviderRegistry` + the deterministic testkit provider, the kind-boundary readiness check, the packet projection, `runtime_context_provider_unavailable` behavioral, the ch11-P3b start-input seam reconciled, the l0e golden trace (incl. the unknown-provider variant) + the l0d golden trace (the deferred hold + cancel — its requested/READY legs realized with the scripted provider; moved from P1, aligned 2026-07-18) | flag-free approve → autonomous build (inherited); predicted: projection (basis: l0e-pseudocode + ledger §2/§3/§4 + the ratified chapter draft) |
+| ch12-P1a | the lifecycle axis (the ch12-P1 sizing split's FOUNDATION share; split executed at ch12-p1a authoring): THE schema bump (fenced — the full C11 instances set PLUS the C12/C10 transcript face — entry-kind + provenance columns, schema-supported with their writers staged to P1b/P2 — in ONE bump; the ch-4 `status` column retired per C24 with the packet-owned consumer sweep, whose structural consequence is that the passthrough read documents surface the axis fields at P1a — the DEDICATED floor extension stays P4), the l0d domain value objects, the admission state rung re-based onto `kernel_status` (the `not_active` name unchanged — behavioral since ch11-P1), COMPLETE → TERMINAL(done) under the single-write disposition rule, the ch-4 one-shot `startInstance` INTERIM-mapped onto the axis (its retirement stays P1b's), the `l0d/terminal-is-a-sink` storeChecker, the C14-transitional runtime-context state encoding | flag-free approve → autonomous build (inherited); predicted: projection (basis: inherited from the P1 row — l0d-pseudocode + ledger §2/§3/§4 + the ratified chapter draft) |
+| ch12-P1b | the activation machinery (the split's ACTIVATION share): the source-routed entry, the operator-intent ingress family (CREATE/START/KICKOFF/CANCEL — C13), START's none-path + the activate_or_hold fork, the lifecycle fact entries with `op_id` (C12), activate, FAIL, `task_required` behavioral, the ch-4 `startInstance` RETIRED as the named replacement (C24) + the C25 in-handler CLI bridge, a context-free deferred-hold journey trace (the l0d golden trace's requested/READY legs need the provider machinery — it moves to P3; aligned at the ch12 draft refine round, 2026-07-18, the draft's C25 trace staging); the `l0d/actor-routable-execution` share lands BOTH-ENDS at this commit (this packet's slice + the reciprocal entry in ch12-p1a's — the coverage both-ends rule) | flag-free approve → autonomous build (inherited); predicted: projection (basis: inherited from the P1 row — l0d-pseudocode + ledger §2/§3/§4 + the ratified chapter draft) |
+| ch12-P2 | the L0c run profile: `AgentConfig` + the cascade + `resolve_agent_config`, the packet's `effective_agent_config`, the transcript's `issued_agent_config` recomputed-at-commit provenance, `run_overrides` at start, the l0c golden trace; the `l0d-pseudocode/HANDLE` share lands BOTH-ENDS at this commit (this packet's slice + the reciprocal entry in ch12-p1a's — the coverage both-ends rule) | flag-free approve → autonomous build (inherited); predicted: projection (basis: l0c-pseudocode + ledger §2/§4 + the ratified chapter draft) |
+| ch12-P3 | the L0e provider contract: the requirement on the template (C18/C19 successor), the provider port + `ProviderRegistry` + the deterministic testkit provider, the kind-boundary readiness check, the packet projection, `runtime_context_provider_unavailable` behavioral, the ch11-P3b start-input seam reconciled, the l0e golden trace (incl. the unknown-provider variant) + the l0d golden trace (the deferred hold + cancel — its requested/READY legs realized with the scripted provider; moved from the pre-split P1 row, aligned 2026-07-18) | flag-free approve → autonomous build (inherited); predicted: projection (basis: l0e-pseudocode + ledger §2/§3/§4 + the ratified chapter draft) |
 | ch12-P4 | the format + operator surface: the runtime YAML keys (agent_config / activation / runtime_context requirement) + validator lanes + CLI validate extension, the lifecycle CLI verbs, the floor extension (kernel_status / wait / runtime-context state), template-fixture updates under the ch8-P2 equality pin | flag-free approve → autonomous build (inherited); predicted: projection (basis: the ratified chapter draft) |
 
-Order: draft ratification → P0 → P1 → P2 → P3 → P4 (the README §4
-draft-first rule binds without exception — P0 anchors no draft row
-but still follows the ratification). One packet = packet file +
-code + tests in ONE commit.
+Order: draft ratification → P0 → P1a → P1b → P2 → P3 → P4 (the README
+§4 draft-first rule binds without exception — P0 anchors no draft row
+but still follows the ratification; the P1a/P1b order is the P1
+split's foundation → activation shape — aligned at ch12-p1a
+pre-approval). One packet = packet file + code + tests in ONE commit.
 
 ### 12.5 Deliverables and DoD
 

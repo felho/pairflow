@@ -1,6 +1,16 @@
 import { describe, expect, it } from "vitest";
 
-import type { EffectiveProcessConfig, GateDecision, WorkflowInstance } from "../domain/index.js";
+import type {
+  ActivationMode,
+  EffectiveProcessConfig,
+  GateDecision,
+  KernelStatus,
+  RuntimeContext,
+  RuntimeContextRef,
+  TerminalDisposition,
+  WaitReason,
+  WorkflowInstance,
+} from "../domain/index.js";
 import type {
   GateInvocation,
   GateInvocationHistoryEntry,
@@ -275,7 +285,7 @@ describe("runner_outcome (M3)", () => {
 // v3:typecheck via TS2578 on an unused @ts-expect-error if a type ever widens.
 // Exported so the unused-variable lint treats them as consumed. ─────────────
 
-// (a) WorkflowInstance.runtimeContext is REQUIRED string | null.
+// (a) WorkflowInstance.runtimeContext is the REQUIRED discriminated state (T3/T4).
 const __instanceNoRuntimeContext: Omit<WorkflowInstance, "runtimeContext"> = {
   instanceId: "i",
   templateRef: { id: "t", version: 1 },
@@ -283,7 +293,11 @@ const __instanceNoRuntimeContext: Omit<WorkflowInstance, "runtimeContext"> = {
   binding: { implementer: "codex", reviewer: "claude" },
   currentStep: "s",
   round: 1,
-  status: "RUNNING",
+  kernelStatus: "ACTIVE",
+  terminalDisposition: null,
+  activationMode: "immediate",
+  wait: null,
+  failureReason: null,
   version: 1,
 };
 
@@ -294,7 +308,7 @@ export const __probeInstanceMissingRuntimeContext: WorkflowInstance = {
 
 export const __probeInstanceBadRuntimeContext: WorkflowInstance = {
   ...__instanceNoRuntimeContext,
-  // @ts-expect-error runtimeContext is `string | null` — a non-string/non-null value is rejected.
+  // @ts-expect-error runtimeContext is the discriminated RuntimeContext state — a bare scalar is rejected.
   runtimeContext: 5,
 };
 
@@ -339,3 +353,54 @@ export const __probeProjectionMissingHistory: GateInvocationProjection = {
   current_step: "s",
   event_type: "E",
 };
+
+// ── Compile-negative probes (packet ch12-p1a — the type family, T3/T4 + W1):
+// validated by v3:typecheck via TS2578 on an unused @ts-expect-error if a
+// union widens, a shape loosens, or the retired export returns. Exported so
+// the unused-variable lint treats them as consumed. ─────────────────────────
+
+// W1: the `LifecycleStatus` export is RETIRED (C24 named replacement) —
+// reviving it turns this suppression into an unused-@ts-expect-error red.
+// The inline import() form is deliberate: a top-level import statement
+// cannot carry a per-name @ts-expect-error probe.
+// @ts-expect-error LifecycleStatus no longer exists on domain/index.
+export type __ProbeRetiredLifecycleStatus = import("../domain/index.js").LifecycleStatus; // eslint-disable-line @typescript-eslint/consistent-type-imports
+
+// T3: exact unions — out-of-union tokens are compile errors.
+// @ts-expect-error out-of-union kernel status token.
+export const __probeBadKernelStatus: KernelStatus = "PAUSED";
+// @ts-expect-error the ch-4 token spelling is NOT in the axis union (E1 maps, never aliases).
+export const __probeOldRunningToken: KernelStatus = "RUNNING";
+// @ts-expect-error out-of-union terminal disposition token.
+export const __probeBadDisposition: TerminalDisposition = "abandoned";
+// @ts-expect-error the model token is snake `deferred_kickoff` — a camelCase fork is rejected.
+export const __probeBadActivationMode: ActivationMode = "deferredKickoff";
+export const __probeBadWaitKind: WaitReason = {
+  // @ts-expect-error the ch12 wait-kind set is exactly {kickoff_pending} (C23 additive growth).
+  kind: "help_pending",
+  requestedBy: "activation",
+  resumeEvents: [],
+};
+
+// T4: composite shapes — wrong discriminator key / missing variant field /
+// the opaque locator cannot flow to string without the X2 narrowing.
+// @ts-expect-error the RuntimeContext discriminator key is `state`, not `kind`.
+export const __probeWrongDiscriminatorKey: RuntimeContext = { kind: "none" };
+// @ts-expect-error the `requested` variant REQUIRES requestId.
+export const __probeMissingVariantField: RuntimeContext = { state: "requested" };
+// @ts-expect-error the `ready` variant REQUIRES the ref field (null IS ready(∅) — absence is not).
+export const __probeReadyWithoutRef: RuntimeContext = { state: "ready" };
+export function __probeLocatorStaysOpaque(ref: RuntimeContextRef): string {
+  // @ts-expect-error the locator is OPAQUE (unknown) — it cannot flow to string un-narrowed (X2).
+  return ref.locator;
+}
+
+// T3: readonly probes — the value objects' fields cannot be written.
+export function __probeReadonlyAxisFields(instance: WorkflowInstance, wait: WaitReason): void {
+  // @ts-expect-error kernelStatus is readonly.
+  instance.kernelStatus = "ACTIVE";
+  // @ts-expect-error terminalDisposition is readonly.
+  instance.terminalDisposition = null;
+  // @ts-expect-error wait.resumeEvents is readonly.
+  wait.resumeEvents = [];
+}

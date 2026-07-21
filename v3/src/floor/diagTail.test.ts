@@ -49,9 +49,13 @@ const instance: WorkflowInstance = {
   binding: { implementer: "codex", reviewer: "claude" },
   currentStep: "implement",
   round: 1,
-  status: "RUNNING",
+  kernelStatus: "ACTIVE",
+  terminalDisposition: null,
+  activationMode: "immediate",
+  wait: null,
+  runtimeContext: { state: "ready", ref: null },
+  failureReason: null,
   version: 1,
-  runtimeContext: null,
 };
 
 function env(
@@ -299,7 +303,7 @@ describe("tailWithDiagnostics — committed-lane parity (dimension 1)", () => {
   it("parity 4c — terminal lands BETWEEN drain and status read (fake seams): final drain yields it, zero waits, ONE final diag read", async () => {
     const store = scriptedStore(
       [ok([fakeRow(1)]), ok([fakeRow(2)]), ok([])],
-      [ok({ ...instance, status: "DONE" as const, version: 3 })],
+      [ok({ ...instance, kernelStatus: "TERMINAL" as const, terminalDisposition: "done" as const, version: 3 })],
     );
     const reader = scriptedReader([ok([]), ok([])]);
     const scripted = createScriptedTailWait([]);
@@ -483,7 +487,7 @@ describe("stop semantics (dimension 5 / T5)", () => {
     const rows = await collectAll(tail.tailWithDiagnostics("inst-1", 0, 0));
     expect(diagEvents(rows)).toEqual([]);
 
-    // A rejected submit against the DONE instance, AFTER completion.
+    // A rejected submit against the TERMINAL instance, AFTER completion.
     const outcome = await r.kernel.handle(env("p9", "PASS", 3));
     expect(outcome).toEqual({ kind: "rejected", reason: "not_active" });
 
@@ -579,7 +583,7 @@ describe("tail error contract (dimension 6 / the E matrix)", () => {
   it("E4 — stop-path DRAIN-null variant: terminal observed, the drain read resolves null → TailIntegrityError, never a silent completion", async () => {
     const store = scriptedStore(
       [ok([fakeRow(1)]), ok(null)],
-      [ok({ ...instance, status: "DONE" as const, version: 2 })],
+      [ok({ ...instance, kernelStatus: "TERMINAL" as const, terminalDisposition: "done" as const, version: 2 })],
     );
     const reader = scriptedReader([ok([])]);
     const scripted = createScriptedTailWait([]);
@@ -719,7 +723,7 @@ describe("tail error contract (dimension 6 / the E matrix)", () => {
   it("E9 — stop-path DRAIN-read rejection: terminal observed, the drain getTimeline rejects → loud on that next(), rows between last yield and terminal are never dropped silently", async () => {
     const store = scriptedStore(
       [ok([fakeRow(1)]), failWith(new Error("drain-boom"))],
-      [ok({ ...instance, status: "DONE" as const, version: 2 })],
+      [ok({ ...instance, kernelStatus: "TERMINAL" as const, terminalDisposition: "done" as const, version: 2 })],
     );
     const reader = scriptedReader([ok([])]);
     const scripted = createScriptedTailWait([]);

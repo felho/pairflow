@@ -3,10 +3,11 @@ import type {
   EventEnvelope,
   GateDecision,
   GateProjection,
-  LifecycleStatus,
+  KernelStatus,
   Outcome,
   RetainedGateDecision,
   Started,
+  TerminalDisposition,
   WorkflowInstance,
   WorkflowTemplate,
 } from "../domain/index.js";
@@ -94,6 +95,23 @@ async function loadTemplate(
  * contract is attempt-scoped; see the post-build regression lanes). */
 interface AttemptContext {
   payloadDigest?: string;
+}
+
+/**
+ * l0d-pseudocode/COMPLETE (packet ch12-p1a, E4): the kernel-internal
+ * terminal branch — never routed, never exported as a handler (done
+ * originates only from a terminal step). The unit's REQUIRE
+ * `kernel_status = ACTIVE` is structural at P1a: this branch is reached
+ * only from an admitted ACTIVE commit (the E5 state rung admits only
+ * ACTIVE), so the guard is stated as the invariant it protects. Both
+ * axis writes land in the SAME atomic commit as the transition (E3) —
+ * the single-write discipline's only P1a writer (T1).
+ */
+function complete(): {
+  readonly newKernelStatus: KernelStatus;
+  readonly newTerminalDisposition: TerminalDisposition;
+} {
+  return { newKernelStatus: "TERMINAL", newTerminalDisposition: "done" };
 }
 
 function errorFields(error: unknown): { readonly name: string; readonly message: string } {
@@ -213,14 +231,26 @@ export function createKernel(deps: KernelDeps): Kernel {
       let decision: GateDecision;
       if (registration.implementation === "process") {
         // L2a: the inline process now RUNS (the model's reject→run flip).
-        // C36 runtime backstop (S5) — BEFORE any runner call and before
-        // this arm's projection read; a null runtime context on a drifted
-        // (store-constructed / cross-generation) instance rejects here.
-        if (instance.runtimeContext === null) {
+        // C36 runtime backstop re-read (packet ch12-p1a, X2) — BEFORE any
+        // runner call and before this arm's projection read: a process
+        // gate reached without a ready REF — `ready(∅)` (ref null), or a
+        // drifted non-ready state — rejects here (behavior-preserving:
+        // the ch11 null→reject lane one-to-one).
+        const context = instance.runtimeContext;
+        if (context.state !== "ready" || context.ref === null) {
           return { kind: "rejected", reason: "runtime_context_required_for_process_gate" };
         }
-        // The ready ref narrowed to a string — the runner `cwd` (X2).
-        const workspace: string = instance.runtimeContext;
+        // The ready ref's locator narrowed to a string — the runner `cwd`
+        // (X2, the single read site). A non-string locator here is a
+        // kernel/config integrity failure (the E4 REQUIRE pattern) —
+        // structurally unreachable at P1a (X1's sole writer stores a
+        // string), never a rejection.
+        if (typeof context.ref.locator !== "string") {
+          throw new Error(
+            `kernel integrity: runtime-context ref locator for instance '${instance.instanceId}' is not a string`,
+          );
+        }
+        const workspace: string = context.ref.locator;
         decision = await runProcessGate(
           binding.config as EffectiveProcessConfig,
           instance,
@@ -258,7 +288,16 @@ export function createKernel(deps: KernelDeps): Kernel {
     }
 
     const terminal = template.terminal.includes(target);
-    const newStatus: LifecycleStatus = terminal ? "DONE" : instance.status;
+    // The axis derivation (E3): a terminal arrival takes the COMPLETE
+    // branch (TERMINAL + "done", E4); a non-terminal commit writes
+    // ACTIVE + null. Non-null disposition EXACTLY when TERMINAL — the
+    // type face of the single-write rule (T1).
+    const axis = terminal
+      ? complete()
+      : {
+          newKernelStatus: "ACTIVE" as const,
+          newTerminalDisposition: null,
+        };
     // K1 (packet ch11-P2c): round advancement is DECLARED transition
     // semantics — the CURRENT step's admission-normalized flag for the
     // committed event type, never inferred from target equality (the
@@ -276,7 +315,8 @@ export function createKernel(deps: KernelDeps): Kernel {
       gateDecisions,
       newCurrentStep: target,
       newRound,
-      newStatus,
+      newKernelStatus: axis.newKernelStatus,
+      newTerminalDisposition: axis.newTerminalDisposition,
     });
     switch (result.kind) {
       case "duplicate_op":
@@ -288,14 +328,17 @@ export function createKernel(deps: KernelDeps): Kernel {
       case "cas_conflict":
         return "restart";
       case "committed": {
-        if (terminal) {
+        // Post-commit intent guard (the l0d HANDLE unit): a TERMINAL
+        // instance derives no intent — `kernel_status = TERMINAL ⇒ none`.
+        if (axis.newKernelStatus === "TERMINAL") {
           return { kind: "committed", version: result.version, intent: null };
         }
         const committed: WorkflowInstance = {
           ...instance,
           currentStep: target,
           round: newRound,
-          status: newStatus,
+          kernelStatus: axis.newKernelStatus,
+          terminalDisposition: axis.newTerminalDisposition,
           version: result.version,
         };
         const intent = deriveDispatchIntent(committed, template, target, envelope.payload);

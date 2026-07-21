@@ -95,9 +95,13 @@ describe("trace harness — fake-seam negatives (packet ch5-P3)", () => {
         binding: { implementer: "codex", reviewer: "claude" },
         currentStep: "done",
         round: 1,
-        status: "DONE",
+        kernelStatus: "TERMINAL",
+        terminalDisposition: "done",
+        activationMode: "immediate",
+        wait: null,
+        runtimeContext: { state: "ready", ref: null },
+        failureReason: null,
         version: 3,
-        runtimeContext: null,
       },
       transcript: [
         { seq: 1, envelope: envelope("a1", "PASS"), payloadDigest: "d-a1", gateDecisions: [], committedAt: 1_001 },
@@ -120,7 +124,13 @@ describe("trace harness — fake-seam negatives (packet ch5-P3)", () => {
         [1, "a1"],
         [3, "b2"],
       ],
-      finalState: { currentStep: "done", round: 1, status: "DONE", version: 3 },
+      finalState: {
+        currentStep: "done",
+        round: 1,
+        kernelStatus: "TERMINAL",
+        terminalDisposition: "done",
+        version: 3,
+      },
     };
     await expect(replayTrace(fixture, fakeSeams(corrupt, [2, 3]))).rejects.toThrow(
       /post-condition checkers rejected/,
@@ -136,9 +146,13 @@ describe("trace harness — fake-seam negatives (packet ch5-P3)", () => {
         binding: { implementer: "codex", reviewer: "claude" },
         currentStep: "implement",
         round: 1,
-        status: "RUNNING",
+        kernelStatus: "ACTIVE",
+        terminalDisposition: null,
+        activationMode: "immediate",
+        wait: null,
+        runtimeContext: { state: "ready", ref: null },
+        failureReason: null,
         version: 1,
-        runtimeContext: null,
       },
       transcript: [],
     };
@@ -154,7 +168,13 @@ describe("trace harness — fake-seam negatives (packet ch5-P3)", () => {
         { kind: "emit", opId: "a1", type: "PASS", actorId: "codex", expect: { kind: "committed", version: 2 } },
       ],
       finalTranscript: [[1, "a1"]],
-      finalState: { currentStep: "review", round: 1, status: "RUNNING", version: 2 },
+      finalState: {
+        currentStep: "review",
+        round: 1,
+        kernelStatus: "ACTIVE",
+        terminalDisposition: null,
+        version: 2,
+      },
     };
     await expect(replayTrace(fixture, fakeSeams(irrelevant, [2]))).rejects.toThrow(
       /no expectedVersion and no lift/,
@@ -171,9 +191,13 @@ describe("trace harness — the typed mismatch contract (packet ch6-P4b)", () =>
       binding: { implementer: "codex", reviewer: "claude" },
       currentStep: "review",
       round: 1,
-      status: "RUNNING",
+      kernelStatus: "ACTIVE",
+      terminalDisposition: null,
+      activationMode: "immediate",
+      wait: null,
+      runtimeContext: { state: "ready", ref: null },
+      failureReason: null,
       version: 2,
-      runtimeContext: null,
     },
     transcript: [
       { seq: 1, envelope: envelope("a1", "PASS"), payloadDigest: "d-a1", gateDecisions: [], committedAt: 1_001 },
@@ -194,7 +218,13 @@ describe("trace harness — the typed mismatch contract (packet ch6-P4b)", () =>
         { kind: "emit", opId: "a1", type: "PASS", actorId: "codex", expectedVersion: 1, expect: { kind: "committed", version: 3 } },
       ],
       finalTranscript: [[1, "a1"]],
-      finalState: { currentStep: "review", round: 1, status: "RUNNING", version: 2 },
+      finalState: {
+        currentStep: "review",
+        round: 1,
+        kernelStatus: "ACTIVE",
+        terminalDisposition: null,
+        version: 2,
+      },
     };
     const failure = await replayTrace(fixture, fakeSeams(detail, [2])).then(
       () => null,
@@ -216,7 +246,13 @@ describe("trace harness — the typed mismatch contract (packet ch6-P4b)", () =>
         { kind: "emit", opId: "a1", type: "PASS", actorId: "codex", expectedVersion: 1, expect: { kind: "committed", version: 2 } },
       ],
       finalTranscript: [],
-      finalState: { currentStep: "implement", round: 1, status: "RUNNING", version: 1 },
+      finalState: {
+        currentStep: "implement",
+        round: 1,
+        kernelStatus: "ACTIVE",
+        terminalDisposition: null,
+        version: 1,
+      },
     };
     const failure = await replayTrace(fixture, fakeSeams(detail, [2])).then(
       () => null,
@@ -255,9 +291,13 @@ describe("trace harness — ch11-P3b seams (runtimeContextRef passthrough + evid
         binding: { implementer: "codex", reviewer: "claude" },
         currentStep: "implement",
         round: 1,
-        status: "RUNNING",
+        kernelStatus: "ACTIVE",
+        terminalDisposition: null,
+        activationMode: "immediate",
+        wait: null,
+        runtimeContext: { state: "ready", ref: { kind: "worktree", locator: "/ws/ready" } },
+        failureReason: null,
         version: 1,
-        runtimeContext: "/ws/ready",
       },
       transcript: [],
     };
@@ -283,7 +323,13 @@ describe("trace harness — ch11-P3b seams (runtimeContextRef passthrough + evid
         },
       ],
       finalTranscript: [],
-      finalState: { currentStep: "implement", round: 1, status: "RUNNING", version: 1 },
+      finalState: {
+        currentStep: "implement",
+        round: 1,
+        kernelStatus: "ACTIVE",
+        terminalDisposition: null,
+        version: 1,
+      },
     };
     await replayTrace(fixture, seams);
     expect(received).toBe("/ws/ready");
@@ -306,9 +352,13 @@ describe("trace harness — ch11-P3b seams (runtimeContextRef passthrough + evid
         binding: { implementer: "codex", reviewer: "claude" },
         currentStep: "review",
         round: 1,
-        status: "RUNNING",
+        kernelStatus: "ACTIVE",
+        terminalDisposition: null,
+        activationMode: "immediate",
+        wait: null,
+        runtimeContext: { state: "ready", ref: { kind: "worktree", locator: "/ws/ready" } },
+        failureReason: null,
         version: 2,
-        runtimeContext: "/ws/ready",
       },
       transcript: [
         {
@@ -339,7 +389,13 @@ describe("trace harness — ch11-P3b seams (runtimeContextRef passthrough + evid
         },
       ],
       finalTranscript: [[1, "a1"]],
-      finalState: { currentStep: "review", round: 1, status: "RUNNING", version: 2 },
+      finalState: {
+        currentStep: "review",
+        round: 1,
+        kernelStatus: "ACTIVE",
+        terminalDisposition: null,
+        version: 2,
+      },
     };
     // No seam → the store-visible evidence half is fail-closed → checker fails.
     await expect(replayTrace(fixture, fakeSeams(detailWithRef, [2]))).rejects.toThrow(

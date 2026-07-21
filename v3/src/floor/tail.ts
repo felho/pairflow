@@ -55,9 +55,9 @@ export function createTail(store: StorePort, wait: TailWait): Tail {
 
 /**
  * Engine invariant (refine finding 1): `wait()` runs ONLY after a
- * non-terminal POST-drain status read. Once terminal is observed the
+ * non-terminal POST-drain state read. Once terminal is observed the
  * engine drains until an empty batch and completes — a terminal commit
- * landing between the drain and the status read is picked up by the
+ * landing between the drain and the state read is picked up by the
  * final drain, never followed by a wait. The drain-till-empty loop is
  * bounded by the terminal-sink invariant (no commits after terminal).
  */
@@ -86,7 +86,9 @@ async function* tailLoop(
     if (instance === null) {
       throw new TailIntegrityError(`tail: instance '${instanceId}' vanished mid-stream`);
     }
-    if (instance.status === "DONE") {
+    // The completion predicate re-based onto the axis (packet ch12-p1a,
+    // W3): terminal IS `kernel_status = TERMINAL` (DONE ≡ TERMINAL(done)).
+    if (instance.kernelStatus === "TERMINAL") {
       for (;;) {
         const rest = await store.getTimeline(instanceId, cursor);
         if (rest === null) {
@@ -164,13 +166,13 @@ export function createDiagTail(
  * into yield-as-you-fetch.
  *
  * Stop rule (T5): completion anchors to the COMMITTED terminal —
- * terminal observed (post-yield status read) → committed
+ * terminal observed (post-yield state read) → committed
  * drain-till-empty (bounded by the terminal-sink invariant) → ONE final
  * diag read → complete. The final diag read is ONE read by design: a
- * stray submit against a DONE instance can mint diag events forever, so
+ * stray submit against a TERMINAL instance can mint diag events forever, so
  * a till-empty diag drain would unbound the tail; post-close visibility
  * is the query surface's recourse. `wait()` runs ONLY after a
- * non-terminal post-drain status read (T6).
+ * non-terminal post-drain state read (T6).
  */
 async function* diagTailLoop(
   store: StorePort,
@@ -205,7 +207,8 @@ async function* diagTailLoop(
     if (instance === null) {
       throw new TailIntegrityError(`tail: instance '${instanceId}' vanished mid-stream`);
     }
-    if (instance.status === "DONE") {
+    // W3 (packet ch12-p1a): the same axis completion predicate as tailLoop.
+    if (instance.kernelStatus === "TERMINAL") {
       for (;;) {
         const rest = await store.getTimeline(instanceId, seqCursor);
         if (rest === null) {

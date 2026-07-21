@@ -54,9 +54,13 @@ function detail(
     binding: { implementer: "codex", reviewer: "claude" },
     currentStep: "done",
     round: 1,
-    status: "DONE",
+    kernelStatus: "TERMINAL",
+    terminalDisposition: "done",
+    activationMode: "immediate",
+    wait: null,
+    runtimeContext: { state: "ready", ref: null },
+    failureReason: null,
     version: 1 + rows.length,
-    runtimeContext: null,
     ...overrides,
   };
   return { instance, transcript: rows };
@@ -90,13 +94,17 @@ describe("post-condition checker kit (packet ch5-P2)", () => {
     expect(checkOpUniqueness(duplicated)).not.toEqual([]);
   });
 
-  it("end-state consistency: DONE on a non-terminal step is a violation", () => {
-    const wrong = detail(greenRows, { currentStep: "review", status: "DONE" });
+  it("end-state consistency: TERMINAL on a non-terminal step is a violation", () => {
+    const wrong = detail(greenRows, { currentStep: "review" });
     expect(checkEndStateConsistency(wrong, template)).not.toEqual([]);
   });
 
-  it("end-state consistency: RUNNING parked on a terminal step is a violation", () => {
-    const wrong = detail(greenRows, { currentStep: "done", status: "RUNNING" });
+  it("end-state consistency: ACTIVE parked on a terminal step is a violation", () => {
+    const wrong = detail(greenRows, {
+      currentStep: "done",
+      kernelStatus: "ACTIVE",
+      terminalDisposition: null,
+    });
     expect(checkEndStateConsistency(wrong, template)).not.toEqual([]);
   });
 
@@ -121,11 +129,65 @@ describe("post-condition checker kit (packet ch5-P2)", () => {
   it("the aggregator surfaces every checker's violations together", () => {
     const bad = detail([row(1, "a1", "PASS"), row(1, "a1", "PASS")], {
       currentStep: "review",
-      status: "DONE",
       version: 9,
     });
     const violations = runAllCheckers(bad, template);
     expect(violations.length).toBeGreaterThanOrEqual(3);
+  });
+});
+
+// ── packet ch12-p1a (T2): the terminal-sink extension — the axis lanes
+// (a) TERMINAL ⇔ disposition, (b) disposition ⇔ reconstruction,
+// (d) wait NULL at TERMINAL; each proven RED on a fabricated violation. ──
+
+describe("checkTerminalSink — the axis extension (packet ch12-p1a, T2)", () => {
+  it("(a) TERMINAL without a disposition is a violation (single-write rule)", () => {
+    const bare = detail(greenRows, { terminalDisposition: null });
+    const violations = checkTerminalSink(bare, template);
+    expect(violations.some((v) => v.includes("without a terminal_disposition"))).toBe(true);
+  });
+
+  it("(a) a disposition on a non-TERMINAL instance is a violation", () => {
+    // Mid-run shape with a stray disposition: ACTIVE at review, one row.
+    const stray = detail([row(1, "a1", "PASS")], {
+      currentStep: "review",
+      kernelStatus: "ACTIVE",
+      terminalDisposition: "done",
+    });
+    const violations = checkTerminalSink(stray, template);
+    expect(violations.some((v) => v.includes("non-TERMINAL"))).toBe(true);
+  });
+
+  it("(b) disposition 'done' with a NON-terminal replayed position is a violation", () => {
+    // One PASS row replays implement → review (not terminal), yet the
+    // instance claims TERMINAL + done.
+    const mismatched = detail([row(1, "a1", "PASS")], { currentStep: "review" });
+    const violations = checkTerminalSink(mismatched, template);
+    expect(violations.some((v) => v.includes("not terminal"))).toBe(true);
+  });
+
+  it("(b) a terminal replayed position whose disposition is not 'done' is a violation (P1a inventory)", () => {
+    const wrongToken = detail(greenRows, {
+      kernelStatus: "TERMINAL",
+      terminalDisposition: "cancelled",
+    });
+    const violations = checkTerminalSink(wrongToken, template);
+    expect(violations.some((v) => v.includes("expected 'done'"))).toBe(true);
+  });
+
+  it("(d) a non-null wait at TERMINAL is a violation (S5's iff at the terminal cell)", () => {
+    const waiting = detail(greenRows, {
+      wait: { kind: "kickoff_pending", requestedBy: "activation", resumeEvents: ["KICKOFF"] },
+    });
+    const violations = checkTerminalSink(waiting, template);
+    expect(violations.some((v) => v.includes("non-null wait"))).toBe(true);
+  });
+
+  it("the aggregator carries the extension: a TERMINAL-without-disposition detail fails through runAllCheckers", () => {
+    const bare = detail(greenRows, { terminalDisposition: null });
+    expect(runAllCheckers(bare, template).some((v) => v.includes("terminal_disposition"))).toBe(
+      true,
+    );
   });
 });
 
@@ -212,7 +274,8 @@ describe("checkRoundReconstruction — replay = stored (dimension 5, packet ch11
   it("a declaration-absent loop-back history reconstructs 1", () => {
     const absent = detail([row(1, "a1", "PASS"), row(2, "b2", "PASS")], {
       currentStep: "review",
-      status: "RUNNING",
+      kernelStatus: "ACTIVE",
+      terminalDisposition: null,
       round: 1,
     });
     expect(checkRoundReconstruction(absent, admittedAbsent)).toEqual([]);
@@ -321,9 +384,13 @@ function detailWith(rows: readonly TranscriptEntry[]): InstanceDetail {
       binding: { implementer: "codex", reviewer: "claude" },
       currentStep: template.start,
       round: 1,
-      status: "RUNNING",
+      kernelStatus: "ACTIVE",
+      terminalDisposition: null,
+      activationMode: "immediate",
+      wait: null,
+      runtimeContext: { state: "ready", ref: null },
+      failureReason: null,
       version: 1 + rows.length,
-      runtimeContext: null,
     },
     transcript: rows,
   };

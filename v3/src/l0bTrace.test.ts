@@ -61,7 +61,13 @@ const l0bFixture: TraceFixture = {
     [3, "c4"],
     [4, "d5"],
   ],
-  finalState: { currentStep: "done", round: 2, status: "DONE", version: 5 },
+  finalState: {
+    currentStep: "done",
+    round: 2,
+    kernelStatus: "TERMINAL",
+    terminalDisposition: "done",
+    version: 5,
+  },
 };
 
 describe("l0b golden trace — the walking skeleton end-to-end (on the harness)", () => {

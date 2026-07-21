@@ -140,7 +140,13 @@ const l2Fixture: TraceFixture = {
     [3, "op-4"],
     [4, "op-5"],
   ],
-  finalState: { currentStep: "done", round: 2, status: "DONE", version: 5 },
+  finalState: {
+    currentStep: "done",
+    round: 2,
+    kernelStatus: "TERMINAL",
+    terminalDisposition: "done",
+    version: 5,
+  },
 };
 
 describe("l2 golden trace — the gate rung + both evaluators end-to-end (08-l2 Runtime)", () => {

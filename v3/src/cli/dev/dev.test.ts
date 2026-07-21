@@ -573,7 +573,13 @@ describe("dev cli — replay (hermetic golden-trace diagnostics)", () => {
       },
     ],
     finalTranscript: [[1, "a1"]],
-    finalState: { currentStep: "review", round: 1, status: "RUNNING", version: 2 },
+    finalState: {
+      currentStep: "review",
+      round: 1,
+      kernelStatus: "ACTIVE",
+      terminalDisposition: null,
+      version: 2,
+    },
   };
 
   it("a holding trace → ReplayResult on stdout, exit 0", async () => {
@@ -626,6 +632,18 @@ describe("dev cli — replay (hermetic golden-trace diagnostics)", () => {
         ],
       },
       { ...greenFixture, lift: { expectedVersion: "something-else" } },
+      // ch12-p1a (W2): the finalState keyset re-based onto the axis —
+      // a fixture still carrying the RETIRED ch-4 `status` key is
+      // structurally invalid (exact keyset), never silently accepted.
+      {
+        ...greenFixture,
+        finalState: { currentStep: "review", round: 1, status: "RUNNING", version: 2 },
+      },
+      // ...and terminalDisposition must be a token or null — absence fails.
+      {
+        ...greenFixture,
+        finalState: { currentStep: "review", round: 1, kernelStatus: "ACTIVE", version: 2 },
+      },
     ];
     for (const [index, fixture] of lanes.entries()) {
       const file = writeJson(`structural-${String(index)}.json`, fixture);
@@ -796,7 +814,13 @@ describe("dev cli — wiring negatives (packet ch7-P4: C4/M11)", () => {
         },
       ],
       finalTranscript: [[1, "a1"]],
-      finalState: { currentStep: "review", round: 1, status: "RUNNING", version: 2 },
+      finalState: {
+      currentStep: "review",
+      round: 1,
+      kernelStatus: "ACTIVE",
+      terminalDisposition: null,
+      version: 2,
+    },
     });
     const result = await runDev(["replay", "--file", file], deps);
     expect(result.code).toBe(EXIT.ok);
@@ -906,7 +930,13 @@ describe("dev cli — replay role schema (X5)", () => {
       },
     ],
     finalTranscript: [[1, "a1"]],
-    finalState: { currentStep: "review", round: 1, status: "RUNNING", version: 2 },
+    finalState: {
+      currentStep: "review",
+      round: 1,
+      kernelStatus: "ACTIVE",
+      terminalDisposition: null,
+      version: 2,
+    },
   };
 
   it("the role-lift axis round-trips (a liftless-role fixture commits via the current step's role)", async () => {
@@ -953,7 +983,13 @@ describe("dev cli — replay role schema (X5)", () => {
         },
       ],
       finalTranscript: [],
-      finalState: { currentStep: "implement", round: 1, status: "RUNNING", version: 1 },
+      finalState: {
+        currentStep: "implement",
+        round: 1,
+        kernelStatus: "ACTIVE",
+        terminalDisposition: null,
+        version: 1,
+      },
     });
     const result = await runDev(["replay", "--file", file], testDeps());
     expect(result.code).toBe(EXIT.ok);

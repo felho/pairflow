@@ -38,7 +38,7 @@ function setup(template = fixtureTemplate()) {
 }
 
 describe("START_INSTANCE — bootstrap (l0b)", () => {
-  it("creates at template.start with version 1, round 1, RUNNING, and derives the first intent", async () => {
+  it("creates the E2 composed create+activate end state (ACTIVE, template.start, round 1) and derives the first intent", async () => {
     const { kernel, store } = setup();
     const started = await kernel.startInstance({
       instanceId: "inst-1",
@@ -60,13 +60,24 @@ describe("START_INSTANCE — bootstrap (l0b)", () => {
       },
     });
 
+    // E2 (packet ch12-p1a): the creation-state EQUALITY lane — the one-shot's
+    // single write produces exactly the composed create+activate end state;
+    // a wrong column default in ANY axis field turns this red.
     const instance = await store.loadInstance("inst-1");
-    expect(instance).toMatchObject({
+    expect(instance).toEqual({
+      instanceId: "inst-1",
+      templateRef: { id: "local-pair-v0", version: 1 },
+      task: "ship the feature",
+      binding: { implementer: "codex", reviewer: "claude" },
       currentStep: "implement",
       round: 1,
-      status: "RUNNING",
+      kernelStatus: "ACTIVE",
+      terminalDisposition: null,
+      activationMode: "immediate",
+      wait: null,
+      runtimeContext: { state: "ready", ref: null },
+      failureReason: null,
       version: 1,
-      binding: { implementer: "codex", reviewer: "claude" },
     });
   });
 
@@ -137,7 +148,7 @@ describe("START_INSTANCE — the runtime-context lane table (packet ch11-P3b, S2
     runtimeContext: "required",
   });
 
-  it("declared 'required' + ref present → the instance starts with runtimeContext = ref", async () => {
+  it("declared 'required' + ref present → the instance starts ready(worktree ref) (X1's transitional bridge)", async () => {
     const { kernel, store } = setup(requiredTemplate());
     await kernel.startInstance({
       instanceId: "inst-1",
@@ -145,7 +156,10 @@ describe("START_INSTANCE — the runtime-context lane table (packet ch11-P3b, S2
       task: "t",
       runtimeContextRef: "/ws/ready",
     });
-    expect((await store.loadInstance("inst-1"))?.runtimeContext).toBe("/ws/ready");
+    expect((await store.loadInstance("inst-1"))?.runtimeContext).toEqual({
+      state: "ready",
+      ref: { kind: "worktree", locator: "/ws/ready" },
+    });
   });
 
   it("declared 'required' + ref ABSENT → START-SIDE throw, no state, no invented rejection name", async () => {
@@ -160,14 +174,14 @@ describe("START_INSTANCE — the runtime-context lane table (packet ch11-P3b, S2
     expect(await store.listInstances()).toEqual([]);
   });
 
-  it("undeclared + ref ABSENT → runtimeContext = null (ready(∅))", async () => {
+  it("undeclared + ref ABSENT → runtimeContext ready(∅) (ref null)", async () => {
     const { kernel, store } = setup();
     await kernel.startInstance({
       instanceId: "inst-1",
       templateRef: { id: "local-pair-v0", version: 1 },
       task: "t",
     });
-    expect((await store.loadInstance("inst-1"))?.runtimeContext).toBeNull();
+    expect((await store.loadInstance("inst-1"))?.runtimeContext).toEqual({ state: "ready", ref: null });
   });
 
   it("undeclared + ref PRESENT → START-SIDE throw (surplus input, S3), no state", async () => {

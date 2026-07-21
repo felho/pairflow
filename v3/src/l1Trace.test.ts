@@ -85,7 +85,13 @@ const l1Fixture: TraceFixture = {
     [1, "op-1"],
     [2, "op-3"],
   ],
-  finalState: { currentStep: "done", round: 1, status: "DONE", version: 3 },
+  finalState: {
+    currentStep: "done",
+    round: 1,
+    kernelStatus: "TERMINAL",
+    terminalDisposition: "done",
+    version: 3,
+  },
 };
 
 describe("l1 golden trace — role authority end-to-end (07-l1 Runtime)", () => {

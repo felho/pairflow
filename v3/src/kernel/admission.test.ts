@@ -22,9 +22,13 @@ function instance(over: Partial<WorkflowInstance> = {}): WorkflowInstance {
     binding: { implementer: "codex", reviewer: "claude" },
     currentStep: "implement",
     round: 1,
-    status: "RUNNING",
+    kernelStatus: "ACTIVE",
+    terminalDisposition: null,
+    activationMode: "immediate",
+    wait: null,
+    runtimeContext: { state: "ready", ref: null },
+    failureReason: null,
     version: 3,
-    runtimeContext: null,
     ...over,
   };
 }
@@ -41,7 +45,7 @@ function expectation(over: Partial<AdmitExpect> = {}): AdmitExpect {
 }
 
 describe("admitLoaded — rung outcomes", () => {
-  it("full warrant on a RUNNING instance → accepted", () => {
+  it("full warrant on an ACTIVE instance → accepted", () => {
     expect(admitLoaded(instance(), expectation())).toEqual({ kind: "accepted" });
   });
 
@@ -57,17 +61,24 @@ describe("admitLoaded — rung outcomes", () => {
     ).toEqual({ kind: "rejected", reason: "op_id_collision" });
   });
 
-  it("CREATED instance → not_active (the state rung, live at L1)", () => {
-    expect(admitLoaded(instance({ status: "CREATED" }), expectation())).toEqual({
+  it("CREATED instance → not_active (the state rung's axis basis, E5)", () => {
+    expect(admitLoaded(instance({ kernelStatus: "CREATED" }), expectation())).toEqual({
       kind: "rejected",
       reason: "not_active",
     });
   });
 
-  it("DONE instance → not_active", () => {
+  it("WAITING instance → not_active (the axis basis covers every non-ACTIVE token)", () => {
+    expect(admitLoaded(instance({ kernelStatus: "WAITING" }), expectation())).toEqual({
+      kind: "rejected",
+      reason: "not_active",
+    });
+  });
+
+  it("TERMINAL(done) instance → not_active", () => {
     expect(
       admitLoaded(
-        instance({ status: "DONE", currentStep: "done" }),
+        instance({ kernelStatus: "TERMINAL", terminalDisposition: "done", currentStep: "done" }),
         expectation({ grantedRole: undefined }),
       ),
     ).toEqual({ kind: "rejected", reason: "not_active" });
@@ -103,37 +114,37 @@ describe("admitLoaded — rung outcomes", () => {
 });
 
 describe("admitLoaded — the ladder-internal ordering combinations (dimension 1, #1–#7)", () => {
-  it("#1 duplicate op_id on a DONE instance → duplicate (idempotency precedes state)", () => {
+  it("#1 duplicate op_id on a TERMINAL instance → duplicate (idempotency precedes state)", () => {
     expect(
       admitLoaded(
-        instance({ status: "DONE", currentStep: "done" }),
+        instance({ kernelStatus: "TERMINAL", terminalDisposition: "done", currentStep: "done" }),
         expectation({ existingOp: { payloadDigest: "dg-1" }, grantedRole: undefined }),
       ),
     ).toEqual({ kind: "duplicate" });
   });
 
-  it("#2 collision digest on a DONE instance → op_id_collision (idempotency precedes state)", () => {
+  it("#2 collision digest on a TERMINAL instance → op_id_collision (idempotency precedes state)", () => {
     expect(
       admitLoaded(
-        instance({ status: "DONE", currentStep: "done" }),
+        instance({ kernelStatus: "TERMINAL", terminalDisposition: "done", currentStep: "done" }),
         expectation({ existingOp: { payloadDigest: "dg-OTHER" }, grantedRole: undefined }),
       ),
     ).toEqual({ kind: "rejected", reason: "op_id_collision" });
   });
 
-  it("#3 DONE + missing version → not_active (state precedes the version entry guard)", () => {
+  it("#3 TERMINAL + missing version → not_active (state precedes the version entry guard)", () => {
     expect(
       admitLoaded(
-        instance({ status: "DONE", currentStep: "done" }),
+        instance({ kernelStatus: "TERMINAL", terminalDisposition: "done", currentStep: "done" }),
         expectation({ expectedVersion: undefined, grantedRole: undefined }),
       ),
     ).toEqual({ kind: "rejected", reason: "not_active" });
   });
 
-  it("#4 DONE + wrong role → not_active (state precedes authority)", () => {
+  it("#4 TERMINAL + wrong role → not_active (state precedes authority)", () => {
     expect(
       admitLoaded(
-        instance({ status: "DONE", currentStep: "done" }),
+        instance({ kernelStatus: "TERMINAL", terminalDisposition: "done", currentStep: "done" }),
         expectation({ expectedRole: "reviewer", grantedRole: undefined }),
       ),
     ).toEqual({ kind: "rejected", reason: "not_active" });

@@ -21,7 +21,16 @@ export type {
   GateProjectionEntry,
   RetainedGateDecision,
 } from "./gate.js";
-export type { LifecycleStatus, TranscriptEntry, WorkflowInstance } from "./instance.js";
+export type {
+  ActivationMode,
+  KernelStatus,
+  RuntimeContext,
+  RuntimeContextRef,
+  TerminalDisposition,
+  TranscriptEntry,
+  WaitReason,
+  WorkflowInstance,
+} from "./instance.js";
 export type { EventEnvelope } from "./envelope.js";
 export type { ContextPacket, DispatchIntent } from "./dispatch.js";
 export type { Outcome, Started } from "./outcome.js";

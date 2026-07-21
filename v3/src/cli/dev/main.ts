@@ -472,15 +472,27 @@ function validateFixtureShape(parsed: unknown): TraceFixture {
   if (!isPlainObject(finalState)) {
     fixtureError("finalState must be an object");
   }
-  assertExactKeys(finalState, ["currentStep", "round", "status", "version"], "finalState");
+  // W2 (packet ch12-p1a): the exact keyset follows the harness's
+  // finalState shape — the ch-4 `status` key re-based onto the axis
+  // pair; terminalDisposition is a token OR null (the non-terminal
+  // final states). No verb/flag/handler semantics change.
+  assertExactKeys(
+    finalState,
+    ["currentStep", "round", "kernelStatus", "terminalDisposition", "version"],
+    "finalState",
+  );
   if (
     !isNonEmptyString(finalState["currentStep"]) ||
     !isNonNegSafeInt(finalState["round"]) ||
-    !isNonEmptyString(finalState["status"]) ||
+    !isNonEmptyString(finalState["kernelStatus"]) ||
+    !(
+      finalState["terminalDisposition"] === null ||
+      isNonEmptyString(finalState["terminalDisposition"])
+    ) ||
     !isNonNegSafeInt(finalState["version"])
   ) {
     fixtureError(
-      "finalState requires currentStep/status (non-empty strings) and round/version (nonnegative safe integers)",
+      "finalState requires currentStep/kernelStatus (non-empty strings), terminalDisposition (non-empty string or null), and round/version (nonnegative safe integers)",
     );
   }
   return parsed as unknown as TraceFixture;

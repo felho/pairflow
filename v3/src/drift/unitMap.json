@@ -157,7 +157,9 @@
     "status": "pending"
   },
   "l0d-pseudocode/COMPLETE": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/kernel.ts#complete",
+    "disposition": "implement",
+    "status": "realized"
   },
   "l0d-pseudocode/CREATE_INSTANCE": {
     "status": "pending"
@@ -166,7 +168,9 @@
     "status": "pending"
   },
   "l0d-pseudocode/HANDLE": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/kernel.ts#createKernel",
+    "disposition": "implement",
+    "status": "realized"
   },
   "l0d-pseudocode/KICKOFF": {
     "status": "pending"
@@ -184,7 +188,9 @@
     "status": "pending"
   },
   "l0d-pseudocode/admit_loaded": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/admission.ts#admitLoaded",
+    "disposition": "implement",
+    "status": "realized"
   },
   "l0d-pseudocode/dispatch_intent": {
     "status": "pending"

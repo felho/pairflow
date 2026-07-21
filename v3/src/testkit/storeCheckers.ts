@@ -55,36 +55,47 @@ export function checkOpUniqueness(detail: InstanceDetail): string[] {
 }
 
 /**
- * Final-state equivalence: DONE ⇔ currentStep ∈ template.terminal.
- * Deliberately NOT terminal-is-a-sink (pre-approval finding) — that
- * historical claim lives in checkTerminalSink's reconstruction.
+ * Final-state equivalence, re-based onto the axis (packet ch12-p1a,
+ * T2): `kernel_status = TERMINAL` ⇔ currentStep ∈ template.terminal
+ * (DONE ≡ TERMINAL(done), the E1 map). Deliberately NOT
+ * terminal-is-a-sink (pre-approval finding) — that historical claim
+ * lives in checkTerminalSink's reconstruction.
  */
 export function checkEndStateConsistency(
   detail: InstanceDetail,
   template: WorkflowTemplate,
 ): string[] {
   const atTerminal = template.terminal.includes(detail.instance.currentStep);
-  const done = detail.instance.status === "DONE";
-  if (done && !atTerminal) {
+  const terminal = detail.instance.kernelStatus === "TERMINAL";
+  if (terminal && !atTerminal) {
     return [
-      `end-state consistency: status DONE but currentStep '${detail.instance.currentStep}' is not terminal`,
+      `end-state consistency: kernel_status TERMINAL but currentStep '${detail.instance.currentStep}' is not terminal`,
     ];
   }
-  if (!done && atTerminal) {
+  if (!terminal && atTerminal) {
     return [
-      `end-state consistency: currentStep '${detail.instance.currentStep}' is terminal but status is '${detail.instance.status}'`,
+      `end-state consistency: currentStep '${detail.instance.currentStep}' is terminal but kernel_status is '${detail.instance.kernelStatus}'`,
     ];
   }
   return [];
 }
 
 /**
- * l0d/terminal-is-a-sink — the HISTORICAL claim: after terminal entry
- * there is no later commit. Transcript-based path reconstruction from
- * template.start; a row committed FROM a terminal position violates the
- * sink, and a row whose type has no transition at the reconstructed
- * position is a violation too — a corrupt history breaks the sink
- * proof, and the checker must not silently skip what it cannot replay.
+ * l0d/terminal-is-a-sink (re-based and EXTENDED, packet ch12-p1a T2):
+ * pure over floor reads like every checker. Lanes:
+ *  (c) the HISTORICAL sink claim: after terminal entry there is no
+ *      later commit — transcript-based path reconstruction from
+ *      template.start; a row committed FROM a terminal position
+ *      violates the sink, and a row whose type has no transition at
+ *      the reconstructed position is a violation too — a corrupt
+ *      history breaks the sink proof, and the checker must not
+ *      silently skip what it cannot replay;
+ *  (a) `kernel_status = TERMINAL` ⇔ `terminal_disposition` non-null
+ *      (the single-write rule's read face, T1);
+ *  (b) the disposition is consistent with the reconstruction — at P1a
+ *      `done` ⇔ the replayed position is terminal (the `cancelled`/
+ *      `failed` shapes join WITH their writers at P1b);
+ *  (d) `wait` is NULL at TERMINAL (S5's iff at the terminal cell).
  */
 export function checkTerminalSink(
   detail: InstanceDetail,
@@ -111,7 +122,37 @@ export function checkTerminalSink(
     }
     position = target;
   }
-  return [];
+
+  const violations: string[] = [];
+  const { kernelStatus, terminalDisposition, wait } = detail.instance;
+  // (a) TERMINAL ⇔ non-null disposition.
+  if (kernelStatus === "TERMINAL" && terminalDisposition === null) {
+    violations.push(
+      "terminal sink: kernel_status TERMINAL without a terminal_disposition (single-write rule)",
+    );
+  }
+  if (kernelStatus !== "TERMINAL" && terminalDisposition !== null) {
+    violations.push(
+      `terminal sink: terminal_disposition '${terminalDisposition}' on a non-TERMINAL instance (kernel_status '${kernelStatus}')`,
+    );
+  }
+  // (b) done ⇔ the replayed position is terminal (the P1a inventory).
+  const replayedTerminal = template.terminal.includes(position);
+  if (terminalDisposition === "done" && !replayedTerminal) {
+    violations.push(
+      `terminal sink: disposition 'done' but the replayed position '${position}' is not terminal`,
+    );
+  }
+  if (replayedTerminal && terminalDisposition !== "done") {
+    violations.push(
+      `terminal sink: replayed position '${position}' is terminal but the disposition is '${String(terminalDisposition)}' (expected 'done')`,
+    );
+  }
+  // (d) wait is NULL at TERMINAL (S5's iff at the terminal cell).
+  if (kernelStatus === "TERMINAL" && wait !== null) {
+    violations.push("terminal sink: non-null wait on a TERMINAL instance (S5 iff)");
+  }
+  return violations;
 }
 
 /**

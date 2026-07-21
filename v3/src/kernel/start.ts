@@ -105,7 +105,15 @@ export async function startInstance(
     );
   }
   const binding = resolveBinding(template, input.startOverrides);
-  const runtimeContext = resolveRuntimeContext(template, input.runtimeContextRef);
+  const resolvedRef = resolveRuntimeContext(template, input.runtimeContextRef);
+  // E2 (packet ch12-p1a): the one-shot's INTERIM axis mapping — its
+  // single write produces the composed create+activate end state
+  // (kernel_status ACTIVE, current_step = template.start, round 1,
+  // activation_mode "immediate"); the Started return shape and the
+  // throw surface above are byte-unchanged. Retirement is P1b's (C24).
+  // X1: the seam ref maps onto the discriminated runtime-context state
+  // at this single write site — null IS ready(∅); a seam ref stores
+  // ready with the v1 `worktree` kind (the transitional bridge).
   const instance: WorkflowInstance = {
     instanceId: input.instanceId,
     templateRef: input.templateRef,
@@ -113,9 +121,16 @@ export async function startInstance(
     binding,
     currentStep: template.start,
     round: 1,
-    status: "RUNNING",
+    kernelStatus: "ACTIVE",
+    terminalDisposition: null,
+    activationMode: "immediate",
+    wait: null,
+    runtimeContext:
+      resolvedRef === null
+        ? { state: "ready", ref: null }
+        : { state: "ready", ref: { kind: "worktree", locator: resolvedRef } },
+    failureReason: null,
     version: 1,
-    runtimeContext,
   };
   await deps.store.createInstance(instance);
   // Derive AFTER the commit — commit ≠ deliver; the intent is a value.

@@ -3,13 +3,14 @@ import type {
   AdmittedTemplate,
   EventType,
   InstanceId,
-  LifecycleStatus,
+  KernelStatus,
   OpId,
   Outcome,
   RejectionName,
   Started,
   StepId,
   TemplateRef,
+  TerminalDisposition,
 } from "../domain/index.js";
 import type { InstanceDetail, StorePort } from "../ports/store.js";
 import { runAllCheckers } from "./storeCheckers.js";
@@ -104,10 +105,17 @@ export interface TraceFixture {
   readonly steps: readonly TraceStep[];
   /** [seq, opId] — full-sequence equality. */
   readonly finalTranscript: readonly (readonly [number, string])[];
+  /**
+   * W2 (packet ch12-p1a): the fixture shape is the harness's mirror of
+   * the instance shape — the ch-4 `status` key re-based onto the axis
+   * pair under E1's map (RUNNING → ACTIVE + null; DONE → TERMINAL +
+   * "done").
+   */
   readonly finalState: {
     readonly currentStep: StepId;
     readonly round: number;
-    readonly status: LifecycleStatus;
+    readonly kernelStatus: KernelStatus;
+    readonly terminalDisposition: TerminalDisposition | null;
     readonly version: number;
   };
 }
@@ -314,13 +322,14 @@ export async function replayTrace(
     fail("transcript", undefined, `${fixture.name} (final transcript)`, expectedRows, rows);
   }
 
-  const { currentStep, round, status, version } = finalDetail.instance;
-  const actualState = { currentStep, round, status, version };
+  const { currentStep, round, kernelStatus, terminalDisposition, version } = finalDetail.instance;
+  const actualState = { currentStep, round, kernelStatus, terminalDisposition, version };
   const expectedState = fixture.finalState;
   if (
     actualState.currentStep !== expectedState.currentStep ||
     actualState.round !== expectedState.round ||
-    actualState.status !== expectedState.status ||
+    actualState.kernelStatus !== expectedState.kernelStatus ||
+    actualState.terminalDisposition !== expectedState.terminalDisposition ||
     actualState.version !== expectedState.version
   ) {
     fail("state", undefined, `${fixture.name} (final state)`, expectedState, actualState);

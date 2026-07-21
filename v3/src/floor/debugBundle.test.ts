@@ -48,9 +48,13 @@ const instance: WorkflowInstance = {
   binding: { implementer: "codex", reviewer: "claude" },
   currentStep: "implement",
   round: 1,
-  status: "RUNNING",
+  kernelStatus: "ACTIVE",
+  terminalDisposition: null,
+  activationMode: "immediate",
+  wait: null,
+  runtimeContext: { state: "ready", ref: null },
+  failureReason: null,
   version: 1,
-  runtimeContext: null,
 };
 
 // Markers planted in committed payloads — the default-policy negative
@@ -185,7 +189,14 @@ const INSTANCE_KEYS = [
   "binding",
   "currentStep",
   "round",
-  "status",
+  // ch12-p1a (W3): the axis fields ride the zero-projection passthrough —
+  // `status` disappeared with its column (C21 realized), the axis pair +
+  // the P1a-constant fields surface structurally.
+  "kernelStatus",
+  "terminalDisposition",
+  "activationMode",
+  "wait",
+  "failureReason",
   "version",
   // ch11-P3b (S1/dimension 12): the instance's runtimeContext rides the
   // INSTANCE-carrying read payloads verbatim — additive, every pre-existing

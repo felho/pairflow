@@ -147,7 +147,13 @@ const l2aFixture: TraceFixture = {
     [1, "op-1"],
     [2, "op-2"],
   ],
-  finalState: { currentStep: "implement", round: 2, status: "RUNNING", version: 3 },
+  finalState: {
+    currentStep: "implement",
+    round: 2,
+    kernelStatus: "ACTIVE",
+    terminalDisposition: null,
+    version: 3,
+  },
 };
 
 describe("l2a golden trace — the HANDLE process branch end-to-end (09-l2a Runtime)", () => {

@@ -39,7 +39,7 @@ export interface AdmitExpect {
    * Authority grant: the position's active role — read only at the
    * authority rung. `undefined` only for a terminal current step,
    * which the state rung rejects BEFORE the authority rung runs
-   * (RUNNING ⇒ currentStep ∈ steps by construction), so the rung
+   * (ACTIVE ⇒ currentStep ∈ steps by construction), so the rung
    * never compares against undefined.
    */
   readonly grantedRole: RoleName | undefined;
@@ -52,10 +52,14 @@ export function admitLoaded(instance: WorkflowInstance, expect: AdmitExpect): Ad
       ? { kind: "duplicate" }
       : { kind: "rejected", reason: "op_id_collision" };
   }
-  // Lifecycle/state rung — LIVE at L1 (the l0d slot): an actor emits
-  // only into actor-routable RUNNING execution (CREATED and DONE both
-  // reject; the post-terminal answer changed from no_transition).
-  if (instance.status !== "RUNNING") {
+  // Lifecycle/state rung — the l0d basis (packet ch12-p1a, E5): an
+  // actor emits only into actor-routable ACTIVE execution
+  // (`kernel_status = ACTIVE → Rejected(not_active)`, the l0d
+  // admit_loaded expect). Rung ORDER is byte-identical to ch11-P1;
+  // at P1a the reachable states are exactly {ACTIVE, TERMINAL(done)},
+  // so the rung's behavior is exactly the ch11 `status !== "RUNNING"`
+  // behavior under the unchanged ch11-P1 rejection name.
+  if (instance.kernelStatus !== "ACTIVE") {
     return { kind: "rejected", reason: "not_active" };
   }
   // Version-presence is the staleness rung's ENTRY GUARD, not a separate rung.

@@ -17,9 +17,13 @@ const instance: WorkflowInstance = {
   binding: { implementer: "codex", reviewer: "claude" },
   currentStep: "implement",
   round: 1,
-  status: "RUNNING",
+  kernelStatus: "ACTIVE",
+  terminalDisposition: null,
+  activationMode: "immediate",
+  wait: null,
+  runtimeContext: { state: "ready", ref: null },
+  failureReason: null,
   version: 1,
-  runtimeContext: null,
 };
 
 function envelope(opId: string, expectedVersion: number): EventEnvelope {
@@ -65,7 +69,8 @@ describe("commitTransition — atomic transition commit (l0a invariant)", () => 
       gateDecisions: [],
       newCurrentStep: "review",
       newRound: 1,
-      newStatus: "RUNNING",
+      newKernelStatus: "ACTIVE",
+      newTerminalDisposition: null,
     });
 
     expect(result).toEqual({ kind: "committed", version: 2 });
@@ -90,7 +95,8 @@ describe("commitTransition — atomic transition commit (l0a invariant)", () => 
       gateDecisions: [],
       newCurrentStep: "review",
       newRound: 1,
-      newStatus: "RUNNING",
+      newKernelStatus: "ACTIVE",
+      newTerminalDisposition: null,
     });
 
     expect(result).toEqual({ kind: "cas_conflict" });
@@ -111,7 +117,8 @@ describe("commitTransition — atomic transition commit (l0a invariant)", () => 
       gateDecisions: [],
       newCurrentStep: "review",
       newRound: 1,
-      newStatus: "RUNNING",
+      newKernelStatus: "ACTIVE",
+      newTerminalDisposition: null,
     });
     await handle.store.commitTransition({
       instanceId: "inst-1",
@@ -121,7 +128,8 @@ describe("commitTransition — atomic transition commit (l0a invariant)", () => 
       gateDecisions: [],
       newCurrentStep: "implement",
       newRound: 2,
-      newStatus: "RUNNING",
+      newKernelStatus: "ACTIVE",
+      newTerminalDisposition: null,
     });
 
     // op a1 retransmitted with its (now stale) original expectation:
@@ -133,7 +141,8 @@ describe("commitTransition — atomic transition commit (l0a invariant)", () => 
       gateDecisions: [],
       newCurrentStep: "review",
       newRound: 1,
-      newStatus: "RUNNING",
+      newKernelStatus: "ACTIVE",
+      newTerminalDisposition: null,
     });
     expect(result).toEqual({ kind: "duplicate_op" });
     const detail = await handle.store.getInstanceDetail("inst-1");
@@ -153,7 +162,8 @@ describe("commitTransition — atomic transition commit (l0a invariant)", () => 
         gateDecisions: [],
         newCurrentStep: "review",
         newRound: 1,
-        newStatus: "RUNNING",
+        newKernelStatus: "ACTIVE",
+        newTerminalDisposition: null,
       });
     }
     const detail = await handle.store.getInstanceDetail("inst-1");
@@ -182,7 +192,8 @@ describe("CHK-A1-SCHEMA — the uniqueness constraint lives in the database", ()
       gateDecisions: [],
       newCurrentStep: "review",
       newRound: 1,
-      newStatus: "RUNNING",
+      newKernelStatus: "ACTIVE",
+      newTerminalDisposition: null,
     });
     handle.close();
 
@@ -192,9 +203,9 @@ describe("CHK-A1-SCHEMA — the uniqueness constraint lives in the database", ()
         .prepare(
           // payload_digest AND gate_decisions supplied: the red must be
           // the UNIQUE constraint, never a NOT NULL (P4/P2b watchpoint).
-          "INSERT INTO transcript (instance_id, seq, op_id, envelope, payload_digest, gate_decisions, committed_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+          "INSERT INTO transcript (instance_id, seq, op_id, entry_kind, envelope, payload_digest, gate_decisions, committed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         )
-        .run("inst-1", 99, "a1", "{}", "d", "[]", 0),
+        .run("inst-1", 99, "a1", "transition", "{}", "d", "[]", 0),
     ).toThrow(/UNIQUE/);
     raw.close();
   });
@@ -213,7 +224,8 @@ describe("CHK-C-TS-SOURCE — timestamps come from the injected TimeSource", () 
       gateDecisions: [],
       newCurrentStep: "review",
       newRound: 1,
-      newStatus: "RUNNING",
+      newKernelStatus: "ACTIVE",
+      newTerminalDisposition: null,
     });
     clock.advance(500);
     await handle.store.commitTransition({
@@ -224,7 +236,8 @@ describe("CHK-C-TS-SOURCE — timestamps come from the injected TimeSource", () 
       gateDecisions: [],
       newCurrentStep: "implement",
       newRound: 2,
-      newStatus: "RUNNING",
+      newKernelStatus: "ACTIVE",
+      newTerminalDisposition: null,
     });
 
     const detail = await handle.store.getInstanceDetail("inst-1");
@@ -302,7 +315,8 @@ describe("op_id_collision — the digest-aware idempotency rung (packet ch5-P4)"
       gateDecisions: [],
       newCurrentStep: "review",
       newRound: 1,
-      newStatus: "RUNNING",
+      newKernelStatus: "ACTIVE",
+      newTerminalDisposition: null,
     });
 
     const collided = await handle.store.commitTransition({
@@ -313,7 +327,8 @@ describe("op_id_collision — the digest-aware idempotency rung (packet ch5-P4)"
       gateDecisions: [],
       newCurrentStep: "review",
       newRound: 1,
-      newStatus: "RUNNING",
+      newKernelStatus: "ACTIVE",
+      newTerminalDisposition: null,
     });
     expect(collided).toEqual({ kind: "op_id_collision" });
     const detail = await handle.store.getInstanceDetail("inst-1");
@@ -333,7 +348,8 @@ describe("op_id_collision — the digest-aware idempotency rung (packet ch5-P4)"
       gateDecisions: [],
       newCurrentStep: "review",
       newRound: 1,
-      newStatus: "RUNNING",
+      newKernelStatus: "ACTIVE",
+      newTerminalDisposition: null,
     });
     await handle.store.commitTransition({
       instanceId: "inst-1",
@@ -343,7 +359,8 @@ describe("op_id_collision — the digest-aware idempotency rung (packet ch5-P4)"
       gateDecisions: [],
       newCurrentStep: "implement",
       newRound: 2,
-      newStatus: "RUNNING",
+      newKernelStatus: "ACTIVE",
+      newTerminalDisposition: null,
     });
 
     const collided = await handle.store.commitTransition({
@@ -354,7 +371,8 @@ describe("op_id_collision — the digest-aware idempotency rung (packet ch5-P4)"
       gateDecisions: [],
       newCurrentStep: "review",
       newRound: 1,
-      newStatus: "RUNNING",
+      newKernelStatus: "ACTIVE",
+      newTerminalDisposition: null,
     });
     expect(collided).toEqual({ kind: "op_id_collision" });
     handle.close();
@@ -371,7 +389,8 @@ describe("op_id_collision — the digest-aware idempotency rung (packet ch5-P4)"
       gateDecisions: [],
       newCurrentStep: "review",
       newRound: 1,
-      newStatus: "RUNNING",
+      newKernelStatus: "ACTIVE",
+      newTerminalDisposition: null,
     });
     const detail = await handle.store.getInstanceDetail("inst-1");
     expect(detail?.transcript[0]?.payloadDigest).toBe(DIGEST);
@@ -380,15 +399,15 @@ describe("op_id_collision — the digest-aware idempotency rung (packet ch5-P4)"
   });
 });
 
-describe("schema → v4 — THE ch11-P3b fenced wipe (packet ch11-P3b, S4, ADR-003)", () => {
-  it("a known PROTOTYPE store at marker '3' wipes on open and re-marks as '4'", async () => {
+describe("schema → v5 — THE ch12 lifecycle-axis bump rides the fenced wipe (packet ch12-p1a, S1, ADR-003)", () => {
+  it("a known PROTOTYPE store at marker '4' wipes on open and re-marks as '5'", async () => {
     const path = tempDbPath();
     const first = openStore(path, createControlledClock(0));
     await first.store.createInstance(instance);
     first.close();
 
     const raw = new DatabaseSync(path);
-    raw.prepare("UPDATE meta SET value = '3' WHERE key = 'schema_version'").run();
+    raw.prepare("UPDATE meta SET value = '4' WHERE key = 'schema_version'").run();
     raw.close();
 
     const second = openStore(path, createControlledClock(0));
@@ -399,11 +418,11 @@ describe("schema → v4 — THE ch11-P3b fenced wipe (packet ch11-P3b, S4, ADR-0
     const marker = check
       .prepare("SELECT value FROM meta WHERE key = 'schema_version'")
       .get() as { value: string };
-    expect(marker.value).toBe("4");
+    expect(marker.value).toBe("5");
     check.close();
   });
 
-  it("an incomplete marker (schema_version present, prototype missing) refuses at v4", () => {
+  it("an incomplete marker (schema_version present, prototype missing) refuses at v5", () => {
     const path = tempDbPath();
     const first = openStore(path, createControlledClock(0));
     first.close();
@@ -414,10 +433,10 @@ describe("schema → v4 — THE ch11-P3b fenced wipe (packet ch11-P3b, S4, ADR-0
   });
 });
 
-describe("runtime_context — the nullable instance column (packet ch11-P3b, S4)", () => {
-  it("null runtimeContext: the WHOLE instance round-trips deep-equal across every read surface", async () => {
+describe("runtime_context — the discriminated-state column (packet ch12-p1a, S7/X1)", () => {
+  it("ready(∅): the WHOLE instance round-trips deep-equal across every read surface", async () => {
     const handle = openStore(":memory:", createControlledClock(0));
-    const created: WorkflowInstance = { ...instance, runtimeContext: null };
+    const created: WorkflowInstance = { ...instance, runtimeContext: { state: "ready", ref: null } };
     await handle.store.createInstance(created);
     // FULL deep-equality (not just the runtimeContext field): the whole read
     // value equals the created value on ALL THREE reads — a mapper divergence
@@ -427,13 +446,41 @@ describe("runtime_context — the nullable instance column (packet ch11-P3b, S4)
     expect((await handle.store.getInstanceDetail("inst-1"))?.instance).toEqual(created);
   });
 
-  it("a ready ref: the WHOLE instance round-trips deep-equal across every read surface", async () => {
+  it("ready(worktree ref): the WHOLE instance round-trips deep-equal across every read surface", async () => {
     const handle = openStore(":memory:", createControlledClock(0));
-    const created: WorkflowInstance = { ...instance, runtimeContext: "/ws/abc-123" };
+    const created: WorkflowInstance = {
+      ...instance,
+      runtimeContext: { state: "ready", ref: { kind: "worktree", locator: "/ws/abc-123" } },
+    };
     await handle.store.createInstance(created);
     expect(await handle.store.loadInstance("inst-1")).toEqual(created);
     expect((await handle.store.listInstances())[0]).toEqual(created);
     expect((await handle.store.getInstanceDetail("inst-1"))?.instance).toEqual(created);
+  });
+
+  it("stored BYTES are canonical (sorted keys, strict — the emit-lib culture)", async () => {
+    const path = tempDbPath();
+    const handle = openStore(path, createControlledClock(0));
+    await handle.store.createInstance({ ...instance, runtimeContext: { state: "ready", ref: null } });
+    await handle.store.createInstance({
+      ...instance,
+      instanceId: "inst-2",
+      runtimeContext: { state: "ready", ref: { kind: "worktree", locator: "/ws/x" } },
+    });
+    handle.close();
+    const raw = new DatabaseSync(path);
+    const rows = raw
+      .prepare("SELECT instance_id, runtime_context, wait, failure_reason, run_overrides FROM instances ORDER BY instance_id")
+      .all() as { instance_id: string; runtime_context: string; wait: string | null; failure_reason: string | null; run_overrides: string }[];
+    // ready(∅) — the ∅ encoding stores `ref: null` (S7); sorted keys.
+    expect(rows[0]?.runtime_context).toBe('{"ref":null,"state":"ready"}');
+    // ready(ref) — the transitional worktree bridge (X1); sorted keys.
+    expect(rows[1]?.runtime_context).toBe('{"ref":{"kind":"worktree","locator":"/ws/x"},"state":"ready"}');
+    // S5/S6/S8 always-NULL / constant lanes at P1a.
+    expect(rows[0]?.wait).toBeNull();
+    expect(rows[0]?.failure_reason).toBeNull();
+    expect(rows[0]?.run_overrides).toBe("{}");
+    raw.close();
   });
 });
 
@@ -454,7 +501,8 @@ describe("getTimeline — the ch6-P1 cursor read", () => {
         gateDecisions: [],
         newCurrentStep: "review",
         newRound: 1,
-        newStatus: "RUNNING",
+        newKernelStatus: "ACTIVE",
+        newTerminalDisposition: null,
       });
       expect(result.kind).toBe("committed");
     }
@@ -528,7 +576,8 @@ describe("getTimeline — the ch6-P1 cursor read", () => {
       gateDecisions: [],
       newCurrentStep: "review",
       newRound: 1,
-      newStatus: "RUNNING",
+      newKernelStatus: "ACTIVE",
+      newTerminalDisposition: null,
     });
     expect(result).toEqual({ kind: "committed", version: 5 });
     handle.close();
@@ -542,9 +591,9 @@ describe("getTimeline — the ch6-P1 cursor read", () => {
     const raw = new DatabaseSync(path);
     raw
       .prepare(
-        "INSERT INTO transcript (instance_id, seq, op_id, envelope, payload_digest, gate_decisions, committed_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO transcript (instance_id, seq, op_id, entry_kind, envelope, payload_digest, gate_decisions, committed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
       )
-      .run("inst-1", 1, "bad", "not-json", "d", "[]", 0);
+      .run("inst-1", 1, "bad", "transition", "not-json", "d", "[]", 0);
     raw.close();
 
     await expect(handle.store.getTimeline("inst-1", 0)).rejects.toThrow(SyntaxError);
@@ -556,7 +605,8 @@ describe("getTimeline — the ch6-P1 cursor read", () => {
       gateDecisions: [],
       newCurrentStep: "review",
       newRound: 1,
-      newStatus: "RUNNING",
+      newKernelStatus: "ACTIVE",
+      newTerminalDisposition: null,
     });
     expect(result).toEqual({ kind: "committed", version: 2 });
     handle.close();
@@ -582,7 +632,8 @@ describe("expectedRole round-trip (packet ch11-P1, W6)", () => {
       gateDecisions: [],
       newCurrentStep: "review",
       newRound: 1,
-      newStatus: "RUNNING",
+      newKernelStatus: "ACTIVE",
+      newTerminalDisposition: null,
     });
     expect(result.kind).toBe("committed");
     const detail = await handle.store.getInstanceDetail("inst-1");
@@ -614,7 +665,8 @@ describe("gate_decisions — the retained-decision column (packet ch11-P2b, S1�
       gateDecisions: decisions,
       newCurrentStep: "review",
       newRound: 1,
-      newStatus: "RUNNING",
+      newKernelStatus: "ACTIVE",
+      newTerminalDisposition: null,
     });
     expect(result.kind).toBe("committed");
     // One write, two reads: a mapper divergence between getInstanceDetail
@@ -638,14 +690,15 @@ describe("gate_decisions — the retained-decision column (packet ch11-P2b, S1�
       gateDecisions: [],
       newCurrentStep: "review",
       newRound: 1,
-      newStatus: "RUNNING",
+      newKernelStatus: "ACTIVE",
+      newTerminalDisposition: null,
     });
     const detail = await handle.store.getInstanceDetail("inst-1");
     expect(detail?.transcript[0]?.gateDecisions).toEqual([]);
     handle.close();
   });
 
-  it("METADATA lane: gate_decisions is declared TEXT + NOT NULL and the table is STRICT", () => {
+  it("METADATA lane: gate_decisions is TEXT (NULLABLE at v5 — the S11 class face) and the table is STRICT", () => {
     const path = tempDbPath();
     const handle = openStore(path, createControlledClock(0));
     handle.close();
@@ -659,13 +712,182 @@ describe("gate_decisions — the retained-decision column (packet ch11-P2b, S1�
     const column = columns.find((c) => c.name === "gate_decisions");
     expect(column).toBeDefined();
     expect(column?.type).toBe("TEXT");
-    expect(column?.notnull).toBe(1);
-    // The table's STRICT flag (a nullable or type-loose column would not
-    // survive a STRICT declaration byte-for-byte).
+    // v5 (packet ch12-p1a, S11): nullable BY CLASS — a transition row
+    // carries it non-null (the mapper refuses otherwise), a fact row
+    // (P1b) carries it NULL. The known-empty [] culture is unchanged on
+    // the transition side.
+    expect(column?.notnull).toBe(0);
+    // The table's STRICT flag (a type-loose column would not survive a
+    // STRICT declaration byte-for-byte).
     const ddl = raw
       .prepare("SELECT sql FROM sqlite_master WHERE name = 'transcript'")
       .get() as { sql: string };
     expect(ddl.sql).toMatch(/STRICT/);
     raw.close();
+  });
+});
+
+// ── packet ch12-p1a: THE v5 lifecycle-axis schema (S2–S12) ──
+
+describe("the axis columns — schema shape (packet ch12-p1a, S2–S11)", () => {
+  function tableInfo(raw: DatabaseSync, table: string) {
+    return raw.prepare(`PRAGMA table_info(${table})`).all() as {
+      name: string;
+      type: string;
+      notnull: number;
+    }[];
+  }
+
+  it("instances carries the FULL C11 column set with exact nullability; the ch-4 `status` column is GONE (S10)", () => {
+    const path = tempDbPath();
+    const handle = openStore(path, createControlledClock(0));
+    handle.close();
+    const raw = new DatabaseSync(path);
+    const columns = tableInfo(raw, "instances");
+    const byName = new Map(columns.map((c) => [c.name, c]));
+    // The named replacement (S10): no `status` column survives.
+    expect(byName.has("status")).toBe(false);
+    const expectCol = (name: string, notnull: number) => {
+      expect(byName.get(name)?.type, name).toBe("TEXT");
+      expect(byName.get(name)?.notnull, name).toBe(notnull);
+    };
+    expectCol("kernel_status", 1); // S2
+    expectCol("terminal_disposition", 0); // S3
+    expectCol("activation_mode", 1); // S4
+    expectCol("wait", 0); // S5
+    expectCol("failure_reason", 0); // S6
+    expectCol("runtime_context", 1); // S7 — NOT NULL at v5
+    expectCol("run_overrides", 1); // S8
+    expectCol("task", 0); // S9 — nullable column, non-null TS (type-staging)
+    expectCol("current_step", 0); // S9
+    raw.close();
+  });
+
+  it("transcript carries the S11 entry-kind face: entry_kind NOT NULL; the three class fields + issued_agent_config NULLABLE", () => {
+    const path = tempDbPath();
+    const handle = openStore(path, createControlledClock(0));
+    handle.close();
+    const raw = new DatabaseSync(path);
+    const columns = tableInfo(raw, "transcript");
+    const byName = new Map(columns.map((c) => [c.name, c]));
+    expect(byName.get("entry_kind")?.notnull).toBe(1);
+    expect(byName.get("envelope")?.notnull).toBe(0);
+    expect(byName.get("payload_digest")?.notnull).toBe(0);
+    expect(byName.get("gate_decisions")?.notnull).toBe(0);
+    expect(byName.get("issued_agent_config")?.notnull).toBe(0);
+    raw.close();
+  });
+
+  it("every committed row is written entry_kind 'transition' with issued_agent_config NULL (S11's P1a write shape)", async () => {
+    const path = tempDbPath();
+    const handle = openStore(path, createControlledClock(0));
+    await handle.store.createInstance(instance);
+    await handle.store.commitTransition({
+      instanceId: "inst-1",
+      expectedVersion: 1,
+      envelope: envelope("a1", 1),
+      payloadDigest: DIGEST,
+      gateDecisions: [],
+      newCurrentStep: "review",
+      newRound: 1,
+      newKernelStatus: "ACTIVE",
+      newTerminalDisposition: null,
+    });
+    handle.close();
+    const raw = new DatabaseSync(path);
+    const row = raw
+      .prepare("SELECT entry_kind, issued_agent_config FROM transcript WHERE instance_id = 'inst-1'")
+      .get() as { entry_kind: string; issued_agent_config: string | null };
+    expect(row.entry_kind).toBe("transition");
+    expect(row.issued_agent_config).toBeNull();
+    raw.close();
+  });
+
+  it("a terminal commit round-trips TERMINAL + 'done'; a non-terminal commit ACTIVE + null (E3, the same transaction)", async () => {
+    const handle = openStore(":memory:", createControlledClock(0));
+    await handle.store.createInstance(instance);
+    await handle.store.commitTransition({
+      instanceId: "inst-1",
+      expectedVersion: 1,
+      envelope: envelope("a1", 1),
+      payloadDigest: DIGEST,
+      gateDecisions: [],
+      newCurrentStep: "review",
+      newRound: 1,
+      newKernelStatus: "ACTIVE",
+      newTerminalDisposition: null,
+    });
+    let read = await handle.store.loadInstance("inst-1");
+    expect(read?.kernelStatus).toBe("ACTIVE");
+    expect(read?.terminalDisposition).toBeNull();
+    await handle.store.commitTransition({
+      instanceId: "inst-1",
+      expectedVersion: 2,
+      envelope: envelope("b2", 2),
+      payloadDigest: DIGEST,
+      gateDecisions: [],
+      newCurrentStep: "done",
+      newRound: 1,
+      newKernelStatus: "TERMINAL",
+      newTerminalDisposition: "done",
+    });
+    read = await handle.store.loadInstance("inst-1");
+    expect(read?.kernelStatus).toBe("TERMINAL");
+    expect(read?.terminalDisposition).toBe("done");
+    handle.close();
+  });
+
+  it("token-domain refusal at the mapper: out-of-domain stored tokens throw store integrity, never widen (S2/S3/S4)", async () => {
+    const path = tempDbPath();
+    const handle = openStore(path, createControlledClock(0));
+    await handle.store.createInstance(instance);
+
+    const stage = (column: string, value: string) => {
+      const raw = new DatabaseSync(path);
+      raw.prepare(`UPDATE instances SET ${column} = ? WHERE instance_id = 'inst-1'`).run(value);
+      raw.close();
+    };
+
+    stage("kernel_status", "PAUSED");
+    expect(() => handle.store.loadInstance("inst-1")).toThrow(/unknown kernel_status token 'PAUSED'/);
+    stage("kernel_status", "TERMINAL");
+    stage("terminal_disposition", "abandoned");
+    expect(() => handle.store.loadInstance("inst-1")).toThrow(/unknown terminal_disposition token 'abandoned'/);
+    stage("terminal_disposition", "done");
+    stage("activation_mode", "deferredKickoff"); // the camelCase fork the model tokens forbid
+    expect(() => handle.store.loadInstance("inst-1")).toThrow(/unknown activation_mode token 'deferredKickoff'/);
+    handle.close();
+  });
+
+  it("S11 class iff, read side: a staged fact-kind row (or a transition row with a NULL class field) is refused by the mapper", async () => {
+    const path = tempDbPath();
+    const handle = openStore(path, createControlledClock(0));
+    await handle.store.createInstance(instance);
+    const raw = new DatabaseSync(path);
+    // A fact row has NO reader until P1b — the transition-side mapper refuses it loudly.
+    raw
+      .prepare(
+        "INSERT INTO transcript (instance_id, seq, op_id, entry_kind, envelope, payload_digest, gate_decisions, issued_agent_config, committed_at) VALUES (?, ?, ?, ?, NULL, NULL, NULL, NULL, ?)",
+      )
+      .run("inst-1", 1, "fact-1", "STARTED", 0);
+    raw.close();
+    await expect(handle.store.getTimeline("inst-1", 0)).rejects.toThrow(/entry_kind 'STARTED'/);
+
+    const raw2 = new DatabaseSync(path);
+    raw2.prepare("UPDATE transcript SET entry_kind = 'transition' WHERE op_id = 'fact-1'").run();
+    raw2.close();
+    await expect(handle.store.getTimeline("inst-1", 0)).rejects.toThrow(/class-required field/);
+    handle.close();
+  });
+
+  it("the mapper refuses a NULL task/current_step (S9's type-staging guard — the P1b readers have not landed)", async () => {
+    const path = tempDbPath();
+    const handle = openStore(path, createControlledClock(0));
+    await handle.store.createInstance(instance);
+    const raw = new DatabaseSync(path);
+    raw.prepare("UPDATE instances SET task = NULL WHERE instance_id = 'inst-1'").run();
+    raw.close();
+    expect(() => handle.store.loadInstance("inst-1")).toThrow(/NULL task\/current_step/);
+    handle.close();
   });
 });

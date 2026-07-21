@@ -77,9 +77,15 @@ describe("cli — the full-lifecycle journey smoke (packet ch8-P2: J1/J2)", () =
       // terminal verified (detail — a shipped ch6 floor verb).
       const detail = await cli("detail", id, "--db", db);
       const detailDoc = JSON.parse(detail.stdout.trim()) as {
-        instance: { status: string; currentStep: string; task: string };
+        instance: {
+          kernelStatus: string;
+          terminalDisposition: string | null;
+          currentStep: string;
+          task: string;
+        };
       };
-      expect(detailDoc.instance.status).toBe("DONE");
+      expect(detailDoc.instance.kernelStatus).toBe("TERMINAL");
+      expect(detailDoc.instance.terminalDisposition).toBe("done");
       expect(detailDoc.instance.currentStep).toBe("done");
       expect(detailDoc.instance.task).toBe("journey");
 
@@ -166,9 +172,15 @@ describe("cli — the full-lifecycle journey smoke (packet ch8-P2: J1/J2)", () =
 
       const detail = await cli("detail", id, "--db", db);
       const detailDoc = JSON.parse(detail.stdout.trim()) as {
-        instance: { status: string; currentStep: string; round: number };
+        instance: {
+          kernelStatus: string;
+          terminalDisposition: string | null;
+          currentStep: string;
+          round: number;
+        };
       };
-      expect(detailDoc.instance.status).toBe("DONE");
+      expect(detailDoc.instance.kernelStatus).toBe("TERMINAL");
+      expect(detailDoc.instance.terminalDisposition).toBe("done");
       expect(detailDoc.instance.currentStep).toBe("done");
       // The Y1 restoration live end-to-end: the round ADVANCED on the
       // pass-back arrival at the start step (the declared advancement).
@@ -291,9 +303,15 @@ round:
 
       const detail = await cli("detail", id, "--db", db);
       const detailDoc = JSON.parse(detail.stdout.trim()) as {
-        instance: { status: string; currentStep: string; round: number };
+        instance: {
+          kernelStatus: string;
+          terminalDisposition: string | null;
+          currentStep: string;
+          round: number;
+        };
       };
-      expect(detailDoc.instance.status).toBe("DONE");
+      expect(detailDoc.instance.kernelStatus).toBe("TERMINAL");
+      expect(detailDoc.instance.terminalDisposition).toBe("done");
       expect(detailDoc.instance.currentStep).toBe("done");
       expect(detailDoc.instance.round).toBe(2);
 

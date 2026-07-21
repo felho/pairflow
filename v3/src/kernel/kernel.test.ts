@@ -72,9 +72,13 @@ const baseInstance: WorkflowInstance = {
   binding: { implementer: "codex", reviewer: "claude" },
   currentStep: "implement",
   round: 1,
-  status: "RUNNING",
+  kernelStatus: "ACTIVE",
+  terminalDisposition: null,
+  activationMode: "immediate",
+  wait: null,
+  runtimeContext: { state: "ready", ref: null },
+  failureReason: null,
   version: 1,
-  runtimeContext: null,
 };
 
 function envelope(
@@ -293,12 +297,14 @@ describe("committed path — intent derived from POST-commit state", () => {
     });
   });
 
-  it("a terminal commit yields intent: null and status DONE (commit ≠ deliver)", async () => {
+  it("a terminal commit yields intent: null and TERMINAL + done (commit ≠ deliver; E4)", async () => {
     const { kernel, store } = await setup();
     await kernel.handle(envelope("a1", "PASS", 1));
     const outcome = await kernel.handle({ ...envelope("b2", "CONVERGED", 2, undefined, "reviewer"), actorId: "claude" });
     expect(outcome).toEqual({ kind: "committed", version: 3, intent: null });
-    expect((await store.loadInstance("inst-1"))?.status).toBe("DONE");
+    const done = await store.loadInstance("inst-1");
+    expect(done?.kernelStatus).toBe("TERMINAL");
+    expect(done?.terminalDisposition).toBe("done");
   });
 
 });
@@ -384,7 +390,8 @@ describe("round advancement — dimension 2: declaration-absent default (kernel 
       actorId: "claude",
     }); // review → done (terminal)
     const instance = await store.loadInstance("inst-1");
-    expect(instance?.status).toBe("DONE");
+    expect(instance?.kernelStatus).toBe("TERMINAL");
+    expect(instance?.terminalDisposition).toBe("done");
     expect(instance?.round).toBe(1);
   });
 });
@@ -523,7 +530,7 @@ describe("L1 authority — the four new rejections through the real seam (A4/A7/
 
   it("a store-staged CREATED instance → Rejected(not_active); state unchanged", async () => {
     const { kernel, store } = await setup();
-    await store.createInstance({ ...baseInstance, instanceId: "inst-created", status: "CREATED" });
+    await store.createInstance({ ...baseInstance, instanceId: "inst-created", kernelStatus: "CREATED" });
     await expectNoStateChange(store, "inst-created", async () => {
       expect(
         await kernel.handle({ ...envelope("m3", "PASS", 1, { ref: "d" }), instanceId: "inst-created" }),
@@ -531,7 +538,7 @@ describe("L1 authority — the four new rejections through the real seam (A4/A7/
     });
   });
 
-  it("DONE + missing version → not_active (the state rung precedes the version entry guard); state unchanged", async () => {
+  it("TERMINAL + missing version → not_active (the state rung precedes the version entry guard); state unchanged", async () => {
     const { kernel, store } = await setup();
     await kernel.handle(envelope("d1", "PASS", 1, { ref: "d" }));
     await kernel.handle(envelope("d2", "CONVERGED", 2, { ref: "d" }, "reviewer"));
@@ -640,7 +647,8 @@ describe("L1 authority — CAS restart × terminal (dimension 6, A12)", () => {
             gateDecisions: [],
             newCurrentStep: "done",
             newRound: 1,
-            newStatus: "DONE",
+            newKernelStatus: "TERMINAL",
+            newTerminalDisposition: "done",
           });
           expect(winner.kind).toBe("committed");
           // ...and THIS attempt reports the conflict → whole-handle restart.
@@ -740,7 +748,10 @@ const jsonEffective: EffectiveProcessConfig = {
 
 /** A ready-ref review instance — the process arm's happy operand state. */
 const READY_REF = "/ws/inst-1";
-const reviewInstanceReady: WorkflowInstance = { ...reviewInstance, runtimeContext: READY_REF };
+const reviewInstanceReady: WorkflowInstance = {
+  ...reviewInstance,
+  runtimeContext: { state: "ready", ref: { kind: "worktree", locator: READY_REF } },
+};
 
 /**
  * Seed inst-1 as a ready review instance whose committed transcript carries a
@@ -755,7 +766,10 @@ const reviewInstanceReady: WorkflowInstance = { ...reviewInstance, runtimeContex
  * single-entry history — a palindrome — would be blind to ordering).
  */
 async function seedReviewWithHistory(store: StorePort): Promise<void> {
-  await store.createInstance({ ...baseInstance, runtimeContext: READY_REF });
+  await store.createInstance({
+    ...baseInstance,
+    runtimeContext: { state: "ready", ref: { kind: "worktree", locator: READY_REF } },
+  });
   // The alternating path: implement→review→implement→review (PASS each), so the
   // committed replay is well-formed and lands at review.
   const path: readonly [string, string][] = [
@@ -783,7 +797,8 @@ async function seedReviewWithHistory(store: StorePort): Promise<void> {
       gateDecisions: [],
       newCurrentStep,
       newRound: 1,
-      newStatus: "RUNNING",
+      newKernelStatus: "ACTIVE",
+      newTerminalDisposition: null,
     });
     if (seeded.kind !== "committed") {
       throw new Error(`history seed failed at ${opId}: ${seeded.kind}`);
@@ -1449,10 +1464,10 @@ describe("gate rung — the grid hostile-store lanes (integrity throws, not reje
 // ── ch11-P3b: the HANDLE process branch (S5/X1/X2/M1/E1) ─────────────
 
 describe("gate rung — the C36 runtime backstop plane (S5, dimension 3, both directions)", () => {
-  it("process binding × null runtime context → C36 reject, ZERO runner calls, ZERO records, no commit", async () => {
+  it("process binding × ready(∅) runtime context → C36 reject, ZERO runner calls, ZERO records, no commit", async () => {
     const cat = catalogOf({ "g.proc": processRegWith(exitCodeEffective) });
     const runner = createScriptedProcessGateRunner([okResult(0, "ev-unused")]);
-    // reviewInstance carries runtimeContext: null.
+    // reviewInstance carries runtimeContext ready(∅) (ref null) — the X2 reject lane.
     const { kernel, store } = await setupGatedReview({
       pipeline: [{ uses: "g.proc" }],
       admitCatalog: cat,
@@ -1690,7 +1705,10 @@ describe("gate rung — E2 confinement: hostile opaque values retained VERBATIM 
     const cat = catalogOf({ "g.proc": processRegWith(effective) });
     const runner = createScriptedProcessGateRunner([result]);
     const handle = openStore(":memory:", createControlledClock(0));
-    await handle.store.createInstance({ ...reviewInstance, runtimeContext: runtimeContextRef });
+    await handle.store.createInstance({
+      ...reviewInstance,
+      runtimeContext: { state: "ready", ref: { kind: "worktree", locator: runtimeContextRef } },
+    });
     const { kernel } = await setupGatedReview({
       pipeline: [{ uses: "g.proc" }],
       admitCatalog: cat,

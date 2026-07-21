@@ -187,10 +187,11 @@ describe("cli — start / submit (write verbs through the sanctioned entrypoints
     const detail = await run(["detail", id, "--db", db], deps);
     expect(detail.code).toBe(EXIT.ok);
     const doc = JSON.parse(detail.stdout[0] ?? "") as {
-      instance: { instanceId: string; status: string };
+      instance: { instanceId: string; kernelStatus: string; terminalDisposition: string | null };
       transcript: unknown[];
     };
-    expect(doc.instance.status).toBe("RUNNING");
+    expect(doc.instance.kernelStatus).toBe("ACTIVE");
+    expect(doc.instance.terminalDisposition).toBeNull();
     expect(doc.transcript).toEqual([]);
   });
 

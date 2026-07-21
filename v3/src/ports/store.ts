@@ -1,10 +1,11 @@
 import type {
   EventEnvelope,
   InstanceId,
-  LifecycleStatus,
+  KernelStatus,
   OpId,
   RetainedGateDecision,
   StepId,
+  TerminalDisposition,
   TranscriptEntry,
   WorkflowInstance,
 } from "../domain/index.js";
@@ -12,10 +13,10 @@ import type {
 /**
  * StorePort (ADR-003; packet ch4-P1 contract matrix). The store owns
  * atomicity, the kernel owns semantics: the kernel derives target /
- * newRound / newStatus, the store writes what it is told. NO write API
- * accepts a timestamp — the type-level half of CHK-C-TS-SOURCE; the
- * implementation stamps created_at / committed_at inside the commit
- * boundary from its injected TimeSource (plan §4.3).
+ * newRound / the axis fields, the store writes what it is told. NO
+ * write API accepts a timestamp — the type-level half of
+ * CHK-C-TS-SOURCE; the implementation stamps created_at / committed_at
+ * inside the commit boundary from its injected TimeSource (plan §4.3).
  */
 export interface CommitTransitionInput {
   readonly instanceId: InstanceId;
@@ -32,7 +33,19 @@ export interface CommitTransitionInput {
   readonly gateDecisions: readonly RetainedGateDecision[];
   readonly newCurrentStep: StepId;
   readonly newRound: number;
-  readonly newStatus: LifecycleStatus;
+  /**
+   * E3 (packet ch12-p1a): the axis replacement of the ch-4 `newStatus`
+   * field. Both fields ride the SAME transaction the commit always used
+   * (REV-A1-TXN unchanged).
+   */
+  readonly newKernelStatus: KernelStatus;
+  /**
+   * Non-null EXACTLY when the commit enters TERMINAL — the type face of
+   * the single-write rule (T1): a terminal arrival writes `TERMINAL` +
+   * `"done"` (the COMPLETE branch), a non-terminal commit writes
+   * `ACTIVE` + null.
+   */
+  readonly newTerminalDisposition: TerminalDisposition | null;
 }
 
 /**

@@ -156,7 +156,8 @@ describe("CT-B-TWOWORKER — two workers, one instance stream, winner-independen
       ]);
       expect(detail?.instance).toMatchObject({
         currentStep: "done",
-        status: "DONE",
+        kernelStatus: "TERMINAL",
+        terminalDisposition: "done",
         version: 5,
         round: 2,
       });

@@ -1,4 +1,5 @@
 import type {
+  ActivationMode,
   ActorId,
   AdmittedTemplate,
   CapabilityProfile,
@@ -9,11 +10,15 @@ import type {
   GateDecision,
   GatePipeline,
   GateProjection,
-  LifecycleStatus,
+  KernelStatus,
   RejectionName,
   RoleName,
+  RuntimeContext,
+  RuntimeContextRef,
   Step,
+  TerminalDisposition,
   TranscriptEntry,
+  WaitReason,
   WorkflowInstance,
   WorkflowTemplate,
 } from "../domain/index.js";
@@ -42,7 +47,10 @@ import type {
  * stays `pending`: the manifest tracks the ladder, not bare name reuse.
  * `pending` carries NO chapter claim — scheduling lives in the plan map.
  * `contract-row` marks §4 prose/contract surfaces that never become a
- * TS type by design.
+ * TS type by design. `superseded` (ch12-p1a, additive) marks a row
+ * whose realized TS type was RETIRED by a ratified named replacement
+ * (C24) — the named successor rows carry the realized witnesses, and
+ * the successor keys are compile-checked against the witness table.
  *
  * ADR-007: this is a NON-test drift module — `import type` only.
  */
@@ -60,7 +68,6 @@ interface RealizedTypeTable {
   readonly "l0a/Role": RoleName;
   readonly "l0a/WorkflowInstance": WorkflowInstance;
   readonly "l0a/Transcript": TranscriptEntry;
-  readonly "l0a/LifecycleStatus": LifecycleStatus;
   readonly "l0a/EventEnvelope": EventEnvelope;
   readonly "l0b/Role": RoleName;
   readonly "l0b/Step": Step;
@@ -83,6 +90,15 @@ interface RealizedTypeTable {
   readonly "l2a/ProcessResult": ProcessResult;
   // ch11-P3b T4: the l2a wire value (the C23 invocation document).
   readonly "l2a/GateInvocation": GateInvocation;
+  // ch12-p1a D3: the l0d lifecycle-axis value objects + the instance
+  // aggregate (the axis fields land on WorkflowInstance).
+  readonly "l0d/WorkflowInstance": WorkflowInstance;
+  readonly "l0d/KernelStatus": KernelStatus;
+  readonly "l0d/TerminalDisposition": TerminalDisposition;
+  readonly "l0d/WaitReason": WaitReason;
+  readonly "l0d/RuntimeContext": RuntimeContext;
+  readonly "l0d/RuntimeContextRef": RuntimeContextRef;
+  readonly "l0d/ActivationMode": ActivationMode;
 }
 
 export type RegistryEntry =
@@ -102,7 +118,25 @@ export type RegistryEntry =
       readonly rejectionNames: readonly RejectionName[];
     }
   | { readonly kind: "pending" }
-  | { readonly kind: "contract-row" };
+  | { readonly kind: "contract-row" }
+  | {
+      /**
+       * ch12-p1a D2: an ADDITIVE extension of the level-axis semantics —
+       * a row whose TS type existed and was RETIRED by a ratified named
+       * replacement (C24): the type no longer exists BY DESIGN, and the
+       * named successor rows carry the realized witnesses. Distinct from
+       * `contract-row` (whose definition is "never becomes a TS type by
+       * design" — false for a row realized since ch 4) and from a dead
+       * witness alias (the surviving parallel path C24 forbids).
+       */
+      readonly kind: "superseded";
+      /**
+       * The successor registry keys — typed against RealizedTypeTable
+       * so a renamed or vanished successor is a compile error (the
+       * referential-integrity obligation, red-on-break).
+       */
+      readonly successors: readonly (keyof RealizedTypeTable)[];
+    };
 
 export const DOMAIN_REGISTRY: Readonly<Record<string, RegistryEntry>> = {
   // ── l0a (7) ────────────────────────────────────────────────────────
@@ -111,7 +145,12 @@ export const DOMAIN_REGISTRY: Readonly<Record<string, RegistryEntry>> = {
   "l0a/Role": { kind: "realized", typeName: "RoleName" },
   "l0a/WorkflowInstance": { kind: "realized", typeName: "WorkflowInstance" },
   "l0a/Transcript": { kind: "realized", typeName: "TranscriptEntry" },
-  "l0a/LifecycleStatus": { kind: "realized", typeName: "LifecycleStatus" },
+  // ch12-p1a D2: the LifecycleStatus type RETIRED under C24's named
+  // replacement — the two-axis successors carry the realized witnesses.
+  "l0a/LifecycleStatus": {
+    kind: "superseded",
+    successors: ["l0d/KernelStatus", "l0d/TerminalDisposition"],
+  },
   "l0a/EventEnvelope": { kind: "realized", typeName: "EventEnvelope" },
   // ── l0b (6) ────────────────────────────────────────────────────────
   "l0b/Role": { kind: "realized", typeName: "RoleName" },
@@ -128,14 +167,19 @@ export const DOMAIN_REGISTRY: Readonly<Record<string, RegistryEntry>> = {
   "l0c/TranscriptEntry": { kind: "pending" },
   "l0c/effective_agent_config": { kind: "pending" },
   // ── l0d (13) ───────────────────────────────────────────────────────
-  "l0d/WorkflowInstance": { kind: "pending" },
+  // ch12-p1a D3: the lifecycle-axis value objects + the instance
+  // aggregate flip realized (the axis fields land on WorkflowInstance).
+  // l0d/Template stays pending (the `activation` key — P1b's
+  // admission-default face + P4's format face); the entry classes are
+  // P1b's.
+  "l0d/WorkflowInstance": { kind: "realized", typeName: "WorkflowInstance" },
   "l0d/Template": { kind: "pending" },
-  "l0d/KernelStatus": { kind: "pending" },
-  "l0d/TerminalDisposition": { kind: "pending" },
-  "l0d/WaitReason": { kind: "pending" },
-  "l0d/RuntimeContext": { kind: "pending" },
-  "l0d/RuntimeContextRef": { kind: "pending" },
-  "l0d/ActivationMode": { kind: "pending" },
+  "l0d/KernelStatus": { kind: "realized", typeName: "KernelStatus" },
+  "l0d/TerminalDisposition": { kind: "realized", typeName: "TerminalDisposition" },
+  "l0d/WaitReason": { kind: "realized", typeName: "WaitReason" },
+  "l0d/RuntimeContext": { kind: "realized", typeName: "RuntimeContext" },
+  "l0d/RuntimeContextRef": { kind: "realized", typeName: "RuntimeContextRef" },
+  "l0d/ActivationMode": { kind: "realized", typeName: "ActivationMode" },
   "l0d/OperatorIntent": { kind: "pending" },
   "l0d/KernelEvent": { kind: "pending" },
   "l0d/ActorEnvelope": { kind: "pending" },
@@ -373,7 +417,6 @@ export const REALIZED_TYPE_TABLE_KEYS = [
   "l0a/Role",
   "l0a/WorkflowInstance",
   "l0a/Transcript",
-  "l0a/LifecycleStatus",
   "l0a/EventEnvelope",
   "l0b/Role",
   "l0b/Step",
@@ -394,6 +437,13 @@ export const REALIZED_TYPE_TABLE_KEYS = [
   "l2a/ProcessGateRunner",
   "l2a/ProcessResult",
   "l2a/GateInvocation",
+  "l0d/WorkflowInstance",
+  "l0d/KernelStatus",
+  "l0d/TerminalDisposition",
+  "l0d/WaitReason",
+  "l0d/RuntimeContext",
+  "l0d/RuntimeContextRef",
+  "l0d/ActivationMode",
 ] as const satisfies readonly (keyof RealizedTypeTable)[];
 
 type TypeTableFullyListed =
