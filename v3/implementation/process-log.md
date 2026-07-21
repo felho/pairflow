@@ -2947,3 +2947,27 @@ ledger inventory numbers (158 units / 85 rejections / 121 entities
 — the ledger and the coverage checker's plan-§1.4 guard agree on
 159 / 54 / 122); the defect predates ADR-015 and stays untouched by
 this mechanical migration.
+
+**2026-07-21 — ADR-015 arm series: fresh verification tooling needs
+adversarial negative tests (boundary candidate for ch12).** A
+user-directed three-round xhigh external-arm review of the ADR-015
+migration implementation (bases d9845d4f → 7e39d4a1 → 9a949450;
+APPROVE on round 3) found ZERO defects in the migration itself and
+TWO false-green classes in the freshly written reconciliation tooling
+(`adr015_sweep.py --post`): (1) count-closure circularity — expected
+occurrence counts were computed FROM THE POST TREE (`lines.count`),
+so deleting one of two identical kept lines passed with 0 errors;
+(2) order blindness — content+count closure blessed a SWAP of two
+different kept-historical lines. Both folded same-day (multiplicity
+from the frozen table; subsequence-based order closure), each proven
+by a scratch-commit negative test that now trips red. The pattern:
+the tooling was proven green on the good tree but was never driven
+to FAIL before commit — the checker-selftest discipline ("each claim
+proves itself red on a fixture before it may gate") and the test
+plane's R-LANE-SENSITIVITY ("declared disciplines DRIVEN and ABLE TO
+FAIL") already carry this rule, and the same need surfaced
+independently on the testing side as MUTATION TESTING: verification
+code earns trust only by killing mutants. Boundary candidate: new
+checker/reconciliation tooling ships WITH adversarial negative
+fixtures (delete / duplicate / swap / typo mutations) in the same
+commit, on the checker-selftest precedent.
