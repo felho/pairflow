@@ -24,7 +24,7 @@ from pathlib import Path
 import foldlib
 
 REPO = Path(__file__).resolve().parents[2]
-SRC = REPO / "docs/v3/convergence/model-src"
+SRC = REPO / "v3/model"
 
 def norm_lines(text: str) -> list[str]:
     lines = [ln.rstrip() for ln in text.split("\n")]

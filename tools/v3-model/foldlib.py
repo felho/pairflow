@@ -17,7 +17,7 @@ import json
 from functools import lru_cache
 from pathlib import Path
 
-SRC = Path(__file__).resolve().parents[2] / "docs/v3/convergence/model-src"
+SRC = Path(__file__).resolve().parents[2] / "v3/model"
 
 
 @lru_cache(maxsize=None)

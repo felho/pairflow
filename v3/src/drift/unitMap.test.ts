@@ -8,12 +8,12 @@ import { describe, expect, it } from "vitest";
  * `drift/unitMap.json` — ONE machine face, dual-read by this test and by
  * `tools/v3-plan/check_coverage.py` (the three-way ledger ↔ manifest ↔
  * packet lock's code end). This test owns: key set == the
- * `model-src/units/` tree at test time, schema validity, and codeRef
+ * `v3/model/units/` tree at test time, schema validity, and codeRef
  * resolution (file exists, symbol present on a word boundary — a
  * presence check; the owning packet's tests carry the deeper guarantee).
  */
 const UNITS_DIR = fileURLToPath(
-  new URL("../../../docs/v3/convergence/model-src/units/", import.meta.url),
+  new URL("../../../v3/model/units/", import.meta.url),
 );
 const REPO_ROOT = fileURLToPath(new URL("../../../", import.meta.url));
 const UNIT_MAP_URL = new URL("./unitMap.json", import.meta.url);
@@ -50,7 +50,7 @@ function unitsTreeIds(): string[] {
   return ids;
 }
 
-describe("the unit→code manifest (model-src/units ↔ drift/unitMap.json)", () => {
+describe("the unit→code manifest (v3/model/units ↔ drift/unitMap.json)", () => {
   const unitMap = loadUnitMap();
 
   it("equals the units tree key set exactly — no misses, no extras", () => {

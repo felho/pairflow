@@ -1,0 +1,194 @@
+<section id="l0a">
+        <h2 class="level-h"><span class="level-badge">L0a</span> Kernel skeleton</h2>
+        <p class="level-sub">The smallest mechanically-correct kernel: routing + state, with the
+        foundational invariants in place — but no agent guidance yet (that is L0b).</p>
+
+        <p>Two roles alternate on one machine; the kernel routes their events through transitions and
+        records everything. At L0a the kernel does only <b>route → atomic-commit (append + update)</b>,
+        plus enforce the invariants below. There is deliberately no notion yet of <em>what</em> an
+        actor should do; an agent here would route correctly but have no task. That gap is filled at
+        L0b, and naming it is half the point.</p>
+        <p><b>L0a is a reactive kernel slice:</b> it handles envelopes that arrive (from a manual
+        driver here) but does not dispatch work or wake actors — the trace's "emits" is an external
+        stimulus, not the kernel activating anyone. Closing that loop (handing the next work item to
+        the next actor — its task, the version it sees, and the protocol outputs the step exposes) is
+        L0b's dispatch.</p>
+
+        <h3 class="view-h"><span class="view-tag runtime">Runtime</span> A concrete trace</h3>
+        <p>A two-round run that converges on the second review, including a re-delivered event to show
+        idempotency:</p>
+        <div class="trace">
+          <div class="trace-row"><div class="trace-n">1</div><div class="trace-c">
+            <div class="ev">START — instance created from template <code>local-pair-v0</code></div>
+            <div class="meta">instance store write; <b>template_ref</b> { id, version: 1 } snapshotted; state: <b>current_step=implement</b>, <b>round=1</b>, <b>status=RUNNING</b>, <b>version=1</b></div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">2</div><div class="trace-c">
+            <div class="ev">the <b>implementer role</b> emits <code>PASS</code></div>
+            <div class="meta">EventEnvelope { event_id, <b>op_id=a1</b>, instance_id, type: PASS, <b>actor_id</b> (provenance), payload: { ref } }</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">3</div><div class="trace-c">
+            <div class="ev">kernel: (instance_id, a1) unseen → resolve transition <b>implement → review</b></div>
+            <div class="meta"><b>atomic commit</b> — transcript append + state update under expected_version (1 → 2); <b>current_step=review</b></div>
+          </div></div>
+          <div class="trace-row idem"><div class="trace-n">3′</div><div class="trace-c">
+            <div class="ev">same <code>PASS</code> re-delivered (retry, <b>op_id=a1</b>)</div>
+            <div class="meta">kernel: (instance_id, a1) already in transcript → <b>Duplicate</b>, no-op. No second transition entry. (idempotency; a separate duplicate-delivery audit is optional/later)</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">4</div><div class="trace-c">
+            <div class="ev">the <b>reviewer role</b> emits <code>PASS</code> (op_id=b2, payload: findings)</div>
+            <div class="meta">kernel: resolve <b>review → implement</b>; atomic commit (2 → 3); <b>round=2</b>, <b>current_step=implement</b></div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">5</div><div class="trace-c">
+            <div class="ev">the implementer role emits <code>PASS</code> (op_id=c3) → <b>implement → review</b></div>
+            <div class="meta">atomic commit (3 → 4); <b>current_step=review</b></div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">6</div><div class="trace-c">
+            <div class="ev">the reviewer role emits <code>CONVERGED</code> (op_id=d4)</div>
+            <div class="meta">kernel: resolve <b>review → done</b>; atomic commit (4 → 5); <b>status=DONE</b> — terminal</div>
+          </div></div>
+        </div>
+        <div class="note runtime">
+          The kernel has no decision logic of its own yet — the actors decide, the kernel routes,
+          records, and guarantees each accepted event is applied <em>at most once per
+          (instance_id, op_id)</em> — duplicate delivery is a no-op (step 3′). (Not "exactly once":
+          delivery may repeat; idempotency makes the <em>apply</em> effectively-once.) Convergence
+          here is the reviewer's bare judgement; the formal gate arrives at L2.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag pseudo">Pseudocode</span> The rule behind the trace</h3>
+        <p>The trace shows one happy path. The pseudocode states the general rule, including the
+        branches the trace never exercises:</p>
+        <div class="code-diff" aria-label="L0a pseudocode" data-old-label="Empty baseline" data-new-label="L0a current">
+          <script type="text/plain" class="diff-source" data-code-old></script>
+          <script type="text/plain" class="diff-source" data-code-new data-code-id="l0a-pseudocode">[[@fold l0a-pseudocode]]</script>
+        </div>
+        <div class="note pseudo">
+          <b>What the pseudocode surfaces that the trace hid:</b> three reject paths (invalid shape /
+          unknown instance / no transition for this event in this step), the Duplicate no-op, and the
+          exact atomic-commit boundary. <b>And a question it raises:</b> the CAS here is the kernel's
+          own version counter (internal consistency). An <em>actor-supplied</em> expected_version —
+          "I act against the version I last saw" → a true <code>Stale</code> rejection — needs the
+          actor to know the version, which arrives with the context packet at <b>L0b+</b>. The
+          pseudocode found a real boundary the trace could not: a small but genuine coherence signal.
+        </div>
+
+        <div class="note">
+          <b>Two kernel contracts, named</b> (the synthesis todo's Part B, stated here where the
+          durable kernel is born). <b>Record, not replay:</b> an accepted actor emit is the durable
+          fact — committed to the transcript with its provenance (issued config, actor identity/role,
+          operation identity, output refs). Recovery may re-derive the deterministic skeleton
+          (routing, gates, dispatch, post-commit outputs) from committed state, but it never re-runs
+          an LLM/actor to reconstruct a previously accepted result — the default kernel contract, not
+          a per-step opt-in. <b>Leaderless by construction:</b> any worker may handle any instance
+          event; correctness comes from the store-backed <code>(instance_id, op_id)</code> operation
+          ledger plus per-instance <code>expected_version</code>/CAS — never from a leader-per-shard,
+          a process-local single writer, or an in-memory version map. In-band correlation is the
+          fencing: a completion must still match the committed marker (<code>request_id</code>), so a
+          superseded worker's late result loses against the newer state.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag domain">Domain</span> The model</h3>
+        <p>Two aggregates — the <b>template</b> (definition, immutable while running) and the
+        <b>instance</b> (the run) — and the EventEnvelope that drives the instance through the kernel.</p>
+
+        <div class="agg">
+          <div class="agg-label">Template aggregate — the definition (immutable at runtime)</div>
+          <div class="ents">
+            <div class="ent"><div class="en">WorkflowTemplate <span class="root">root</span></div><div class="fields">id, version, roles[] (names), steps[], start</div></div>
+            <div class="ent"><div class="en">Step</div><div class="fields">id, role, transitions { on_pass, on_converged }</div></div>
+            <div class="ent"><div class="en">Role <span style="font-size:10px;color:var(--muted)">(name only)</span></div><div class="fields">implementer / reviewer — no actor binding yet (L0b)</div></div>
+          </div>
+        </div>
+
+        <div class="agg">
+          <div class="agg-label">Instance aggregate — the run (mutable, append-only history)</div>
+          <div class="ents">
+            <div class="ent"><div class="en">WorkflowInstance <span class="root">root</span></div><div class="fields">id, <b>template_ref { id, version }</b>, current_step, round, lifecycle_status, version</div></div>
+            <div class="ent"><div class="en">Transcript</div><div class="fields">append-only ordered EventEnvelopes</div></div>
+            <div class="ent"><div class="en">LifecycleStatus <span style="font-size:10px;color:var(--muted)">(value)</span></div><div class="fields">CREATED → RUNNING → DONE</div></div>
+          </div>
+        </div>
+
+        <div class="agg" style="border-style:solid;border-color:var(--line);background:var(--panel)">
+          <div class="agg-label" style="color:var(--runtime)">Message — crosses the boundary</div>
+          <div class="ents">
+            <div class="ent"><div class="en">EventEnvelope</div><div class="fields">event_id, <b>op_id</b>, instance_id, type (PASS / CONVERGED), <b>actor_id</b> (provenance), payload</div></div>
+          </div>
+        </div>
+
+        <p class="rel"><b>Relationships:</b> a <b>Template</b> (id + version) defines <b>Step</b>s bound to
+        <b>Role</b> names. A <b>WorkflowInstance</b> is created from a Template — snapshotting its
+        <b>template_ref { id, version }</b> so the run is pinned to an immutable definition — and owns
+        its <b>Transcript</b>. An <b>EventEnvelope</b> targets an instance and carries an
+        <b>actor_id</b> as provenance (who sent it); the kernel applies it as a transition. Which
+        concrete actor fills a role, and how the next work item is dispatched, is L0b.</p>
+        <div class="note domain">
+          <b>Why two aggregate roots.</b> Definition and run have different lifecycles and consistency
+          rules: the template is shared and immutable while instances run; the instance mutates but
+          its transcript is append-only. This split is the seed of the braindump's
+          lifecycle-vs-execution-position (§2.2) and immutable-artifact / append-only-transcript
+          (§15.1) decisions — present at L0a, before any machinery that needs them.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag invariant">Invariant</span> Hard rules, stated now — not deferred</h3>
+        <p>The braindump insists these belong in the foundation (§2.1): every later trigger and
+        correlation level reaches back to them, so they must exist at L0a or they look retrofitted.</p>
+
+        <div class="agg invariant">
+          <div class="agg-label">Idempotency &amp; atomic commit</div>
+          <div class="ents">
+[[@invariants l0a 0]]
+          </div>
+        </div>
+        <div class="agg invariant">
+          <div class="agg-label">Store semantics — dumb store, kernel-owned meaning</div>
+          <div class="ents">
+[[@invariants l0a 1]]
+          </div>
+        </div>
+        <div class="note invariant">
+          The store only persists and returns bytes (CAS-checked); it knows nothing about workflow
+          semantics — the <b>kernel owns all meaning</b> (v2 BC-06). This is what lets the store be
+          swapped later (file → SQLite → cloud) without touching the kernel.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag config">Config</span> The template</h3>
+        <p>The whole of L0a's behaviour is this declaration — the loop <em>is</em> the transitions, no
+        engine code encodes it:</p>
+        <div class="code-diff" aria-label="L0a template config" data-old-label="Empty baseline" data-new-label="L0a current">
+          <script type="text/plain" class="diff-source" data-code-old></script>
+          <script type="text/plain" class="diff-source" data-code-new data-code-id="l0a-template-config">[[@code code/l0a-template-config.new.txt]]</script>
+        </div>
+        <div class="note config">
+          <b>Template = configuration, not code</b> (§2.1). L0a is "just one preset"; the engine reads
+          transitions from data. <code>roles</code> are bare names — binding them to concrete actors is
+          L0b. Reality check against v1: this is the <code>review-loop</code> the v1 code hardcodes —
+          here it is already external data.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag absent">Absent</span> Deliberately not here yet</h3>
+        <p>The border of L0a — each is a later level, and seeing the border is half the point:</p>
+        <div class="absent-grid">
+[[@absent l0a]]
+        </div>
+
+        <h3 class="view-h"><span class="view-tag evidence">Evidence</span> Why we accept L0a for now</h3>
+        <div class="note evidence">
+          <ul style="margin:0">
+            <li><b>Scenario coverage:</b> the local pair loop runs end-to-end (runtime trace);
+              forward-compatible with WF-7, whose child workflows build on exactly this kernel
+              (instance + transcript + atomic transitions).</li>
+            <li><b>Invariant coverage:</b> idempotency <code>(instance_id, op_id)</code> ✓; atomic
+              transition commit under expected_version ✓; dumb-store / kernel-owned semantics ✓;
+              template/instance boundary holds (pseudocode loads the template from the definition
+              store via <code>template_ref</code>, not from the instance) ✓.</li>
+            <li><b>Known gaps (intended):</b> no actor binding / guidance (L0b); no actor-supplied
+              stale-intent (L0b+); no gate (L2). Each is listed in Absent.</li>
+            <li><b>Decision:</b> accepted as the L0a baseline. Light evidence per the
+              <a href="../design/design-method-playbook.md">playbook §2.1</a>; a full evidence gate is only
+              needed when L0a becomes an implementation input.</li>
+          </ul>
+        </div>
+      </section>
+
+      

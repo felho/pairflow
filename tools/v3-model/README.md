@@ -1,7 +1,7 @@
 # v3-model — core-model source/render split (Phase 0 + 1 + 2)
 
-Tooling for `docs/v3/convergence/core-model.html`. The HTML is decomposed into
-addressable source files under `docs/v3/convergence/model-src/`; the HTML is
+Tooling for `v3/model/core-model.html`. The HTML is decomposed into
+addressable source files under `v3/model/`; the HTML is
 (re)built from them byte-identically. This is the harness for refactoring the
 core-model document without content changes.
 
@@ -9,17 +9,17 @@ core-model document without content changes.
 
 | Script | Role |
 |---|---|
-| `extract.py` | HTML → `model-src/` (mechanical cut: per-section files + code blocks + Absent/Invariant records + manifest). **Bootstrap only** — refuses to run once `deltas/` exists (it would clobber the unit-delta layout). |
-| `build.py [--out PATH]` | `model-src/` → HTML (paste-back + record rendering + unit folding). |
+| `extract.py` | HTML → `v3/model/` (mechanical cut: per-section files + code blocks + Absent/Invariant records + manifest). **Bootstrap only** — refuses to run once `deltas/` exists (it would clobber the unit-delta layout). |
+| `build.py [--out PATH]` | `v3/model/` → HTML (paste-back + record rendering + unit folding). |
 | `check.sh` | Golden test: the built HTML must be byte-identical to the canonical `core-model.html`; also verifies `ledger.md` freshness. |
 | `foldlib.py` | Shared fold logic: reassembles a pseudocode block from its unit deltas along the baseline chain. |
 | `migrate_units.py` | One-shot Phase 2 migration (snapshots → unit deltas); kept for provenance, guarded no-op now. |
 | `analyze_chain.py` | Read-only report: the baseline graph of the code blocks (`data-code-old-ref`), per-block delta size, and the precise per-unit blast radius (from the `units/` layout). |
-| `report_ledger.py` | Generates `model-src/ledger.md`: the deferral ledger (Absent items bucketed by pointer target — the L9 bucket is the recovery-obligations list), the invariant catalog, the rejection registry, and the domain registry (aggregate/entity inventory per section's Domain lens, with root/kind markers and relationship prose). |
+| `report_ledger.py` | Generates `v3/model/ledger.md`: the deferral ledger (Absent items bucketed by pointer target — the L9 bucket is the recovery-obligations list), the invariant catalog, the rejection registry, and the domain registry (aggregate/entity inventory per section's Domain lens, with root/kind markers and relationship prose). |
 
 ## Editing workflow (until a later phase changes it)
 
-1. Edit files under `docs/v3/convergence/model-src/` (a section, a code
+1. Edit files under `v3/model/` (a section, a code
    snapshot).
 2. Run `python3 tools/v3-model/build.py` to regenerate the HTML.
 3. Run `bash tools/v3-model/check.sh` — it must pass before committing.

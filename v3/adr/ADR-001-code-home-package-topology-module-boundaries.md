@@ -7,7 +7,7 @@ Links: supersedes — · amends — · depends-on ADR-000 · related ADR-002
 ## Context
 
 The v3 kernel needs a code home. The model↔code contract surface
-(`docs/v3/convergence/model-src/ledger.md`) is drift-tested against the code
+(`v3/model/ledger.md`) is drift-tested against the code
 (PI-3), and the build loop executes through the v1 machinery — both live in
 this repo. The v1 CLI package (`src/` → dist → npm publish) has its own
 release lifecycle the v3 work must not entangle.

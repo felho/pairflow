@@ -21,7 +21,7 @@ a ````markdown outer fence QUOTES inner ```json / ```text blocks as
 material — quoted machine blocks are never declarations, and quoted
 rows/marks never reach the prose scans.
 
-Packets (docs/v3/implementation/packets/*.md, README.md excluded):
+Packets (v3/implementation/packets/*.md, README.md excluded):
   P1. A packet is v2 iff it carries the mutation_boundary machine
       block. Grandfathering is the CLOSED 16-file set below:
       whitelisted pre-v2 packets are SKIPPED (parse noise included);
@@ -88,7 +88,7 @@ Packets (docs/v3/implementation/packets/*.md, README.md excluded):
       become machine data (they gate nothing downstream), so the
       no-semantics-from-free-text principle stands.
 
-Drafts (docs/v3/implementation/contracts/*.md, README.md excluded):
+Drafts (v3/implementation/contracts/*.md, README.md excluded):
   D1. contract_draft = {chapter, surface, status}: exact keyset;
       status in draft|ratified|reopened|realized; filename
       ch<N>-<surface>-contract.md matches chapter/surface.
@@ -145,7 +145,7 @@ empty exit-0 pass — after a path migration, a checker still pointed
 at a retired home would otherwise pass while checking nothing.
 
 The canonical STOP member-token registry is mirrored here from
-docs/v3/implementation/README.md §5.5 (the canonical home since the
+v3/implementation/README.md §5.5 (the canonical home since the
 Phase-1 flip; this constant is the mechanical mirror and changes only
 with it). The reserved lane families are mirrored from
 task-packet-template.md §1.
@@ -168,14 +168,14 @@ import tempfile
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-PACKETS_DIR = REPO_ROOT / "docs" / "v3" / "implementation" / "packets"
-CONTRACTS_DIR = REPO_ROOT / "docs" / "v3" / "implementation" / "contracts"
+PACKETS_DIR = REPO_ROOT / "v3" / "implementation" / "packets"
+CONTRACTS_DIR = REPO_ROOT / "v3" / "implementation" / "contracts"
 ADR_DIR = REPO_ROOT / "v3" / "adr"
 
 # ADR-015 legacy-path alias (see the History-audit continuity section
 # of the docstring). None = alias fully disabled; the ADR-015
 # migration commit pins this to its own parent's sha.
-MIGRATION_PARENT: str | None = None
+MIGRATION_PARENT: str | None = "3446e48e1b130834e7122cac2335b371bafa8d7f"
 LEGACY_HOME_NEW = "v3/implementation/"
 LEGACY_HOME_OLD = "docs/v3/implementation/"  # the pre-ADR-015 home
 

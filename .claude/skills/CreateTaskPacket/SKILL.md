@@ -17,12 +17,12 @@ README §5.5 verdict-action matrix).
 
 | Surface | File |
 |---|---|
-| Template (§1) + projection checklist (§2) + `REV-*` registry (§3) | `docs/v3/implementation/task-packet-template.md` |
-| Contract-draft FORM authority (C-rows, ratification blocks, lifecycle) | `docs/v3/implementation/contract-draft-template.md` |
-| Build loop + the autonomy envelope, STOP registry, verdict-action matrix, finding policy (§5.5) | `docs/v3/implementation/README.md` (§4–§7) |
-| The ratified plan (the packet's plan step lives here) | `docs/v3/implementation/plan.md` |
-| The model↔code contract surface (units / rejections / invariants / traces) | `docs/v3/convergence/model-src/ledger.md` |
-| Friction log (provenance of every learned rule) | `docs/v3/implementation/process-log.md` |
+| Template (§1) + projection checklist (§2) + `REV-*` registry (§3) | `v3/implementation/task-packet-template.md` |
+| Contract-draft FORM authority (C-rows, ratification blocks, lifecycle) | `v3/implementation/contract-draft-template.md` |
+| Build loop + the autonomy envelope, STOP registry, verdict-action matrix, finding policy (§5.5) | `v3/implementation/README.md` (§4–§7) |
+| The ratified plan (the packet's plan step lives here) | `v3/implementation/plan.md` |
+| The model↔code contract surface (units / rejections / invariants / traces) | `v3/model/ledger.md` |
+| Friction log (provenance of every learned rule) | `v3/implementation/process-log.md` |
 
 This skill carries **procedure + learned failure classes**
 ([references/LearnedRules.md](references/LearnedRules.md)); content authority

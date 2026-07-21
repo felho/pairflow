@@ -27,7 +27,7 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
-SRC = REPO / "docs/v3/convergence/model-src"
+SRC = REPO / "v3/model"
 
 HEADER_RE = re.compile(r"^(?:INTERFACE\s+)?([A-Za-z_][A-Za-z0-9_]*)")
 PREAMBLE = "__preamble__"

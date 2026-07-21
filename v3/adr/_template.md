@@ -25,7 +25,7 @@ source of truth · reconciler/outbox for the kernel's own state)?
 Answer `no`, or `yes` — in which case this ADR must cite and overturn IC-N
 explicitly. Either way: this screen does NOT bypass the model↔code
 divergence stop. A decision that changes model meaning goes back to the
-model plane (`docs/v3/implementation/README.md` §6); an ADR records only
+model plane (`v3/implementation/README.md` §6); an ADR records only
 deviations the model contract itself permits.
 
 ## Consequences

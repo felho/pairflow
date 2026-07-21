@@ -79,5 +79,5 @@ authority guardrail is a standing review surface
 
 ## Related
 
-Plan §2.4 · storage memo (`docs/v3/topics/_open-v3-storage-architecture.md`)
+Plan §2.4 · storage memo (`v3/design/topics/_open-v3-storage-architecture.md`)
 #1/#8 · ADR-001.

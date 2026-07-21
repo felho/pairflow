@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Assemble docs/v3/convergence/core-model.html from model-src/ sources.
+"""Assemble v3/model/core-model.html from v3/model/ sources.
 
 The inverse of extract.py: prelude + sections (with `[[@code <relpath>]]`
 markers replaced by the referenced file's bytes) + postlude. Pure paste-back —
@@ -16,7 +16,7 @@ from pathlib import Path
 import foldlib
 
 REPO = Path(__file__).resolve().parents[2]
-SRC = REPO / "docs/v3/convergence/model-src"
+SRC = REPO / "v3/model"
 MARKER_RE = re.compile(r"\[\[@code ([^\]]+)\]\]")
 FOLD_RE = re.compile(r"\[\[@fold ([^\]]+)\]\]")
 ABSENT_MARK_RE = re.compile(r"^\[\[@absent (\S+)\]\]$", re.M)
@@ -40,7 +40,7 @@ def render_invariants(match: re.Match) -> str:
 
 
 def main() -> None:
-    out_path = REPO / "docs/v3/convergence/core-model.html"
+    out_path = REPO / "v3/model/core-model.html"
     args = sys.argv[1:]
     if args[:1] == ["--out"] and len(args) == 2:
         out_path = Path(args[1])

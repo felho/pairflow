@@ -13,7 +13,7 @@ import { REJECTION_NAMES } from "../domain/index.js";
  * comparing the runtime value against the ledger is the whole point.
  */
 const LEDGER_URL = new URL(
-  "../../../docs/v3/convergence/model-src/ledger.md",
+  "../../../v3/model/ledger.md",
   import.meta.url,
 );
 

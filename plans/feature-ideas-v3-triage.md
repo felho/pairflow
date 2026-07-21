@@ -4,7 +4,7 @@ Date: 2026-06-19
 Source: [`feature-ideas.md`](feature-ideas.md) (lines 1–118)
 Method: one subagent pass; each line judged for relevance to **Pairflow v3** (the
 distributed workflow-kernel redesign — see
-[`../docs/v3/convergence/approach.md`](../docs/v3/convergence/approach.md)).
+[`../v3/design/approach.md`](../v3/design/approach.md)).
 Opaque-but-promising URLs were fetched to identify the project; obvious or
 clearly off-theme ones were judged by name. `basis` = how the verdict was reached
 (`knew` / `fetched` / `guess`).

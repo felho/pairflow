@@ -1,6 +1,6 @@
 # Learned Rules — the failure-class registry
 
-Distilled from `docs/v3/implementation/process-log.md` (the source of
+Distilled from `v3/implementation/process-log.md` (the source of
 record; every rule cites its provenance line). Maintenance: updated at
 **chapter boundaries only** (README §7 — capture, don't fix), from the
 boundary review's verdicts — or at an explicit USER-RATIFIED process

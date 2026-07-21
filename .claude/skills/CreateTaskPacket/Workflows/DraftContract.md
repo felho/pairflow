@@ -6,7 +6,7 @@ the chapter's undecided row-level contracts are decided ONCE here and
 ratified by the human, so every packet of the chapter PROJECTS from
 ratified rows instead of re-deriving decisions inside review rounds.
 
-Form authority: `docs/v3/implementation/contract-draft-template.md`
+Form authority: `v3/implementation/contract-draft-template.md`
 (docs win — this workflow carries procedure only). Process authority:
 README §4 (the draft phase) and §5.5 (ratification is a standing human
 checkpoint, never delegated, never inferred).
@@ -14,7 +14,7 @@ checkpoint, never delegated, never inferred).
 ## Input
 
 - `CHAPTER` + `SURFACE`: the draft names one memo-born surface —
-  `docs/v3/implementation/contracts/ch<N>-<surface>-contract.md`. A
+  `v3/implementation/contracts/ch<N>-<surface>-contract.md`. A
   chapter may carry several drafts (one per surface); the chapter's
   draft set is what its plan Packets-and-flow-mode table references.
 - `SEED_ROWS`: the new-decision row set handed over by AuthorPacket's
@@ -102,14 +102,15 @@ never an autonomous act.
 ### 5) Chapter close (owned by the boundary review, not this workflow)
 
 The realized map is filled and the status flips to `realized` in ONE
-act; the file never moves; row ids never change. Decision-class rows'
+act; the file never moves; row ids never change
+(the contracts HOME was re-pinned once, `docs/v3/implementation/contracts` → `v3/implementation/contracts`, by ADR-015 — a relocation of the home as a whole, not of a file within it; filenames and row IDs unchanged, anchors unaffected). Decision-class rows'
 ADRs land `accepted` WITH the draft ratification (the packet-flow ADR
 lanes, README §4).
 
 ## Report
 
 ```
-Draft: docs/v3/implementation/contracts/ch<N>-<surface>-contract.md
+Draft: v3/implementation/contracts/ch<N>-<surface>-contract.md
 Draft basis: sha256(<file>) = <hash> @ HEAD <commit>, worktree: clean | dirty
 Rows: <n> (new-decision seed: <n>)   Probes: <run/cited list | none needed>
 Tier 0: <pass | errors>   Panel: <verdict + Gate Coverage Matrix state>

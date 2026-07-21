@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Extract docs/v3/convergence/core-model.html into addressable source files.
+"""Extract v3/model/core-model.html into addressable source files.
 
 Phase 0 of the core-model source/render split: a mechanical, content-neutral
 decomposition. The HTML is cut at <section> boundaries into per-level files,
@@ -7,7 +7,7 @@ and every diff-source code block (pseudocode / template config) is pulled out
 into a standalone file, leaving an include marker behind. build.py re-assembles
 the byte-identical HTML; check.sh is the golden test.
 
-Layout produced under docs/v3/convergence/model-src/:
+Layout produced under v3/model/:
   _prelude.html            head + styles + nav + intro (up to the first level section)
   _postlude.html           everything after the last level section (incl. the diff-viewer JS)
   sections/NN-<id>.html    one file per level section, code bodies replaced by markers
@@ -34,8 +34,8 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
-HTML = REPO / "docs/v3/convergence/core-model.html"
-OUT = REPO / "docs/v3/convergence/model-src"
+HTML = REPO / "v3/model/core-model.html"
+OUT = REPO / "v3/model"
 
 SECTION_RE = re.compile(r'<section id="([^"]+)">')
 CODE_RE = re.compile(
@@ -236,9 +236,12 @@ def extract_codes(section_id: str, chunk: str, code_dir: Path):
 
 def main() -> None:
     if (OUT / "deltas").exists():
-        fail("model-src/ uses the unit-delta layout (deltas/ exists); extract.py is the "
+        fail("v3/model uses the unit-delta layout (deltas/ exists); extract.py is the "
              "pre-phase-2 bootstrapper and would clobber it. To re-bootstrap from the HTML, "
-             "remove model-src/ entirely first — the delta decomposition would be lost.")
+             "delete the source artifacts first — sections/, units/, records/, deltas/, "
+             "code/, manifest.json, _prelude.html, _postlude.html — NEVER core-model.html "
+             "itself (the HTML lives inside the source root and is this script's input); "
+             "the delta decomposition would be lost.")
     src = HTML.read_text()
     prelude, chunks, postlude = split_sections(src)
 
@@ -247,7 +250,7 @@ def main() -> None:
     (OUT / "_prelude.html").write_text(prelude)
     (OUT / "_postlude.html").write_text(postlude)
 
-    manifest = {"html": "docs/v3/convergence/core-model.html", "sections": []}
+    manifest = {"html": "v3/model/core-model.html", "sections": []}
     n_absent = n_inv = 0
     for i, (sid, chunk) in enumerate(chunks, start=1):
         rewritten, codes = extract_codes(sid, chunk, OUT / "code")

@@ -8,7 +8,7 @@ Links: supersedes — · amends ADR-001 · depends-on — · related ADR-005
 
 Chapter 5 builds the PI-3 drift suite (packet ch5-P1): the three
 unconditional tests that keep the model's machine face (ledger §3/§4 +
-the `model-src/units/` tree) and the code from shearing. The suite needs
+the `v3/model/units/` tree) and the code from shearing. The suite needs
 a home with unusual properties: its tests read model documents at test
 time, its manifests must be type-bound to `domain/` exports (a vanished
 type = compile error), and one manifest (`unitMap.json`) must be readable
@@ -31,7 +31,7 @@ module** — the model↔code contract surface's code end:
     `domainRegistry.ts`) are `import type` ONLY — static bookkeeping;
     a value import there would smuggle runtime coupling into a proof
     that is deliberately compile-time.
-- **`drift/` reads `docs/v3/convergence/model-src/` at test time** (the
+- **`drift/` reads `v3/model/` at test time** (the
   ch-4 `rejectionNames.test.ts` precedent, now the module norm).
 - **`drift/unitMap.json` is dual-read**: the vitest drift test AND
   `tools/v3-plan/check_coverage.py` (the three-way ledger ↔ manifest ↔
@@ -44,7 +44,7 @@ layer that mechanizes ADR-001 and ADR-005.
 
 - **Folding the drift tests into `testkit/`** — the kit implements port
   seams for tests to DRIVE the kernel; drift is a document↔code lock
-  with opposite dependencies (reads model-src, binds domain types).
+  with opposite dependencies (reads v3/model, binds domain types).
   Mixing them muddles both ADR-005 import rules; rejected.
 - **A TS `unitMap.ts` manifest** — either the Python checker grows a TS
   parser (fragile, non-stdlib) or the lock loses its script end;

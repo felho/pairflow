@@ -20,26 +20,26 @@ When preparing a commit message, read `docs/commit-message-guidance.md`.
 - Do not run `git push` at all — the user pushes to origin themselves.
 - Do not change files outside this repo unless explicitly requested.
 
-## V3 Implementation Plane (`docs/v3/` + `v3/`)
+## V3 Implementation Plane (`v3/`)
 
 Work on the v3 kernel/implementation follows its OWN process, not the
 bubble workflow below. Everything an agent needs lives on repo surfaces
 — no session memory is required or assumed:
 
-- **Process authority:** `docs/v3/implementation/README.md` (build loop
+- **Process authority:** `v3/implementation/README.md` (build loop
   §4, execution model §5, chapter DoD §6, friction log §7). The plan
-  (`docs/v3/implementation/plan.md`) is ratified chapter by chapter;
-  task packets live in `docs/v3/implementation/packets/`.
+  (`v3/implementation/plan.md`) is ratified chapter by chapter;
+  task packets live in `v3/implementation/packets/`.
 - **Packet authoring, review, and contract-drafts** run through the
   repo-local `CreateTaskPacket` skill
   (`.claude/skills/CreateTaskPacket/`); the canonical template /
   projection checklist / `REV-*` registry stay in
-  `docs/v3/implementation/task-packet-template.md`, and the
+  `v3/implementation/task-packet-template.md`, and the
   contract-draft form authority in
-  `docs/v3/implementation/contract-draft-template.md` — if the skill
+  `v3/implementation/contract-draft-template.md` — if the skill
   and the docs disagree, the docs win.
 - **Contract-drafts exist:** a chapter's memo-born surface is decided
-  as C-rows in `docs/v3/implementation/contracts/` and RATIFIED by the
+  as C-rows in `v3/implementation/contracts/` and RATIFIED by the
   human before any packet anchors to it (`contract:chN-<surface>#Cn`).
 - **Human decision points (the README §5.5 verdict-action matrix):**
   STOPs and flag-bearing approves are the USER's; flag-free approves

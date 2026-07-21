@@ -1,0 +1,315 @@
+{
+  "html": "v3/model/core-model.html",
+  "sections": [
+    {
+      "id": "l0a",
+      "file": "sections/01-l0a.html",
+      "codes": [
+        {
+          "id": "l0a-pseudocode",
+          "baseline": null,
+          "fold": true
+        },
+        {
+          "id": "l0a-template-config",
+          "baseline": null,
+          "new": "code/l0a-template-config.new.txt"
+        }
+      ]
+    },
+    {
+      "id": "l0b",
+      "file": "sections/02-l0b.html",
+      "codes": [
+        {
+          "id": "l0b-pseudocode",
+          "baseline": "l0a-pseudocode",
+          "fold": true
+        },
+        {
+          "id": "l0b-template-config",
+          "baseline": "l0a-template-config",
+          "new": "code/l0b-template-config.new.txt"
+        }
+      ]
+    },
+    {
+      "id": "l0c",
+      "file": "sections/03-l0c.html",
+      "codes": [
+        {
+          "id": "l0c-pseudocode",
+          "baseline": "l0b-pseudocode",
+          "fold": true
+        },
+        {
+          "id": "l0c-template-config",
+          "baseline": "l0b-template-config",
+          "new": "code/l0c-template-config.new.txt"
+        }
+      ]
+    },
+    {
+      "id": "l0d",
+      "file": "sections/04-l0d.html",
+      "codes": [
+        {
+          "id": "l0d-pseudocode",
+          "baseline": "l0c-pseudocode",
+          "fold": true
+        },
+        {
+          "id": "l0d-template-config",
+          "baseline": "l0c-template-config",
+          "new": "code/l0d-template-config.new.txt"
+        }
+      ]
+    },
+    {
+      "id": "l0e",
+      "file": "sections/05-l0e.html",
+      "codes": [
+        {
+          "id": "l0e-pseudocode",
+          "baseline": "l0d-pseudocode",
+          "fold": true
+        },
+        {
+          "id": "l0e-template-config",
+          "baseline": "l0d-template-config",
+          "new": "code/l0e-template-config.new.txt"
+        }
+      ]
+    },
+    {
+      "id": "l0f",
+      "file": "sections/06-l0f.html",
+      "codes": [
+        {
+          "id": "l0f-pseudocode",
+          "baseline": null,
+          "fold": true
+        },
+        {
+          "id": "l0f-template-config",
+          "baseline": "l0e-template-config",
+          "new": "code/l0f-template-config.new.txt"
+        },
+        {
+          "id": "l0f-project-config",
+          "baseline": null,
+          "new": "code/l0f-project-config.new.txt"
+        }
+      ]
+    },
+    {
+      "id": "l1",
+      "file": "sections/07-l1.html",
+      "codes": [
+        {
+          "id": "l1-pseudocode",
+          "baseline": "l0e-pseudocode",
+          "fold": true
+        }
+      ]
+    },
+    {
+      "id": "l2",
+      "file": "sections/08-l2.html",
+      "codes": [
+        {
+          "id": "l2-pseudocode",
+          "baseline": "l1-pseudocode",
+          "fold": true
+        },
+        {
+          "id": "l2-template-config",
+          "baseline": "l0f-template-config",
+          "new": "code/l2-template-config.new.txt"
+        }
+      ]
+    },
+    {
+      "id": "l2a",
+      "file": "sections/09-l2a.html",
+      "codes": [
+        {
+          "id": "l2a-pseudocode",
+          "baseline": "l2-pseudocode",
+          "fold": true
+        },
+        {
+          "id": "l2a-template-config",
+          "baseline": "l2-template-config",
+          "new": "code/l2a-template-config.new.txt"
+        }
+      ]
+    },
+    {
+      "id": "l2b",
+      "file": "sections/10-l2b.html",
+      "codes": [
+        {
+          "id": "l2b-pseudocode",
+          "baseline": "l2a-pseudocode",
+          "fold": true
+        },
+        {
+          "id": "l2b-template-config",
+          "baseline": "l2a-template-config",
+          "new": "code/l2b-template-config.new.txt"
+        }
+      ]
+    },
+    {
+      "id": "l3",
+      "file": "sections/11-l3.html",
+      "codes": [
+        {
+          "id": "l3-pseudocode",
+          "baseline": "l2b-pseudocode",
+          "fold": true
+        },
+        {
+          "id": "l3-template-config",
+          "baseline": "l2b-template-config",
+          "new": "code/l3-template-config.new.txt"
+        }
+      ]
+    },
+    {
+      "id": "storage-scope",
+      "file": "sections/12-storage-scope.html",
+      "codes": [
+        {
+          "id": "storage-scope-pseudocode",
+          "baseline": null,
+          "fold": true
+        }
+      ]
+    },
+    {
+      "id": "runtime-teardown",
+      "file": "sections/13-runtime-teardown.html",
+      "codes": [
+        {
+          "id": "release-pseudocode",
+          "baseline": "l3-pseudocode",
+          "fold": true
+        },
+        {
+          "id": "release-template-config",
+          "baseline": "l3-template-config",
+          "new": "code/release-template-config.new.txt"
+        }
+      ]
+    },
+    {
+      "id": "workflow-actions",
+      "file": "sections/14-workflow-actions.html",
+      "codes": [
+        {
+          "id": "action-pseudocode",
+          "baseline": "release-pseudocode",
+          "fold": true
+        },
+        {
+          "id": "action-template-config",
+          "baseline": "release-template-config",
+          "new": "code/action-template-config.new.txt"
+        }
+      ]
+    },
+    {
+      "id": "auto-workflow-actions",
+      "file": "sections/15-auto-workflow-actions.html",
+      "codes": [
+        {
+          "id": "auto-action-pseudocode",
+          "baseline": "action-pseudocode",
+          "fold": true
+        },
+        {
+          "id": "auto-action-template-config",
+          "baseline": "action-template-config",
+          "new": "code/auto-action-template-config.new.txt"
+        }
+      ]
+    },
+    {
+      "id": "archive-purge",
+      "file": "sections/16-archive-purge.html",
+      "codes": [
+        {
+          "id": "complete-pseudocode",
+          "baseline": "auto-action-pseudocode",
+          "fold": true
+        }
+      ]
+    },
+    {
+      "id": "l0f-mode",
+      "file": "sections/17-l0f-mode.html",
+      "codes": [
+        {
+          "id": "l0f-mode-pseudocode",
+          "baseline": "l0f-pseudocode",
+          "fold": true
+        },
+        {
+          "id": "l0f-mode-template-config",
+          "baseline": "auto-action-template-config",
+          "new": "code/l0f-mode-template-config.new.txt"
+        }
+      ]
+    },
+    {
+      "id": "l4-child",
+      "file": "sections/18-l4-child.html",
+      "codes": [
+        {
+          "id": "l4-pseudocode",
+          "baseline": "auto-action-pseudocode",
+          "fold": true
+        },
+        {
+          "id": "l4-parent-template",
+          "baseline": null,
+          "new": "code/l4-parent-template.new.txt"
+        }
+      ]
+    },
+    {
+      "id": "l5",
+      "file": "sections/19-l5.html",
+      "codes": [
+        {
+          "id": "l5-pseudocode",
+          "baseline": "l4-pseudocode",
+          "fold": true
+        },
+        {
+          "id": "l5-template-config",
+          "baseline": "l0f-mode-template-config",
+          "new": "code/l5-template-config.new.txt"
+        }
+      ]
+    },
+    {
+      "id": "emit-contract",
+      "file": "sections/20-emit-contract.html",
+      "codes": [
+        {
+          "id": "emit-contract-pseudocode",
+          "baseline": "l5-pseudocode",
+          "fold": true
+        },
+        {
+          "id": "emit-contract-template-config",
+          "baseline": "l5-template-config",
+          "new": "code/emit-contract-template-config.new.txt"
+        }
+      ]
+    }
+  ]
+}

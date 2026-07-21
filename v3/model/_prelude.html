@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>V3 Core Model — Convergence by Complexity Ramp</title>
+  <style>
+    :root {
+      --ink: #1a1e27;
+      --muted: #5d6675;
+      --line: #dde3ec;
+      --soft: #f4f6fb;
+      --panel: #ffffff;
+      --accent: #4f46e5;       /* indigo — structural */
+      --runtime: #0e7490;      /* cyan — runtime trace */
+      --pseudo: #047857;       /* emerald — protocol pseudocode */
+      --domain: #7c3aed;       /* violet — domain model */
+      --invariant: #b91c1c;    /* red — hard invariant */
+      --config: #b45309;       /* amber — configuration */
+      --absent: #9aa3b2;
+      --good: #15803d;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: #fbfcfe;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.55;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    .layout { display: grid; grid-template-columns: 280px minmax(0, 1fr); min-height: 100vh; }
+    nav {
+      position: sticky; top: 0; height: 100vh; overflow: auto;
+      border-right: 1px solid var(--line); background: #f7f9fc; padding: 24px 18px;
+    }
+    nav h1 { font-size: 16px; line-height: 1.3; margin: 0 0 6px; }
+    nav .sub { font-size: 12px; color: var(--muted); margin: 0 0 16px; }
+    nav a { display: block; color: var(--ink); padding: 6px 9px; border-radius: 6px; font-size: 14px; }
+    nav a:hover { background: #e9eef7; }
+    nav a.active { background: #ece8ff; font-weight: 600; }
+    nav a.level .tag { font-weight: 400; color: var(--muted); font-size: 12px; }
+    nav .block { font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--accent); margin: 14px 0 4px 9px; }
+    nav .future { color: var(--absent); font-size: 13px; padding: 5px 9px; }
+    nav .cut { font-size: 11px; color: var(--good); font-weight: 700; padding: 4px 9px; }
+    main { max-width: 1080px; width: 100%; padding: 32px 44px 90px; }
+    header.page { border-bottom: 1px solid var(--line); padding-bottom: 22px; margin-bottom: 10px; }
+    header.page h2 { font-size: clamp(26px, 3.4vw, 40px); line-height: 1.1; margin: 0 0 10px; }
+    header.page p { max-width: 820px; color: var(--muted); font-size: 17px; margin: 0; }
+    section { margin: 40px 0; scroll-margin-top: 18px; }
+    h2.level-h { font-size: 26px; margin: 0 0 4px; display: flex; align-items: center; gap: 12px; }
+    .level-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      background: var(--accent); color: #fff; border-radius: 7px;
+      font-size: 15px; font-weight: 700; padding: 3px 10px; letter-spacing: .3px;
+    }
+    .level-sub { color: var(--muted); margin: 0 0 8px; font-size: 16px; }
+    h3 { font-size: 19px; margin: 28px 0 10px; }
+    .view-h { display: flex; align-items: center; gap: 9px; }
+    .view-tag {
+      font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase;
+      padding: 2px 8px; border-radius: 999px;
+    }
+    .view-tag.runtime   { background: #cffafe; color: var(--runtime); }
+    .view-tag.pseudo    { background: #d1fae5; color: var(--pseudo); }
+    .view-tag.domain    { background: #ede9fe; color: var(--domain); }
+    .view-tag.invariant { background: #fee2e2; color: var(--invariant); }
+    .view-tag.config    { background: #fef3c7; color: var(--config); }
+    .view-tag.absent    { background: #eef1f5; color: var(--absent); }
+    .view-tag.evidence  { background: #dcfce7; color: var(--good); }
+    p { margin: 0 0 12px; }
+    ul { margin: 6px 0 14px 20px; padding: 0; }
+    li { margin: 4px 0; }
+    code { background: #eef1f7; padding: 1px 5px; border-radius: 4px; font-size: 13.5px; }
+    pre {
+      background: #1a1e27; color: #e6e9f0; border-radius: 9px; padding: 16px 18px;
+      overflow: auto; font-size: 13px; line-height: 1.5; margin: 12px 0;
+    }
+    pre.pseudo { background: #06251c; }
+    pre .k, .code-diff .k { color: #c4b5fd; }
+    pre .s, .code-diff .s { color: #86efac; }
+    pre .c, .code-diff .c { color: #7d8597; }
+    pre .n, .code-diff .n { color: #fdba74; }
+    pre .kw, .code-diff .kw { color: #fca5a5; }
+    pre .out, .code-diff .out { color: #fcd34d; }
+    /* kernel-primitive labels — render-side readability layer (the source units are untouched):
+       comments recede so code lines pop (hover a line to read its full comment); the uppercase
+       primitive labels become color-coded pills; the `# ─── … ───` contract headers become bands */
+    .diff-code .c { opacity: .6; transition: opacity .15s ease; }
+    .diff-line:hover .c { opacity: 1; }
+    .prim {
+      font-weight: 700; font-size: 10px; letter-spacing: .5px;
+      padding: 0 6px; border-radius: 999px;
+    }
+    .prim-admission   { background: rgba(125,211,252,.14); color: #7dd3fc; }
+    .prim-warrant     { background: rgba(252,211,77,.14);  color: #fcd34d; }
+    .prim-errand      { background: rgba(134,239,172,.14); color: #86efac; }
+    .prim-choicepoint { background: rgba(196,181,253,.14); color: #c4b5fd; }
+    .prim-directive   { background: rgba(249,168,212,.14); color: #f9a8d4; }
+    .diff-line.contract-head { background: rgba(216,243,232,.05); }
+    .diff-line.contract-head .c { opacity: .92; font-weight: 600; }
+    .diff-line.contract-head.ch-admission   { box-shadow: inset 3px 0 0 #7dd3fc; }
+    .diff-line.contract-head.ch-warrant     { box-shadow: inset 3px 0 0 #fcd34d; }
+    .diff-line.contract-head.ch-errand      { box-shadow: inset 3px 0 0 #86efac; }
+    .diff-line.contract-head.ch-choicepoint { box-shadow: inset 3px 0 0 #c4b5fd; }
+    .diff-line.contract-head.ch-directive   { box-shadow: inset 3px 0 0 #f9a8d4; }
+    .note {
+      border-left: 4px solid var(--accent); background: var(--soft);
+      padding: 12px 15px; margin: 16px 0; border-radius: 0 8px 8px 0;
+    }
+    .note.runtime   { border-left-color: var(--runtime); }
+    .note.pseudo    { border-left-color: var(--pseudo); }
+    .note.domain    { border-left-color: var(--domain); }
+    .note.invariant { border-left-color: var(--invariant); }
+    .note.config    { border-left-color: var(--config); }
+    .note.evidence  { border-left-color: var(--good); background: #f3faf5; }
+
+    /* runtime trace as a vertical sequence */
+    .trace { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--panel); }
+    .trace-row { display: grid; grid-template-columns: 38px 1fr; border-bottom: 1px solid var(--line); }
+    .trace-row:last-child { border-bottom: 0; }
+    .trace-row.idem { background: #fff7f7; }
+    .trace-n {
+      background: #f1f4fa; color: var(--muted); font-size: 13px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; border-right: 1px solid var(--line);
+    }
+    .trace-row.idem .trace-n { background: #fee2e2; color: var(--invariant); }
+    .trace-c { padding: 11px 14px; }
+    .trace-c .ev { font-weight: 600; }
+    .trace-c .meta { font-size: 13px; color: var(--muted); margin-top: 2px; }
+    .trace-c .meta b { color: var(--ink); font-weight: 600; }
+
+    /* domain model entity cards */
+    .agg { border: 1.5px dashed #c7bdf2; border-radius: 12px; padding: 14px; margin: 14px 0; background: #faf9ff; }
+    .agg.invariant { border-color: #f2bdbd; background: #fdf7f7; }
+    .agg > .agg-label { font-size: 12px; font-weight: 700; color: var(--domain); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 10px; }
+    .agg.invariant > .agg-label { color: var(--invariant); }
+    .ents { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
+    .ent { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 11px 13px; }
+    .ent .en { font-weight: 700; font-size: 14px; }
+    .ent .root { font-size: 10px; font-weight: 700; color: #fff; background: var(--domain); border-radius: 4px; padding: 1px 5px; margin-left: 6px; vertical-align: middle; }
+    .ent .fields { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+    .rel { font-size: 13.5px; color: var(--muted); margin: 10px 0 0; }
+    .rel b { color: var(--ink); }
+
+    /* absent list */
+    .absent-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
+    .absent-item { border: 1px solid var(--line); border-radius: 7px; padding: 9px 11px; font-size: 13.5px; color: var(--muted); background: #fbfcfe; }
+    .absent-item b { color: var(--ink); font-weight: 600; }
+    .absent-item .at { color: var(--accent); font-weight: 600; }
+    /* canonical contract matrix */
+    .contract { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 6px; }
+    .contract th, .contract td { border: 1px solid var(--line); padding: 5px 8px; text-align: left; vertical-align: top; }
+    .contract th { background: var(--panel); color: var(--ink); font-weight: 600; }
+    .contract td { color: var(--muted); }
+    .contract td:first-child { color: var(--ink); font-family: ui-monospace, monospace; white-space: nowrap; }
+    .contract tr.grp td { background: var(--panel); color: var(--ink); font-weight: 600; font-family: inherit; }
+    .contract code { font-size: 11px; }
+    /* IDE-like side-by-side pseudocode diff */
+    .diff-title { font-weight: 700; margin: 20px 0 8px; }
+    .code-diff {
+      border: 1px solid #223f35; border-radius: 10px; overflow: hidden; background: #071b15;
+      color: #d8f3e8; margin: 12px 0 18px; box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+    }
+    .diff-toolbar {
+      display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center;
+      min-height: 44px; padding: 0 10px; background: #0b2a21; border-bottom: 1px solid #245044;
+    }
+    .diff-labels {
+      visibility: hidden; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      color: #b9d9cf; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 12.5px; font-weight: 700;
+    }
+    .diff-labels span { padding-left: 56px; }
+    .code-diff.is-diff-on .diff-labels { visibility: visible; }
+    .diff-toggle {
+      border: 1px solid #2c5f50; border-radius: 6px; background: #09231b; color: #b9d9cf;
+      font: 700 12px Inter, ui-sans-serif, system-ui, sans-serif;
+      padding: 5px 10px; cursor: pointer;
+    }
+    .diff-toggle[aria-pressed="true"] { background: #d1fae5; color: #07543f; border-color: #d1fae5; }
+    .diff-source { display: none; }
+    .diff-view[hidden] { display: none; }
+    .diff-view {
+      padding: 16px 0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 13px; line-height: 1.72;
+    }
+    .full-scroll { overflow-x: auto; }
+    .full-body { min-width: 920px; }
+    .diff-panes {
+      display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+    .diff-pane { min-width: 0; }
+    .diff-pane:first-child { border-right: 1px solid #245044; }
+    .diff-pane-scroll { overflow-x: auto; }
+    .diff-pane-body { min-width: 720px; }
+    .diff-line {
+      display: grid; grid-template-columns: 46px max-content; min-height: 1.72em; box-sizing: border-box;
+      border-bottom: 1px solid rgba(255,255,255,.035); align-items: center;
+    }
+    .diff-line:last-child { border-bottom: 0; }
+    .diff-ln {
+      color: #789189; text-align: right; user-select: none; padding: 0 8px;
+      background: rgba(255,255,255,.025); border-right: 1px solid rgba(255,255,255,.06);
+      align-self: stretch; display: flex; align-items: center; justify-content: flex-end;
+    }
+    .diff-code { white-space: pre; padding: 0 10px; }
+    .diff-line.ctx .diff-code { color: #bfd2cc; }
+    .diff-line.add .diff-ln, .diff-line.add .diff-code { background: rgba(22,163,74,.22); }
+    .diff-line.add .diff-code { box-shadow: inset 3px 0 0 #22c55e; color: #dfffee; }
+    .diff-line.remove .diff-ln, .diff-line.remove .diff-code { background: rgba(185,28,28,.18); }
+    .diff-line.remove .diff-code { box-shadow: inset 3px 0 0 #ef4444; color: #fee2e2; }
+    .diff-line.change .diff-ln, .diff-line.change .diff-code { background: rgba(234,179,8,.20); }
+    .diff-line.change .diff-code { box-shadow: inset 3px 0 0 #eab308; color: #fff7d6; }
+    .diff-line.gap .diff-code { color: #668177; }
+    .diff-line.blank .diff-code { min-width: 640px; }
+    @media (max-width: 880px) {
+      .layout { grid-template-columns: 1fr; }
+      nav { position: static; height: auto; }
+      main { padding: 22px 16px 60px; }
+      .diff-panes { grid-template-columns: 1fr; }
+      .diff-pane:first-child { border-right: 0; border-bottom: 1px solid #245044; }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <nav>
+      <h1>V3 Core Model</h1>
+      <p class="sub">Convergence by complexity ramp</p>
+      <a href="#how">How to read this</a>
+      <div class="block">Block A · local core</div>
+      <a class="level" href="#l0a">L0a <span class="tag">· kernel skeleton</span></a>
+      <a class="level" href="#l0b">L0b <span class="tag">· actor + context</span></a>
+      <a class="level" href="#l0c">L0c <span class="tag">· agent run config</span></a>
+      <a class="level" href="#l0d">L0d <span class="tag">· lifecycle + activation</span></a>
+      <a class="level" href="#l0e">L0e <span class="tag">· runtime context</span></a>
+      <a class="level" href="#l0f">L0f <span class="tag">· project config + resolution</span></a>
+      <a class="level" href="#l1">L1 <span class="tag">· capability matrix</span></a>
+      <a class="level" href="#l2">L2 <span class="tag">· gate / policy</span></a>
+      <a class="level" href="#l2a">L2a <span class="tag">· external/process gate</span></a>
+      <a class="level" href="#l2b">L2b <span class="tag">· policy/gate context</span></a>
+      <a class="level" href="#l3">L3 <span class="tag">· human decision Ask</span></a>
+      <a class="level" href="#storage-scope">LC1 <span class="tag">· durable run record / storage scope</span></a>
+      <a class="level" href="#runtime-teardown">LC2 <span class="tag">· runtime resource teardown</span></a>
+      <a class="level" href="#workflow-actions">LC3a <span class="tag">· workflow actions (commit / merge)</span></a>
+      <a class="level" href="#auto-workflow-actions">LC3b <span class="tag">· auto actions (perf-test)</span></a>
+      <a class="level" href="#archive-purge">LC4 <span class="tag">· archive / export / purge</span></a>
+      <a class="level" href="#l0f-mode">L0g <span class="tag">· run-scoped mode / variants</span></a>
+      <a class="level" href="#l4-child">L4 <span class="tag">· child workflow instances</span></a>
+      <div class="cut">▲ MVP cut — local WF-7 runs</div>
+      <a class="level" href="#l5">L5 <span class="tag">· help subflow (agent ask)</span></a>
+      <a class="level" href="#emit-contract">EC <span class="tag">· emit contract + verify gates</span></a>
+      <div class="block">Block B · distribution</div>
+      <div class="future">L6 · triggers (minimal)</div>
+      <div class="future">L7 · grants &amp; credentials</div>
+      <div class="future">L8 · channels + general Ask</div>
+      <div class="future">L9 · wait + correlation</div>
+      <div class="future">L10 · gatekeeper / federation</div>
+      <div class="block">Block C · agent-native</div>
+      <div class="future">L11 · agent registry</div>
+      <div class="future">L12 · definition PRs / metacog</div>
+      <div class="future">L13 · trust / evals</div>
+      <div class="block">post-MVP · scenario primitives</div>
+      <div class="future">dataset, read-model, fan-out…</div>
+      <div class="block">Block D · org-scale</div>
+      <div class="future">L14 · governance (deferred)</div>
+    </nav>
+
+    <main>
+      <header class="page">
+        <h2>V3 Core Model — built one level at a time</h2>
+        <p>The convergence companion to <a href="../design/concept-braindump.md">concept-braindump.md</a>,
+        <a href="../design/approach.md">approach.md</a> (the method + roadmap; source of truth for the ramp), and
+        <a href="../design/design-method-playbook.md">design-method-playbook.md</a> (how to use DDD, pseudocode,
+        and evidence while designing). Grows from the smallest kernel, one coherent capability per
+        level, each shown through multiple lenses.</p>
+      </header>
+
+      <section id="how">
+        <h2 class="level-h">How to read this</h2>
+        <p>Each level adds <strong>one coherent capability</strong> (a single concept, or an
+        inseparable cluster — not a convenience bundle) and is rendered through multiple lenses, so
+        the model and its rules can be followed as complexity grows rather than absorbed all at once:</p>
+        <ul>
+          <li><span class="view-tag runtime">Runtime</span> &nbsp;one concrete trace — what events arrive and what the kernel does, step by step.</li>
+          <li><span class="view-tag pseudo">Pseudocode</span> &nbsp;the general rule behind the trace, including branches the trace does not exercise (duplicate, stale, invalid, reject, no-op).</li>
+          <li><span class="view-tag domain">Domain</span> &nbsp;the model (DDD) — entities, aggregate boundaries, relationships.</li>
+          <li><span class="view-tag invariant">Invariant</span> &nbsp;hard rules stated at this level, not deferred (idempotency, atomicity, store semantics).</li>
+          <li><span class="view-tag config">Config</span> &nbsp;the template/definition that declares the behaviour.</li>
+          <li><span class="view-tag absent">Absent</span> &nbsp;what is deliberately not here yet, and which level introduces it.</li>
+        </ul>
+        <div class="note">
+          <strong>Two coherence tests run as the ramp grows.</strong> Structurally: if a new
+          capability sits cleanly on the model (a new entity or field, not a rewrite), the core is
+          sound. Algorithmically: if it slots into the pseudocode as a small guard/branch, the
+          abstraction holds; if the pseudocode must be torn apart, the earlier level hid a missing
+          concept. Some primitives <em>mature in stages</em> (the Ask: human-decision → agent-help →
+          general; the wait: internal-deterministic → external-fuzzy). Levels are greenfield kernel
+          concepts; reality checks against the v1 code (<code>src/v11/…</code>) keep them honest.
+        </div>
+        <div class="note">
+          <strong>Naming note.</strong> The <strong>LC1–LC4</strong> slices (durable run record ·
+          runtime teardown · workflow actions · archive/purge) are the <em>lifecycle-close</em>
+          strand — a build-order sequence that landed between L3 and L4. LC names ramp
+          <em>position</em>, not ownership: LC2 completes L0e's runtime-context lifecycle, LC1 is a
+          cross-cutting storage contract. <strong>L0g</strong> (run-scoped mode / variants) is the
+          L0f-family resolution extension.
+        </div>
+      </section>
+
+      

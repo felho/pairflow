@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate model-src/ledger.md — the derived registries of the core model.
+"""Generate v3/model/ledger.md — the derived registries of the core model.
 
 Four registries, all DERIVED from the extracted sources (never edited by hand):
 
@@ -28,7 +28,7 @@ from pathlib import Path
 import foldlib
 
 REPO = Path(__file__).resolve().parents[2]
-SRC = REPO / "docs/v3/convergence/model-src"
+SRC = REPO / "v3/model"
 
 AT_RE = re.compile(r'<span class="at">→\s*(.*?)</span>')
 TAG_RE = re.compile(r"<[^>]+>")

@@ -14,7 +14,7 @@ import { DOMAIN_REGISTRY } from "./domainRegistry.js";
  * normalization rule fails here, not downstream.
  */
 const LEDGER_URL = new URL(
-  "../../../docs/v3/convergence/model-src/ledger.md",
+  "../../../v3/model/ledger.md",
   import.meta.url,
 );
 

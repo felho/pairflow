@@ -75,7 +75,7 @@ kernel shape (no deterministic replay, no leader-per-shard, no
 event-sourcing-as-truth, no reconciler/outbox for kernel state). This
 screen does not bypass the model↔code divergence stop: the lifecycle
 realization projects the l0d/l0e units, and any unit change routes
-through model-src + check.sh (the ch12 draft's decision point 3 is
+through v3/model + check.sh (the ch12 draft's decision point 3 is
 exactly such a model-plane act).
 
 ## Consequences
@@ -103,7 +103,7 @@ exactly such a model-plane act).
 ## Related
 
 - Levels: L0c / L0d / L0e (model sections 03–05).
-- Contract: `docs/v3/implementation/contracts/ch12-runtime-core-contract.md`
+- Contract: `v3/implementation/contracts/ch12-runtime-core-contract.md`
   (rows C15/C16/C22/C25).
 - Prior ADRs: ADR-001 (module boundaries), ADR-005 (testkit),
   ADR-009 (dev entrypoint), ADR-013 (the gate registry's contrasting

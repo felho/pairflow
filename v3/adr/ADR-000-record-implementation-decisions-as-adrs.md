@@ -6,7 +6,7 @@ Links: supersedes — · amends — · depends-on — · related ADR-001, ADR-00
 
 ## Context
 
-The model plane keeps its decisions in the corpus + `docs/v3/topics/` memos
+The model plane keeps its decisions in the corpus + `v3/design/topics/` memos
 (the playbook §8 boundary rule; the memos ARE the model's decision records).
 The implementation plane needs its own decision records with a lifecycle and
 a review surface — PI-10 activates the convention; this ADR is its bootstrap

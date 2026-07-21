@@ -13,7 +13,7 @@ v2's `split` / `refine` / `approve` adapts v1 ReviewSpec's
 `block_not_ready`; the pre-v2 "ready for pre-approval" state name
 retired with the modes.)*
 
-Process authority: `docs/v3/implementation/README.md` §5.5 (the
+Process authority: `v3/implementation/README.md` §5.5 (the
 autonomy envelope, the STOP registry, the finding policy — this file
 is the procedure mirror; if they disagree, the README wins). Form
 authorities: `task-packet-template.md` (packets),
@@ -21,8 +21,8 @@ authorities: `task-packet-template.md` (packets),
 
 ## Input
 
-- `TARGET_PATH`: a packet under `docs/v3/implementation/packets/` or a
-  contract-draft under `docs/v3/implementation/contracts/`.
+- `TARGET_PATH`: a packet under `v3/implementation/packets/` or a
+  contract-draft under `v3/implementation/contracts/`.
 - Target kind is derived from the path. For DRAFTS the panel is scoped:
   the substrate lens FULLY applies (probes are tree-independent);
   embedding-class checks are `n/a (draft)` in the matrix — a resolved
@@ -128,7 +128,7 @@ drift)*
 1. Content floor (kernel-semantic targets): the `ledger_slice` block
    parses with the template §1 machine tokens; an operability packet
    declares `[]` on every axis EXPLICITLY [R-EMPTY-SLICE]; every unit
-   id resolves to a file under `model-src/units/` (spot-check by `ls`,
+   id resolves to a file under `v3/model/units/` (spot-check by `ls`,
    never memory); rejection strings match ledger §3 EXACTLY (grep);
    operative material is verbatim (spot-check one unit); contract/type
    rows carry registry **field lists**, not entity names
@@ -562,7 +562,7 @@ R-LANE-SENSITIVITY's build-close half. Elsewhere it stays an option:
      EXPLICITLY; the machine's current `~/.codex/config.toml` default
      is never trusted (an operator's config-in-flux must not silently
      swap the reviewer). The pin's SOURCE OF TRUTH is
-     `docs/v3/implementation/arm-pin.md` (current row; revised at
+     `v3/implementation/arm-pin.md` (current row; revised at
      chapter boundaries only) — this workflow never hardcodes it.
      PIN-MISMATCH RULE: an output header whose model/effort disagrees
      with the current pin, OR whose approval policy is not `never`

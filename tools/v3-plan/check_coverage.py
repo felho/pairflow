@@ -5,12 +5,12 @@ Asserts over the plan: the union of declared task-packet ledger slices
 against the in-scope inventory. Stdlib only (the report_ledger.py culture).
 
 Inventory sources (the ledger's machine face):
-  - model-src/units/<section>/<UnitName>.txt -> unit ids "<section>/<UnitName>"
+  - v3/model/units/<section>/<UnitName>.txt -> unit ids "<section>/<UnitName>"
   - ledger.md par.2                          -> invariant ids "<section>/<slug>"
   - ledger.md par.3                          -> rejection names
   - the unit sections                        -> chapter-trace inventory
 
-Packet source: docs/v3/implementation/packets/*.md (README.md excluded) —
+Packet source: v3/implementation/packets/*.md (README.md excluded) —
 each packet carries exactly ONE "ledger_slice" block AMONG its machine
 blocks (a v2 packet also carries mutation_boundary, packet_rows, and at
 close packet_metrics — task-packet-template.md par.1). Prose is not
@@ -41,7 +41,7 @@ Validation asserts: manifest key set == units tree; packet-owned units
 are realized with the SAME disposition; realized rows have packet owners.
 --unit-map overrides the manifest path (negative-test seam).
 
-Disposition lock (packet ch5-P2): docs/v3/implementation/
+Disposition lock (packet ch5-P2): v3/implementation/
 invariant-disposition-map.md is REQUIRED — one machine block classing
 ALL 116 invariants (checker/type-schema/test/review). One-way lock by
 design: packets declare only their slices and may not contradict the
@@ -70,12 +70,12 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-MODEL_SRC = REPO_ROOT / "docs/v3/convergence/model-src"
+MODEL_SRC = REPO_ROOT / "v3/model"
 UNITS_DIR = MODEL_SRC / "units"
 LEDGER = MODEL_SRC / "ledger.md"
-DEFAULT_PACKETS_DIR = REPO_ROOT / "docs/v3/implementation/packets"
+DEFAULT_PACKETS_DIR = REPO_ROOT / "v3/implementation/packets"
 DEFAULT_UNIT_MAP = REPO_ROOT / "v3/src/drift/unitMap.json"
-DEFAULT_DISPOSITION_MAP = REPO_ROOT / "docs/v3/implementation/invariant-disposition-map.md"
+DEFAULT_DISPOSITION_MAP = REPO_ROOT / "v3/implementation/invariant-disposition-map.md"
 CODE_REF = re.compile(r"^[^#]+#[^#]+$")
 
 UNIT_DISPOSITIONS = {
@@ -331,7 +331,7 @@ def load_unit_map(
 def load_disposition_map(
     path: Path, inventory: dict[str, set[str]], checker: Checker
 ) -> dict[str, str]:
-    """The invariant disposition map (docs/v3/implementation/
+    """The invariant disposition map (v3/implementation/
     invariant-disposition-map.md) — REQUIRED from packet ch5-P2 on
     (fail-closed). Exactly ONE fenced json block with the top-level key
     'invariant_disposition_map'; key set == ledger par.2; values are the

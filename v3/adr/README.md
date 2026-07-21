@@ -3,7 +3,7 @@
 Home of the v3 implementation-plane decision records (convention: ADR-000;
 activation: playbook §8 addendum + `implementation-contract.md` PI-10).
 Model-side decisions do NOT live here — they stay in the corpus +
-`docs/v3/topics/` memos.
+`v3/design/topics/` memos.
 
 Template: [`_template.md`](_template.md) — the IC-N screen is mandatory.
 Lifecycle: `proposed → accepted → deprecated | superseded by ADR-XXX`

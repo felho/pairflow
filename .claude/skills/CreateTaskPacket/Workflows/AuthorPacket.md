@@ -8,7 +8,7 @@ material the model corpus already resolved; it never re-derives semantics.
 
 - `PACKET_ID`: `ch<N>-p<M>[a-z]?-<slug>` — the split suffix is optional
   (precedent: `ch6-p4a-*` / `ch6-p4b-*` from the ratified P4 split);
-  matches the file name under `docs/v3/implementation/packets/`.
+  matches the file name under `v3/implementation/packets/`.
   OPTIONAL: when the ask is just "the plan's next step", DERIVE it —
   see step 0a.
 - `PLAN_SECTION`: the plan.md section this packet realizes (e.g. `§7.2`)
@@ -29,7 +29,7 @@ Deterministic, from repo surfaces ONLY — no session memory:
    NUMBER wanders by chapter (4.8/5.8/6.7/7.7), legacy headings
    vary, and ch8+ headings are exactly `Packets and flow mode` per
    the plan's convention paragraph) with NO packet file under
-   `docs/v3/implementation/packets/` — a packet file lands in git only
+   `v3/implementation/packets/` — a packet file lands in git only
    WITH its build commit (the one-commit rule), so absence = not
    built. EDGE: an UNCOMMITTED packet file in a dirty worktree is a
    packet IN FLIGHT (pre-approval) — resume it, do not skip it.
@@ -66,16 +66,16 @@ Deterministic, from repo surfaces ONLY — no session memory:
 
 Read, in this order (current state, never from memory):
 
-1. `docs/v3/implementation/task-packet-template.md` — template §1,
+1. `v3/implementation/task-packet-template.md` — template §1,
    projection checklist §2, `REV-*` registry §3. The checklist §2 is the
    authoritative step list; this workflow operationalizes it, it does not
    replace it.
-2. The `PLAN_SECTION` in `docs/v3/implementation/plan.md`, including any
+2. The `PLAN_SECTION` in `v3/implementation/plan.md`, including any
    chapter rules and packet watchpoints recorded at ratification.
 3. `references/LearnedRules.md` — the failure-class registry applied at the
    steps marked below.
 4. The most recent packet of the same class under
-   `docs/v3/implementation/packets/` — conventions are inherited from the
+   `v3/implementation/packets/` — conventions are inherited from the
    latest precedent, not reinvented.
 
 ### 2) Classify the packet
@@ -128,7 +128,7 @@ For kernel-semantic packets:
 
 1. Select the slice along **constraint cohesion**, from the plan step.
 2. Pull the unit pseudocode **verbatim** from
-   `docs/v3/convergence/model-src/units/` — no paraphrase.
+   `v3/model/units/` — no paraphrase.
 3. For every contract/type row: pull the registry **field lists** from the
    model source, never entity names alone [R-FIELD-LISTS].
 4. Pull the **exact rejection strings** (ledger §3) for the slice.
@@ -241,7 +241,7 @@ deferred edit.
 
 ### 8) Write the packet file
 
-`docs/v3/implementation/packets/<PACKET_ID>.md`, following template §1
+`v3/implementation/packets/<PACKET_ID>.md`, following template §1
 exactly: header (plan step + autonomy stage + the classification line:
 case verdict with its one-line derivation), the THREE authoring-time
 machine blocks — `ledger_slice` (empty or full — always present),
@@ -348,7 +348,7 @@ ch7-P1 dangling-"flagged below" lesson).
 ## Report
 
 ```
-Packet drafted: docs/v3/implementation/packets/<PACKET_ID>.md
+Packet drafted: v3/implementation/packets/<PACKET_ID>.md
 Class: kernel-semantic | operability   First-of-a-kind: yes/no
 Classification: projection | invention (manifest tally: a/d/n) — B-case: routed to DraftContract?
 Slice: <n units / n rejections / n invariants / n traces | EMPTY (declared)>
