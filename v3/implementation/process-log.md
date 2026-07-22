@@ -3942,3 +3942,45 @@ final CLEAN.
   plateau residual carried a real defect, "continue" was correct);
   the arm's record-precision catch class (a data category for the
   yield tally, no mechanism).
+
+- 2026-07-22 · ch12 BOUNDARY REVIEW CLOSED · ten verdicts (the ten
+  entries above), one-at-a-time with the owner per the README §6
+  presentation discipline; the (c) admission bias adopted in verdict 1
+  governed the rest of the review live (7a and 9b-b landed WATCH under
+  it, 8 and the delegation rule took recorded severity exceptions).
+  THE FIRST RETIREMENT SWEEP + CH12 CATCH TALLY (verdict 1's
+  mechanism, owner-ratified): high-yield — R-LANE-SENSITIVITY ~24
+  (every gate-2 leg's spine), R-CLAIM-GRAMMAR 2–3, R-ALIGNED-UP 2,
+  R-CLAIM-FORM-PROBES 2 (the ADR-015 false-greens), R-EXECUTION 1
+  (the pipe-eaten exit code), R-INSTRUMENT-PROBE 1 (the P0 CWD
+  no-op), R-ABSENCE-CONSUMERS 1 (the §13 recap mirror). Zero-fire
+  with SCOPE explanations (no numeric work, no first-of-a-kind, WATCH
+  dormant): R-NUMERIC-LADDER, R-RAW-FIXTURES, R-FIRST-STOP,
+  R-UNTRUNCATED-SWEEP, R-DIMENSIONS, the six REV-* rules. Silently
+  load-bearing (applied, catch-free — not dead): R-ALTITUDE-LINE,
+  R-EMPTY-SLICE, R-FLAGS-IN-PACKET, R-DERIVED-PROBES,
+  R-ACTIVATION-JOURNEY, R-PRESENT-TENSE. VERDICT: ZERO retirements
+  this round (one chapter of tally = the same over-indexing the
+  boundary spent the day refusing); TWO ch13 pre-registrations with
+  check tasks: (1) R-WIDE-CLAIM ⊂ R-CLAIM-GRAMMAR merge candidate
+  (retire-by-merge if it catches nothing the grammar would not);
+  (2) R-EMPTY-SLICE mechanization check (suspicion: the lint already
+  enforces the explicit empty declaration — verify, then drop the
+  prose row). Overlap note (the credit-each rule's first product):
+  test-evidence catches co-credit R-LANE-SENSITIVITY /
+  R-DERIVED-PROBES / R-MATRIX-LANES — LAYERED (lane text / executed
+  probe / matrix row), not duplicative; verdict 4 restructured
+  exactly those layers. The G bucket's first read — gate-2
+  test-evidence per packet: P1a 6 / P1b 8 / P2 6 / P4 4 (+ P3's
+  inside its 7-round leg). TOOLING BUILT (3 commits, each with
+  adversarial selftests per the extended R-CLAIM-FORM-PROBES):
+  check_packet P10 ref-closure lint (87 red dims; its own FIRST LIVE
+  RUN tripped on ch11-p2a's line-wrapped header union — the
+  R-INSTRUMENT-PROBE class caught in a freshly written instrument
+  AGAIN, fixed wrap-aware + wrapped-form green case),
+  check_deferred + v3:deferred bridge (8 cases; live tree: 0
+  markers), probe_runner (12 cases incl. the driven restore-failure
+  loud path). All bridges green at close: packet-lint 18/0, coverage
+  OK, adr-check 16 OK. Chapter-close acts remain OUTSIDE this review
+  (realized_map, plan map-row flip, full ci:local, close record);
+  ch9 opens on the owner's explicit go as the model-tier-2 FABLE arm.
