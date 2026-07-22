@@ -88,6 +88,7 @@ function fakeSeams(detail: InstanceDetail, committedVersions: readonly number[])
         instruction: "build it",
         availableOps: ["PASS"],
         effectiveAgentConfig: {},
+        runtimeContext: "none",
       },
     },
   };
@@ -298,84 +299,7 @@ describe("trace harness — the typed mismatch contract (packet ch6-P4b)", () =>
   });
 });
 
-describe("trace harness — ch11-P3b seams (runtimeContextRef passthrough + evidence)", () => {
-  const activatedAt = (instanceId: string): Activated => ({
-    kind: "activated",
-    instanceId,
-    version: 2,
-    intent: {
-      actor: "codex",
-      packet: {
-        instanceId,
-        expectedVersion: 1,
-        task: "t",
-        role: "implementer",
-        instruction: "build it",
-        availableOps: ["PASS"],
-        effectiveAgentConfig: {},
-      },
-    },
-  });
-
-  it("passes a start step's runtimeContextRef through to seams.start", async () => {
-    let received: string | undefined = "UNSET";
-    const detail: InstanceDetail = {
-      instance: {
-        instanceId: "i1",
-        templateRef: template.ref,
-        task: "t",
-        binding: { implementer: "codex", reviewer: "claude" },
-        currentStep: "implement",
-        round: 1,
-        kernelStatus: "ACTIVE",
-        terminalDisposition: null,
-        activationMode: "immediate",
-        wait: null,
-        runtimeContext: { state: "ready", ref: { kind: "worktree", locator: "/ws/ready" } },
-        failureReason: null,
-        runOverrides: {},
-        version: 2,
-      },
-      // W3: a bare start yields the STARTED activation fact at seq 1.
-      transcript: [startedFact("s1")],
-    };
-    const created: WorkflowInstance = { ...detail.instance };
-    const seams: TraceSeams = {
-      submit: () => Promise.reject(new Error("unused")),
-      create: () =>
-        Promise.resolve({ kind: "created", instanceId: "i1", version: 1 }),
-      start: (input) => {
-        received = input.runtimeContextRef;
-        return Promise.resolve(activatedAt("i1"));
-      },
-      store: fakeStore(detail, created),
-      template,
-    };
-    const fixture: TraceFixture = {
-      name: "ref passthrough",
-      steps: [
-        {
-          kind: "start",
-          instanceId: "i1",
-          task: "t",
-          opId: "s1",
-          runtimeContextRef: "/ws/ready",
-          expect: { currentStep: "implement", version: 2 },
-        },
-      ],
-      finalTranscript: [[1, "s1"]],
-      finalState: {
-        currentStep: "implement",
-        round: 1,
-        kernelStatus: "ACTIVE",
-        terminalDisposition: null,
-        version: 2,
-      },
-    };
-    await replayTrace(fixture, seams);
-    expect(received).toBe("/ws/ready");
-  });
-
+describe("trace harness — ch11-P3b evidence seam (ch12-p3: the runtimeContextRef passthrough retired)", () => {
   it("threads the evidence seam to runAllCheckers: a committed ref FAILS with no seam, resolves clean with one", async () => {
     const fakeRecord: ProcessGateEvidence = {
       log: "ok",

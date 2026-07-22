@@ -16,6 +16,13 @@ export type {
   RecordedRunnerCall,
   ScriptedProcessGateRunner,
 } from "./scriptedProcessGateRunner.js";
+export { createScriptedRuntimeContextProvider } from "./scriptedRuntimeContextProvider.js";
+export type {
+  ProvisionCall,
+  ScriptedProvisionBehavior,
+  ScriptedRuntimeContextProvider,
+  ScriptedRuntimeContextProviderOptions,
+} from "./scriptedRuntimeContextProvider.js";
 export { createScriptedTailWait } from "./tailWait.js";
 export type { ScriptedTailWait } from "./tailWait.js";
 export { devPassthroughRedactionPolicy } from "./redaction.js";

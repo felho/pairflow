@@ -1,3 +1,4 @@
+import { createStaticProviderRegistry } from "../ports/index.js";
 import { createScriptedProcessGateRunner } from "../testkit/index.js";
 import { describe, expect, it } from "vitest";
 
@@ -125,6 +126,7 @@ describe("floor.getTimeline — the §6.2 cursor read (packet ch6-P1)", () => {
     const handle = openStore(":memory:", createControlledClock(0));
     await handle.store.createInstance(instance);
     const kernel = createKernel({
+      providerRegistry: createStaticProviderRegistry({}),
       processRunner: createScriptedProcessGateRunner([]),
       store: handle.store,
       definitions,

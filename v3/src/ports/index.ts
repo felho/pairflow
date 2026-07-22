@@ -23,6 +23,12 @@ export type {
   StorePort,
 } from "./store.js";
 export type { DefinitionStore } from "./definition.js";
+export type {
+  ProviderRegistry,
+  RuntimeContextCompletionSink,
+  RuntimeContextProvider,
+} from "./runtimeContextProvider.js";
+export { createStaticProviderRegistry } from "./runtimeContextProvider.js";
 export type { DigestSource } from "./digest.js";
 export type { TailWait } from "./tail.js";
 export type { RedactionPolicy } from "./redaction.js";

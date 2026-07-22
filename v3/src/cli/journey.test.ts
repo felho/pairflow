@@ -80,6 +80,7 @@ describe("cli — the full-lifecycle journey smoke (packet ch8-P2: J1/J2)", () =
             instruction: "build it",
             availableOps: ["PASS"],
             effectiveAgentConfig: {},
+            runtimeContext: "none",
           },
         },
       });
@@ -190,6 +191,7 @@ describe("cli — the full-lifecycle journey smoke (packet ch8-P2: J1/J2)", () =
             instruction: "build it",
             availableOps: ["PASS"],
             effectiveAgentConfig: {},
+            runtimeContext: "none",
           },
         },
       });
@@ -326,6 +328,7 @@ round:
             instruction: "build it",
             availableOps: ["PASS"],
             effectiveAgentConfig: {},
+            runtimeContext: "none",
           },
         },
       });

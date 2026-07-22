@@ -1,3 +1,4 @@
+import { createStaticProviderRegistry } from "./ports/index.js";
 import { createScriptedProcessGateRunner } from "./testkit/index.js";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -66,6 +67,7 @@ function wireWorker(path: string): Worker {
   // here) rides the fixture's OWN round declaration (Y2); the P2c staging
   // wrapper has collapsed at this ONE definitions site.
   const kernel = createKernel({
+      providerRegistry: createStaticProviderRegistry({}),
       processRunner: createScriptedProcessGateRunner([]),
     store: handle.store,
     definitions: fixtureDefinitionStore(admit(fixtureTemplate())),

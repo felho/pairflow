@@ -12,6 +12,8 @@ import type {
   Outcome,
   RejectionName,
   RetainedGateDecision,
+  RuntimeContextReadyOutcome,
+  RuntimeContextRef,
   StartOutcome,
   TerminalDisposition,
   WorkflowInstance,
@@ -21,6 +23,7 @@ import type { DefinitionStore } from "../ports/definition.js";
 import type { DiagnosticEventBody, DiagnosticsSink } from "../ports/diagnostics.js";
 import type { DigestSource } from "../ports/digest.js";
 import type { GateCatalog, ProcessGateRunner } from "../ports/gate.js";
+import type { ProviderRegistry } from "../ports/runtimeContextProvider.js";
 import type { StorePort } from "../ports/store.js";
 import type { TimeSource } from "../ports/time.js";
 import { admitLoaded } from "./admission.js";
@@ -29,8 +32,16 @@ import { capability } from "./capability.js";
 import { deriveDispatchIntent } from "./dispatchIntent.js";
 import { deriveGateProjection } from "./gateProjection.js";
 import { runProcessGate } from "./processGate.js";
-import { cancel, createInstance, fail, kickoff, start } from "./lifecycle.js";
-import type { CancelInput, CreateInput, KickoffInput, StartInput } from "./lifecycle.js";
+import { cancel, createInstance, fail, kickoff, runtimeContextReady, start } from "./lifecycle.js";
+import type {
+  CancelInput,
+  CreateInput,
+  KickoffInput,
+  LifecycleDeps,
+  ReadyDeps,
+  StartDeps,
+  StartInput,
+} from "./lifecycle.js";
 
 /**
  * The port-parametric L1 kernel (packets ch4-P3 · ch11-P1). The check
@@ -74,6 +85,14 @@ export interface KernelDeps {
    * the shipped CLI roots inject the fail-closed runner (W2).
    */
   readonly processRunner: ProcessGateRunner;
+  /**
+   * T3/PR2 (packet ch12-p3): the STATIC injected runtime-context provider
+   * registry — ONE new REQUIRED dependency (the `diag`/`gates` explicit-wiring
+   * culture). The shipped CLI injects the EMPTY production registry (C16 — a
+   * spec-declaring template is honestly unstartable); the dev/test roots
+   * inject the scripted-provider registry.
+   */
+  readonly providerRegistry: ProviderRegistry;
 }
 
 /**
@@ -91,6 +110,26 @@ export interface Kernel {
   kickoff(input: KickoffInput): Promise<KickoffOutcome>;
   cancel(input: CancelInput): Promise<CancelOutcome>;
   fail(instanceId: InstanceId, reason: string): Promise<FailOutcome>;
+  /**
+   * l0e-pseudocode/RUNTIME_CONTEXT_READY (packet ch12-p3, K1): the new kernel
+   * event handler — in-process only (C13), wired via `lifecycleOp` exactly as
+   * `fail` is. Driven by the completion seam (via `deliverCompletion`) or
+   * directly by tests/composition post-commit delivery.
+   */
+  runtimeContextReady(
+    instanceId: InstanceId,
+    requestId: string,
+    ref: RuntimeContextRef,
+  ): Promise<RuntimeContextReadyOutcome>;
+  /**
+   * The provider-completion delivery endpoint (SM seam): a resolved provider
+   * fires its READY completion HERE; the seam HOLDS it until the START
+   * attempt's atomic commit lands (ordered-after-commit, C15), releasing it
+   * CONCLUSION-SIGNALLED at the attempt's conclusion — never on an event-loop
+   * scheduling primitive (SM3). Wired at the dev/test composition root to the
+   * scripted provider; dormant in production (the empty registry never fires).
+   */
+  deliverCompletion(instanceId: InstanceId, requestId: string, ref: RuntimeContextRef): void;
 }
 
 async function loadTemplate(
@@ -152,7 +191,96 @@ function envelopeAttribution(
 }
 
 export function createKernel(deps: KernelDeps): Kernel {
-  const { store, definitions, digest, diag, gates, processRunner } = deps;
+  const { store, definitions, digest, diag, gates, processRunner, providerRegistry } = deps;
+
+  // ── The ordered-after-commit completion seam (packet ch12-p3, SM family;
+  // composition wiring, the store uninvolved). The buffer HOLDS a provider's
+  // READY completion until the START attempt's commit lands; `start` signals
+  // `concludeAttempt` at each attempt's conclusion (SM3), never on an
+  // event-loop primitive — a microtask FIFO would deliver READY before the
+  // `requested` marker commits and LOSE it (SM3's excluded anti-pattern). ──
+  const lifecycleDeps: LifecycleDeps = { store, definitions, providerRegistry };
+  const completionBuffer = new Map<
+    string,
+    { readonly instanceId: InstanceId; readonly ref: RuntimeContextRef }[]
+  >();
+  let requestCounter = 0;
+  // A FRESH unique request_id per provisioning attempt (S3/S5); a kernel-local
+  // counter (deterministic, no randomness — the CHK-noRandom seam) since the
+  // recorded provision call carries the id downstream.
+  const newRequestId = (): string => {
+    requestCounter += 1;
+    return `req-${String(requestCounter)}`;
+  };
+  // PR4 ref transport gate: reuse the injected emit-lib (DigestSource) — a
+  // non-canonical ref throws at digest, exactly the isCanonicalizable culture
+  // (the kernel imports no emit; the digest is the audited canonical seam).
+  const assertRefCanonical = (
+    instanceId: InstanceId,
+    requestId: string,
+    ref: RuntimeContextRef,
+  ): void => {
+    try {
+      digest({
+        instanceId,
+        opId: requestId,
+        type: "RUNTIME_CONTEXT_READY",
+        actorId: "kernel",
+        payload: ref,
+      });
+    } catch (error) {
+      throw new Error(
+        `kernel integrity: runtime-context ref for instance '${instanceId}' is not canonical-JSON-safe (transport gate): ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        { cause: error },
+      );
+    }
+  };
+  const readyDeps: ReadyDeps = { store, definitions, providerRegistry, assertRefCanonical };
+  const startDeps: StartDeps = {
+    store,
+    definitions,
+    providerRegistry,
+    newRequestId,
+    concludeAttempt,
+  };
+  function readyOp(
+    instanceId: InstanceId,
+    requestId: string,
+    ref: RuntimeContextRef,
+  ): Promise<RuntimeContextReadyOutcome> {
+    return lifecycleOp(() => runtimeContextReady(readyDeps, instanceId, requestId, ref), {
+      instanceId,
+    });
+  }
+  function deliverCompletion(
+    instanceId: InstanceId,
+    requestId: string,
+    ref: RuntimeContextRef,
+  ): void {
+    // The HOLD/enqueue returns to the provider IMMEDIATELY (SM2) — never
+    // blocks the completion call, so no circular wait with C18's detach await.
+    const held = completionBuffer.get(requestId);
+    if (held === undefined) {
+      completionBuffer.set(requestId, [{ instanceId, ref }]);
+    } else {
+      held.push({ instanceId, ref });
+    }
+  }
+  async function concludeAttempt(requestId: string): Promise<void> {
+    // CONCLUSION-SIGNALLED DELIVERY (SM2/SM3): flush the held completion(s)
+    // for this attempt — commit-landed (correlation matches → ready/ACTIVE)
+    // or superseded/failed (correlation rejects it inert). Idempotent.
+    const held = completionBuffer.get(requestId);
+    if (held === undefined) {
+      return;
+    }
+    completionBuffer.delete(requestId);
+    for (const completion of held) {
+      await readyOp(completion.instanceId, requestId, completion.ref);
+    }
+  }
 
   async function handleOnce(
     envelope: EventEnvelope,
@@ -381,7 +509,7 @@ export function createKernel(deps: KernelDeps): Kernel {
           terminalDisposition: axis.newTerminalDisposition,
           version: result.version,
         };
-        const intent = deriveDispatchIntent(committed, template, target, envelope.payload);
+        const intent = deriveDispatchIntent(committed, template, target, providerRegistry, envelope.payload);
         return { kind: "committed", version: result.version, intent };
       }
     }
@@ -450,26 +578,30 @@ export function createKernel(deps: KernelDeps): Kernel {
       }
     },
     create: (input) =>
-      lifecycleOp(() => createInstance({ store, definitions }, input), {
+      lifecycleOp(() => createInstance(lifecycleDeps, input), {
         instanceId: input.instanceId,
       }),
     start: (input) =>
-      lifecycleOp(() => start({ store, definitions }, input), {
+      lifecycleOp(() => start(startDeps, input), {
         instanceId: input.instanceId,
         opId: input.opId,
       }),
     kickoff: (input) =>
-      lifecycleOp(() => kickoff({ store, definitions }, input), {
+      lifecycleOp(() => kickoff(lifecycleDeps, input), {
         instanceId: input.instanceId,
         opId: input.opId,
       }),
     cancel: (input) =>
-      lifecycleOp(() => cancel({ store, definitions }, input), {
+      lifecycleOp(() => cancel(lifecycleDeps, input), {
         instanceId: input.instanceId,
         opId: input.opId,
       }),
     fail: (instanceId, reason) =>
-      lifecycleOp(() => fail({ store, definitions }, instanceId, reason), { instanceId }),
+      lifecycleOp(() => fail(lifecycleDeps, instanceId, reason), { instanceId }),
+    // K1: the RUNTIME_CONTEXT_READY kernel event, wired via lifecycleOp (the
+    // `fail` culture). deliverCompletion is the SM seam's provider fire endpoint.
+    runtimeContextReady: (instanceId, requestId, ref) => readyOp(instanceId, requestId, ref),
+    deliverCompletion,
   };
 
   /**

@@ -186,7 +186,7 @@ const INTENT_KEYS: Record<string, ReadonlySet<string>> = {
     "runOverrides",
     "mode",
   ]),
-  start: new Set(["intent", "instanceId", "opId", "runtimeContextRef"]),
+  start: new Set(["intent", "instanceId", "opId"]),
   kickoff: new Set(["intent", "instanceId", "opId", "task"]),
   cancel: new Set(["intent", "instanceId", "opId"]),
 };
@@ -363,7 +363,7 @@ export function createIngress(deps: IngressDeps): Ingress {
           return rejectIntent(intentFailure("unknown_key", record));
         }
       }
-      const { instanceId, opId, task, runtimeContextRef } = record;
+      const { instanceId, opId, task } = record;
       if (!isNonEmptyString(instanceId)) {
         return rejectIntent(intentFailure("invalid_required_string", record));
       }
@@ -413,14 +413,11 @@ export function createIngress(deps: IngressDeps): Ingress {
           });
         }
         case "start": {
-          if ("runtimeContextRef" in record && !isNonEmptyString(runtimeContextRef)) {
-            return rejectIntent(intentFailure("invalid_runtime_context_ref", record));
-          }
-          return kernel.start({
-            instanceId,
-            opId: opId as string,
-            ...(isNonEmptyString(runtimeContextRef) ? { runtimeContextRef } : {}),
-          });
+          // W2 (packet ch12-p3): the interim `runtimeContextRef` wire key is
+          // RETIRED — a `start` intent carrying it is now an unknown-key
+          // rejection (the fail-closed ingress culture); the provider
+          // machinery resolves the requirement kernel-side.
+          return kernel.start({ instanceId, opId: opId as string });
         }
         case "kickoff": {
           if (!isNonEmptyString(task)) {

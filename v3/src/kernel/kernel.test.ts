@@ -1,4 +1,5 @@
-import { createScriptedProcessGateRunner } from "../testkit/index.js";
+import { createStaticProviderRegistry } from "../ports/index.js";
+import { createScriptedProcessGateRunner, createScriptedRuntimeContextProvider } from "../testkit/index.js";
 import { describe, expect, it } from "vitest";
 
 import type {
@@ -7,12 +8,16 @@ import type {
   GateDecision,
   GateProjection,
   Outcome,
+  RuntimeContextSpec,
   TranscriptEntry,
   TransitionEntry,
   WorkflowInstance,
   AdmittedTemplate,
   WorkflowTemplate,
 } from "../domain/index.js";
+
+/** ch12-p3: the retired "required" string migrated to a provisionable spec. */
+const KERNEL_WORKTREE_SPEC: RuntimeContextSpec = { kind: "worktree", provider: "pairflow.worktree" };
 import { deriveEmitDigest } from "../emit/index.js";
 import { createIngress } from "../ingress/index.js";
 import type { DefinitionStore } from "../ports/definition.js";
@@ -123,6 +128,7 @@ async function setup() {
   const handle = openStore(":memory:", createControlledClock(0));
   await handle.store.createInstance(baseInstance);
   const kernel = createKernel({
+      providerRegistry: createStaticProviderRegistry({}),
       processRunner: createScriptedProcessGateRunner([]),
     store: handle.store,
     definitions,
@@ -209,6 +215,7 @@ describe("CAS restart — never re-commit a target computed from stale state", (
       },
     };
     const kernel = createKernel({
+      providerRegistry: createStaticProviderRegistry({}),
       processRunner: createScriptedProcessGateRunner([]),
       store: double,
       definitions,
@@ -239,6 +246,7 @@ describe("CAS restart — never re-commit a target computed from stale state", (
       },
     };
     const kernel = createKernel({
+      providerRegistry: createStaticProviderRegistry({}),
       processRunner: createScriptedProcessGateRunner([]),
       store: double,
       definitions,
@@ -319,6 +327,8 @@ describe("committed path — intent derived from POST-commit state", () => {
           // ch12-p2 (E1): the resolved run profile — no agentConfig
           // authored on this template, so the cascade yields `{}`.
           effectiveAgentConfig: {},
+          // ch12-p3 (E1): a context-free run — the explicit `none`.
+          runtimeContext: "none",
         },
       },
     });
@@ -351,6 +361,7 @@ async function setupRound(
   await handle.store.createInstance(instance);
   const defs: DefinitionStore = { load: () => Promise.resolve(admit(tmpl)) };
   const kernel = createKernel({
+      providerRegistry: createStaticProviderRegistry({}),
       processRunner: createScriptedProcessGateRunner([]),
     store: handle.store,
     definitions: defs,
@@ -587,6 +598,7 @@ describe("L1 authority — the four new rejections through the real seam (A4/A7/
     const handle = openStore(":memory:", createControlledClock(0));
     await handle.store.createInstance({ ...baseInstance, currentStep: "review", version: 1 });
     const kernel = createKernel({
+      providerRegistry: createStaticProviderRegistry({}),
       processRunner: createScriptedProcessGateRunner([]),
       store: handle.store,
       definitions: defs,
@@ -638,6 +650,7 @@ describe("L1 authority — the cross-boundary ordering combinations (dimension 1
     const handle = openStore(":memory:", createControlledClock(0));
     await handle.store.createInstance(baseInstance);
     const kernel = createKernel({
+      providerRegistry: createStaticProviderRegistry({}),
       processRunner: createScriptedProcessGateRunner([]),
       store: handle.store,
       definitions: defs,
@@ -687,6 +700,7 @@ describe("L1 authority — CAS restart × terminal (dimension 6, A12)", () => {
       },
     };
     const kernel = createKernel({
+      providerRegistry: createStaticProviderRegistry({}),
       processRunner: createScriptedProcessGateRunner([]),
       store: contended,
       definitions,
@@ -859,7 +873,7 @@ async function setupGatedReview(opts: {
   store?: StorePort;
   instance?: WorkflowInstance;
   processRunner?: ProcessGateRunner;
-  runtimeContext?: "required";
+  runtimeContext?: RuntimeContextSpec;
 }): Promise<{ kernel: Kernel; store: StorePort }> {
   const baseTemplate = gatedReviewTemplate(opts.pipeline);
   const template = opts.runtimeContext
@@ -877,6 +891,12 @@ async function setupGatedReview(opts: {
     store = handle.store;
   }
   const kernel = createKernel({
+    // A provider registered under the spec's name so a provisioned-ref
+    // instance's dispatch projection resolves (E2); context-free tests seed
+    // ready(∅) and never invoke it.
+    providerRegistry: createStaticProviderRegistry({
+      "pairflow.worktree": createScriptedRuntimeContextProvider(),
+    }),
     processRunner: opts.processRunner ?? createScriptedProcessGateRunner([]),
     store,
     definitions: defs,
@@ -1082,7 +1102,7 @@ describe("gate rung — dimension 4: fail-closed backstop lanes", () => {
       kernelCatalog: cat,
       store: handle.store,
       processRunner: runner,
-      runtimeContext: "required",
+      runtimeContext: KERNEL_WORKTREE_SPEC,
     });
     const outcome = await kernel.handle(reviewEmit("pr1", "CONVERGED", 1));
     expect(outcome.kind).toBe("committed");
@@ -1351,6 +1371,7 @@ describe("gate rung — dimension 11: the packaged evaluator's first-arrival blo
     const handle = openStore(":memory:", createControlledClock(0));
     await handle.store.createInstance(baseInstance);
     const kernel = createKernel({
+      providerRegistry: createStaticProviderRegistry({}),
       processRunner: createScriptedProcessGateRunner([]),
       store: handle.store,
       definitions: { load: () => Promise.resolve(admitted.template) },
@@ -1507,7 +1528,7 @@ describe("gate rung — the C36 runtime backstop plane (S5, dimension 3, both di
       admitCatalog: cat,
       kernelCatalog: cat,
       processRunner: runner,
-      runtimeContext: "required",
+      runtimeContext: KERNEL_WORKTREE_SPEC,
     });
     await expectNoStateChange(store, "inst-1", async () => {
       expect(await kernel.handle(reviewEmit("bs1", "CONVERGED", 1))).toEqual({
@@ -1538,7 +1559,7 @@ describe("gate rung — the C36 runtime backstop plane (S5, dimension 3, both di
       kernelCatalog: cat,
       store: counting,
       processRunner: runner,
-      runtimeContext: "required",
+      runtimeContext: KERNEL_WORKTREE_SPEC,
     });
     expect(await kernel.handle(reviewEmit("bs2", "CONVERGED", 1))).toEqual({
       kind: "rejected",
@@ -1571,7 +1592,7 @@ describe("gate rung — the C36 runtime backstop plane (S5, dimension 3, both di
       kernelCatalog: cat,
       store: counting,
       processRunner: runner,
-      runtimeContext: "required",
+      runtimeContext: KERNEL_WORKTREE_SPEC,
     });
     expect(await kernel.handle(reviewEmit("bs3", "CONVERGED", 1))).toEqual({
       kind: "rejected",
@@ -1611,7 +1632,7 @@ describe("gate rung — the six-outcome family end-to-end (M1, full-decision equ
       kernelCatalog: cat,
       store: handle.store,
       processRunner: runner,
-      runtimeContext: "required",
+      runtimeContext: KERNEL_WORKTREE_SPEC,
     });
     const outcome = await kernel.handle(reviewEmit("p1", "CONVERGED", 1));
     return { outcome, runner, store: handle.store };
@@ -1749,7 +1770,7 @@ describe("gate rung — E2 confinement: hostile opaque values retained VERBATIM 
       kernelCatalog: cat,
       store: handle.store,
       processRunner: runner,
-      runtimeContext: "required",
+      runtimeContext: KERNEL_WORKTREE_SPEC,
     });
     const outcome = await kernel.handle(reviewEmit("e2", "CONVERGED", 1));
     return { outcome, runner, store: handle.store };
@@ -1834,7 +1855,7 @@ describe("gate rung — process ordering + one-snapshot (X2, dimension 8)", () =
       kernelCatalog: cat,
       store: handle.store,
       processRunner: runner,
-      runtimeContext: "required",
+      runtimeContext: KERNEL_WORKTREE_SPEC,
     });
     expect((await kernel.handle(reviewEmit("o1", "CONVERGED", 1))).kind).toBe("rejected");
     expect(runner.calls).toEqual([]);
@@ -1856,7 +1877,7 @@ describe("gate rung — process ordering + one-snapshot (X2, dimension 8)", () =
       kernelCatalog: cat,
       store: handle.store,
       processRunner: runner,
-      runtimeContext: "required",
+      runtimeContext: KERNEL_WORKTREE_SPEC,
     });
     expect((await kernel.handle(reviewEmit("o2", "CONVERGED", 1))).kind).toBe("rejected");
     expect(runner.calls).toHaveLength(1);
@@ -1891,7 +1912,7 @@ describe("gate rung — process ordering + one-snapshot (X2, dimension 8)", () =
       kernelCatalog: cat,
       store: counting,
       processRunner: runner,
-      runtimeContext: "required",
+      runtimeContext: KERNEL_WORKTREE_SPEC,
     });
     expect((await kernel.handle(reviewEmit("o3", "CONVERGED", 4))).kind).toBe("committed");
     expect(reads).toBe(1); // ONE shared snapshot
@@ -1934,7 +1955,7 @@ describe("gate rung — process ordering + one-snapshot (X2, dimension 8)", () =
       kernelCatalog: cat,
       store: handle.store,
       processRunner: runner,
-      runtimeContext: "required",
+      runtimeContext: KERNEL_WORKTREE_SPEC,
     });
     await kernel.handle(reviewEmit("x1", "CONVERGED", 4));
     expect(runner.calls).toHaveLength(1);
@@ -1985,7 +2006,7 @@ describe("gate rung — process ordering + one-snapshot (X2, dimension 8)", () =
       kernelCatalog: cat,
       store: handle.store,
       processRunner: throwing,
-      runtimeContext: "required",
+      runtimeContext: KERNEL_WORKTREE_SPEC,
       diag: rec.sink,
     });
     await expect(kernel.handle(reviewEmit("th1", "CONVERGED", 1))).rejects.toBe(boom);

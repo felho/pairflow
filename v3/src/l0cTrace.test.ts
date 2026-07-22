@@ -1,3 +1,4 @@
+import { createStaticProviderRegistry } from "./ports/index.js";
 import { describe, expect, it } from "vitest";
 
 import { admitTemplate } from "./definition/index.js";
@@ -114,6 +115,7 @@ function envelope(
 function makeKernel(admitted: AdmittedTemplate): ReturnType<typeof createKernel> & { close: () => void } {
   const handle = openStore(":memory:", createControlledClock(1_000));
   const kernel = createKernel({
+    providerRegistry: createStaticProviderRegistry({}),
     processRunner: createScriptedProcessGateRunner([]),
     store: handle.store,
     definitions: fixtureDefinitionStore(admitted),
@@ -130,6 +132,7 @@ describe("l0c golden trace — the run profile end-to-end (C family + TR)", () =
     const admitted = admit(l0cTemplate());
     const handle = openStore(":memory:", createControlledClock(1_000));
     const kernel = createKernel({
+      providerRegistry: createStaticProviderRegistry({}),
       processRunner: createScriptedProcessGateRunner([]),
       store: handle.store,
       definitions: fixtureDefinitionStore(admitted),
@@ -209,6 +212,7 @@ describe("l0c golden trace — the run profile end-to-end (C family + TR)", () =
     const admitted = admit(l0cTemplate());
     const handle = openStore(":memory:", createControlledClock(1_000));
     const kernel = createKernel({
+      providerRegistry: createStaticProviderRegistry({}),
       processRunner: createScriptedProcessGateRunner([]),
       store: handle.store,
       definitions: fixtureDefinitionStore(admitted),

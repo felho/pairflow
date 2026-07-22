@@ -203,12 +203,14 @@ describe("admitTemplate — the gate-free confinement (A8) and own-property writ
     const result = admitTemplate(raw, catalog);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    // ch11-P2c A1 + ch12-p1b G3: the shape deltas are the expanded
-    // per-step advancesRound map (declaration-absent ⇒ all-false, C38)
-    // and the MATERIALIZED activation default (absent ⇒ immediate, C1).
+    // ch11-P2c A1 + ch12-p1b G3 + ch12-p3 R1: the shape deltas are the
+    // expanded per-step advancesRound map (declaration-absent ⇒ all-false,
+    // C38), the MATERIALIZED activation default (absent ⇒ immediate, C1), and
+    // the MATERIALIZED runtime-context requirement (absent ⇒ "none", C4).
     expect(result.template).toEqual({
       ...raw,
       activation: { mode: "immediate" },
+      runtimeContext: "none",
       steps: {
         implement: { ...raw.steps["implement"], advancesRound: { PASS: false } },
         review: { ...raw.steps["review"], advancesRound: { PASS: false, CONVERGED: false } },
@@ -506,6 +508,9 @@ const processConfigNoCommand = {
   onExit: { zero: "allow", nonzero: "block" },
 };
 
+/** ch12-p3: the retired "required" string migrated to a provisionable spec. */
+const WORKTREE_SPEC = { kind: "worktree", provider: "pairflow.worktree" } as const;
+
 /** `template()` + optional `runtimeContext` (hostile shapes bypass the type). */
 function withRuntimeContext(
   runtimeContext: unknown,
@@ -522,7 +527,7 @@ describe("admitTemplate — external.process code propagation (V4/A9) at the adm
     // command missing → lane d (invalid_process_gate_config). runtimeContext
     // declared so the C19 cross-rule stays silent — the config lane is isolated.
     const result = admitTemplate(
-      withRuntimeContext("required", { PASS: [{ uses: "external.process", config: processConfigNoCommand }] }),
+      withRuntimeContext(WORKTREE_SPEC, { PASS: [{ uses: "external.process", config: processConfigNoCommand }] }),
       catalog,
     );
     expect(result.ok).toBe(false);
@@ -536,7 +541,7 @@ describe("admitTemplate — external.process code propagation (V4/A9) at the adm
 
   it("an UNCODED config lane stays code-free through admission (own-property parity)", () => {
     const result = admitTemplate(
-      withRuntimeContext("required", { PASS: [{ uses: "external.process", config: { ...validProcessConfig, bogus: 1 } }] }),
+      withRuntimeContext(WORKTREE_SPEC, { PASS: [{ uses: "external.process", config: { ...validProcessConfig, bogus: 1 } }] }),
       catalog,
     );
     expect(result.ok).toBe(false);
@@ -548,12 +553,12 @@ describe("admitTemplate — external.process code propagation (V4/A9) at the adm
 
   it("a valid process gate WITH runtimeContext: required ADMITS, effective config materialized", () => {
     const result = admitTemplate(
-      withRuntimeContext("required", { PASS: [{ uses: "external.process", config: validProcessConfig }] }),
+      withRuntimeContext(WORKTREE_SPEC, { PASS: [{ uses: "external.process", config: validProcessConfig }] }),
       catalog,
     );
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.template.runtimeContext).toBe("required");
+    expect(result.template.runtimeContext).toEqual(WORKTREE_SPEC);
     expect(result.template.steps["review"]?.gates?.["PASS"]?.[0]?.config).toEqual({
       command: "gate.sh",
       timeoutMs: 1000,
@@ -591,7 +596,7 @@ describe("admitTemplate — the C19 cross-rule (V5, lane s), both directions", (
 
   it("negative direction: a declaring template (runtimeContext: required) with a process gate ADMITS", () => {
     const result = admitTemplate(
-      withRuntimeContext("required", { PASS: [{ uses: "external.process", config: validProcessConfig }] }),
+      withRuntimeContext(WORKTREE_SPEC, { PASS: [{ uses: "external.process", config: validProcessConfig }] }),
       catalog,
     );
     expect(result.ok).toBe(true);
@@ -606,10 +611,10 @@ describe("admitTemplate — the C19 cross-rule (V5, lane s), both directions", (
   });
 
   it("negative direction: a process-gate-FREE template admits WITH the declaration present (C19 iff)", () => {
-    const result = admitTemplate(withRuntimeContext("required"), catalog);
+    const result = admitTemplate(withRuntimeContext(WORKTREE_SPEC), catalog);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.template.runtimeContext).toBe("required");
+    expect(result.template.runtimeContext).toEqual(WORKTREE_SPEC);
   });
 
   it("accumulation: an invalid process config AND a missing runtimeContext report BOTH", () => {
@@ -684,17 +689,27 @@ describe("admitTemplate — A2 the `uses` GRAMMAR lane (C6, direct channel)", ()
 });
 
 describe("admitTemplate — A3 the runtimeContext ILLEGAL-VALUE lane (C18, direct channel)", () => {
-  it("a present runtimeContext that is not 'required' → an UNCODED finding at runtimeContext", () => {
+  it("R2: a present runtimeContext that is neither 'none' nor a spec map → an UNCODED finding at runtimeContext", () => {
     const result = admitTemplate(withRuntimeContext("optional"), catalog);
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.findings).toHaveLength(1);
     expect(result.findings[0]?.path).toBe("runtimeContext");
     expect(result.findings[0]).not.toHaveProperty("code");
-    expect(result.findings[0]?.message).toContain("required");
+    expect(result.findings[0]?.message).toContain("spec map");
   });
 
-  it("A3 + C19 ACCUMULATE where both fire: an illegal value AND a process gate → BOTH at runtimeContext", () => {
+  it("R2: the retired bare 'required' string → the LOUD migration refusal (uncoded)", () => {
+    const result = admitTemplate(withRuntimeContext("required"), catalog);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0]?.path).toBe("runtimeContext");
+    expect(result.findings[0]).not.toHaveProperty("code");
+    expect(result.findings[0]?.message).toContain("retired");
+  });
+
+  it("R4: an ILLEGAL value fires ONLY its own container finding — the C5 cross-rule is SUPPRESSED as its dependent", () => {
     const result = admitTemplate(
       withRuntimeContext("optional", { PASS: [{ uses: "external.process", config: validProcessConfig }] }),
       catalog,
@@ -702,9 +717,10 @@ describe("admitTemplate — A3 the runtimeContext ILLEGAL-VALUE lane (C18, direc
     expect(result.ok).toBe(false);
     if (result.ok) return;
     const atRuntimeContext = result.findings.filter((f) => f.path === "runtimeContext");
-    expect(atRuntimeContext).toHaveLength(2);
-    expect(atRuntimeContext.some((f) => f.code === "runtime_context_required_for_process_gate")).toBe(true);
-    expect(atRuntimeContext.some((f) => f.code === undefined)).toBe(true);
+    // ONLY the illegal-value (uncoded) finding — the C5 dependent is suppressed.
+    expect(atRuntimeContext).toHaveLength(1);
+    expect(atRuntimeContext.some((f) => f.code === "runtime_context_required_for_process_gate")).toBe(false);
+    expect(atRuntimeContext[0]).not.toHaveProperty("code");
   });
 
   it("the negative direction: an ABSENT runtimeContext on an ungated template does not fire A3", () => {
@@ -802,7 +818,8 @@ describe("admitTemplate — the C7 agentConfig value-level narrowing (A1/A2)", (
   });
 });
 
-// ── D1 compile-negative probe: runtimeContext's sole legal value is the
-// string literal "required" (validated by v3:typecheck via TS2578). ──
-// @ts-expect-error D1: runtimeContext is the "required" literal — no other value is representable.
+// ── ch12-p3 T1 compile-negative probe: runtimeContext's authored domain is
+// RuntimeContextSpec | "none" | "required" | undefined — "optional" is NOT
+// representable (validated by v3:typecheck via TS2578). ──
+// @ts-expect-error T1: "optional" is not in the runtimeContext authored domain.
 export const __probeRuntimeContextLiteral: WorkflowTemplate["runtimeContext"] = "optional";

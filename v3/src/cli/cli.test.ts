@@ -162,6 +162,8 @@ async function startOne(db: string, deps: CliDeps): Promise<string> {
         // ch12-p2 (E1): the resolved run profile — the canonical template
         // authors no agentConfig, so the cascade yields the empty map.
         effectiveAgentConfig: {},
+        // ch12-p3 (E1): a context-free run — the explicit `none`.
+        runtimeContext: "none",
       },
     },
   });
@@ -1187,11 +1189,10 @@ describe("submit --expected-role (packet ch11-P1, O1/O2)", () => {
 // ── packet ch11-P4: Y6 the eager required-context start pre-check + the
 // gate-defective write-lane drive ──────────────────────────────────────
 
-describe("cli — Y6 the eager required-context start pre-check (packet ch11-P4)", () => {
-  it("start on a runtimeContext: required template → EAGER usage 2 StartFailed, side-effect-free (no store DB, no diag file)", async () => {
-    // The template loads/admits fine (runtimeContext: required is legal
-    // without a process gate); the eager pre-check refuses to START it —
-    // the shipped CLI can supply no runtime-context ref until ch9.
+describe("cli — ch12-p3 W3: a spec/stale runtime-context template is unstartable (the eager guard retired)", () => {
+  it("a residual `runtimeContext: required` template → the R2 admission migration refusal (never the eager guard)", async () => {
+    // The eager pre-check is RETIRED (W3): a bare `required` string is now
+    // refused by the KERNEL's admission migration (R2) at template load.
     const dir = stageTemplates({
       "local-pair-v0@1.yaml": `${CANONICAL_BYTES()}runtimeContext: required\n`,
     });
@@ -1200,18 +1201,26 @@ describe("cli — Y6 the eager required-context start pre-check (packet ch11-P4)
       ["start", "--db", db, "--task", "t", "--templates-dir", dir],
       testDeps(),
     );
-    const err = errorDoc(res);
-    expect(res.code).toBe(EXIT.usage);
-    expect(err.name).toBe("StartFailed");
-    expect(err.class).toBe("usage");
-    expect(err.message).toMatch(/runtimeContext|runtime context/);
-    // The side-effect negative (the grid's required-shape cell): the eager
-    // gate fired BEFORE any store/diag/kernel construction — neither the
-    // run store nor the derived diag file was created.
-    expect(existsSync(db)).toBe(false);
-    expect(existsSync(diagPathOf(db))).toBe(false);
-    // The store DB's process-evidence sibling is likewise never minted.
-    expect(existsSync(`${db}.gate-evidence.sqlite`)).toBe(false);
+    // The template fails to load/admit — the migration refusal surfaces as
+    // the canonical TemplateInvalid doc (never a StartFailed usage guard).
+    expect(res.code).not.toBe(EXIT.ok);
+    expect(JSON.stringify(res)).toMatch(/retired|spec map/);
+  });
+
+  it("a spec-declaring template → START's runtime_context_provider_unavailable against the EMPTY production registry (C16)", async () => {
+    const dir = stageTemplates({
+      "local-pair-v0@1.yaml": `${CANONICAL_BYTES()}runtimeContext:\n  kind: worktree\n  provider: pairflow.worktree\n`,
+    });
+    const db = tempDbPath();
+    const res = await run(
+      ["start", "--db", db, "--task", "t", "--templates-dir", dir],
+      testDeps(),
+    );
+    // The shipped CLI ships no provider — START rejects with the base
+    // contract error, output as a data row on stdout.
+    const doc = JSON.parse(res.stdout[0] ?? "{}") as { kind: string; reason?: string };
+    expect(doc).toEqual({ kind: "rejected", reason: "runtime_context_provider_unavailable" });
+    expect(res.code).toBe(EXIT.notFound);
   });
 
   it("start on a template with an unbound role → usage 2 StartFailed (the W2 bridge's binding-coverage lane, packet ch12-p1b)", async () => {

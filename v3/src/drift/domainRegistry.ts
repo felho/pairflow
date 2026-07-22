@@ -15,7 +15,9 @@ import type {
   RejectionName,
   RoleName,
   RuntimeContext,
+  RuntimeContextProjection,
   RuntimeContextRef,
+  RuntimeContextRequirement,
   Step,
   TerminalDisposition,
   TranscriptEntry,
@@ -37,6 +39,9 @@ import type {
 // family (the operator-intent inputs; the in-process FAIL member) live
 // in kernel/, the same ADR-007 type-import allowance.
 import type { CancelInput, CreateInput, Kernel, KickoffInput, StartInput } from "../kernel/index.js";
+// ch12-p3 D2: the l0e provider port shapes live in ports/ (the injected
+// contract) — the same ADR-007 type-import allowance as the l2/l2a witnesses.
+import type { ProviderRegistry, RuntimeContextProvider } from "../ports/runtimeContextProvider.js";
 
 /**
  * The PI-3 domain-registry manifest (packet ch5-P1): every ledger §4
@@ -120,6 +125,17 @@ interface RealizedTypeTable {
   readonly "l0d/KernelEvent": Kernel["fail"];
   readonly "l0d/ActorEnvelope": EventEnvelope;
   readonly "l0d/Template": WorkflowTemplate;
+  // ch12-p3 D2: the l0e provider-contract witnesses. `Template`/`ContextPacket`
+  // /`RuntimeContextRef` are name-reuse rows (the multi-level witness
+  // convention — the runtimeContext raw field / the projection field / the
+  // l0d ref reused at l0e).
+  readonly "l0e/Template": WorkflowTemplate;
+  readonly "l0e/ContextPacket": ContextPacket;
+  readonly "l0e/RuntimeContextProvider": RuntimeContextProvider;
+  readonly "l0e/ProviderRegistry": ProviderRegistry;
+  readonly "l0e/RuntimeContextProjection": RuntimeContextProjection;
+  readonly "l0e/RuntimeContextRef": RuntimeContextRef;
+  readonly "l0e/RuntimeContextRequirement": RuntimeContextRequirement;
 }
 
 export type RegistryEntry =
@@ -221,14 +237,16 @@ export const DOMAIN_REGISTRY: Readonly<Record<string, RegistryEntry>> = {
     typeName: "RejectionName",
     rejectionNames: ["task_required"],
   },
-  // ── l0e (8) ────────────────────────────────────────────────────────
-  "l0e/Template": { kind: "pending" },
-  "l0e/ContextPacket": { kind: "pending" },
-  "l0e/RuntimeContextProvider": { kind: "pending" },
-  "l0e/ProviderRegistry": { kind: "pending" },
-  "l0e/RuntimeContextProjection": { kind: "pending" },
-  "l0e/RuntimeContextRef": { kind: "pending" },
-  "l0e/RuntimeContextRequirement": { kind: "pending" },
+  // ── l0e (8) — the provider contract: realized at ch12-p3 (the port +
+  // registry + projection + requirement types; the runtimeContext raw/
+  // projection fields; the l0d ref reused at l0e) ──────────────────────
+  "l0e/Template": { kind: "realized", typeName: "WorkflowTemplate" },
+  "l0e/ContextPacket": { kind: "realized", typeName: "ContextPacket" },
+  "l0e/RuntimeContextProvider": { kind: "realized", typeName: "RuntimeContextProvider" },
+  "l0e/ProviderRegistry": { kind: "realized", typeName: "ProviderRegistry" },
+  "l0e/RuntimeContextProjection": { kind: "realized", typeName: "RuntimeContextProjection" },
+  "l0e/RuntimeContextRef": { kind: "realized", typeName: "RuntimeContextRef" },
+  "l0e/RuntimeContextRequirement": { kind: "realized", typeName: "RuntimeContextRequirement" },
   "l0e/Rejected(runtime_context_provider_unavailable)": {
     kind: "realized",
     typeName: "RejectionName",
@@ -482,6 +500,13 @@ export const REALIZED_TYPE_TABLE_KEYS = [
   "l0d/KernelEvent",
   "l0d/ActorEnvelope",
   "l0d/Template",
+  "l0e/Template",
+  "l0e/ContextPacket",
+  "l0e/RuntimeContextProvider",
+  "l0e/ProviderRegistry",
+  "l0e/RuntimeContextProjection",
+  "l0e/RuntimeContextRef",
+  "l0e/RuntimeContextRequirement",
 ] as const satisfies readonly (keyof RealizedTypeTable)[];
 
 type TypeTableFullyListed =

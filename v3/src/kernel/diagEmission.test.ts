@@ -1,3 +1,4 @@
+import { createStaticProviderRegistry } from "../ports/index.js";
 import { createScriptedProcessGateRunner } from "../testkit/index.js";
 import { describe, expect, it } from "vitest";
 
@@ -95,6 +96,7 @@ async function setup() {
   await handle.store.createInstance(baseInstance);
   const diag = createRecordingDiagnosticsSink();
   const kernel = createKernel({
+      providerRegistry: createStaticProviderRegistry({}),
       processRunner: createScriptedProcessGateRunner([]),
     store: handle.store,
     definitions,
@@ -280,6 +282,7 @@ describe("cas_restart — count discipline", () => {
     };
     const diag = createRecordingDiagnosticsSink();
     const kernel = createKernel({
+      providerRegistry: createStaticProviderRegistry({}),
       processRunner: createScriptedProcessGateRunner([]),
       store,
       definitions,
@@ -326,6 +329,7 @@ describe("cas_restart — count discipline", () => {
     };
     const diag = createRecordingDiagnosticsSink();
     const kernel = createKernel({
+      providerRegistry: createStaticProviderRegistry({}),
       processRunner: createScriptedProcessGateRunner([]),
       store,
       definitions,
@@ -435,6 +439,7 @@ describe("handle internal_failure lanes — emit + rethrow unchanged", () => {
     const handle = openStore(":memory:", createControlledClock(0));
     await handle.store.createInstance(baseInstance);
     const kernel = createKernel({
+      providerRegistry: createStaticProviderRegistry({}),
       processRunner: createScriptedProcessGateRunner([]),
       store: handle.store,
       definitions: { load: () => Promise.resolve(admit(corrupted)) },
@@ -519,6 +524,7 @@ describe("create/start internal_failure lanes — {instanceId, error} keyset", (
       createInstance: () => Promise.reject(boom),
     };
     const kernel = createKernel({
+      providerRegistry: createStaticProviderRegistry({}),
       processRunner: createScriptedProcessGateRunner([]),
       store: failing,
       definitions,
@@ -540,6 +546,7 @@ describe("create/start internal_failure lanes — {instanceId, error} keyset", (
     const rec = createRecordingDiagnosticsSink();
     const handle = openStore(":memory:", createControlledClock(0));
     const kernel = createKernel({
+      providerRegistry: createStaticProviderRegistry({}),
       processRunner: createScriptedProcessGateRunner([]),
       store: handle.store,
       definitions: { load: () => Promise.resolve(admit(corrupted)) },
@@ -582,6 +589,7 @@ async function kernelWith(overrides: {
   const handle = openStore(":memory:", createControlledClock(0));
   await handle.store.createInstance(baseInstance);
   return createKernel({
+      providerRegistry: createStaticProviderRegistry({}),
       processRunner: createScriptedProcessGateRunner([]),
     store: handle.store,
     definitions: overrides.definitions ?? definitions,
@@ -603,6 +611,7 @@ async function throwingStoreKernel(method: "loadInstance" | "findOp" | "commitTr
   };
   const diag = createRecordingDiagnosticsSink();
   const kernel = createKernel({
+      providerRegistry: createStaticProviderRegistry({}),
       processRunner: createScriptedProcessGateRunner([]),
     store,
     definitions,
@@ -632,6 +641,7 @@ async function commitResultKernel(result: CommitTransitionResult) {
   };
   const diag = createRecordingDiagnosticsSink();
   const kernel = createKernel({
+      providerRegistry: createStaticProviderRegistry({}),
       processRunner: createScriptedProcessGateRunner([]),
     store,
     definitions,
@@ -660,6 +670,7 @@ async function conflictThenRealKernel(conflicts: number) {
   };
   const diag = createRecordingDiagnosticsSink();
   const kernel = createKernel({
+      providerRegistry: createStaticProviderRegistry({}),
       processRunner: createScriptedProcessGateRunner([]),
     store,
     definitions,
@@ -740,6 +751,7 @@ describe("L1 rejection lanes — not_authorized (explicit profile, local wiring)
     await handle.store.createInstance(baseInstance);
     const diag = createRecordingDiagnosticsSink();
     const kernel = createKernel({
+      providerRegistry: createStaticProviderRegistry({}),
       processRunner: createScriptedProcessGateRunner([]),
       store: handle.store,
       definitions: { load: () => Promise.resolve(admit(profiled)) },

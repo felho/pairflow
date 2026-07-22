@@ -1,3 +1,4 @@
+import { createStaticProviderRegistry } from "../ports/index.js";
 import { createScriptedProcessGateRunner } from "../testkit/index.js";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -102,6 +103,7 @@ async function seeded(): Promise<{ store: StorePort; close: () => void }> {
   const handle = openStore(":memory:", createControlledClock(0));
   await handle.store.createInstance(instance);
   const kernel = createKernel({
+      providerRegistry: createStaticProviderRegistry({}),
       processRunner: createScriptedProcessGateRunner([]),
     store: handle.store,
     definitions,

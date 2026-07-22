@@ -610,7 +610,7 @@ describe("ch11-P4 dimension 4 — the gates subtree through the file channel", (
     const err = gatedErr(
       gatedStep(
         "    gates:\n      GO:\n        - uses: external.process\n          config:\n            command: \"echo hi\"\n            timeoutMs: 1000\n            output: { mode: gateDecisionJson }\n            onExit: { zero: allow, nonzero: block }\n",
-        "runtimeContext: required\n",
+        "runtimeContext:\n  kind: worktree\n  provider: pairflow.worktree\n",
       ),
     );
     expect(gatedPaths(err)).toContain("steps.s.gates.GO[0].config.onExit");
@@ -698,7 +698,7 @@ describe("ch11-P4 dimension 4 — the C21 admission lanes through the file chann
     const err = gatedErr(
       gatedStep(
         "    gates:\n      GO:\n        - uses: external.process\n          config: nope\n",
-        "runtimeContext: required\n",
+        "runtimeContext:\n  kind: worktree\n  provider: pairflow.worktree\n",
       ),
     );
     const finding = err.findings.find((f) => (f as { path: string }).path === "steps.s.gates.GO[0].config");
@@ -710,7 +710,7 @@ describe("ch11-P4 dimension 4 — the C21 admission lanes through the file chann
     const err = gatedErr(
       gatedStep(
         "    gates:\n      GO:\n        - uses: external.process\n          config:\n            command: \"echo hi\"\n            timeoutMs: 1000\n            output: nope\n            onExit: { zero: allow, nonzero: block }\n",
-        "runtimeContext: required\n",
+        "runtimeContext:\n  kind: worktree\n  provider: pairflow.worktree\n",
       ),
     );
     const finding = err.findings.find((f) => (f as { path: string }).path === "steps.s.gates.GO[0].config.output");
@@ -722,7 +722,7 @@ describe("ch11-P4 dimension 4 — the C21 admission lanes through the file chann
     const err = gatedErr(
       gatedStep(
         "    gates:\n      GO:\n        - uses: external.process\n          config:\n            command: \"echo hi\"\n            timeoutMs: 1000\n            onExit: nope\n",
-        "runtimeContext: required\n",
+        "runtimeContext:\n  kind: worktree\n  provider: pairflow.worktree\n",
       ),
     );
     const finding = err.findings.find((f) => (f as { path: string }).path === "steps.s.gates.GO[0].config.onExit");
@@ -734,7 +734,7 @@ describe("ch11-P4 dimension 4 — the C21 admission lanes through the file chann
     const err = gatedErr(
       gatedStep(
         "    gates:\n      GO:\n        - uses: external.process\n          config:\n            command: \"echo hi\"\n            timeoutMs: 1000\n            onExit: { zero: allow, nonzero: block }\n            reason: nope\n",
-        "runtimeContext: required\n",
+        "runtimeContext:\n  kind: worktree\n  provider: pairflow.worktree\n",
       ),
     );
     const finding = err.findings.find((f) => (f as { path: string }).path === "steps.s.gates.GO[0].config.reason");
@@ -770,7 +770,7 @@ describe("ch11-P4 dimension 4 — the C21 admission lanes through the file chann
     const err = gatedErr(
       gatedStep(
         "    gates:\n      GO:\n        - uses: external.process\n          config:\n            command: \"echo hi\"\n            timeoutMs: 1000\n            onExit: { zero: allow, nonzero: block }\n            onRunnerError: failInstance\n",
-        "runtimeContext: required\n",
+        "runtimeContext:\n  kind: worktree\n  provider: pairflow.worktree\n",
       ),
     );
     const finding = err.findings.find(
@@ -783,7 +783,7 @@ describe("ch11-P4 dimension 4 — the C21 admission lanes through the file chann
     const err = gatedErr(
       gatedStep(
         "    gates:\n      GO:\n        - uses: external.process\n          config:\n            command: \"echo hi\"\n            timeoutMs: 1000\n            onExit: { zero: allow, nonzero: block }\n            reason: { nonzero: \"Bad-Token\" }\n",
-        "runtimeContext: required\n",
+        "runtimeContext:\n  kind: worktree\n  provider: pairflow.worktree\n",
       ),
     );
     const finding = err.findings.find(
@@ -894,14 +894,6 @@ steps:
       build it
     transitions:
       PASS: review
-    gates:
-      PASS:
-        - uses: external.process
-          config:
-            command: "pnpm test"
-            timeoutMs: 600000
-            onExit: { zero: allow, nonzero: block }
-            reason: { nonzero: test_failed }
   review:
     role: reviewer
     instruction: |-
@@ -921,7 +913,6 @@ roles:
     defaultActor: codex
   reviewer:
     defaultActor: claude
-runtimeContext: required
 round:
   advanceOnArrivalAt:
     - implement
@@ -935,19 +926,6 @@ round:
         role: "implementer",
         instruction: "build it",
         transitions: { PASS: "review" },
-        gates: {
-          PASS: [
-            {
-              uses: "external.process",
-              config: {
-                command: "pnpm test",
-                timeoutMs: 600000,
-                onExit: { zero: "allow", nonzero: "block" },
-                reason: { nonzero: "test_failed" },
-              },
-            },
-          ],
-        },
       },
       review: {
         role: "reviewer",
@@ -963,9 +941,8 @@ round:
     },
     terminal: ["done"],
     roles: { implementer: { defaultActor: "codex" }, reviewer: { defaultActor: "claude" } },
-    runtimeContext: "required",
     round: { advanceOnArrivalAt: ["implement"] },
-  } as unknown as WorkflowTemplate;
+  };
 
   it("the whole admitted value is DEEP-EQUAL across channels (effective configs + advancesRound + every field)", () => {
     const fileLoaded = loadGated(maximalYaml);

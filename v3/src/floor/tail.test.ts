@@ -1,3 +1,4 @@
+import { createStaticProviderRegistry } from "../ports/index.js";
 import { createScriptedProcessGateRunner } from "../testkit/index.js";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -76,6 +77,7 @@ function env(
 
 function makeKernel(store: StorePort): Kernel {
   return createKernel({
+      providerRegistry: createStaticProviderRegistry({}),
       processRunner: createScriptedProcessGateRunner([]),
     store,
     definitions,

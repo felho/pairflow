@@ -25,6 +25,10 @@ function capturingKernel(): { kernel: Kernel; seen: EventEnvelope[] } {
     kickoff: unused,
     cancel: unused,
     fail: unused,
+    runtimeContextReady: unused,
+    deliverCompletion: () => {
+      /* unused in ingress tests */
+    },
   };
   return { kernel, seen };
 }
@@ -408,6 +412,11 @@ function intentKernel(): IntentCapture {
       return Promise.resolve({ kind: "terminated", disposition: "cancelled" });
     },
     fail: () => Promise.reject(new Error("kernel events have no ingress endpoint (C13)")),
+    runtimeContextReady: () =>
+      Promise.reject(new Error("kernel events have no ingress endpoint (C13)")),
+    deliverCompletion: () => {
+      /* unused in ingress intent tests */
+    },
   };
   return { kernel, creates, starts, kickoffs, cancels };
 }
@@ -449,16 +458,15 @@ describe("submitIntent — accept lanes (I1/I2): the typed intent reaches the ke
     expect(cap.creates).toEqual([{ instanceId: "i1", templateRef: REF_WIRE }]);
   });
 
-  it("start: opId + the interim runtimeContextRef pass through (L3's wire key)", async () => {
+  it("start: the exact keyset is { intent, instanceId, opId } — the provider machinery is kernel-side (W2)", async () => {
     const cap = intentKernel();
     const outcome = await ingressOf(cap.kernel).submitIntent({
       intent: "start",
       instanceId: "i1",
       opId: "op-s",
-      runtimeContextRef: "/ws",
     });
     expect(outcome).toEqual({ kind: "accepted" });
-    expect(cap.starts).toEqual([{ instanceId: "i1", opId: "op-s", runtimeContextRef: "/ws" }]);
+    expect(cap.starts).toEqual([{ instanceId: "i1", opId: "op-s" }]);
   });
 
   it("kickoff and cancel: exact keysets, outcomes verbatim", async () => {
@@ -615,10 +623,12 @@ describe("submitIntent — refusal lanes (I3/I4): fail-closed, one token per gat
     );
   });
 
-  it("runtimeContextRef present-but-empty → invalid_runtime_context_ref", async () => {
+  it("W2 (ch12-p3): the retired `runtimeContextRef` start key is now an UNKNOWN-KEY rejection", async () => {
+    // The interim wire key retired with the provider machinery (C14) — a
+    // `start` intent carrying it is refused by the fail-closed unknown-key lane.
     await refuse(
-      { intent: "start", instanceId: "i1", opId: "op", runtimeContextRef: "" },
-      "invalid_runtime_context_ref",
+      { intent: "start", instanceId: "i1", opId: "op", runtimeContextRef: "/ws" },
+      "unknown_key",
     );
   });
 });

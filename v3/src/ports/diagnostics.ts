@@ -35,8 +35,7 @@ export type IngressDetailToken =
   | "invalid_task"
   | "invalid_mode"
   | "invalid_overrides"
-  | "invalid_run_overrides"
-  | "invalid_runtime_context_ref";
+  | "invalid_run_overrides";
 
 /**
  * The emit-side face: NO timestamp, NO ordinal — the SINK stamps `at`

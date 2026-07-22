@@ -788,6 +788,9 @@ round:
       round: { advanceOnArrivalAt: ["implement"] },
       // ch12-p1b G3: admission materializes the activation default.
       activation: { mode: "immediate" },
+      // ch12-p3 R1: admission materializes the runtime-context requirement
+      // (absent ⇒ "none").
+      runtimeContext: "none",
     };
     const result = load(canonical);
     expect(result.ok).toBe(true);
@@ -800,7 +803,7 @@ round:
 
 describe("ch11-P4 F1/F2 — keyset growth, both directions (dimension 1)", () => {
   it("F1: root accepts the OPTIONAL runtimeContext key (driven positive)", () => {
-    expect(load(`${VALID}runtimeContext: required\n`).ok).toBe(true);
+    expect(load(`${VALID}runtimeContext: none\n`).ok).toBe(true);
   });
 
   it("F1: root accepts the OPTIONAL round key (driven positive)", () => {
@@ -947,7 +950,9 @@ terminal:
   - done
 roles:
   r: {}
-runtimeContext: required
+runtimeContext:
+  kind: worktree
+  provider: pairflow.worktree
 `;
 
 describe("ch11-P4 F6 — the C12 source ladder for config.value (dimension 3)", () => {
@@ -1069,7 +1074,9 @@ terminal:
   - done
 roles:
   r: {}
-runtimeContext: required
+runtimeContext:
+  kind: worktree
+  provider: pairflow.worktree
 `;
     const result = loadGated(aliased);
     expect(result.ok).toBe(false);
@@ -1168,7 +1175,9 @@ terminal:
   - done
 roles:
   r: {}
-runtimeContext: required
+runtimeContext:
+  kind: worktree
+  provider: pairflow.worktree
 `;
     const result = loadGated(withStrayValue);
     expect(result.ok).toBe(false);

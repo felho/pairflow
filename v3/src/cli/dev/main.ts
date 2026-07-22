@@ -13,8 +13,10 @@ import {
   TemplateLoadError,
 } from "../../definition/index.js";
 import { createGateRegistry } from "../../gates/index.js";
+import { createStaticProviderRegistry } from "../../ports/index.js";
 import type { TraceFixture } from "../../testkit/index.js";
 import {
+  createScriptedRuntimeContextProvider,
   devPassthroughRedactionPolicy,
   fixtureDefinitionStore,
   fixtureTemplate,
@@ -258,6 +260,9 @@ async function verbInject(ctx: VerbContext): Promise<number> {
         diag: diag.sink,
         gates,
         processRunner,
+        // inject stages actor emits only (never START) — the registry is
+        // unused here; the EMPTY registry keeps the wiring honest.
+        providerRegistry: createStaticProviderRegistry({}),
       });
       const ingress = createIngress({ kernel, diag: diag.sink });
       for (const step of steps) {
@@ -378,12 +383,11 @@ function validateStep(raw: unknown, index: number): void {
   }
   if (raw["kind"] === "start") {
     // W3 (packet ch12-p1b): the start step follows the harness contract
-    // re-base — the START intent's opId joins the keyset, and the
-    // expected version is 2 (genesis v1 + the activation commit).
-    // Gate-2 aftermath (finding 2): `runtimeContextRef` is the harness
-    // contract's OPTIONAL window key (W3/L3) — the exact keyset carries
-    // it, nonempty-string when present.
-    const allowedStart = ["kind", "instanceId", "opId", "task", "expect", "runtimeContextRef"];
+    // re-base — the START intent's opId joins the keyset, and the expected
+    // version is 2 (genesis v1 + the activation commit). W4 (packet ch12-p3):
+    // the interim `runtimeContextRef` window key RETIRED with the harness
+    // seam — the provider machinery resolves the requirement kernel-side.
+    const allowedStart = ["kind", "instanceId", "opId", "task", "expect"];
     for (const key of Object.keys(raw)) {
       if (!allowedStart.includes(key)) {
         fixtureError(`${label} has unknown field '${key}'`, { allowedFields: allowedStart });
@@ -397,9 +401,6 @@ function validateStep(raw: unknown, index: number): void {
       fixtureError(
         `${label} requires instanceId and opId (non-empty strings) and task (string)`,
       );
-    }
-    if ("runtimeContextRef" in raw && !isNonEmptyString(raw["runtimeContextRef"])) {
-      fixtureError(`${label}.runtimeContextRef must be a non-empty string when present`);
     }
     const expect = raw["expect"];
     if (!isPlainObject(expect)) {
@@ -575,6 +576,11 @@ async function verbReplay(ctx: VerbContext): Promise<number> {
     if (!admitted.ok) {
       throw new Error("dev replay: the canonical fixture failed admission (unreachable)");
     }
+    // W4/C19 (packet ch12-p3): the dev `replay` root gains the SCRIPTED
+    // provider registry — dev `replay` is where the provisioned path is
+    // drivable pre-ch9 (the hermetic fixture is context-free, so the provider
+    // is never invoked here; the wiring makes the provisioned path reachable).
+    const scriptedProvider = createScriptedRuntimeContextProvider();
     const kernel = createKernel({
       store: handle.store,
       definitions: fixtureDefinitionStore(admitted.template),
@@ -583,7 +589,9 @@ async function verbReplay(ctx: VerbContext): Promise<number> {
       diag: noopDiagnosticsSink,
       gates,
       processRunner,
+      providerRegistry: createStaticProviderRegistry({ "pairflow.worktree": scriptedProvider }),
     });
+    scriptedProvider.bindCompletionSink((i, r, ref) => kernel.deliverCompletion(i, r, ref));
     const ingress = createIngress({ kernel, diag: noopDiagnosticsSink });
     const result = await replayTrace(fixture, {
       submit: (raw) => ingress.submit(raw),

@@ -1,3 +1,4 @@
+import { createStaticProviderRegistry } from "../ports/index.js";
 import { createScriptedProcessGateRunner } from "../testkit/index.js";
 import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -675,6 +676,7 @@ interface FlowResult {
 async function runFlow(diag: DiagnosticsSink, mainPath: string, clock: ReturnType<typeof createControlledClock>): Promise<FlowResult> {
   const storeHandle = openStore(mainPath, clock);
   const kernel = createKernel({
+      providerRegistry: createStaticProviderRegistry({}),
       processRunner: createScriptedProcessGateRunner([]),
     store: storeHandle.store,
     definitions,

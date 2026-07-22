@@ -74,7 +74,28 @@ export type StartOutcome =
   | Activated
   | Accepted
   | { readonly kind: "duplicate" }
-  | { readonly kind: "rejected"; readonly reason: "unknown_instance" | "op_id_collision" };
+  | {
+      readonly kind: "rejected";
+      readonly reason:
+        | "unknown_instance"
+        | "op_id_collision"
+        | "runtime_context_provider_unavailable";
+    };
+
+/**
+ * RUNTIME_CONTEXT_READY's return vocabulary (packet ch12-p3, K family): the
+ * accepted-readiness continues into `activate_or_hold` (immediate → the
+ * `Activated` dispatch; deferred → `Accepted`). A rung- or guard-rejected
+ * event (terminal-sink, correlation, or the kind boundary) is INERT — it
+ * mutates NOTHING and returns `ignored` (never a business rejection, never a
+ * throw — the seam delivers superseded completions and they must be inert).
+ * A vanished instance is the L8 inert `unknown_instance` (droppable).
+ */
+export type RuntimeContextReadyOutcome =
+  | Activated
+  | Accepted
+  | { readonly kind: "ignored" }
+  | { readonly kind: "rejected"; readonly reason: "unknown_instance" };
 
 export type KickoffOutcome =
   | Activated

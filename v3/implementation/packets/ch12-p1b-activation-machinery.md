@@ -57,7 +57,9 @@ plan text, or derives from those with an in-row note.
     ],
     "traces": [],
     "shared_ownership": [
-      { "item": "l0d/actor-routable-execution", "co_owner": "ch12-p1a-lifecycle-axis.md" }
+      { "item": "l0d/actor-routable-execution", "co_owner": "ch12-p1a-lifecycle-axis.md" },
+      { "item": "l0d-pseudocode/START", "co_owner": "ch12-p3-provider-contract.md" },
+      { "item": "l0d-pseudocode/RECEIVE", "co_owner": "ch12-p3-provider-contract.md" }
     ]
   }
 }

@@ -621,34 +621,19 @@ describe("dev cli — replay (hermetic golden-trace diagnostics)", () => {
     assertError(await runDev(["replay", "--file", extra], testDeps()), "usage", EXIT.usage);
   });
 
-  it("finding 2 — a supplied runtimeContextRef passes the VALIDATOR, then fails at replay as the surplus-input runtime error (internal 1, never usage 2)", async () => {
-    // The dev replay uses the canonical hermetic (context-free) fixture
-    // template. A supplied ref has zero consuming paths there, so the
-    // kernel throws surplus-input at START — the split: the validator
-    // ACCEPTS the optional key (no InvalidFixture), and the failure is the
-    // runtime one, not a usage-2 refusal.
+  it("W4 (ch12-p3): the retired `runtimeContextRef` start-step key is now an UNKNOWN FIELD — InvalidFixture usage 2, never reaching replay", async () => {
+    // The interim window carrier RETIRED with the harness seam (W4): the
+    // fixture validator's start keyset no longer carries `runtimeContextRef`,
+    // so a fixture supplying it is a structural (usage 2) refusal.
     const file = writeJson("ref-surplus.json", {
       ...greenFixture,
       name: "dev replay ref surplus",
       steps: [{ ...greenFixture.steps[0], runtimeContextRef: "x" }, greenFixture.steps[1]],
     });
     const result = await runDev(["replay", "--file", file], testDeps());
-    const error = assertError(result, "internal", EXIT.internal);
-    // usage-2 absent: not the validator's InvalidFixture refusal.
-    expect(error.name).not.toBe("InvalidFixture");
-    expect(error.message).toMatch(/surplus input|context-free workflow/);
-    expect(result.stdout).toEqual([]);
-  });
-
-  it("finding 2 — an EMPTY runtimeContextRef is refused by the validator (InvalidFixture usage 2), never reaching replay", async () => {
-    const file = writeJson("ref-empty.json", {
-      ...greenFixture,
-      name: "dev replay ref empty",
-      steps: [{ ...greenFixture.steps[0], runtimeContextRef: "" }, greenFixture.steps[1]],
-    });
-    const result = await runDev(["replay", "--file", file], testDeps());
     const error = assertError(result, "usage", EXIT.usage);
     expect(error.name).toBe("InvalidFixture");
+    expect(JSON.stringify(error)).toMatch(/runtimeContextRef|unknown field/);
     expect(result.stdout).toEqual([]);
   });
 

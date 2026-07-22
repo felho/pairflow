@@ -37,6 +37,7 @@ import type { CliDeps } from "./runtime.js";
 import { productionDeps } from "./runtime.js";
 import { createFileDefinitionStore } from "../definition/index.js";
 import { createGateRegistry } from "../gates/index.js";
+import { createStaticProviderRegistry } from "../ports/index.js";
 
 /**
  * The operator CLI, normal entrypoint (plan §6.5, packet ch6-P4a): a
@@ -269,27 +270,13 @@ async function verbStart(ctx: VerbContext): Promise<number> {
       Array.isArray(overrideFlags) ? overrideFlags.filter((v) => typeof v === "string") : [],
       template,
     );
-    // Y6 (ch11-P4): the EAGER required-context pre-check — a
-    // NON-AUTHORITATIVE CLI classification mirror on the verb's OWN
-    // pre-loaded template (the ch8-P2 A2 eager-gate culture). A
-    // `runtimeContext: "required"` template is UNSTARTABLE through this
-    // CLI: the shipped surface can supply no runtime-context ref until
-    // ch9's provisioning surface (C28 adds no flag). Fired HERE — after
-    // the pre-load, BEFORE withStoreAndDiag / the runner slot / the
-    // kernel — it is USAGE exit 2 with ZERO store/diag/kernel side
-    // effects. The kernel's S2 lane (P3b-built) stays the start-invariant
-    // AUTHORITY; its CLI reachability is the mid-invocation race only, and
-    // it rides INTERNAL by construction (the inner catch's allowlist keeps
-    // binding coverage as its SOLE member — no runtime-context mapping
-    // joins it).
-    if (template.runtimeContext === "required") {
-      throw usage(
-        "StartFailed",
-        `template '${templateRef.id}@${String(templateRef.version)}' declares ` +
-          `runtimeContext: "required" and cannot be started through this CLI until ` +
-          `ch9's provisioning surface supplies a runtime-context ref`,
-      );
-    }
+    // W3 (packet ch12-p3, C24): the ch11-P4 EAGER required-context pre-check
+    // RETIRES — no retired surface survives as a parallel path. A
+    // spec-declaring template is now refused by the KERNEL's own S2 lane
+    // (`runtime_context_provider_unavailable` against the EMPTY production
+    // registry, C16); a residual `"required"` string by the R2 admission
+    // migration refusal. The shipped CLI ships no provider — a
+    // spec-declaring template is honestly unstartable here until ch9.
     return await withStoreAndDiag(ctx, async (handle, diag) => {
       // W2 (ch11-P3b): the fail-closed process-gate runner on a derived-path
       // sibling beside the store DB — never spawns, never allows.
@@ -307,6 +294,9 @@ async function verbStart(ctx: VerbContext): Promise<number> {
           diag: diag.sink,
           gates,
           processRunner,
+          // C16 (packet ch12-p3, PR2): the EMPTY production registry — the
+          // shipped CLI ships no runtime-context provider.
+          providerRegistry: createStaticProviderRegistry({}),
         });
         try {
           // The C25 in-handler bridge (packet ch12-p1b, W2): the retired
@@ -432,6 +422,7 @@ async function verbSubmit(ctx: VerbContext): Promise<number> {
           diag: diag.sink,
           gates,
           processRunner,
+          providerRegistry: createStaticProviderRegistry({}),
         });
         const outcome = await createIngress({ kernel, diag: diag.sink }).submit(envelope);
         // The outcome IS the surface's answer — DATA on stdout, always;

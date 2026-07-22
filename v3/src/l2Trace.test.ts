@@ -1,3 +1,4 @@
+import { createStaticProviderRegistry } from "./ports/index.js";
 import { createScriptedProcessGateRunner } from "./testkit/index.js";
 import { describe, expect, it } from "vitest";
 
@@ -158,6 +159,7 @@ describe("l2 golden trace — the gate rung + both evaluators end-to-end (08-l2 
     // the narrowed harness seam (the checker reads the flags).
     const admitted = admit(gatedTemplate);
     const kernel = createKernel({
+      providerRegistry: createStaticProviderRegistry({}),
       processRunner: createScriptedProcessGateRunner([]),
       store: handle.store,
       definitions: fixtureDefinitionStore(admitted),

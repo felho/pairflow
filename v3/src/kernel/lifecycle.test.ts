@@ -1,20 +1,29 @@
 import { describe, expect, it } from "vitest";
 
-import type { TranscriptEntry, WorkflowInstance } from "../domain/index.js";
+import type { RuntimeContextRef, TranscriptEntry, WorkflowInstance } from "../domain/index.js";
 import { admitTemplate } from "../definition/index.js";
 import { deriveEmitDigest } from "../emit/index.js";
 import { createGateRegistry } from "../gates/index.js";
 import type { ProcessGateRunner } from "../ports/gate.js";
+import { createStaticProviderRegistry } from "../ports/index.js";
 import type { StorePort } from "../ports/store.js";
 import { openStore } from "../store/sqliteStore.js";
 import {
   createRecordingDiagnosticsSink,
   createControlledClock,
+  createScriptedRuntimeContextProvider,
   fixtureDefinitionStore,
   fixtureTemplate,
 } from "../testkit/index.js";
+import type {
+  ScriptedRuntimeContextProvider,
+  ScriptedRuntimeContextProviderOptions,
+} from "../testkit/index.js";
 import { createKernel } from "./kernel.js";
 import type { Kernel } from "./kernel.js";
+
+const WORKTREE_SPEC = { kind: "worktree", provider: "pairflow.worktree" } as const;
+const SPEC_REF: RuntimeContextRef = { kind: "worktree", locator: "/ws/i1" };
 
 /**
  * The lifecycle-op family (packet ch12-p1b — L1–L9, A1–A4, J4): per-op
@@ -29,6 +38,7 @@ interface Harness {
   readonly kernel: Kernel;
   readonly store: ReturnType<typeof openStore>["store"];
   readonly diag: ReturnType<typeof createRecordingDiagnosticsSink>;
+  readonly provider: ScriptedRuntimeContextProvider;
   close(): void;
 }
 
@@ -41,6 +51,8 @@ function makeHarness(
    * on the first commit and delegate afterward (L9).
    */
   storeWrap?: (real: StorePort) => StorePort,
+  /** The scripted provider's per-provision behavior (S/SM families). */
+  providerOptions?: ScriptedRuntimeContextProviderOptions,
 ): Harness {
   const clock = createControlledClock(1_000);
   const handle = openStore(":memory:", clock);
@@ -48,12 +60,15 @@ function makeHarness(
   const raw = templateMutation ? templateMutation(fixtureTemplate()) : fixtureTemplate();
   const admitted = admitTemplate(raw, gates);
   if (!admitted.ok) {
-    throw new Error("lifecycle.test harness: fixture template failed admission");
+    throw new Error(
+      `lifecycle.test harness: fixture template failed admission: ${JSON.stringify(admitted.findings)}`,
+    );
   }
   const diag = createRecordingDiagnosticsSink();
   const processRunner: ProcessGateRunner = {
     run: () => Promise.reject(new Error("no process gates in lifecycle tests")),
   };
+  const provider = createScriptedRuntimeContextProvider(providerOptions);
   const kernel = createKernel({
     store: storeWrap ? storeWrap(handle.store) : handle.store,
     definitions: fixtureDefinitionStore(admitted.template),
@@ -62,8 +77,10 @@ function makeHarness(
     diag: diag.sink,
     gates,
     processRunner,
+    providerRegistry: createStaticProviderRegistry({ "pairflow.worktree": provider }),
   });
-  return { kernel, store: handle.store, diag, close: () => handle.close() };
+  provider.bindCompletionSink((i, r, ref) => kernel.deliverCompletion(i, r, ref));
+  return { kernel, store: handle.store, diag, provider, close: () => handle.close() };
 }
 
 /**
@@ -103,7 +120,7 @@ function deferred(raw: ReturnType<typeof fixtureTemplate>): ReturnType<typeof fi
 function requiredContext(
   raw: ReturnType<typeof fixtureTemplate>,
 ): ReturnType<typeof fixtureTemplate> {
-  return { ...raw, runtimeContext: "required" };
+  return { ...raw, runtimeContext: { kind: "worktree", provider: "pairflow.worktree" } };
 }
 
 async function loadOrThrow(h: Harness, id: string): Promise<WorkflowInstance> {
@@ -389,73 +406,210 @@ describe("START (L2/L3) — the fork and the window lanes", () => {
     h.close();
   });
 
-  describe("the interim window context lanes (L3 — all five)", () => {
-    it("undeclared + ref ABSENT → ready(∅)", async () => {
+  describe("the provider legs (S family, ch12-p3)", () => {
+    it("S1: the none path is unchanged — ready(∅) + activate, NO provider call", async () => {
       const h = makeHarness();
       await h.kernel.create({ instanceId: "i1", templateRef: REF, task: "T" });
-      await h.kernel.start({ instanceId: "i1", opId: "op" });
+      const started = await h.kernel.start({ instanceId: "i1", opId: "op" });
+      expect(started.kind).toBe("activated");
       expect((await loadOrThrow(h, "i1")).runtimeContext).toEqual({ state: "ready", ref: null });
+      expect(h.provider.provisionCalls).toHaveLength(0);
       h.close();
     });
 
-    it("undeclared + ref PRESENT → throw (surplus input), no state change", async () => {
-      const h = makeHarness();
+    it("S3: the spec path — resolve → provision FIRST → requested(request_id) + STARTED, Accepted; status stays CREATED", async () => {
+      const h = makeHarness(requiredContext);
+      await h.kernel.create({ instanceId: "i1", templateRef: REF, task: "T" });
+      const started = await h.kernel.start({ instanceId: "i1", opId: "op" });
+      expect(started).toEqual({ kind: "accepted" });
+      expect(h.provider.provisionCalls).toHaveLength(1);
+      const call = h.provider.provisionCalls[0];
+      expect(call?.instanceId).toBe("i1");
+      expect(call?.spec).toEqual(WORKTREE_SPEC);
+      const inst = await loadOrThrow(h, "i1");
+      expect(inst.kernelStatus).toBe("CREATED");
+      expect(inst.runtimeContext).toEqual({ state: "requested", requestId: call?.requestId });
+      expect(await h.store.getTimeline("i1", 0)).toEqual([
+        { entryKind: "STARTED", seq: 1, opId: "op", committedAt: 1_000 },
+      ]);
+      h.close();
+    });
+
+    it("S2: an UNRESOLVED provider → Rejected(runtime_context_provider_unavailable) PRE-commit; op_id NOT consumed, no marker/fact", async () => {
+      const h = makeHarness((raw) => ({
+        ...raw,
+        runtimeContext: { kind: "worktree", provider: "nope.absent" },
+      }));
       await h.kernel.create({ instanceId: "i1", templateRef: REF, task: "T" });
       const before = await loadOrThrow(h, "i1");
-      await expect(
-        h.kernel.start({ instanceId: "i1", opId: "op", runtimeContextRef: "/ws" }),
-      ).rejects.toThrow(/surplus input/);
+      const outcome = await h.kernel.start({ instanceId: "i1", opId: "op" });
+      expect(outcome).toEqual({ kind: "rejected", reason: "runtime_context_provider_unavailable" });
+      expect(h.provider.provisionCalls).toHaveLength(0);
+      expect(await loadOrThrow(h, "i1")).toEqual(before);
+      expect(await h.store.getTimeline("i1", 0)).toEqual([]);
+      h.close();
+    });
+
+    it("S4: a synchronous provision throw is a PORT BREACH — fail-loud, zero state change, op_id unconsumed", async () => {
+      const h = makeHarness(requiredContext, undefined, { script: [{ throwOnProvision: true }] });
+      await h.kernel.create({ instanceId: "i1", templateRef: REF, task: "T" });
+      const before = await loadOrThrow(h, "i1");
+      await expect(h.kernel.start({ instanceId: "i1", opId: "op" })).rejects.toThrow(/port breach/i);
+      expect(await loadOrThrow(h, "i1")).toEqual(before);
+      expect(await h.store.getTimeline("i1", 0)).toEqual([]);
+      h.close();
+    });
+
+    it("S4: a pre-commit-rejecting detach ack is a PORT BREACH — same fail-loud, no state change", async () => {
+      const h = makeHarness(requiredContext, undefined, { script: [{ rejectAck: true }] });
+      await h.kernel.create({ instanceId: "i1", templateRef: REF, task: "T" });
+      const before = await loadOrThrow(h, "i1");
+      await expect(h.kernel.start({ instanceId: "i1", opId: "op" })).rejects.toThrow(/port breach/i);
       expect(await loadOrThrow(h, "i1")).toEqual(before);
       h.close();
     });
 
-    it("required + ref PRESENT → ready({kind: worktree, locator}) — the X1 bridge encoding", async () => {
-      const h = makeHarness(requiredContext);
+    it("S5: a CAS-conflicted requested commit RESTARTS and re-provisions under a FRESH request_id", async () => {
+      const h = makeHarness(requiredContext, (real) => casOnceStore(real).store);
       await h.kernel.create({ instanceId: "i1", templateRef: REF, task: "T" });
-      const outcome = await h.kernel.start({
-        instanceId: "i1",
-        opId: "op",
-        runtimeContextRef: "/ws/i1",
+      const started = await h.kernel.start({ instanceId: "i1", opId: "op" });
+      expect(started).toEqual({ kind: "accepted" });
+      // ≥2 provision calls under DISTINCT request_ids (the superseded id + the retry).
+      expect(h.provider.provisionCalls.length).toBeGreaterThanOrEqual(2);
+      const ids = h.provider.provisionCalls.map((c) => c.requestId);
+      expect(new Set(ids).size).toBe(ids.length);
+      // The committed marker correlates to the LAST (surviving) request_id.
+      const inst = await loadOrThrow(h, "i1");
+      expect(inst.runtimeContext).toEqual({
+        state: "requested",
+        requestId: ids[ids.length - 1],
       });
+      h.close();
+    });
+  });
+
+  describe("RUNTIME_CONTEXT_READY (K family) + the completion seam (SM)", () => {
+    async function provisioned(
+      h: Harness,
+      opts: { deferred?: boolean } = {},
+    ): Promise<string> {
+      await h.kernel.create({
+        instanceId: "i1",
+        templateRef: REF,
+        ...(opts.deferred ? { mode: "deferred_kickoff" as const } : { task: "T" }),
+      });
+      await h.kernel.start({ instanceId: "i1", opId: "op" });
+      return h.provider.provisionCalls[0]?.requestId ?? "";
+    }
+
+    it("K2/K4 immediate: a correlated kind-matching ref → ready(ref) + activate", async () => {
+      const h = makeHarness(requiredContext);
+      const requestId = await provisioned(h);
+      const outcome = await h.kernel.runtimeContextReady("i1", requestId, SPEC_REF);
       expect(outcome.kind).toBe("activated");
-      expect((await loadOrThrow(h, "i1")).runtimeContext).toEqual({
-        state: "ready",
-        ref: { kind: "worktree", locator: "/ws/i1" },
+      const inst = await loadOrThrow(h, "i1");
+      expect(inst.kernelStatus).toBe("ACTIVE");
+      expect(inst.currentStep).toBe("implement");
+      expect(inst.runtimeContext).toEqual({ state: "ready", ref: SPEC_REF });
+      h.close();
+    });
+
+    it("K4 deferred: READY holds WAITING(kickoff_pending), Accepted", async () => {
+      const h = makeHarness((raw) => ({ ...requiredContext(raw), activation: { mode: "deferred_kickoff" } }));
+      const requestId = await provisioned(h, { deferred: true });
+      const outcome = await h.kernel.runtimeContextReady("i1", requestId, SPEC_REF);
+      expect(outcome).toEqual({ kind: "accepted" });
+      const inst = await loadOrThrow(h, "i1");
+      expect(inst.kernelStatus).toBe("WAITING");
+      expect(inst.wait).toEqual({
+        kind: "kickoff_pending",
+        requestedBy: "activation",
+        resumeEvents: ["KICKOFF"],
       });
       h.close();
     });
 
-    it("required + ref ABSENT → throw (the provider machinery is P3's), op unconsumed", async () => {
+    it("K3 correlation: a wrong request_id READY is INERT — no state change", async () => {
       const h = makeHarness(requiredContext);
-      await h.kernel.create({ instanceId: "i1", templateRef: REF, task: "T" });
-      await expect(h.kernel.start({ instanceId: "i1", opId: "op" })).rejects.toThrow(
-        /declares runtimeContext 'required'/,
-      );
-      // The op was never consumed — a corrected retry with the SAME id works.
-      const retried = await h.kernel.start({
-        instanceId: "i1",
-        opId: "op",
-        runtimeContextRef: "/ws",
+      await provisioned(h);
+      const before = await loadOrThrow(h, "i1");
+      expect(await h.kernel.runtimeContextReady("i1", "wrong-req", SPEC_REF)).toEqual({
+        kind: "ignored",
       });
-      expect(retried.kind).toBe("activated");
+      expect(await loadOrThrow(h, "i1")).toEqual(before);
       h.close();
     });
 
-    it("an empty-string ref → throw on every lane (the value grammar)", async () => {
-      const h = makeHarness();
-      await h.kernel.create({ instanceId: "i1", templateRef: REF, task: "T" });
-      await expect(
-        h.kernel.start({ instanceId: "i1", opId: "op", runtimeContextRef: "" }),
-      ).rejects.toThrow(/nonempty string/);
-      h.close();
-    });
-
-    it("an empty-string ref throws on the DECLARED variant too — '' is not a ref before the required branch", async () => {
+    it("K2 kind boundary: a WRONG-kind ref is INERT — no state change, stays requested", async () => {
       const h = makeHarness(requiredContext);
-      await h.kernel.create({ instanceId: "i1", templateRef: REF, task: "T" });
+      const requestId = await provisioned(h);
+      const before = await loadOrThrow(h, "i1");
+      expect(
+        await h.kernel.runtimeContextReady("i1", requestId, { kind: "container", locator: "/x" }),
+      ).toEqual({ kind: "ignored" });
+      expect(await loadOrThrow(h, "i1")).toEqual(before);
+      h.close();
+    });
+
+    it("K2 terminal-sink: a late READY after CANCEL does not resurrect the run — INERT", async () => {
+      const h = makeHarness(requiredContext);
+      const requestId = await provisioned(h);
+      await h.kernel.cancel({ instanceId: "i1", opId: "op-c" });
+      const before = await loadOrThrow(h, "i1");
+      expect(await h.kernel.runtimeContextReady("i1", requestId, SPEC_REF)).toEqual({
+        kind: "ignored",
+      });
+      expect(await loadOrThrow(h, "i1")).toEqual(before);
+      h.close();
+    });
+
+    it("K2 transport gate: a non-canonical ref is an integrity throw (no state change)", async () => {
+      const h = makeHarness(requiredContext);
+      const requestId = await provisioned(h);
+      const before = await loadOrThrow(h, "i1");
       await expect(
-        h.kernel.start({ instanceId: "i1", opId: "op", runtimeContextRef: "" }),
-      ).rejects.toThrow(/nonempty string/);
+        h.kernel.runtimeContextReady("i1", requestId, {
+          kind: "worktree",
+          locator: { bad: Number.POSITIVE_INFINITY },
+        }),
+      ).rejects.toThrow(/transport gate/);
+      expect(await loadOrThrow(h, "i1")).toEqual(before);
+      h.close();
+    });
+
+    it("K3: an unknown-instance READY is the inert droppable unknown_instance", async () => {
+      const h = makeHarness(requiredContext);
+      expect(await h.kernel.runtimeContextReady("ghost", "r", SPEC_REF)).toEqual({
+        kind: "rejected",
+        reason: "unknown_instance",
+      });
+      h.close();
+    });
+
+    it("SM1: a synchronous-completion provider is HELD until the START commit — the run reaches ready/ACTIVE", async () => {
+      // The provider fires READY INSIDE provision() (before the requested
+      // marker commits). A deliver-before-commit impl would lose it (the run
+      // stuck `requested`); the seam holds it until conclusion → ACTIVE.
+      const h = makeHarness(requiredContext, undefined, { script: [{ fireOnProvision: SPEC_REF }] });
+      await h.kernel.create({ instanceId: "i1", templateRef: REF, task: "T" });
+      const started = await h.kernel.start({ instanceId: "i1", opId: "op" });
+      expect(started).toEqual({ kind: "accepted" });
+      const inst = await loadOrThrow(h, "i1");
+      expect(inst.kernelStatus).toBe("ACTIVE");
+      expect(inst.runtimeContext).toEqual({ state: "ready", ref: SPEC_REF });
+      h.close();
+    });
+
+    it("SM3: a held completion on a FAILED (port-breach) attempt is delivered INERT, never dropped, no crash beyond the breach", async () => {
+      const h = makeHarness(requiredContext, undefined, {
+        script: [{ fireOnProvision: SPEC_REF, rejectAck: true }],
+      });
+      await h.kernel.create({ instanceId: "i1", templateRef: REF, task: "T" });
+      const before = await loadOrThrow(h, "i1");
+      await expect(h.kernel.start({ instanceId: "i1", opId: "op" })).rejects.toThrow(/port breach/i);
+      // The held completion flushed at conclusion delivers inert (correlation
+      // rejects — no requested marker committed); zero state change.
+      expect(await loadOrThrow(h, "i1")).toEqual(before);
       h.close();
     });
   });

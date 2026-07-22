@@ -9,13 +9,18 @@ import type {
   OpId,
   RoleName,
   RuntimeContext,
+  RuntimeContextReadyOutcome,
+  RuntimeContextRef,
   StartOutcome,
   TemplateRef,
   WaitReason,
   WorkflowInstance,
   WorkflowTemplate,
 } from "../domain/index.js";
+import { resolveRuntimeContextRequirement } from "../domain/index.js";
 import type { DefinitionStore } from "../ports/definition.js";
+import type { LifecycleFactKind } from "../domain/index.js";
+import type { ProviderRegistry } from "../ports/runtimeContextProvider.js";
 import type { StorePort } from "../ports/store.js";
 import { admitLifecycle } from "./admission.js";
 import { deriveDispatchIntent } from "./dispatchIntent.js";
@@ -37,6 +42,44 @@ import { deriveDispatchIntent } from "./dispatchIntent.js";
 export interface LifecycleDeps {
   readonly store: StorePort;
   readonly definitions: DefinitionStore;
+  /**
+   * E1/T3 (packet ch12-p3): the injected provider registry — reached from
+   * `activate`/`activateOrHold`/`deriveDispatchIntent` (the projection leg)
+   * and from `start` (spec resolution). The kernel never branches on a
+   * concrete provider type (REV-E-NO-ADAPTER-BRANCH).
+   */
+  readonly providerRegistry: ProviderRegistry;
+}
+
+/**
+ * The provisioning extras `start` needs beyond LifecycleDeps (packet
+ * ch12-p3, S/SM families) — the request-id minter and the completion-seam
+ * conclusion signal. Both are kernel-originated composition wiring: the seam
+ * BUFFER lives inside `createKernel`; `start` signals `concludeAttempt` at
+ * EACH provisioning attempt's conclusion (SM3), never on an event-loop
+ * scheduling primitive.
+ */
+export interface StartDeps extends LifecycleDeps {
+  /** Mint a FRESH unique request_id per provisioning attempt (S3/S5). */
+  readonly newRequestId: () => string;
+  /** Signal a provisioning attempt's conclusion — the seam flushes any held
+   * completion for this request_id (SM3). PER-ATTEMPT (a superseded id
+   * concludes at ITS attempt, inert by correlation). */
+  readonly concludeAttempt: (requestId: string) => Promise<void>;
+}
+
+/**
+ * The extras RUNTIME_CONTEXT_READY needs (packet ch12-p3, K family / PR4):
+ * the ref transport gate — throws iff the delivered ref is not
+ * canonical-JSON-safe (reuses the injected emit-lib; the kernel imports no
+ * emit).
+ */
+export interface ReadyDeps extends LifecycleDeps {
+  readonly assertRefCanonical: (
+    instanceId: InstanceId,
+    requestId: string,
+    ref: RuntimeContextRef,
+  ) => void;
 }
 
 export interface CreateInput {
@@ -53,9 +96,6 @@ export interface CreateInput {
 export interface StartInput {
   readonly instanceId: InstanceId;
   readonly opId: OpId;
-  /** The interim window carrier (L3) — the ch11-P3b seam's ready-ref,
-   * re-homed onto START for the P1b–P3 window; retires at P3 (C14). */
-  readonly runtimeContextRef?: string;
 }
 
 export interface KickoffInput {
@@ -103,70 +143,130 @@ function resolveBinding(
 }
 
 /**
- * L3 (packet ch12-p1b): the interim window context lanes — the
- * ch11-P3b lane table RE-HOMED onto START byte-for-byte; runs
- * POST-admission, PRE-commit (a throw = no state change, the op_id
- * unconsumed). Retirement is P3's (C14 — the wire key, the CLI eager
- * guard, and the behavior-level reconciliation).
- *   undeclared + ref ABSENT  → `ready(∅)` (C18's none lane)
- *   undeclared + ref PRESENT → THROW (surplus input — fail-closed)
- *   "required" + ref PRESENT → ready({kind: "worktree", locator}) (X1)
- *   "required" + ref ABSENT  → THROW (the provider machinery is P3's)
- *   empty-string ref         → THROW on every lane (the value grammar)
- */
-function resolveWindowContext(
-  template: WorkflowTemplate,
-  ref: string | undefined,
-): RuntimeContext {
-  if (ref === "") {
-    throw new Error(
-      "start failed (runtime context): runtimeContextRef must be a nonempty string — '' is not a ref and not null",
-    );
-  }
-  const declared = template.runtimeContext === "required";
-  if (declared) {
-    if (ref === undefined) {
-      throw new Error(
-        "start failed (runtime context): template declares runtimeContext 'required' but no runtimeContextRef was supplied — " +
-          "the provider machinery arrives at P3; supply a ready ref, or the run is unstartable in this window",
-      );
-    }
-    return { state: "ready", ref: { kind: "worktree", locator: ref } };
-  }
-  if (ref !== undefined) {
-    throw new Error(
-      "start failed (runtime context): a runtimeContextRef was supplied for a context-free workflow (no runtimeContext declaration) — " +
-        "surplus input has zero consuming paths; fail-closed rather than silently drop it",
-    );
-  }
-  return { state: "ready", ref: null };
-}
-
-/**
  * l0d-pseudocode/activate (L7): internal — never routed, never exported
  * as a handler. The activation WRITE-SET (ACTIVE + template.start +
  * round 1) rides the CALLER's atomic commit; this function is the
  * post-commit half — the readiness REQUIRE (readiness gates dispatch;
- * structurally satisfied at every P1b call site, guarded FAIL-LOUD —
- * the E4 pattern) and the first dispatch derived from COMMITTED state
- * (commit ≠ deliver).
+ * structurally satisfied at every call site, guarded FAIL-LOUD — the E4
+ * pattern) and the first dispatch derived from COMMITTED state (commit ≠
+ * deliver). E1 (packet ch12-p3): the `providerRegistry` is threaded to
+ * `deriveDispatchIntent` for the runtime-context projection leg.
  */
 function activate(
   committed: WorkflowInstance,
   template: WorkflowTemplate,
-): { readonly kind: "activated"; readonly instanceId: InstanceId; readonly version: number; readonly intent: ReturnType<typeof deriveDispatchIntent> } {
+  providerRegistry: ProviderRegistry,
+): {
+  readonly kind: "activated";
+  readonly instanceId: InstanceId;
+  readonly version: number;
+  readonly intent: ReturnType<typeof deriveDispatchIntent>;
+} {
   if (committed.runtimeContext.state !== "ready" || committed.task === null) {
     throw new Error(
       `kernel integrity: activation of instance '${committed.instanceId}' without a ready context and task (readiness gates dispatch)`,
     );
   }
-  const intent = deriveDispatchIntent(committed, template, template.start);
+  const intent = deriveDispatchIntent(committed, template, template.start, providerRegistry);
   return {
     kind: "activated",
     instanceId: committed.instanceId,
     version: committed.version,
     intent,
   };
+}
+
+/** The activated/held outcome of `activateOrHold` (packet ch12-p3), plus the
+ * internal `restart` signal returned on a CAS conflict so the CALLER's
+ * load-first loop re-admits on fresh state. */
+type ActivateOrHoldResult =
+  | { readonly kind: "activated"; readonly instanceId: InstanceId; readonly version: number; readonly intent: ReturnType<typeof deriveDispatchIntent> }
+  | { readonly kind: "accepted" }
+  | { readonly kind: "duplicate" }
+  | { readonly kind: "rejected"; readonly reason: "op_id_collision" }
+  | { readonly kind: "restart" };
+
+/**
+ * l0e-pseudocode/activate_or_hold (packet ch12-p3, K4): the SHARED
+ * post-readiness decision, EXTRACTED from P1b's inline START fork so
+ * RUNTIME_CONTEXT_READY reuses it. The immediate branch composes the
+ * activation write-set (ACTIVE + template.start + round 1) into the SAME
+ * atomic commit as the `ready(ref)`/`ready(∅)` write; the deferred branch
+ * composes the WAITING(kickoff_pending) hold. START's none path passes the
+ * STARTED fact; READY passes `fact: null` (a kernel event carries no op fact).
+ * A CAS conflict returns `restart` for the caller's loop.
+ */
+async function activateOrHold(
+  deps: LifecycleDeps,
+  args: {
+    readonly instance: WorkflowInstance;
+    readonly template: WorkflowTemplate;
+    readonly newRuntimeContext: RuntimeContext;
+    readonly fact: { readonly kind: LifecycleFactKind; readonly opId: OpId } | null;
+    readonly expectedVersion: number;
+  },
+): Promise<ActivateOrHoldResult> {
+  const { instance, template, newRuntimeContext, fact, expectedVersion } = args;
+  if (instance.activationMode === "immediate") {
+    // The composed activation commit (L2/L7): ACTIVE + template.start + round
+    // 1 + the resolved context (+ the STARTED fact on the none path), one move.
+    const result = await deps.store.commitLifecycle({
+      instanceId: instance.instanceId,
+      expectedVersion,
+      fact,
+      newKernelStatus: "ACTIVE",
+      newTerminalDisposition: null,
+      newWait: null,
+      newCurrentStep: template.start,
+      newRound: 1,
+      newRuntimeContext,
+    });
+    switch (result.kind) {
+      case "duplicate_op":
+        return { kind: "duplicate" };
+      case "op_id_collision":
+        return { kind: "rejected", reason: "op_id_collision" };
+      case "cas_conflict":
+        return { kind: "restart" };
+      case "committed":
+        // The post-commit half of activate (L7) — derive AFTER the commit,
+        // from committed state (the task is guaranteed present in immediate mode).
+        return activate(
+          {
+            ...instance,
+            kernelStatus: "ACTIVE",
+            currentStep: template.start,
+            round: 1,
+            runtimeContext: newRuntimeContext,
+            wait: null,
+            version: result.version,
+          },
+          template,
+          deps.providerRegistry,
+        );
+    }
+  }
+  // deferred_kickoff: the hold commit — WAITING(kickoff_pending) + the
+  // resolved context (+ the STARTED fact on the none path), one move (L2/T3).
+  const result = await deps.store.commitLifecycle({
+    instanceId: instance.instanceId,
+    expectedVersion,
+    fact,
+    newKernelStatus: "WAITING",
+    newTerminalDisposition: null,
+    newWait: KICKOFF_WAIT,
+    newRuntimeContext,
+  });
+  switch (result.kind) {
+    case "duplicate_op":
+      return { kind: "duplicate" };
+    case "op_id_collision":
+      return { kind: "rejected", reason: "op_id_collision" };
+    case "cas_conflict":
+      return { kind: "restart" };
+    case "committed":
+      return { kind: "accepted" };
+  }
 }
 
 async function loadPinnedTemplate(
@@ -232,54 +332,98 @@ export async function createInstance(
 }
 
 /**
- * l0d-pseudocode/START (L2/L3): single-shot provisioning-or-hold. The
- * none-requirement path resolves `ready(∅)` (or the window's seam ref)
- * and continues INTO the activate_or_hold fork on the instance's
- * snapshotted mode; EVERY successful START commits the STARTED fact in
- * the SAME atomic move (the op_id's consumption record — C12). The
- * provider legs (spec form, `requested` marker) are P3's.
+ * l0e-pseudocode/START (packet ch12-p3, S family; completing
+ * l0d-pseudocode/START): single-shot provisioning-or-hold. After the
+ * single-shot admission, the MATERIALIZED requirement (read through
+ * `resolveRuntimeContextRequirement` over the admission-normalized field —
+ * T1/R1, never re-derived) forks:
+ *   - `none`  → `ready(∅)` + the STARTED fact + `activate_or_hold` (P1b's
+ *     path, unchanged in effect);
+ *   - `required(spec)` → resolve the provider (unresolved →
+ *     `Rejected(runtime_context_provider_unavailable)` PRE-COMMIT, the op_id
+ *     unconsumed, S2), `provision(...)` FIRST (the awaited value is the
+ *     DETACH ACK — a throw/pre-commit-rejecting ack is a PORT BREACH, S4),
+ *     then commit `requested(request_id)` + the STARTED fact in ONE atomic
+ *     move (status stays CREATED) and return `Accepted` (the dispatch arrives
+ *     on the async READY path, S3).
+ * The completion seam is CONCLUSION-SIGNALLED (SM3): `start` signals
+ * `concludeAttempt` at EACH provisioning attempt's conclusion — the
+ * CAS-restart superseded id inline (per-attempt), and the terminal/failed
+ * attempt via the leak-proof `try/finally` backstop over the restart loop.
  */
-export async function start(deps: LifecycleDeps, input: StartInput): Promise<StartOutcome> {
-  for (;;) {
-    const instance = await deps.store.loadInstance(input.instanceId);
-    if (instance === null) {
-      return { kind: "rejected", reason: "unknown_instance" };
-    }
-    const existing = await deps.store.findOp(input.instanceId, input.opId);
-    const admitted = admitLifecycle({
-      op: { existing, factKind: "STARTED" },
-      stateHolds:
-        instance.kernelStatus === "CREATED" && instance.runtimeContext.state === "none",
-    });
-    if (admitted.kind === "duplicate") {
-      return { kind: "duplicate" };
-    }
-    if (admitted.kind === "rejected") {
-      return admitted;
-    }
-    if (admitted.kind === "state_violation") {
-      // The unnamed single-shot guard (A4): START is requestable only
-      // from genesis — bare-REQUIRE semantics, no state change, the
-      // op_id unconsumed.
-      throw new Error(
-        `start failed (single-shot guard): instance '${input.instanceId}' is not CREATED with an unprovisioned context — START is requestable only from none`,
-      );
-    }
-    const template = await loadPinnedTemplate(deps.definitions, instance);
-    const context = resolveWindowContext(template, input.runtimeContextRef);
-    if (instance.activationMode === "immediate") {
-      // The composed activation commit (L2/L7): ACTIVE + template.start
-      // + round 1 + the resolved context + the STARTED fact, one move.
+export async function start(deps: StartDeps, input: StartInput): Promise<StartOutcome> {
+  const mintedRequestIds: string[] = [];
+  try {
+    for (;;) {
+      const instance = await deps.store.loadInstance(input.instanceId);
+      if (instance === null) {
+        return { kind: "rejected", reason: "unknown_instance" };
+      }
+      const existing = await deps.store.findOp(input.instanceId, input.opId);
+      const admitted = admitLifecycle({
+        op: { existing, factKind: "STARTED" },
+        stateHolds:
+          instance.kernelStatus === "CREATED" && instance.runtimeContext.state === "none",
+      });
+      if (admitted.kind === "duplicate") {
+        return { kind: "duplicate" };
+      }
+      if (admitted.kind === "rejected") {
+        return admitted;
+      }
+      if (admitted.kind === "state_violation") {
+        // The unnamed single-shot guard (A4): START is requestable only
+        // from genesis — bare-REQUIRE semantics, no state change, the
+        // op_id unconsumed.
+        throw new Error(
+          `start failed (single-shot guard): instance '${input.instanceId}' is not CREATED with an unprovisioned context — START is requestable only from none`,
+        );
+      }
+      const template = await loadPinnedTemplate(deps.definitions, instance);
+      // T1/R1: read the MATERIALIZED requirement — a total view over the
+      // admission-normalized field (the interim `resolveWindowContext` seam
+      // and the `runtimeContextRef` carrier retire here, W1).
+      const requirement = resolveRuntimeContextRequirement(template.runtimeContext);
+      if (requirement.state === "none") {
+        // The none path (P1b's, unchanged): trivially ready — nothing to
+        // provision — ready(∅) + the STARTED fact + activate_or_hold.
+        const result = await activateOrHold(deps, {
+          instance,
+          template,
+          newRuntimeContext: { state: "ready", ref: null },
+          fact: { kind: "STARTED", opId: input.opId },
+          expectedVersion: instance.version,
+        });
+        if (result.kind === "restart") {
+          continue;
+        }
+        return result;
+      }
+      // The spec path (S2): resolve the provider against the injected registry.
+      const provider = deps.providerRegistry.resolve(requirement.spec.provider);
+      if (provider === null) {
+        // Name-resolution failure = base contract error, a PRE-COMMIT reject:
+        // NO `requested` marker, NO STARTED fact, the op_id NOT consumed.
+        return { kind: "rejected", reason: "runtime_context_provider_unavailable" };
+      }
+      const requestId = deps.newRequestId();
+      mintedRequestIds.push(requestId);
+      // S3/S4: provision FIRST — an external async OUTSIDE any transaction.
+      // The awaited fulfillment is the DETACH ACKNOWLEDGMENT; a synchronous
+      // throw OR a pre-commit-rejecting ack propagates as a PORT BREACH
+      // (fail-loud, NO state change — nothing committed yet, the op_id
+      // unconsumed).
+      await provider.provision(instance.instanceId, requestId, requirement.spec);
+      // S3: the L0d single-shot marker + the STARTED fact in ONE atomic move;
+      // status stays CREATED (= v1 PREPARING_WORKSPACE).
       const result = await deps.store.commitLifecycle({
         instanceId: instance.instanceId,
         expectedVersion: instance.version,
         fact: { kind: "STARTED", opId: input.opId },
-        newKernelStatus: "ACTIVE",
+        newKernelStatus: "CREATED",
         newTerminalDisposition: null,
         newWait: null,
-        newCurrentStep: template.start,
-        newRound: 1,
-        newRuntimeContext: context,
+        newRuntimeContext: { state: "requested", requestId },
       });
       switch (result.kind) {
         case "duplicate_op":
@@ -287,45 +431,103 @@ export async function start(deps: LifecycleDeps, input: StartInput): Promise<Sta
         case "op_id_collision":
           return { kind: "rejected", reason: "op_id_collision" };
         case "cas_conflict":
+          // S5: this attempt is superseded — conclude it NOW (per-attempt
+          // release, before the next attempt provisions under a FRESH id); a
+          // buffered completion delivers inert by correlation (K3).
+          await deps.concludeAttempt(requestId);
           continue;
         case "committed":
-          // The post-commit half of activate (L7) — derive AFTER the
-          // commit, from committed state.
-          return activate(
-            {
-              ...instance,
-              kernelStatus: "ACTIVE",
-              currentStep: template.start,
-              round: 1,
-              runtimeContext: context,
-              wait: null,
-              version: result.version,
-            },
-            template,
-          );
+          return { kind: "accepted" };
       }
     }
-    // deferred_kickoff: the hold commit — WAITING(kickoff_pending) +
-    // the resolved context + the STARTED fact, one move (L2/T3).
-    const result = await deps.store.commitLifecycle({
-      instanceId: instance.instanceId,
-      expectedVersion: instance.version,
-      fact: { kind: "STARTED", opId: input.opId },
-      newKernelStatus: "WAITING",
-      newTerminalDisposition: null,
-      newWait: KICKOFF_WAIT,
-      newRuntimeContext: context,
-    });
-    switch (result.kind) {
-      case "duplicate_op":
-        return { kind: "duplicate" };
-      case "op_id_collision":
-        return { kind: "rejected", reason: "op_id_collision" };
-      case "cas_conflict":
-        continue;
-      case "committed":
-        return { kind: "accepted" };
+  } finally {
+    // SM3 leak-proof backstop: flush every minted id NOT already released at
+    // its own attempt's conclusion (the committed/rejected/threw attempt).
+    // Idempotent — an already-concluded id is a no-op.
+    for (const requestId of mintedRequestIds) {
+      await deps.concludeAttempt(requestId);
     }
+  }
+}
+
+/**
+ * l0e-pseudocode/RUNTIME_CONTEXT_READY (packet ch12-p3, K family): the new
+ * kernel event handler — in-process only (no external ingress, C13); driven
+ * by the completion seam or directly by tests. The checks run in ONE ORDER
+ * (K2): the ADMISSION rungs FIRST — terminal-sink (`kernel_status ≠ TERMINAL`
+ * — a late READY after CANCEL/FAIL must not resurrect the run) then
+ * correlation (`runtime_context = requested(request_id)` — the readiness for
+ * the request WE issued); a rung-rejected event is INERT (`ignored`, mutates
+ * NOTHING). THEN the ref's transport gate (canonical-JSON-safety, PR4 —
+ * breach = integrity throw), THEN the `required(spec)` bind (structurally
+ * satisfied — a request was issued ⇒ required), THEN the ONLY business
+ * validation: the kind boundary (`ref.kind = spec.kind`; a mismatch is inert,
+ * NO state change — the LOCATOR is provider-defined, NEVER validated). An
+ * accepted readiness commits `ready(ref)` and continues into the SHARED
+ * `activate_or_hold` fork.
+ */
+export async function runtimeContextReady(
+  deps: ReadyDeps,
+  instanceId: InstanceId,
+  requestId: string,
+  ref: RuntimeContextRef,
+): Promise<RuntimeContextReadyOutcome> {
+  for (;;) {
+    const instance = await deps.store.loadInstance(instanceId);
+    if (instance === null) {
+      // L8: an in-process event answered with an inert rejection is
+      // droppable without a crash (the C15 event-anomaly semantics).
+      return { kind: "rejected", reason: "unknown_instance" };
+    }
+    // K2 admission rung 1 — terminal-sink (inert).
+    if (instance.kernelStatus === "TERMINAL") {
+      return { kind: "ignored" };
+    }
+    // K2 admission rung 2 — correlation (inert: duplicate / unsolicited /
+    // already-resolved / requested-of-a-different-id all fail here, K3).
+    if (
+      instance.runtimeContext.state !== "requested" ||
+      instance.runtimeContext.requestId !== requestId
+    ) {
+      return { kind: "ignored" };
+    }
+    // K2 transport gate (PR4): the ref must be canonical-JSON-safe — a
+    // violating provider return is a kernel/config integrity throw.
+    deps.assertRefCanonical(instanceId, requestId, ref);
+    const template = await loadPinnedTemplate(deps.definitions, instance);
+    // K2 required(spec) bind: made explicit — a request was issued ⇒ a
+    // context is required (structurally satisfied; START only sets the marker
+    // on the required path).
+    const requirement = resolveRuntimeContextRequirement(template.runtimeContext);
+    if (requirement.state !== "required") {
+      throw new Error(
+        `kernel integrity: instance '${instanceId}' carries requested() but its pinned template declares no runtime context`,
+      );
+    }
+    // K2 kind boundary — the ONLY business validation (inert on mismatch, no
+    // state change; the run stays requested).
+    if (ref.kind !== requirement.spec.kind) {
+      return { kind: "ignored" };
+    }
+    // K4 accepted readiness: ready(ref) + activate_or_hold (fact: null — a
+    // kernel event carries no op fact).
+    const result = await activateOrHold(deps, {
+      instance,
+      template,
+      newRuntimeContext: { state: "ready", ref },
+      fact: null,
+      expectedVersion: instance.version,
+    });
+    if (result.kind === "restart") {
+      continue;
+    }
+    if (result.kind === "duplicate" || result.kind === "rejected") {
+      // Structurally unreachable: a fact-less commit consumes no idempotency key.
+      throw new Error(
+        `kernel integrity: fact-less RUNTIME_CONTEXT_READY commit reported '${result.kind}' for instance '${instanceId}'`,
+      );
+    }
+    return result;
   }
 }
 
@@ -394,6 +596,7 @@ export async function kickoff(
             version: result.version,
           },
           template,
+          deps.providerRegistry,
         );
     }
   }

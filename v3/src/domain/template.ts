@@ -73,6 +73,59 @@ export type CapabilityProfile = Readonly<
   Record<RoleName, Readonly<Record<StepId, readonly EventType[]>>>
 >;
 
+/**
+ * l0e/RuntimeContextSpec (packet ch12-p3, T1/R3): the provisioning spec a
+ * template declares when it requires a runtime context — the FIXED-KEYSET
+ * `{kind, provider, config?}` (C3). `kind` selects the context kind
+ * (`worktree` for v1), `provider` names the fulfiller resolved against the
+ * injected `ProviderRegistry` at START, and `config` is an OPTIONAL
+ * provider-owned raw pass-through map (kernel-uninterpreted). The `kind`/
+ * `provider` string GRAMMARS are a parameterized family whose source-form
+ * lanes land at P4 (C25); at P3 the spec arrives as a constructed object on
+ * the direct-construction channel.
+ */
+export interface RuntimeContextSpec {
+  readonly kind: string;
+  readonly provider: string;
+  readonly config?: Readonly<Record<string, unknown>>;
+}
+
+/**
+ * l0e/RuntimeContextRequirement (packet ch12-p3, T1): the read-time VIEW of
+ * a template's runtime-context declaration — `none` (the workflow declares
+ * no runtime context) or `required(spec)`. Materialized ONCE AT ADMISSION
+ * (`admitTemplate` normalizes the authored field; R1/C4), read through the
+ * total `resolveRuntimeContextRequirement` view over the already-normalized
+ * admitted value — never the first materialization point.
+ */
+export type RuntimeContextRequirement =
+  | { readonly state: "none" }
+  | { readonly state: "required"; readonly spec: RuntimeContextSpec };
+
+/**
+ * The read-time TOTAL view over the admission-normalized `runtimeContext`
+ * field (packet ch12-p3, T1/R1): `"none"` (or absent — the structurally-dead
+ * type-level belt, since admission normalizes absent → `"none"`, the G3
+ * `activation ?? immediate` culture) → `{state:"none"}`; a spec map →
+ * `{state:"required", spec}`. The bare `"required"` string is refused at
+ * admission (R2) — reaching it here is structurally-dead integrity drift (the
+ * G3 dead-belt precedent). START and `deriveDispatchIntent` READ through this
+ * view; they never re-derive the requirement from an absent field.
+ */
+export function resolveRuntimeContextRequirement(
+  field: RuntimeContextSpec | "none" | "required" | undefined,
+): RuntimeContextRequirement {
+  if (field === undefined || field === "none") {
+    return { state: "none" };
+  }
+  if (field === "required") {
+    throw new Error(
+      "kernel integrity: an unmaterialized bare 'required' runtimeContext reached the read view — admission should have refused it (R2)",
+    );
+  }
+  return { state: "required", spec: field };
+}
+
 export interface WorkflowTemplate {
   readonly ref: TemplateRef;
   readonly start: StepId;
@@ -103,18 +156,22 @@ export interface WorkflowTemplate {
    */
   readonly round?: { readonly advanceOnArrivalAt: readonly StepId[] };
   /**
-   * D1 (packet ch11-P3a): the C18 runtime-context declaration at the DOMAIN
-   * grain — the sole legal value is the string literal `"required"` (the
-   * literal type forecloses every other value on the direct channel; since
-   * ch11-P4 the file-channel illegal-value lane is admission's A3, guarding
-   * the raw YAML value the walk passes through F4). ABSENT = a context-free
-   * workflow. A template declaring any process gate (a
-   * `requiresRuntimeContext` registration) without this field FAILS admission
-   * (the C19 cross-rule, V5). `admitTemplate` carries the field through
-   * unchanged (the template-root spread). Named exclusion with home: the
-   * ref-supplying start/provisioning surface — ch9.
+   * D1 (packet ch11-P3a → ch12-p3, T1): the C2/C4 runtime-context declaration
+   * at the DOMAIN grain — the window's AUTHORED domain BROADENED at P3
+   * (`"required" | undefined` → `RuntimeContextSpec | "none" | "required" |
+   * undefined`): a directly-constructed spec map (`required(spec)`), the
+   * authored string `"none"` (C2), the RETIRED ch11 `"required"` string (to
+   * be REFUSED LOUD at admission, R2), or absent (a context-free workflow, ≡
+   * `"none"`). `admitTemplate` MATERIALIZES the requirement ONCE AT ADMISSION
+   * (R1/C4 — the activation `?`-belt precedent): it refuses the bare
+   * `"required"` string and normalizes `absent → "none"`, so a
+   * successfully-admitted template's field ∈ { `"none"`, `RuntimeContextSpec` }
+   * — NO absent state downstream. The read-time view is
+   * `resolveRuntimeContextRequirement`. A template declaring any process gate
+   * without a provisionable requirement FAILS admission (the C5 cross-rule).
+   * The `kind`/`provider` STRING-GRAMMAR source-form lanes are P4's (C25).
    */
-  readonly runtimeContext?: "required";
+  readonly runtimeContext?: RuntimeContextSpec | "none" | "required";
   /**
    * G3 (packet ch12-p1b): the C1 activation default at the DOMAIN
    * grain — the per-workflow default mode. OPTIONAL on a raw

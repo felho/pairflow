@@ -9,10 +9,13 @@ export type {
   AdmittedTemplate,
   AgentConfig,
   CapabilityProfile,
+  RuntimeContextRequirement,
+  RuntimeContextSpec,
   Step,
   TemplateRef,
   WorkflowTemplate,
 } from "./template.js";
+export { resolveRuntimeContextRequirement } from "./template.js";
 export type {
   EffectiveProcessConfig,
   GateBinding,
@@ -36,7 +39,7 @@ export type {
   WorkflowInstance,
 } from "./instance.js";
 export type { EventEnvelope } from "./envelope.js";
-export type { ContextPacket, DispatchIntent } from "./dispatch.js";
+export type { ContextPacket, DispatchIntent, RuntimeContextProjection } from "./dispatch.js";
 export type {
   Accepted,
   Activated,
@@ -46,6 +49,7 @@ export type {
   FailOutcome,
   KickoffOutcome,
   Outcome,
+  RuntimeContextReadyOutcome,
   StartOutcome,
   Terminated,
 } from "./outcome.js";

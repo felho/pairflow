@@ -220,19 +220,29 @@
     "status": "realized"
   },
   "l0e-pseudocode/RUNTIME_CONTEXT_READY": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/lifecycle.ts#runtimeContextReady",
+    "disposition": "implement",
+    "status": "realized"
   },
   "l0e-pseudocode/RuntimeContextProvider": {
-    "status": "pending"
+    "codeRef": "v3/src/ports/runtimeContextProvider.ts#createStaticProviderRegistry",
+    "disposition": "implement",
+    "status": "realized"
   },
   "l0e-pseudocode/START": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/lifecycle.ts#start",
+    "disposition": "alias/inherited",
+    "status": "realized"
   },
   "l0e-pseudocode/activate_or_hold": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/lifecycle.ts#activateOrHold",
+    "disposition": "implement",
+    "status": "realized"
   },
   "l0e-pseudocode/dispatch_intent": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/dispatchIntent.ts#deriveDispatchIntent",
+    "disposition": "alias/inherited",
+    "status": "realized"
   },
   "l0f-mode-pseudocode/RESOLVE_START": {
     "status": "pending"

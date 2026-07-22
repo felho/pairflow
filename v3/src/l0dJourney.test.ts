@@ -1,3 +1,4 @@
+import { createStaticProviderRegistry } from "./ports/index.js";
 import { describe, expect, it } from "vitest";
 
 import { admitTemplate } from "./definition/index.js";
@@ -40,6 +41,7 @@ describe("the context-free deferred-hold journey (J1)", () => {
       run: () => Promise.reject(new Error("no process gates on this journey")),
     };
     const kernel = createKernel({
+      providerRegistry: createStaticProviderRegistry({}),
       store: handle.store,
       definitions: fixtureDefinitionStore(admitted.template),
       time: clock,

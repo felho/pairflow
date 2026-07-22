@@ -38,8 +38,6 @@ export interface HarnessCreateInput {
 export interface HarnessStartOpInput {
   readonly instanceId: InstanceId;
   readonly opId: OpId;
-  /** The interim window carrier (L3) — rides the START leg; retires at P3. */
-  readonly runtimeContextRef?: string;
 }
 
 export interface TraceSeams {
@@ -81,8 +79,6 @@ export type TraceStep =
       /** W3 (packet ch12-p1b): the START intent's op_id — fixture-declared,
        * deterministic; the STARTED fact appears as [1, opId]. */
       readonly opId: OpId;
-      /** The OPTIONAL ready ref, re-homed onto the START leg (L3). */
-      readonly runtimeContextRef?: string;
       /** Genesis is v1; the activation commit is v2 (W3's arithmetic). */
       readonly expect: { readonly currentStep: StepId; readonly version: 2 };
     }
@@ -249,9 +245,6 @@ export async function replayTrace(
       const startOutcome = await seams.start({
         instanceId: step.instanceId,
         opId: step.opId,
-        ...(step.runtimeContextRef !== undefined
-          ? { runtimeContextRef: step.runtimeContextRef }
-          : {}),
       });
       outcomes.push(startOutcome);
       if (startOutcome.kind !== "activated") {

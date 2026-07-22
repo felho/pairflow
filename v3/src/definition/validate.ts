@@ -1,7 +1,7 @@
 import { isAlias, isScalar } from "yaml";
 import type { Document } from "yaml";
 
-import type { AgentConfig, Step, WorkflowTemplate } from "../domain/index.js";
+import type { AgentConfig, RuntimeContextSpec, Step, WorkflowTemplate } from "../domain/index.js";
 import type { ValidationFinding } from "./errors.js";
 
 /**
@@ -740,7 +740,9 @@ export function validateTemplate(value: unknown, doc: Document, source: string):
     steps: builtSteps,
     terminal: terminalIds ?? [],
     roles: builtRoles,
-    ...(runtimeContextPresent ? { runtimeContext: runtimeContextRaw as "required" } : {}),
+    ...(runtimeContextPresent
+      ? { runtimeContext: runtimeContextRaw as RuntimeContextSpec | "none" | "required" }
+      : {}),
     ...(roundDomain !== undefined && stepsIsMap ? { round: roundDomain } : {}),
   };
   return { template, findings };

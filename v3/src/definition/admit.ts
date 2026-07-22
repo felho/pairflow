@@ -1,4 +1,10 @@
-import type { AdmittedTemplate, GateBinding, Step, WorkflowTemplate } from "../domain/index.js";
+import type {
+  AdmittedTemplate,
+  GateBinding,
+  RuntimeContextSpec,
+  Step,
+  WorkflowTemplate,
+} from "../domain/index.js";
 import { isCanonicalizable } from "../emit/opId.js";
 import type { GateCatalog } from "../ports/index.js";
 import type { ValidationFinding } from "./errors.js";
@@ -296,34 +302,50 @@ export function admitTemplate(template: WorkflowTemplate, catalog: GateCatalog):
     );
   }
 
-  // A7 (packet ch11-P3a, V5): the C19 cross-rule fires post-loop as EXACTLY
-  // ONE template-grain finding at the top-level `runtimeContext` path — never
-  // per binding, never C7-prefixed. It fires IFF the template declares ≥ 1
-  // process gate (a requiresRuntimeContext registration resolved above) AND
-  // `template.runtimeContext` is not `"required"`. The message names the
-  // triggering bindings (packet freedom — every trigger stays locatable);
-  // the single push holds even for N ≥ 2 offending gates (the collapse).
-  if (runtimeContextBindings.length > 0 && template.runtimeContext !== "required") {
+  // R2 (packet ch12-p3, C2/C25): the runtimeContext ILLEGAL-VALUE lane —
+  // detected FIRST (order is load-bearing, R4). The legal authored domain is
+  // absent, the string "none", or a spec MAP { kind, provider, config? }. The
+  // RETIRED ch11 bare "required" string fails admission LOUD with its
+  // migration text; any other non-"none" scalar/list is an uncoded illegal
+  // finding (the file-channel / cast-forged guard). An illegal value fires
+  // ONLY its own container finding — the C5 cross-rule below is SUPPRESSED as
+  // its dependent (ch8-C21).
+  const runtimeContext: unknown = template.runtimeContext;
+  let runtimeContextIllegal = false;
+  if (runtimeContext === "required") {
+    findings.push({
+      path: "runtimeContext",
+      message:
+        `runtimeContext: "required" is retired — author the spec map ` +
+        `{ kind, provider, config? } (a directly-constructed RuntimeContextSpec)`,
+    });
+    runtimeContextIllegal = true;
+  } else if (
+    runtimeContext !== undefined &&
+    runtimeContext !== "none" &&
+    !isMap(runtimeContext)
+  ) {
+    findings.push({
+      path: "runtimeContext",
+      message: `runtimeContext must be "none" or a spec map { kind, provider, config? } when present; got ${describeValue(runtimeContext)}`,
+    });
+    runtimeContextIllegal = true;
+  }
+
+  // R4 (packet ch12-p3, C5): the process↔workspace cross-rule — a template
+  // declaring ≥ 1 process gate needs a PROVISIONABLE runtime context (only a
+  // spec MAP provisions; authored "none" or absent resolves to none). Fires
+  // as EXACTLY ONE template-grain finding IFF the resolved requirement is not
+  // required(spec) AND the value is LEGAL (an illegal value fired only its
+  // own container finding above — this dependent lane is suppressed). The
+  // message names the triggering bindings (every trigger stays locatable).
+  if (runtimeContextBindings.length > 0 && !runtimeContextIllegal && !isMap(runtimeContext)) {
     findings.push({
       path: "runtimeContext",
       code: "runtime_context_required_for_process_gate",
       message:
-        `template declares process gate(s) requiring runtime context but does not set ` +
-        `runtimeContext: "required" (gates: ${runtimeContextBindings.join(", ")})`,
-    });
-  }
-
-  // A3 (packet ch11-P4, C18): the runtimeContext ILLEGAL-VALUE lane — a
-  // present value that is not the string "required" is an UNCODED finding
-  // at the top-level `runtimeContext` path (type-foreclosed on the
-  // well-typed direct channel; the lane guards the file channel and
-  // cast-forged direct values). It ACCUMULATES with the C19 cross-rule
-  // where both fire (a process-gated template with an illegal value).
-  const runtimeContext: unknown = template.runtimeContext;
-  if (runtimeContext !== undefined && runtimeContext !== "required") {
-    findings.push({
-      path: "runtimeContext",
-      message: `runtimeContext must be the string "required" when present; got ${describeValue(runtimeContext)}`,
+        `template declares process gate(s) requiring runtime context but does not ` +
+        `declare a provisionable runtimeContext spec { kind, provider } (gates: ${runtimeContextBindings.join(", ")})`,
     });
   }
 
@@ -403,10 +425,39 @@ export function admitTemplate(template: WorkflowTemplate, catalog: GateCatalog):
   // is never mutated). The FILE key stays unauthorable until P4 (the
   // ch8 unknown-key rejection stands — C25's window); an authored
   // direct-channel value is carried verbatim.
+  //
+  // R1 (packet ch12-p3, C4): the runtime-context requirement MATERIALIZED
+  // ONCE at admission — the SAME shape-preserving normalize move as
+  // activation. An absent key OR the authored string "none" becomes the
+  // "none" requirement; a spec map is kept. The bare "required" string and
+  // every illegal value were REFUSED above (findings block admission), so a
+  // successfully-admitted template's field ∈ { "none", RuntimeContextSpec } —
+  // no absent state downstream.
   const admitted = {
     ...template,
     steps: admittedSteps,
     activation: template.activation ?? { mode: "immediate" },
+    runtimeContext: normalizeRuntimeContext(template.runtimeContext),
   } as AdmittedTemplate;
   return { ok: true, template: admitted };
+}
+
+/**
+ * R1 (packet ch12-p3, C4): the admission-normalize move for the runtime-
+ * context requirement — absent ≡ authored "none" → "none"; a spec map kept.
+ * The bare "required" string is refused upstream (R2), so reaching it here is
+ * structurally-dead integrity drift.
+ */
+function normalizeRuntimeContext(
+  field: RuntimeContextSpec | "none" | "required" | undefined,
+): RuntimeContextSpec | "none" {
+  if (field === undefined || field === "none") {
+    return "none";
+  }
+  if (field === "required") {
+    throw new Error(
+      "kernel integrity: a bare 'required' runtimeContext reached admission normalization — R2 should have refused it",
+    );
+  }
+  return field;
 }

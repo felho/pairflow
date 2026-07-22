@@ -1,3 +1,4 @@
+import { createStaticProviderRegistry } from "./ports/index.js";
 import { createScriptedProcessGateRunner } from "./testkit/index.js";
 import { describe, expect, it } from "vitest";
 
@@ -80,6 +81,7 @@ describe("l0b golden trace — the walking skeleton end-to-end (on the harness)"
     // BOTH the definition store and the harness seam (T1).
     const admitted = admit(fixtureTemplate());
     const kernel = createKernel({
+      providerRegistry: createStaticProviderRegistry({}),
       processRunner: createScriptedProcessGateRunner([]),
       store: handle.store,
       definitions: fixtureDefinitionStore(admitted),
