@@ -145,7 +145,10 @@ async function startOne(db: string, deps: CliDeps): Promise<string> {
     version: number;
   };
   // `create` emits the Created outcome as data — the minted instance id is
-  // surfaced on stdout for scripting the create→start sequence (V2).
+  // surfaced on stdout for scripting the create→start sequence (V2). The
+  // EXACT keyset proves creation is genesis: NO `op_id` (creation mints only
+  // the instance id — a leaked op_id would fail this assert).
+  expect(Object.keys(createdDoc).sort()).toEqual(["instanceId", "kind", "version"]);
   expect(createdDoc.kind).toBe("created");
   expect(typeof createdDoc.instanceId).toBe("string");
   expect(createdDoc.instanceId).not.toBe("");
@@ -1448,7 +1451,7 @@ describe("cli — kickoff / cancel lanes (packet ch12-P4, V3)", () => {
     expect(again.stdout).toEqual([]);
   });
 
-  it("a replayed lifecycle op_id → Duplicate idempotent-success, exit 0", async () => {
+  it("a replayed CANCEL op_id → Duplicate idempotent-success, exit 0", async () => {
     const db = tempDbPath();
     // A fixed nonce makes two cancels derive the SAME op_id — the second is a
     // Duplicate (idempotent success), not a fresh commit.
@@ -1460,5 +1463,55 @@ describe("cli — kickoff / cancel lanes (packet ch12-P4, V3)", () => {
     const second = await run(["cancel", id, "--db", db], deps);
     expect(second.code).toBe(EXIT.ok);
     expect((JSON.parse(second.stdout[0] ?? "") as { kind: string }).kind).toBe("duplicate");
+  });
+
+  it("a replayed START op_id → Duplicate idempotent-success, exit 0 (the grid's start/replayed-op_id cell)", async () => {
+    const db = tempDbPath();
+    const deps = testDeps();
+    // create with fresh deps; the two STARTs share a FIXED nonce → the same
+    // op_id, so the second start is a Duplicate (not a fresh activation).
+    const created = await run(["create", "--db", db, "--task", "t"], deps);
+    expect(created.code).toBe(EXIT.ok);
+    const id = (JSON.parse(created.stdout[0] ?? "") as { instanceId: string }).instanceId;
+    const fixed = testDeps({ nonce: () => "nonce-start-fixed" });
+    const first = await run(["start", id, "--db", db], fixed);
+    expect(first.code).toBe(EXIT.ok);
+    expect((JSON.parse(first.stdout[0] ?? "") as { kind: string }).kind).toBe("activated");
+    const second = await run(["start", id, "--db", db], fixed);
+    expect(second.code).toBe(EXIT.ok);
+    expect((JSON.parse(second.stdout[0] ?? "") as { kind: string }).kind).toBe("duplicate");
+  });
+
+  it("kickoff of an already-TERMINAL run → state_violation THROW, internal 1 (the terminal-sink guard on kickoff — distinct from cancel-sink)", async () => {
+    const db = tempDbPath();
+    const deps = testDeps();
+    const id = await startOne(db, deps); // create→start (immediate) ⇒ ACTIVE
+    const cancelled = await run(["cancel", id, "--db", db], deps);
+    expect(cancelled.code).toBe(EXIT.ok); // ⇒ TERMINAL(cancelled)
+    // kickoff on a TERMINAL run: not WAITING(kickoff_pending) → the hold-guard
+    // state_violation THROW → exit-1 internal (NOT an exit-3 rejection).
+    const kicked = await run(["kickoff", id, "--db", db, "--task", "t"], deps);
+    assertErrorContract(kicked, "internal", EXIT.internal);
+    expect(kicked.stdout).toEqual([]);
+  });
+
+  it("NO `stale` lane surfaces from the lifecycle verbs (a CAS conflict retries in-loop — a driven non-occurrence)", async () => {
+    const db = tempDbPath();
+    const deps = testDeps();
+    // Drive the full create→start→kickoff-attempt→cancel surface and collect
+    // every lifecycle outcome kind; `stale` (an actor-`Outcome` kind) must
+    // NEVER appear — it is absent from the lifecycle unions (retries in-loop).
+    const kinds: string[] = [];
+    const record = (r: Run): void => {
+      if (r.stdout[0] !== undefined) kinds.push((JSON.parse(r.stdout[0]) as { kind: string }).kind);
+    };
+    const created = await run(["create", "--db", db, "--mode", "deferredKickoff"], deps);
+    record(created);
+    const id = (JSON.parse(created.stdout[0] ?? "") as { instanceId: string }).instanceId;
+    record(await run(["start", id, "--db", db], deps)); // accepted (held)
+    record(await run(["kickoff", id, "--db", db, "--task", "t"], deps)); // activated
+    record(await run(["cancel", id, "--db", db], deps)); // terminated
+    expect(kinds).toEqual(["created", "accepted", "activated", "terminated"]);
+    expect(kinds).not.toContain("stale");
   });
 });

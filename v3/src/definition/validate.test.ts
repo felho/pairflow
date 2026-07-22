@@ -1245,6 +1245,17 @@ describe("ch12-P4 F1/F2 — the activation source form (dimension 1), both direc
     expect(paths(err)).toContain("activation.mode");
   });
 
+  for (const [label, form] of [
+    ["a number", "activation:\n  mode: 123\n"],
+    ["a list", "activation:\n  mode:\n    - immediate\n"],
+    ["present-null", "activation:\n  mode:\n"],
+  ] as const) {
+    it(`F2: a NON-STRING mode (${label}) → a finding at activation.mode (the string/non-string sensitivity — a "reject only bad strings" bug must fail here)`, () => {
+      const err = expectValidateErr(`${VALID}${form}`);
+      expect(paths(err)).toContain("activation.mode");
+    });
+  }
+
   it("F2: an empty activation map (missing mode) → a finding at activation", () => {
     const err = expectValidateErr(`${VALID}activation: {}\n`);
     expect(activationPaths(err)).toStrictEqual(["activation"]);
@@ -1343,17 +1354,32 @@ describe("ch12-P4 F3 — the runtimeContext spec-map source form (dimension 2)",
     expect(result.error.stage).toBe("parse");
   });
 
-  it("RP6: an anchor/alias spec map resolves to a plain object graph (no bypass) → materializes required(spec)", () => {
-    const aliased = `${VALID}_anchors:\n  spec: &s\n    kind: worktree\n    provider: pairflow.worktree\nruntimeContext: *s\n`;
-    // `_anchors` is an unknown root key — the alias resolution is what this
-    // lane probes (the spec still materializes cleanly under runtimeContext).
-    const result = load(aliased);
-    expect(result.ok).toBe(false);
-    if (result.ok) return;
-    // The ONLY finding is the unknown `_anchors` key — the aliased spec map
-    // itself walked clean (no runtimeContext finding).
-    expect(paths(result.error).filter((p) => p.startsWith("runtimeContext"))).toStrictEqual([]);
-    expect(paths(result.error)).toContain("_anchors");
+  it("RP6: a merge key `<<` inside the spec map is a LITERAL key under 1.2 core → double fail-closed (unknown key + still-missing kind)", () => {
+    const err = expectValidateErr(
+      withRc("  <<:\n    kind: worktree\n  provider: pairflow.worktree\n"),
+    );
+    // `<<` is not a legal spec-map key (no 1.2 merge) → unknown key; and the
+    // map still lacks a legal `kind` → missing-key finding. A silent merge
+    // would leave a well-formed spec and this test would fail.
+    expect(paths(err)).toContain("runtimeContext.<<");
+    expect(paths(err)).toContain("runtimeContext");
+  });
+
+  it("RP6: an anchor/alias in the spec map resolves to a plain value graph (no alias node leaks) → the MATERIALIZED own-property record carries the resolved content", () => {
+    // The provider string is anchored and aliased inside `config.mirror`; the
+    // whole template is valid and admits. The assert pins the MATERIALIZED
+    // content (a plain own-property record with the resolved string) — a raw
+    // JS Map or an unresolved alias node slipping through would fail toEqual.
+    const result = load(
+      withRc("  kind: worktree\n  provider: &p pairflow.worktree\n  config:\n    mirror: *p\n"),
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.template.runtimeContext).toEqual({
+      kind: "worktree",
+      provider: "pairflow.worktree",
+      config: { mirror: "pairflow.worktree" },
+    });
   });
 });
 

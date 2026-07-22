@@ -1014,14 +1014,20 @@ describe("ch12-P4 F3 — the file-channel runtimeContext spec-map source form no
     expect((finding as { message: string }).message).toMatch(/retired/);
   });
 
-  it("a YAML `runtimeContext: none` (context-free) admits", () => {
+  it("a YAML `runtimeContext: none` (context-free) admits AND normalizes to the `none` requirement (content asserted, not just ok)", () => {
     const result = loadGated(withRc("runtimeContext: none\n"));
     expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    // A mis-normalization (e.g. carrying the raw string through as a spec, or
+    // dropping the field) would fail this content assert.
+    expect(result.template.runtimeContext).toBe("none");
   });
 
-  it("an ABSENT runtimeContext (context-free) admits", () => {
+  it("an ABSENT runtimeContext (context-free) admits AND normalizes to `none`", () => {
     const result = loadGated(withRc(""));
     expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.template.runtimeContext).toBe("none");
   });
 
   it("an ILLEGAL runtimeContext value (present-null / list / other-scalar) → admission's A1 container finding at runtimeContext (the walk passes it raw)", () => {
@@ -1130,5 +1136,75 @@ describe("ch12-P4 A3 — the non-finite agent-config rejection through the file 
     );
     expect(at).toHaveLength(1);
     expect((at[0] as { message: string }).message).toMatch(/canonical-JSON-safe/);
+  });
+
+  it("a NON-MAP `roles.<r>.defaultAgentConfig` (a scalar) → the container-precondition finding through the FILE channel", () => {
+    const err = gatedErr(
+      `ref:\n  id: t\n  version: 1\nstart: s\nsteps:\n  s:\n    role: r\n    instruction: i\n    transitions: {}\nterminal:\n  - done\nroles:\n  r:\n    defaultAgentConfig: hello\n`,
+    );
+    const at = err.findings.filter(
+      (f) => (f as { path: string }).path === "roles.r.defaultAgentConfig",
+    );
+    expect(at).toHaveLength(1);
+    expect((at[0] as { message: string }).message).toMatch(/defaultAgentConfig must be a map/);
+  });
+
+  it("a NON-MAP `steps.<s>.agentConfig` (a scalar) → the container-precondition finding through the FILE channel", () => {
+    const err = gatedErr(
+      `ref:\n  id: t\n  version: 1\nstart: s\nsteps:\n  s:\n    role: r\n    instruction: i\n    transitions: {}\n    agentConfig: hello\nterminal:\n  - done\nroles:\n  r: {}\n`,
+    );
+    const at = err.findings.filter((f) => (f as { path: string }).path === "steps.s.agentConfig");
+    expect(at).toHaveLength(1);
+    expect((at[0] as { message: string }).message).toMatch(/agentConfig must be a map/);
+  });
+});
+
+// ── packet ch12-P4 A2 (C5): the process↔workspace cross-rule through the
+// FILE channel — an ILLEGAL runtimeContext value SUPPRESSES the cross-rule
+// (dependent-lane suppression), and a real spec map SATISFIES it. ──────────
+
+describe("ch12-P4 A2 — the process-gate cross-rule through the file channel", () => {
+  const processStep = `steps:
+  s:
+    role: r
+    instruction: i
+    transitions:
+      GO: done
+    gates:
+      GO:
+        - uses: external.process
+          config:
+            command: "echo hi"
+            timeoutMs: 1000
+            onExit: { zero: allow, nonzero: block }
+`;
+  const withProcess = (rc: string): string =>
+    `ref:\n  id: t\n  version: 1\nstart: s\n${processStep}terminal:\n  - done\nroles:\n  r: {}\n${rc}`;
+
+  it("an ILLEGAL runtimeContext value AND a process gate → ONE container finding at runtimeContext, the C5 cross-rule SUPPRESSED (dependent-lane)", () => {
+    const err = gatedErr(withProcess("runtimeContext:\n")); // present-null (illegal)
+    const at = err.findings.filter((f) => (f as { path: string }).path === "runtimeContext");
+    // Exactly one finding at runtimeContext — the A1 container lane, uncoded;
+    // the coded cross-rule is SUPPRESSED under it (would fail if the cross-rule
+    // fired alongside the illegal-value finding).
+    expect(at).toHaveLength(1);
+    expect(at[0]).not.toHaveProperty("code");
+    expect(
+      err.findings.some((f) => (f as { code?: string }).code === "runtime_context_required_for_process_gate"),
+    ).toBe(false);
+  });
+
+  it("a real spec map SATISFIES the process-gate cross-rule (the negative direction — admits clean)", () => {
+    const result = loadGated(
+      withProcess("runtimeContext:\n  kind: worktree\n  provider: pairflow.worktree\n"),
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  it("an authored `none` requirement TRIGGERS the cross-rule (a coded finding — the positive direction, so suppression above is meaningful)", () => {
+    const err = gatedErr(withProcess("runtimeContext: none\n"));
+    expect(
+      err.findings.some((f) => (f as { code?: string }).code === "runtime_context_required_for_process_gate"),
+    ).toBe(true);
   });
 });

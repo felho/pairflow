@@ -197,6 +197,26 @@ const heldInstance: WorkflowInstance = {
   runtimeContext: { state: "ready", ref: null },
 };
 
+const SECRET_REQUEST_ID = "req-secret-provision-987";
+
+const noneInstance: WorkflowInstance = {
+  ...instance,
+  instanceId: "inst-none",
+  currentStep: null,
+  round: 0,
+  kernelStatus: "CREATED",
+  runtimeContext: { state: "none" },
+};
+
+const requestedInstance: WorkflowInstance = {
+  ...instance,
+  instanceId: "inst-requested",
+  currentStep: null,
+  round: 0,
+  kernelStatus: "CREATED",
+  runtimeContext: { state: "requested", requestId: SECRET_REQUEST_ID },
+};
+
 describe("floor — R1 the compact listInstances projection (packet ch12-P4)", () => {
   it("projects the state-scan discriminant and EXCLUDES the opaque locator (a sensitivity assert)", async () => {
     const handle = openStore(":memory:", createControlledClock(0));
@@ -237,6 +257,32 @@ describe("floor — R1 the compact listInstances projection (packet ch12-P4)", (
     // the compact row's.
     expect(row?.wait).not.toHaveProperty("requestedBy");
     expect(row?.wait).not.toHaveProperty("resumeEvents");
+    handle.close();
+  });
+
+  it("carries the runtime-context STATE discriminant for all THREE states (none / requested / ready) — and neither the locator NOR the request_id leaks", async () => {
+    const handle = openStore(":memory:", createControlledClock(0));
+    await handle.store.createInstance(noneInstance);
+    await handle.store.createInstance(requestedInstance);
+    await handle.store.createInstance(provisionedActive);
+    const rows = await createFloor(handle.store).listInstances();
+    const byId = new Map(rows.map((r) => [r.instanceId, r]));
+
+    // none → { state: "none" }
+    expect(byId.get("inst-none")?.runtimeContext).toEqual({ state: "none" });
+
+    // requested → { state: "requested" } — the request_id must NOT leak (a
+    // hardcoded `ready` or a request_id leak would fail).
+    expect(byId.get("inst-requested")?.runtimeContext).toEqual({ state: "requested" });
+    expect(byId.get("inst-requested")?.runtimeContext).not.toHaveProperty("requestId");
+
+    // ready → { state: "ready" } — the opaque locator must NOT leak.
+    expect(byId.get("inst-ready")?.runtimeContext).toEqual({ state: "ready" });
+    expect(byId.get("inst-ready")?.runtimeContext).not.toHaveProperty("ref");
+
+    // The whole compact payload leaks neither secret.
+    expect(JSON.stringify(rows)).not.toContain(SECRET_REQUEST_ID);
+    expect(JSON.stringify(rows)).not.toContain(SECRET_LOCATOR);
     handle.close();
   });
 });
@@ -293,6 +339,15 @@ describe("floor — R3 getTimeline returns both transcript entry classes (packet
     expect(kinds).toContain("transition");
     // The retired ch-4 `status` field appears in no timeline row.
     expect(JSON.stringify(rows)).not.toContain('"status"');
+
+    // R3 (packet:519): the TransitionEntry carries `issuedAgentConfig` (C10) —
+    // it must SURVIVE the timeline projection. A content-dropping projection
+    // (or one that compacts the transition row) would fail this. The canonical
+    // template authors no agentConfig, so the resolved profile is `{}`.
+    const transition = (rows ?? []).find((r) => r.entryKind === "transition");
+    expect(transition).toBeDefined();
+    expect(transition && "issuedAgentConfig" in transition).toBe(true);
+    expect((transition as { issuedAgentConfig: unknown }).issuedAgentConfig).toEqual({});
     handle.close();
   });
 });

@@ -987,7 +987,43 @@ the V6 spec-declaring flip, and the lifecycle exit-union mapping all
 matched the built kernel).
 
 Arm gate 2 (the build-close implementation review + mandatory
-sensitivity pass): <filled after the gate on the committed sha>.
+sensitivity pass; pin-conform gpt-5.6-sol/high/never, byte-guard clean
+before + after, HEAD/tree unchanged): REFINE citing `709ba9ee` with
+FOUR findings — ALL test-evidence class, ZERO product gaps (the arm
+confirmed the production code contract-faithful: the admission
+Map-interception gone, `start` calls only `kernel.start`, no lifecycle
+`stale`, the floor excludes the locator + version). The four
+green-but-blind BUILT-body lanes (the ch11-P2/ch8-P2 sensitivity-pass
+class recurring): (1) F2/F3 — the `activation.mode` non-member fixtures
+were string-only (a non-string bug stayed green), no RP6 merge-key
+spec-map fixture, the alias test checked finding-ABSENCE not
+materialized content, the `none` test asserted `ok` not the normalized
+value; (2) A2/A3 — the illegal-runtimeContext + process-gate
+suppression and the `defaultAgentConfig` non-map container lane were
+direct-channel only, not FILE-driven; (3) V2/V3 — the `start`
+replayed-op_id Duplicate/exit-0 cell, the `stale`-absent
+non-occurrence, and the terminal-`kickoff`→internal lane were undriven
+(only `cancel`-sink was), and the `Created` negative was not
+exact-keyset; (4) R1/R3 — the compact-list drove only `ready(ref)` (a
+`requested.request_id` leak or a hardcoded `ready` stayed green) and
+the timeline `issuedAgentConfig` survival was unasserted. All four
+folded in one aftermath round (test-body strengthening ONLY, zero
+production change — the arm's zero-product-gaps verdict held):
+**1248 → 1261 v3 tests** (+13 sensitivity lanes across the 4 boundary
+test files). Bridges re-verified GREEN (orchestrator-rerun):
+`v3:typecheck` clean · `v3:lint` clean · the v3 suite 1261/1261;
+boundary containment orchestrator-verified (4 changed test files ⊆
+boundary). The aftermath's sensitivity strengthenings: the
+string/non-string `mode` boundary; the RP6 merge-key inside the spec
+map + the alias MATERIALIZED-content assert (Map ≠ plain object); the
+`none` normalized-value assert; the file-channel A2 suppression + both
+agent-config positions' non-map container; the `start` Duplicate/exit-0
++ terminal-`kickoff`/1 + the `[created, accepted, activated,
+terminated]`-only `stale`-never sweep + the `Created` exact keyset; the
+`none`/`requested`/`ready` three-state compact rows with a
+`SECRET_REQUEST_ID`/`SECRET_LOCATOR`-absent leak assert + the
+`issuedAgentConfig`-survives-projection assert. Arm gate-2 re-check on
+the folded sha: <filled after the finder-lane rerun>.
 
 ```json
 {
@@ -995,13 +1031,14 @@ sensitivity pass): <filled after the gate on the committed sha>.
     "class": "operability",
     "prediction": { "predicted": "projection", "reasoning": "the ratified runtime-core draft (2026-07-19, incl. the acts A/B/C reopen set and the D5 stance set) decided every format + operator-surface point; the packet projects the file-channel/source-form shares of C1-C7, the CLI verb surface of C19/C20/C24, the mode/override realizations of C9/C13, the empty-registry lane of C16, and the floor read split of C11/C12/C17/C21", "discovered": "projection" },
     "provenance": { "anchored": 16, "derived": 1, "new_decision": 1 },
-    "rounds": { "review": 2, "doc_refinement": 0, "implementation": 1 },
+    "rounds": { "review": 2, "doc_refinement": 0, "implementation": 2 },
     "stops": [
       { "type": "4:flagged-approve", "what": "R1's compact-list field selection rode as flag F1 — arm-gate-1 reclassified it from derived (C21's 'compact state discriminant' + C17's ref-exclusion leave the exact membership open; the ch11-P4 Y6 class)", "resolution": "the human approved 2026-07-22: F1 ratified (the chosen compact set stands — kernelStatus/terminalDisposition/activationMode/wait.kind/runtime-context discriminant, no locator, no version); V7 accepted as derived (the arm's journey-structure new-decision challenge reconciled — the row forced, its shape build-freedom); the three arm-gate-1 content folds (exit-matrix/A1-ownership/plan-alignment) carried" }
     ],
     "detector_misses": [
       { "found_at": "arm-approve", "what": "R1 rode as derived through the full round + targeted re-run + two closes; the arm's entailment attack surfaced conforming compact-shape alternatives, reclassifying it new-decision and demoting the flag-free approve", "why_missed": "the internal lenses tested R1's derivation against C21/C17's ref-exclusion, not against the full space of conforming field-set alternatives (the W1 watchpoint was carried but not escalated)" },
-      { "found_at": "arm-approve", "what": "the CLI exit mapping was based on the actor-transition Outcome (committed/duplicate/stale/rejected) instead of the per-op lifecycle unions — stale absent, terminal-sink a throw not a rejection, write-path unknown_instance a Rejected data doc not a notFound", "why_missed": "the packet assumed the ch6-P4a matrix applied uniformly; the two internal closes verified Duplicate→0 but not the whole lifecycle-vs-actor union divergence" }
+      { "found_at": "arm-approve", "what": "the CLI exit mapping was based on the actor-transition Outcome (committed/duplicate/stale/rejected) instead of the per-op lifecycle unions — stale absent, terminal-sink a throw not a rejection, write-path unknown_instance a Rejected data doc not a notFound", "why_missed": "the packet assumed the ch6-P4a matrix applied uniformly; the two internal closes verified Duplicate→0 but not the whole lifecycle-vs-actor union divergence" },
+      { "found_at": "implementation", "what": "the build-close arm sensitivity pass harvested 4 green-but-blind BUILT test bodies (string-only mode fixtures; alias finding-absence-not-content; direct-channel-only A2/A3; the start-Duplicate/terminal-kickoff/stale-absent lifecycle lanes undriven; the compact-list ready-only, no requested/leak assert; the timeline issuedAgentConfig unasserted) — all test-evidence, zero product gaps", "why_missed": "the builder's R-DERIVED-PROBES table ran ONE probe per family, proving the family not-entirely-dead but not every LANE within it sensitive — the single-probe-per-family rule under-covers multi-lane families (the boundary-review mutation-testing item)" }
     ],
     "learned": "the CLI exit-class must read the actual per-op outcome UNION (domain/outcome.ts), never assume a sibling matrix applies — a code-substrate the Substrate Reality Probe did not previously cover; and a watchpointed-derived row (R1/W1) is a latent new-decision the arm's entailment attack surfaces"
   }
