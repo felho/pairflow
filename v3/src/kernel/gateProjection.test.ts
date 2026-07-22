@@ -66,6 +66,7 @@ function committed(seq: number, opId: string, type: string): TranscriptEntry {
     envelope,
     payloadDigest: `d-${opId}`,
     gateDecisions: [],
+    issuedAgentConfig: {},
     committedAt: seq,
   };
 }

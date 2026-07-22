@@ -142,16 +142,24 @@
     "status": "realized"
   },
   "l0c-pseudocode/HANDLE": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/kernel.ts#createKernel",
+    "disposition": "alias/inherited",
+    "status": "realized"
   },
   "l0c-pseudocode/START_INSTANCE": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/lifecycle.ts#createInstance",
+    "disposition": "alias/inherited",
+    "status": "realized"
   },
   "l0c-pseudocode/dispatch_intent": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/dispatchIntent.ts#deriveDispatchIntent",
+    "disposition": "alias/inherited",
+    "status": "realized"
   },
   "l0c-pseudocode/resolve_agent_config": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/agentConfig.ts#resolveAgentConfig",
+    "disposition": "implement",
+    "status": "realized"
   },
   "l0d-pseudocode/CANCEL": {
     "codeRef": "v3/src/kernel/lifecycle.ts#cancel",
@@ -207,7 +215,9 @@
     "status": "realized"
   },
   "l0d-pseudocode/dispatch_intent": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/dispatchIntent.ts#deriveDispatchIntent",
+    "disposition": "implement",
+    "status": "realized"
   },
   "l0e-pseudocode/RUNTIME_CONTEXT_READY": {
     "status": "pending"

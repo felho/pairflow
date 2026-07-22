@@ -41,6 +41,7 @@ function row(seq: number, opId: string, type: string): TranscriptEntry {
     envelope: envelope(opId, type),
     payloadDigest: `digest-${opId}`,
     gateDecisions: [],
+    issuedAgentConfig: {},
     committedAt: 1_000 + seq,
   };
 }
@@ -319,6 +320,7 @@ describe("checkEvidenceResolution — the store-visible evidence half (packet ch
       envelope: envelope(`op-${String(seq)}`, "CONVERGED"),
       payloadDigest: `d-${String(seq)}`,
       gateDecisions: [{ uses: "external.process", verdict: "allow", evidenceRefs: [...refs] }],
+      issuedAgentConfig: {},
       committedAt: 1_000 + seq,
     };
   }
@@ -361,6 +363,7 @@ describe("checkEvidenceResolution — the store-visible evidence half (packet ch
         { uses: "external.process", verdict: "allow", evidenceRefs: ["ok-2"] },
         { uses: "external.process", verdict: "warn", evidenceRefs: ["ok-3", "bad-ref"] },
       ],
+      issuedAgentConfig: {},
       committedAt: 1_002,
     };
     const detail = {

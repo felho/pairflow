@@ -87,6 +87,7 @@ function fakeSeams(detail: InstanceDetail, committedVersions: readonly number[])
         role: "implementer",
         instruction: "build it",
         availableOps: ["PASS"],
+        effectiveAgentConfig: {},
       },
     },
   };
@@ -132,8 +133,8 @@ describe("trace harness — fake-seam negatives (packet ch5-P3)", () => {
       // (2→4, missing 3) so only the post-condition checkers catch it.
       transcript: [
         startedFact("s1"),
-        { entryKind: "transition", seq: 2, envelope: envelope("a1", "PASS"), payloadDigest: "d-a1", gateDecisions: [], committedAt: 1_001 },
-        { entryKind: "transition", seq: 4, envelope: envelope("b2", "CONVERGED"), payloadDigest: "d-b2", gateDecisions: [], committedAt: 1_002 },
+        { entryKind: "transition", seq: 2, envelope: envelope("a1", "PASS"), payloadDigest: "d-a1", gateDecisions: [], issuedAgentConfig: {}, committedAt: 1_001 },
+        { entryKind: "transition", seq: 4, envelope: envelope("b2", "CONVERGED"), payloadDigest: "d-b2", gateDecisions: [], issuedAgentConfig: {}, committedAt: 1_002 },
       ],
     };
     const fixture: TraceFixture = {
@@ -233,7 +234,7 @@ describe("trace harness — the typed mismatch contract (packet ch6-P4b)", () =>
       version: 2,
     },
     transcript: [
-      { entryKind: "transition", seq: 1, envelope: envelope("a1", "PASS"), payloadDigest: "d-a1", gateDecisions: [], committedAt: 1_001 },
+      { entryKind: "transition", seq: 1, envelope: envelope("a1", "PASS"), payloadDigest: "d-a1", gateDecisions: [], issuedAgentConfig: {}, committedAt: 1_001 },
     ],
   };
 
@@ -311,6 +312,7 @@ describe("trace harness — ch11-P3b seams (runtimeContextRef passthrough + evid
         role: "implementer",
         instruction: "build it",
         availableOps: ["PASS"],
+        effectiveAgentConfig: {},
       },
     },
   });
@@ -408,6 +410,7 @@ describe("trace harness — ch11-P3b seams (runtimeContextRef passthrough + evid
           envelope: envelope("a1", "PASS"),
           payloadDigest: "d-a1",
           gateDecisions: [{ uses: "external.process", verdict: "allow", evidenceRefs: ["ev-1"] }],
+          issuedAgentConfig: {},
           committedAt: 1_001,
         },
       ],

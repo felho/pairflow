@@ -52,7 +52,8 @@ or ratified plan text, or derives from those with an in-row note.
     ],
     "traces": [],
     "shared_ownership": [
-      { "item": "l0d/actor-routable-execution", "co_owner": "ch12-p1b-activation-machinery.md" }
+      { "item": "l0d/actor-routable-execution", "co_owner": "ch12-p1b-activation-machinery.md" },
+      { "item": "l0d-pseudocode/HANDLE", "co_owner": "ch12-p2-run-profile.md" }
     ]
   }
 }

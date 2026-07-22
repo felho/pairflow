@@ -713,6 +713,95 @@ describe("admitTemplate — A3 the runtimeContext ILLEGAL-VALUE lane (C18, direc
   });
 });
 
+// ── packet ch12-p2 (A family): the C7 run-profile value-level narrowing
+// on the DIRECT-construction channel — steps.<s>.agentConfig and
+// roles.<r>.defaultAgentConfig must be a MAP whose resolved values are
+// canonical-JSON-safe. Claim-derived negatives (map + canonical-JSON-safe),
+// never the implemented predicate's shape. (The file-channel parity lanes
+// live in validate.test.ts, where load() runs validate → admit.)
+describe("admitTemplate — the C7 agentConfig value-level narrowing (A1/A2)", () => {
+  function admitWith(parts: {
+    readonly stepAgentConfig?: unknown;
+    readonly roleDefaultAgentConfig?: unknown;
+  }): ReturnType<typeof admitTemplate> {
+    const t = template() as unknown as {
+      steps: Record<string, Record<string, unknown>>;
+      roles: Record<string, Record<string, unknown>>;
+    };
+    if ("stepAgentConfig" in parts) {
+      t.steps["implement"]!["agentConfig"] = parts.stepAgentConfig;
+    }
+    if ("roleDefaultAgentConfig" in parts) {
+      t.roles["implementer"]!["defaultAgentConfig"] = parts.roleDefaultAgentConfig;
+    }
+    return admitTemplate(t as unknown as WorkflowTemplate, catalog);
+  }
+
+  function findingsOf(result: ReturnType<typeof admitTemplate>): readonly ValidationFinding[] {
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("expected admission to fail");
+    return result.findings;
+  }
+
+  it("map-admits: a valid canonical-JSON map on BOTH positions admits", () => {
+    const result = admitWith({
+      stepAgentConfig: { approach: "systematic", refs: ["a", "b"] },
+      roleDefaultAgentConfig: { mode: "builder", nested: { k: 1 } },
+    });
+    expect(result.ok).toBe(true);
+  });
+
+  it("steps-non-map-rejects: a non-map step agentConfig — ONE finding at steps.<s>.agentConfig", () => {
+    for (const nonMap of ["a string", 42, true, ["a", "list"], null]) {
+      const findings = findingsOf(admitWith({ stepAgentConfig: nonMap }));
+      const at = findings.filter((f) => f.path === "steps.implement.agentConfig");
+      expect(at).toHaveLength(1);
+      expect(at[0]?.message).toMatch(/agentConfig must be a map/);
+      // dependent-lane suppression: NOT also the canonical-safety lane.
+      expect(at[0]?.message).not.toMatch(/canonical/);
+    }
+  });
+
+  it("steps-non-canonical-rejects: a plain map with a non-finite value — the canonical-safety lane", () => {
+    const findings = findingsOf(admitWith({ stepAgentConfig: { rate: Number.NaN } }));
+    const at = findings.filter((f) => f.path === "steps.implement.agentConfig");
+    expect(at).toHaveLength(1);
+    expect(at[0]?.message).toMatch(/canonical-JSON-safe/);
+  });
+
+  it("steps-non-canonical-rejects: an Infinity member fails at admission (not at commit-time serialization)", () => {
+    const findings = findingsOf(admitWith({ stepAgentConfig: { limit: Number.POSITIVE_INFINITY } }));
+    expect(findings.some((f) => f.path === "steps.implement.agentConfig")).toBe(true);
+  });
+
+  it("roles-non-map-rejects (direct channel): a non-map defaultAgentConfig at roles.<r>.defaultAgentConfig", () => {
+    const findings = findingsOf(admitWith({ roleDefaultAgentConfig: "not a map" }));
+    const at = findings.filter((f) => f.path === "roles.implementer.defaultAgentConfig");
+    expect(at).toHaveLength(1);
+    expect(at[0]?.message).toMatch(/defaultAgentConfig must be a map/);
+  });
+
+  it("roles-non-canonical-rejects (direct channel): a map role default with a non-finite value", () => {
+    const findings = findingsOf(admitWith({ roleDefaultAgentConfig: { weight: Number.NaN } }));
+    const at = findings.filter((f) => f.path === "roles.implementer.defaultAgentConfig");
+    expect(at).toHaveLength(1);
+    expect(at[0]?.message).toMatch(/canonical-JSON-safe/);
+  });
+
+  it("both positions accumulate: a bad step config AND a bad role default → TWO path-addressed findings", () => {
+    const findings = findingsOf(
+      admitWith({ stepAgentConfig: 1, roleDefaultAgentConfig: 2 }),
+    );
+    const paths = findings.map((f) => f.path);
+    expect(paths).toContain("steps.implement.agentConfig");
+    expect(paths).toContain("roles.implementer.defaultAgentConfig");
+  });
+
+  it("the empty map admits (the vacuous run profile)", () => {
+    expect(admitWith({ stepAgentConfig: {}, roleDefaultAgentConfig: {} }).ok).toBe(true);
+  });
+});
+
 // ── D1 compile-negative probe: runtimeContext's sole legal value is the
 // string literal "required" (validated by v3:typecheck via TS2578). ──
 // @ts-expect-error D1: runtimeContext is the "required" literal — no other value is representable.

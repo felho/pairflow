@@ -1,7 +1,7 @@
 import type { EventEnvelope } from "./envelope.js";
 import type { RetainedGateDecision } from "./gate.js";
 import type { ActorId, InstanceId, OpId, RoleName, StepId } from "./ids.js";
-import type { TemplateRef } from "./template.js";
+import type { AgentConfig, TemplateRef } from "./template.js";
 import type { EpochMillis } from "./time.js";
 
 /**
@@ -132,6 +132,15 @@ export interface TransitionEntry {
    * ONE shared row mapper exposes it identically on both read surfaces.
    */
   readonly gateDecisions: readonly RetainedGateDecision[];
+  /**
+   * C2/C10 (packet ch12-p2): the run profile the kernel ISSUED for this
+   * dispatched step — RECOMPUTED at commit from the same immutable
+   * sources the dispatch used, so it equals the packet's
+   * `effectiveAgentConfig` byte-identically (deterministic provenance).
+   * A map, possibly `{}`; opaque; records what was issued, NOT that the
+   * actor ran exactly so (issued ≠ proven runtime).
+   */
+  readonly issuedAgentConfig: AgentConfig;
   readonly committedAt: EpochMillis;
 }
 
@@ -139,8 +148,8 @@ export interface TransitionEntry {
  * A lifecycle fact row (C12; packet ch12-p1b F3): the op_id
  * consumption record of an op-carrying intent, committed in the SAME
  * atomic move as its state change. The transition-only fields are
- * ABSENT by entry class (C10) — never known-empty; NEITHER variant
- * carries `issuedAgentConfig` (its writer is P2's).
+ * ABSENT by entry class (C10) — never known-empty; the fact variant
+ * carries NO `issuedAgentConfig` (a transition-only field, C10/C12).
  */
 export interface LifecycleFactEntry {
   readonly entryKind: LifecycleFactKind;

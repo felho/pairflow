@@ -14,13 +14,30 @@ export interface TemplateRef {
   readonly version: number;
 }
 
+/**
+ * l0c/AgentConfig (packet ch12-p2, T1): the run PROFILE — a MAP, raw and
+ * format-OPEN, no field kernel-interpreted (C7). The model's field names
+ * (`mode`, `approach`, `model_ref`, `prompt_profile_refs`, `skill_refs`,
+ * `tool_policy_ref`, …) are run-intent hints no kernel component reads or
+ * type-enforces (the no-speculative-keys rule). Resolved by the L0c
+ * cascade (`kernel/agentConfig.ts`), carried as the packet's
+ * `effectiveAgentConfig` and recorded as the transcript's
+ * `issuedAgentConfig`.
+ */
+export type AgentConfig = Readonly<Record<string, unknown>>;
+
 export interface Step {
   readonly role: RoleName;
   readonly instruction: string;
   /** event_type → target step; every target ∈ steps ∪ terminal. */
   readonly transitions: Readonly<Record<EventType, StepId>>;
-  /** Raw optional pass-through until L0c (dispatch_intent unit comment). */
-  readonly agentConfig?: unknown;
+  /**
+   * The step's run-profile override (packet ch12-p2, T1): the SECOND
+   * cascade layer (`role.defaultAgentConfig ⊕ step.agentConfig ⊕
+   * instance.runOverrides[step]`). A MAP, kernel-opaque (C7); narrowed to
+   * map + canonical-JSON-safe at admission (A1). ABSENT contributes `{}`.
+   */
+  readonly agentConfig?: AgentConfig;
   /**
    * D1 (packet ch11-P2a): the per-(event-type) gate pipeline realizing
    * the model's `gates_for(step, event_type)`. ABSENT = ungated (C1).
@@ -62,8 +79,17 @@ export interface WorkflowTemplate {
   readonly steps: Readonly<Record<StepId, Step>>;
   /** "target is terminal" ⇔ listed here. */
   readonly terminal: readonly StepId[];
-  /** Actor defaults (l0b): resolve_binding = default_actor + start overrides. */
-  readonly roles: Readonly<Record<RoleName, { readonly defaultActor?: ActorId }>>;
+  /**
+   * Actor defaults (l0b): resolve_binding = default_actor + start
+   * overrides. `defaultAgentConfig` (packet ch12-p2, T2) is the run
+   * profile's FIRST cascade layer (C7) — a map, kernel-opaque; narrowed
+   * to map + canonical-JSON-safe at admission on the direct-construction
+   * channel (A2; the file source-form walk is P4's). ABSENT contributes
+   * `{}`.
+   */
+  readonly roles: Readonly<
+    Record<RoleName, { readonly defaultActor?: ActorId; readonly defaultAgentConfig?: AgentConfig }>
+  >;
   /** L1 explicit restrictions (none in the baseline) — see CapabilityProfile. */
   readonly capabilityProfile?: CapabilityProfile;
   /**

@@ -1,4 +1,5 @@
 import type { AdmittedTemplate, GateBinding, Step, WorkflowTemplate } from "../domain/index.js";
+import { isCanonicalizable } from "../emit/opId.js";
 import type { GateCatalog } from "../ports/index.js";
 import type { ValidationFinding } from "./errors.js";
 
@@ -72,6 +73,58 @@ function describeValue(value: unknown): string {
 }
 
 /**
+ * A1/A2 (packet ch12-p2, C7): the value-level narrowing for a run-profile
+ * position (`steps.<s>.agentConfig`, `roles.<r>.defaultAgentConfig`) — a
+ * PRESENT value must be a MAP whose resolved values are
+ * canonical-JSON-safe (the `isCanonicalizable` predicate: finite numbers,
+ * plain maps/lists/scalars; `.nan`/`.inf` doubles rejected). ONE finding
+ * at the position's C7 path — a non-map SUPPRESSES the canonical-safety
+ * lane (dependent-lane suppression). Type-foreclosed on the well-typed
+ * direct channel; the lane guards the file channel and cast-forged direct
+ * values. Absent (the empty layer) is admissible.
+ */
+function checkAgentConfigValue(
+  value: unknown,
+  path: string,
+  field: string,
+  findings: ValidationFinding[],
+): void {
+  if (value === undefined) {
+    return;
+  }
+  // The container lane: a PLAIN map (a plain object with string keys) —
+  // a non-object, an array, or a non-plain object (a JS Map from
+  // non-string YAML keys, a class instance) is NOT a plain map. This
+  // SUPPRESSES the canonical-safety lane below (dependent-lane
+  // suppression); a canonical JSON map has string keys by construction.
+  if (!isPlainMap(value)) {
+    findings.push({ path, message: `${field} must be a map; got ${describeValue(value)}` });
+    return;
+  }
+  // The value lane: a plain string-keyed map whose RESOLVED values are
+  // not canonical-JSON-safe (a `.nan`/`.inf` double, a non-plain nested
+  // object, a symbol/undefined member) fails.
+  if (!isCanonicalizable(value)) {
+    findings.push({
+      path,
+      message: `${field} must be canonical-JSON-safe (a map of finite numbers and plain values)`,
+    });
+  }
+}
+
+/** A plain string-keyed map: a plain object (Object.prototype or null
+ * proto), never an array, a JS Map, or a class instance. Distinct from
+ * `isMap` (which admits any non-array object) because a run-profile
+ * position must be a canonical-JSON map — string keys by construction. */
+function isPlainMap(value: unknown): value is Record<string, unknown> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+  const proto: unknown = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
+}
+
+/**
  * A1 (packet ch11-P2c): expand a step's transitions into the model's
  * COMPLETE per-transition `advancesRound` map — every
  * `eventType ∈ keys(step.transitions)` present with an explicit boolean
@@ -106,6 +159,10 @@ export function admitTemplate(template: WorkflowTemplate, catalog: GateCatalog):
 
   for (const stepId of Object.keys(template.steps)) {
     const step = ownGet(template.steps, stepId) as Step;
+    // A1 (packet ch12-p2, C7): the steps.<s>.agentConfig value-level lane
+    // — fires on EVERY admission channel (file included, via the validate
+    // stage's admit rung; direct-construction, via the same function).
+    checkAgentConfigValue(step.agentConfig, `steps.${stepId}.agentConfig`, "agentConfig", findings);
     const gates: unknown = step.gates;
     if (gates === undefined) {
       continue;
@@ -221,6 +278,22 @@ export function admitTemplate(template: WorkflowTemplate, catalog: GateCatalog):
         effectiveConfigs.set(effectiveKey(stepId, eventType, index), result.effective);
       });
     }
+  }
+
+  // A2 (packet ch12-p2, C7): the roles.<r>.defaultAgentConfig value-level
+  // lane — reachable via the DIRECT-construction channel now; the roles
+  // source-form walk stays P4's, so a FILE cannot yet author the key (the
+  // ch8 unknown-key rejection stands for it in the window).
+  for (const roleName of Object.keys(template.roles)) {
+    const role = ownGet(template.roles, roleName) as {
+      readonly defaultAgentConfig?: unknown;
+    };
+    checkAgentConfigValue(
+      role.defaultAgentConfig,
+      `roles.${roleName}.defaultAgentConfig`,
+      "defaultAgentConfig",
+      findings,
+    );
   }
 
   // A7 (packet ch11-P3a, V5): the C19 cross-rule fires post-loop as EXACTLY

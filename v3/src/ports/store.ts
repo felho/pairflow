@@ -1,4 +1,5 @@
 import type {
+  AgentConfig,
   EventEnvelope,
   InstanceId,
   KernelStatus,
@@ -49,6 +50,14 @@ export interface CommitTransitionInput {
    * `ACTIVE` + null.
    */
   readonly newTerminalDisposition: TerminalDisposition | null;
+  /**
+   * C2/C10 (packet ch12-p2): the run profile the kernel issued for this
+   * dispatched step — the store writes it CANONICAL JSON into the
+   * transition row's `issued_agent_config` column (in place of the P1a
+   * NULL) inside the SAME commit transaction (REV-A1-TXN unchanged). A
+   * map, possibly `{}`; never null on a transition row.
+   */
+  readonly issuedAgentConfig: AgentConfig;
 }
 
 /**

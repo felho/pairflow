@@ -114,6 +114,7 @@ function fakeRow(seq: number): TranscriptEntry {
     envelope: env(`op-${String(seq)}`, "PASS", seq),
     payloadDigest: "d",
     gateDecisions: [],
+    issuedAgentConfig: {},
     committedAt: 0,
   };
 }

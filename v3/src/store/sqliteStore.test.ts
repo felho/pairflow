@@ -88,6 +88,7 @@ describe("commitTransition — atomic transition commit (l0a invariant)", () => 
       newRound: 1,
       newKernelStatus: "ACTIVE",
       newTerminalDisposition: null,
+      issuedAgentConfig: {},
     });
 
     expect(result).toEqual({ kind: "committed", version: 2 });
@@ -114,6 +115,7 @@ describe("commitTransition — atomic transition commit (l0a invariant)", () => 
       newRound: 1,
       newKernelStatus: "ACTIVE",
       newTerminalDisposition: null,
+      issuedAgentConfig: {},
     });
 
     expect(result).toEqual({ kind: "cas_conflict" });
@@ -136,6 +138,7 @@ describe("commitTransition — atomic transition commit (l0a invariant)", () => 
       newRound: 1,
       newKernelStatus: "ACTIVE",
       newTerminalDisposition: null,
+      issuedAgentConfig: {},
     });
     await handle.store.commitTransition({
       instanceId: "inst-1",
@@ -147,6 +150,7 @@ describe("commitTransition — atomic transition commit (l0a invariant)", () => 
       newRound: 2,
       newKernelStatus: "ACTIVE",
       newTerminalDisposition: null,
+      issuedAgentConfig: {},
     });
 
     // op a1 retransmitted with its (now stale) original expectation:
@@ -160,6 +164,7 @@ describe("commitTransition — atomic transition commit (l0a invariant)", () => 
       newRound: 1,
       newKernelStatus: "ACTIVE",
       newTerminalDisposition: null,
+      issuedAgentConfig: {},
     });
     expect(result).toEqual({ kind: "duplicate_op" });
     const detail = await handle.store.getInstanceDetail("inst-1");
@@ -181,6 +186,7 @@ describe("commitTransition — atomic transition commit (l0a invariant)", () => 
         newRound: 1,
         newKernelStatus: "ACTIVE",
         newTerminalDisposition: null,
+        issuedAgentConfig: {},
       });
     }
     const detail = await handle.store.getInstanceDetail("inst-1");
@@ -216,6 +222,7 @@ describe("commitTransition — atomic transition commit (l0a invariant)", () => 
         newRound: 1,
         newKernelStatus: "ACTIVE",
         newTerminalDisposition: null,
+        issuedAgentConfig: {},
       }),
     ).rejects.toThrow(/fault: split transaction/);
 
@@ -244,6 +251,7 @@ describe("commitTransition — atomic transition commit (l0a invariant)", () => 
       newRound: 1,
       newKernelStatus: "ACTIVE",
       newTerminalDisposition: null,
+      issuedAgentConfig: {},
     });
     expect(result).toEqual({ kind: "committed", version: 2 });
     handle.close();
@@ -272,6 +280,7 @@ describe("CHK-A1-SCHEMA — the uniqueness constraint lives in the database", ()
       newRound: 1,
       newKernelStatus: "ACTIVE",
       newTerminalDisposition: null,
+      issuedAgentConfig: {},
     });
     handle.close();
 
@@ -304,6 +313,7 @@ describe("CHK-C-TS-SOURCE — timestamps come from the injected TimeSource", () 
       newRound: 1,
       newKernelStatus: "ACTIVE",
       newTerminalDisposition: null,
+      issuedAgentConfig: {},
     });
     clock.advance(500);
     await handle.store.commitTransition({
@@ -316,6 +326,7 @@ describe("CHK-C-TS-SOURCE — timestamps come from the injected TimeSource", () 
       newRound: 2,
       newKernelStatus: "ACTIVE",
       newTerminalDisposition: null,
+      issuedAgentConfig: {},
     });
 
     const detail = await handle.store.getInstanceDetail("inst-1");
@@ -395,6 +406,7 @@ describe("op_id_collision — the digest-aware idempotency rung (packet ch5-P4)"
       newRound: 1,
       newKernelStatus: "ACTIVE",
       newTerminalDisposition: null,
+      issuedAgentConfig: {},
     });
 
     const collided = await handle.store.commitTransition({
@@ -407,6 +419,7 @@ describe("op_id_collision — the digest-aware idempotency rung (packet ch5-P4)"
       newRound: 1,
       newKernelStatus: "ACTIVE",
       newTerminalDisposition: null,
+      issuedAgentConfig: {},
     });
     expect(collided).toEqual({ kind: "op_id_collision" });
     const detail = await handle.store.getInstanceDetail("inst-1");
@@ -428,6 +441,7 @@ describe("op_id_collision — the digest-aware idempotency rung (packet ch5-P4)"
       newRound: 1,
       newKernelStatus: "ACTIVE",
       newTerminalDisposition: null,
+      issuedAgentConfig: {},
     });
     await handle.store.commitTransition({
       instanceId: "inst-1",
@@ -439,6 +453,7 @@ describe("op_id_collision — the digest-aware idempotency rung (packet ch5-P4)"
       newRound: 2,
       newKernelStatus: "ACTIVE",
       newTerminalDisposition: null,
+      issuedAgentConfig: {},
     });
 
     const collided = await handle.store.commitTransition({
@@ -451,6 +466,7 @@ describe("op_id_collision — the digest-aware idempotency rung (packet ch5-P4)"
       newRound: 1,
       newKernelStatus: "ACTIVE",
       newTerminalDisposition: null,
+      issuedAgentConfig: {},
     });
     expect(collided).toEqual({ kind: "op_id_collision" });
     handle.close();
@@ -469,6 +485,7 @@ describe("op_id_collision — the digest-aware idempotency rung (packet ch5-P4)"
       newRound: 1,
       newKernelStatus: "ACTIVE",
       newTerminalDisposition: null,
+      issuedAgentConfig: {},
     });
     const detail = await handle.store.getInstanceDetail("inst-1");
     expect(asTransition(detail?.transcript[0]).payloadDigest).toBe(DIGEST);
@@ -584,6 +601,7 @@ describe("getTimeline — the ch6-P1 cursor read", () => {
         newRound: 1,
         newKernelStatus: "ACTIVE",
         newTerminalDisposition: null,
+        issuedAgentConfig: {},
       });
       expect(result.kind).toBe("committed");
     }
@@ -659,6 +677,7 @@ describe("getTimeline — the ch6-P1 cursor read", () => {
       newRound: 1,
       newKernelStatus: "ACTIVE",
       newTerminalDisposition: null,
+      issuedAgentConfig: {},
     });
     expect(result).toEqual({ kind: "committed", version: 5 });
     handle.close();
@@ -670,11 +689,14 @@ describe("getTimeline — the ch6-P1 cursor read", () => {
     await handle.store.createInstance(instance);
 
     const raw = new DatabaseSync(path);
+    // A class-iff-VALID transition row (issued_agent_config non-null,
+    // ch12-p2 C3) whose ENVELOPE is malformed JSON — so the failure under
+    // test is the row PARSE (JSON.parse), not the class-iff guard.
     raw
       .prepare(
-        "INSERT INTO transcript (instance_id, seq, op_id, entry_kind, envelope, payload_digest, gate_decisions, committed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO transcript (instance_id, seq, op_id, entry_kind, envelope, payload_digest, gate_decisions, issued_agent_config, committed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
       )
-      .run("inst-1", 1, "bad", "transition", "not-json", "d", "[]", 0);
+      .run("inst-1", 1, "bad", "transition", "not-json", "d", "[]", "{}", 0);
     raw.close();
 
     await expect(handle.store.getTimeline("inst-1", 0)).rejects.toThrow(SyntaxError);
@@ -688,6 +710,7 @@ describe("getTimeline — the ch6-P1 cursor read", () => {
       newRound: 1,
       newKernelStatus: "ACTIVE",
       newTerminalDisposition: null,
+      issuedAgentConfig: {},
     });
     expect(result).toEqual({ kind: "committed", version: 2 });
     handle.close();
@@ -715,6 +738,7 @@ describe("expectedRole round-trip (packet ch11-P1, W6)", () => {
       newRound: 1,
       newKernelStatus: "ACTIVE",
       newTerminalDisposition: null,
+      issuedAgentConfig: {},
     });
     expect(result.kind).toBe("committed");
     const detail = await handle.store.getInstanceDetail("inst-1");
@@ -748,6 +772,7 @@ describe("gate_decisions — the retained-decision column (packet ch11-P2b, S1�
       newRound: 1,
       newKernelStatus: "ACTIVE",
       newTerminalDisposition: null,
+      issuedAgentConfig: {},
     });
     expect(result.kind).toBe("committed");
     // One write, two reads: a mapper divergence between getInstanceDetail
@@ -773,6 +798,7 @@ describe("gate_decisions — the retained-decision column (packet ch11-P2b, S1�
       newRound: 1,
       newKernelStatus: "ACTIVE",
       newTerminalDisposition: null,
+      issuedAgentConfig: {},
     });
     const detail = await handle.store.getInstanceDetail("inst-1");
     expect(asTransition(detail?.transcript[0]).gateDecisions).toEqual([]);
@@ -859,7 +885,7 @@ describe("the axis columns — schema shape (packet ch12-p1a, S2–S11)", () => 
     raw.close();
   });
 
-  it("every committed row is written entry_kind 'transition' with issued_agent_config NULL (S11's P1a write shape)", async () => {
+  it("every committed row is written entry_kind 'transition' with issued_agent_config CANONICAL JSON (C2 — the P2 write shape)", async () => {
     const path = tempDbPath();
     const handle = openStore(path, createControlledClock(0));
     await handle.store.createInstance(instance);
@@ -873,6 +899,7 @@ describe("the axis columns — schema shape (packet ch12-p1a, S2–S11)", () => 
       newRound: 1,
       newKernelStatus: "ACTIVE",
       newTerminalDisposition: null,
+      issuedAgentConfig: { mode: "builder" },
     });
     handle.close();
     const raw = new DatabaseSync(path);
@@ -880,7 +907,9 @@ describe("the axis columns — schema shape (packet ch12-p1a, S2–S11)", () => 
       .prepare("SELECT entry_kind, issued_agent_config FROM transcript WHERE instance_id = 'inst-1'")
       .get() as { entry_kind: string; issued_agent_config: string | null };
     expect(row.entry_kind).toBe("transition");
-    expect(row.issued_agent_config).toBeNull();
+    // C2 (packet ch12-p2): the P2 writer lands — canonical JSON (sorted
+    // keys), in place of the P1a NULL. Fact rows keep it NULL by class.
+    expect(row.issued_agent_config).toBe('{"mode":"builder"}');
     raw.close();
   });
 
@@ -897,6 +926,7 @@ describe("the axis columns — schema shape (packet ch12-p1a, S2–S11)", () => 
       newRound: 1,
       newKernelStatus: "ACTIVE",
       newTerminalDisposition: null,
+      issuedAgentConfig: {},
     });
     let read = await handle.store.loadInstance("inst-1");
     expect(read?.kernelStatus).toBe("ACTIVE");
@@ -911,6 +941,7 @@ describe("the axis columns — schema shape (packet ch12-p1a, S2–S11)", () => 
       newRound: 1,
       newKernelStatus: "TERMINAL",
       newTerminalDisposition: "done",
+      issuedAgentConfig: {},
     });
     read = await handle.store.loadInstance("inst-1");
     expect(read?.kernelStatus).toBe("TERMINAL");
@@ -982,6 +1013,7 @@ describe("the axis columns — schema shape (packet ch12-p1a, S2–S11)", () => 
         newRound: 1,
         newKernelStatus: "ACTIVE",
         newTerminalDisposition: null,
+        issuedAgentConfig: {},
       });
       expect(committed.kind).toBe("committed");
       const raw = new DatabaseSync(path);

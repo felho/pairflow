@@ -2,6 +2,7 @@ import type {
   ActivationMode,
   ActorId,
   AdmittedTemplate,
+  AgentConfig,
   CapabilityProfile,
   ContextPacket,
   DispatchIntent,
@@ -46,9 +47,9 @@ import type { CancelInput, CreateInput, Kernel, KickoffInput, StartInput } from 
  * renamed export is a compile error, not a runtime surprise.
  *
  * Classification semantics (LEVEL axis): a row is `realized` when the
- * entity's OWN level is implemented (l0a + l0b today) — a later level's
- * row over an existing type (e.g. `l0c/WorkflowInstance`, run overrides)
- * stays `pending`: the manifest tracks the ladder, not bare name reuse.
+ * entity's OWN level is implemented — a later level's row over an
+ * existing type (e.g. `l0e/ContextPacket`) stays `pending` until that
+ * level is built: the manifest tracks the ladder, not bare name reuse.
  * `pending` carries NO chapter claim — scheduling lives in the plan map.
  * `contract-row` marks §4 prose/contract surfaces that never become a
  * TS type by design. `superseded` (ch12-p1a, additive) marks a row
@@ -94,6 +95,17 @@ interface RealizedTypeTable {
   readonly "l2a/ProcessResult": ProcessResult;
   // ch11-P3b T4: the l2a wire value (the C23 invocation document).
   readonly "l2a/GateInvocation": GateInvocation;
+  // ch12-p2 D2: the l0c run-profile witnesses — the cascade output type
+  // (AgentConfig) + the derived-not-stored effective_agent_config
+  // witnessed by the value type it carries; the four name-reuse rows
+  // (Role/Step/WorkflowInstance/TranscriptEntry) this packet implements
+  // the l0c level over (the l0d-already-realized precedent).
+  readonly "l0c/Role": RoleName;
+  readonly "l0c/Step": Step;
+  readonly "l0c/AgentConfig": AgentConfig;
+  readonly "l0c/WorkflowInstance": WorkflowInstance;
+  readonly "l0c/TranscriptEntry": TranscriptEntry;
+  readonly "l0c/effective_agent_config": AgentConfig;
   // ch12-p1a D3: the l0d lifecycle-axis value objects + the instance
   // aggregate (the axis fields land on WorkflowInstance).
   readonly "l0d/WorkflowInstance": WorkflowInstance;
@@ -168,13 +180,16 @@ export const DOMAIN_REGISTRY: Readonly<Record<string, RegistryEntry>> = {
   "l0b/WorkflowInstance": { kind: "realized", typeName: "WorkflowInstance" },
   "l0b/DispatchIntent": { kind: "realized", typeName: "DispatchIntent" },
   "l0b/ContextPacket": { kind: "realized", typeName: "ContextPacket" },
-  // ── l0c (6) — run profile / overrides: the level is unbuilt ───────
-  "l0c/Role": { kind: "pending" },
-  "l0c/Step": { kind: "pending" },
-  "l0c/AgentConfig": { kind: "pending" },
-  "l0c/WorkflowInstance": { kind: "pending" },
-  "l0c/TranscriptEntry": { kind: "pending" },
-  "l0c/effective_agent_config": { kind: "pending" },
+  // ── l0c (6) — the run profile: realized at ch12-p2 (the cascade +
+  // the effective/issued provenance over the existing aggregates) ──────
+  "l0c/Role": { kind: "realized", typeName: "RoleName" },
+  "l0c/Step": { kind: "realized", typeName: "Step" },
+  "l0c/AgentConfig": { kind: "realized", typeName: "AgentConfig" },
+  "l0c/WorkflowInstance": { kind: "realized", typeName: "WorkflowInstance" },
+  "l0c/TranscriptEntry": { kind: "realized", typeName: "TranscriptEntry" },
+  // effective_agent_config is derived-not-stored; its faithful witness is
+  // AgentConfig, the value type it carries (D2).
+  "l0c/effective_agent_config": { kind: "realized", typeName: "AgentConfig" },
   // ── l0d (13) ───────────────────────────────────────────────────────
   // ch12-p1a D3: the lifecycle-axis value objects + the instance
   // aggregate flip realized (the axis fields land on WorkflowInstance).
@@ -437,6 +452,12 @@ export const REALIZED_TYPE_TABLE_KEYS = [
   "l0b/WorkflowInstance",
   "l0b/DispatchIntent",
   "l0b/ContextPacket",
+  "l0c/Role",
+  "l0c/Step",
+  "l0c/AgentConfig",
+  "l0c/WorkflowInstance",
+  "l0c/TranscriptEntry",
+  "l0c/effective_agent_config",
   "l1/EventEnvelope",
   "l1/ContextPacket",
   "l1/CapabilityProfile",

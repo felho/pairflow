@@ -7,6 +7,7 @@ export type { ActorId, EventType, InstanceId, OpId, RoleName, StepId } from "./i
 export type { EpochMillis } from "./time.js";
 export type {
   AdmittedTemplate,
+  AgentConfig,
   CapabilityProfile,
   Step,
   TemplateRef,

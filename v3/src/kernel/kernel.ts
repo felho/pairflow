@@ -24,6 +24,7 @@ import type { GateCatalog, ProcessGateRunner } from "../ports/gate.js";
 import type { StorePort } from "../ports/store.js";
 import type { TimeSource } from "../ports/time.js";
 import { admitLoaded } from "./admission.js";
+import { resolveAgentConfig } from "./agentConfig.js";
 import { capability } from "./capability.js";
 import { deriveDispatchIntent } from "./dispatchIntent.js";
 import { deriveGateProjection } from "./gateProjection.js";
@@ -334,6 +335,17 @@ export function createKernel(deps: KernelDeps): Kernel {
     const newRound =
       step.advancesRound?.[envelope.type] === true ? instance.round + 1 : instance.round;
 
+    // C1 (packet ch12-p2): the run profile the kernel ISSUES for this
+    // dispatched step — resolved on the OPTIMISTIC commit path, downstream
+    // of every synchronous admission guard and the gate pipeline (a
+    // rejected envelope returned before this point and never resolves),
+    // just before the atomic commit. The resolver is PURE, so a doomed
+    // attempt (a cas_conflict restart, a commit-time duplicate/collision)
+    // records nothing; the provenance rides the committed transition only.
+    // Recomputed from the SAME immutable sources the dispatch used, so it
+    // equals the packet's effective_agent_config byte-identically.
+    const issuedAgentConfig = resolveAgentConfig(template, instance.currentStep, instance);
+
     const result = await store.commitTransition({
       instanceId: instance.instanceId,
       expectedVersion: instance.version,
@@ -344,6 +356,7 @@ export function createKernel(deps: KernelDeps): Kernel {
       newRound,
       newKernelStatus: axis.newKernelStatus,
       newTerminalDisposition: axis.newTerminalDisposition,
+      issuedAgentConfig,
     });
     switch (result.kind) {
       case "duplicate_op":

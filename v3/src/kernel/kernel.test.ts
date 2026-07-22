@@ -316,6 +316,9 @@ describe("committed path — intent derived from POST-commit state", () => {
           instruction: "review it",
           handoff: { ref: "diff-1" },
           availableOps: ["PASS", "CONVERGED"],
+          // ch12-p2 (E1): the resolved run profile — no agentConfig
+          // authored on this template, so the cascade yields `{}`.
+          effectiveAgentConfig: {},
         },
       },
     });
@@ -674,6 +677,7 @@ describe("L1 authority — CAS restart × terminal (dimension 6, A12)", () => {
             newRound: 1,
             newKernelStatus: "TERMINAL",
             newTerminalDisposition: "done",
+            issuedAgentConfig: {},
           });
           expect(winner.kind).toBe("committed");
           // ...and THIS attempt reports the conflict → whole-handle restart.
@@ -824,6 +828,7 @@ async function seedReviewWithHistory(store: StorePort): Promise<void> {
       newRound: 1,
       newKernelStatus: "ACTIVE",
       newTerminalDisposition: null,
+      issuedAgentConfig: {},
     });
     if (seeded.kind !== "committed") {
       throw new Error(`history seed failed at ${opId}: ${seeded.kind}`);
@@ -1381,6 +1386,7 @@ describe("gate rung — dimension 12: CAS-restart re-derives the projection per 
       payloadDigest: "seed-digest",
       committedAt: 0,
       gateDecisions: [],
+      issuedAgentConfig: {},
     };
     const store: StorePort = {
       loadInstance: () => Promise.resolve(reviewInstance),

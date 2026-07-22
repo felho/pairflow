@@ -5,6 +5,7 @@ import type {
   WorkflowInstance,
   WorkflowTemplate,
 } from "../domain/index.js";
+import { resolveAgentConfig } from "./agentConfig.js";
 
 /**
  * l0b-pseudocode/dispatch_intent — derived from COMMITTED state, after
@@ -46,7 +47,10 @@ export function deriveDispatchIntent(
     instruction: step.instruction,
     ...(handoff !== undefined ? { handoff } : {}),
     availableOps: Object.keys(step.transitions),
-    ...(step.agentConfig !== undefined ? { agentConfig: step.agentConfig } : {}),
+    // E1 (packet ch12-p2): the resolved run profile, ALWAYS present (a
+    // map, possibly `{}`) — replaces the L0b conditional raw agentConfig
+    // pass-through spread.
+    effectiveAgentConfig: resolveAgentConfig(template, stepId, instance),
   };
   return { actor, packet };
 }

@@ -2,6 +2,7 @@ import { DatabaseSync } from "node:sqlite";
 
 import type {
   ActivationMode,
+  AgentConfig,
   EventEnvelope,
   InstanceId,
   KernelStatus,
@@ -329,6 +330,7 @@ interface TranscriptRow {
   envelope: string | null;
   payload_digest: string | null;
   gate_decisions: string | null;
+  issued_agent_config: string | null;
   committed_at: number;
 }
 
@@ -347,7 +349,15 @@ const LIFECYCLE_FACT_KINDS: readonly LifecycleFactKind[] = [
  * drift. */
 function toTranscriptEntry(row: TranscriptRow): TranscriptEntry {
   if (row.entry_kind === "transition") {
-    if (row.envelope === null || row.payload_digest === null || row.gate_decisions === null) {
+    // S11/C3 class iff (packet ch12-p2): a transition row carries all
+    // four class fields NON-NULL — issued_agent_config joins the trio now
+    // its P2 writer exists (a canonical-JSON map, possibly `{}`).
+    if (
+      row.envelope === null ||
+      row.payload_digest === null ||
+      row.gate_decisions === null ||
+      row.issued_agent_config === null
+    ) {
       throw new Error(
         `store integrity: transition row seq ${String(row.seq)} missing a class-required field (S11 class iff)`,
       );
@@ -358,6 +368,7 @@ function toTranscriptEntry(row: TranscriptRow): TranscriptEntry {
       envelope: JSON.parse(row.envelope) as EventEnvelope,
       payloadDigest: row.payload_digest,
       gateDecisions: JSON.parse(row.gate_decisions) as readonly RetainedGateDecision[],
+      issuedAgentConfig: JSON.parse(row.issued_agent_config) as AgentConfig,
       committedAt: row.committed_at,
     };
   }
@@ -375,6 +386,13 @@ function toTranscriptEntry(row: TranscriptRow): TranscriptEntry {
     if (row.gate_decisions !== null) {
       throw new Error(
         `store integrity: fact row seq ${String(row.seq)} carries non-null gate_decisions (S11 class iff)`,
+      );
+    }
+    // C3 (packet ch12-p2): issued_agent_config is a transition-only field
+    // — a fact row carrying it is integrity drift (NULL by class forever).
+    if (row.issued_agent_config !== null) {
+      throw new Error(
+        `store integrity: fact row seq ${String(row.seq)} carries non-null issued_agent_config (S11 class iff)`,
       );
     }
     return {
@@ -590,11 +608,12 @@ export function openStore(path: string, time: TimeSource): StoreHandle {
         const next = db
           .prepare("SELECT COALESCE(MAX(seq), 0) + 1 AS seq FROM transcript WHERE instance_id = ?")
           .get(input.instanceId) as { seq: number };
-        // S11: the commit path writes `transition` rows — the three
-        // class fields non-null, issued_agent_config NULL (its writer is
-        // P2's C10 face; fact rows are P1b's).
+        // S11/C2 (packet ch12-p2): the commit path writes `transition`
+        // rows — the three class fields non-null, and issued_agent_config
+        // now written CANONICAL JSON (P2's C10 writer, in place of the P1a
+        // NULL); fact rows keep it NULL by class (commitLifecycle).
         db.prepare(
-          "INSERT INTO transcript (instance_id, seq, op_id, entry_kind, envelope, payload_digest, gate_decisions, issued_agent_config, committed_at) VALUES (?, ?, ?, 'transition', ?, ?, ?, NULL, ?)",
+          "INSERT INTO transcript (instance_id, seq, op_id, entry_kind, envelope, payload_digest, gate_decisions, issued_agent_config, committed_at) VALUES (?, ?, ?, 'transition', ?, ?, ?, ?, ?)",
         ).run(
           input.instanceId,
           next.seq,
@@ -602,6 +621,7 @@ export function openStore(path: string, time: TimeSource): StoreHandle {
           JSON.stringify(input.envelope),
           input.payloadDigest,
           JSON.stringify(input.gateDecisions),
+          canonicalJson(input.issuedAgentConfig),
           time.now(),
         );
         db.exec("COMMIT");
@@ -719,7 +739,7 @@ export function openStore(path: string, time: TimeSource): StoreHandle {
       }
       const entries = db
         .prepare(
-          "SELECT seq, op_id, entry_kind, envelope, payload_digest, gate_decisions, committed_at FROM transcript WHERE instance_id = ? ORDER BY seq",
+          "SELECT seq, op_id, entry_kind, envelope, payload_digest, gate_decisions, issued_agent_config, committed_at FROM transcript WHERE instance_id = ? ORDER BY seq",
         )
         .all(instanceId) as unknown as TranscriptRow[];
       return Promise.resolve({
@@ -760,7 +780,7 @@ export function openStore(path: string, time: TimeSource): StoreHandle {
             ? null
             : (db
                 .prepare(
-                  "SELECT seq, op_id, entry_kind, envelope, payload_digest, gate_decisions, committed_at FROM transcript WHERE instance_id = ? AND seq > ? ORDER BY seq",
+                  "SELECT seq, op_id, entry_kind, envelope, payload_digest, gate_decisions, issued_agent_config, committed_at FROM transcript WHERE instance_id = ? AND seq > ? ORDER BY seq",
                 )
                 .all(instanceId, afterSeq) as unknown as TranscriptRow[]);
         db.exec("COMMIT");

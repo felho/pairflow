@@ -1,7 +1,7 @@
 import { isAlias, isScalar } from "yaml";
 import type { Document } from "yaml";
 
-import type { Step, WorkflowTemplate } from "../domain/index.js";
+import type { AgentConfig, Step, WorkflowTemplate } from "../domain/index.js";
 import type { ValidationFinding } from "./errors.js";
 
 /**
@@ -710,8 +710,17 @@ export function validateTemplate(value: unknown, doc: Document, source: string):
         role: mapGet(step, "role") as string,
         instruction: mapGet(step, "instruction") as string,
         transitions,
+        // A3 (packet ch12-p2): the V9 raw pass-through is UNCHANGED — the
+        // materialized value rides through as-is; the map + canonical-JSON
+        // VALUE-LEVEL check lives at the admit rung (A1), not here (the
+        // source-form walk stays validate's). The cast mirrors `gates`.
         ...(mapHas(step, "agentConfig")
-          ? { agentConfig: materializeResolvedValue(mapGet(step, "agentConfig"), materializeMemo) }
+          ? {
+              agentConfig: materializeResolvedValue(
+                mapGet(step, "agentConfig"),
+                materializeMemo,
+              ) as AgentConfig,
+            }
           : {}),
         ...(mapHas(step, "gates")
           ? {

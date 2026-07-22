@@ -498,8 +498,15 @@ roles:
     });
   });
 
-  it("keeps numeric, complex, and __proto__ keys losslessly inside agentConfig", () => {
-    const result = load(
+  // ch12-p2 (C7 narrowing): the ch8-C14 ANY-VALUE agentConfig domain is
+  // narrowed to a canonical-JSON MAP at admission. A non-string-keyed
+  // agentConfig materializes (validate stage UNCHANGED) as a JS Map to
+  // preserve typed keys — which is no longer a PLAIN map, so it now
+  // REJECTS at the admit rung (accumulated into the validate stage under
+  // the F7 cross-rung rule). The lossless string-keyed case still admits
+  // (the "keeps STRING keys losslessly" test above).
+  it("rejects a non-string-keyed agentConfig at admission (C7 map narrowing)", () => {
+    const err = expectValidateErr(
       template({
         steps: `steps:
   s:
@@ -514,17 +521,12 @@ roles:
 `,
       }),
     );
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    const config = result.template.steps["s"]?.agentConfig;
-    expect(config).toBeInstanceOf(Map);
-    const entries = [...(config as Map<unknown, unknown>).entries()];
-    expect(entries[0]).toStrictEqual([["a", "b"], "complex"]);
-    expect(entries.slice(1)).toStrictEqual([[1, "numeric"], ["__proto__", "proto"]]);
+    expect(paths(err)).toContain("steps.s.agentConfig");
+    expect(JSON.stringify(err.findings)).toMatch(/agentConfig must be a map/);
   });
 
-  it("preserves typed-distinct agentConfig keys without string coercion or data loss", () => {
-    const result = load(
+  it("rejects a typed-distinct-keyed agentConfig at admission (C7 map narrowing — 1 vs \"1\")", () => {
+    const err = expectValidateErr(
       template({
         steps: `steps:
   s:
@@ -537,11 +539,8 @@ roles:
 `,
       }),
     );
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    const config = result.template.steps["s"]?.agentConfig;
-    expect(config).toBeInstanceOf(Map);
-    expect([...(config as Map<unknown, unknown>).entries()]).toStrictEqual([[1, "numeric"], ["1", "string"]]);
+    expect(paths(err)).toContain("steps.s.agentConfig");
+    expect(JSON.stringify(err.findings)).toMatch(/agentConfig must be a map/);
   });
 });
 
@@ -585,7 +584,12 @@ describe("V15 — acyclicity (cycle-safe validator)", () => {
     expect(JSON.stringify(err.findings)).toMatch(/cycl/i);
     expect(p).toContain("start");
     expect(p).toContain("extra");
-    expect(err.findings.length).toBe(3);
+    // ch12-p2 (C7): the cyclic value sits in agentConfig, so the admit
+    // rung's canonical-JSON lane ALSO fires on it (a cycle is not
+    // canonical-JSON-safe) and ACCUMULATES beside the walk's cycle/start/
+    // extra findings — four, not three.
+    expect(p).toContain("steps.s.agentConfig");
+    expect(err.findings.length).toBe(4);
   });
 });
 

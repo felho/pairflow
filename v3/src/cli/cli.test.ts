@@ -159,6 +159,9 @@ async function startOne(db: string, deps: CliDeps): Promise<string> {
         role: "implementer",
         instruction: "build it",
         availableOps: ["PASS"],
+        // ch12-p2 (E1): the resolved run profile — the canonical template
+        // authors no agentConfig, so the cascade yields the empty map.
+        effectiveAgentConfig: {},
       },
     },
   });

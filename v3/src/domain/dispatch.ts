@@ -1,4 +1,5 @@
 import type { ActorId, EventType, InstanceId, RoleName } from "./ids.js";
+import type { AgentConfig } from "./template.js";
 
 /**
  * Kernel output (ledger §4 l0b + l1) — derived, never stored. No store
@@ -14,8 +15,14 @@ export interface ContextPacket {
   /** The envelope payload that brought us here; absent at start. Opaque. */
   readonly handoff?: unknown;
   readonly availableOps: readonly EventType[];
-  /** Raw optional pass-through until L0c. Opaque. */
-  readonly agentConfig?: unknown;
+  /**
+   * The resolved run profile (packet ch12-p2, E1/E2): the L0c cascade's
+   * portable run INTENT, ALWAYS present (a map, possibly `{}`) — it
+   * REPLACES the L0b raw `agentConfig` conditional pass-through. Opaque
+   * (C7); ref resolution is the ch-9 ActorAdapter / L2b ContextAssembly,
+   * later.
+   */
+  readonly effectiveAgentConfig: AgentConfig;
 }
 
 export interface DispatchIntent {
