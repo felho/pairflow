@@ -3733,3 +3733,49 @@ final CLEAN.
   recorded with the verdict: the experiment count is very low — these
   assessments may not generalize; treat them as current-best working
   conclusions, re-read as data accumulates, not as settled truths.
+
+- 2026-07-22 · ch12 boundary review · VERDICT — the test-reliability /
+  mutation-testing cluster, decided sub-item by sub-item with the owner
+  (two owner contributions reshaped the package pre-verdict: the
+  CODE-MUTATION vs INPUT-DOMAIN blindness distinction — a mutation tool
+  is structurally silent when neither code nor test has the branch —
+  and the SELF-REPORT gap: the builder's probe table was LLM prose and
+  the arm's spot-check read prose, violating our own verify-gate
+  principle). Verdicts:
+  (4A) builder probes STAY >=1-per-family — per-lane coverage is the
+  tool's job, not more manual work (owner note: may retire entirely
+  long-term). (4B) author-time "mutation smoke" harness DECLINED —
+  interim scaffolding the pilot would obsolete. (4C) ADOPTED:
+  arm-flagged "plausibly blind" lanes get an EXECUTED
+  mutate-run-restore verification before the fold is recorded
+  (prompt-driven, owner-confirmed understanding; receipt-covered via
+  4E, tool-absorbable later). (4D) ADOPTED as PILOT: StrykerJS+vitest
+  scoped to the packet mutation_boundary (`pnpm v3:mutation`), no
+  hand-picked mutants — file-scoped breadth IS the point, config
+  arm-checkable, report = machine evidence; DUAL-RUN beside arm gate-2
+  for two chapters (the owner's parallel-run design), catches labeled
+  code-mutation vs input-domain so the un-mechanizable share of the
+  arm's value becomes measurable; realization = named ch9 work item
+  (plan ch9 row updated; feasibility proof first). WATCH:
+  property-based/fuzz testing as the input-domain class's mechanized
+  endgame — revisit at the pilot read. (4E) ADOPTED: probe-execution
+  protocol into R-DERIVED-PROBES — probes run EXCLUSIVELY through a
+  probe runner (scratchpad-copy backup, restore FROM the copy,
+  git-restore forbidden for mutation rollback [3 incidents], cmp
+  byte-verify, RECEIPT file per probe cited by the table); the arm's
+  spot-check audits receipts vs table, never prose (ReviewPacket §6
+  amended); the runner tool itself is built at this review's close
+  WITH adversarial negative fixtures. (4F) second probe-derivation
+  pass DECLINED/WATCH — superseded by the pilot. (G) ADOPTED: the
+  boundary tally counts TEST-CLASS arm catches in their own bucket —
+  the safety-net-reliability signal measured directly. (H) RECORDED
+  (log-level, no rule): the INDEPENDENCE PRINCIPLE as the standing
+  answer to "can we trust the process" — reliability is the union of
+  DIVERSE loops whose errors do not correlate (different model /
+  different question / mechanical gates), so improvement invests in
+  diversity, and removing a layer must answer "which failure classes
+  did ONLY this layer catch" (the pilot's dual-run answers exactly
+  this for gate-2); bounded trust, owner's low-n caveat applies.
+  (I) ADOPTED as scope extension of R-CLAIM-FORM-PROBES: one-off
+  verification/reconciliation scripts ship WITH adversarial negative
+  fixtures in the same commit (the ADR-015 false-green classes).

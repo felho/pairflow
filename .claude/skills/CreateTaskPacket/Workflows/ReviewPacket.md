@@ -512,7 +512,16 @@ act, per gate). The build-close gate carries a MANDATORY SENSITIVITY
 PASS (README §5.5, promoted 2026-07-17): the arm's prompt instructs
 it to verify every packet-declared discipline and inventory member
 DRIVEN and ABLE TO FAIL in the built test bodies —
-R-LANE-SENSITIVITY's build-close half. Elsewhere it stays an option:
+R-LANE-SENSITIVITY's build-close half. Two receipt rules (adopted at
+the ch12 boundary, 2026-07-22 — the self-report gap): the builder's
+mutation-probe table is RECEIPT-BACKED (every probe runs through the
+probe runner, R-DERIVED-PROBES' execution protocol), and the arm's
+probe spot-check audits RECEIPTS against the table — never the
+builder's prose alone; and any lane the arm flags "plausibly blind"
+gets an EXECUTED mutate-run-restore verification (same runner,
+receipt attached) BEFORE its fold is recorded — "plausibly red"
+becomes "observed red" exactly where the arm's reasoning could err.
+Elsewhere it stays an option:
 
 - **When:** at a pre-ratification/pre-approval STOP as an extra
   adversarial pass, or as the FINDER-LANE RERUN after an
