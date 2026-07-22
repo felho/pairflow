@@ -3085,3 +3085,40 @@ tests; panel 3 rounds + clean close; gate-1 8 findings (2 re-checks
 to CLEAN), gate-2 11 findings (2 product) + 1 re-check residual;
 build commit `6aec56d4`, aftermath `fb1adcfa` + `db452cda`; gate-2
 final CLEAN.
+
+- 2026-07-22 · ch12-P2 build (L0c run profile) · build-session capture.
+  (1) **Detector-miss — T4 consumer sweep under-enumerated a typed
+  CONSTRUCTOR site.** The `Step.agentConfig` type flip (`unknown` →
+  `AgentConfig`) compile-forced an `as AgentConfig` cast in
+  `definition/validate.ts`'s V9 materialization, but the packet's T4
+  unknown-slot sweep enumerated only READERS of the renamed fields, not
+  a typed Step-object CONSTRUCTOR site — so `validate.ts` was absent from
+  the mutation_boundary and the boundary was extended at build. Boundary
+  candidate (a spec rule, no new mechanism): the T4 "unknown-slot
+  consumer sweep" must explicitly include CONSTRUCTORS of the flipped
+  type (sites that BUILD a `Step`/`ContextPacket`/entry), not only field
+  readers — a compiler-forced site the value-ripple search misses because
+  it is not a field access. Recorded as `detector_misses` on the packet.
+  (2) **The C7 narrowing re-based ch8-C14 V9 fixtures to rejection — as
+  designed, but worth a WATCH.** Three ratified V9/V15 validate tests
+  flipped: two "lossless numeric/typed-distinct/`__proto__` agentConfig"
+  cases now REJECT at admission (a non-string-keyed agentConfig
+  materializes as a JS Map = not a plain map), and the cyclic-agentConfig
+  accumulation test grew 3→4 findings (the admit canonical lane also
+  fires). The F7 cross-rung accumulation (validate walk + admit findings
+  merge under stage "validate") is what surfaced the admit findings in
+  `expectValidateErr`; a re-basing author must know the admit rung's
+  findings ride the "validate" stage. No rule — the narrowing is
+  ratified (A3) and the re-bases are faithful; captured so the ch12
+  boundary review sees that a value-domain narrowing lands its
+  behavior-change in the OTHER stage's test suite.
+  (3) **The value-ripple is invisible to typecheck.** The `packet: {…}`
+  `toEqual` literals (cli/journey/kernel) failed only at the suite run,
+  never at typecheck — the T4 "value-ripple the compiler does not catch"
+  note held exactly. The shared `startOne` helper concentrated 24 of the
+  27 cli re-bases into ONE literal edit (the ergonomic payoff of a shared
+  expected-doc helper).
+  Metrics: 17 anchored / 4 derived / 0 new-decision; 1136 → 1151 tests;
+  flag-bearing approve (FLAG-1, human-ratified 2026-07-22:
+  approve-ratified + FH-1 deferred); build commit `0e094ccb`; post-build
+  boundary audit CLEAN; build-close external arm gate PENDING.
