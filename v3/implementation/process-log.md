@@ -3984,3 +3984,27 @@ final CLEAN.
   OK, adr-check 16 OK. Chapter-close acts remain OUTSIDE this review
   (realized_map, plan map-row flip, full ci:local, close record);
   ch9 opens on the owner's explicit go as the model-tier-2 FABLE arm.
+
+- 2026-07-23 · ch12 CHAPTER CLOSED (owner-approved after the boundary;
+  the template §4 one-act close). realized_map FILLED — 27 rows, C1–C25
+  code-realized across P1a/P1b/P2/P3/P4 (P0 exempt: model-fix packet,
+  zero draft-row refs), C26/C27 act-realized (the ratification's own
+  reopen set + the template §4 patch); the map was BUILT BY a
+  fresh-context subagent from the packet manifests + lane tables (the
+  conductor architecture's first post-ratification use on a close
+  artifact) and orchestrator-verified by spot-probes (cited files
+  exist incl. the deleted kernel/start.ts, the C21↔P4-R1 anchor, the
+  pre-commit provider-unavailable rejection). Contract status
+  ratified → realized in the same act; plan §1.3 map row 12 →
+  realized. DoD evidence: dogfooding checkpoint cited (run clean
+  2026-07-22, recorded — not waived, not re-run per its own
+  idempotence note); FULL ci:local PASSED at tip; packet-lint 18/0
+  with the realized form linted; v3:deferred --closed ch12 = 0
+  markers (the new close gate's FIRST live use); coverage OK.
+  CH12 COMPLETE: the runtime core (L0c cascade + L0d lifecycle/
+  activation + L0e provider contract + format/operator surface) is
+  realized kernel surface. NEXT: ch9 (Runner MVP) on the owner's
+  explicit go, in a NEW session — the model-tier-2 FABLE arm; its
+  ratification disposes the mutation-pilot feasibility work item
+  (plan ch9 row), the production-provider gate (C15's D5 condition),
+  and the ch9 map-extension question.
