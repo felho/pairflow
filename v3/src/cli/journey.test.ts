@@ -53,27 +53,32 @@ describe("cli — the full-lifecycle journey smoke (packet ch8-P2: J1/J2)", () =
       const cli = (...argv: string[]): Promise<{ stdout: string; stderr: string }> =>
         execFileAsync(tsxBin, [mainPath, ...argv]); // rejects on nonzero exit
 
-      // start — the operator-authored repo file, the pinned default ref.
-      const started = await cli(
-        "start", "--db", db, "--task", "journey",
+      // create → start — the operator-authored repo file, the pinned default
+      // ref (ch12-P4: the create→start sequence replaces the retired C25
+      // bridge). `create` mints the instance id (surfaced on stdout).
+      const created = await cli(
+        "create", "--db", db, "--task", "journey",
         "--templates-dir", templatesDir,
       );
-      // FOLD 7 (arm gate 2 aftermath): the C25 bridge's `activated` stdout
-      // document asserted by FULL equality — the subprocess-minted
-      // instanceId read from the parsed doc, everything else pinned
-      // (version 2 = genesis v1 + the activation commit; the first
-      // dispatch's ContextPacket for the implement step).
+      const createdDoc = JSON.parse(created.stdout.trim()) as { kind: string; instanceId: string };
+      expect(createdDoc.kind).toBe("created");
+      expect(typeof createdDoc.instanceId).toBe("string");
+      expect(createdDoc.instanceId).not.toBe("");
+      const id = createdDoc.instanceId;
+
+      const started = await cli("start", id, "--db", db, "--templates-dir", templatesDir);
+      // The START `activated` stdout document asserted by FULL equality —
+      // version 2 = genesis v1 + the activation commit; the first dispatch's
+      // ContextPacket for the implement step.
       const startDoc = JSON.parse(started.stdout.trim()) as { instanceId: string };
-      expect(typeof startDoc.instanceId).toBe("string");
-      expect(startDoc.instanceId).not.toBe("");
       expect(startDoc).toEqual({
         kind: "activated",
-        instanceId: startDoc.instanceId,
+        instanceId: id,
         version: 2,
         intent: {
           actor: "codex",
           packet: {
-            instanceId: startDoc.instanceId,
+            instanceId: id,
             expectedVersion: 2,
             task: "journey",
             role: "implementer",
@@ -84,7 +89,6 @@ describe("cli — the full-lifecycle journey smoke (packet ch8-P2: J1/J2)", () =
           },
         },
       });
-      const id = startDoc.instanceId;
 
       // submitted events driving implement →(PASS)→ review →(CONVERGED)→ done.
       const pass = await cli(
@@ -115,8 +119,8 @@ describe("cli — the full-lifecycle journey smoke (packet ch8-P2: J1/J2)", () =
       expect(detailDoc.instance.task).toBe("journey");
 
       // floor reads — the ratified row's named pair, both driven:
-      // timeline (the cursor read) — the STARTED fact (seq 1, the C25
-      // bridge's activation record) plus the two submitted transitions.
+      // timeline (the cursor read) — the STARTED fact (seq 1, the START
+      // verb's activation record) plus the two submitted transitions.
       const timeline = await cli("timeline", id, "--db", db);
       const timelineRows = JSON.parse(timeline.stdout.trim()) as TimelineRow[];
       const timelineTx = timelineRows.filter((r) => r.entryKind === "transition");
@@ -167,24 +171,28 @@ describe("cli — the full-lifecycle journey smoke (packet ch8-P2: J1/J2)", () =
       const cli = (...argv: string[]): Promise<{ stdout: string; stderr: string }> =>
         execFileAsync(tsxBin, [mainPath, ...argv]); // rejects on nonzero exit
 
-      const started = await cli(
-        "start", "--db", db, "--task", "pass-back journey",
+      const created = await cli(
+        "create", "--db", db, "--task", "pass-back journey",
         "--templates-dir", templatesDir,
       );
-      // FOLD 7: the pass-back journey's start document asserted by FULL
-      // equality (task "pass-back journey"; version 2 = genesis v1 + the
-      // activation commit).
+      const createdDoc = JSON.parse(created.stdout.trim()) as { kind: string; instanceId: string };
+      expect(createdDoc.kind).toBe("created");
+      expect(createdDoc.instanceId).not.toBe("");
+      const id = createdDoc.instanceId;
+
+      const started = await cli("start", id, "--db", db, "--templates-dir", templatesDir);
+      // The pass-back journey's START document asserted by FULL equality
+      // (task "pass-back journey"; version 2 = genesis v1 + the activation
+      // commit).
       const startDoc = JSON.parse(started.stdout.trim()) as { instanceId: string };
-      expect(typeof startDoc.instanceId).toBe("string");
-      expect(startDoc.instanceId).not.toBe("");
       expect(startDoc).toEqual({
         kind: "activated",
-        instanceId: startDoc.instanceId,
+        instanceId: id,
         version: 2,
         intent: {
           actor: "codex",
           packet: {
-            instanceId: startDoc.instanceId,
+            instanceId: id,
             expectedVersion: 2,
             task: "pass-back journey",
             role: "implementer",
@@ -195,7 +203,6 @@ describe("cli — the full-lifecycle journey smoke (packet ch8-P2: J1/J2)", () =
           },
         },
       });
-      const id = startDoc.instanceId;
 
       const submit = (
         type: string,
@@ -304,24 +311,28 @@ round:
       const cli = (...argv: string[]): Promise<{ stdout: string; stderr: string }> =>
         execFileAsync(tsxBin, [mainPath, ...argv]); // rejects on nonzero exit
 
-      const started = await cli(
-        "start", "--db", db, "--task", "gated", "--template", "gated-pair-v0@1",
+      const created = await cli(
+        "create", "--db", db, "--task", "gated", "--template", "gated-pair-v0@1",
         "--templates-dir", templatesDir,
       );
-      // FOLD 7: the gated file's start document asserted by FULL equality
-      // (task "gated" over the gated-pair-v0 template — same implement-step
-      // dispatch shape; version 2 = genesis v1 + the activation commit).
+      const createdDoc = JSON.parse(created.stdout.trim()) as { kind: string; instanceId: string };
+      expect(createdDoc.kind).toBe("created");
+      expect(createdDoc.instanceId).not.toBe("");
+      const id = createdDoc.instanceId;
+
+      const started = await cli("start", id, "--db", db, "--templates-dir", templatesDir);
+      // The gated file's START document asserted by FULL equality (task
+      // "gated" over the gated-pair-v0 template — same implement-step dispatch
+      // shape; version 2 = genesis v1 + the activation commit).
       const startDoc = JSON.parse(started.stdout.trim()) as { instanceId: string };
-      expect(typeof startDoc.instanceId).toBe("string");
-      expect(startDoc.instanceId).not.toBe("");
       expect(startDoc).toEqual({
         kind: "activated",
-        instanceId: startDoc.instanceId,
+        instanceId: id,
         version: 2,
         intent: {
           actor: "codex",
           packet: {
-            instanceId: startDoc.instanceId,
+            instanceId: id,
             expectedVersion: 2,
             task: "gated",
             role: "implementer",
@@ -332,7 +343,6 @@ round:
           },
         },
       });
-      const id = startDoc.instanceId;
 
       const submit = (
         type: string,
@@ -413,6 +423,133 @@ round:
 
       // the staged store DB exists (the run really persisted).
       expect(existsSync(db)).toBe(true);
+    },
+  );
+
+  it(
+    "ch12-P4 V7: a context-free DEFERRED-HOLD lifecycle through all four verbs — create --mode deferredKickoff → start (held) → kickoff (activate)",
+    { timeout: 30_000 },
+    async () => {
+      // The R-ACTIVATION-JOURNEY discharge (V7): the full CREATE→START→hold→
+      // KICKOFF lifecycle drivable through the SHIPPED subprocess CLI, over the
+      // EMPTY production provider registry (C16). Deterministic by
+      // construction (context-free + deferred: no provider leg, and every
+      // state read lands BEFORE any immediate dispatch would spawn an actor).
+      const tsxBin = join(process.cwd(), "..", "node_modules", ".bin", "tsx");
+      const mainPath = join(process.cwd(), "src", "cli", "main.ts");
+      const templatesDir = join(process.cwd(), "templates");
+      const dir = mkdtempSync(join(tmpdir(), "v3-journey-deferred-"));
+      dirs.push(dir);
+      const db = join(dir, "store.db");
+      const cli = (...argv: string[]): Promise<{ stdout: string; stderr: string }> =>
+        execFileAsync(tsxBin, [mainPath, ...argv]); // rejects on nonzero exit
+
+      // create --mode deferredKickoff (NO task — task-less legal in deferred
+      // mode) → Created + the instance id on stdout.
+      const created = await cli(
+        "create", "--db", db, "--mode", "deferredKickoff",
+        "--templates-dir", templatesDir,
+      );
+      const createdDoc = JSON.parse(created.stdout.trim()) as { kind: string; instanceId: string };
+      expect(createdDoc.kind).toBe("created");
+      expect(createdDoc.instanceId).not.toBe("");
+      const id = createdDoc.instanceId;
+
+      // start → Accepted, the run WAITING(kickoff_pending) (the deferred hold).
+      const started = await cli("start", id, "--db", db, "--templates-dir", templatesDir);
+      expect(JSON.parse(started.stdout.trim())).toEqual({ kind: "accepted" });
+
+      // detail shows kernelStatus WAITING + the typed wait (the EMITTED
+      // camelCase read-doc grain, R1).
+      const heldDetail = await cli("detail", id, "--db", db);
+      const heldDoc = JSON.parse(heldDetail.stdout.trim()) as {
+        instance: {
+          kernelStatus: string;
+          activationMode: string;
+          currentStep: string | null;
+          wait: { kind: string } | null;
+        };
+      };
+      expect(heldDoc.instance.kernelStatus).toBe("WAITING");
+      expect(heldDoc.instance.activationMode).toBe("deferred_kickoff");
+      expect(heldDoc.instance.currentStep).toBeNull();
+      expect(heldDoc.instance.wait?.kind).toBe("kickoff_pending");
+
+      // the compact list row carries the WAITING discriminant + the wait KIND
+      // only (R1's state-scan projection), never the full wait payload.
+      const heldList = await cli("list", "--db", db);
+      const heldRows = JSON.parse(heldList.stdout.trim()) as {
+        instanceId: string;
+        kernelStatus: string;
+        wait: { kind: string } | null;
+      }[];
+      const heldRow = heldRows.find((r) => r.instanceId === id);
+      expect(heldRow?.kernelStatus).toBe("WAITING");
+      expect(heldRow?.wait).toEqual({ kind: "kickoff_pending" });
+
+      // kickoff --task → activation (currentStep = template.start, round 1).
+      const kicked = await cli("kickoff", id, "--db", db, "--task", "deferred task", "--templates-dir", templatesDir);
+      const kickedDoc = JSON.parse(kicked.stdout.trim()) as { kind: string; version: number };
+      expect(kickedDoc.kind).toBe("activated");
+
+      const activeDetail = await cli("detail", id, "--db", db);
+      const activeDoc = JSON.parse(activeDetail.stdout.trim()) as {
+        instance: { kernelStatus: string; currentStep: string; round: number; task: string };
+      };
+      expect(activeDoc.instance.kernelStatus).toBe("ACTIVE");
+      expect(activeDoc.instance.currentStep).toBe("implement");
+      expect(activeDoc.instance.round).toBe(1);
+      expect(activeDoc.instance.task).toBe("deferred task");
+    },
+  );
+
+  it(
+    "ch12-P4 V7 cancel lane: create --mode deferredKickoff → start (held) → cancel → TERMINAL(cancelled)",
+    { timeout: 30_000 },
+    async () => {
+      const tsxBin = join(process.cwd(), "..", "node_modules", ".bin", "tsx");
+      const mainPath = join(process.cwd(), "src", "cli", "main.ts");
+      const templatesDir = join(process.cwd(), "templates");
+      const dir = mkdtempSync(join(tmpdir(), "v3-journey-cancel-"));
+      dirs.push(dir);
+      const db = join(dir, "store.db");
+      const cli = (...argv: string[]): Promise<{ stdout: string; stderr: string }> =>
+        execFileAsync(tsxBin, [mainPath, ...argv]); // rejects on nonzero exit
+
+      const created = await cli(
+        "create", "--db", db, "--mode", "deferredKickoff",
+        "--templates-dir", templatesDir,
+      );
+      const id = (JSON.parse(created.stdout.trim()) as { instanceId: string }).instanceId;
+
+      const started = await cli("start", id, "--db", db, "--templates-dir", templatesDir);
+      expect(JSON.parse(started.stdout.trim())).toEqual({ kind: "accepted" });
+
+      // cancel → TERMINAL(cancelled) — the terminated outcome on stdout.
+      const cancelled = await cli("cancel", id, "--db", db, "--templates-dir", templatesDir);
+      expect(JSON.parse(cancelled.stdout.trim())).toEqual({
+        kind: "terminated",
+        disposition: "cancelled",
+      });
+
+      // detail's instance shows the terminal disposition.
+      const detail = await cli("detail", id, "--db", db);
+      const detailDoc = JSON.parse(detail.stdout.trim()) as {
+        instance: { kernelStatus: string; terminalDisposition: string | null };
+      };
+      expect(detailDoc.instance.kernelStatus).toBe("TERMINAL");
+      expect(detailDoc.instance.terminalDisposition).toBe("cancelled");
+
+      // the compact list row's cancelled discriminant.
+      const list = await cli("list", "--db", db);
+      const rows = JSON.parse(list.stdout.trim()) as {
+        instanceId: string;
+        kernelStatus: string;
+        terminalDisposition: string | null;
+      }[];
+      const row = rows.find((r) => r.instanceId === id);
+      expect(row?.kernelStatus).toBe("TERMINAL");
+      expect(row?.terminalDisposition).toBe("cancelled");
     },
   );
 });

@@ -287,9 +287,8 @@ export function admitTemplate(template: WorkflowTemplate, catalog: GateCatalog):
   }
 
   // A2 (packet ch12-p2, C7): the roles.<r>.defaultAgentConfig value-level
-  // lane — reachable via the DIRECT-construction channel now; the roles
-  // source-form walk stays P4's, so a FILE cannot yet author the key (the
-  // ch8 unknown-key rejection stands for it in the window).
+  // lane — driven through BOTH channels: the DIRECT-construction channel and
+  // (since ch12-P4, F4) the FILE channel's roles source-form walk.
   for (const roleName of Object.keys(template.roles)) {
     const role = ownGet(template.roles, roleName) as {
       readonly defaultAgentConfig?: unknown;
@@ -302,14 +301,20 @@ export function admitTemplate(template: WorkflowTemplate, catalog: GateCatalog):
     );
   }
 
-  // R2 (packet ch12-p3, C2/C25): the runtimeContext ILLEGAL-VALUE lane —
-  // detected FIRST (order is load-bearing, R4). The legal authored domain is
-  // absent, the string "none", or a spec MAP { kind, provider, config? }. The
-  // RETIRED ch11 bare "required" string fails admission LOUD with its
-  // migration text; any other non-"none" scalar/list is an uncoded illegal
-  // finding (the file-channel / cast-forged guard). An illegal value fires
-  // ONLY its own container finding — the C5 cross-rule below is SUPPRESSED as
-  // its dependent (ch8-C21).
+  // R2 (packet ch12-p3, C2 → ch12-P4, A1): the runtimeContext ILLEGAL-VALUE
+  // lane — detected FIRST (order is load-bearing, R4). The legal authored
+  // domain is absent, the string "none", or a spec MAP { kind, provider,
+  // config? }. The RETIRED ch11 bare "required" string fails admission LOUD
+  // with its migration text; any other non-"none" scalar/list is an uncoded
+  // illegal finding (the file-channel / cast-forged guard). An illegal value
+  // fires ONLY its own container finding — the C5 cross-rule below is
+  // SUPPRESSED as its dependent (ch8-C21).
+  //
+  // The ch12-P3 P4-deferred JS-Map interception RETIRES at ch12-P4 (C25): the
+  // F3 source-form walk now MATERIALIZES a file-channel spec map into a plain
+  // own-property record, so a well-formed file spec reaches admission as a
+  // plain object (isMap true) and flows through exactly like the
+  // direct-construction spec — one authority, no degenerate staging.
   const runtimeContext: unknown = template.runtimeContext;
   let runtimeContextIllegal = false;
   if (runtimeContext === "required") {
@@ -318,23 +323,6 @@ export function admitTemplate(template: WorkflowTemplate, catalog: GateCatalog):
       message:
         `runtimeContext: "required" is retired — author the spec map ` +
         `{ kind, provider, config? } (a directly-constructed RuntimeContextSpec)`,
-    });
-    runtimeContextIllegal = true;
-  } else if (runtimeContext instanceof Map) {
-    // C25 (packet ch12-p3, R3): the FILE-channel spec-map SOURCE FORM is
-    // deferred to P4 — the YAML walk lands a `mapAsMap` JS Map here (never a
-    // plain object). Refuse it CLEANLY at P3 rather than degenerately accept
-    // it as a spec (`spec.provider` on a JS Map is `undefined` → START would
-    // reject with `runtime_context_provider_unavailable`, an unclean staging).
-    // The window's file domain is context-free (`none`/absent); the ch11
-    // `required` string is refused (R2). The DIRECT-construction plain-object
-    // spec is UNAFFECTED (the golden traces still provision).
-    findings.push({
-      path: "runtimeContext",
-      message:
-        `a runtimeContext spec map authored via the file channel is deferred to P4 (C25) — ` +
-        `the file domain in this window is "none" or absent (context-free); ` +
-        `author the spec on the direct-construction channel, or omit it`,
     });
     runtimeContextIllegal = true;
   } else if (
@@ -439,9 +427,9 @@ export function admitTemplate(template: WorkflowTemplate, catalog: GateCatalog):
   // G3 (packet ch12-p1b): the C1 activation default MATERIALIZED once
   // at admission — an absent key becomes `{mode: "immediate"}` on the
   // ADMITTED value (the advancesRound expansion pattern; the raw input
-  // is never mutated). The FILE key stays unauthorable until P4 (the
-  // ch8 unknown-key rejection stands — C25's window); an authored
-  // direct-channel value is carried verbatim.
+  // is never mutated). Since ch12-P4 the FILE key is authorable (the F2
+  // source-form walk); an authored value (file or direct) is carried
+  // verbatim, an absent key materializes the default.
   //
   // R1 (packet ch12-p3, C4): the runtime-context requirement MATERIALIZED
   // ONCE at admission — the SAME shape-preserving normalize move as

@@ -1027,17 +1027,15 @@ roles:
 });
 
 describe("ch11-P4 F6 — the C12 source ladder for config.timeoutMs (dimension 3)", () => {
-  it("the plain-decimal positive passes its OWN lane — no config.timeoutMs finding (the sole finding is the C25 file-channel refusal)", () => {
-    // ch12-p3 C25: a process-gated YAML template can no longer ADMIT at P3 (the
-    // file-channel runtime-context source form is P4-deferred, R3). The
-    // plain-decimal timeoutMs is still VALID — proven by the ABSENCE of a
-    // config.timeoutMs finding; the only refusal is the runtimeContext one.
+  it("the plain-decimal positive ADMITS — F3 materializes the file spec map (the C25 P4-deferral retired), the process gate's C5 cross-rule satisfied", () => {
+    // ch12-P4 (F3/A1): a process-gated YAML template now ADMITS — the
+    // file-channel runtimeContext spec map WALKS (F3 materializes it into a
+    // plain own-property record, retiring the P3 P4-deferred admission
+    // refusal), so the process gate's C5 provisionable-requirement cross-rule
+    // is satisfied and the plain-decimal timeoutMs is valid: the whole
+    // template loads clean.
     const result = loadGated(gatedProcess("600000"));
-    expect(result.ok).toBe(false);
-    if (result.ok) return;
-    const paths = result.error.findings.map((f) => (f as { path: string }).path);
-    expect(paths).not.toContain("steps.s.gates.GO[0].config.timeoutMs");
-    expect(paths).toContain("runtimeContext");
+    expect(result.ok).toBe(true);
   });
 
   const badForms = [
@@ -1199,5 +1197,201 @@ runtimeContext:
     expect(valueFindings).toHaveLength(1);
     expect(valueFindings[0]).not.toHaveProperty("code");
     expect((valueFindings[0] as { message: string }).message).toContain("unknown config key");
+  });
+});
+
+// ── packet ch12-P4: F1/F2 the `activation` source form (dimension 1) ────
+
+function activationPaths(err: TemplateLoadErrorInfo): string[] {
+  return paths(err).filter((p) => p === "activation" || p.startsWith("activation."));
+}
+
+describe("ch12-P4 F1/F2 — the activation source form (dimension 1), both directions", () => {
+  it("F1: root accepts the OPTIONAL activation key (immediate positive)", () => {
+    expect(load(`${VALID}activation:\n  mode: immediate\n`).ok).toBe(true);
+  });
+
+  it("F1: activation at STEP grain is UNKNOWN", () => {
+    const err = expectValidateErr(
+      template({ steps: "steps:\n  s:\n    role: r\n    instruction: i\n    transitions: {}\n    activation: {}\n" }),
+    );
+    expect(paths(err)).toContain("steps.s.activation");
+  });
+
+  it("F1: activation at ROLES-ENTRY grain is UNKNOWN", () => {
+    const err = expectValidateErr(template({ roles: "roles:\n  r:\n    activation: {}\n" }));
+    expect(paths(err)).toContain("roles.r.activation");
+  });
+
+  it("F2: both `mode` members are legal (immediate, deferredKickoff)", () => {
+    expect(load(`${VALID}activation:\n  mode: immediate\n`).ok).toBe(true);
+    expect(load(`${VALID}activation:\n  mode: deferredKickoff\n`).ok).toBe(true);
+  });
+
+  it("F2: the authored camelCase `deferredKickoff` maps to the STORED `deferred_kickoff` on the admitted value", () => {
+    const result = load(`${VALID}activation:\n  mode: deferredKickoff\n`);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.template.activation).toEqual({ mode: "deferred_kickoff" });
+  });
+
+  it("F2: the STORED snake token `deferred_kickoff` is NOT an authored member (a sensitivity lane) → a finding at activation.mode", () => {
+    const err = expectValidateErr(`${VALID}activation:\n  mode: deferred_kickoff\n`);
+    expect(paths(err)).toContain("activation.mode");
+  });
+
+  it("F2: a non-member `mode` value → a finding at activation.mode", () => {
+    const err = expectValidateErr(`${VALID}activation:\n  mode: eager\n`);
+    expect(paths(err)).toContain("activation.mode");
+  });
+
+  it("F2: an empty activation map (missing mode) → a finding at activation", () => {
+    const err = expectValidateErr(`${VALID}activation: {}\n`);
+    expect(activationPaths(err)).toStrictEqual(["activation"]);
+  });
+
+  it("F2: an unknown key in the activation map → a finding at activation.<key>", () => {
+    const err = expectValidateErr(`${VALID}activation:\n  mode: immediate\n  extra: 1\n`);
+    expect(paths(err)).toContain("activation.extra");
+  });
+
+  for (const [label, form] of [
+    ["present-null", "activation:\n"],
+    ["a scalar", "activation: hello\n"],
+    ["a list", "activation:\n  - x\n"],
+  ] as const) {
+    it(`F2: a PRESENT non-map activation (${label}) → ONE container finding at activation, dependents suppressed`, () => {
+      const err = expectValidateErr(`${VALID}${form}`);
+      expect(activationPaths(err)).toStrictEqual(["activation"]);
+    });
+  }
+
+  it("F2: an ABSENT activation key materializes the immediate default at admission (the walk adds no default)", () => {
+    const result = load(VALID);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.template.activation).toEqual({ mode: "immediate" });
+  });
+});
+
+// ── packet ch12-P4: F3 the `runtimeContext` spec-map source form (dim 2) ─
+
+describe("ch12-P4 F3 — the runtimeContext spec-map source form (dimension 2)", () => {
+  const withRc = (rc: string): string => `${VALID}runtimeContext:\n${rc}`;
+
+  it("a well-formed spec map materializes to required(spec) (the positive)", () => {
+    const result = load(withRc("  kind: worktree\n  provider: pairflow.worktree\n"));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.template.runtimeContext).toEqual({
+      kind: "worktree",
+      provider: "pairflow.worktree",
+    });
+  });
+
+  it("a missing `kind` → a finding at runtimeContext", () => {
+    const err = expectValidateErr(withRc("  provider: pairflow.worktree\n"));
+    expect(paths(err)).toContain("runtimeContext");
+  });
+
+  it("a missing `provider` → a finding at runtimeContext", () => {
+    const err = expectValidateErr(withRc("  kind: worktree\n"));
+    expect(paths(err)).toContain("runtimeContext");
+  });
+
+  it("a `kind` off the ^[a-z][a-z0-9_]*$ grammar → a finding at runtimeContext.kind", () => {
+    const err = expectValidateErr(withRc("  kind: Worktree\n  provider: pairflow.worktree\n"));
+    expect(paths(err)).toContain("runtimeContext.kind");
+  });
+
+  it("a `provider` off the dotted grammar (no dot) → a finding at runtimeContext.provider", () => {
+    const err = expectValidateErr(withRc("  kind: worktree\n  provider: worktree\n"));
+    expect(paths(err)).toContain("runtimeContext.provider");
+  });
+
+  it("a non-map `config` → a finding at runtimeContext.config", () => {
+    const err = expectValidateErr(
+      withRc("  kind: worktree\n  provider: pairflow.worktree\n  config: nope\n"),
+    );
+    expect(paths(err)).toContain("runtimeContext.config");
+  });
+
+  it("an unknown spec-map key → a finding at runtimeContext.<key>", () => {
+    const err = expectValidateErr(
+      withRc("  kind: worktree\n  provider: pairflow.worktree\n  extra: 1\n"),
+    );
+    expect(paths(err)).toContain("runtimeContext.extra");
+  });
+
+  it("RP6: `!!str none` is the string none (context-free) → admits", () => {
+    expect(load(`${VALID}runtimeContext: !!str none\n`).ok).toBe(true);
+  });
+
+  it("RP6: the capitalized-null family (`None`/`NULL`/`Null`) is a null node → admission's illegal-value container finding", () => {
+    for (const nul of ["None", "NULL", "Null"]) {
+      const err = expectValidateErr(`${VALID}runtimeContext: ${nul}\n`);
+      expect(paths(err)).toContain("runtimeContext");
+    }
+  });
+
+  it("RP6: a duplicate `kind` key is the document-wide DUPLICATE_KEY (a parse-stage refusal, never a walk finding)", () => {
+    const result = load(
+      withRc("  kind: worktree\n  kind: other\n  provider: pairflow.worktree\n"),
+    );
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.stage).toBe("parse");
+  });
+
+  it("RP6: an anchor/alias spec map resolves to a plain object graph (no bypass) → materializes required(spec)", () => {
+    const aliased = `${VALID}_anchors:\n  spec: &s\n    kind: worktree\n    provider: pairflow.worktree\nruntimeContext: *s\n`;
+    // `_anchors` is an unknown root key — the alias resolution is what this
+    // lane probes (the spec still materializes cleanly under runtimeContext).
+    const result = load(aliased);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    // The ONLY finding is the unknown `_anchors` key — the aliased spec map
+    // itself walked clean (no runtimeContext finding).
+    expect(paths(result.error).filter((p) => p.startsWith("runtimeContext"))).toStrictEqual([]);
+    expect(paths(result.error)).toContain("_anchors");
+  });
+});
+
+// ── packet ch12-P4: F4 the roles-entry defaultAgentConfig (dimension 3) ─
+
+describe("ch12-P4 F4 — the defaultAgentConfig roles-entry source form (dimension 3)", () => {
+  it("a roles entry accepts the OPTIONAL defaultAgentConfig key (positive)", () => {
+    const result = load(
+      template({ roles: "roles:\n  r:\n    defaultAgentConfig:\n      mode: builder\n" }),
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.template.roles["r"]?.defaultAgentConfig).toEqual({ mode: "builder" });
+  });
+
+  it("defaultActor + defaultAgentConfig together are both delivered", () => {
+    const result = load(
+      template({
+        roles: "roles:\n  r:\n    defaultActor: codex\n    defaultAgentConfig:\n      approach: tdd\n",
+      }),
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.template.roles["r"]).toEqual({
+      defaultActor: "codex",
+      defaultAgentConfig: { approach: "tdd" },
+    });
+  });
+
+  it("defaultAgentConfig at ROOT is UNKNOWN", () => {
+    const err = expectValidateErr(`${VALID}defaultAgentConfig: {}\n`);
+    expect(paths(err)).toStrictEqual(["defaultAgentConfig"]);
+  });
+
+  it("defaultAgentConfig at STEP grain is UNKNOWN", () => {
+    const err = expectValidateErr(
+      template({ steps: "steps:\n  s:\n    role: r\n    instruction: i\n    transitions: {}\n    defaultAgentConfig: {}\n" }),
+    );
+    expect(paths(err)).toContain("steps.s.defaultAgentConfig");
   });
 });

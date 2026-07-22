@@ -61,6 +61,20 @@ describe("S1 — byte-exact listing identity", () => {
     expect(template?.ref).toStrictEqual({ id: "x", version: 1 });
   });
 
+  it("ch12-P4: loads a RUNTIME-KEY template by ref — the activation / runtimeContext / defaultAgentConfig walk delivers the admitted value", async () => {
+    const dir = tempDir();
+    writeFileSync(
+      join(dir, "rt@1.yaml"),
+      `ref:\n  id: rt\n  version: 1\nstart: s\nsteps:\n  s:\n    role: r\n    instruction: i\n    transitions: {}\nterminal:\n  - done\nroles:\n  r:\n    defaultActor: codex\n    defaultAgentConfig:\n      mode: builder\nactivation:\n  mode: deferredKickoff\nruntimeContext:\n  kind: worktree\n  provider: pairflow.worktree\n`,
+    );
+    const store = createFileDefinitionStore(dir, createGateRegistry());
+    const template = await store.load({ id: "rt", version: 1 });
+    expect(template).not.toBeNull();
+    expect(template?.activation).toEqual({ mode: "deferred_kickoff" });
+    expect(template?.runtimeContext).toEqual({ kind: "worktree", provider: "pairflow.worktree" });
+    expect(template?.roles["r"]?.defaultAgentConfig).toEqual({ mode: "builder" });
+  });
+
   it("resolves null on a miss", async () => {
     const dir = tempDir();
     const store = createFileDefinitionStore(dir, createGateRegistry());

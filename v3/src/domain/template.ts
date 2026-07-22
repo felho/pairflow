@@ -80,9 +80,8 @@ export type CapabilityProfile = Readonly<
  * (`worktree` for v1), `provider` names the fulfiller resolved against the
  * injected `ProviderRegistry` at START, and `config` is an OPTIONAL
  * provider-owned raw pass-through map (kernel-uninterpreted). The `kind`/
- * `provider` string GRAMMARS are a parameterized family whose source-form
- * lanes land at P4 (C25); at P3 the spec arrives as a constructed object on
- * the direct-construction channel.
+ * `provider` string GRAMMARS are a parameterized family with a file-channel
+ * source-form walk (ch12-P4, F3) beside the direct-construction channel.
  */
 export interface RuntimeContextSpec {
   readonly kind: string;
@@ -136,9 +135,9 @@ export interface WorkflowTemplate {
    * Actor defaults (l0b): resolve_binding = default_actor + start
    * overrides. `defaultAgentConfig` (packet ch12-p2, T2) is the run
    * profile's FIRST cascade layer (C7) — a map, kernel-opaque; narrowed
-   * to map + canonical-JSON-safe at admission on the direct-construction
-   * channel (A2; the file source-form walk is P4's). ABSENT contributes
-   * `{}`.
+   * to map + canonical-JSON-safe at admission (A2) on BOTH the
+   * direct-construction channel and (ch12-P4, F4) the file source-form
+   * walk. ABSENT contributes `{}`.
    */
   readonly roles: Readonly<
     Record<RoleName, { readonly defaultActor?: ActorId; readonly defaultAgentConfig?: AgentConfig }>
@@ -169,7 +168,8 @@ export interface WorkflowTemplate {
    * — NO absent state downstream. The read-time view is
    * `resolveRuntimeContextRequirement`. A template declaring any process gate
    * without a provisionable requirement FAILS admission (the C5 cross-rule).
-   * The `kind`/`provider` STRING-GRAMMAR source-form lanes are P4's (C25).
+   * The `kind`/`provider` STRING-GRAMMAR source-form lanes ship at ch12-P4
+   * (F3 — the file-channel spec-map walk).
    */
   readonly runtimeContext?: RuntimeContextSpec | "none" | "required";
   /**
@@ -178,9 +178,9 @@ export interface WorkflowTemplate {
    * directly-constructed template; `admitTemplate` MATERIALIZES an
    * absent key to `{mode: "immediate"}` on the admitted value (the
    * `advancesRound` admission-expansion pattern; C1's "materialized
-   * once at admission"). The FILE key stays unauthorable until P4
-   * (the ch8 unknown-key rejection stands — C25's window); the
-   * authored camelCase faces are the create wire and P4's walk.
+   * once at admission"). Since ch12-P4 the FILE key is authorable (the
+   * F2 source-form walk); the authored camelCase faces are the create
+   * wire and that walk.
    */
   readonly activation?: { readonly mode: ActivationMode };
 }

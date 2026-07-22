@@ -968,20 +968,44 @@ describe("ch11-P4 dimension 8 — the file-grain declaration-absent default (F8)
   });
 });
 
-// ── packet ch12-p3 (Finding 6, C25): the file-channel runtime-context SOURCE
-// FORM is deferred to P4. The YAML walk lands a JS Map; admission refuses it
-// CLEANLY (not a degenerate unstartable). Direct construction is unaffected. ──
+// ── packet ch12-P4 (F3, C2/C3): the file-channel runtimeContext spec-map
+// SOURCE FORM now WALKS — the walk materializes the `mapAsMap` JS Map into a
+// plain own-property record delivered to the template's runtimeContext slot
+// (retiring the ch12-P3 P4-deferred admission interception, Claim 6 item 5).
+// Direct construction is unaffected. ──
 
-describe("ch12-p3 C25 — the file-channel runtimeContext spec-map source form is P4-deferred", () => {
+describe("ch12-P4 F3 — the file-channel runtimeContext spec-map source form now walks", () => {
   const withRc = (rc: string): string =>
     `ref:\n  id: t\n  version: 1\nstart: s\nsteps:\n  s:\n    role: r\n    instruction: i\n    transitions:\n      GO: done\nterminal:\n  - done\nroles:\n  r: {}\n${rc}`;
 
-  it("a YAML-authored runtimeContext SPEC MAP → admission REJECTS with the P4-deferred finding (never a degenerate unstartable)", () => {
-    const err = gatedErr(withRc("runtimeContext:\n  kind: worktree\n  provider: pairflow.worktree\n"));
-    const finding = err.findings.find((f) => (f as { path: string }).path === "runtimeContext");
-    expect(finding).toBeDefined();
-    expect(finding).not.toHaveProperty("code");
-    expect((finding as { message: string }).message).toMatch(/deferred to P4|C25/);
+  it("a YAML-authored runtimeContext SPEC MAP now WALKS (F3) → the admitted template carries the materialized required(spec)", () => {
+    const result = loadGated(
+      withRc("runtimeContext:\n  kind: worktree\n  provider: pairflow.worktree\n"),
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    // The spec map materialized into a plain own-property record (never a JS
+    // Map) — deep-equal to the direct-construction spec (the C25 P4-deferral
+    // retirement: one authority, no degenerate staging).
+    expect(result.template.runtimeContext).toEqual({
+      kind: "worktree",
+      provider: "pairflow.worktree",
+    });
+  });
+
+  it("a spec map with a `config` sub-map carries the RAW config verbatim (provider-owned, uninterpreted)", () => {
+    const result = loadGated(
+      withRc(
+        "runtimeContext:\n  kind: worktree\n  provider: pairflow.worktree\n  config:\n    repo: bubble/{instance_id}\n",
+      ),
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.template.runtimeContext).toEqual({
+      kind: "worktree",
+      provider: "pairflow.worktree",
+      config: { repo: "bubble/{instance_id}" },
+    });
   });
 
   it("a YAML `runtimeContext: required` → the R2 migration refusal (still driven)", () => {
@@ -998,5 +1022,113 @@ describe("ch12-p3 C25 — the file-channel runtimeContext spec-map source form i
   it("an ABSENT runtimeContext (context-free) admits", () => {
     const result = loadGated(withRc(""));
     expect(result.ok).toBe(true);
+  });
+
+  it("an ILLEGAL runtimeContext value (present-null / list / other-scalar) → admission's A1 container finding at runtimeContext (the walk passes it raw)", () => {
+    for (const rc of ["runtimeContext:\n", "runtimeContext:\n  - x\n", "runtimeContext: 7\n"]) {
+      const err = gatedErr(withRc(rc));
+      const at = err.findings.filter((f) => (f as { path: string }).path === "runtimeContext");
+      // EXACTLY ONE finding at runtimeContext (the walk owns no value meaning;
+      // A1 emits the container-precondition lane), uncoded.
+      expect(at).toHaveLength(1);
+      expect(at[0]).not.toHaveProperty("code");
+    }
+  });
+});
+
+// ── packet ch12-P4: dimension 5 — the MAXIMAL runtime-key template channel
+// equivalence (file-loaded ≡ direct-admitted, whole-value deep-equal) ──────
+
+describe("ch12-P4 dimension 5 — the maximal runtime-key template: file-loaded ≡ direct-admitted", () => {
+  const maximalYaml = `ref:
+  id: rtmax
+  version: 1
+start: implement
+steps:
+  implement:
+    role: implementer
+    instruction: |-
+      build it
+    transitions:
+      PASS: done
+    agentConfig:
+      approach: tdd
+terminal:
+  - done
+roles:
+  implementer:
+    defaultActor: codex
+    defaultAgentConfig:
+      mode: builder
+      promptProfileRefs:
+        - engineer-defaults
+activation:
+  mode: deferredKickoff
+runtimeContext:
+  kind: worktree
+  provider: pairflow.worktree
+  config:
+    repo: bubble/{instance_id}
+`;
+
+  const maximalDirect: WorkflowTemplate = {
+    ref: { id: "rtmax", version: 1 },
+    start: "implement",
+    steps: {
+      implement: {
+        role: "implementer",
+        instruction: "build it",
+        transitions: { PASS: "done" },
+        agentConfig: { approach: "tdd" },
+      },
+    },
+    terminal: ["done"],
+    roles: {
+      implementer: {
+        defaultActor: "codex",
+        defaultAgentConfig: { mode: "builder", promptProfileRefs: ["engineer-defaults"] },
+      },
+    },
+    // The authored camelCase deferredKickoff ↔ the stored deferred_kickoff.
+    activation: { mode: "deferred_kickoff" },
+    runtimeContext: {
+      kind: "worktree",
+      provider: "pairflow.worktree",
+      config: { repo: "bubble/{instance_id}" },
+    },
+  };
+
+  it("the whole admitted value is DEEP-EQUAL across channels (activation default, requirement, every agent-config position)", () => {
+    const fileLoaded = loadGated(maximalYaml);
+    const direct = admitTemplate(maximalDirect, catalog);
+    expect(fileLoaded.ok).toBe(true);
+    expect(direct.ok).toBe(true);
+    if (!fileLoaded.ok || !direct.ok) return;
+    expect(fileLoaded.template).toEqual(direct.template);
+  });
+});
+
+// ── packet ch12-P4: A3 the agent-config canonical-JSON-safety value lane,
+// driven through the FILE channel at BOTH template positions ──────────────
+
+describe("ch12-P4 A3 — the non-finite agent-config rejection through the file channel", () => {
+  it("a `.nan` in a step agentConfig → the canonical-JSON-safety rejection at steps.<s>.agentConfig", () => {
+    const err = gatedErr(
+      `ref:\n  id: t\n  version: 1\nstart: s\nsteps:\n  s:\n    role: r\n    instruction: i\n    transitions: {}\n    agentConfig:\n      budget: .nan\nterminal:\n  - done\nroles:\n  r: {}\n`,
+    );
+    const at = err.findings.filter((f) => (f as { path: string }).path === "steps.s.agentConfig");
+    expect(at).toHaveLength(1);
+    expect((at[0] as { message: string }).message).toMatch(/canonical-JSON-safe/);
+  });
+
+  it("a `.inf` in a role defaultAgentConfig → the canonical-JSON-safety rejection at roles.<r>.defaultAgentConfig", () => {
+    const err = gatedErr(
+      `ref:\n  id: t\n  version: 1\nstart: s\nsteps:\n  s:\n    role: r\n    instruction: i\n    transitions: {}\nterminal:\n  - done\nroles:\n  r:\n    defaultAgentConfig:\n      ceiling: .inf\n`,
+    );
+    const at = err.findings.filter(
+      (f) => (f as { path: string }).path === "roles.r.defaultAgentConfig",
+    );
+    expect(at).toHaveLength(1);
+    expect((at[0] as { message: string }).message).toMatch(/canonical-JSON-safe/);
   });
 });

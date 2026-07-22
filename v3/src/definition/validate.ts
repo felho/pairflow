@@ -1,7 +1,13 @@
 import { isAlias, isScalar } from "yaml";
 import type { Document } from "yaml";
 
-import type { AgentConfig, RuntimeContextSpec, Step, WorkflowTemplate } from "../domain/index.js";
+import type {
+  ActivationMode,
+  AgentConfig,
+  RuntimeContextSpec,
+  Step,
+  WorkflowTemplate,
+} from "../domain/index.js";
 import type { ValidationFinding } from "./errors.js";
 
 /**
@@ -34,15 +40,31 @@ export interface ValidateOutcome {
 
 /** The five REQUIRED root keys (ch8-C9) — missing any is a finding. */
 const ROOT_KEYS = ["ref", "start", "steps", "terminal", "roles"] as const;
-/** F1 (ch11-P4): the two OPTIONAL root keys the format walk grows to —
- * `runtimeContext` (C18) and `round` (C37). Legal but never required;
- * `gates` at ROOT stays unknown (it is step surface). */
-const OPTIONAL_ROOT_KEYS = ["runtimeContext", "round"] as const;
+/** F1 (ch11-P4 → ch12-P4): the OPTIONAL root keys the format walk grows
+ * to — `runtimeContext` (C18), `round` (C37), and `activation` (ch12-P4,
+ * C1). Legal but never required; `gates` at ROOT stays unknown (it is
+ * step surface). */
+const OPTIONAL_ROOT_KEYS = ["runtimeContext", "round", "activation"] as const;
 /** F2 (ch11-P4): the step keyset — the ch8 three required + optional
  * `agentConfig` + optional `gates` (C1). */
 const STEP_KEYS = ["role", "instruction", "transitions", "agentConfig", "gates"] as const;
+/** F4 (ch12-P4, C6): the roles-entry keyset grows to `defaultActor?` +
+ * `defaultAgentConfig?` (both optional). */
+const ROLES_ENTRY_KEYS = ["defaultActor", "defaultAgentConfig"] as const;
 const REF_ID = /^[a-z0-9][a-z0-9-]*$/;
 const VERSION_SOURCE = /^[1-9][0-9]*$/;
+/** F2 (ch12-P4, C1): the authored camelCase `activation.mode` values ↔
+ * the model's stored snake tokens — the C1/C11 authored↔stored mapping,
+ * stated so neither side silently forks. */
+const ACTIVATION_MODE_BY_AUTHORED: Readonly<Record<string, ActivationMode>> = {
+  immediate: "immediate",
+  deferredKickoff: "deferred_kickoff",
+};
+/** F3 (ch12-P4, C2/C3): the runtimeContext spec-map keyset + the `kind`
+ * and dotted `provider` grammars (the ch11-C6 dotted grammar reuse). */
+const RUNTIME_CONTEXT_SPEC_KEYS = ["kind", "provider", "config"] as const;
+const RUNTIME_CONTEXT_KIND = /^[a-z][a-z0-9_]*$/;
+const RUNTIME_CONTEXT_PROVIDER = /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/;
 
 type ResolvedMap = ReadonlyMap<unknown, unknown>;
 
@@ -299,6 +321,11 @@ export function validateTemplate(value: unknown, doc: Document, source: string):
 
   const findings: ValidationFinding[] = [];
   const root = value;
+  // ONE materialization memo per build preserves cross-position aliased
+  // value identity (the V9 integration re-check's catch) — shared by the
+  // roles `defaultAgentConfig` (F4), the runtimeContext spec map (F3),
+  // and the step `agentConfig`/`gates` positions.
+  const materializeMemo = new WeakMap<object, unknown>();
 
   // V15: the cycle finding ACCUMULATES with the structural lanes
   // (E2/C21 accumulation — aftermath fix, the external arm's catch:
@@ -543,13 +570,20 @@ export function validateTemplate(value: unknown, doc: Document, source: string):
   }
 
   // V10: roles — container precondition, entry keysets, defaultActor rule.
+  // F4 (ch12-P4, C6): the roles-entry keyset grows to `defaultActor?` +
+  // `defaultAgentConfig?`; the walk delivers the resolved value to the
+  // built slot, and the agent-config VALUE-LEVEL gate (map,
+  // canonical-JSON-safe) is admission's (A3, P2-built).
   let declaredRoles: string[] | undefined;
   let declaredRolesReliable = true;
-  const builtRoles: Record<string, { readonly defaultActor?: string }> = {};
+  const builtRoles: Record<
+    string,
+    { readonly defaultActor?: string; readonly defaultAgentConfig?: AgentConfig }
+  > = {};
   if (mapHas(root, "roles")) {
     const roles = mapGet(root, "roles");
     if (!isResolvedMap(roles)) {
-      findings.push({ path: "roles", message: "roles must be a map of role-name -> { defaultActor? }" });
+      findings.push({ path: "roles", message: "roles must be a map of role-name -> { defaultActor?, defaultAgentConfig? }" });
     } else {
       const rawRoleNames = mapKeys(roles);
       declaredRoles = rawRoleNames.filter((name): name is string => typeof name === "string");
@@ -564,29 +598,39 @@ export function validateTemplate(value: unknown, doc: Document, source: string):
         const entryPath = typeof name === "string" ? `roles.${name}` : "roles";
         const entry = mapGet(roles, name);
         if (!isResolvedMap(entry)) {
-          findings.push({ path: entryPath, message: "a roles entry must be a map whose only legal key is the optional defaultActor" });
+          findings.push({ path: entryPath, message: "a roles entry must be a map whose legal keys are the optional defaultActor and defaultAgentConfig" });
           continue;
         }
         for (const key of mapKeys(entry)) {
-          if (key !== "defaultActor") {
+          if (typeof key !== "string" || !(ROLES_ENTRY_KEYS as readonly string[]).includes(key)) {
             findings.push({
               path: typeof key === "string" ? `${entryPath}.${key}` : entryPath,
               message: `unknown key ${describeValue(key)}`,
             });
           }
         }
+        if (typeof name !== "string") {
+          continue;
+        }
+        const roleEntry: { defaultActor?: string; defaultAgentConfig?: AgentConfig } = {};
         if (mapHas(entry, "defaultActor")) {
           const actor = mapGet(entry, "defaultActor");
           if (typeof actor !== "string" || actor.length === 0) {
             findings.push({ path: `${entryPath}.defaultActor`, message: "defaultActor must be a nonempty string when present" });
-          } else if (typeof name === "string") {
-            defineOwn(builtRoles, name, { defaultActor: actor });
-            continue;
+          } else {
+            roleEntry.defaultActor = actor;
           }
         }
-        if (typeof name === "string") {
-          defineOwn(builtRoles, name, {});
+        // F4: the value rides through RAW (materialized like a step's
+        // agentConfig) — the map + canonical-JSON VALUE-LEVEL check is
+        // admission's (A3). ONE shared memo preserves aliased identity.
+        if (mapHas(entry, "defaultAgentConfig")) {
+          roleEntry.defaultAgentConfig = materializeResolvedValue(
+            mapGet(entry, "defaultAgentConfig"),
+            materializeMemo,
+          ) as AgentConfig;
         }
+        defineOwn(builtRoles, name, roleEntry);
       }
     }
   }
@@ -672,11 +716,118 @@ export function validateTemplate(value: unknown, doc: Document, source: string):
     }
   }
 
-  // F4 (ch11-P4, C18): `runtimeContext` passes through RAW — the
-  // illegal-value lane is ADMISSION's (A3, C21), so both channels share
-  // one authority. The walk neither legalizes nor rejects any value.
+  // F3 (ch12-P4, C2/C3): the `runtimeContext` requirement SOURCE FORM. The
+  // walk resolves the value domain { the string `none` (→ `none`); a SPEC
+  // MAP (→ `required(spec)`) } and MATERIALIZES a file-channel spec map (a
+  // `mapAsMap` JS Map) into an own-property record for the template slot
+  // (retiring the P4-deferred admission interception). The spec map is
+  // FIXED-KEYSET (`kind` required + `^[a-z][a-z0-9_]*$`; `provider` required
+  // + the dotted grammar; `config` OPTIONAL map, RAW pass-through) — each
+  // violation a finding at its path. An ILLEGAL value (present-null / list /
+  // other-scalar — neither the string `none` NOR a spec map) is NOT
+  // materialized: it passes through RAW and admission's A1 container lane
+  // emits the ONE finding at `runtimeContext` (the OWNERSHIP ASYMMETRY with
+  // F2 — the walk owns only a well-formed spec map's FORM, never a value's
+  // MEANING).
   const runtimeContextPresent = mapHas(root, "runtimeContext");
-  const runtimeContextRaw = runtimeContextPresent ? mapGet(root, "runtimeContext") : undefined;
+  let runtimeContextField: RuntimeContextSpec | "none" | "required" | undefined;
+  if (runtimeContextPresent) {
+    const runtimeContext = mapGet(root, "runtimeContext");
+    if (isResolvedMap(runtimeContext)) {
+      for (const key of mapKeys(runtimeContext)) {
+        if (typeof key !== "string" || !(RUNTIME_CONTEXT_SPEC_KEYS as readonly string[]).includes(key)) {
+          findings.push({
+            path: typeof key === "string" ? `runtimeContext.${key}` : "runtimeContext",
+            message: `unknown key ${describeValue(key)} (a runtimeContext spec map's only keys are kind, provider, config?)`,
+          });
+        }
+      }
+      if (!mapHas(runtimeContext, "kind")) {
+        findings.push({ path: "runtimeContext", message: 'missing required key "kind"' });
+      } else {
+        const kind = mapGet(runtimeContext, "kind");
+        if (typeof kind !== "string" || !RUNTIME_CONTEXT_KIND.test(kind)) {
+          findings.push({
+            path: "runtimeContext.kind",
+            message: `kind must be a string matching ${RUNTIME_CONTEXT_KIND.source}; got ${describeValue(kind)}`,
+          });
+        }
+      }
+      if (!mapHas(runtimeContext, "provider")) {
+        findings.push({ path: "runtimeContext", message: 'missing required key "provider"' });
+      } else {
+        const provider = mapGet(runtimeContext, "provider");
+        if (typeof provider !== "string" || !RUNTIME_CONTEXT_PROVIDER.test(provider)) {
+          findings.push({
+            path: "runtimeContext.provider",
+            message: `provider must be a string matching ${RUNTIME_CONTEXT_PROVIDER.source} (two or more dot-separated lowercase segments); got ${describeValue(provider)}`,
+          });
+        }
+      }
+      if (mapHas(runtimeContext, "config")) {
+        const config = mapGet(runtimeContext, "config");
+        if (!isResolvedMap(config)) {
+          findings.push({
+            path: "runtimeContext.config",
+            message: `config must be a map when present; got ${describeValue(config)}`,
+          });
+        }
+      }
+      // Materialize the spec map (string-keyed → own-property record) for the
+      // template slot — a well-formed spec reaches admission as a plain object
+      // (never a JS Map), the retired-interception's raison d'être closed. A
+      // defective one still materializes (its findings already gate the load).
+      runtimeContextField = materializeResolvedValue(
+        runtimeContext,
+        materializeMemo,
+      ) as RuntimeContextSpec;
+    } else {
+      // The string `none` (→ `none`) or an ILLEGAL value passed RAW to
+      // admission's A1 container lane (the walk owns no value MEANING).
+      runtimeContextField = runtimeContext as RuntimeContextSpec | "none" | "required";
+    }
+  }
+
+  // F2 (ch12-P4, C1): the `activation` container + `mode` SOURCE FORM.
+  // `activation` is a FIXED-KEYSET map with the single REQUIRED key `mode`
+  // (an empty map → the missing-`mode` finding at `activation`); `mode`'s
+  // value ∈ { `immediate`, `deferredKickoff` } (authored camelCase ↔ the
+  // stored `immediate`/`deferred_kickoff`); a PRESENT non-map value is ONE
+  // container-precondition finding at `activation` (dependents suppressed);
+  // unknown keys are findings at `activation.<key>`. The walk performs NO
+  // default materialization — an ABSENT key leaves the field absent and
+  // admission materializes the `immediate` default (G3, P1a-built).
+  let activationDomain: { readonly mode: ActivationMode } | undefined;
+  if (mapHas(root, "activation")) {
+    const activationFindingsStart = findings.length;
+    const activation = mapGet(root, "activation");
+    if (!isResolvedMap(activation)) {
+      findings.push({ path: "activation", message: "activation must be a map with the single key mode" });
+    } else {
+      for (const key of mapKeys(activation)) {
+        if (key !== "mode") {
+          findings.push({
+            path: typeof key === "string" ? `activation.${key}` : "activation",
+            message: `unknown key ${describeValue(key)} (activation's only key is mode)`,
+          });
+        }
+      }
+      if (!mapHas(activation, "mode")) {
+        findings.push({ path: "activation", message: 'missing required key "mode"' });
+      } else {
+        const mode = mapGet(activation, "mode");
+        const stored = typeof mode === "string" ? ACTIVATION_MODE_BY_AUTHORED[mode] : undefined;
+        if (stored === undefined) {
+          findings.push({
+            path: "activation.mode",
+            message: `mode must be one of immediate, deferredKickoff; got ${describeValue(mode)}`,
+          });
+        } else if (findings.length === activationFindingsStart) {
+          activationDomain = { mode: stored };
+        }
+      }
+    }
+  }
 
   // F7 (ch11-P4): build the best-effort template ALWAYS (the root is a
   // map at this point). The admission rung runs on it in the load
@@ -685,9 +836,6 @@ export function validateTemplate(value: unknown, doc: Document, source: string):
   // findings-free admission escape). Broken step containers are SKIPPED
   // (disposition c — their own finding already fired); the round slot is
   // attached only when source-form clean AND the steps operand exists.
-  // ONE materialization memo per build preserves cross-step aliased
-  // agentConfig identity (the V9 integration re-check's catch).
-  const materializeMemo = new WeakMap<object, unknown>();
   const builtSteps: Record<string, Step> = {};
   const stepsValue = mapGet(root, "steps");
   const stepsIsMap = isResolvedMap(stepsValue);
@@ -741,9 +889,10 @@ export function validateTemplate(value: unknown, doc: Document, source: string):
     terminal: terminalIds ?? [],
     roles: builtRoles,
     ...(runtimeContextPresent
-      ? { runtimeContext: runtimeContextRaw as RuntimeContextSpec | "none" | "required" }
+      ? { runtimeContext: runtimeContextField as RuntimeContextSpec | "none" | "required" }
       : {}),
     ...(roundDomain !== undefined && stepsIsMap ? { round: roundDomain } : {}),
+    ...(activationDomain !== undefined ? { activation: activationDomain } : {}),
   };
   return { template, findings };
 }

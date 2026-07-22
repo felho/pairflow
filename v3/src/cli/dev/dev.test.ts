@@ -98,18 +98,25 @@ function assertError(result: Run, expectedClass: string, expectedCode: number): 
 const MARKER = "MARKER_DEV_ECHO_7a1";
 
 /** Seeds a file DB with one run + one marker-payload commit via the
- * NORMAL cli (the P4a surface is the fixture tool here). */
+ * NORMAL cli (the ch12-P4 create→start surface is the fixture tool
+ * here). */
 async function seedDb(): Promise<{ db: string; id: string }> {
   const db = join(tempDir(), "store.db");
   const deps = testDeps();
-  const started: string[] = [];
-  const code = await runCli(["start", "--db", db, "--task", "t"], deps, {
-    out: (line) => started.push(line),
+  const created: string[] = [];
+  const createCode = await runCli(["create", "--db", db, "--task", "t"], deps, {
+    out: (line) => created.push(line),
     err: () => undefined,
   });
-  expect(code).toBe(EXIT.ok);
-  const id = (JSON.parse(started[0] ?? "") as { instanceId: string }).instanceId;
-  // The C25 bridge activates to version 2, so the first PASS targets v2.
+  expect(createCode).toBe(EXIT.ok);
+  const id = (JSON.parse(created[0] ?? "") as { instanceId: string }).instanceId;
+  const startCode = await runCli(["start", id, "--db", db], deps, {
+    out: () => undefined,
+    err: () => undefined,
+  });
+  expect(startCode).toBe(EXIT.ok);
+  // create (genesis v1) + start (the activation commit) ⇒ version 2, so the
+  // first PASS targets v2.
   const submit = await runCli(
     ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "2", "--expected-role", "implementer", "--payload", `{"secret":"${MARKER}"}`],
     deps,
@@ -519,6 +526,63 @@ describe("dev cli — validate over gated files (packet ch11-P4 Y7)", () => {
   });
 });
 
+// ── packet ch12-P4 V1: dev validate over RUNTIME-KEY template files (the
+// activation / runtimeContext spec / defaultAgentConfig source forms ride
+// the SAME {stage, findings} carrier — only finding content is new). ──────
+
+const runtimeKeyFile = (mode: string): string => `ref:
+  id: rt-pair-v0
+  version: 1
+start: implement
+steps:
+  implement:
+    role: implementer
+    instruction: |-
+      build it
+    transitions:
+      PASS: done
+    agentConfig:
+      approach: tdd
+terminal:
+  - done
+roles:
+  implementer:
+    defaultActor: codex
+    defaultAgentConfig:
+      mode: builder
+activation:
+  mode: ${mode}
+runtimeContext:
+  kind: worktree
+  provider: pairflow.worktree
+`;
+
+describe("dev cli — validate over runtime-key files (packet ch12-P4 V1)", () => {
+  it("a VALID runtime-key file (activation + runtimeContext spec + defaultAgentConfig) → exit 0, {valid: true, ref}", async () => {
+    const path = join(tempDir(), "rt.yaml");
+    writeFileSync(path, runtimeKeyFile("deferredKickoff"));
+    const res = await runDev(["validate", path], testDeps());
+    expect(res.code).toBe(EXIT.ok);
+    expect(res.stderr).toEqual([]);
+    expect(JSON.parse(res.stdout[0] ?? "")).toEqual({
+      valid: true,
+      ref: { id: "rt-pair-v0", version: 1 },
+    });
+  });
+
+  it("a source-form-defective runtime-key file (bad activation.mode) → exit 1 TemplateInvalid, stage validate, the activation.mode finding", async () => {
+    const path = join(tempDir(), "rt-bad.yaml");
+    writeFileSync(path, runtimeKeyFile("eager"));
+    const res = await runDev(["validate", path], testDeps());
+    expect(res.stdout).toEqual([]);
+    const err = assertError(res, "internal", EXIT.internal);
+    expect(err.name).toBe("TemplateInvalid");
+    const details = err.details as { stage: string; findings: { path: string }[] };
+    expect(details.stage).toBe("validate");
+    expect(details.findings.some((f) => f.path === "activation.mode")).toBe(true);
+  });
+});
+
 describe("dev cli — inject/replay on the templates lane (packet ch8-P2: W-lane + A3/M4 edges)", () => {
   it("inject W-lane: the in-handle typed load error surfaces at the ingress.submit await → TemplateInvalid 1", async () => {
     const { db, id } = await seedDb();
@@ -806,8 +870,9 @@ describe("dev cli — the diag verb: the global cursor dump (packet ch7-P4: V3/F
     const deps = testDeps();
     const outs: string[] = [];
     const sink = { out: (l: string) => outs.push(l), err: () => undefined };
-    expect(await runCli(["start", "--db", db, "--task", "t"], deps, sink)).toBe(EXIT.ok);
+    expect(await runCli(["create", "--db", db, "--task", "t"], deps, sink)).toBe(EXIT.ok);
     const id = (JSON.parse(outs[0] ?? "") as { instanceId: string }).instanceId;
+    expect(await runCli(["start", id, "--db", db], deps, sink)).toBe(EXIT.ok);
     expect(
       await runCli(
         ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "2", "--expected-role", "implementer", "--payload", '{"ref":"d"}'],

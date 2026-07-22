@@ -176,3 +176,123 @@ describe("floor.getTimeline — the §6.2 cursor read (packet ch6-P1)", () => {
     handle.close();
   });
 });
+
+// ── packet ch12-P4: R1/R2/R3 — the compact/full floor split ──────────────
+
+const SECRET_LOCATOR = "/secret/worktree/locator-path";
+
+const provisionedActive: WorkflowInstance = {
+  ...instance,
+  instanceId: "inst-ready",
+  runtimeContext: { state: "ready", ref: { kind: "worktree", locator: SECRET_LOCATOR } },
+};
+
+const heldInstance: WorkflowInstance = {
+  ...instance,
+  instanceId: "inst-held",
+  currentStep: null,
+  round: 0,
+  kernelStatus: "WAITING",
+  wait: { kind: "kickoff_pending", requestedBy: "activation", resumeEvents: ["KICKOFF"] },
+  runtimeContext: { state: "ready", ref: null },
+};
+
+describe("floor — R1 the compact listInstances projection (packet ch12-P4)", () => {
+  it("projects the state-scan discriminant and EXCLUDES the opaque locator (a sensitivity assert)", async () => {
+    const handle = openStore(":memory:", createControlledClock(0));
+    await handle.store.createInstance(provisionedActive);
+    const rows = await createFloor(handle.store).listInstances();
+    expect(rows).toHaveLength(1);
+    const row = rows[0];
+    // The axis fields present, the runtime-context STATE discriminant present…
+    expect(row).toEqual({
+      instanceId: "inst-ready",
+      templateRef: { id: "local-pair-v0", version: 1 },
+      currentStep: "implement",
+      round: 1,
+      kernelStatus: "ACTIVE",
+      terminalDisposition: null,
+      activationMode: "immediate",
+      wait: null,
+      runtimeContext: { state: "ready" },
+    });
+    // …but the opaque locator is ABSENT from the compact row (no `ref`), and
+    // no read-doc field carries the retired ch-4 `status`/`version` on a list
+    // row.
+    expect(JSON.stringify(row)).not.toContain(SECRET_LOCATOR);
+    expect(row?.runtimeContext).not.toHaveProperty("ref");
+    expect(row).not.toHaveProperty("status");
+    expect(row).not.toHaveProperty("version");
+    handle.close();
+  });
+
+  it("projects the typed wait's KIND alone (not the full payload) for a WAITING run", async () => {
+    const handle = openStore(":memory:", createControlledClock(0));
+    await handle.store.createInstance(heldInstance);
+    const rows = await createFloor(handle.store).listInstances();
+    const row = rows[0];
+    expect(row?.kernelStatus).toBe("WAITING");
+    expect(row?.wait).toEqual({ kind: "kickoff_pending" });
+    // The full wait payload (requestedBy / resumeEvents) is `detail`'s, not
+    // the compact row's.
+    expect(row?.wait).not.toHaveProperty("requestedBy");
+    expect(row?.wait).not.toHaveProperty("resumeEvents");
+    handle.close();
+  });
+});
+
+describe("floor — R2 getInstanceDetail keeps the FULL state incl. the opaque ref (packet ch12-P4)", () => {
+  it("the detail read carries the opaque runtime-context ref locator (the operator/debug read)", async () => {
+    const handle = openStore(":memory:", createControlledClock(0));
+    await handle.store.createInstance(provisionedActive);
+    const detail = await createFloor(handle.store).getInstanceDetail("inst-ready");
+    expect(detail?.instance.runtimeContext).toEqual({
+      state: "ready",
+      ref: { kind: "worktree", locator: SECRET_LOCATOR },
+    });
+    // The full wait payload survives for a held run too.
+    await handle.store.createInstance(heldInstance);
+    const held = await createFloor(handle.store).getInstanceDetail("inst-held");
+    expect(held?.instance.wait).toEqual({
+      kind: "kickoff_pending",
+      requestedBy: "activation",
+      resumeEvents: ["KICKOFF"],
+    });
+    // The retired ch-4 `status` field appears in no read doc.
+    expect(JSON.stringify(detail?.instance)).not.toContain('"status"');
+    handle.close();
+  });
+});
+
+describe("floor — R3 getTimeline returns both transcript entry classes (packet ch12-P4)", () => {
+  it("a create→start→transition run's timeline carries the STARTED lifecycle fact AND the transition, kinds visible", async () => {
+    const handle = openStore(":memory:", createControlledClock(0));
+    const kernel = createKernel({
+      providerRegistry: createStaticProviderRegistry({}),
+      processRunner: createScriptedProcessGateRunner([]),
+      store: handle.store,
+      definitions,
+      time: createControlledClock(0),
+      digest: deriveEmitDigest,
+      gates: gateCatalog,
+      diag: noopDiagnosticsSink,
+    });
+    const floor = createFloor(handle.store);
+
+    await kernel.create({ instanceId: "inst-tl", templateRef: { id: "local-pair-v0", version: 1 }, task: "t" });
+    const started = await kernel.start({ instanceId: "inst-tl", opId: "op-start" });
+    expect(started.kind).toBe("activated");
+    expect(
+      (await kernel.handle({ ...env("a1", "PASS", 2, { ref: "d" }), instanceId: "inst-tl" })).kind,
+    ).toBe("committed");
+
+    const rows = await floor.getTimeline("inst-tl", 0);
+    expect(rows).not.toBeNull();
+    const kinds = (rows ?? []).map((r) => r.entryKind);
+    expect(kinds).toContain("STARTED");
+    expect(kinds).toContain("transition");
+    // The retired ch-4 `status` field appears in no timeline row.
+    expect(JSON.stringify(rows)).not.toContain('"status"');
+    handle.close();
+  });
+});

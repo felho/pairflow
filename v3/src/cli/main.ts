@@ -1,8 +1,13 @@
 import { pathToFileURL } from "node:url";
 
 import { DiagUnavailableError } from "../diag/index.js";
-import type { EventEnvelope, Outcome, WorkflowTemplate } from "../domain/index.js";
-import { deriveEmitDigest, deriveOperatorOpId } from "../emit/index.js";
+import type {
+  ActivationMode,
+  EventEnvelope,
+  Outcome,
+  WorkflowTemplate,
+} from "../domain/index.js";
+import { deriveEmitDigest, deriveOperatorOpId, isCanonicalizable } from "../emit/index.js";
 import {
   createDebugBundleExporter,
   createDiagTail,
@@ -14,6 +19,9 @@ import {
 } from "../floor/index.js";
 import { createIngress } from "../ingress/index.js";
 import { createKernel } from "../kernel/index.js";
+import type { Kernel } from "../kernel/index.js";
+import type { DefinitionStore } from "../ports/definition.js";
+import type { GateCatalog } from "../ports/gate.js";
 import type { VerbContext, VerbHandler, VerbOptions } from "./common.js";
 import {
   dispatch,
@@ -40,13 +48,16 @@ import { createGateRegistry } from "../gates/index.js";
 import { createStaticProviderRegistry } from "../ports/index.js";
 
 /**
- * The operator CLI, normal entrypoint (plan §6.5, packet ch6-P4a): a
- * THIN client — formatting, defaults, wiring; zero semantics. Verbs:
- * list / detail / timeline / tail / bundle (read-only floor) and
- * start / submit (writes — through the kernel's CREATE→START bridge and
+ * The operator CLI, normal entrypoint (plan §6.5, packets ch6-P4a ·
+ * ch12-P4): a THIN client — formatting, defaults, wiring; zero
+ * semantics. Verbs: list / detail / timeline / tail / bundle (read-only
+ * floor) and create / start / kickoff / cancel / submit (writes — THIN
+ * INGRESS WRITERS over the built kernel lifecycle methods and
  * ingress.submit ONLY; the src/cli lint boundary bans direct StorePort
- * writes). Dev verbs live behind the SEPARATE cli/dev entrypoint
- * (P4b; ADR-009 boundary).
+ * writes). The four lifecycle verbs (ch12-P4, V1–V6) replace the
+ * retired C25 in-handler CREATE→START bridge — `create` is genesis,
+ * `start` the real single-op START. Dev verbs live behind the SEPARATE
+ * cli/dev entrypoint (P4b; ADR-009 boundary).
  */
 export type { CliSinks } from "./common.js";
 
@@ -117,6 +128,136 @@ function outcomeExitCode(outcome: Outcome): number {
     case "rejected":
       return EXIT.notFound;
   }
+}
+
+/**
+ * V3 (packet ch12-P4): the exit mapping over the LIFECYCLE outcome
+ * unions (`CreateOutcome`/`StartOutcome`/`KickoffOutcome`/`CancelOutcome`
+ * — `domain/outcome.ts`), which DIFFER from the actor-transition
+ * `Outcome`: the SUCCESS/idempotent kinds (`created`/`activated`/
+ * `accepted`/`terminated`/`duplicate`) → exit-0 DATA docs; `rejected`
+ * → exit-3 kernel-negative DATA docs (incl. a WRITE-path
+ * `unknown_instance` — NOT a read-side notFound error doc). There is NO
+ * `stale` (a lifecycle CAS conflict RETRIES in-loop, never surfacing an
+ * outcome), and the terminal-sink `state_violation` THROWS (mapped to
+ * exit-1 internal by the dispatch catch) rather than returning here.
+ */
+function lifecycleExitCode(outcome: { readonly kind: string }): number {
+  switch (outcome.kind) {
+    case "created":
+    case "activated":
+    case "accepted":
+    case "terminated":
+    case "duplicate":
+      return EXIT.ok;
+    case "rejected":
+      return EXIT.notFound;
+    default:
+      // Unreachable — the lifecycle unions carry no other kind.
+      return EXIT.internal;
+  }
+}
+
+/** V2/V5 (packet ch12-P4, C13): the `--mode` CLI input precondition — a
+ * MEMBER token by construction. The authored camelCase `immediate` /
+ * `deferredKickoff` maps to the DOMAIN token; a NON-member is refused
+ * CLI-side (usage/2) BEFORE `kernel.create`, so the `?? default` cascade
+ * never resolves a bogus token (the fail-open a silent pass-through would
+ * create is closed at the CLI grain). */
+const MODE_BY_AUTHORED: Readonly<Record<string, ActivationMode>> = {
+  immediate: "immediate",
+  deferredKickoff: "deferred_kickoff",
+};
+function parseMode(raw: string | undefined): ActivationMode | undefined {
+  if (raw === undefined) {
+    return undefined;
+  }
+  const mode = MODE_BY_AUTHORED[raw];
+  if (mode === undefined) {
+    throw usage("InvalidMode", `--mode must be 'immediate' or 'deferredKickoff', got '${raw}'`);
+  }
+  return mode;
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** V2 (packet ch12-P4, C9): `--run-overrides` — a JSON map of step-id →
+ * agent-config map, shape-validated CLI-side as STRUCTURE ONLY (valid
+ * JSON, a map whose every entry is a map, canonical-JSON-safe). The
+ * SEMANTICS are kernel-side (C9 — the kernel treats each entry opaquely;
+ * an unknown step-id is INERT, the ratifier's D5 conscious debt, NOT a
+ * CLI rejection lane). Each structure violation is a deterministic
+ * usage/2. */
+function parseRunOverrides(
+  raw: string | undefined,
+): Readonly<Record<string, Readonly<Record<string, unknown>>>> | undefined {
+  if (raw === undefined) {
+    return undefined;
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw) as unknown;
+  } catch {
+    throw usage("InvalidRunOverrides", `--run-overrides is not valid JSON: '${raw}'`);
+  }
+  if (!isPlainRecord(parsed)) {
+    throw usage(
+      "InvalidRunOverrides",
+      "--run-overrides must be a JSON map of step-id -> agent-config map",
+    );
+  }
+  for (const [stepId, entry] of Object.entries(parsed)) {
+    if (!isPlainRecord(entry)) {
+      throw usage("InvalidRunOverrides", `--run-overrides entry '${stepId}' must be a map`);
+    }
+    // Canonical-JSON safety (`1e999` → Infinity survives JSON.parse but
+    // fails here) — the same emit-lib strictness the provenance rests on.
+    if (!isCanonicalizable(entry)) {
+      throw usage(
+        "InvalidRunOverrides",
+        `--run-overrides entry '${stepId}' must be canonical-JSON-safe`,
+      );
+    }
+  }
+  return parsed as Record<string, Record<string, unknown>>;
+}
+
+/**
+ * V1 (packet ch12-P4): the shared kernel wiring for the lifecycle write
+ * verbs — the fail-closed process-gate runner beside the derived-path
+ * store DB (W2, ch11-P3b), the EMPTY production provider registry (C16 —
+ * the shipped CLI ships no runtime-context provider), and the built
+ * kernel injected the SAME gate catalog the definition store admits with
+ * (ch11-P2b T1). No CLI handler writes through `StorePort` directly.
+ */
+async function withKernel<T>(
+  ctx: VerbContext,
+  definitions: DefinitionStore,
+  gates: GateCatalog,
+  run: (kernel: Kernel) => Promise<T>,
+): Promise<T> {
+  return withStoreAndDiag(ctx, async (handle, diag) => {
+    const processRunner = createFailClosedProcessGateRunner(
+      deriveProcessEvidenceDbPath(resolveDbPath(flagString(ctx, "db"), ctx.deps)),
+    );
+    try {
+      const kernel = createKernel({
+        store: handle.store,
+        definitions,
+        time: ctx.deps.time,
+        digest: deriveEmitDigest,
+        diag: diag.sink,
+        gates,
+        processRunner,
+        providerRegistry: createStaticProviderRegistry({}),
+      });
+      return await run(kernel);
+    } finally {
+      processRunner.close();
+    }
+  });
 }
 
 async function verbList(ctx: VerbContext): Promise<number> {
@@ -236,27 +377,34 @@ async function verbBundle(ctx: VerbContext): Promise<number> {
   });
 }
 
-async function verbStart(ctx: VerbContext): Promise<number> {
-  const task = flagString(ctx, "task");
-  if (task === undefined || task === "") {
-    throw usage("MissingTask", "--task <text> is required");
-  }
+/**
+ * V2 (packet ch12-P4, C20): `create` — genesis. The pinned template ref
+ * (ch8-C30 grammar; default `local-pair-v0@1`), the caller-MINTED
+ * instance id (`ctx.deps.instanceIdSource()` — no op_id; creation is
+ * genesis, C13), optional `--task`, the `--override role=actor` binding
+ * surface, optional `--run-overrides` (C9), and optional `--mode`
+ * (C13). Emits the `Created` outcome as data (the instance id surfaced
+ * on stdout for scripting the `create`→`start` sequence). The
+ * binding-coverage guard MIGRATED from the retired bridge (V4): a
+ * `kernel.create` binding-coverage THROW maps to usage/2.
+ */
+async function verbCreate(ctx: VerbContext): Promise<number> {
   const templateRef = parseTemplateRef(flagString(ctx, "template") ?? "local-pair-v0@1");
+  const task = flagString(ctx, "task");
+  // CLI-side INPUT-PRECONDITION lanes (V2) — a non-member `--mode` and a
+  // malformed `--run-overrides` are refused CLI-side (usage/2) BEFORE the
+  // kernel sees anything (the kernel never sees a malformed input).
+  const mode = parseMode(flagString(ctx, "mode"));
+  const runOverrides = parseRunOverrides(flagString(ctx, "run-overrides"));
   // ONE catalog value per composition root (ch11-P2b, T1): the SAME
-  // `createGateRegistry()` feeds the definition store AND the kernel —
-  // composing two would let admission and the rung disagree, the drift
-  // the C35 backstop exists to catch.
+  // `createGateRegistry()` feeds the definition store AND the kernel.
   const gates = createGateRegistry();
-  // ONE resolution, ONE store instance (packet ch8-P2 note 1): the
-  // eager dir gate (A2) runs BEFORE any store/kernel construction, and
-  // the SAME file store feeds the pre-load and the kernel.
   const definitions = createFileDefinitionStore(
     resolveTemplatesDir(flagString(ctx, "templates-dir"), ctx.deps),
     gates,
   );
-  // The outer catch is TYPE-based (W4/note 2): it maps TemplateLoadError
-  // from EVERY site in this verb body — the pre-load below AND the
-  // kernel's own load inside the CREATE leg (the mid-invocation race).
+  // The outer catch is TYPE-based (W4): it maps TemplateLoadError from the
+  // pre-load AND the kernel's own load inside CREATE (the mid-race).
   try {
     const template = await definitions.load(templateRef);
     if (template === null) {
@@ -270,91 +418,126 @@ async function verbStart(ctx: VerbContext): Promise<number> {
       Array.isArray(overrideFlags) ? overrideFlags.filter((v) => typeof v === "string") : [],
       template,
     );
-    // W3 (packet ch12-p3, C24): the ch11-P4 EAGER required-context pre-check
-    // RETIRES — no retired surface survives as a parallel path. A shipped-CLI
-    // template authors runtimeContext in a FILE, so its refusal happens at
-    // ADMISSION (before this handler runs `start`): a FILE spec map is refused
-    // as a P4-DEFERRED source form (the finding-6 guard, C25 — the YAML
-    // spec-map source-form walk lands at P4); a residual `"required"` string by
-    // the R2 admission migration refusal. (A DIRECT-constructed spec map —
-    // test-only at ch12, not shipped-CLI-authorable — would reach the kernel's
-    // S2 `runtime_context_provider_unavailable` lane against the EMPTY
-    // production registry, C16.) The shipped CLI ships no provider — a
-    // spec-declaring template is honestly unstartable here until ch9.
-    return await withStoreAndDiag(ctx, async (handle, diag) => {
-      // W2 (ch11-P3b): the fail-closed process-gate runner on a derived-path
-      // sibling beside the store DB — never spawns, never allows.
-      const processRunner = createFailClosedProcessGateRunner(
-        deriveProcessEvidenceDbPath(resolveDbPath(flagString(ctx, "db"), ctx.deps)),
-      );
+    return await withKernel(ctx, definitions, gates, async (kernel) => {
       try {
-        // V5 (ch7-P4): the store-backed sink on the derived path, passed
-        // BARE — no defensive wrapper (REV-DIAG-FAILOPEN).
-        const kernel = createKernel({
-          store: handle.store,
-          definitions,
-          time: ctx.deps.time,
-          digest: deriveEmitDigest,
-          diag: diag.sink,
-          gates,
-          processRunner,
-          // C16 (packet ch12-p3, PR2): the EMPTY production registry — the
-          // shipped CLI ships no runtime-context provider.
-          providerRegistry: createStaticProviderRegistry({}),
+        const instanceId = ctx.deps.instanceIdSource();
+        const outcome = await kernel.create({
+          instanceId,
+          templateRef,
+          ...(task !== undefined ? { task } : {}),
+          ...(Object.keys(overrides).length > 0 ? { overrides } : {}),
+          ...(runOverrides !== undefined ? { runOverrides } : {}),
+          ...(mode !== undefined ? { mode } : {}),
         });
-        try {
-          // The C25 in-handler bridge (packet ch12-p1b, W2): the retired
-          // one-shot's call site rewired to an interim CREATE→START
-          // sequence — NOT the C19 convenience verb (P4 lands the
-          // four-verb surface and retires this). No CREATE-level mode
-          // (immediate default; the deferred path in the window is
-          // ingress/test-driven). `--task` is parse-required above, so
-          // `task_required` is unreachable through this verb; a
-          // CREATE-committed/START-rejected residue is unreachable on
-          // the business paths, and any non-business residue is an
-          // ordinary CREATED instance, resumable by a fresh START.
-          const instanceId = ctx.deps.instanceIdSource();
-          const created = await kernel.create({
-            instanceId,
-            templateRef,
-            task,
-            ...(Object.keys(overrides).length > 0 ? { overrides } : {}),
-          });
-          if (created.kind === "rejected") {
-            throw new Error(
-              `start failed: unexpected create rejection '${created.reason}' with a parse-required task`,
-            );
-          }
-          const startOutcome = await kernel.start({
-            instanceId,
-            opId: deriveOperatorOpId(ctx.deps.nonceSource()),
-          });
-          // The verb emits the START leg's outcome as the stdout data
-          // document (the CREATE leg's `Created` is interior — C25).
-          ctx.sinks.out(JSON.stringify(startOutcome));
-          return startOutcome.kind === "activated" || startOutcome.kind === "accepted"
-            ? EXIT.ok
-            : startOutcome.kind === "duplicate"
-              ? EXIT.ok
-              : EXIT.notFound;
-        } catch (error) {
-          // ONLY the create-INPUT lane is usage — binding coverage, the
-          // one reachable input failure (the ref is pre-checked above).
-          // Everything else (store integrity such as a colliding minted
-          // id, unexpected errors) flows to the outer internal branch:
-          // the 2-vs-1 exit split must not collapse (P4a aftermath
-          // finding 1).
-          if (
-            error instanceof Error &&
-            error.message.startsWith("create failed (binding coverage)")
-          ) {
-            throw usage("StartFailed", error.message);
-          }
-          throw error;
+        // The Created outcome carries the minted instance id on stdout;
+        // a `Rejected(task_required)` rides as an exit-3 DATA doc (V3).
+        ctx.sinks.out(JSON.stringify(outcome));
+        return lifecycleExitCode(outcome);
+      } catch (error) {
+        // The retired bridge's binding-coverage → usage guard, migrated to
+        // CREATE (where binding coverage now rejects; V4). Everything else
+        // (a colliding minted id, unexpected errors) flows to the dispatch
+        // internal branch — the 2-vs-1 exit split must not collapse.
+        if (
+          error instanceof Error &&
+          error.message.startsWith("create failed (binding coverage)")
+        ) {
+          throw usage("CreateFailed", error.message);
         }
-      } finally {
-        processRunner.close();
+        throw error;
       }
+    });
+  } catch (error) {
+    throw toTemplateInvalid(error);
+  }
+}
+
+/**
+ * V3/V4/V6 (packet ch12-P4, C20/C24): `start <instance-id>` — the real
+ * single-op START verb (the C25 in-handler CREATE→START bridge RETIRED).
+ * Calls `kernel.start` alone with a minted nonce `op_id` (C13); NO
+ * create. A spec-declaring template resolves the provider against the
+ * EMPTY production registry and the kernel returns
+ * `Rejected(runtime_context_provider_unavailable)` (C16/V6 — honestly
+ * unstartable through the shipped CLI until ch9). No convenience
+ * CREATE+START verb ships (C19).
+ */
+async function verbStart(ctx: VerbContext): Promise<number> {
+  const instanceId = requireInstanceId(ctx);
+  const gates = createGateRegistry();
+  const definitions = createFileDefinitionStore(
+    resolveTemplatesDir(flagString(ctx, "templates-dir"), ctx.deps),
+    gates,
+  );
+  try {
+    return await withKernel(ctx, definitions, gates, async (kernel) => {
+      const outcome = await kernel.start({
+        instanceId,
+        opId: deriveOperatorOpId(ctx.deps.nonceSource()),
+      });
+      ctx.sinks.out(JSON.stringify(outcome));
+      return lifecycleExitCode(outcome);
+    });
+  } catch (error) {
+    throw toTemplateInvalid(error);
+  }
+}
+
+/**
+ * V3 (packet ch12-P4, C20): `kickoff <instance-id> --task <task>` — the
+ * deferred task supplied now. REQUIRES the task (its nonempty-string
+ * grammar; a missing `--task` is usage/2). Mints a nonce `op_id` (C13).
+ * A terminal-sink `state_violation` (kickoff of an already-TERMINAL run)
+ * THROWS → exit-1 internal (the dispatch catch).
+ */
+async function verbKickoff(ctx: VerbContext): Promise<number> {
+  const instanceId = requireInstanceId(ctx);
+  const task = flagString(ctx, "task");
+  if (task === undefined || task === "") {
+    throw usage("MissingTask", "--task <text> is required");
+  }
+  const gates = createGateRegistry();
+  const definitions = createFileDefinitionStore(
+    resolveTemplatesDir(flagString(ctx, "templates-dir"), ctx.deps),
+    gates,
+  );
+  try {
+    return await withKernel(ctx, definitions, gates, async (kernel) => {
+      const outcome = await kernel.kickoff({
+        instanceId,
+        task,
+        opId: deriveOperatorOpId(ctx.deps.nonceSource()),
+      });
+      ctx.sinks.out(JSON.stringify(outcome));
+      return lifecycleExitCode(outcome);
+    });
+  } catch (error) {
+    throw toTemplateInvalid(error);
+  }
+}
+
+/**
+ * V3 (packet ch12-P4, C20): `cancel <instance-id>` — terminal disposal
+ * from any non-terminal state. No payload; mints a nonce `op_id` (C13).
+ * A terminal-sink `state_violation` (cancel of an already-TERMINAL run)
+ * THROWS → exit-1 internal (the dispatch catch — a terminal instance is
+ * an INVARIANT sink, not a business rejection).
+ */
+async function verbCancel(ctx: VerbContext): Promise<number> {
+  const instanceId = requireInstanceId(ctx);
+  const gates = createGateRegistry();
+  const definitions = createFileDefinitionStore(
+    resolveTemplatesDir(flagString(ctx, "templates-dir"), ctx.deps),
+    gates,
+  );
+  try {
+    return await withKernel(ctx, definitions, gates, async (kernel) => {
+      const outcome = await kernel.cancel({
+        instanceId,
+        opId: deriveOperatorOpId(ctx.deps.nonceSource()),
+      });
+      ctx.sinks.out(JSON.stringify(outcome));
+      return lifecycleExitCode(outcome);
     });
   } catch (error) {
     throw toTemplateInvalid(error);
@@ -454,12 +637,27 @@ const VERB_OPTIONS: Record<string, VerbOptions> = {
     "from-ordinal": { type: "string" },
   },
   bundle: { db: { type: "string" } },
-  start: {
+  create: {
     db: { type: "string" },
     task: { type: "string" },
     template: { type: "string" },
     "templates-dir": { type: "string" },
     override: { type: "string", multiple: true },
+    "run-overrides": { type: "string" },
+    mode: { type: "string" },
+  },
+  start: {
+    db: { type: "string" },
+    "templates-dir": { type: "string" },
+  },
+  kickoff: {
+    db: { type: "string" },
+    task: { type: "string" },
+    "templates-dir": { type: "string" },
+  },
+  cancel: {
+    db: { type: "string" },
+    "templates-dir": { type: "string" },
   },
   submit: {
     db: { type: "string" },
@@ -479,7 +677,10 @@ const VERBS: Record<string, VerbHandler> = {
   timeline: verbTimeline,
   tail: verbTail,
   bundle: verbBundle,
+  create: verbCreate,
   start: verbStart,
+  kickoff: verbKickoff,
+  cancel: verbCancel,
   submit: verbSubmit,
 };
 

@@ -133,27 +133,40 @@ function assertErrorContract(result: Run, expectedClass: string, expectedCode: n
   }
 }
 
+/** ch12-P4: the create→start sequence replaces the retired C25 bridge —
+ * `create` is genesis (the Created doc carries the minted instance id),
+ * `start` is the real single-op START (the `activated` doc). */
 async function startOne(db: string, deps: CliDeps): Promise<string> {
-  const started = await run(["start", "--db", db, "--task", "t"], deps);
+  const created = await run(["create", "--db", db, "--task", "t"], deps);
+  expect(created.code).toBe(EXIT.ok);
+  const createdDoc = JSON.parse(created.stdout[0] ?? "") as {
+    kind: string;
+    instanceId: string;
+    version: number;
+  };
+  // `create` emits the Created outcome as data — the minted instance id is
+  // surfaced on stdout for scripting the create→start sequence (V2).
+  expect(createdDoc.kind).toBe("created");
+  expect(typeof createdDoc.instanceId).toBe("string");
+  expect(createdDoc.instanceId).not.toBe("");
+  expect(createdDoc.version).toBe(1);
+  const id = createdDoc.instanceId;
+
+  const started = await run(["start", id, "--db", db], deps);
   expect(started.code).toBe(EXIT.ok);
-  // FOLD 7 (arm gate 2 aftermath): the C25 bridge emits the START leg's
-  // `activated` outcome as the stdout data document — asserted by FULL
-  // equality. The minted instanceId is read from the parsed doc (asserted
-  // nonempty) and everything else is pinned exactly: genesis v1 + the
-  // activation commit ⇒ version 2, and the first dispatch's ContextPacket
-  // for the implement step (task "t", role implementer, the canonical
-  // template's instruction + availableOps).
+  // `start` emits the START `activated` outcome — asserted by FULL equality:
+  // genesis v1 + the activation commit ⇒ version 2, and the first dispatch's
+  // ContextPacket for the implement step (task "t", role implementer, the
+  // canonical template's instruction + availableOps).
   const doc = JSON.parse(started.stdout[0] ?? "") as { instanceId: string };
-  expect(typeof doc.instanceId).toBe("string");
-  expect(doc.instanceId).not.toBe("");
   expect(doc).toEqual({
     kind: "activated",
-    instanceId: doc.instanceId,
+    instanceId: id,
     version: 2,
     intent: {
       actor: "codex",
       packet: {
-        instanceId: doc.instanceId,
+        instanceId: id,
         expectedVersion: 2,
         task: "t",
         role: "implementer",
@@ -167,7 +180,7 @@ async function startOne(db: string, deps: CliDeps): Promise<string> {
       },
     },
   });
-  return doc.instanceId;
+  return id;
 }
 
 describe("cli — runtime config matrix (packet ch6-P4a)", () => {
@@ -221,8 +234,8 @@ describe("cli — start / submit (write verbs through the sanctioned entrypoints
     };
     expect(doc.instance.kernelStatus).toBe("ACTIVE");
     expect(doc.instance.terminalDisposition).toBeNull();
-    // The C25 bridge stamps the STARTED lifecycle fact at seq 1 — every
-    // run's transcript begins with it (opId is the bridge-minted nonce).
+    // `start` stamps the STARTED lifecycle fact at seq 1 — every run's
+    // transcript begins with it (opId is the start-minted nonce).
     expect(doc.transcript).toHaveLength(1);
     expect(doc.transcript[0]?.entryKind).toBe("STARTED");
     expect(doc.transcript[0]?.seq).toBe(1);
@@ -230,25 +243,27 @@ describe("cli — start / submit (write verbs through the sanctioned entrypoints
     expect(doc.transcript[0]?.opId).not.toBe("");
   });
 
-  it("start parse contract: bad template ref → 2; unknown template → 3; bad/unknown override → 2 (+validRoles)", async () => {
+  it("create parse contract: bad template ref → 2; unknown template → 3; bad/unknown override → 2 (+validRoles)", async () => {
     const db = tempDbPath();
+    // ch12-P4: template-ref parsing + `--override` binding parsing moved to
+    // `create` (the genesis verb pins the ref and binds actors).
     assertErrorContract(
-      await run(["start", "--db", db, "--task", "t", "--template", "nope"], testDeps()),
+      await run(["create", "--db", db, "--task", "t", "--template", "nope"], testDeps()),
       "usage",
       EXIT.usage,
     );
     assertErrorContract(
-      await run(["start", "--db", db, "--task", "t", "--template", "ghost@1"], testDeps()),
+      await run(["create", "--db", db, "--task", "t", "--template", "ghost@1"], testDeps()),
       "not_found",
       EXIT.notFound,
     );
     assertErrorContract(
-      await run(["start", "--db", db, "--task", "t", "--override", "reviewer"], testDeps()),
+      await run(["create", "--db", db, "--task", "t", "--override", "reviewer"], testDeps()),
       "usage",
       EXIT.usage,
     );
     const unknownRole = await run(
-      ["start", "--db", db, "--task", "t", "--override", "ghost=claude"],
+      ["create", "--db", db, "--task", "t", "--override", "ghost=claude"],
       testDeps(),
     );
     const error = errorDoc(unknownRole);
@@ -287,9 +302,9 @@ describe("cli — start / submit (write verbs through the sanctioned entrypoints
 
   it("ADR-004 operator nonce: a fixed nonce re-derives the same op_id → duplicate = exit 0", async () => {
     const db = tempDbPath();
-    // The C25 bridge mints the START leg's op_id from the nonce source too,
-    // so start with a FRESH nonce — the fixed nonce is the artifice that
-    // makes the two SUBMITS collide onto one op_id (the lane under test).
+    // `start` mints its own op_id from the nonce source too, so seed with a
+    // FRESH nonce — the fixed nonce is the artifice that makes the two
+    // SUBMITS collide onto one op_id (the lane under test).
     const id = await startOne(db, testDeps());
     const deps = testDeps({ nonce: () => "nonce-fixed" });
     const args = [
@@ -514,10 +529,13 @@ describe("cli — read verbs (the floor activated)", () => {
 describe("cli — P4a aftermath (post-commit review, 2026-07-08)", () => {
   it("F1 — a colliding minted id is INTERNAL (1), never usage: the 2-vs-1 split holds", async () => {
     const db = tempDbPath();
+    // ch12-P4: the id is MINTED at `create` (genesis), so the collision
+    // surfaces there — a fixed id re-created is the store's creation-
+    // uniqueness THROW, internal 1 (never the binding-coverage usage lane).
     const deps: CliDeps = { ...testDeps(), instanceIdSource: () => "inst-fixed" };
-    expect((await run(["start", "--db", db, "--task", "t"], deps)).code).toBe(EXIT.ok);
+    expect((await run(["create", "--db", db, "--task", "t"], deps)).code).toBe(EXIT.ok);
     assertErrorContract(
-      await run(["start", "--db", db, "--task", "t"], deps),
+      await run(["create", "--db", db, "--task", "t"], deps),
       "internal",
       EXIT.internal,
     );
@@ -816,8 +834,9 @@ describe("cli — write-path wiring + separation (packet ch7-P4: V5/M11/C3/dimen
         outs.push(...r.stdout);
         codes.push(r.code);
       };
-      record(await run(["start", "--db", db, "--task", "t"], deps));
+      record(await run(["create", "--db", db, "--task", "t"], deps));
       const id = "inst-1";
+      record(await run(["start", id, "--db", db], deps));
       record(
         await run(
           ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "2", "--expected-role", "implementer", "--payload", '{"ref":"d"}'],
@@ -909,7 +928,7 @@ describe("cli — the templates-dir config lane (packet ch8-P2: A1/A2/A3)", () =
     // exit 3), the flag at the repo dir → the flag's dir served.
     const emptyDir = stageTemplates({});
     const flagWins = await run(
-      ["start", "--db", tempDbPath(), "--task", "t", "--templates-dir", REPO_TEMPLATES],
+      ["create", "--db", tempDbPath(), "--task", "t", "--templates-dir", REPO_TEMPLATES],
       testDeps({ env: { PAIRFLOW_V3_TEMPLATES: emptyDir } }),
     );
     expect(flagWins.code).toBe(EXIT.ok);
@@ -917,14 +936,14 @@ describe("cli — the templates-dir config lane (packet ch8-P2: A1/A2/A3)", () =
     // env-only (the leg every seeded test rides via the default deps),
     // explicit here:
     const envOnly = await run(
-      ["start", "--db", tempDbPath(), "--task", "t"],
+      ["create", "--db", tempDbPath(), "--task", "t"],
       testDeps({ env: { PAIRFLOW_V3_TEMPLATES: REPO_TEMPLATES } }),
     );
     expect(envOnly.code).toBe(EXIT.ok);
 
     // both missing → usage 2 with the A1 doc name:
     const missing = await run(
-      ["start", "--db", tempDbPath(), "--task", "t"],
+      ["create", "--db", tempDbPath(), "--task", "t"],
       testDeps({ env: {} }),
     );
     const err = errorDoc(missing);
@@ -935,12 +954,12 @@ describe("cli — the templates-dir config lane (packet ch8-P2: A1/A2/A3)", () =
     // aftermath finding 3): an empty flag and an empty env value each
     // take the missing lane.
     const emptyFlag = await run(
-      ["start", "--db", tempDbPath(), "--task", "t", "--templates-dir", ""],
+      ["create", "--db", tempDbPath(), "--task", "t", "--templates-dir", ""],
       testDeps({ env: {} }),
     );
     expect(errorDoc(emptyFlag).name).toBe("MissingTemplatesDir");
     const emptyEnv = await run(
-      ["start", "--db", tempDbPath(), "--task", "t"],
+      ["create", "--db", tempDbPath(), "--task", "t"],
       testDeps({ env: { PAIRFLOW_V3_TEMPLATES: "" } }),
     );
     expect(errorDoc(emptyEnv).name).toBe("MissingTemplatesDir");
@@ -965,7 +984,7 @@ describe("cli — the templates-dir config lane (packet ch8-P2: A1/A2/A3)", () =
     for (const form of forms) {
       const db = tempDbPath();
       const res = await run(
-        ["start", "--db", db, "--task", "t", "--templates-dir", form],
+        ["create", "--db", db, "--task", "t", "--templates-dir", form],
         testDeps(),
       );
       const err = errorDoc(res);
@@ -1005,7 +1024,7 @@ describe("cli — the pinned --template ref grammar (packet ch8-P2: T1/T2)", () 
       "x@0x10", "x@1e2", "x@ 1", "x@'1'", "x@9007199254740993",
     ]) {
       const res = await run(
-        ["start", "--db", tempDbPath(), "--task", "t", "--template", bad],
+        ["create", "--db", tempDbPath(), "--task", "t", "--template", bad],
         testDeps(),
       );
       const err = errorDoc(res);
@@ -1018,7 +1037,7 @@ describe("cli — the pinned --template ref grammar (packet ch8-P2: T1/T2)", () 
     // has no such file → UnknownTemplate 3 proves the parse ACCEPTED.
     for (const good of ["x@10", "x@9007199254740991", "a@b@1"]) {
       const res = await run(
-        ["start", "--db", tempDbPath(), "--task", "t", "--template", good],
+        ["create", "--db", tempDbPath(), "--task", "t", "--template", good],
         testDeps(),
       );
       const err = errorDoc(res);
@@ -1028,7 +1047,7 @@ describe("cli — the pinned --template ref grammar (packet ch8-P2: T1/T2)", () 
     // The id half is NOT prevalidated (S1 no-prevalidation): an
     // off-grammar id can only MISS — never open outside the dir.
     const trav = await run(
-      ["start", "--db", tempDbPath(), "--task", "t", "--template", "../evil@1"],
+      ["create", "--db", tempDbPath(), "--task", "t", "--template", "../evil@1"],
       testDeps(),
     );
     expect(trav.code).toBe(EXIT.notFound);
@@ -1040,7 +1059,7 @@ describe("cli — write-lane dispositions (packet ch8-P2: W1/W2/W3/W4)", () => {
     const badBody = `${CANONICAL_BYTES()}kind: nope\n`;
     const dir = stageTemplates({ "local-pair-v0@1.yaml": badBody });
     const res = await run(
-      ["start", "--db", tempDbPath(), "--task", "t", "--templates-dir", dir],
+      ["create", "--db", tempDbPath(), "--task", "t", "--templates-dir", dir],
       testDeps(),
     );
     const err = errorDoc(res);
@@ -1063,7 +1082,7 @@ describe("cli — write-lane dispositions (packet ch8-P2: W1/W2/W3/W4)", () => {
     // absent-at-START (invalid ≠ absent, the other half): version 2
     // has no byte-exact listing match in the repo dir.
     const absent = await run(
-      ["start", "--db", tempDbPath(), "--task", "t", "--template", "local-pair-v0@2"],
+      ["create", "--db", tempDbPath(), "--task", "t", "--template", "local-pair-v0@2"],
       testDeps(),
     );
     const absentErr = errorDoc(absent);
@@ -1103,12 +1122,14 @@ describe("cli — write-lane dispositions (packet ch8-P2: W1/W2/W3/W4)", () => {
     // file itself is never touched).
     const dir = stageTemplates({ "local-pair-v0@1.yaml": CANONICAL_BYTES() });
     const db = tempDbPath();
-    const started = await run(
-      ["start", "--db", db, "--task", "t", "--templates-dir", dir],
-      testDeps(),
+    const deps = testDeps();
+    const created = await run(
+      ["create", "--db", db, "--task", "t", "--templates-dir", dir],
+      deps,
     );
-    expect(started.code).toBe(EXIT.ok);
-    const id = (JSON.parse(started.stdout[0] ?? "") as { instanceId: string }).instanceId;
+    expect(created.code).toBe(EXIT.ok);
+    const id = (JSON.parse(created.stdout[0] ?? "") as { instanceId: string }).instanceId;
+    expect((await run(["start", id, "--db", db, "--templates-dir", dir], deps)).code).toBe(EXIT.ok);
     rmSync(join(dir, "local-pair-v0@1.yaml"));
     const res = await run(
       [
@@ -1126,20 +1147,33 @@ describe("cli — write-lane dispositions (packet ch8-P2: W1/W2/W3/W4)", () => {
 });
 
 describe("cli — last-mile smoke: the SHIPPED entrypoint (root tsx bridge)", () => {
-  it("start → detail through the real cli/main.ts process", { timeout: 30_000 }, async () => {
+  it("create → start → detail through the real cli/main.ts process", { timeout: 30_000 }, async () => {
     const db = tempDbPath();
     const tsxBin = join(process.cwd(), "..", "node_modules", ".bin", "tsx");
     const mainPath = join(process.cwd(), "src", "cli", "main.ts");
+    const templatesDir = join(process.cwd(), "templates");
 
-    const started = await execFileAsync(tsxBin, [
+    const created = await execFileAsync(tsxBin, [
       mainPath,
-      "start",
+      "create",
       "--db",
       db,
       "--task",
       "smoke",
       "--templates-dir",
-      join(process.cwd(), "templates"),
+      templatesDir,
+    ]);
+    const createdDoc = JSON.parse(created.stdout.trim()) as { instanceId: string; kind: string };
+    expect(createdDoc.kind).toBe("created");
+
+    const started = await execFileAsync(tsxBin, [
+      mainPath,
+      "start",
+      createdDoc.instanceId,
+      "--db",
+      db,
+      "--templates-dir",
+      templatesDir,
     ]);
     const doc = JSON.parse(started.stdout.trim()) as { instanceId: string; version: number };
     expect(doc.version).toBe(2);
@@ -1189,49 +1223,57 @@ describe("submit --expected-role (packet ch11-P1, O1/O2)", () => {
 // ── packet ch11-P4: Y6 the eager required-context start pre-check + the
 // gate-defective write-lane drive ──────────────────────────────────────
 
-describe("cli — ch12-p3 W3: a spec/stale runtime-context template is unstartable (the eager guard retired)", () => {
-  it("a residual `runtimeContext: required` template → the R2 admission migration refusal (never the eager guard)", async () => {
-    // The eager pre-check is RETIRED (W3): a bare `required` string is now
-    // refused by the KERNEL's admission migration (R2) at template load.
+describe("cli — ch12-P4 V6: the spec-declaring-template unstartable lane + the C25 P4-deferral retirement", () => {
+  it("a residual `runtimeContext: required` template → the R2 admission migration refusal at CREATE", async () => {
+    // A bare `required` string is refused by admission's migration (R2) at
+    // template load — CREATE pre-loads the template, so the refusal surfaces
+    // as the canonical TemplateInvalid doc.
     const dir = stageTemplates({
       "local-pair-v0@1.yaml": `${CANONICAL_BYTES()}runtimeContext: required\n`,
     });
     const db = tempDbPath();
     const res = await run(
-      ["start", "--db", db, "--task", "t", "--templates-dir", dir],
+      ["create", "--db", db, "--task", "t", "--templates-dir", dir],
       testDeps(),
     );
-    // The template fails to load/admit — the migration refusal surfaces as
-    // the canonical TemplateInvalid doc (never a StartFailed usage guard).
     expect(res.code).not.toBe(EXIT.ok);
     expect(JSON.stringify(res)).toMatch(/retired|spec map/);
   });
 
-  it("a FILE-authored spec-map template → the C25 P4-deferred admission refusal (the file source form is P4's; never a degenerate unstartable)", async () => {
-    // ch12-p3 finding 6 (C25): a YAML-authored runtimeContext spec map is a
-    // `mapAsMap` JS Map — refused CLEANLY at admission (P4-deferred), so the
-    // shipped CLI never reaches START with it. The empty-registry START
-    // rejection (`runtime_context_provider_unavailable`, C16) is exercised on
-    // the DIRECT-construction channel (kernel/lifecycle.test.ts S2).
+  it("a FILE-authored spec-map template now WALKS (F3): create ADMITS, start → Rejected(runtime_context_provider_unavailable) exit 3 (V6, the EMPTY production registry)", async () => {
+    // ch12-P4 Claim 6 item 4 / V6 (the C25 P4-deferral RETIRED): a
+    // YAML-authored runtimeContext spec map is now MATERIALIZED by F3 and
+    // ADMITS. `start` then resolves the provider against the EMPTY production
+    // registry (C16) and the KERNEL returns the runtime_context lane — a
+    // spec-declaring template is honestly unstartable through the shipped CLI
+    // until ch9 (no eager CLI guard resurrected).
     const dir = stageTemplates({
       "local-pair-v0@1.yaml": `${CANONICAL_BYTES()}runtimeContext:\n  kind: worktree\n  provider: pairflow.worktree\n`,
     });
     const db = tempDbPath();
-    const res = await run(
-      ["start", "--db", db, "--task", "t", "--templates-dir", dir],
-      testDeps(),
+    const deps = testDeps();
+    const created = await run(
+      ["create", "--db", db, "--task", "t", "--templates-dir", dir],
+      deps,
     );
-    // The template fails to load/admit — the P4-deferred refusal surfaces (not
-    // a START outcome on stdout).
-    expect(res.code).not.toBe(EXIT.ok);
-    expect(JSON.stringify(res)).toMatch(/deferred to P4|C25/);
+    expect(created.code).toBe(EXIT.ok);
+    const id = (JSON.parse(created.stdout[0] ?? "") as { instanceId: string }).instanceId;
+
+    const started = await run(["start", id, "--db", db, "--templates-dir", dir], deps);
+    // The kernel-negative rejection rides as a DATA doc on stdout, exit 3.
+    expect(started.code).toBe(EXIT.notFound);
+    expect(started.stderr).toEqual([]);
+    expect(JSON.parse(started.stdout[0] ?? "")).toEqual({
+      kind: "rejected",
+      reason: "runtime_context_provider_unavailable",
+    });
   });
 
-  it("start on a template with an unbound role → usage 2 StartFailed (the W2 bridge's binding-coverage lane, packet ch12-p1b)", async () => {
-    // The reviewer role carries NO defaultActor and the verb passes no
-    // override — CREATE's coverage REQUIRE throws, and the bridge maps
-    // the "create failed (binding coverage)" prefix to usage 2 (the
-    // 2-vs-1 exit split preserved).
+  it("create on a template with an unbound role → usage 2 CreateFailed (the binding-coverage guard, migrated from the retired bridge)", async () => {
+    // The reviewer role carries NO defaultActor and no override is passed —
+    // CREATE's coverage REQUIRE throws, and `create` maps the "create failed
+    // (binding coverage)" prefix to usage 2 (the migrated guard; the 2-vs-1
+    // exit split preserved).
     const dir = stageTemplates({
       "local-pair-v0@1.yaml": CANONICAL_BYTES().replace(
         "  reviewer:\n    defaultActor: claude\n",
@@ -1240,24 +1282,31 @@ describe("cli — ch12-p3 W3: a spec/stale runtime-context template is unstartab
     });
     const db = tempDbPath();
     const res = await run(
-      ["start", "--db", db, "--task", "t", "--templates-dir", dir],
+      ["create", "--db", db, "--task", "t", "--templates-dir", dir],
       testDeps(),
     );
     const err = errorDoc(res);
     expect(res.code).toBe(EXIT.usage);
-    expect(err.name).toBe("StartFailed");
+    expect(err.name).toBe("CreateFailed");
     expect(err.class).toBe("usage");
     expect(err.message).toMatch(/create failed \(binding coverage\): role 'reviewer'/);
   });
 
-  it("a context-FREE template starts normally (the gate is silent — the no-throw baseline)", async () => {
-    // The default deps ride the repo canonical template (context-free).
-    const res = await run(["start", "--db", tempDbPath(), "--task", "t"], testDeps());
-    expect(res.code).toBe(EXIT.ok);
+  it("a context-FREE template creates and starts normally (the no-throw baseline)", async () => {
+    // The default deps ride the repo canonical template (context-free). A
+    // clean create→start reaches ACTIVE with the `activated` outcome.
+    const db = tempDbPath();
+    const deps = testDeps();
+    const created = await run(["create", "--db", db, "--task", "t"], deps);
+    expect(created.code).toBe(EXIT.ok);
+    const id = (JSON.parse(created.stdout[0] ?? "") as { instanceId: string }).instanceId;
+    const started = await run(["start", id, "--db", db], deps);
+    expect(started.code).toBe(EXIT.ok);
+    expect((JSON.parse(started.stdout[0] ?? "") as { kind: string }).kind).toBe("activated");
   });
 });
 
-describe("cli — Y6/Y7 the gate-defective write-lane drive (packet ch11-P4)", () => {
+describe("cli — the gate-defective write-lane drive (packet ch11-P4 → ch12-P4)", () => {
   const gateDefective = `${CANONICAL_BYTES()}`
     .replace(
       "    transitions:\n      PASS: implement\n      CONVERGED: done\n",
@@ -1265,10 +1314,10 @@ describe("cli — Y6/Y7 the gate-defective write-lane drive (packet ch11-P4)", (
         "    gates:\n      CONVERGED:\n        - uses: no.such.gate\n",
     );
 
-  it("start on a gate-defective template → TemplateInvalid 1 with the coded finding in the VERBATIM {stage, findings} doc", async () => {
+  it("create on a gate-defective template → TemplateInvalid 1 with the coded finding in the VERBATIM {stage, findings} doc", async () => {
     const dir = stageTemplates({ "local-pair-v0@1.yaml": gateDefective });
     const res = await run(
-      ["start", "--db", tempDbPath(), "--task", "t", "--templates-dir", dir],
+      ["create", "--db", tempDbPath(), "--task", "t", "--templates-dir", dir],
       testDeps(),
     );
     const err = errorDoc(res);
@@ -1281,5 +1330,135 @@ describe("cli — Y6/Y7 the gate-defective write-lane drive (packet ch11-P4)", (
     // carrier the ch8 W-lane already tests).
     expect(JSON.stringify(details.findings)).toContain("gate_evaluator_unavailable");
     expect(JSON.stringify(details.findings)).toContain("steps.review.gates.CONVERGED[0]");
+  });
+});
+
+// ── packet ch12-P4: the four lifecycle verbs — the CLI input-precondition
+// lanes (V2) + the kernel-outcome exit classes (V3) + the mode/run-overrides
+// realizations (V5) ─────────────────────────────────────────────────────
+
+describe("cli — create input-precondition lanes (packet ch12-P4, V2)", () => {
+  it("a `--mode` non-member token → usage 2 (refused CLI-side BEFORE the kernel — the sensitivity lane)", async () => {
+    const res = await run(["create", "--db", tempDbPath(), "--task", "t", "--mode", "eager"], testDeps());
+    const err = errorDoc(res);
+    expect(res.code).toBe(EXIT.usage);
+    expect(err.name).toBe("InvalidMode");
+  });
+
+  for (const [label, value] of [
+    ["malformed JSON", "{bad"],
+    ["valid JSON that is not a map", "[1,2]"],
+    ["a map with a non-map entry", '{"implement":5}'],
+    ["a non-canonical-JSON-safe leaf (1e999 → Infinity)", '{"implement":{"budget":1e999}}'],
+  ] as const) {
+    it(`a \`--run-overrides\` ${label} → usage 2`, async () => {
+      const res = await run(
+        ["create", "--db", tempDbPath(), "--task", "t", "--run-overrides", value],
+        testDeps(),
+      );
+      const err = errorDoc(res);
+      expect(res.code).toBe(EXIT.usage);
+      expect(err.name).toBe("InvalidRunOverrides");
+    });
+  }
+
+  it("a well-formed `--run-overrides` snapshots onto the instance (an unknown step-id is INERT — no rejection lane, the D5 conscious debt)", async () => {
+    const db = tempDbPath();
+    const deps = testDeps();
+    // An unknown step-id `ghost-step` is INERT kernel-side — create still
+    // succeeds (no CLI rejection lane; the conscious-debt disposition).
+    const res = await run(
+      ["create", "--db", db, "--task", "t", "--run-overrides", '{"implement":{"approach":"tdd"},"ghost-step":{"x":1}}'],
+      deps,
+    );
+    expect(res.code).toBe(EXIT.ok);
+    const id = (JSON.parse(res.stdout[0] ?? "") as { instanceId: string }).instanceId;
+    // The snapshot is frozen on the instance at genesis (C9).
+    const detail = await run(["detail", id, "--db", db], deps);
+    const doc = JSON.parse(detail.stdout[0] ?? "") as {
+      instance: { runOverrides: Record<string, unknown> };
+    };
+    expect(doc.instance.runOverrides).toEqual({
+      implement: { approach: "tdd" },
+      "ghost-step": { x: 1 },
+    });
+  });
+});
+
+describe("cli — create kernel-outcome lanes (packet ch12-P4, V3/V5)", () => {
+  it("immediate create WITHOUT --task → Rejected(task_required) DATA doc, exit 3", async () => {
+    const res = await run(["create", "--db", tempDbPath()], testDeps());
+    expect(res.code).toBe(EXIT.notFound);
+    expect(res.stderr).toEqual([]);
+    expect(JSON.parse(res.stdout[0] ?? "")).toEqual({ kind: "rejected", reason: "task_required" });
+  });
+
+  it("--mode deferredKickoff create WITHOUT --task → Created (task-less legal), exit 0", async () => {
+    const res = await run(["create", "--db", tempDbPath(), "--mode", "deferredKickoff"], testDeps());
+    expect(res.code).toBe(EXIT.ok);
+    const doc = JSON.parse(res.stdout[0] ?? "") as { kind: string; instanceId: string };
+    expect(doc.kind).toBe("created");
+    expect(doc.instanceId).not.toBe("");
+  });
+});
+
+describe("cli — kickoff / cancel lanes (packet ch12-P4, V3)", () => {
+  it("kickoff WITHOUT --task → usage 2 MissingTask", async () => {
+    const db = tempDbPath();
+    const res = await run(["kickoff", "inst-x", "--db", db], testDeps());
+    const err = errorDoc(res);
+    expect(res.code).toBe(EXIT.usage);
+    expect(err.name).toBe("MissingTask");
+  });
+
+  it("kickoff / cancel / start of an UNKNOWN instance → Rejected(unknown_instance) DATA doc, exit 3 (a write-path kernel-negative, NOT a read-side notFound)", async () => {
+    const db = tempDbPath();
+    const deps = testDeps();
+    for (const argv of [
+      ["start", "ghost", "--db", db],
+      ["kickoff", "ghost", "--db", db, "--task", "t"],
+      ["cancel", "ghost", "--db", db],
+    ]) {
+      const res = await run(argv, deps);
+      expect(res.code).toBe(EXIT.notFound);
+      expect(res.stderr).toEqual([]);
+      expect(JSON.parse(res.stdout[0] ?? "")).toEqual({
+        kind: "rejected",
+        reason: "unknown_instance",
+      });
+    }
+  });
+
+  it("cancel of a non-terminal run → TERMINAL(cancelled) exit 0; a SECOND cancel of the now-terminal run → state_violation THROW, internal 1", async () => {
+    const db = tempDbPath();
+    const deps = testDeps();
+    const id = await startOne(db, deps);
+
+    const cancelled = await run(["cancel", id, "--db", db], deps);
+    expect(cancelled.code).toBe(EXIT.ok);
+    expect(JSON.parse(cancelled.stdout[0] ?? "")).toEqual({
+      kind: "terminated",
+      disposition: "cancelled",
+    });
+
+    // The terminal-sink guard: cancel of an already-TERMINAL run is an
+    // INTEGRITY THROW (exit-1 internal), NOT an exit-3 business rejection.
+    const again = await run(["cancel", id, "--db", db], deps);
+    assertErrorContract(again, "internal", EXIT.internal);
+    expect(again.stdout).toEqual([]);
+  });
+
+  it("a replayed lifecycle op_id → Duplicate idempotent-success, exit 0", async () => {
+    const db = tempDbPath();
+    // A fixed nonce makes two cancels derive the SAME op_id — the second is a
+    // Duplicate (idempotent success), not a fresh commit.
+    const id = await startOne(db, testDeps());
+    const deps = testDeps({ nonce: () => "nonce-fixed" });
+    const first = await run(["cancel", id, "--db", db], deps);
+    expect(first.code).toBe(EXIT.ok);
+    expect((JSON.parse(first.stdout[0] ?? "") as { kind: string }).kind).toBe("terminated");
+    const second = await run(["cancel", id, "--db", db], deps);
+    expect(second.code).toBe(EXIT.ok);
+    expect((JSON.parse(second.stdout[0] ?? "") as { kind: string }).kind).toBe("duplicate");
   });
 });
