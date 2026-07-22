@@ -688,9 +688,30 @@ loop — pre-defined **capture**, deferred **structure**:
   process-polishing.
 - **Reflection point = the chapter boundary** (already a ratification
   checkpoint, now part of the chapter DoD): review the new log lines; each
-  becomes a gate, a checkpoint rule, a README edit, or an acknowledged
-  non-issue. This extends §5.5's measurement stage (hand-catches become
-  gates) from the build loop to the process itself.
+  becomes a gate, a checkpoint rule, a README edit, a WATCH, or an
+  acknowledged non-issue. **Admission bias (adopted at the ch12
+  boundary):** a single-occurrence candidate defaults to WATCH (promoted
+  on recurrence; severity-weighted exceptions only); when a rule IS
+  warranted, the preference order is mechanize (lint/test/checker) →
+  extend an existing lens duty → new prose rule, because a prose rule
+  costs per-read attention while a mechanical check runs free — the cap
+  that matters is the PROSE registry's size, not the rule count. This
+  extends §5.5's measurement stage (hand-catches become gates) from the
+  build loop to the process itself.
+- **Rule retirement is a first-class boundary verdict (adopted at the
+  ch12 boundary), with the same standing as addition.** Each boundary
+  review sweeps the standing registries (the LearnedRules `R-*` registry,
+  the template §3 `REV-*` rules, the §4 build-loop rules) asking, per
+  rule: did it catch nothing this chapter? has a mechanical check
+  absorbed it? does it duplicate a lens duty or persistently co-fire with
+  another rule? A retired rule's row is DELETED from its registry (the
+  operative surface speaks present — R-PRESENT-TENSE); the retirement
+  verdict and its reasons live in the boundary's process-log entry and
+  git history. The sweep is fed by a per-rule catch TALLY the boundary
+  entry carries for the chapter (hand-tallied from packet metrics /
+  detector-miss records; a catch matching several rules credits EACH of
+  them, and a persistent multi-rule overlap is itself a boundary signal —
+  a duplication candidate, same standing as a zero-catch rule).
 - **No pre-defined metrics or retro template** — what is worth measuring is
   itself an empirical question; let the first chapters' log answer it.
 

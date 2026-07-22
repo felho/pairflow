@@ -3657,3 +3657,22 @@ final CLEAN.
     lifecycle verbs are safely hand-drivable pre-ch9. Provenance: the user
     asked to run the dogfooding BEFORE the chapter close (a bug would block
     it); run clean this session, recorded here for the close.
+
+- 2026-07-22 · ch12 boundary review · VERDICT — rule-accretion governance
+  (the P1b item-6 question) ADOPTED in all three parts, user-ratified:
+  (a) RETIREMENT = a first-class boundary verdict with the same standing
+  as addition — each boundary sweeps the registries (LearnedRules `R-*`,
+  template §3 `REV-*`, README §4) for zero-catch / mechanized / lens-duty-
+  duplicate rules; a retired row is deleted, provenance stays here + git.
+  (b) Per-rule catch TALLY in the boundary entry (hand-tallied from packet
+  metrics + detector-miss records; structure-light first, mechanize only if
+  it earns it) — with the user's refinement: a catch matching several rules
+  credits EACH of them, and a persistent multi-rule overlap is itself a
+  boundary topic (duplication candidate), same standing as a zero-catch
+  rule. (c) Admission bias: single-occurrence candidates default to WATCH
+  (severity-weighted exceptions); mechanize-or-extend-a-lens-duty preferred
+  over new prose — the guarded budget is the PROSE registry's size. Carried
+  by README §7 (verdict menu + the retirement bullet) and LearnedRules.md
+  ("How a rule gets here" step 2 + the new "How a rule leaves" section).
+  The (c) bias governs the REST of this boundary review's verdicts; the
+  first retirement sweep + ch12 tally run at this review's close.

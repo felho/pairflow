@@ -39,7 +39,24 @@ adopted or standing; WATCH items enter marked as such.
 
 1. Friction happens → one line in `process-log.md` the moment it happens.
 2. Chapter boundary review issues the verdict (gate / rule / README edit /
-   non-issue / WATCH).
+   non-issue / WATCH). Admission bias (adopted at the ch12 boundary): a
+   single-occurrence candidate defaults to WATCH (severity-weighted
+   exceptions only); when a rule is warranted, mechanize (lint/test/
+   checker) or extend an existing lens duty before adding prose — the
+   prose registry's size is the guarded budget.
 3. Verdicts that shape packet AUTHORING land here with their provenance;
    verdicts that shape the build loop land in README §4. This file never
    invents a rule the log does not carry.
+
+## How a rule leaves
+
+Retirement is a first-class boundary verdict with the same standing as
+addition (adopted at the ch12 boundary). Each boundary review asks, per
+rule: zero catches this chapter? absorbed by a mechanical check? a
+duplicate of a lens duty, or persistently co-firing with another rule?
+A retired rule's row is DELETED — the registry speaks present
+(R-PRESENT-TENSE); the retirement's reasons and date live in the
+boundary's process-log entry and git history. The boundary entry carries
+the per-rule catch tally that feeds this sweep (a catch matching several
+rules credits EACH of them; persistent overlap is itself a duplication
+signal, same standing as a zero-catch rule).
