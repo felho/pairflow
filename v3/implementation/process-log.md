@@ -3317,3 +3317,56 @@ final CLEAN.
   detector-miss + the boundary-review candidate are the durable artifacts,
   and the gate-1 findings' folds land in the packet's own Build-record
   aftermath.
+
+- 2026-07-22 · ch12-P3 gate-1 arm · CONVERGENCE CHRONICLE + a SECOND
+  detector-miss class (a ratified `type/schema` disposition that no
+  structural type actually delivers). The autonomous-path APPROVE-gate arm
+  (gpt-5.6-sol/high) took SIX verdict rounds to converge to CLEAN (one
+  10-min timeout first, an infra retry; then FINDINGS×5 → CLEAN), the yield
+  monotately decreasing: 4 (2 P0) → 2 (P1) → 2 (P1) → 1 (P1) → 1 (P2
+  bookkeeping) → 0. Each round: fold → fresh-context lens-4 reconciliation
+  (all CLEAN but one bookkeeping ref-sync) → hash-citing re-check. Total
+  ~6 arm runs (~90–110k tokens each) + 4 reconciliation sub-agents. The
+  folds, in order: ① requirement materialized AT ADMISSION not at read
+  (P0, the C4-faithfulness miss captured in the entry above); ② the SM
+  completion-release inventory gained the FAILED/non-commit lane (C15's
+  "released when the attempt failed" — the success-only inventory could
+  pass an impl that drops a held completion on the S4 port-breach path);
+  the SM3 "explicit buffer" MANDATE narrowed to the entailed PROPERTY
+  (conclusion-signalled delivery — a latch is an admissible equivalent,
+  only the microtask-FIFO is foreclosed); the SM3 release TRIGGER made
+  PER-ATTEMPT (a CAS-superseded id releases at ITS attempt's conclusion,
+  the call-end `try/finally` a backstop) + a throwing `commitLifecycle`
+  added to the exit inventory; and the T2 SAGA (below). **The second
+  detector-miss class (boundary-review candidate):** the internal panel
+  cleared T2 typing `RuntimeContextProjection = Readonly<Record<string,
+  unknown>>` and D3 claiming that RENDERS `projection-never-the-ref` at the
+  type (`type/schema`, per the RATIFIED invariant-disposition-map.md:66).
+  But a `{kind, locator}` `RuntimeContextRef` is STRUCTURALLY assignable to
+  `Record<string, unknown>` — so the object type NEVER type-excluded a raw
+  ref; the ratified `type/schema` disposition was UNREALIZED by the
+  packet's type, undetected by the panel. The arm's iterative pushback
+  (Record narrows C15's "value" → `unknown` (non-narrowing, but now NOTHING
+  is type-enforced, the collapse making D3/Acceptance §T's compile-error
+  claim FALSE) → the reconciling answer: a declared-unique-symbol BRAND (the
+  codebase `AdmittedTemplate` idiom) — nominally DISTINCT from
+  `RuntimeContextRef` so a raw ref is a genuine TS2322 compile error
+  (realizing the ratified `type/schema`), yet compile-time-only so the value
+  domain stays unconstrained (non-narrowing)). NEITHER the packet author NOR
+  the internal panel found the type/schema-vs-structural-type gap; the
+  cross-model arm did, over three T2 rounds. LESSON for the boundary review:
+  a disposition-map `type/schema` claim is a CHECKABLE obligation — does the
+  named type NOMINALLY exclude the forbidden value (a brand), or only
+  structurally coincide (a `Record`/`unknown` that a sibling shape satisfies)?
+  Candidate: lens-2/lens-3 gains a "type/schema disposition realizability"
+  check — for every invariant the packet declares `type/schema`, name the
+  type and confirm it genuinely excludes the invariant's negative, not merely
+  documents intent (the Record-accepts-a-ref class). Both ch12-P3 gate-1
+  detector-misses (the C4 materialization point, the projection brand)
+  are TYPE-LEVEL faithfulness gaps the Opus panel's projection lens read
+  past — the measurement-stage evidence that the cross-model arm's decorrelation
+  earns its cost. The arm's own verdict prose turned Hungarian at the CLEAN
+  round ("A packet approve-ready") — a model-language drift, cosmetic, noted.
+  Provenance: the six-round gate-1 leg under the user's option-1 authorization;
+  full round transcripts in the session scratchpad, folds in the packet bytes
+  (basis hash 58a0cca8), metrics to land in the Build record at close.
