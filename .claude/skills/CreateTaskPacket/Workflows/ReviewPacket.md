@@ -615,8 +615,12 @@ Elsewhere it stays an option:
      null-delimited order (porcelain output may COLLAPSE untracked
      directories; a path list alone is blind to an untracked file's
      content change — the gate-1 target itself is untracked).
-  2. **Launch FOREGROUND** from the repo root with an explicit
-     10-minute tool timeout — NEVER `run_in_background` (both P2
+  2. **Launch FOREGROUND** from the repo root with an explicit tool
+     timeout — 10 minutes for approve-gate/doc-review runs, 20
+     minutes (`timeout: 1200000`) for BUILD-CLOSE runs (the
+     test-running sensitivity pass is slower than a doc review — two
+     ch12-P1b overruns; adopted at the ch12 boundary) — NEVER
+     `run_in_background` (both P2
      kills were the background-task manager's, not the arm's; at a
      mandatory gate, blocking is correct — nothing may proceed
      without the verdict, and the main loop must not touch the

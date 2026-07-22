@@ -3916,3 +3916,29 @@ final CLEAN.
   a machine-checkable registry for class-2 prose anchors ("built-at
   chN-pM") is declined for now: new surface, new upkeep, and the (c)
   default shrinks the class instead; revisit if class-2 rot bites.
+
+- 2026-07-22 · ch12 boundary review · VERDICT — the admin batch, five
+  items owner-ratified in one act. (10a) README §2 inventory numbers
+  FIXED 158/85/121 → 159/54/122 (verified against ledger §4 + the
+  coverage checker's plan-§1.4 guard before editing; the ADR-015
+  routing resolved) + a pointer that plan §1.4 + the checker guard are
+  the drift-checked authority. (10b) the C33/K4-class illustration-
+  quote refresh ROUTING CONFIRMED as recorded at ch12-P0: a future
+  ch11-gate-format touch refreshes the quotes (or marks them
+  "illustrative, defers to unit"); no reopen, no packet impact, no
+  action now. (10c) the coverage BOTH-ENDS shared_ownership rule
+  RATIFIED as the standing lifecycle (reciprocal declaration on both
+  slices; a share with a future sibling lands at the SIBLING's commit
+  amending both files; co_owner = packet filename; plan rows carry the
+  obligation) — played out correctly twice (P1b, P2), no new
+  mechanism. (10d) arm timeout ADOPTED: build-close (test-running)
+  arm runs get a 20-minute foreground timeout, approve-gate/doc runs
+  stay at 10 (ReviewPacket §6; the two P1b overruns + the P3 gate-1
+  first-run timeout are the evidence). (10e) WATCH acknowledgments:
+  value-domain narrowing lands its behavior change in the OTHER
+  stage's suite (P2 — aware, no rule); full-object-equality tests as
+  hidden consumers (P1b — WATCH stands, recurrence promotes);
+  the first live 3:plateau STOP data point (the rule worked — the
+  plateau residual carried a real defect, "continue" was correct);
+  the arm's record-precision catch class (a data category for the
+  yield tally, no mechanism).

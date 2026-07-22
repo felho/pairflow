@@ -37,9 +37,11 @@ reachable through their pointers:
 
 1. **The model** — `../model/core-model.html`, authored via
    `../model/` (playbook §6). Its machine face is
-   `../model/ledger.md`: 158 pseudocode units, 85 named rejections, the
-   invariant catalog, the domain registry (51 aggregates / 121 entities), and
-   140 named Absents. The ledger is the model↔code contract surface.
+   `../model/ledger.md`: 159 pseudocode units, 54 named rejections, the
+   invariant catalog, the domain registry (51 aggregates / 122 entities), and
+   140 named Absents (counts at the ch11 model alignment; the plan §1.4
+   inventory and the coverage checker's guard are the drift-checked
+   authority). The ledger is the model↔code contract surface.
 2. **The implementation contract** — `../design/implementation-contract.md`:
    binding `IC-*` constraints (each must map to a test, a check, or an ADR)
    and the `PI-*` plan-intake checklist (each must have a home in the plan).
@@ -270,7 +272,7 @@ The real lever is transforming constraints downward in this table:
   rule (rule interaction is the flapping engine: fix A, break B, oscillate).
   Data does not interact — it is one already-consistent artifact. The
   constraint-satisfaction work was done ONCE on the model plane (e.g. L2a's
-  many review rounds); the 158 units are its residue. Passing prose rules
+  many review rounds); the 159 units are its residue. Passing prose rules
   instead would make every implementation task redo that work, with error
   odds. Concretely: the packet carries its units verbatim, the exact
   rejection strings for its slice (not "name things consistently"), and the
