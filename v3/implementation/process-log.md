@@ -3622,3 +3622,38 @@ final CLEAN.
       becomes a machine-checked gate — the strongest defense-in-depth answer to
       "can we trust the tests". Provenance: the user raised it while reading the
       gate-2 verdict; capture-don't-fix.
+
+- 2026-07-22 · ch12-P4 · DOGFOODING CHECKPOINT RECORD (§12.5 DoD, run-and-
+  recorded — the chapter-close session may cite this instead of re-running;
+  idempotent against a fresh temp DB either way). Hand-driven the full
+  lifecycle through the SHIPPED CLI (`../node_modules/.bin/tsx src/cli/main.ts`
+  from `v3/`, an isolated temp sqlite DB, the repo's canonical
+  `local-pair-v0@1` template). RESULT: CLEAN — no blocking bug; the chapter
+  is closeable on the dogfooding axis. Observed:
+  - `create --mode deferredKickoff` → `{kind:created, instanceId, version:1}`
+    exit 0; `start <id>` → `{kind:accepted}` exit 0, held; `kickoff <id>
+    --task …` → `{kind:activated, …, intent:{actor:codex, packet:{…,
+    runtimeContext:"none"}}}` exit 0, ACTIVE (currentStep=implement, round=1,
+    task supplied); `cancel <id>` → `{kind:terminated, disposition:cancelled}`
+    exit 0, TERMINAL. The four verbs drive the CREATED→WAITING→ACTIVE→TERMINAL
+    lifecycle end-to-end.
+  - The R1/R2 compact/full split confirmed LIVE: `list` row carries
+    `wait:{kind:"kickoff_pending"}` (kind only) + `runtimeContext:{state:"ready"}`
+    (NO locator, NO version); `detail` carries the full `wait{kind,requestedBy,
+    resumeEvents}` + `runtimeContext:{state:"ready",ref:null}`. Emitted keys
+    camelCase (the F4.1 read-doc grain). The `wait` clears to null on leaving
+    WAITING (the C11 non-stale invariant). The `STARTED` lifecycle fact lands
+    on the timeline (C12).
+  - The arm-gate-1 exit-mapping CORRECTIONS verified LIVE (the strongest datum
+    that the fold was real, not cosmetic): `cancel` on a TERMINAL run →
+    `{error:{class:internal,…terminal is a sink}}` exit 1 (the state_violation
+    THROW, NOT an exit-3 rejection); `create` immediate without `--task` →
+    `{kind:rejected, reason:task_required}` exit 3 (kernel-negative data doc);
+    `create --mode bogus` → `{error:{class:usage, name:InvalidMode,…}}` exit 2
+    (CLI-side before the kernel). The shipped code matches the corrected
+    lifecycle exit contract exactly.
+  - The CLI does NOT synchronously spawn a real actor — `kickoff` emits the
+    dispatch intent and returns (the real spawn is ch9's runner); so the
+    lifecycle verbs are safely hand-drivable pre-ch9. Provenance: the user
+    asked to run the dogfooding BEFORE the chapter close (a bug would block
+    it); run clean this session, recorded here for the close.
