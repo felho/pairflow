@@ -3697,3 +3697,12 @@ final CLEAN.
   Fable-mandatory surface list (contract drafts, plan chapters, kernel
   new-capability / idiom-minting, process revisions, boundary reviews),
   economics-driven goal: implementation packets runnable on Opus-class.
+  FOLLOW-UP same day: model-tier-experiment-2.md PRE-REGISTERED and
+  owner-ratified — alternating-chapter design (ch9 = Fable first;
+  Opus arm gated on the K3 hardenings), Fable-mandatory surface list,
+  and the mechanical 5-axis DIFFICULTY INDEX (mass / inference load /
+  ripple / seam class / novelty, thresholds frozen from a 14-packet
+  ch11–ch12 back-scoring: 5 Light / 4 Medium / 5 Heavy, the five
+  Heavies = the five highest observed loads; the owner-estimate
+  difficulty note was REJECTED by the owner as unanchored — the index
+  is computed from declared machine blocks at approve time instead).
