@@ -3676,3 +3676,24 @@ final CLEAN.
   ("How a rule gets here" step 2 + the new "How a rule leaves" section).
   The (c) bias governs the REST of this boundary review's verdicts; the
   first retirement sweep + ch12 tally run at this review's close.
+
+- 2026-07-22 · ch12 boundary review · VERDICT — model-tier experiment
+  closed as REVERT (owner-ratified; the full reasoning lives in
+  model-tier-experiment.md §7, appended per its write-once rule). Facts
+  bound: all three ch12-P2/P3/P4 main threads ran Opus-class (owner
+  memory — the capture gap); K1 clean, K2 double-strike on P3 (rounds 12
+  vs band 1–4; gate-2 ~18 findings vs band 2–8), K3 not ruled
+  FAIL-evidence (owner reading: the process prompt set was authored
+  entirely under Fable — never tuned for Opus; guidance-reducible).
+  Protocol slips logged in §8: the verdict was due at P3 close; P4 ran
+  Opus as an UNRATIFIED EXTEND (in-band metrics, informal data point).
+  Consequences executed at this boundary: (1) `main_thread_model` added
+  to packet_metrics (template + check_packet.py optional key + string
+  type check + red/green selftest cases; REQUIRED by template rule from
+  ch13, lint-optional for grandfathering); (2) the K3-class prompt
+  hardening is delegated to this boundary's entry-mode / arm-invocation
+  verdicts; (3) successor experiment to be pre-registered as
+  model-tier-experiment-2.md — alternating-chapter design, explicit
+  Fable-mandatory surface list (contract drafts, plan chapters, kernel
+  new-capability / idiom-minting, process revisions, boundary reviews),
+  economics-driven goal: implementation packets runnable on Opus-class.

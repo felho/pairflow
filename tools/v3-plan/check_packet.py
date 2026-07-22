@@ -276,7 +276,7 @@ PACKET_METRICS_KEYS = {
     "detector_misses",
     "learned",
 }
-PACKET_METRICS_OPTIONAL = {"baseline_note"}
+PACKET_METRICS_OPTIONAL = {"baseline_note", "main_thread_model"}
 ROUNDS_KEYS = {"review", "doc_refinement", "implementation"}
 PREDICTION_KEYS = {"predicted", "reasoning", "discovered"}
 PREDICTION_CLASSES = {"projection", "invention"}
@@ -900,6 +900,8 @@ def check_packet_metrics(
         type_err("learned", "a string")
     if "baseline_note" in metrics and not isinstance(metrics["baseline_note"], str):
         type_err("baseline_note", "a string")
+    if "main_thread_model" in metrics and not isinstance(metrics["main_thread_model"], str):
+        type_err("main_thread_model", "a string")
 
     prediction = metrics.get("prediction")
     if "prediction" in metrics:
@@ -1581,6 +1583,20 @@ def run_selftest() -> int:
         GREEN_PACKET.replace(', "learned": "l"', ""),
         "packet_metrics missing keys",
     )
+    expect_red_packet(
+        "metrics-main-thread-model-not-string",
+        GREEN_PACKET.replace('"learned": "l"', '"learned": "l", "main_thread_model": 1'),
+        "packet_metrics.main_thread_model must be a string",
+    )
+    shared_packet.write_text(
+        GREEN_PACKET.replace(
+            '"learned": "l"', '"learned": "l", "main_thread_model": "claude-fable-5"'
+        ),
+        encoding="utf-8",
+    )
+    errors, _ = lint(shared_root / "packets", shared_root / "contracts", ADR_DIR)
+    expect_green("metrics-main-thread-model-string", errors)
+    shared_packet.write_text(GREEN_PACKET, encoding="utf-8")
     expect_red_packet(
         "metrics-nested-wrong-type",
         GREEN_PACKET.replace(

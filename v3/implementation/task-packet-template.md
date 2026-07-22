@@ -175,7 +175,12 @@ ch7 boundary)>
 <Filled at build close: rounds, test delta, surprises — prose; plus the
 machine block. `stops[].type` comes from the canonical STOP member-token
 registry (README §5.5). `baseline_note` (optional) is the ONLY home for
-unit/regime qualifiers — never ad hoc keys.>
+unit/regime qualifiers — never ad hoc keys. `main_thread_model`
+(adopted at the ch12 boundary — the model-tier experiment's capture
+gap) records the MAIN thread's model id (e.g. `claude-fable-5`,
+`claude-opus-4-8`); required on every packet from ch13 on
+(lint-optional for grandfathering), because tier decisions cannot be
+adjudicated from memory.>
 
 ```json
 {
@@ -186,7 +191,8 @@ unit/regime qualifiers — never ad hoc keys.>
     "rounds": { "review": 0, "doc_refinement": 0, "implementation": 0 },
     "stops": [],
     "detector_misses": [],
-    "learned": "<one-line hook — the process-log carries the detail>"
+    "learned": "<one-line hook — the process-log carries the detail>",
+    "main_thread_model": "<model id of the main authoring/build thread>"
   }
 }
 ```
