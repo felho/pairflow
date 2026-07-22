@@ -1022,8 +1022,23 @@ agent-config positions' non-map container; the `start` Duplicate/exit-0
 terminated]`-only `stale`-never sweep + the `Created` exact keyset; the
 `none`/`requested`/`ready` three-state compact rows with a
 `SECRET_REQUEST_ID`/`SECRET_LOCATOR`-absent leak assert + the
-`issuedAgentConfig`-survives-projection assert. Arm gate-2 re-check on
-the folded sha: <filled after the finder-lane rerun>.
+`issuedAgentConfig`-survives-projection assert. Arm gate-2 re-check
+(finder-lane rerun on `9636ddcd`): REFINE with ONE finding — the RP6
+alias fold had WEAKENED a pre-existing lane (it aliased only the inner
+provider scalar, dropping the WHOLE-MAP alias coverage the original
+`runtimeContext: *s` fixture carried). Folded (`d1bbcbca`): the
+whole-map alias test restored — the full `{kind, provider, config}`
+spec map anchored on a step's format-open `agentConfig`, the ENTIRE
+`runtimeContext` value that alias, asserting the materialized plain
+own-property record via `toEqual` (a raw JS Map fails); the
+inner-scalar-alias test kept as a second dimension. 1261 → 1262 tests.
+Arm gate-2 re-check #2 (`d1bbcbca`): **CLEAN** — the arm EXECUTED the
+mutation this time (a raw-Map materializer turned the whole-map test
+red at `toEqual`, restored byte-clean), confirming sensitivity by
+execution; suite 1262/1262 green, no test weakened. **The packet is
+DONE** (a clean sha-citing gate-2 verdict; the transitional arm gates
+both discharged). Every arm pass pin-conform gpt-5.6-sol/high/never,
+byte-guard clean before + after.
 
 ```json
 {
