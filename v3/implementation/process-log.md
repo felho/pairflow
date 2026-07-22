@@ -3193,3 +3193,127 @@ final CLEAN.
   arm-timeout candidate (P1b log item 5) did NOT bite here: both runs
   (gate-2 ~250k tokens, re-check ~99k) finished inside the 10-min
   foreground window.
+
+- 2026-07-22 · ch12-P3 pre-approval · the ENTRY-MODE / authorization
+  ambiguity (sibling of the same-day arm-invocation ask-the-human entry
+  above — same family: "when does the loop stop for the human vs proceed
+  autonomously"). At ch12-P3 the agent classified the packet FLAG-FREE
+  (0 new-decision, flags None, tier-0 green, clean close, not
+  first-of-a-kind, measurement stage) — which README §5.5 makes an
+  AUTONOMOUS approve from ch8 on: proceed to build THROUGH the two arm
+  gates, the loop stopping only at STOP / flag-bearing approve /
+  first-of-a-kind. The agent nonetheless STOPPED and asked the user to
+  approve the build. The stated reasons: (a) the "entry mode is the trust
+  dial" clause (README §5.5 / AGENTS.md — the user chooses per work item,
+  prompt-by-prompt vs delegating a whole packet/chapter), read off the
+  opening "jöhet a ch12-P3" as prompt-by-prompt; (b) the global
+  never-assume rule (build is the consequence-terful step → a commit); (c)
+  the human-gate-presentation memory. **The incoherence the user flagged:**
+  once flag-free is established, the process DEFAULT is autonomous build,
+  NOT a stop — so the pre-approval-then-STOP was a DISCRETIONARY human gate
+  the process does not require here, added SILENTLY (defaulted, not asked)
+  rather than either (i) proceeding autonomously per the letter or (ii)
+  asking the ONE entry-mode question explicitly. The root cause: the
+  trust-dial has NO explicit encoding — "jöhet a chN-pM" is genuinely
+  ambiguous between "author+review, stop at the approve" and "delegate the
+  whole packet through build," and the agent resolved the ambiguity by a
+  silent conservative default. Candidate edits for the boundary review
+  (NOT applied — capture-don't-fix):
+  (1) **Define an explicit ENTRY-MODE convention (AGENTS.md V3 section +
+  the CreateTaskPacket/ExecutePairflowPlan skills).** The user's OPENING
+  PROMPT encodes the trust dial with a small closed vocabulary, e.g.:
+  present-and-stop-at-approve (prompt-by-prompt: "review/jöhet a chN-pM")
+  vs autonomous-through-build ("menj/delegáld a chN-pM", or a standing
+  "autonóm módban a fejezet végéig"). A per-item token overrides a standing
+  mode. This is the user's own offered fix ("egy jobb indító prompt a
+  részemről") — the convention makes it cheap and unambiguous.
+  (2) **Name the DEFAULT explicitly when the entry mode is undetermined
+  for a flag-free approve** — so the agent never silently defaults. Two
+  legal resolutions, one must be chosen at the boundary: EITHER the
+  process letter (undetermined ⇒ proceed autonomously, the §5.5 default)
+  OR a single explicit entry-mode question ("prompt-by-prompt vagy
+  delegálod a buildet?") — but NOT a silent full-gate-then-stop that reads
+  as if the process required it. The agent DID make its reasoning visible
+  in-chat, which is the mitigating half; the defect is the classification
+  (flag-free ⇒ autonomous) and the behavior (stop) diverging without the
+  divergence being named as a CHOICE.
+  (3) **Tie to the same-day meta-rule (arm-invocation entry item 4):**
+  "asking the user is itself an action that can rest on an unchecked
+  assumption." The entry-mode stop is exactly that class — a silent
+  assumption that prompt-by-prompt ⇒ stop-at-approve. Highest-leverage
+  pairing: (1) gives the user a cheap way to SET the dial; (2)+item-4
+  stop the agent from GUESSING it. Provenance: the user asked why the
+  agent requested permission the process does not require, then asked to
+  capture the clarification as a boundary-review retro — the reflection
+  and the proposed opening-prompt convention are the artifact.
+
+- 2026-07-22 · ch12-P3 gate-1 arm · a DETECTOR MISS (the internal panel
+  cleared a P0 contract-faithfulness gap) + a human-surfaced canonical-row
+  fold, both retro-worthy. Context: the user's "build ch12-P3" resumed the
+  packet from its (flag-free, internally-clean) pre-approval point and ran
+  the mandatory autonomous-path APPROVE-gate external arm (README §5.5;
+  first agent-invoked gate-1 on this packet). Arm mechanics: the pinned
+  reviewer (gpt-5.6-sol / high, arm-pin ch8 row) timed out on the first
+  10-min foreground run (~8385 lines of exploration, no verdict — an infra
+  failure, §6 item 8), the byte guard stayed intact (READ-ONLY honored),
+  and the ONE retry with a tightened verdict-first prompt returned a
+  hash-citing verdict in ~85k tokens: **FINDINGS**, 4 items.
+  **The catch that matters (finding ①, P0):** the packet's requirement
+  value-domain (T1/R1) materializes the `RuntimeContextRequirement` at the
+  KERNEL READ (a raw-vs-view belt), but ratified C4 says "MATERIALIZED once
+  at admission (the admitted template carries `none` or the normalized spec
+  — no absent state downstream)" and plan §12.1 says the requirement is
+  "ON the template"; the packet leaves `undefined` on the admitted template
+  and derives `none` at each read. The packet's T1 DERIVATION NOTE defended
+  read-belt (claiming admission-materialization would force `admitTemplate`
+  from "normalize value, keep shape" into "transform shape") — and that
+  defense is UNFOUNDED: the `activation` precedent (`admit.ts:409`,
+  `activation: template.activation ?? { mode: "immediate" }`) already
+  normalizes a value at admission WITHOUT a shape transform; the identical
+  move (`absent → none`) conforms to C4 and dissolves the note's concern.
+  The internal Opus panel had cleared the packet; the arm caught the gap.
+  This is exactly the gates' ground (README §5.5: "the ch8-P1 measurement
+  — real catches the internal panel missed") and feeds `detector_misses`.
+  **The miss's lens home:** lens-2's derived-row entailment attack +
+  draft→packet semantic-drift duty — a `derived` row whose in-row note
+  DEFENDS a realization AGAINST a ratified row's plain-language default is
+  the soft spot; the panel accepted the derivation prose without testing
+  it against C4's literal text AND the nearest realized precedent.
+  BOUNDARY-REVIEW CANDIDATE: make lens-2 MANDATE, for any `derived` row
+  citing a contract anchor whose note argues away from that anchor's
+  literal default, an explicit "does the anchor's plain text + the nearest
+  realized precedent contradict this derivation?" check — the finding-①
+  class. The other three: ② (P1, genuine) the SM completion-release test
+  inventory omits the S4 port-breach conclusion path C15 requires (a
+  driven-but-incomplete family — fold); ③ (arm-graded P0, agent-regraded
+  P3) SM3's "explicit per-request_id buffer, no microtask" over-mandates a
+  data structure where C15's five observable rules only entail
+  conclusion-signalled delivery (the arm's latch alternative is an INSTANCE
+  of the entailed property, not a competing decision — narrow, not a
+  new-decision STOP); ④ (P2) `RuntimeContextProjection = Record<string,
+  unknown>` narrows C15's "canonical-JSON-safe value" to object-only
+  (minor value-domain — broaden or annotate). Agent adjudication: all four
+  are ordinary external-arm folds (every fix DETERMINED by ratified
+  C4/C15, none a genuinely-open-choice STOP), so §5.5's letter is
+  fold-autonomously → re-review → re-run gate-1 → build on clean.
+  **Why the human was nonetheless asked (the user affirmed it "tök oké"):**
+  finding ① reworks a CANONICAL row (T1/R1) AGAINST the author's documented
+  rationale and is a ratified-contract-faithfulness call — surfaced as an
+  EXPLICIT recommendation-first choice (fold all four / pause on ① / fold
+  ①②-only), never a silent rework and never a silent stop, applying the
+  same-day entry-mode meta-rule (the entry above, candidate 2: name the
+  choice, don't silently default). The DISTINCTION from that pre-approval
+  incident is load-bearing and worth pinning: there the gate was CLEAN
+  (flag-free ⇒ autonomous, so the stop was unwarranted); HERE the gate
+  returned P0 FINDINGS (the autonomous path's clean-arm precondition
+  unmet), so pausing to let the human weigh a canonical-row rework against
+  a ratified contract is warranted, not the prior anti-pattern. The rule
+  the pairing suggests: an arm-gate FINDINGS verdict whose fold rewrites a
+  canonical row on a ratified-faithfulness question is a legitimate
+  recommendation-first human touchpoint even when the fix is
+  process-"ordinary" — the surfacing is about the AUTHOR-vs-ARM contract
+  dispute, not about re-deciding autonomy. Provenance: the user asked for
+  this retro before authorizing the autonomous fold (option 1); the
+  detector-miss + the boundary-review candidate are the durable artifacts,
+  and the gate-1 findings' folds land in the packet's own Build-record
+  aftermath.
