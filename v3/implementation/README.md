@@ -152,7 +152,19 @@ delegation prompt QUOTES the discipline lines verbatim and instructs
 preserve-don't-weaken is insufficient exactly when the packet's
 point is stronger proof (the agents faithfully preserved the old
 assert strength while the record claimed the declared level; gate-2
-caught it as the chapter's largest aftermath batch). The split
+caught it as the chapter's largest aftermath batch).
+
+**Pointer-comment convention (adopted at the ch12 boundary — the
+reference-economy verdict):** a temporary in-code deferral marker
+takes the CANONICAL form `DEFERRED(chN[-pM]): <note>`; the boundary
+tooling enumerates the markers, and a chapter's close goes RED while
+markers addressed to that chapter remain. Free-text deferral prose
+("until P4", "deferred to P4") is retired to this form as code is
+touched. This flips pointer retirement from fragile free-text greps
+(the R-INSTRUMENT-PROBE weakness class) to a machine count; the
+broader default is R-PRESENT-TENSE's reference economy — promote a
+reference to a machine-checked class where its value justifies it,
+otherwise DROP it rather than maintain a rotting pointer. The split
 is by ACCOUNTABILITY, not authorship: the builder owns the
 realization + test bodies (fail-first receipts per
 R-DERIVED-PROBES); the orchestrator owns verification, the gates,

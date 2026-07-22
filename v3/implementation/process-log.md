@@ -3893,3 +3893,26 @@ final CLEAN.
   packets are FOR; (2) the failure is self-report-invisible (the Build
   record claimed the declared level while the tests held the old one —
   only gate-2 caught it, as the chapter's largest aftermath batch).
+
+- 2026-07-22 · ch12 boundary review · VERDICT — the mechanization pair.
+  (9a) ADOPTED: the prose↔manifest ref-drift LINT extension — every
+  `contract:...#Cn` cited in a row's anchored/derived closure must
+  appear in that row's manifest refs AND the header union, or the
+  packet-lint goes red (the existing cross-lock pattern one step
+  wider). Attribution corrected at the owner's catch: the two P1b
+  occurrences were caught by the GATE-1 ARM's rounds (not the owner as
+  first drafted) — which strengthens the case: ~100k-token
+  probabilistic review rounds were spent on a class a free
+  deterministic lint line retires. Implementation lands in the
+  boundary-close tooling batch (check_packet.py + negative fixtures
+  per the R-CLAIM-FORM-PROBES extension). (9b) the reference-economy
+  triple, owner-decided: (c) ADOPTED — drop-over-maintain as the
+  standing default, folded into R-PRESENT-TENSE (a reference earns its
+  upkeep iff benefit > rot-risk × miss-cost; promote to
+  machine-checked where justified, DROP otherwise); (a) ADOPTED — the
+  canonical `DEFERRED(chN[-pM]): <note>` pointer-comment marker with a
+  boundary-tooling count that goes red at the addressed chapter's
+  close (README §4; retires the free-text-grep fragility); (b) WATCH —
+  a machine-checkable registry for class-2 prose anchors ("built-at
+  chN-pM") is declined for now: new surface, new upkeep, and the (c)
+  default shrinks the class instead; revisit if class-2 rot bites.
