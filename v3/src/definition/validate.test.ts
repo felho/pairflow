@@ -1365,11 +1365,47 @@ describe("ch12-P4 F3 — the runtimeContext spec-map source form (dimension 2)",
     expect(paths(err)).toContain("runtimeContext");
   });
 
-  it("RP6: an anchor/alias in the spec map resolves to a plain value graph (no alias node leaks) → the MATERIALIZED own-property record carries the resolved content", () => {
+  it("RP6: a WHOLE-MAP alias spec map resolves to a plain object graph (no bypass) → the ENTIRE runtimeContext value materializes to a plain own-property record", () => {
+    // The WHOLE spec map is anchored on a step's format-open `agentConfig`
+    // (`&s`) and the ENTIRE `runtimeContext` value is that alias (`*s`) — this
+    // exercises WHOLE-MAP alias resolution/materialization (the value is a
+    // `mapAsMap` alias node, not an ordinary map). A raw JS Map or an
+    // unresolved alias node slipping through the whole-value alias path fails
+    // toEqual (a Map is not deep-equal to a plain object).
+    const wholeMapAlias = `ref:
+  id: t
+  version: 1
+start: s
+steps:
+  s:
+    role: r
+    instruction: i
+    transitions: {}
+    agentConfig: &s
+      kind: worktree
+      provider: pairflow.worktree
+      config:
+        repo: bubble
+terminal:
+  - done
+roles:
+  r: {}
+runtimeContext: *s
+`;
+    const result = load(wholeMapAlias);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.template.runtimeContext).toEqual({
+      kind: "worktree",
+      provider: "pairflow.worktree",
+      config: { repo: "bubble" },
+    });
+  });
+
+  it("RP6: an INNER anchor/alias in the spec map resolves to a plain value graph (no alias node leaks) — the inner-alias dimension", () => {
     // The provider string is anchored and aliased inside `config.mirror`; the
-    // whole template is valid and admits. The assert pins the MATERIALIZED
-    // content (a plain own-property record with the resolved string) — a raw
-    // JS Map or an unresolved alias node slipping through would fail toEqual.
+    // whole template is valid and admits. Complements the whole-map alias test
+    // above with an inner (sub-value) alias dimension.
     const result = load(
       withRc("  kind: worktree\n  provider: &p pairflow.worktree\n  config:\n    mirror: *p\n"),
     );
