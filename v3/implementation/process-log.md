@@ -3481,3 +3481,100 @@ final CLEAN.
   fresh-build authorizations; the detector-misses + learned live in the
   packet's `packet_metrics`, the build-record aftermath carries the folds,
   and this line carries the boundary-review candidates.
+
+- 2026-07-22 · ch12-P4 arm gate-1 · BOUNDARY-REVIEW ITEM (user-raised, the
+  process-reliability question) — the external arm keeps catching REAL
+  errors in our own artifacts (this gate: the CLI exit-matrix based on the
+  wrong outcome union; earlier: the ch12-P3 gate-2 product bug, the ch11-P2
+  green-but-blind test bodies). That the arm catches them is the arm working
+  as designed. But the user's deeper worry: if we can author WRONG artifacts
+  — especially WRONG TESTS (the safety net itself) — and the arm is not
+  guaranteed complete, how much can the process be trusted? Frame the
+  improvement space on the user's two axes: (A) GUIDANCE (the inputs —
+  context/prompts/skills/model choice) reduces the error RATE at source;
+  (B) FEEDBACK LOOPS (panel, arm, sensitivity pass, drift/coverage/typecheck)
+  bound the DAMAGE after an error is made but do not lower the rate. The
+  question the boundary must answer per recurring class: is it GUIDANCE-
+  REDUCIBLE (a nameable rule front-loads the catch) or IRREDUCIBLE (a diffuse
+  slip — accept it, rely on defense-in-depth + measure yield)?
+  CLASSIFY THIS SESSION'S ARM CATCHES as the working data:
+  (1) the exit-matrix miss = a SUBSTRATE-ASSUMPTION class — reasoned from a
+  plausible SIBLING (the actor `Outcome` union) instead of READING the actual
+  lifecycle outcome unions (`domain/outcome.ts`). The Substrate Reality Probe
+  / R-DERIVED-PROBES discipline exists for parser/OS substrate but was NOT
+  applied to a CODE-substrate (a type/enum union a claim rests on). GUIDANCE-
+  REDUCIBLE candidate: extend the substrate-probe rule EXPLICITLY to type
+  unions / enum domains / outcome vocabularies — "a claim resting on a union's
+  membership READS the union, never assumes it mirrors a sibling." This is a
+  test-relevant class: a test authored off the wrong union asserts the wrong
+  exit code and can pass a wrong build.
+  (2) the R1 derived→new-decision miss = an ENTAILMENT-ATTACK-DEPTH class —
+  the internal lens-2 tested R1 against its cited anchors but not against the
+  full space of conforming alternatives; a W1 watchpoint was carried but not
+  ESCALATED. GUIDANCE-REDUCIBLE candidate: when a derived row is ALSO carried
+  as an openness watchpoint, that pairing is itself the escalation trigger
+  (a watchpointed-derived row is a latent new-decision — run the entailment
+  attack to exhaustion at authoring, or pre-classify new-decision).
+  THE INDEPENDENCE PRINCIPLE (the reliability answer, for the boundary to
+  ratify or refine): no single fallible loop is trusted to be complete; the
+  reliability comes from loops whose errors DO NOT CORRELATE — the arm is a
+  DIFFERENT model (decorrelation), the sensitivity pass asks a DIFFERENT
+  question ("can this test FAIL?" not "is this test present?"), the drift/
+  coverage/typecheck gates are MECHANICAL (no LLM). Defense-in-depth over
+  DIVERSE loops is what makes the union reliable even when each part errs;
+  the guidance investment should target the classes that are reducible, and
+  the measurement (arm YIELD by class over chapters — the ARMED falling-yield
+  prediction this chapter already tracks) is the evidence of whether guidance
+  is working vs whether a class is irreducible. SPECIFIC ASK FOR THE
+  BOUNDARY: (a) adopt or reject the two guidance candidates above (the
+  code-substrate probe extension; the watchpointed-derived escalation
+  trigger); (b) decide whether TEST-CLASS arm catches deserve their OWN yield
+  bucket (separate from product / packet-docs / test-evidence) so the
+  test-safety-net-reliability signal is measurable directly; (c) record the
+  independence principle as the standing answer to "can we trust the process"
+  — the honest position is bounded-trust-via-diverse-redundancy, not
+  any-single-loop-completeness. Provenance: the user raised this mid-ch12-P4
+  approve while reading the arm-gate-1 fold summary; capture-don't-fix — the
+  verdict is the ch12 boundary review's.
+
+- 2026-07-22 · ch12-P4 build · BOUNDARY-REVIEW ITEM (user-raised, "just an
+  interesting point") — the artifact-linkage cost/benefit question: the code
+  and docs carry MANY cross-references (in comments and prose), and it is not
+  obvious which we actually BUILD ON (functionally rely on) vs which are
+  decorative, nor how to weigh the upkeep cost of maintaining all these tiny
+  links against their benefit. Frame for the boundary: the references are NOT
+  one thing — they split into THREE classes with very different economics.
+  (1) MACHINE-CHECKED load-bearing refs — the packet manifest's
+  `contract:chN-<surface>#Cn` anchors, the `mutation_boundary`, the coverage
+  `ledger_slice`, the `ADR-NNN` refs. Tooling VERIFIES them (packet-lint,
+  check_coverage, adr-check); a stale one goes LOUD-RED. We build on them; the
+  upkeep cost is bounded BY the check (rot cannot hide). High benefit
+  (provenance + drift detection), low residual cost. (2) HUMAN-CHECKED
+  load-bearing prose anchors — "P3-built", "aligned at ch12-p4 pre-approval",
+  "the ch11-C6 grammar reuse". These carry MEANING a reader/implementer needs
+  (where a rule lives, why a value is what it is) but are NOT machine-verified;
+  they can go stale SILENTLY (comment rot). This is the user's worry class.
+  (3) POINTER/scaffolding comments — "until P4", "deferred to P4 (C25)",
+  "P4's format walk". TEMPORARY to-do markers that RETIRE when the future
+  arrives (this very packet retired a batch: admit.ts 291/325/335/442,
+  template.ts 84/140/172/181/183, main.ts 308). Cost: the retirement SWEEP can
+  MISS them (the ch11-P4 instrument-blindness lesson — wrapped/em-dash/
+  NUL-classified comments; R-INSTRUMENT-PROBE was born there). THE PRINCIPLE
+  for the boundary to ratify: a reference is worth its upkeep IFF
+  benefit(link) > rot-risk × miss-cost; MACHINE-CHECKING flips a ref from
+  "silent rot" to "loud red" (what makes class 1 cheap), so the lever is —
+  convert high-value HUMAN-checked refs (class 2/3) to machine-checked (class
+  1) where the value justifies the tooling, and where it does NOT, prefer to
+  DROP the ref (R-PRESENT-TENSE: the operative path speaks present, provenance
+  lives in machine blocks + git) rather than maintain a rotting pointer. The
+  Mirrored Surface Map already applies this to intra-packet mirrors
+  (state-once, mirror-defers, one canonical home updated on change). SPECIFIC
+  ASK: (a) should class-3 pointer comments become MACHINE-TRACKED (a "retire
+  at chN" marker a lint enforces + counts) instead of free-text greps — the
+  R-INSTRUMENT-PROBE fragility says the grep approach is the weak link;
+  (b) should a small set of class-2 anchors ("built-at chN-pM") gain a
+  machine-checkable form (a registry the drift suite validates) so
+  where-a-rule-lives stops being silent-rot prose; (c) the standing default
+  when in doubt — DROP (present-tense) over MAINTAIN, keeping only the
+  machine-checked and the genuinely load-bearing. Provenance: the user raised
+  it mid-ch12-P4 build as a low-urgency curiosity; capture-don't-fix.
