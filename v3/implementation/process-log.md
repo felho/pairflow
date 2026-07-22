@@ -3431,3 +3431,53 @@ final CLEAN.
   ch12-P3 build specifically to lodge this as a boundary-review item,
   agreeing to run THIS build fresh-context while the general practice is
   ratified at the ch12 close.
+
+- 2026-07-22 · ch12-P3 gate-2 (build-close) · the arm caught a REAL PRODUCT
+  BUG the internal panel, gate-1, AND the initial fresh-context build all
+  missed — the strongest measurement-stage datum yet for the build-close
+  arm gate. The bug: the ordered-after-commit completion seam (SM) held +
+  flushed a provider READY that arrived BEFORE the START attempt concluded,
+  but a READY arriving AFTER conclusion (the NORMAL async path — a real
+  provider provisions and fires READY long after START returns) was buffered
+  and NEVER re-flushed → the completion was lost forever, the run stuck
+  `requested`. The packet's SM1–SM3 only described the pre-conclusion HOLD;
+  the post-conclusion direct-delivery path was absent from the contract, so
+  the build faithfully realized an INCOMPLETE contract. Fix: a `concluded`
+  set routes post-conclusion completions to a DIRECT delivery + a
+  `settle`-drain; the SM contract now states TWO temporal paths. TWO
+  boundary-review candidates from the gate-2 leg (both feed
+  `detector_misses`, both a class the panel's lenses structurally miss):
+  (1) **operational-simulation of ASYNC seams** — the panel's SM review
+  reasoned text-vs-text about the hold, never WALKED the post-conclusion
+  delivery timeline (the operational-simulation lens, ch11-arm catch-class
+  (a), applied to a delivery seam would have caught it); the model prose's
+  "async → later fires" is exactly the post-conclusion path the packet
+  under-specified. (2) **the abort-on-throw-drop class** — BOTH sequential-
+  await-in-a-loop buffer consumers (`settle` and `concludeAttempt`) dropped
+  later held completions when an earlier `readyOp` threw at the transport
+  gate (SM2 unconditional never-dropped violated); the arm found BOTH twins
+  across re-checks. Candidate: a lens/arm probe for "a loop of awaited
+  fallible deliveries that aborts on the first throw" against any
+  never-dropped/all-delivered contract. **Gate-2 convergence cost + the
+  fresh-build-fidelity datum:** the build-close leg took 7 arm rounds
+  (yield 6→6→2→1→1→2→P3, closed on the diminishing-returns cutoff at a
+  bookkeeping-only round). The fresh-context-delegated build (the b8ceeb69
+  boundary item) was substantively correct BUT: it shipped the async-post-
+  conclusion bug (an incomplete-contract realization, not the agent's
+  fault — the packet lacked the path), and its aftermath folds needed
+  ORCHESTRATOR correction on subtle async correctness (the `void
+  delivery.finally` unhandled-rejection + drain race; the drain error-path
+  concurrent-arrival; both never-dropped twins) — the orchestrator wrote
+  those production fixes, the agent wrote the tests. So the fresh build
+  splits cleanly: the AGENT owns the bulk mechanical realization + the
+  test bodies (with fail-first receipts), the ORCHESTRATOR owns the subtle
+  async/robustness product fixes + the packet-contract reconciliations +
+  the mirror propagation (the finding-6 shipped-CLI ripple, the SM two-path
+  contract). This is a concrete answer to the b8ceeb69 "who owns the fixes"
+  open question: the build-execution-context convention should NAME this
+  split (agent = realization + tests; orchestrator = subtle-correctness
+  fixes + contract reconciliation), not leave it per-run. Provenance: the
+  gate-2 build-close leg under the user's option-1 (finding-6) and
+  fresh-build authorizations; the detector-misses + learned live in the
+  packet's `packet_metrics`, the build-record aftermath carries the folds,
+  and this line carries the boundary-review candidates.
