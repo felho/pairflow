@@ -3370,3 +3370,64 @@ final CLEAN.
   Provenance: the six-round gate-1 leg under the user's option-1 authorization;
   full round transcripts in the session scratchpad, folds in the packet bytes
   (basis hash 58a0cca8), metrics to land in the Build record at close.
+
+- 2026-07-22 · ch12-P3 build-execution-context · a BOUNDARY-REVIEW
+  question the user raised explicitly (settle it, don't leave it to
+  per-run discretion): WHERE does the BUILD run — the main agent context,
+  or a fresh-context sub-agent? The process is SILENT. README §4's build
+  loop (read spec → TDD → implement → drift → review → commit →
+  post-build audit) and §5.5's arm gates specify the STEPS and the
+  human/autonomy envelope, but NOTHING names the build's execution
+  CONTEXT. Practice so far has been INCONSISTENT/unrecorded — the user
+  believes some prior packets were built IN the main context; this is not
+  captured anywhere, so the boundary review should first ESTABLISH the
+  actual history (grep the packet Build records / session notes) before
+  deciding. THE TRIGGER: at ch12-P3, after the six-round gate-1 leg
+  (~600k+ tokens of arm rounds + reconciliation sub-agents) heavily
+  consumed the main context, the agent proposed DELEGATING the build to a
+  fresh-context sub-agent fed the self-contained packet, reserving the
+  main context for orchestration + verification + gate 2; the user
+  accepted for THIS run but flagged that the general practice is
+  unsettled and "could be a general best practice" worth ratifying.
+  THE CASE FOR fresh-context-delegated build as the STANDING practice:
+  (1) the packet is SELF-CONTAINED BY DESIGN (§5.3 — "self-contained for
+  its operative set"), so a fresh context fed only the packet is EXACTLY
+  the artifact's intended consumer, and a clean build is itself a live
+  test of the §5.3 self-containment claim (the fresh-implementer lens §7
+  tests comprehension; a fresh-context BUILD tests executability);
+  (2) DECORRELATION — the author/gate context should not build its own
+  bytes, mirroring the fresh-context PANEL principle (the author's
+  context never scores its own bytes clean; the same logic says it
+  should not implement them either, carrying invisible assumptions);
+  (3) a heavy gate leg DEGRADES the main context (context rot) right when
+  the build — the most code-dense step — begins, exactly backwards;
+  (4) it is a natural STEP TOWARD the ratified CHAINING stage (§5.5 —
+  "chapter-level delivery through ExecutePairflowPlan, pairflow
+  doc-bubbles carrying refinement and implementation"): a doc-bubble IS a
+  fresh execution context, so delegating the build now rehearses the
+  target architecture. THE CASE AGAINST / open questions for the review:
+  (a) FIDELITY — does a fresh agent lose the fold-context nuance (e.g. the
+  ch12-P3 branded-projection / admission-materialization / per-attempt
+  subtleties)? Mitigation: the packet bytes now ENCODE those decisions
+  (that is what the folds did), and the orchestrator can hand explicit
+  build-guidance notes; but the review should decide whether such notes
+  are standardized; (b) ATOMICITY/SCALE — one sub-agent for a ~45-file
+  TDD build (one commit) is a large unit of work with its own context
+  limits; does it need staging (types→ports→kernel→…), and if staged,
+  who guards the one-packet-one-commit boundary and coherence?
+  (c) VERIFICATION BURDEN + AUTHORITY — the orchestrator must rigorously
+  verify the delegated output (typecheck/lint/tests/drift/post-build
+  audit) and run gate 2; is the build-close arm gate SUFFICIENT to catch
+  a fidelity slip, or does delegation need an extra check? (d) COST — a
+  fresh full-budget build agent plus verification vs an in-context build.
+  PROPOSED RESOLUTION SHAPE (for the review to accept/amend/reject): make
+  build-execution-context an EXPLICIT, RECORDED field of the build loop —
+  DEFAULT to fresh-context-delegated build (the four reasons above), with
+  the packet Build record noting the execution context used and any
+  build-guidance notes handed over, so the choice is never silent; the
+  main context retains orchestration, verification, and both arm gates.
+  This is the same meta-shape as the same-day entry-mode retro (name the
+  default, don't silently default). Provenance: the user paused the
+  ch12-P3 build specifically to lodge this as a boundary-review item,
+  agreeing to run THIS build fresh-context while the general practice is
+  ratified at the ch12 close.
