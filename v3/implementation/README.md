@@ -439,11 +439,18 @@ is the ARM'S OWN RE-CHECK on the folded bytes, its verdict citing
 the NEW content hash (a verdict on stale bytes is no verdict), plus
 the mandatory delta-scoped reconciliation pass; the escalation
 triggers are unchanged. The arm may be run by the user manually OR
-invoked by the loop non-interactively — an OPTION, not a mandate,
-proven 2026-07-10 (the ch8 draft's rounds 5: find + re-check both
-agent-invoked, hash-citing); the mechanics live in the
-`CreateTaskPacket` skill's ReviewPacket workflow. Whether it becomes
-a STANDING loop leg is a queued boundary-review decision.
+invoked by the loop non-interactively — and on the autonomous path
+(the arm-gates paragraph below) AGENT-INVOCATION IS THE DEFAULT: the
+user-manual arm is the FALLBACK when the ReviewPacket §6 availability
+preflight fails, and which form runs is decided BY that preflight,
+never offered as a user choice (emphasis reversed at the ch12
+boundary — the earlier "an OPTION, not a mandate" framing licensed an
+ask-the-human default and survives only OUTSIDE the two mandatory
+gates; agent invocation proven 2026-07-10, the ch8 draft's rounds 5).
+The mechanics live in the `CreateTaskPacket` skill's ReviewPacket
+workflow. Its standing-leg question was resolved by the two mandatory
+autonomous-path gates (2026-07-11) and re-affirmed at the ch12
+boundary (yield FLAT — the arm is load-bearing).
 **Model policy (amended 2026-07-10):** EVERY panel pass — full,
 targeted, reconciliation, the close — runs on an Opus-class model;
 the full⇒Opus / targeted⇒Sonnet tiering is retired
@@ -588,9 +595,20 @@ R-LANE-SENSITIVITY's build-close half; the packet is
 DONE only on a clean, sha-citing verdict — substance findings fold
 per the §4 aftermath rules. Discipline: the diminishing-returns
 cutoff binds (find → fold → ONE hash-citing re-check per fold; a
-round yielding only bookkeeping-class items ends the leg); an
-UNAVAILABLE arm is a BLOCKER → STOP to the human, never a silent
-skip; a waive is the human's explicit act, per gate. The boundary
+round yielding only bookkeeping-class items ends the leg); an arm is
+UNAVAILABLE only after the ReviewPacket §6 availability preflight
+FAILS (`which codex` + arm-pin match + the attempted invocation) —
+the agent runs the check and the attempt FIRST, and a STOP must CITE
+the failed check (assume-then-STOP is the named anti-pattern, ch12
+boundary); an UNAVAILABLE arm is a BLOCKER → STOP to the human, never
+a silent skip; a waive is the human's explicit act, per gate.
+Human-touchpoint distinction (ch12 boundary): on a CLEAN gate the
+flag-free path PROCEEDS — a discretionary stop is the named
+anti-pattern (the ch12-P3 pre-approval incident); but an arm FINDINGS
+verdict whose fold REWRITES A CANONICAL ROW against the author's
+documented rationale on a ratified-contract-faithfulness question is
+a legitimate recommendation-first human touchpoint — it surfaces the
+author-vs-arm dispute, it does not re-decide autonomy. The boundary
 review evaluates the gates' yield from the `detector_misses` stream.
 Ground: the ch8-P1 measurement — four real catches, two per gate
 class, that the internal Opus panel missed.

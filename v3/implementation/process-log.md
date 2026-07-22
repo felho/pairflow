@@ -3779,3 +3779,39 @@ final CLEAN.
   (I) ADOPTED as scope extension of R-CLAIM-FORM-PROBES: one-off
   verification/reconciliation scripts ship WITH adversarial negative
   fixtures in the same commit (the ADR-015 false-green classes).
+
+- 2026-07-22 · ch12 boundary review · VERDICT — the autonomy /
+  entry-mode cluster (the P2 arm-invocation ask-the-human + the P3
+  discretionary pre-approval stop), all four sub-items owner-ratified.
+  These are the K3-class prompt hardenings model-tier-experiment-2's
+  Opus arm is gated on. (5A) ENTRY-MODE convention ADOPTED — closed
+  opening-prompt vocabulary: bare "jöhet a chN-pM" = per-packet
+  (flag-free ⇒ autonomous through build, mode announced in one line,
+  stop after the packet); "review chN-pM" = stop at approve;
+  "delegáld a chN fejezetet" = standing chapter mode, the loop
+  self-advancing between packets — VALID ONLY with the conductor
+  architecture (heavy steps in fresh-context subagents, summaries in
+  the main context; the owner's context-purity condition — ratified
+  jointly with the build-execution-context item); per-item token
+  overrides; undetermined ⇒ the letter WITH the announcement, never a
+  silent stop. Landed: AGENTS.md V3 + CreateTaskPacket SKILL.md
+  (ExecutePairflowPlan intentionally NOT touched — v1-world skill,
+  unused in v3; the chaining-era boundary owns that if it comes).
+  (5B) ADOPTED — README §5.5 emphasis reversed (agent-invocation =
+  the autonomous-path DEFAULT, user-manual arm = fallback on a FAILED
+  preflight; the stale "standing loop leg queued" line resolved);
+  "unavailable" = a CHECK RESULT (`which codex` + arm-pin match +
+  attempted invocation; the STOP cites the failed check); ReviewPacket
+  §6 disambiguation (a different model reached THROUGH the CLI —
+  invoking ≠ being). (5C) ADOPTED — the assume-then-ASK sibling row
+  added to the global ~/.claude/CLAUDE.md NEVER-ASSUME table
+  (cross-repo, committed separately there). (5D) ADOPTED — §5.5
+  human-touchpoint distinction: clean gate ⇒ proceed (discretionary
+  stop = anti-pattern); arm-FINDINGS fold rewriting a canonical row
+  against the author's documented rationale on ratified-faithfulness
+  ⇒ recommendation-first human touchpoint is legitimate. OWNER DATUM
+  recorded: ExecutePairflowPlan ran v1 on Opus-class holding process
+  fine — evidence that adherence gaps are prompt-hardening issues,
+  not model capability (and a pointer to the prompt DENSITY that
+  achieves it: EPP's stepwise prescribed workflow is the calibration
+  target for v3 process prose).

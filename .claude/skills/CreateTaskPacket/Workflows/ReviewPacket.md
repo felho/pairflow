@@ -503,12 +503,22 @@ mirror). The scoping governs COST, never the review definition.
 A fresh third-party model session reviewing the target from the repo
 root — the same arm the user runs manually by pasting the
 STOP/pre-approval message into a fresh Codex session; both paths have
-IDENTICAL standing. The loop MAY invoke it anywhere; on the
-AUTONOMOUS flag-free path it is MANDATORY at two gates — the approve
-bytes before build and the implementation at build close (README
-§5.5's transitional autonomous-path rule, user-ratified 2026-07-11;
-unavailable arm = BLOCKER → STOP; a waive is the human's explicit
-act, per gate). The build-close gate carries a MANDATORY SENSITIVITY
+IDENTICAL standing. Disambiguation (ch12 boundary — the P2
+ask-the-human incident): the arm is a DIFFERENT model reached THROUGH
+the `codex` CLI — the authoring agent does not BECOME it but DOES
+invoke it; being a different model is the POINT of the gate, never a
+reason to hand the invocation to the user. The loop MAY invoke it
+anywhere; on the AUTONOMOUS flag-free path it is MANDATORY at two
+gates — the approve bytes before build and the implementation at
+build close (README §5.5's transitional autonomous-path rule,
+user-ratified 2026-07-11), and there AGENT-INVOCATION IS THE DEFAULT:
+before any "unavailable" claim the agent runs the AVAILABILITY
+PREFLIGHT — `which codex` succeeds, `arm-pin.md` readable with a
+current row, and the invocation itself attempted; "unavailable" is a
+CHECK RESULT (the STOP cites the failed check), never an assumption,
+and the user-manual arm is the FALLBACK on preflight failure, not a
+choice offered up front (unavailable arm = BLOCKER → STOP; a waive is
+the human's explicit act, per gate). The build-close gate carries a MANDATORY SENSITIVITY
 PASS (README §5.5, promoted 2026-07-17): the arm's prompt instructs
 it to verify every packet-declared discipline and inventory member
 DRIVEN and ABLE TO FAIL in the built test bodies —

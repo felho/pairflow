@@ -58,9 +58,25 @@ lens duties).
   approve proceeds to build (one packet = one commit) THROUGH the two
   transitional external-arm gates (README §5.5, user-ratified
   2026-07-11: the arm on the approve-ready bytes before build + its
-  implementation review at build close; unavailable arm = STOP) —
-  never build before an approve, and a new chapter starts only on the
-  user's explicit go.
+  implementation review at build close; unavailable arm = STOP, where
+  "unavailable" is a VERIFIED preflight failure per ReviewPacket §6 —
+  never an assumption) — never build before an approve, and a new
+  chapter starts only on the user's explicit go.
+- **Entry mode — the trust dial (adopted at the ch12 boundary):** the
+  user's OPENING PROMPT encodes how far the loop runs unattended:
+  bare "jöhet a chN-pM" = PER-PACKET — the §5.5 letter governs
+  (flag-free ⇒ autonomous through build), the loop ANNOUNCES the mode
+  in one line at start and STOPS after the packet (the next packet
+  needs a new prompt); "review chN-pM" = stop at the approve even when
+  flag-free; "delegáld a chN fejezetet" = STANDING chapter mode — the
+  loop self-advances between packets, valid ONLY with the conductor
+  architecture (heavy steps — authoring, build, arm runs — delegated
+  to fresh-context subagents, the main context holding orchestration
+  and summaries); a per-item token overrides a standing mode. An
+  UNDETERMINED mode on a flag-free approve resolves to the LETTER
+  (autonomous) WITH the explicit one-line announcement — a silent
+  discretionary stop is the named anti-pattern (the ch12-P3
+  pre-approval incident).
 - **First-of-a-kind stop** (canonical statement: README §5.5): the
   first packet of a new task class is human-approved regardless of
   trust stage.

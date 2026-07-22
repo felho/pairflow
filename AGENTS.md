@@ -54,9 +54,23 @@ bubble workflow below. Everything an agent needs lives on repo surfaces
   transitional external-arm gates (README §5.5, user-ratified
   2026-07-11: the agent-invoked arm on the approve-ready bytes BEFORE
   build, and its implementation review at build close — mandatory
-  while doc-refinement is not live; unavailable arm = STOP) — never
+  while doc-refinement is not live; unavailable arm = STOP, where
+  "unavailable" is a VERIFIED preflight failure — `which codex` +
+  arm-pin match + an attempted invocation, per ReviewPacket §6 —
+  never an assumption, and the STOP cites the failed check) — never
   build before an approve, and a new chapter starts only on the
   user's explicit go.
+- **Entry mode (the trust dial, adopted at the ch12 boundary):** the
+  user's opening prompt encodes it. Bare "jöhet a chN-pM" =
+  PER-PACKET (flag-free ⇒ autonomous through build per the §5.5
+  letter; the loop announces the mode in one line and stops after the
+  packet). "review chN-pM" = stop at the approve. "delegáld a chN
+  fejezetet" = STANDING chapter mode — the loop self-advances between
+  packets; valid only with the conductor architecture (heavy steps in
+  fresh-context subagents, the main context orchestrates). A per-item
+  token overrides a standing mode; an undetermined mode on a
+  flag-free approve resolves to the letter (autonomous) WITH the
+  announcement — never a silent discretionary stop.
 - **Verification bridges (run from repo root):** `pnpm v3:typecheck`,
   `v3:lint`, `v3:test`, `v3:coverage`, `v3:packet-lint`,
   `v3:adr-check`; the chapter DoD additionally requires full
