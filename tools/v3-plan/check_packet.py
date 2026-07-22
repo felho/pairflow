@@ -202,6 +202,22 @@ CONTRACT_DRAFT_KEYS = {"chapter", "surface", "status"}
 MUTATION_BOUNDARY_KEYS = {"files"}
 PACKET_ROWS_KEYS = {"rows"}
 ROW_KEYS = {"id", "class", "refs"}
+
+# P10 (ch12 boundary): the prose↔manifest ref-drift class. A contract
+# token cited inside a row's "(anchored: …)" / "(derived: …)" prose
+# closure must appear in the packet_rows manifest refs; an anchored
+# closure's token must additionally appear in the header's
+# "`contract:<surface>` rows C…/C…" union when that surface declares
+# one. Matched in fence-stripped prose only.
+CLOSURE_RE = re.compile(r"\((anchored|derived):\s*([^()]*)\)")
+CONTRACT_TOKEN_RE = re.compile(r"contract:([a-z][a-z0-9-]*)#(C[1-9]\d*)")
+# The row list may be LINE-WRAPPED (the live ch11-p2a header wraps
+# mid-list — the R-INSTRUMENT-PROBE wrapped-form class, caught by this
+# check's own first live run): separators admit whitespace/newlines.
+HEADER_UNION_RE = re.compile(
+    r"`contract:([a-z][a-z0-9-]*)`\s+rows\s+(C[1-9]\d*(?:\s*/\s*C[1-9]\d*)*)"
+)
+HEADER_UNION_ROW_RE = re.compile(r"C[1-9]\d*")
 ROW_CLASSES = ("anchored", "derived", "new-decision")
 RATIFICATION_KEYS = {"date", "arms", "commit"}
 PROSE_PREFIX = "prose:"
@@ -784,6 +800,45 @@ def check_packet_rows(
     return tally
 
 
+def check_ref_closure(name: str, blocks: list[dict], prose: str, checker: Checker) -> None:
+    """P10 (ch12 boundary — the P1b ref-drift class): prose closures vs
+    the machine face. Skips silently when the manifest is malformed —
+    P3's errors already own that."""
+    rows_blocks = block_by_key(blocks, "packet_rows")
+    if len(rows_blocks) != 1 or not isinstance(rows_blocks[0], dict):
+        return
+    rows = rows_blocks[0].get("rows")
+    if not isinstance(rows, list):
+        return
+    manifest_refs: set[str] = set()
+    for row in rows:
+        if isinstance(row, dict) and isinstance(row.get("refs"), list):
+            manifest_refs.update(r for r in row["refs"] if isinstance(r, str))
+    header_union: dict[str, set[str]] = {}
+    for m in HEADER_UNION_RE.finditer(prose):
+        header_union.setdefault(m.group(1), set()).update(
+            HEADER_UNION_ROW_RE.findall(m.group(2))
+        )
+    for closure in CLOSURE_RE.finditer(prose):
+        kind = closure.group(1)
+        for tok in CONTRACT_TOKEN_RE.finditer(closure.group(2)):
+            full = f"contract:{tok.group(1)}#{tok.group(2)}"
+            if full not in manifest_refs:
+                checker.error(
+                    f"{name}: '{full}' cited in a ({kind}: …) closure but missing "
+                    f"from the packet_rows manifest refs — the prose↔manifest "
+                    f"ref-drift class (ch12 boundary)"
+                )
+            if kind == "anchored":
+                surface, row_c = tok.group(1), tok.group(2)
+                if surface in header_union and row_c not in header_union[surface]:
+                    checker.error(
+                        f"{name}: anchored ref '{full}' missing from the header "
+                        f"`contract:{surface}` rows union — the header-union "
+                        f"drift class (ch12 boundary)"
+                    )
+
+
 def check_packet(
     path: Path,
     drafts: dict[str, dict],
@@ -842,6 +897,7 @@ def check_packet(
         )
 
     tally = check_packet_rows(path.name, blocks, prose, drafts, adr_dir, checker)
+    check_ref_closure(path.name, blocks, prose, checker)
 
     # P9: fold-time prose-tally cross-lock — every prose statement of
     # the tally must equal the machine count (AL-20 on the packet's own
@@ -1576,6 +1632,43 @@ def run_selftest() -> int:
         GREEN_PACKET.replace("| O3 | c |", "| O3 | c [P:typo] |"),
         "withdrawn at design time",
     )
+
+    # ---- P10 ref closure (ch12 boundary)
+    expect_red_packet(
+        "closure-ref-missing-from-manifest",
+        GREEN_PACKET + "\nThe lane rides (anchored: contract:ch9-test-surface#C3).\n",
+        "missing from the packet_rows manifest refs",
+    )
+    expect_red_packet(
+        "closure-derived-ref-missing-from-manifest",
+        GREEN_PACKET + "\nDerived from (derived: contract:ch9-test-surface#C9).\n",
+        "missing from the packet_rows manifest refs",
+    )
+    expect_red_packet(
+        "closure-anchored-ref-missing-from-header-union",
+        GREEN_PACKET
+        + "\nAnchors: `contract:ch9-test-surface` rows C1\n"
+        + "\nThe other lane rides (anchored: contract:ch9-test-surface#C2).\n",
+        "missing from the header `contract:ch9-test-surface` rows union",
+    )
+    shared_packet.write_text(
+        GREEN_PACKET
+        + "\nAnchors: `contract:ch9-test-surface` rows C1/C2\n"
+        + "\nThe lane rides (anchored: contract:ch9-test-surface#C1) and "
+        + "(derived: contract:ch9-test-surface#C2).\n",
+        encoding="utf-8",
+    )
+    errors, _ = lint(shared_root / "packets", shared_root / "contracts", ADR_DIR)
+    expect_green("closure-consistent-refs", errors)
+    shared_packet.write_text(
+        GREEN_PACKET
+        + "\nAnchors: `contract:ch9-test-surface` rows C1/\nC2\n"
+        + "\nThe lane rides (anchored: contract:ch9-test-surface#C2).\n",
+        encoding="utf-8",
+    )
+    errors, _ = lint(shared_root / "packets", shared_root / "contracts", ADR_DIR)
+    expect_green("closure-header-union-line-wrapped", errors)
+    shared_packet.write_text(GREEN_PACKET, encoding="utf-8")
 
     # ---- P7 metrics
     expect_red_packet(
