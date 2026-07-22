@@ -3878,3 +3878,18 @@ final CLEAN.
   an over-long duty list is a LENS-SPLIT signal (packet
   size-threshold logic applied to lenses); per-duty answers feed
   duty-level yield accounting, extending §7 retirement to lens duties.
+
+- 2026-07-22 · ch12 boundary review · VERDICT — the delegation-prompt
+  rule (the P1b delegation-altitude gap) ADOPTED into the README §4
+  execution-context paragraph: a packet declaring a discipline
+  STRONGER than the existing suite embodies gets its discipline lines
+  QUOTED VERBATIM in the delegation prompt with an explicit "raise to
+  the declared level" instruction — preserve-don't-weaken is
+  insufficient exactly when the packet's point is stronger proof.
+  Single occurrence, adopted as a SEVERITY EXCEPTION to the boundary's
+  own WATCH-first bias, with the two grounds recorded: (1) verdict 6
+  made the delegated build the DEFAULT path, so the class's trigger
+  surface is now standing, and discipline-raising is what discipline
+  packets are FOR; (2) the failure is self-report-invisible (the Build
+  record claimed the declared level while the tests held the old one —
+  only gate-2 caught it, as the chapter's largest aftermath batch).

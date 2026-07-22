@@ -141,7 +141,18 @@ build its own bytes); a heavy gate leg degrades the main context
 exactly before the most code-dense step; and it rehearses the
 chaining-stage architecture (a doc-bubble IS a fresh execution
 context). The Build record NAMES the execution context used and any
-guidance notes handed over — the choice is never silent. The split
+guidance notes handed over — the choice is never silent.
+**Delegation-prompt rule (adopted at the ch12 boundary — the P1b
+delegation-altitude gap, a severity exception to the WATCH-first
+admission bias: the class rides the now-DEFAULT delegated path and
+its Build-record claim is self-report-invisible):** when the packet
+declares a discipline STRONGER than the existing suite embodies, the
+delegation prompt QUOTES the discipline lines verbatim and instructs
+"raise the existing tests to the declared level" —
+preserve-don't-weaken is insufficient exactly when the packet's
+point is stronger proof (the agents faithfully preserved the old
+assert strength while the record claimed the declared level; gate-2
+caught it as the chapter's largest aftermath batch). The split
 is by ACCOUNTABILITY, not authorship: the builder owns the
 realization + test bodies (fail-first receipts per
 R-DERIVED-PROBES); the orchestrator owns verification, the gates,
