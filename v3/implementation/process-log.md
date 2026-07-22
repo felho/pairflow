@@ -4064,3 +4064,56 @@ final CLEAN.
   independence split so far across two maps: arm-only 1 (the
   temporal-drift C16 — file reality is invisible to the manifest
   scan), cross-check-only 3, both 17.
+
+- 2026-07-23 · ch11 realized_map ARM-AUDIT SWEEP (map 2 of 3) — the
+  richest map (41 rows, 8 packets) yielded the richest haul: arm
+  FINDINGS (21) on basis 1b6d5473 (byte guard intact, pin-conform
+  gpt-5.6-sol/high) — omissions (D1 from C2, X1 from C9, R1 from
+  C13, F4+S2/W3 from C18, A2/D6/T1/V6/F3 from C20, G3/G5/G8 from
+  C21, D5 from C24, O3/E1 from C27, both T1s from C29, T1 from C34,
+  D1/Y5 from C38, T1/F8 from C39), packet-mixups (C23's P3a-T1 for
+  P3b-T1), context-reattributions (C5's verdict-optional to G5,
+  C12's G3 to C10), a disposition-wording defect (C30 stance read as
+  code-realization), and FOUR code-file mis-attributions the
+  manifest scan CANNOT see (C1/C37 domain fields live in
+  template.ts not gate.ts; C31/C36 the gate_blocked rejection and
+  the ready(∅) backstop live in kernel.ts not processGate.ts —
+  each grep-verified before folding, incl. against the ch11-close
+  snapshot: NOT temporal drift, close-time defects). The machine
+  cross-check confirmed every manifest-checkable arm claim and again
+  OUT-CAUGHT the arm on its home turf: five machine-only omissions
+  (C20's D6/F3, C27's O4, C32's O5, C39's D3, C8's K2/T1, C18's
+  S2/W3, C19's A7, C1's W3). CONVERGENCE took the full three fold
+  rounds: round-2 re-check FINDINGS (8) — six of them precision
+  defects in MY OWN round-1 fold texts (the G5 anchored-vs-derived
+  class, C34's snake_case-vs-TS spelling, the E2/S5 test-file cites)
+  and one REVERSAL: round 1 dropped V5 from C19 because the manifest
+  scan showed no ref — but V5 is a NEW-DECISION row with an EMPTY
+  refs list whose lane TEXT carries the C19 anchor; the arm caught
+  the scanner's blind spot and V5 was restored. LESSON for the
+  realized_map-lint candidate: manifest refs alone are not the full
+  anchor surface — new-decision rows anchor through lane text, so a
+  refs-only lint needs a new-decision exemption or a lane-text
+  secondary scan. Round-3: the ready(∅) spelling + this entry's
+  OPEN item. Re-checks CLEAN-converging (21 → 8 → 2 → folds);
+  lint green throughout.
+  OPEN ITEM (user decision, arm-raised, code-level — NOT folded):
+  C31's disjointness holds only for the seven FIXED reason tokens;
+  an AUTHORED process-gate reason is validated by the grammar
+  `^[a-z][a-z0-9_]*$` only, so a process could return reason
+  `gate_blocked` or another registry/rejection name and it would be
+  accepted verbatim. Whether authored reasons should be checked
+  against the registry/rejection namespaces (fail-closed vs the
+  C32 verbatim-retention culture) is a contract-level question for
+  the owner — parked, map wording scoped to the fixed tokens.
+  CONVERGENCE RESIDUE (the stop rule honored over the itch to fix):
+  the fresh independent full-scope run on 88e8a588 returned
+  FINDINGS (1) — a finding BOTH earlier full-scope passes missed:
+  C14 cites "process.test.ts M1 grid" but the M1 kind×mode grid
+  lives in kernel/processGate.test.ts (grep-confirmed: zero M1
+  hits in gates/process.test.ts). The three-fold-round budget was
+  spent, so per the sweep's pre-committed rule this is logged as
+  OPEN residue instead of folded — a one-line file-cite fix ready
+  on the owner's go. Note for the tally: a THIRD independent pass
+  over unchanged rows still surfaced a new defect — single-pass
+  arm coverage is not exhaustive; passes are samples, not sweeps.
