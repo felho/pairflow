@@ -3847,3 +3847,34 @@ final CLEAN.
   context holding process state + just-enough summaries (the owner's
   context-purity condition). Landed: README §4 execution-context
   paragraph + template Build-record note.
+
+- 2026-07-22 · ch12 boundary review · VERDICT — the lens-duty batch
+  (eight detector-miss-born candidates, each at the preferred
+  extend-a-lens-duty tier), owner-decided per item. ADOPTED (7 of 8):
+  code-substrate probe extension → lens-1 duty 4 (unions/enums READ at
+  source, never mirrored from a sibling — the P4 exit-matrix miss);
+  anchor-literal-default check + watchpointed-derived escalation →
+  lens-2 duty 3 sub-checks (the P3 C4-materialization miss; the P4
+  R1/W1 reclassification); type/schema disposition realizability →
+  lens-2 duty 5 (a structural Record never excluded the ref — brand or
+  it is not realized; the P3 branded-projection miss); async-seam
+  temporal-path walk + abort-on-throw-loop probe → lens-3 duty 8
+  sharpening (the P3 gate-2 product bug + twins); constructor sites on
+  a type flip + embedding-documents-are-renderers → lens-5 duty 3
+  extensions (the P2 validate.ts miss; the P0 ReplayResult.outcomes
+  miss). WATCH (1 of 8): the v1-capability probe (does a stance
+  foreclose a known product capability — the ch12-draft ratifier
+  catch) — the owner applied the boundary's own admission bias against
+  the proposer's severity argument: single occurrence ⇒ WATCH, a
+  second occurrence promotes it into lens 5. ALSO ADOPTED (the owner's
+  saturation question turned mechanism): LENS-PROMPT STRUCTURE — the
+  orchestrator's lens-subagent prompt enumerates duties as a NUMBERED
+  checklist and the lens's own output answers each duty BY NUMBER;
+  missing per-duty answer = incomplete run; Gate Coverage Matrix cells
+  fill FROM per-duty answers, never from essay interpretation. The
+  two-interpretation answer recorded: duty-list growth saturates
+  DIFFUSE attention but converts safely into a harness-verifiable
+  sequential task walk when structured; the residual limit is DEPTH —
+  an over-long duty list is a LENS-SPLIT signal (packet
+  size-threshold logic applied to lenses); per-duty answers feed
+  duty-level yield accounting, extending §7 retirement to lens duties.

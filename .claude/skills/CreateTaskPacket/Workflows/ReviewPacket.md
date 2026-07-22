@@ -69,6 +69,22 @@ executed as the review's definition found exactly the checklist's
 rows and nothing outside them) — each lens ALSO derives checks from
 the target's OWN claims beyond its enumerated duties.
 
+**Lens-prompt structure (adopted at the ch12 boundary, 2026-07-22 —
+the owner's saturation question):** the orchestrator's lens-subagent
+prompt enumerates the lens's duty list as a NUMBERED checklist
+(task-specific framing preserved — that part works), and the lens's
+OWN output answers EACH duty BY NUMBER (`pass | finding | n/a
+(reason)`); a missing per-duty answer = an INCOMPLETE run (re-run
+the lens), and the Gate Coverage Matrix cells are filled FROM these
+per-duty answers — never inferred from an aggregate essay. This
+converts duty-list growth from an attention-saturation risk into a
+sequential task walk the harness can verify; the residual limit
+moves to DEPTH: a duty list too long to answer deeply in one run is
+a LENS-SPLIT signal (the packet size-threshold logic applied to
+lenses), never a longer prompt. Per-duty answers feed the boundary's
+duty-level yield tally — duty retirement runs on the same data as
+rule retirement (README §7).
+
 **Lens 1 — substrate / contract reality** *(owns: Substrate Reality
 Probe + contested-probe corollary; the strong-word inventories)*
 
@@ -104,6 +120,14 @@ Probe + contested-probe corollary; the strong-word inventories)*
    NOT admissible. Corollary — CONTESTED probes: when two probes
    disagree, NO claim may stand on the contested premise — remove the
    premise (re-design the lane/fixture) or drive both environments.
+   **CODE substrate included (adopted at the ch12 boundary — the P4
+   exit-matrix miss):** a claim resting on a type union / enum domain
+   / outcome vocabulary READS the actual union at source, never
+   assumes it mirrors a plausible sibling (the actor `Outcome` vs the
+   per-op lifecycle unions divergence) — reasoned-from-a-sibling
+   membership is inadmissible exactly like plausibility on OS
+   substrate, and it is test-relevant: a test authored off the wrong
+   union asserts the wrong contract and can pass a wrong build.
 5. **Measurement re-run for completeness claims** (adopted at the ch8
    boundary — the ch8-P2 arm-gate-1 catch) [R-UNTRUNCATED-SWEEP]: a
    "full set / all N / nothing else" claim over the TREE is verified
@@ -146,11 +170,32 @@ drift)*
    anchors (the row's in-row derivation note is the input) — if one
    exists, the row was a decision: reclassify `new-decision`
    (`anchored` is machine-checkable, `new-decision` stops — `derived`
-   is the soft spot).
+   is the soft spot). Two mandatory sub-checks (adopted at the ch12
+   boundary): **(a) anchor-literal-default** — when a derived row's
+   in-row note ARGUES AGAINST its cited anchor's plain-language
+   default, ask explicitly "does the anchor's LITERAL text plus the
+   NEAREST REALIZED PRECEDENT contradict this derivation?" (the
+   ch12-P3 C4-materialization miss: the note's defense was unfounded
+   against the existing admission-normalization precedent); **(b)
+   watchpointed-derived escalation** — a `derived` row that ALSO
+   carries an openness watchpoint is a LATENT new-decision (the
+   watchpoint itself admits alternatives may exist): the pairing
+   mandates running this attack to exhaustion at authoring, or
+   pre-classifying the row `new-decision` (the ch12-P4 R1/W1 miss —
+   the arm reclassified and the flag-free approve demoted).
 4. **Draft→packet semantic drift**: a packet row anchored
    `contract:chN-<surface>#Cn` must preserve the draft row's MEANING,
    not just resolve the reference — the mechanized drift tests cover
    model↔code, not this surface.
+5. **Type/schema disposition realizability (adopted at the ch12
+   boundary — the P3 branded-projection miss):** for every invariant
+   the target declares `type/schema`, NAME the enforcing type and
+   confirm it NOMINALLY excludes the invariant's negative (the
+   declared-unique-symbol brand idiom); a structural type a sibling
+   shape satisfies (a `Record<string, unknown>` accepting a
+   `{kind, locator}` ref; an `unknown` enforcing nothing) does NOT
+   realize the disposition — intent documented is not exclusion
+   achieved.
 
 **Lens 3 — claim negatives / matrix symmetry** *(owns: every lane
 driven; wide-claim coverage; the prose-obligation pair; the text
@@ -227,7 +272,16 @@ sweep)*
    fires before which; what state exists at each point; what a
    mid-flight change does), never by text-vs-text consistency — the
    P3b mixed-pipeline catch and the P4 two-load-race catch were both
-   invisible to textual comparison and one walk deep.
+   invisible to textual comparison and one walk deep. **Async
+   delivery seams (sharpened at the ch12 boundary — the P3 gate-2
+   product bug):** the walk covers BOTH temporal paths of a
+   completion/event relative to its consuming attempt (arriving
+   BEFORE conclusion — the hold path — AND AFTER conclusion — the
+   normal async path; "async → fires later" is a timeline to walk,
+   not prose); and every LOOP of awaited fallible deliveries is
+   probed against its never-dropped/all-delivered contract — does
+   the FIRST throw abort the remaining deliveries? (the twin
+   abort-on-throw drops in `settle`/`concludeAttempt`).
 
 **Lens 4 — mirror / propagation** *(owns: the post-lint semantic
 remainder; the fresh-eyes function)*
@@ -276,6 +330,18 @@ consistency; the ergonomics floor)*
    catch (two instance-literal fixture files outside the boundary)
    is the driving precedent. Operational-simulation walks over
    sibling seams bind here too when the claim crosses packets.
+   Two extensions (adopted at the ch12 boundary): **(a) constructor
+   sites on a type FLIP** — when a field's type narrows
+   (`unknown` → typed), the consumer sweep enumerates CONSTRUCTOR
+   sites of the flipped type (code that BUILDS the object), not only
+   field readers — a compiler-forced construction site is not a
+   field access and the reader search misses it (the ch12-P2
+   `validate.ts` boundary miss); **(b) embedding documents are
+   renderers** — an output-surface sweep classifies by CONTENT
+   reachability, not the top-level argument type: a document/
+   structure EMBEDDING the changed value is a surfacing site (the
+   ch12-P0 `ReplayResult.outcomes` miss — `JSON.stringify(result)`
+   classified by its outer type).
 
 ### 2a) The Gate Coverage Matrix
 
