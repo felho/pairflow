@@ -4117,3 +4117,31 @@ final CLEAN.
   on the owner's go. Note for the tally: a THIRD independent pass
   over unchanged rows still surfaced a new defect — single-pass
   arm coverage is not exhaustive; passes are samples, not sweeps.
+
+- 2026-07-23 · REALIZED_MAP ARM-AUDIT SWEEP CLOSED (all three maps) —
+  the overnight goal ran to completion without a user touchpoint.
+  TOTALS: ch8 13 row-fixes (arm 11 / machine-only 2, one fold
+  round, fresh run CLEAN); ch11 32 row-fixes across three fold
+  rounds (arm 21 + re-check 8 + 2, machine-only omissions on top,
+  fresh run FINDINGS(1) → OPEN residue per the round budget); ch12
+  fresh saturation run CLEAN on 971d05e7 — last night's fold set
+  was complete. FINDING-CLASS PROFILE across 45+ folds: omitted
+  co-realizing lanes dominate (~70%), then context-reattributions,
+  code-file mis-attributions (6, all grep-verified close-time
+  defects), disposition wording (C30), one temporal-drift
+  annotation (ch8 C16). INDEPENDENCE TALLY (the sweep's core
+  yield): arm-only catches 12 (file-reality + disposition classes —
+  invisible to the manifest scan, incl. the V5 blind-spot reversal
+  and the third-pass C14 catch), machine-only catches 7 (omissions
+  the arm's row-reading missed), both ~27. NEITHER LOOP SUBSUMES
+  THE OTHER — the ch13 realized_map-lint candidate covers only the
+  machine half (with the new-decision exemption now specified);
+  the arm half has no mechanization path. Sampling lesson: three
+  independent full-scope arm passes over ch11 each surfaced
+  finds the others missed — arm passes are SAMPLES; convergence
+  needs the fresh-run-clean rule, not pass counting. OPEN ITEMS
+  for the owner: (1) ch11 C14 test-file cite (one-line fold, budget-
+  stopped); (2) the C31 authored-process-reason namespace question
+  (contract-level); (3) the ch12 dogfooding-vs-sweep interplay: none
+  — closed clean. Sweep commits: 2f2d5aa7 (ch8), 226393cd (ch11),
+  this entry (close).
