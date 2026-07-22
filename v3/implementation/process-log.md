@@ -3578,3 +3578,47 @@ final CLEAN.
   when in doubt — DROP (present-tense) over MAINTAIN, keeping only the
   machine-checked and the genuinely load-bearing. Provenance: the user raised
   it mid-ch12-P4 build as a low-urgency curiosity; capture-don't-fix.
+
+- 2026-07-22 · ch12-P4 gate-2 · BOUNDARY-REVIEW ITEM (user-raised) — the
+  MUTATION-TESTING MECHANICS deserve an explicit retro walkthrough; the
+  gate-2 harvest (4 green-but-blind lanes, zero product gaps) is the live
+  case. TWO user questions, ANSWERED from this session's evidence (the
+  arm-gate2-out.txt transcript + the byte guard):
+  Q1 — when the arm reports a blind test, did it actually MUTATE the code or
+  "run it in its head"? ANSWER: in gate-2 the arm did NOT mutate — it ran the
+  full `pnpm v3:test` suite ONCE (the green baseline + the regression-honesty
+  check) and REASONED about sensitivity by READING each test body against its
+  rule ("plausibly red" is the reasoning verb; the byte guard confirms a clean
+  tree, no un-restored edit). The BUILDER, by contrast, EXECUTES real mutation
+  probes (R-DERIVED-PROBES: neutralize the rule → run the suite → observe the
+  specific lane go red → restore byte-clean) — the Build-record probe table is
+  executed data. So our "mutation testing" is SPLIT by actor: builder EXECUTES,
+  arm REASONS.
+  Q2 — what were the "test candidates, pick 2-3 and check" in the arm prompt?
+  ANSWER: gate-2 prompt point 3 asked the arm to SPOT-CHECK 2-3 entries of the
+  BUILDER's mutation-probe table (one entry per test family) by reading the
+  named test + rule — a SAMPLING AUDIT of the builder's self-reported probes
+  (catch a dishonest/wrong "N-red" claim), NOT the arm's own coverage pass.
+  THE METHODOLOGICAL FINDING (the retro's spine): there are THREE distinct
+  sensitivity mechanisms with different strength/coverage:
+  (1) builder mutation probes — EXECUTED, strong per-probe, but ≥1-PER-FAMILY,
+      so weak COVERAGE (proves a family not-ENTIRELY-dead, not every LANE
+      sensitive); (2) the arm's spot-check of those probes — REASONED sample,
+      audits builder HONESTY not coverage; (3) the arm's INDEPENDENT sensitivity
+      pass over every matrix row — REASONED, and THIS is what caught the 4
+      multi-lane blind spots the single-per-family probes structurally miss
+      (e.g. R1's one probe "return full instance" proved SOME compaction but
+      not the `requested.request_id`-leak lane). THE RELIABILITY NUANCE the
+      user is circling: mechanism 3 is REASONING, not execution — a wrong
+      "plausibly red" judgment could pass a blind test; the strongest form is
+      EXECUTED per-lane mutation (kill every declared lane's mutant), which is
+      what a real mutation-testing framework (Stryker-class) automates.
+      SPECIFIC ASKS for the boundary: (a) should R-DERIVED-PROBES move from
+      ≥1-per-FAMILY to ≥1-per-LANE (stronger coverage, higher build cost);
+      (b) should the arm's sensitivity pass EXECUTE mutate-run-restore for the
+      lanes it flags (turn "plausibly red" into "observed red") rather than
+      reason; (c) is a real mutation-testing tool worth wiring into the v3
+      bridges (automated mutant-kill score) so the manual probe+reason approach
+      becomes a machine-checked gate — the strongest defense-in-depth answer to
+      "can we trust the tests". Provenance: the user raised it while reading the
+      gate-2 verdict; capture-don't-fix.
