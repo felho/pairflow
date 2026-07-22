@@ -953,8 +953,18 @@ blocker, no new-decision):
 After the folds: suite 1155 green, typecheck/lint/tier-0 all green. The
 aftermath touched only files ALREADY in the mutation_boundary
 (`agentConfig.ts`, `agentConfig.test.ts`, `sqliteStore.test.ts`,
-`processGate.test.ts`) — no boundary extension. The arm's own re-check on
-the folded bytes cites the new hash (below).
+`processGate.test.ts`) — no boundary extension. Post-build boundary audit
+CLEAN against the fold commit `2c09ef7f`.
+
+**Gate-2 re-check (agent-invoked, codex gpt-5.6-sol/high, byte-guard clean
+both sides): CLEAN** — verdict cites basis HEAD `2c09ef7f`, packet_sha256
+`2da29272…`; all 8 folds RESOLVED-and-able-to-fail per finding, no
+regression, all commands green (`v3:test` 1155, packet-lint, adr-check,
+coverage), no evidence gaps. The find→fold→one-hash-citing-re-check leg
+ends CLEAN — **the packet is DONE**. Arms (this packet): gate-1
+approve-bytes (raised FLAG-1, human-ratified) + gate-2 build-close
+(8 findings → folded → re-check CLEAN), both agent-invoked codex
+gpt-5.6-sol/high.
 
 ```json
 {

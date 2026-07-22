@@ -3162,3 +3162,34 @@ final CLEAN.
   this gate locally, (4) generalizes past the arm to every "this needs the
   user" moment. Provenance: the user pressed on WHY the question was asked
   rather than accepting the correction — the reflection is the artifact.
+
+- 2026-07-22 · ch12-P2 gate-2 (build-close arm) yield · agent-invoked
+  codex (gpt-5.6-sol/high, approval=never; byte-guard clean both sides;
+  all commands green incl. v3:test 1155, ledger byte-identical) returned
+  8 × P2 on the build bytes: 1 product (the resolver leaked
+  `runOverrides[stepId]` for an unreachable non-step id — a non-uniform
+  R4) + 6 test-evidence (all the SAME green-but-blind class the P1b gate-2
+  caught: a single-key byte fixture, a `{}`-only read-surface, a
+  source-layer-only purity check, a missing per-conjunct / fact-side
+  class-iff, a missing fact compile probe) + 1 packet-docs (the
+  R-DERIVED-PROBES table unmaterialized). ALL folded; the re-check on the
+  folded bytes (hash `2da29272…`) was CLEAN. **The P1b lesson repeated
+  EXACTLY** — the internal Opus panel approved a suite whose lane TEXTS
+  were correct but whose built BODIES could not fail; the cross-model
+  build-close arm is the only gate that caught it, for the second chapter
+  running. Two boundary-review data points now: (a) the arm-yield is
+  concentrated in test-sensitivity, not product correctness (1/8 product,
+  and that one unreachable) — the internal panel's spec-vs-build altitude
+  line (findings demanding fixture-level enumeration are deferred-to-build
+  BY RULE) is systematically PUSHING this work to the build-close arm, as
+  designed, but the arm is a slow/expensive cross-model run; (b) candidate
+  worth weighing at the boundary: a CHEAP internal "mutation smoke" — a
+  scripted `git`-stash-free perl-mutate → run-targeted-test → assert-red →
+  revert harness over each acceptance family's ONE canonical lane, run by
+  the author BEFORE the arm, would catch the single-key/`{}`-only/
+  source-layer-only class internally and leave the arm to find the subtler
+  ones — turning the R-DERIVED-PROBES table from a build-close deliverable
+  into an author-time gate (constraint → environment). The 20-minute
+  arm-timeout candidate (P1b log item 5) did NOT bite here: both runs
+  (gate-2 ~250k tokens, re-check ~99k) finished inside the 10-min
+  foreground window.
