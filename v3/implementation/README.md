@@ -128,6 +128,35 @@ human (§5.5), and packets then anchor to the ratified rows
    DONE: a red audit is a defect fixed before any further packet work,
    never advisory.
 
+**Build execution context (adopted at the ch12 boundary):** the
+DEFAULT is a FRESH-CONTEXT DELEGATED build — a subagent fed the
+self-contained packet (plus any explicit build-guidance notes)
+executes steps 1–3, while the MAIN context retains orchestration,
+the full verification chain (typecheck / lint / tests / drift /
+post-build audit), both §5.5 arm gates, and the
+one-packet-one-commit boundary. Four grounds: the packet is
+self-contained BY DESIGN (§5.3 — a clean fresh build is a live test
+of that claim); decorrelation (the author/gate context does not
+build its own bytes); a heavy gate leg degrades the main context
+exactly before the most code-dense step; and it rehearses the
+chaining-stage architecture (a doc-bubble IS a fresh execution
+context). The Build record NAMES the execution context used and any
+guidance notes handed over — the choice is never silent. The split
+is by ACCOUNTABILITY, not authorship: the builder owns the
+realization + test bodies (fail-first receipts per
+R-DERIVED-PROBES); the orchestrator owns verification, the gates,
+reconciliation DECISIONS, and the commit boundary. WHO authors an
+aftermath fix is deliberately NOT ruled (n=1 evidence only, owner
+challenge 2026-07-22): the default follows the same delegation
+logic (packaged finding-context to a fresh agent), the orchestrator
+MAY author small folds, and the Build-record Aftermath RECORDS the
+author of each fix — a later boundary reads that data and decides
+whether a rule is warranted at all. Under the STANDING chapter
+entry mode (AGENTS.md V3) this generalizes to the CONDUCTOR
+architecture: every heavy step — authoring, build, arm runs —
+delegates to fresh-context subagents; the main context holds
+process state and just-enough summaries.
+
 **Aftermath handling (adopted at the ch7 boundary — the P3/P4
 practice made rule):** post-close findings fold into the packet's
 claim surface and Build-record Aftermath, and **an aftermath fold IS

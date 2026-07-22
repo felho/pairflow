@@ -3815,3 +3815,35 @@ final CLEAN.
   not model capability (and a pointer to the prompt DENSITY that
   achieves it: EPP's stepwise prescribed workflow is the calibration
   target for v3 process prose).
+
+- 2026-07-22 · ch12 boundary review · VERDICT — build execution context
+  (the b8ceeb69 P3 boundary item), owner-ratified in three parts after
+  an owner CHALLENGE reshaped the middle one. History first
+  established: fresh-context-delegated builds ran twice (ch12-P3/P4,
+  both recorded); every earlier packet built in the main context,
+  unrecorded. (6a) ADOPTED — the DEFAULT is the fresh-context-delegated
+  build (four grounds: §5.3 self-containment live-tested; author/gate
+  decorrelation; context rot peaks exactly before the most code-dense
+  step; chaining-architecture rehearsal); the Build record names the
+  execution context + guidance notes, prose-only (no lint field —
+  admission bias). (6b) ADOPTED AS REWRITTEN: the original proposal
+  enshrined the P3 session's "orchestrator writes subtle fixes, agent
+  writes tests" split as a rule — the owner challenged it as
+  OVER-INDEXED (n=1, not recorded as intentional, no demonstrated
+  structural advantage: the process state the orchestrator holds lives
+  on ARTIFACTS by design, so a packaged finding-context delegates
+  fine), and the challenge also exposed an internal contradiction (6a
+  argues the rotted main context must not build; the proposal put the
+  SUBTLEST code exactly there). The adopted form: the split is
+  ACCOUNTABILITY-only (orchestrator = verification + both gates +
+  reconciliation decisions + the commit boundary; builder =
+  realization + tests); fix AUTHORSHIP is deliberately unruled — the
+  Build-record Aftermath records who authored each fix, and a later
+  boundary reads the data before deciding whether a rule is warranted.
+  The P3 observation is thereby demoted to a data point. (6c) ADOPTED
+  (jointly ratified with the 5A entry-mode verdict): under the
+  standing chapter mode the pattern generalizes to the CONDUCTOR
+  architecture — all heavy steps in fresh-context subagents, the main
+  context holding process state + just-enough summaries (the owner's
+  context-purity condition). Landed: README §4 execution-context
+  paragraph + template Build-record note.

@@ -173,7 +173,12 @@ ch7 boundary)>
 ## Build record
 
 <Filled at build close: rounds, test delta, surprises — prose; plus the
-machine block. `stops[].type` comes from the canonical STOP member-token
+machine block. The prose NAMES the BUILD EXECUTION CONTEXT used
+(fresh-context-delegated [the README §4 default] vs main-context, plus
+any build-guidance notes handed over) and the Aftermath names the
+AUTHOR of each fix (build agent vs orchestrator) — data for the
+boundary's authorship read (ch12 boundary; no authorship rule exists
+yet by design). `stops[].type` comes from the canonical STOP member-token
 registry (README §5.5). `baseline_note` (optional) is the ONLY home for
 unit/regime qualifiers — never ad hoc keys. `main_thread_model`
 (adopted at the ch12 boundary — the model-tier experiment's capture
