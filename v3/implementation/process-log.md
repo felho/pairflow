@@ -3122,3 +3122,43 @@ final CLEAN.
   flag-bearing approve (FLAG-1, human-ratified 2026-07-22:
   approve-ratified + FH-1 deferred); build commit `0e094ccb`; post-build
   boundary audit CLEAN; build-close external arm gate PENDING.
+
+- 2026-07-22 · ch12-P2 build-close · **process-instruction candidate: the
+  agent framed an agent-invokable, checkable gate as a USER decision.**
+  At the build-close external-arm step the agent STOPped and asked the
+  user "you run it / I try / waive" WITHOUT first checking whether the
+  `codex` CLI was available — even though (a) the AGENTS.md text it had
+  just quoted says the arm is "agent-invoked", (b) arm-pin.md + ReviewPacket
+  §6 give the exact `codex` invocation, and (c) `which codex` is a <10s
+  check (the tool WAS present, 0.145.0). Root cause: the arm is described
+  BOTH as "agent-invoked / mandatory" AND as "the USER's manual arm / an
+  OPTION" — coordinate options with no DEFAULT and no decision procedure —
+  and "unavailable arm = STOP" has no antecedent "first VERIFY
+  unavailability". Plus a conceptual conflation: "I am not the cross-model
+  arm" (true) slid into "so I cannot INVOKE it" (false — invoking codex ≠
+  being the model). Four candidate edits for the boundary review (NOT
+  applied — captured here per capture-don't-fix):
+  (1) **README §5.5 — reverse the emphasis:** agent-invocation is the
+  DEFAULT on the measurement/autonomous path (mechanics: §6); the
+  user-manual arm is the FALLBACK when the availability check fails;
+  which form runs is decided by the §6 check, not offered as a user
+  choice. Retires the "an OPTION, not a mandate" framing that licenses
+  the ask-the-human default.
+  (2) **README §5.5 + AGENTS.md — "unavailable" is a CHECK result, not an
+  assumption:** an arm is unavailable ONLY after the §6 preflight FAILS;
+  the agent MUST run the availability check (`which codex` + arm-pin
+  match) and attempt the invocation first; a STOP must CITE the failed
+  check. Closes assume-then-STOP.
+  (3) **ReviewPacket §6 — disambiguate at the source (one line):** the
+  external arm is a DIFFERENT model reached THROUGH the `codex` CLI; the
+  authoring agent does not BECOME it but DOES invoke it — being a
+  different model is the POINT of the gate, not a reason to hand off.
+  (4) **Meta-rule (candidate for the global NEVER-ASSUME table):** name
+  the assume-then-ASK sibling of assume-then-ACT — "asking the user is
+  itself an action that can rest on an unchecked assumption; before
+  presenting a step as a user decision, verify it isn't something you can
+  execute or check yourself (`which <tool>` / read the mechanics doc). A
+  checkable capability is not a question." Highest-leverage pair: (2) closes
+  this gate locally, (4) generalizes past the arm to every "this needs the
+  user" moment. Provenance: the user pressed on WHY the question was asked
+  rather than accepting the correction — the reflection is the artifact.
