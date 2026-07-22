@@ -4008,3 +4008,31 @@ final CLEAN.
   ratification disposes the mutation-pilot feasibility work item
   (plan ch9 row), the production-provider gate (C15's D5 condition),
   and the ch9 map-extension question.
+
+- 2026-07-23 · ch12 realized_map ARM AUDIT (user-initiated curiosity
+  that proved itself) — the owner asked whether an external arm run
+  over the freshly generated close artifact would find anything. It
+  did: 7 findings on basis 97026266 (all the OMISSION/MIS-ATTRIBUTION
+  class — co-realizing lanes missing from C2/C7/C10/C12/C25, the
+  S1–S12 over-claim on C11 [S11 is C10/C12's], the C14 guard-retirement
+  claim belonging to the omitted P3 W3), every one CONFIRMED by a
+  mechanical manifest cross-check before folding, PLUS an eighth the
+  arm missed and the orchestrator's cross-check caught (C11 cited
+  E3/E4 where the manifest says E1/E3 — E4 carries no C11 ref). All
+  eight folded; packet-lint green; the arm's hash-citing re-check on
+  the folded bytes (971d05e7) returned CLEAN. Byte guard intact both
+  runs; pin-conform gpt-5.6-sol/high, agent-invoked per the boundary's
+  own §5.5 default. THREE process readings: (1) the subagent-built
+  close artifact had exactly the record-precision defect class the arm
+  is best at — the conductor architecture's outputs NEED the same
+  verification layers as builds (spot-probes proved insufficient:
+  mine passed while 8 defects stood); (2) the mechanical
+  per-C-row manifest cross-check that adjudicated the findings took
+  ~20 lines of python — a `realized_map` LINT (map lanes ⊆ manifest
+  citations per row, no cited-lane omissions above a threshold) is a
+  mechanization candidate for the ch13 boundary, the P10 pattern one
+  step further; (3) the arm+cross-check pairing caught MORE than
+  either alone (7 arm + 1 cross-check) — the independence principle's
+  cleanest small-scale demonstration yet. Boundary candidate queued
+  (WATCH-first respected: single occurrence of the artifact class):
+  close artifacts built by delegation get an arm pass by default.
