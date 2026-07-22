@@ -25,11 +25,19 @@ export function resolveAgentConfig(
   instance: WorkflowInstance,
 ): AgentConfig {
   const step = template.steps[stepId];
-  const roleDefault =
-    step === undefined ? undefined : template.roles[step.role]?.defaultAgentConfig;
-  const stepConfig = step?.agentConfig;
-  // R4: a step with no override entry (or an override for a non-step key)
-  // reads as `undefined` here and contributes `{}` — the override is inert.
+  // A stepId that is not a step has NO run profile — every layer is
+  // vacuous, INCLUDING the override. The resolver is only ever called for
+  // a VALID current step (dispatch/commit); this guard makes the R4
+  // inertness uniform (an override keyed on a non-step is never read, so
+  // resolving a non-step never surfaces one either) rather than leaking
+  // `runOverrides[stepId]` for a ghost id.
+  if (step === undefined) {
+    return {};
+  }
+  const roleDefault = template.roles[step.role]?.defaultAgentConfig;
+  const stepConfig = step.agentConfig;
+  // R4: a step with no matching override entry reads as `undefined` here
+  // and contributes `{}` — the override is inert.
   const override = instance.runOverrides[stepId];
   return mergeAgentConfig(mergeAgentConfig(roleDefault, stepConfig), override);
 }

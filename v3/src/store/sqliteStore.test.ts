@@ -637,6 +637,36 @@ describe("getTimeline — the ch6-P1 cursor read", () => {
     handle.close();
   });
 
+  it("C2: issued_agent_config projects with its NON-EMPTY value on BOTH read surfaces (each SELECT separately driven)", async () => {
+    const path = tempDbPath();
+    const handle = openStore(path, createControlledClock(0));
+    await handle.store.createInstance(instance);
+    const issued = { mode: "builder", approach: "systematic" };
+    await handle.store.commitTransition({
+      instanceId: "inst-1",
+      expectedVersion: 1,
+      envelope: envelope("a1", 1),
+      payloadDigest: DIGEST,
+      gateDecisions: [],
+      newCurrentStep: "review",
+      newRound: 1,
+      newKernelStatus: "ACTIVE",
+      newTerminalDisposition: null,
+      issuedAgentConfig: issued,
+    });
+    const d0 = (await handle.store.getInstanceDetail("inst-1"))?.transcript[0];
+    const t0 = (await handle.store.getTimeline("inst-1", 0))?.[0];
+    if (d0?.entryKind !== "transition" || t0?.entryKind !== "transition") {
+      throw new Error("expected transition rows on both surfaces");
+    }
+    // Dropping issued_agent_config from EITHER read SELECT reddens its own
+    // lane — a non-empty value distinguishes a real projection from a
+    // '{}'-defaulting stub.
+    expect(d0.issuedAgentConfig).toEqual(issued);
+    expect(t0.issuedAgentConfig).toEqual(issued);
+    handle.close();
+  });
+
   it("dim 6 — invalid cursors fail closed with RangeError", async () => {
     const handle = await seeded();
     for (const bad of [
@@ -899,7 +929,10 @@ describe("the axis columns — schema shape (packet ch12-p1a, S2–S11)", () => 
       newRound: 1,
       newKernelStatus: "ACTIVE",
       newTerminalDisposition: null,
-      issuedAgentConfig: { mode: "builder" },
+      // Multi-key with UNSORTED input order — so the byte assertion below
+      // is SENSITIVE to a `canonicalJson` → `JSON.stringify` regression
+      // (which would write '{"zeta":1,"alpha":2}' verbatim).
+      issuedAgentConfig: { zeta: 1, alpha: 2 },
     });
     handle.close();
     const raw = new DatabaseSync(path);
@@ -907,9 +940,9 @@ describe("the axis columns — schema shape (packet ch12-p1a, S2–S11)", () => 
       .prepare("SELECT entry_kind, issued_agent_config FROM transcript WHERE instance_id = 'inst-1'")
       .get() as { entry_kind: string; issued_agent_config: string | null };
     expect(row.entry_kind).toBe("transition");
-    // C2 (packet ch12-p2): the P2 writer lands — canonical JSON (sorted
-    // keys), in place of the P1a NULL. Fact rows keep it NULL by class.
-    expect(row.issued_agent_config).toBe('{"mode":"builder"}');
+    // C2 (packet ch12-p2): the P2 writer lands — canonical JSON with SORTED
+    // keys, in place of the P1a NULL. Fact rows keep it NULL by class.
+    expect(row.issued_agent_config).toBe('{"alpha":2,"zeta":1}');
     raw.close();
   });
 
@@ -993,12 +1026,32 @@ describe("the axis columns — schema shape (packet ch12-p1a, S2–S11)", () => 
     handle.close();
   });
 
+  it("S11/C3 class iff: a FACT row carrying a non-null issued_agent_config is refused (transition-only, ch12-p2)", async () => {
+    const path = tempDbPath();
+    const handle = openStore(path, createControlledClock(0));
+    await handle.store.createInstance(instance);
+    // A STARTED fact row (the three transition-only columns NULL by class)
+    // that ILLEGALLY carries a non-null issued_agent_config — a
+    // transition-only field (C10/C12); the mapper refuses it loudly.
+    const raw = new DatabaseSync(path);
+    raw
+      .prepare(
+        "INSERT INTO transcript (instance_id, seq, op_id, entry_kind, envelope, payload_digest, gate_decisions, issued_agent_config, committed_at) VALUES (?, ?, ?, 'STARTED', NULL, NULL, NULL, ?, ?)",
+      )
+      .run("inst-1", 1, "st-1", "{}", 0);
+    raw.close();
+    await expect(handle.store.getTimeline("inst-1", 0)).rejects.toThrow(
+      /non-null issued_agent_config/,
+    );
+    handle.close();
+  });
+
   // Build-close aftermath (ch12-p1a): the S11 refusal driven PER
   // CONJUNCT — a real committed transition row with exactly ONE class
   // field nulled, so each conjunct of the `||` is proven load-bearing
   // alone (the all-three fixture above could green with a single-field
   // check).
-  for (const column of ["envelope", "payload_digest", "gate_decisions"] as const) {
+  for (const column of ["envelope", "payload_digest", "gate_decisions", "issued_agent_config"] as const) {
     it(`S11 class iff, single conjunct: a transition row with ONLY ${column} NULL is refused`, async () => {
       const path = tempDbPath();
       const handle = openStore(path, createControlledClock(0));

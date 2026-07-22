@@ -905,9 +905,56 @@ under-enumerated a typed Step CONSTRUCTOR site, not just readers).
 
 Tier-0 (approve + build-close pre-audit) all green: typecheck, lint,
 `v3:test` (1151), `v3:adr-check`, `v3:packet-lint`, coverage (validation).
-The `--post-build` audit runs against the build commit's sha; the
-build-close external arm gate (implementation review + sensitivity pass)
-is PENDING.
+The `--post-build` audit ran CLEAN against build commit `0e094ccb`.
+
+### Build-close arm gate (gate-2) + aftermath
+
+The agent-invoked external arm (codex, pinned gpt-5.6-sol/high,
+`approval_policy=never`; byte-guard clean before AND after; all commands
+green incl. `v3:test` 1151 and the ledger byte-identical) returned a
+basis-citing FINDINGS verdict on `fb26c4e2`: 8 × P2 — 1 product, 6
+test-evidence (the sensitivity pass), 1 packet-docs. All folded (P2, no
+blocker, no new-decision):
+
+- **F1 (product)** — the resolver leaked `runOverrides[stepId]` for a
+  NON-step id (unreachable — the resolver is only called for a valid
+  current step — but a non-uniform R4). Folded: `resolveAgentConfig`
+  returns `{}` when the step does not resolve (all layers vacuous).
+- **F2** — the R4 inert lane did not drive the ghost-step combination.
+  Folded: a `resolveAgentConfig(t, "ghost", {ghost:{x:1}}) → {}` test.
+- **F3** — the purity lane checked only the three source layers. Folded:
+  a whole-template + whole-instance byte-snapshot (catches a mutation of
+  `instance.version` / `template.ref`).
+- **F4** — the C2 byte-form used a single-key map (blind to key ordering).
+  Folded: a multi-key UNSORTED fixture `{zeta,alpha}` → `{"alpha":..,"zeta":..}`.
+- **F5** — the both-read-surfaces lane ran only with `{}`. Folded: a
+  non-empty `issued_agent_config` read on BOTH `getInstanceDetail` and
+  `getTimeline`.
+- **F6** — the C3 class iff omitted `issued_agent_config` both ways.
+  Folded: `issued_agent_config` added to the per-conjunct transition-null
+  loop + a fact-row-carrying-`issued_agent_config` refusal test.
+- **F7** — the T3 "fact entry with `issuedAgentConfig` is a compile error"
+  probe was missing (and the transition probe was P1a-stale). Folded:
+  the fact-variant `@ts-expect-error` probe + the transition probe
+  re-based to the non-null-AgentConfig type.
+- **F8 (packet-docs)** — the R-DERIVED-PROBES build-report table was not
+  materialized. Folded: the table below, each row PROVEN by a live
+  mutation → observed-red → revert.
+
+**R-DERIVED-PROBES build-report (≥1 red-proven probe per R/E/C/A family):**
+
+| Family | Mutation applied | Expected red | Observed (reverted) |
+|---|---|---|---|
+| R (cascade) | `mergeAgentConfig` order swapped (base wins over `over`) | R2 precedence/overwrite lanes | 6 R2 tests red (`agentConfig.test.ts`) ✓ |
+| E (dispatch projection) | `effectiveAgentConfig` made conditional (the L0b spread) | empty-cascade + unconditional-projection lanes | 2 tests red (`dispatchIntent.test.ts`) ✓ |
+| C (commit provenance) | store `canonicalJson` → `JSON.stringify` | C2 sorted-key byte-form | 1 test red (`sqliteStore.test.ts`, multi-key) ✓ |
+| A (admission narrowing) | the plain-map container lane skipped | steps/roles non-map rejects | 3 A tests red (`admit.test.ts`) ✓ |
+
+After the folds: suite 1155 green, typecheck/lint/tier-0 all green. The
+aftermath touched only files ALREADY in the mutation_boundary
+(`agentConfig.ts`, `agentConfig.test.ts`, `sqliteStore.test.ts`,
+`processGate.test.ts`) — no boundary extension. The arm's own re-check on
+the folded bytes cites the new hash (below).
 
 ```json
 {
@@ -915,10 +962,10 @@ is PENDING.
     "class": "kernel-semantic",
     "prediction": { "predicted": "projection", "reasoning": "plan §12.4 P2 row: l0c-pseudocode + ledger §2/§4 + the ratified chapter draft", "discovered": "projection" },
     "provenance": { "anchored": 17, "derived": 4, "new_decision": 0 },
-    "rounds": { "review": 0, "doc_refinement": 0, "implementation": 1 },
+    "rounds": { "review": 0, "doc_refinement": 0, "implementation": 2 },
     "stops": [{ "type": "4:flagged-approve", "what": "FLAG-1 provenance-determinism vs unenforced template immutability (C4 byte-identity rests on pinned-template immutability the fileDefinitionStore does not physically enforce)", "resolution": "human-ratified 2026-07-22: approve-ratified (accept-now) + FH-1 deferred to future-hardening.md" }],
     "detector_misses": [{ "found_at": "implementation", "what": "validate.ts absent from mutation_boundary", "why_missed": "the T4 unknown-slot sweep enumerated READERS of the renamed fields but not a typed Step CONSTRUCTOR site (validate's V9 materialization), which the type flip compile-forces" }],
-    "learned": "the T4 consumer sweep must include typed CONSTRUCTOR sites of a flipped type, not only field readers; the C7 narrowing re-bases ch8-C14 V9 any-value agentConfig fixtures to rejection.",
+    "learned": "the T4 consumer sweep must include typed CONSTRUCTOR sites of a flipped type, not only field readers; the C7 narrowing re-bases ch8-C14 V9 any-value agentConfig fixtures to rejection; the build-close arm's sensitivity pass caught 6 green-but-blind test lanes (single-key byte fixture, {}-only read-surface, source-layer-only purity, missing per-conjunct/fact-side class-iff, missing fact compile probe) that the internal panel missed — the P1b lesson repeated, and the R-DERIVED-PROBES table is now mutation-proven not asserted.",
     "baseline_note": "pre-session panel + external-arm gate-1 rounds (which raised FLAG-1, ratified 2026-07-22) are recorded in the flag ratification, not counted here; rounds.implementation counts this build session."
   }
 }

@@ -5,6 +5,7 @@ import type {
   EffectiveProcessConfig,
   GateDecision,
   KernelStatus,
+  LifecycleFactEntry,
   RuntimeContext,
   RuntimeContextRef,
   TerminalDisposition,
@@ -444,20 +445,33 @@ export function __probeReadonlyCompositeFields(
   }
 }
 
-// S11 (build-close aftermath fold): the type-staging boundary itself —
-// TranscriptEntry does NOT accept an `issuedAgentConfig` member at P1a
-// (the fact/config face is P1b/P2's). Adding the field to the type
-// turns this suppression into a TS2578 red — the boundary is armed,
-// not just documented.
-export const __probeTranscriptEntryNoIssuedAgentConfig: TranscriptEntry = {
+// ch12-p2 (T3): the run-profile type faces, armed as compile probes.
+// (a) The TRANSITION variant's issuedAgentConfig is a NON-NULL
+// AgentConfig map — `null` is not assignable (this was the P1a
+// "no such field" probe; the field landed at P2, so the guard now arms
+// the map-not-null type).
+export const __probeTransitionIssuedAgentConfigIsMap: TranscriptEntry = {
   entryKind: "transition",
   seq: 1,
   envelope: { instanceId: "i", opId: "o", type: "PASS", actorId: "a" },
   payloadDigest: "d",
   gateDecisions: [],
   committedAt: 0,
-  // @ts-expect-error TranscriptEntry has no issuedAgentConfig field at P1a (S11 type-staging).
+  // @ts-expect-error issuedAgentConfig is a NON-NULL AgentConfig at ch12-p2 (T3).
   issuedAgentConfig: null,
+};
+
+// (b) The FACT variant does NOT gain issuedAgentConfig — a fact entry
+// carrying it is a compile error (transition-only, absent by entry
+// class, C10/C12). Reviving the field on LifecycleFactEntry turns this
+// suppression into a TS2578 red.
+export const __probeFactEntryNoIssuedAgentConfig: LifecycleFactEntry = {
+  entryKind: "STARTED",
+  seq: 1,
+  opId: "o",
+  committedAt: 0,
+  // @ts-expect-error LifecycleFactEntry has no issuedAgentConfig member (transition-only, C10/C12).
+  issuedAgentConfig: {},
 };
 
 // ── ch12-p1b compile probes: the retirement sweep (W1) + the outcome

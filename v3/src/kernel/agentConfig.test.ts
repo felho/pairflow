@@ -165,6 +165,14 @@ describe("resolveAgentConfig — the L0c cascade (R family)", () => {
     );
     expect(resolved).toEqual({});
   });
+
+  it("R4: resolving a NON-step id yields {} — a ghost override key is never surfaced", () => {
+    // The resolver is only called for a valid current step; a non-step id
+    // has no role/step layer AND must not leak its OWN runOverrides entry
+    // (would FAIL an impl that reads runOverrides[stepId] for a ghost id).
+    const resolved = resolveAgentConfig(template({}), "ghost", instance({ ghost: { x: 1 } }));
+    expect(resolved).toEqual({});
+  });
 });
 
 describe("resolveAgentConfig — purity + determinism (R3)", () => {
@@ -174,17 +182,23 @@ describe("resolveAgentConfig — purity + determinism (R3)", () => {
     expect(resolveAgentConfig(t, "implement", i)).toEqual(resolveAgentConfig(t, "implement", i));
   });
 
-  it("does NOT mutate any source layer", () => {
+  it("does NOT mutate any source layer, the template, or the instance (no side effects)", () => {
     const roleDefault = { a: "role" };
     const stepConfig = { b: "step" };
     const override = { c: "override" };
     const t = template({ roleDefault, stepConfig });
     const i = instance({ implement: override });
+    const tBefore = JSON.stringify(t);
+    const iBefore = JSON.stringify(i);
     resolveAgentConfig(t, "implement", i);
     expect(roleDefault).toEqual({ a: "role" });
     expect(stepConfig).toEqual({ b: "step" });
     expect(override).toEqual({ c: "override" });
-    expect(i.runOverrides).toEqual({ implement: { c: "override" } });
+    // no-template/instance-side-effect: the WHOLE aggregates are byte-equal
+    // afterwards — catches a resolver mutating e.g. instance.version or
+    // template.ref, which a source-layer-only check would miss.
+    expect(JSON.stringify(t)).toBe(tBefore);
+    expect(JSON.stringify(i)).toBe(iBefore);
   });
 
   it("returns a FRESH map — not an alias of any input layer", () => {
