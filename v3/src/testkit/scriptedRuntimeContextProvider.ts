@@ -42,6 +42,11 @@ export interface ScriptedProvisionBehavior {
    * bound sink — the SM hold hazard (the seam holds it until the START
    * commit). Requires a bound completion sink. */
   readonly fireOnProvision?: RuntimeContextRef;
+  /** Fire MULTIPLE READY completions (in order) SYNCHRONOUSLY inside
+   * `provision()` — two held completions for the SAME request_id, both
+   * buffered PRE-conclusion (the `concludeAttempt` deliver-all path). Requires
+   * a bound completion sink. */
+  readonly fireManyOnProvision?: readonly RuntimeContextRef[];
 }
 
 export interface ScriptedRuntimeContextProviderOptions {
@@ -92,6 +97,18 @@ export function createScriptedRuntimeContextProvider(
         // immediately (SM2, no circular wait). Fired BEFORE any breach so the
         // held-then-failed-attempt SM3 backstop is exercisable.
         sink(instanceId, requestId, behavior.fireOnProvision);
+      }
+      if (behavior?.fireManyOnProvision !== undefined) {
+        if (sink === null) {
+          throw new Error(
+            "scriptedRuntimeContextProvider: fireManyOnProvision requires a bound completion sink (bindCompletionSink)",
+          );
+        }
+        // Multiple held completions for the SAME request_id, both buffered
+        // pre-conclusion — the concludeAttempt deliver-all path.
+        for (const ref of behavior.fireManyOnProvision) {
+          sink(instanceId, requestId, ref);
+        }
       }
       if (behavior?.throwOnProvision === true) {
         // S4 port breach — a synchronous throw (fail-loud, no state change).

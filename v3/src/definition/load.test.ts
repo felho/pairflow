@@ -967,3 +967,36 @@ describe("ch11-P4 dimension 8 — the file-grain declaration-absent default (F8)
     expect(result.template.round).toBeUndefined();
   });
 });
+
+// ── packet ch12-p3 (Finding 6, C25): the file-channel runtime-context SOURCE
+// FORM is deferred to P4. The YAML walk lands a JS Map; admission refuses it
+// CLEANLY (not a degenerate unstartable). Direct construction is unaffected. ──
+
+describe("ch12-p3 C25 — the file-channel runtimeContext spec-map source form is P4-deferred", () => {
+  const withRc = (rc: string): string =>
+    `ref:\n  id: t\n  version: 1\nstart: s\nsteps:\n  s:\n    role: r\n    instruction: i\n    transitions:\n      GO: done\nterminal:\n  - done\nroles:\n  r: {}\n${rc}`;
+
+  it("a YAML-authored runtimeContext SPEC MAP → admission REJECTS with the P4-deferred finding (never a degenerate unstartable)", () => {
+    const err = gatedErr(withRc("runtimeContext:\n  kind: worktree\n  provider: pairflow.worktree\n"));
+    const finding = err.findings.find((f) => (f as { path: string }).path === "runtimeContext");
+    expect(finding).toBeDefined();
+    expect(finding).not.toHaveProperty("code");
+    expect((finding as { message: string }).message).toMatch(/deferred to P4|C25/);
+  });
+
+  it("a YAML `runtimeContext: required` → the R2 migration refusal (still driven)", () => {
+    const err = gatedErr(withRc("runtimeContext: required\n"));
+    const finding = err.findings.find((f) => (f as { path: string }).path === "runtimeContext");
+    expect((finding as { message: string }).message).toMatch(/retired/);
+  });
+
+  it("a YAML `runtimeContext: none` (context-free) admits", () => {
+    const result = loadGated(withRc("runtimeContext: none\n"));
+    expect(result.ok).toBe(true);
+  });
+
+  it("an ABSENT runtimeContext (context-free) admits", () => {
+    const result = loadGated(withRc(""));
+    expect(result.ok).toBe(true);
+  });
+});

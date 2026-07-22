@@ -6,7 +6,7 @@ import { deriveEmitDigest } from "../emit/index.js";
 import { createGateRegistry } from "../gates/index.js";
 import type { ProcessGateRunner } from "../ports/gate.js";
 import { createStaticProviderRegistry } from "../ports/index.js";
-import type { StorePort } from "../ports/store.js";
+import type { CommitTransitionResult, StorePort } from "../ports/store.js";
 import { openStore } from "../store/sqliteStore.js";
 import {
   createRecordingDiagnosticsSink,
@@ -111,6 +111,73 @@ function casOnceStore(real: StorePort): { readonly store: StorePort; count(): nu
     getTimeline: (id, afterSeq) => real.getTimeline(id, afterSeq),
   };
   return { store, count: () => calls };
+}
+
+/** A pass-through store that COUNTS loadInstance calls and optionally makes
+ * `commitLifecycle` THROW (the S4/SM `throwing-commitLifecycle` exit). The
+ * load counter makes a buffered-completion FLUSH observable — the READY
+ * handler loads the instance, so a flushed completion increments the count
+ * while a silently-dropped one does not. */
+function instrumentedStore(
+  real: StorePort,
+  opts: {
+    throwOnCommitLifecycle?: boolean;
+    /** Inject `cas_conflict` on the FIRST commitLifecycle (superseding the
+     * first attempt; the retry delegates). */
+    casOnceLifecycle?: boolean;
+    /** Force EVERY commitLifecycle to return this result (`duplicate_op` /
+     * `op_id_collision` — the non-throwing failing exits). */
+    commitLifecycleResult?: CommitTransitionResult;
+  } = {},
+): { readonly store: StorePort; loadCount(): number; armOnLoadOnce(cb: () => void): void } {
+  let loads = 0;
+  let casInjected = false;
+  // A ONE-SHOT hook that fires (once) when the NEXT loadInstance RESOLVES —
+  // firing on resolution (not on the synchronous call) so the callback runs
+  // asynchronously DURING an in-flight readyOp await, deterministically (no
+  // event-loop-timing hacks). Cleared at attach so it fires exactly once.
+  let onLoadOnce: (() => void) | null = null;
+  const store: StorePort = {
+    loadInstance: (id) => {
+      loads += 1;
+      const loaded = real.loadInstance(id);
+      if (onLoadOnce !== null) {
+        const cb = onLoadOnce;
+        onLoadOnce = null;
+        return loaded.then((inst) => {
+          cb();
+          return inst;
+        });
+      }
+      return loaded;
+    },
+    findOp: (id, opId) => real.findOp(id, opId),
+    createInstance: (instance) => real.createInstance(instance),
+    commitTransition: (input) => real.commitTransition(input),
+    commitLifecycle: (input) => {
+      if (opts.throwOnCommitLifecycle === true) {
+        throw new Error("instrumentedStore: scripted commitLifecycle throw");
+      }
+      if (opts.casOnceLifecycle === true && !casInjected) {
+        casInjected = true;
+        return Promise.resolve({ kind: "cas_conflict" });
+      }
+      if (opts.commitLifecycleResult !== undefined) {
+        return Promise.resolve(opts.commitLifecycleResult);
+      }
+      return real.commitLifecycle(input);
+    },
+    listInstances: () => real.listInstances(),
+    getInstanceDetail: (id) => real.getInstanceDetail(id),
+    getTimeline: (id, afterSeq) => real.getTimeline(id, afterSeq),
+  };
+  return {
+    store,
+    loadCount: () => loads,
+    armOnLoadOnce: (cb) => {
+      onLoadOnce = cb;
+    },
+  };
 }
 
 function deferred(raw: ReturnType<typeof fixtureTemplate>): ReturnType<typeof fixtureTemplate> {
@@ -551,15 +618,89 @@ describe("START (L2/L3) — the fork and the window lanes", () => {
       h.close();
     });
 
-    it("K2 terminal-sink: a late READY after CANCEL does not resurrect the run — INERT", async () => {
+    // NOTE ON RUNG ORDER (honest scope): the terminal-sink and correlation
+    // rungs BOTH reject with the SAME `{kind:"ignored"}` outcome — they are
+    // outcome-INDISTINGUISHABLE, so no test can prove their relative ORDER by
+    // outcome alone (a rung swap is invisible to a doubly-invalid event). The
+    // ORDER itself (terminal-sink before correlation) is CODE-REVIEW-asserted
+    // (runtimeContextReady). What the tests below DO prove per-rung: (1) the
+    // terminal-sink rung EXISTS and fires — a post-terminal event whose
+    // correlation WOULD match is still rejected (no resurrection); (2) the
+    // correlation rung EXISTS and fires — a mis-correlated NON-terminal event
+    // (unsolicited / wrong-id / already-ready) is rejected.
+
+    it("K2 terminal-sink (per-rung): a post-terminal READY whose correlation WOULD match is still rejected — no resurrection", async () => {
       const h = makeHarness(requiredContext);
       const requestId = await provisioned(h);
       await h.kernel.cancel({ instanceId: "i1", opId: "op-c" });
-      const before = await loadOrThrow(h, "i1");
+      const terminal = await loadOrThrow(h, "i1");
+      expect(terminal.kernelStatus).toBe("TERMINAL");
+      // The correlation rung WOULD match (runtimeContext stays requested(req)
+      // through CANCEL) — so a MISSING terminal-sink rung would ACTIVATE
+      // (resurrect) this TERMINAL run. The rung's presence is what this catches.
+      expect(terminal.runtimeContext).toEqual({ state: "requested", requestId });
       expect(await h.kernel.runtimeContextReady("i1", requestId, SPEC_REF)).toEqual({
         kind: "ignored",
       });
+      expect(await loadOrThrow(h, "i1")).toEqual(terminal); // stays TERMINAL, not resurrected
+      h.close();
+    });
+
+    it("K3 correlation (unsolicited): a READY to an instance that never requested a context is INERT — no state change", async () => {
+      const h = makeHarness(); // NONE template — the run is context-free, never requested
+      await h.kernel.create({ instanceId: "i1", templateRef: REF, task: "T" });
+      const before = await loadOrThrow(h, "i1");
+      expect(before.runtimeContext).toEqual({ state: "none" });
+      expect(await h.kernel.runtimeContextReady("i1", "r", SPEC_REF)).toEqual({ kind: "ignored" });
       expect(await loadOrThrow(h, "i1")).toEqual(before);
+      h.close();
+    });
+
+    it("K3 correlation (already-ready / duplicate): a second READY after the run is READY is INERT — no state change", async () => {
+      const h = makeHarness(requiredContext);
+      const requestId = await provisioned(h);
+      const first = await h.kernel.runtimeContextReady("i1", requestId, SPEC_REF);
+      expect(first.kind).toBe("activated");
+      const active = await loadOrThrow(h, "i1");
+      expect(active.kernelStatus).toBe("ACTIVE");
+      // The duplicate/late READY for the SAME request → correlation rejects
+      // (the state is now ready(ref), not requested) → inert.
+      expect(await h.kernel.runtimeContextReady("i1", requestId, SPEC_REF)).toEqual({
+        kind: "ignored",
+      });
+      expect(await loadOrThrow(h, "i1")).toEqual(active);
+      h.close();
+    });
+
+    it("K2 required(spec) bind: a requested() marker over a NONE-requirement template is a structurally-dead integrity throw", async () => {
+      const h = makeHarness(); // NONE template
+      // Hostile seed: integrity drift START never produces — a requested()
+      // marker on an instance whose pinned template declares no runtime context.
+      await h.store.createInstance({
+        instanceId: "drift",
+        templateRef: REF,
+        task: "T",
+        binding: { implementer: "codex", reviewer: "claude" },
+        currentStep: null,
+        round: 0,
+        kernelStatus: "CREATED",
+        terminalDisposition: null,
+        activationMode: "immediate",
+        wait: null,
+        runtimeContext: { state: "requested", requestId: "r" },
+        failureReason: null,
+        runOverrides: {},
+        version: 1,
+      });
+      const before = await loadOrThrow(h, "drift");
+      // terminal-sink ✓, correlation ✓ (requested(r)), transport ✓ → the
+      // required(spec) bind FAILS (requirement is none) → integrity throw.
+      await expect(h.kernel.runtimeContextReady("drift", "r", SPEC_REF)).rejects.toThrow(
+        /declares no runtime context/,
+      );
+      // The bind is checked BEFORE any commit — the runtime_context (and the
+      // whole instance) is UNCHANGED after the rejection.
+      expect(await loadOrThrow(h, "drift")).toEqual(before);
       h.close();
     });
 
@@ -600,16 +741,252 @@ describe("START (L2/L3) — the fork and the window lanes", () => {
       h.close();
     });
 
-    it("SM3: a held completion on a FAILED (port-breach) attempt is delivered INERT, never dropped, no crash beyond the breach", async () => {
-      const h = makeHarness(requiredContext, undefined, {
-        script: [{ fireOnProvision: SPEC_REF, rejectAck: true }],
-      });
+    it("SM3: a held completion on a FAILED (port-breach) attempt is FLUSHED at conclusion — the READY handler is reached (load count), delivered INERT, never dropped", async () => {
+      const probes: ReturnType<typeof instrumentedStore>[] = [];
+      const h = makeHarness(
+        requiredContext,
+        (real) => {
+          const probe = instrumentedStore(real);
+          probes.push(probe);
+          return probe.store;
+        },
+        { script: [{ fireOnProvision: SPEC_REF, rejectAck: true }] },
+      );
+      const probe = probes[0];
+      if (probe === undefined) throw new Error("wiring: store wrap not invoked");
       await h.kernel.create({ instanceId: "i1", templateRef: REF, task: "T" });
       const before = await loadOrThrow(h, "i1");
+      const loadsBefore = probe.loadCount();
       await expect(h.kernel.start({ instanceId: "i1", opId: "op" })).rejects.toThrow(/port breach/i);
-      // The held completion flushed at conclusion delivers inert (correlation
-      // rejects — no requested marker committed); zero state change.
-      expect(await loadOrThrow(h, "i1")).toEqual(before);
+      // The held completion flushed at concludeAttempt: the READY handler
+      // LOADED the instance (an extra load beyond start's own top-of-loop load)
+      // — proof it was DELIVERED (inert, correlation rejects), not dropped in
+      // the buffer. A dropping impl leaves load count at +1 (start's load only).
+      expect(probe.loadCount()).toBeGreaterThan(loadsBefore + 1);
+      expect(await loadOrThrow(h, "i1")).toEqual(before); // zero state change (inert)
+      h.close();
+    });
+
+    it("SM2 (finding 1): a provider firing READY AFTER start concludes (async) is DELIVERED, not dropped — the run reaches ready/ACTIVE", async () => {
+      const h = makeHarness(requiredContext); // detach mode
+      await h.kernel.create({ instanceId: "i1", templateRef: REF, task: "T" });
+      await h.kernel.start({ instanceId: "i1", opId: "op" }); // the attempt CONCLUDES (nothing buffered)
+      const requestId = h.provider.provisionCalls[0]?.requestId ?? "";
+      // Pre-delivery the run is stuck at requested — the completion has not arrived.
+      expect((await loadOrThrow(h, "i1")).runtimeContext).toEqual({
+        state: "requested",
+        requestId,
+      });
+      // The provider fires READY ASYNCHRONOUSLY, post-conclusion, through the seam.
+      h.kernel.deliverCompletion("i1", requestId, SPEC_REF);
+      const outcomes = await h.kernel.settleRuntimeContextDeliveries();
+      // DELIVERED (not lost to a never-flushed buffer) → activated.
+      expect(outcomes.map((o) => o.kind)).toEqual(["activated"]);
+      const inst = await loadOrThrow(h, "i1");
+      expect(inst.kernelStatus).toBe("ACTIVE");
+      expect(inst.runtimeContext).toEqual({ state: "ready", ref: SPEC_REF });
+      h.close();
+    });
+
+    it("SM2 (finding 2b): a CAS-SUPERSEDED request_id's post-conclusion completion is DELIVERED-inert (ignored), never dropped — state unchanged, ≥2 provisions under fresh ids", async () => {
+      const h = makeHarness(requiredContext, (real) => casOnceStore(real).store);
+      await h.kernel.create({ instanceId: "i1", templateRef: REF, task: "T" });
+      await h.kernel.start({ instanceId: "i1", opId: "op" });
+      const ids = h.provider.provisionCalls.map((c) => c.requestId);
+      expect(ids.length).toBeGreaterThanOrEqual(2);
+      expect(new Set(ids).size).toBe(ids.length); // fresh per attempt
+      const superseded = ids[0] ?? "";
+      const surviving = ids[ids.length - 1] ?? "";
+      const before = await loadOrThrow(h, "i1");
+      expect(before.runtimeContext).toEqual({ state: "requested", requestId: surviving });
+      // The superseded provider fires READY late (post-conclusion): delivered
+      // DIRECTLY, correlation rejects (requested(surviving) ≠ superseded) → inert.
+      h.kernel.deliverCompletion("i1", superseded, SPEC_REF);
+      const outcomes = await h.kernel.settleRuntimeContextDeliveries();
+      expect(outcomes).toEqual([{ kind: "ignored" }]); // DELIVERED (not dropped) AND inert
+      expect(await loadOrThrow(h, "i1")).toEqual(before); // zero state change
+      h.close();
+    });
+
+    it("SM (finding 2c): a THROWING commitLifecycle flushes the held completion at concludeAttempt — the READY handler is reached (load count), state unchanged", async () => {
+      const probes: ReturnType<typeof instrumentedStore>[] = [];
+      const h = makeHarness(
+        requiredContext,
+        (real) => {
+          const probe = instrumentedStore(real, { throwOnCommitLifecycle: true });
+          probes.push(probe);
+          return probe.store;
+        },
+        { script: [{ fireOnProvision: SPEC_REF }] },
+      );
+      const probe = probes[0];
+      if (probe === undefined) throw new Error("wiring: store wrap not invoked");
+      await h.kernel.create({ instanceId: "i1", templateRef: REF, task: "T" });
+      const before = await loadOrThrow(h, "i1");
+      const loadsBefore = probe.loadCount();
+      await expect(h.kernel.start({ instanceId: "i1", opId: "op" })).rejects.toThrow(
+        /commitLifecycle throw/,
+      );
+      // The store-port rejection is a failing exit — the finally flushes the
+      // held completion at concludeAttempt (an extra READY-handler load).
+      expect(probe.loadCount()).toBeGreaterThan(loadsBefore + 1);
+      expect(await loadOrThrow(h, "i1")).toEqual(before); // inert (no commit landed)
+      h.close();
+    });
+
+    it("SM (finding 2 held-a): a CAS-SUPERSEDED id's HELD completion (fired BEFORE conclusion) is RELEASED inert at concludeAttempt (load count), state = requested(surviving)", async () => {
+      // The HELD path (not the post-conclusion direct path): the FIRST attempt
+      // fires READY inside provision() (buffered under req-1), then its commit
+      // CAS-conflicts → concludeAttempt(req-1) RELEASES the held completion
+      // inert (the run is still CREATED+none, correlation rejects). The retry
+      // (req-2) detaches. A dropping impl loses req-1's held completion.
+      const probes: ReturnType<typeof instrumentedStore>[] = [];
+      const h = makeHarness(
+        requiredContext,
+        (real) => {
+          const probe = instrumentedStore(real, { casOnceLifecycle: true });
+          probes.push(probe);
+          return probe.store;
+        },
+        { script: [{ fireOnProvision: SPEC_REF }] }, // ONLY the superseded attempt fires
+      );
+      const probe = probes[0];
+      if (probe === undefined) throw new Error("wiring: store wrap not invoked");
+      await h.kernel.create({ instanceId: "i1", templateRef: REF, task: "T" });
+      const loadsBefore = probe.loadCount();
+      const started = await h.kernel.start({ instanceId: "i1", opId: "op" });
+      expect(started).toEqual({ kind: "accepted" });
+      const ids = h.provider.provisionCalls.map((c) => c.requestId);
+      expect(ids.length).toBeGreaterThanOrEqual(2); // req-1 superseded, req-2 surviving
+      expect(new Set(ids).size).toBe(ids.length);
+      // req-1's held completion flushed at concludeAttempt(req-1): start's two
+      // attempt-loads PLUS the extra req-1 flush load. A dropping impl skips it
+      // (only the two attempt-loads).
+      expect(probe.loadCount() - loadsBefore).toBeGreaterThan(2);
+      const inst = await loadOrThrow(h, "i1"); // real store — never inflates the probe
+      expect(inst.runtimeContext).toEqual({ state: "requested", requestId: ids[ids.length - 1] });
+      h.close();
+    });
+
+    it("SM (finding 2 held-b): a duplicate_op START exit still FLUSHES its held completion at concludeAttempt (load count), delivered inert", async () => {
+      const probes: ReturnType<typeof instrumentedStore>[] = [];
+      const h = makeHarness(
+        requiredContext,
+        (real) => {
+          const probe = instrumentedStore(real, {
+            commitLifecycleResult: { kind: "duplicate_op" },
+          });
+          probes.push(probe);
+          return probe.store;
+        },
+        { script: [{ fireOnProvision: SPEC_REF }] },
+      );
+      const probe = probes[0];
+      if (probe === undefined) throw new Error("wiring: store wrap not invoked");
+      await h.kernel.create({ instanceId: "i1", templateRef: REF, task: "T" });
+      const before = await loadOrThrow(h, "i1");
+      const loadsBefore = probe.loadCount();
+      const outcome = await h.kernel.start({ instanceId: "i1", opId: "op" });
+      expect(outcome).toEqual({ kind: "duplicate" });
+      // The held completion flushed at concludeAttempt (an extra READY-handler
+      // load beyond start's own). A dropping impl leaves it at +1.
+      expect(probe.loadCount()).toBeGreaterThan(loadsBefore + 1);
+      expect(await loadOrThrow(h, "i1")).toEqual(before); // inert (no commit landed)
+      h.close();
+    });
+
+    it("SM (finding 2 held-c): an op_id_collision START exit still FLUSHES its held completion at concludeAttempt (load count), delivered inert", async () => {
+      const probes: ReturnType<typeof instrumentedStore>[] = [];
+      const h = makeHarness(
+        requiredContext,
+        (real) => {
+          const probe = instrumentedStore(real, {
+            commitLifecycleResult: { kind: "op_id_collision" },
+          });
+          probes.push(probe);
+          return probe.store;
+        },
+        { script: [{ fireOnProvision: SPEC_REF }] },
+      );
+      const probe = probes[0];
+      if (probe === undefined) throw new Error("wiring: store wrap not invoked");
+      await h.kernel.create({ instanceId: "i1", templateRef: REF, task: "T" });
+      const before = await loadOrThrow(h, "i1");
+      const loadsBefore = probe.loadCount();
+      const outcome = await h.kernel.start({ instanceId: "i1", opId: "op" });
+      expect(outcome).toEqual({ kind: "rejected", reason: "op_id_collision" });
+      // The held completion flushed at concludeAttempt (an extra load).
+      expect(probe.loadCount()).toBeGreaterThan(loadsBefore + 1);
+      expect(await loadOrThrow(h, "i1")).toEqual(before); // inert
+      h.close();
+    });
+
+    it("SM drain (finding — concurrent arrival): settle DRAINS FULLY then throws — an integrity-erroring delivery does NOT leave a concurrently-arriving delivery undrained", async () => {
+      // Two concluded request_ids via a CAS-restart (req-1 superseded, req-2
+      // surviving; run = requested(req-2)). r1 = req-2 delivered with a
+      // NON-CANONICAL ref (correlation matches, then the transport gate throws
+      // a kernel-integrity error). r2 = req-1 delivered with a valid ref
+      // (correlation rejects inert). r2 ARRIVES DURING settle's await of r1 —
+      // fired from a one-shot load-RESOLUTION hook, so it lands in
+      // pendingDeliveries AFTER settle snapshot-and-cleared r1's batch, forcing
+      // a SECOND drain turn. Deterministic (microtask ordering; no timing hacks).
+      const probes: ReturnType<typeof instrumentedStore>[] = [];
+      const h = makeHarness(requiredContext, (real) => {
+        const probe = instrumentedStore(real, { casOnceLifecycle: true });
+        probes.push(probe);
+        return probe.store;
+      });
+      const probe = probes[0];
+      if (probe === undefined) throw new Error("wiring: store wrap not invoked");
+      await h.kernel.create({ instanceId: "i1", templateRef: REF, task: "T" });
+      await h.kernel.start({ instanceId: "i1", opId: "op" });
+      const ids = h.provider.provisionCalls.map((c) => c.requestId);
+      expect(ids.length).toBeGreaterThanOrEqual(2);
+      const superseded = ids[0] ?? "";
+      const surviving = ids[ids.length - 1] ?? "";
+      // Arm r2 to arrive when the NEXT instance load RESOLVES — i.e. inside
+      // settle's await of r1, after r1's batch was snapshot-and-cleared.
+      probe.armOnLoadOnce(() => {
+        h.kernel.deliverCompletion("i1", superseded, SPEC_REF); // valid ref → correlation rejects inert
+      });
+      // r1: the surviving id with a non-canonical ref → the transport gate throws.
+      h.kernel.deliverCompletion("i1", surviving, {
+        kind: "worktree",
+        locator: { bad: Number.POSITIVE_INFINITY },
+      });
+      // settle DRAINS FULLY, THEN throws r1's integrity error — r2, arriving
+      // mid-drain, is still drained (a mid-loop throw would leave it undrained).
+      await expect(h.kernel.settleRuntimeContextDeliveries()).rejects.toThrow(
+        /integrity|canonical/,
+      );
+      // Proof r2 WAS drained by that settle: a second drain finds nothing left.
+      // Under a mid-loop throw, r2 is leftover → the second drain returns [{ignored}].
+      expect(await h.kernel.settleRuntimeContextDeliveries()).toEqual([]);
+      h.close();
+    });
+
+    it("SM (finding — pre-conclusion buffer): concludeAttempt delivers a LATER held completion even when an EARLIER one for the same request_id throws at the transport gate", async () => {
+      // TWO held completions for ONE request_id, both buffered PRE-conclusion
+      // (fired inside provision()): the FIRST a non-canonical ref (the transport
+      // gate throws when concludeAttempt flushes it), the SECOND a VALID ref
+      // (correlation matches → ready(ref) + activate). concludeAttempt must
+      // deliver BOTH (SM2 unconditional never-dropped) then surface the error —
+      // a first-throw abort would DROP the second.
+      const NON_CANONICAL = { kind: "worktree", locator: { bad: Number.POSITIVE_INFINITY } };
+      const h = makeHarness(requiredContext, undefined, {
+        script: [{ fireManyOnProvision: [NON_CANONICAL, SPEC_REF] }],
+      });
+      await h.kernel.create({ instanceId: "i1", templateRef: REF, task: "T" });
+      // START's conclusion flushes the buffer: the first held completion throws
+      // integrity at the transport gate; the error surfaces out of start.
+      await expect(h.kernel.start({ instanceId: "i1", opId: "op" })).rejects.toThrow(
+        /integrity|canonical/,
+      );
+      // Proof the SECOND held completion was STILL delivered (not dropped by the
+      // first's throw): the valid completion reached ready(ref) + activate.
+      const inst = await loadOrThrow(h, "i1");
+      expect(inst.kernelStatus).toBe("ACTIVE");
+      expect(inst.runtimeContext).toEqual({ state: "ready", ref: SPEC_REF });
       h.close();
     });
   });

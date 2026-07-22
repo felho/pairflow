@@ -130,6 +130,15 @@ export interface Kernel {
    * scripted provider; dormant in production (the empty registry never fires).
    */
   deliverCompletion(instanceId: InstanceId, requestId: string, ref: RuntimeContextRef): void;
+  /**
+   * Await every in-flight DETACHED post-conclusion runtime-context delivery
+   * (a provider that fired READY after its START attempt concluded — the
+   * normal async path) and RETURN their READY outcomes (a delivered-inert
+   * completion yields `{kind:"ignored"}`, so a caller can prove it was
+   * delivered, not dropped). A drain seam: tests await it before asserting; a
+   * real shutdown awaits it before teardown. Empty when none pend.
+   */
+  settleRuntimeContextDeliveries(): Promise<RuntimeContextReadyOutcome[]>;
 }
 
 async function loadTemplate(
@@ -254,6 +263,21 @@ export function createKernel(deps: KernelDeps): Kernel {
       instanceId,
     });
   }
+  // The request_ids whose START attempt has CONCLUDED (its commit landed,
+  // failed, or was superseded). NOTE: this Set grows by request_id per run —
+  // bounded by the run's provisioning attempts; real cleanup (on run teardown)
+  // is the ch9 provider seam's concern (the Absent named at C15/C23).
+  const concluded = new Set<string>();
+  // In-flight DETACHED post-conclusion deliveries — a test (or a shutdown
+  // drain) awaits them via `settleRuntimeContextDeliveries`, which returns
+  // their outcomes (so a test can prove delivered-inert ≠ silently-dropped).
+  // Each tracked promise is WRAPPED to never reject (an integrity throw from
+  // readyOp is captured as `{ok:false}` and re-surfaced by the drain), so a
+  // detached delivery never leaks an unhandled rejection.
+  type DeliveryResult =
+    | { readonly ok: true; readonly outcome: RuntimeContextReadyOutcome }
+    | { readonly ok: false; readonly error: unknown };
+  const pendingDeliveries = new Set<Promise<DeliveryResult>>();
   function deliverCompletion(
     instanceId: InstanceId,
     requestId: string,
@@ -261,6 +285,26 @@ export function createKernel(deps: KernelDeps): Kernel {
   ): void {
     // The HOLD/enqueue returns to the provider IMMEDIATELY (SM2) — never
     // blocks the completion call, so no circular wait with C18's detach await.
+    if (concluded.has(requestId)) {
+      // The normal real-world path: the provider fires READY ASYNCHRONOUSLY
+      // AFTER the START attempt concluded — the commit has ALREADY landed, so
+      // buffering would be LOST (concludeAttempt ran once, will not run again).
+      // Deliver DIRECTLY (SM2 "never dropped"): correlation matches on the
+      // committed marker → ready/ACTIVE; a superseded id's late completion
+      // correlation-rejects inert. DETACHED (fire-and-track, not awaited by the
+      // provider); no ordering hazard post-conclusion (the marker is committed).
+      // WRAP so the tracked promise never rejects (a readyOp integrity throw
+      // is captured, re-surfaced by the drain) — no unhandled rejection on a
+      // detached delivery. No self-delete here: the drain snapshots-and-clears
+      // (a `.finally` self-delete races the drain's snapshot).
+      pendingDeliveries.add(
+        readyOp(instanceId, requestId, ref).then(
+          (outcome): DeliveryResult => ({ ok: true, outcome }),
+          (error: unknown): DeliveryResult => ({ ok: false, error }),
+        ),
+      );
+      return;
+    }
     const held = completionBuffer.get(requestId);
     if (held === undefined) {
       completionBuffer.set(requestId, [{ instanceId, ref }]);
@@ -271,15 +315,59 @@ export function createKernel(deps: KernelDeps): Kernel {
   async function concludeAttempt(requestId: string): Promise<void> {
     // CONCLUSION-SIGNALLED DELIVERY (SM2/SM3): flush the held completion(s)
     // for this attempt — commit-landed (correlation matches → ready/ACTIVE)
-    // or superseded/failed (correlation rejects it inert). Idempotent.
+    // or superseded/failed (correlation rejects it inert). Mark CONCLUDED
+    // (before flushing) so any LATER async completion for this id delivers
+    // directly (deliverCompletion) instead of being lost. Idempotent.
     const held = completionBuffer.get(requestId);
-    if (held === undefined) {
-      return;
-    }
     completionBuffer.delete(requestId);
-    for (const completion of held) {
-      await readyOp(completion.instanceId, requestId, completion.ref);
+    concluded.add(requestId);
+    if (held !== undefined) {
+      // Deliver EVERY held completion before surfacing any error — a `readyOp`
+      // integrity throw on one must NOT drop the rest (SM2's unconditional
+      // never-dropped; the buffer was already deleted). Collect errors, deliver
+      // all, then throw the first (mirrors settleRuntimeContextDeliveries).
+      const errors: unknown[] = [];
+      for (const completion of held) {
+        try {
+          await readyOp(completion.instanceId, requestId, completion.ref);
+        } catch (error) {
+          errors.push(error);
+        }
+      }
+      if (errors.length > 0) {
+        throw errors[0];
+      }
     }
+  }
+  async function settleRuntimeContextDeliveries(): Promise<RuntimeContextReadyOutcome[]> {
+    // Await every in-flight detached post-conclusion delivery (a test drain;
+    // a real shutdown would await this before teardown) and RETURN their
+    // outcomes — a delivered-inert completion yields `{kind:"ignored"}`, a
+    // dropped one yields nothing (the fail-able distinction, SM2).
+    // Snapshot-and-CLEAR before awaiting (a delivery arriving mid-drain is
+    // caught by the next loop turn); a post-conclusion integrity throw is
+    // re-surfaced, never swallowed.
+    const outcomes: RuntimeContextReadyOutcome[] = [];
+    const errors: unknown[] = [];
+    while (pendingDeliveries.size > 0) {
+      const batch = [...pendingDeliveries];
+      pendingDeliveries.clear();
+      for (const result of await Promise.all(batch)) {
+        if (result.ok) {
+          outcomes.push(result.outcome);
+        } else {
+          errors.push(result.error);
+        }
+      }
+    }
+    // Drain FULLY first (a delivery arriving mid-drain is caught by the loop),
+    // THEN surface — throwing mid-loop would leave a concurrently-arrived
+    // delivery undrained. First error wins (an integrity breach is a hard
+    // failure; a shutdown drain observes it after every delivery is processed).
+    if (errors.length > 0) {
+      throw errors[0];
+    }
+    return outcomes;
   }
 
   async function handleOnce(
@@ -602,6 +690,7 @@ export function createKernel(deps: KernelDeps): Kernel {
     // `fail` culture). deliverCompletion is the SM seam's provider fire endpoint.
     runtimeContextReady: (instanceId, requestId, ref) => readyOp(instanceId, requestId, ref),
     deliverCompletion,
+    settleRuntimeContextDeliveries,
   };
 
   /**

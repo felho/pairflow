@@ -320,6 +320,23 @@ export function admitTemplate(template: WorkflowTemplate, catalog: GateCatalog):
         `{ kind, provider, config? } (a directly-constructed RuntimeContextSpec)`,
     });
     runtimeContextIllegal = true;
+  } else if (runtimeContext instanceof Map) {
+    // C25 (packet ch12-p3, R3): the FILE-channel spec-map SOURCE FORM is
+    // deferred to P4 — the YAML walk lands a `mapAsMap` JS Map here (never a
+    // plain object). Refuse it CLEANLY at P3 rather than degenerately accept
+    // it as a spec (`spec.provider` on a JS Map is `undefined` → START would
+    // reject with `runtime_context_provider_unavailable`, an unclean staging).
+    // The window's file domain is context-free (`none`/absent); the ch11
+    // `required` string is refused (R2). The DIRECT-construction plain-object
+    // spec is UNAFFECTED (the golden traces still provision).
+    findings.push({
+      path: "runtimeContext",
+      message:
+        `a runtimeContext spec map authored via the file channel is deferred to P4 (C25) — ` +
+        `the file domain in this window is "none" or absent (context-free); ` +
+        `author the spec on the direct-construction channel, or omit it`,
+    });
+    runtimeContextIllegal = true;
   } else if (
     runtimeContext !== undefined &&
     runtimeContext !== "none" &&

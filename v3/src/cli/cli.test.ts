@@ -1207,7 +1207,12 @@ describe("cli — ch12-p3 W3: a spec/stale runtime-context template is unstartab
     expect(JSON.stringify(res)).toMatch(/retired|spec map/);
   });
 
-  it("a spec-declaring template → START's runtime_context_provider_unavailable against the EMPTY production registry (C16)", async () => {
+  it("a FILE-authored spec-map template → the C25 P4-deferred admission refusal (the file source form is P4's; never a degenerate unstartable)", async () => {
+    // ch12-p3 finding 6 (C25): a YAML-authored runtimeContext spec map is a
+    // `mapAsMap` JS Map — refused CLEANLY at admission (P4-deferred), so the
+    // shipped CLI never reaches START with it. The empty-registry START
+    // rejection (`runtime_context_provider_unavailable`, C16) is exercised on
+    // the DIRECT-construction channel (kernel/lifecycle.test.ts S2).
     const dir = stageTemplates({
       "local-pair-v0@1.yaml": `${CANONICAL_BYTES()}runtimeContext:\n  kind: worktree\n  provider: pairflow.worktree\n`,
     });
@@ -1216,11 +1221,10 @@ describe("cli — ch12-p3 W3: a spec/stale runtime-context template is unstartab
       ["start", "--db", db, "--task", "t", "--templates-dir", dir],
       testDeps(),
     );
-    // The shipped CLI ships no provider — START rejects with the base
-    // contract error, output as a data row on stdout.
-    const doc = JSON.parse(res.stdout[0] ?? "{}") as { kind: string; reason?: string };
-    expect(doc).toEqual({ kind: "rejected", reason: "runtime_context_provider_unavailable" });
-    expect(res.code).toBe(EXIT.notFound);
+    // The template fails to load/admit — the P4-deferred refusal surfaces (not
+    // a START outcome on stdout).
+    expect(res.code).not.toBe(EXIT.ok);
+    expect(JSON.stringify(res)).toMatch(/deferred to P4|C25/);
   });
 
   it("start on a template with an unbound role → usage 2 StartFailed (the W2 bridge's binding-coverage lane, packet ch12-p1b)", async () => {

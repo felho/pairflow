@@ -1027,8 +1027,17 @@ roles:
 });
 
 describe("ch11-P4 F6 — the C12 source ladder for config.timeoutMs (dimension 3)", () => {
-  it("the plain-decimal positive admits", () => {
-    expect(loadGated(gatedProcess("600000")).ok).toBe(true);
+  it("the plain-decimal positive passes its OWN lane — no config.timeoutMs finding (the sole finding is the C25 file-channel refusal)", () => {
+    // ch12-p3 C25: a process-gated YAML template can no longer ADMIT at P3 (the
+    // file-channel runtime-context source form is P4-deferred, R3). The
+    // plain-decimal timeoutMs is still VALID — proven by the ABSENCE of a
+    // config.timeoutMs finding; the only refusal is the runtimeContext one.
+    const result = loadGated(gatedProcess("600000"));
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    const paths = result.error.findings.map((f) => (f as { path: string }).path);
+    expect(paths).not.toContain("steps.s.gates.GO[0].config.timeoutMs");
+    expect(paths).toContain("runtimeContext");
   });
 
   const badForms = [

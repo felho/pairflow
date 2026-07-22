@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type {
+  ContextPacket,
   RuntimeContextRef,
   StepId,
   WorkflowInstance,
@@ -11,6 +12,25 @@ import { createScriptedRuntimeContextProvider } from "../testkit/index.js";
 import { deriveDispatchIntent } from "./dispatchIntent.js";
 
 const providerRegistry = createStaticProviderRegistry({});
+
+// ── ch12-p3 T2 compile-negative probes (validated by v3:typecheck via
+// TS2578 — the branded RuntimeContextProjection is nominally DISTINCT from the
+// unbranded RuntimeContextRef, and the packet field is non-optional). ──
+const __rawRef: RuntimeContextRef = { kind: "worktree", locator: "/x" };
+// @ts-expect-error T2: a raw RuntimeContextRef is NOT assignable to the branded
+// RuntimeContextProjection — `projection-never-the-ref` is compile-enforced.
+export const __projectionRejectsRawRef: ContextPacket["runtimeContext"] = __rawRef;
+// @ts-expect-error T2: ContextPacket.runtimeContext is NON-OPTIONAL — a packet
+// literal omitting `runtimeContext` is rejected.
+export const __packetMissingRuntimeContext: ContextPacket = {
+  instanceId: "i",
+  expectedVersion: 1,
+  task: "t",
+  role: "r",
+  instruction: "build it",
+  availableOps: [],
+  effectiveAgentConfig: {},
+};
 
 // Packet ch12-p2 (E family): the dispatch projection — the resolved run
 // profile lands on the packet's `effectiveAgentConfig`, UNCONDITIONALLY,

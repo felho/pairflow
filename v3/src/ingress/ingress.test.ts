@@ -29,6 +29,7 @@ function capturingKernel(): { kernel: Kernel; seen: EventEnvelope[] } {
     deliverCompletion: () => {
       /* unused in ingress tests */
     },
+    settleRuntimeContextDeliveries: () => Promise.resolve([]),
   };
   return { kernel, seen };
 }
@@ -417,6 +418,7 @@ function intentKernel(): IntentCapture {
     deliverCompletion: () => {
       /* unused in ingress intent tests */
     },
+    settleRuntimeContextDeliveries: () => Promise.resolve([]),
   };
   return { kernel, creates, starts, kickoffs, cancels };
 }

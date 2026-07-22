@@ -271,11 +271,15 @@ async function verbStart(ctx: VerbContext): Promise<number> {
       template,
     );
     // W3 (packet ch12-p3, C24): the ch11-P4 EAGER required-context pre-check
-    // RETIRES — no retired surface survives as a parallel path. A
-    // spec-declaring template is now refused by the KERNEL's own S2 lane
-    // (`runtime_context_provider_unavailable` against the EMPTY production
-    // registry, C16); a residual `"required"` string by the R2 admission
-    // migration refusal. The shipped CLI ships no provider — a
+    // RETIRES — no retired surface survives as a parallel path. A shipped-CLI
+    // template authors runtimeContext in a FILE, so its refusal happens at
+    // ADMISSION (before this handler runs `start`): a FILE spec map is refused
+    // as a P4-DEFERRED source form (the finding-6 guard, C25 — the YAML
+    // spec-map source-form walk lands at P4); a residual `"required"` string by
+    // the R2 admission migration refusal. (A DIRECT-constructed spec map —
+    // test-only at ch12, not shipped-CLI-authorable — would reach the kernel's
+    // S2 `runtime_context_provider_unavailable` lane against the EMPTY
+    // production registry, C16.) The shipped CLI ships no provider — a
     // spec-declaring template is honestly unstartable here until ch9.
     return await withStoreAndDiag(ctx, async (handle, diag) => {
       // W2 (ch11-P3b): the fail-closed process-gate runner on a derived-path

@@ -592,10 +592,12 @@ boundary (`ref.kind = spec.kind`; a mismatch rejects, no state change), then
 commits `runtime_context ← ready(ref)` and continues into the SHARED
 `activate_or_hold` fork (immediate → `activate` + the first dispatch;
 deferred_kickoff → `WAITING(kickoff_pending)`); (4) the completion seam
-is ORDERED-AFTER-COMMIT (C15) — a provider completing synchronously
-inside `provision()` is HELD until the START commit lands, released when
-the attempt concludes, never lost to the pre-commit correlation window
-and never delivered mid-attempt; (5) `dispatch_intent` sets the packet's
+is ORDERED-AFTER-COMMIT (C15) with two temporal paths — a provider
+completing synchronously inside `provision()` (or before the attempt
+concludes) is HELD until the START commit lands and released when the
+attempt concludes; a provider completing AFTER the attempt concludes (the
+normal async path) is delivered DIRECTLY — never lost to the pre-commit
+correlation window and never delivered mid-attempt, never dropped; (5) `dispatch_intent` sets the packet's
 `runtime_context` to `project_for_actor(ready_ref)` for the provisioned
 path (the SAME pinned-template provider re-resolved as a kernel/config
 INVARIANT throw when it fails — `registry-stable-for-the-run`) or to the
@@ -605,9 +607,16 @@ explicit value `none` for a context-free run, never the raw ref
 RETIRED as a named replacement (C14), the ch11-C36 workspace-emptiness
 backstop re-reading the REAL lifecycle field; and (7) the PRODUCTION
 registry is EMPTY (C16) — a spec-declaring template is honestly
-unstartable through the shipped CLI (`runtime_context_provider_unavailable`,
-replacing the eager guard), while the testkit's scripted provider drives
-the provisioned path in the two golden traces and dev `replay`. The
+unstartable, and its unstartable PATH depends on the channel: a
+FILE/CLI-authored spec map is refused AT ADMISSION as a P4-deferred
+source form (the finding-6 guard, C25 — the YAML spec-map source-form
+walk lands at P4, so a shipped-CLI spec map never reaches START), while a
+DIRECT-constructed spec map (test-only at ch12; not shipped-CLI-authorable)
+reaches START and is `Rejected(runtime_context_provider_unavailable)`
+against the empty registry (S2, the unknown-provider trace variant);
+either way the eager guard is replaced by the real machinery. The
+testkit's scripted provider drives the provisioned path in the two golden
+traces and dev `replay`. The
 kernel guards kind + correlation ONLY; the locator and the projection
 are provider-defined and never interpreted.
 
@@ -671,7 +680,7 @@ lanes land at P4 — R-CLAIM-GRAMMAR PARAMETERIZED, not measured here.
 | Id | Rule | Class |
 |---|---|---|
 | PR1 | `RuntimeContextProvider` is a PORT interface (model-verbatim members): `provision(instanceId, requestId, spec): Promise<void>` — async, fire-and-forget from the kernel's view (the fulfillment is the DETACH ACKNOWLEDGMENT — the provider accepted and detached its async work — NEVER the completion; C18's pre-commit await targets exactly this), whose completion fires `RUNTIME_CONTEXT_READY(instanceId, requestId, ref)` through the in-process event seam; and `projectForActor(ref): RuntimeContextProjection`. It lives in `ports/` (ADR-014 — a kernel-only injected port; the kernel never branches on a concrete provider type, REV-E-NO-ADAPTER-BRANCH) (anchored: contract:ch12-runtime-core#C15, #C22 + prose:l0e-pseudocode/RuntimeContextProvider) |
-| PR2 | `ProviderRegistry` is STATIC, INJECTED at the composition root, and PER-CHAPTER; `resolve(providerName): RuntimeContextProvider \| none` is a pure lookup. The PRODUCTION registry is EMPTY at ch12 (a spec-declaring template is honestly unstartable through the shipped CLI — `Rejected(runtime_context_provider_unavailable)` at START); `pairflow.worktree` joins at ch9 (bound by C15's production-provider gate — the failure→FAIL channel first). The registry is added to `KernelDeps` as ONE new REQUIRED injected dependency (the explicit-wiring culture) (anchored: contract:ch12-runtime-core#C16, #C22) |
+| PR2 | `ProviderRegistry` is STATIC, INJECTED at the composition root, and PER-CHAPTER; `resolve(providerName): RuntimeContextProvider \| none` is a pure lookup. The PRODUCTION registry is EMPTY at ch12 (a DIRECT-constructed spec-declaring template — test-only at ch12 — is honestly unstartable at START: `Rejected(runtime_context_provider_unavailable)`, S2; a FILE/CLI-authored spec map never reaches START — its YAML source form is admission-refused as P4-deferred, the finding-6 guard/C25); `pairflow.worktree` joins at ch9 (bound by C15's production-provider gate — the failure→FAIL channel first). The registry is added to `KernelDeps` as ONE new REQUIRED injected dependency (the explicit-wiring culture) (anchored: contract:ch12-runtime-core#C16, #C22) |
 | PR3 | The testkit ships `scriptedRuntimeContextProvider` (C22): it RECORDS `provision` calls, plays configured READY events (incl. the hostile kind-mismatch and the never-ready hold), and returns a configured `projectForActor` view; its registry name is test-chosen data under C3's provider grammar (`pairflow.worktree` in the l0e/l0d traces). It follows the `scriptedProcessGateRunner` player culture; the testkit imports ports/domain/emit at most (ADR-005 unchanged) (anchored: contract:ch12-runtime-core#C22, #C16) |
 | PR4 | The ref and the projection are CANONICAL-JSON-SAFE VALUES BY PORT CONTRACT (finite, acyclic, plain data — C15): a violating provider return is a kernel/config INTEGRITY throw, fail-closed, RAISED at the value's OWN gate — the READY ref at the transport gate (K family), the projection at the `projectForActor` RETURN (E family). The kernel never stores or projects a lossy value (anchored: contract:ch12-runtime-core#C15, #C17) |
 
@@ -698,9 +707,9 @@ lanes land at P4 — R-CLAIM-GRAMMAR PARAMETERIZED, not measured here.
 
 | Id | Rule | Class |
 |---|---|---|
-| SM1 | The completion seam is ORDERED-AFTER-COMMIT (C15, DECIDED HERE in the draft — the model's "async → later fires" strengthened into a binding composition-seam rule): the composition delivers a READY completion into RUNTIME_CONTEXT_READY only AFTER the provisioning START's atomic commit has landed. A provider completing SYNCHRONOUSLY inside `provision()` (the scripted player may) is HELD by the seam, never lost to the pre-commit correlation window (`runtime_context` still `none` would reject it) (anchored: contract:ch12-runtime-core#C15) |
+| SM1 | The completion seam is ORDERED-AFTER-COMMIT (C15, DECIDED HERE in the draft — the model's "async → later fires" strengthened into a binding composition-seam rule): the composition delivers a READY completion into RUNTIME_CONTEXT_READY only AFTER the provisioning START's atomic commit has landed. The seam has TWO temporal paths (both ordered-after-commit; SM2's never-dropped covers both): (a) a completion RACING the pre-conclusion window — a provider completing SYNCHRONOUSLY inside `provision()` (the scripted player may), or asynchronously BEFORE the START attempt concludes — is HELD by the seam, never lost to the pre-commit correlation window (`runtime_context` still `none` would reject it), and released at conclusion (SM2); (b) a completion arriving AFTER the START attempt has CONCLUDED — the NORMAL async path, the commit ALREADY landed — is delivered DIRECTLY into RUNTIME_CONTEXT_READY, not held (correlation matches on the committed marker, or inert-rejects for a superseded id). The hold exists ONLY for path (a); path (b) is the common case (a real provider provisions asynchronously and fires READY long after START returns) (anchored: contract:ch12-runtime-core#C15) |
 | SM2 | The hold's RELEASE rule: a held completion releases when the initiating START attempt CONCLUDES — either its commit landed (delivery proceeds, correlation matches) or the attempt failed/was superseded (delivery still proceeds and the correlation rung rejects it, inert); a held completion is NEVER dropped silently and NEVER delivered mid-attempt. The seam's HOLD/enqueue returns to the provider IMMEDIATELY (holding never blocks the completion call), so no circular wait exists with C18's detach-acknowledgment await (anchored: contract:ch12-runtime-core#C15) |
-| SM3 | The seam's BINDING property (entailed by SM1/SM2) is CONCLUSION-SIGNALLED DELIVERY: a held completion is delivered ONLY when the initiating START attempt CONCLUDES (commit-landed, or failed/superseded) — NOT on any event-loop scheduling primitive. The EXCLUDED anti-pattern is a `queueMicrotask`/`setTimeout` delivery, because a provider completing synchronously inside `provision()` posts its READY while START's own post-`await` continuation (which runs `commitLifecycle`) is still queued behind it — a microtask FIFO would deliver READY BEFORE the `requested(request_id)` marker commits, and the correlation rung (still `none`) would reject it, LOSING the completion (the exact hazard SM1 forbids). The REFERENCE realization is an explicit per-`request_id` in-memory buffer flushed at the attempt's conclusion; any conclusion-gated EQUIVALENT (e.g. a per-`request_id` latch/promise resolved at `concludeAttempt`) is admissible PROVIDED delivery is triggered ONLY by attempt-conclusion — the constraint is the property, not the data structure. What is FORECLOSED is only the scheduling-based delivery: it satisfies neither SM1 nor SM2 and would rest on event-loop ORDERING substrate this packet deliberately does not stand on (reconciling the "no substrate probe required" line — a conclusion-signalled delivery is deterministic in-memory, the microtask variant is the excluded substrate dependency). The buffer/delivery is a COMPOSITION-INJECTED seam (C15's "the composition delivers"; ADR-014's port-injection culture — injected into the kernel like the registry, the store uninvolved — Mutable-flow record); only the CONCLUSION SIGNAL is kernel-originated: the `request_id` is minted inside `start` and NOT surfaced on `StartOutcome`, so `start` signals `concludeAttempt` at EACH provisioning attempt's conclusion. The release TRIGGER is PER-ATTEMPT (C15/C18: a held completion releases when ITS initiating attempt concludes — commit-landed, failed, or SUPERSEDED), not per-`start`-call: on the CAS-restart (S5) a superseded `request_id`'s attempt CONCLUDES at the restart, and its buffered completion is released (inert by correlation, K3) THERE — at supersession, as the per-attempt trigger requires, BEFORE the next attempt provisions. The call-end `try/finally` over the restart loop is ONLY the leak-proof BACKSTOP — it flushes any minted id NOT already released at its own attempt's conclusion (the terminal committed/failed attempt, and a defensive net against an early throw), never the primary release for a superseded id. The post-provision exits `concludeAttempt` covers (the `try/finally` over the restart loop flushes EVERY minted id on each): `committed`, `duplicate_op`, `op_id_collision`, a THROWING `commitLifecycle` (a store-port rejection — the `finally` covers it), and the S4 `provision` port-breach throw; one `start` call may mint MULTIPLE `request_id`s (the S5 CAS-restart re-provisions under a fresh id), each buffered and each released at its own attempt's conclusion (the superseded id delivers-and-fails-correlation, inert — K3) (derived: contract:ch12-runtime-core#C15, #C18 + prose:ADR-014 composition-injected seam — DERIVATION: C15's FIVE observable rules (held, released-on-conclude, never-lost, never-mid-attempt, immediate-return) FORECLOSE the scheduling realization — a microtask post loses the pre-commit completion, so CONCLUSION-SIGNALLED DELIVERY is entailed (the property, not a specific data structure — an explicit buffer is the reference representation, a conclusion-gated latch an equivalent; the D1-grain representation choice is the build's); the request_id conclusion signal and the multi-id CAS-restart flush are S5/C18's own arithmetic) |
+| SM3 | The seam's BINDING property (entailed by SM1/SM2) is CONCLUSION-SIGNALLED DELIVERY: a held completion is delivered ONLY when the initiating START attempt CONCLUDES (commit-landed, or failed/superseded) — NOT on any event-loop scheduling primitive. The EXCLUDED anti-pattern is a `queueMicrotask`/`setTimeout` delivery, because a provider completing synchronously inside `provision()` posts its READY while START's own post-`await` continuation (which runs `commitLifecycle`) is still queued behind it — a microtask FIFO would deliver READY BEFORE the `requested(request_id)` marker commits, and the correlation rung (still `none`) would reject it, LOSING the completion (the exact hazard SM1 forbids). The REFERENCE realization is an explicit per-`request_id` in-memory buffer flushed at the attempt's conclusion; any conclusion-gated EQUIVALENT (e.g. a per-`request_id` latch/promise resolved at `concludeAttempt`) is admissible PROVIDED delivery is triggered ONLY by attempt-conclusion — the constraint is the property, not the data structure. What is FORECLOSED is only the scheduling-based delivery: it satisfies neither SM1 nor SM2 and would rest on event-loop ORDERING substrate this packet deliberately does not stand on (reconciling the "no substrate probe required" line — a conclusion-signalled delivery is deterministic in-memory, the microtask variant is the excluded substrate dependency). The buffer/delivery is a COMPOSITION-INJECTED seam (C15's "the composition delivers"; ADR-014's port-injection culture — injected into the kernel like the registry, the store uninvolved — Mutable-flow record); only the CONCLUSION SIGNAL is kernel-originated: the `request_id` is minted inside `start` and NOT surfaced on `StartOutcome`, so `start` signals `concludeAttempt` at EACH provisioning attempt's conclusion. The TWO-PATH realization (SM1): the seam carries a `concluded` SET, marked at `concludeAttempt` BEFORE the buffer flush — a completion arriving while the id is UN-concluded is BUFFERED (path a, flushed at `concludeAttempt`); a completion arriving after the id is CONCLUDED is delivered DIRECTLY (path b — `deliverCompletion` invokes the RUNTIME_CONTEXT_READY handler, DETACHED so it returns to the provider IMMEDIATELY per SM2, the commit already landed so correlation matches or inert-rejects). The detached direct deliveries are tracked for a DRAIN (`Kernel.settleRuntimeContextDeliveries()` awaits every in-flight direct delivery and RETURNS their outcomes — a delivered-inert completion yields `{ignored}`, a dropped one yields nothing: the fail-able distinction SM2 needs; a real shutdown drains before teardown). The release TRIGGER is PER-ATTEMPT (C15/C18: a held completion releases when ITS initiating attempt concludes — commit-landed, failed, or SUPERSEDED), not per-`start`-call: on the CAS-restart (S5) a superseded `request_id`'s attempt CONCLUDES at the restart, and its buffered completion is released (inert by correlation, K3) THERE — at supersession, as the per-attempt trigger requires, BEFORE the next attempt provisions. The call-end `try/finally` over the restart loop is ONLY the leak-proof BACKSTOP — it flushes any minted id NOT already released at its own attempt's conclusion (the terminal committed/failed attempt, and a defensive net against an early throw), never the primary release for a superseded id. The post-provision exits `concludeAttempt` covers (the `try/finally` over the restart loop flushes EVERY minted id on each): `committed`, `duplicate_op`, `op_id_collision`, a THROWING `commitLifecycle` (a store-port rejection — the `finally` covers it), and the S4 `provision` port-breach throw; one `start` call may mint MULTIPLE `request_id`s (the S5 CAS-restart re-provisions under a fresh id), each buffered and each released at its own attempt's conclusion (the superseded id delivers-and-fails-correlation, inert — K3) (derived: contract:ch12-runtime-core#C15, #C18 + prose:ADR-014 composition-injected seam — DERIVATION: C15's FIVE observable rules (held, released-on-conclude, never-lost, never-mid-attempt, immediate-return) FORECLOSE the scheduling realization — a microtask post loses the pre-commit completion, so CONCLUSION-SIGNALLED DELIVERY is entailed (the property, not a specific data structure — an explicit buffer is the reference representation, a conclusion-gated latch an equivalent; the D1-grain representation choice is the build's); the request_id conclusion signal and the multi-id CAS-restart flush are S5/C18's own arithmetic) |
 
 ### E — the dispatch projection (`project_for_actor` — completing `l0e-pseudocode/dispatch_intent`)
 
@@ -725,7 +734,7 @@ lanes land at P4 — R-CLAIM-GRAMMAR PARAMETERIZED, not measured here.
 |---|---|---|
 | W1 | The interim `resolveWindowContext(template, ref)` helper + the `StartInput.runtimeContextRef` field (P1b's L3 window carrier) RETIRE: the four `resolveWindowContext` lanes are REPLACED by the real requirement branch (S1–S4). `template.runtimeContext: "required"` (the ch11 literal, `domain/template.ts`) → the real `RuntimeContextRequirement` type (T1). The retired value's CONSUMERS are enumerated by name (R-ABSENCE-CONSUMERS): `runtimeContextRef`, `resolveWindowContext`, the `runtimeContext: "required"` literal — the sweep re-runs UNTRUNCATED at build with a required end state of ZERO consumers outside this packet's own probes/comments (anchored: contract:ch12-runtime-core#C14, #C24 + prose:R-ABSENCE-CONSUMERS) |
 | W2 | The `runtimeContextRef` WIRE KEY retires from the ingress `start` intent keyset (P1b I2's interim carrier): `ingress/ingress.ts` drops the key from the allowed set, the destructure, the `invalid_runtime_context_ref` empty-string lane, and the passthrough; the `IngressDetailToken` `invalid_runtime_context_ref` member retires WITH it (its only producer). A `start` intent carrying `runtimeContextRef` is now an UNKNOWN-KEY rejection (the fail-closed ingress culture) (anchored: contract:ch12-runtime-core#C14, #C24 + prose:P1b I2 interim carrier) |
-| W3 | The CLI `runtimeContext: "required"` EAGER unstartable guard (`cli/main.ts` — the Y6 pre-check throwing `usage("StartFailed", …)`) RETIRES; a spec-or-`required`-declaring template is now refused by the KERNEL's own lanes — a residual `required` string by the R2 admission migration refusal, a spec map by START's `runtime_context_provider_unavailable` against the EMPTY production registry (C16) — replacing the eager guard with the real machinery (C24: no retired surface survives as a parallel path) (anchored: contract:ch12-runtime-core#C24, #C16, #C2) |
+| W3 | The CLI `runtimeContext: "required"` EAGER unstartable guard (`cli/main.ts` — the Y6 pre-check throwing `usage("StartFailed", …)`) RETIRES; a spec-or-`required`-declaring template is now refused by the KERNEL's own lanes — a residual `required` string by the R2 admission migration refusal, and a FILE-authored spec map (the only shipped-CLI form) by the admission P4-DEFERRED source-form refusal (the finding-6 guard, C25 — its YAML source form is not yet handled, so it never reaches START); a DIRECT-constructed spec map (not shipped-CLI-authorable at ch12) would reach START's `runtime_context_provider_unavailable` against the EMPTY production registry (C16, S2) — replacing the eager guard with the real machinery (C24: no retired surface survives as a parallel path) (anchored: contract:ch12-runtime-core#C24, #C16, #C2) |
 | W4 | The trace-harness CONTRACT re-bases (testkit): the `HarnessStartOpInput.runtimeContextRef` passthrough + the `TraceStep` start-step key + the `seams.start` forwarding RETIRE (W1's mirror); the dev CLI replay fixture-schema validator drops the `runtimeContextRef` start-step key WITH the contract (the P1b W3 precedent — the keyset shrinks, usage-2 refusals updated; no verb/flag semantics change). The dev `replay` root gains the SCRIPTED provider registry (C19: dev `replay` is where the provisioned path is drivable pre-ch9) (derived: contract:ch12-runtime-core#C14, #C19 + prose:built traceHarness contract — DERIVATION: the seam retirement is the mechanical mirror of W1's symbol removals; the dev scripted registry is C19's "the provisioned path is drivable pre-ch9, via the scripted provider" made concrete at the dev composition root) |
 
 ### T — the types
@@ -752,8 +761,10 @@ lanes land at P4 — R-CLAIM-GRAMMAR PARAMETERIZED, not measured here.
   the In-context notes, the Sizing Mutable-flow record.
 - The ORDERED-AFTER-COMMIT completion seam is canonical in SM1/SM2 (the
   FIVE observable rules — held, released-on-conclude, never-lost,
-  never-mid-attempt, immediate-return) with SM3 the realization
-  constraint; mirrors: Claim §4, the In-context notes, the Sizing
+  never-mid-attempt, immediate-return) with its TWO temporal paths
+  (held pre-conclusion / delivered-direct post-conclusion — SM1) and SM3
+  the realization constraint (the `concluded` set + the direct-delivery
+  drain); mirrors: Claim §4, the In-context notes, the Sizing
   Mutable-flow record.
 - The RUNG ORDER (terminal-sink → correlation → transport →
   required(spec) bind → kind boundary) is canonical in K2; mirrors:
@@ -794,17 +805,22 @@ re-discovered next round.
 - `provision` returns a promise whose FULFILLMENT is the DETACH
   ACKNOWLEDGMENT — the provider accepted and detached its async work —
   NEVER the completion. The kernel awaits the detach ack pre-commit
-  (C18); the completion (READY) arrives LATER through the seam. A
-  scripted player that completes synchronously inside `provision()` is
-  held by the seam until the START commit lands (SM1) — the test
-  provider exercises exactly this timing hazard.
+  (C18); the completion (READY) arrives LATER through the seam. Two
+  timing cases (SM1): a scripted player completing synchronously inside
+  `provision()` is HELD by the seam until the START commit lands, while
+  the normal case — a completion firing AFTER START concludes — is
+  delivered DIRECTLY (the commit already landed); the test provider
+  exercises BOTH (the synchronous timing hazard AND the post-conclusion
+  async delivery, finding 1's regression lane).
 - The PRODUCTION registry is EMPTY at ch12 (C16) — this is the honest
   chapter boundary, not a gap: wiring the testkit player into
   production would breach ADR-005 and fake a capability ch12 does not
-  ship. A spec-declaring template is unstartable through the shipped
-  CLI (`runtime_context_provider_unavailable`); `pairflow.worktree`
-  joins at ch9 under C15's production-provider gate (the failure→FAIL
-  channel first).
+  ship. A FILE/CLI-authored spec map is unstartable via the admission
+  P4-deferred refusal (finding-6/C25 — its YAML source form is P4's); a
+  DIRECT-constructed spec map (test-only) hits START's
+  `runtime_context_provider_unavailable` against the empty registry (S2);
+  `pairflow.worktree` joins at ch9 under C15's production-provider gate
+  (the failure→FAIL channel first).
 - The l0e golden-trace Config view authors `provider: pairflow.worktree`
   while the production registry is empty: the trace's TEST registry
   registers the scripted provider under that name (registry names are
@@ -826,6 +842,13 @@ re-discovered next round.
   prose's failure→`FAIL` routing arrives WITH the provisioning-failure
   Absent (a later chapter's rows); nothing at ch12 fires `FAIL` for a
   provider.
+- The FILE-channel runtime-context SPEC-MAP source form is P4-deferred
+  (C25/R3): the YAML walk lands a `mapAsMap` JS `Map`, and `admitTemplate`
+  REFUSES it cleanly at P3 with a P4-deferred finding (never a degenerate
+  unstartable). The window's file domain is `none`/absent (context-free)
+  or the ch11 `required` string (R2-refused); the DIRECT-construction
+  plain-object spec is the P3 value-level channel the golden traces
+  provision through (build-close finding 6, human-ratified option 1).
 
 ## Embedding gates
 
@@ -1017,8 +1040,9 @@ re-discovered next round.
   - `v3/src/ingress/ingress.test.ts` — the W2 `runtimeContextRef`
     key-retirement lanes (now an unknown-key rejection).
   - `v3/src/cli/cli.test.ts`, `v3/src/cli/journey.test.ts` — the W3
-    eager-guard retirement (the migration-refusal + the
-    unresolved-provider unstartable paths); the T4 packet value-ripple.
+    eager-guard retirement (the `required` migration-refusal + the FILE
+    spec-map P4-deferred admission refusal, finding-6/C25); the T4 packet
+    value-ripple.
   - `v3/src/cli/dev/dev.test.ts` — the dev scripted-provider provisioned
     `replay` path; the `runtimeContextRef` validator retirement.
   - `v3/src/store/sqliteStore.test.ts` — the `requested`/`ready(ref)`
@@ -1070,12 +1094,17 @@ are the draft's, not re-run here.
     port-breach and unresolved lanes must FAIL an implementation that
     commits before detaching or consumes the op_id. Membership: S1–S5
     (owner: this packet; driven in `kernel/lifecycle.test.ts`).
-  - **K (READY handler):** the declared set {the rung ORDER as a
-    COMBINATION discipline — a post-terminal AND mis-correlated event
-    is rejected on the FIRST rung (terminal-sink), proving order; the
-    correlation-reject family (duplicate / unsolicited / already-`ready`
-    / `requested`-of-a-different-id) each mutating NOTHING; the kind
-    boundary (match → accept, mismatch → reject no-state-change); the
+  - **K (READY handler):** the declared set {the rungs PER-RUNG (the two
+    inert rejections are outcome-INDISTINGUISHABLE — both `{ignored}`, no
+    state change — so no test can prove their relative ORDER by outcome;
+    the ORDER (terminal-sink before correlation) is CODE-REVIEW-asserted,
+    stated in the test): the terminal-sink rung EXISTS and fires — a
+    post-terminal event whose correlation WOULD match is still rejected
+    (no resurrection; red-proven by disabling the rung → the run
+    activates); the correlation-reject family (duplicate / unsolicited /
+    already-`ready` / `requested`-of-a-different-id) each mutating
+    NOTHING; the kind boundary (match → accept, mismatch → reject
+    no-state-change); the
     transport-gate integrity throw (a non-canonical ref); the
     accepted-readiness `ready(ref)` commit → `activate_or_hold` fork
     (immediate → Activated + first dispatch; deferred → WAITING)} each
@@ -1085,8 +1114,15 @@ are the draft's, not re-run here.
   - **SM (completion ordering):** the declared set
     {synchronous-completion HELD until the START commit (a scripted
     provider firing READY inside `provision()` — the run reaches
-    `ready`/ACTIVE, never lost to the pre-commit window); released on
-    a SUPERSEDED attempt delivers-but-correlation-rejects (inert);
+    `ready`/ACTIVE, never lost to the pre-commit window); POST-CONCLUSION
+    DIRECT delivery (SM1 path b — a completion firing AFTER START concludes
+    is delivered directly, the run reaches `ready`/ACTIVE; the fail-able
+    distinction is the drain — `settleRuntimeContextDeliveries()` returns
+    `[activated]` when delivered vs `[]` when the pre-fix code dropped it,
+    finding 1's regression lane; a delivered-INERT completion returns
+    `[{ignored}]` vs `[]` for a drop); released on a SUPERSEDED attempt
+    delivers-but-correlation-rejects (inert, observable via the drain
+    `[{ignored}]`);
     released on a FAILED / NON-COMMIT conclusion — the S4 port-breach
     throw, a THROWING `commitLifecycle` (store-port rejection), AND the
     non-commit exits (`duplicate_op`, `op_id_collision`) each flush the
@@ -1124,9 +1160,9 @@ are the draft's, not re-run here.
     `runtimeContext: "required"`) finds ZERO consumers outside this
     packet's probes/comments; the ingress unknown-key lane for
     `runtimeContextRef`; the CLI eager-guard-retirement lanes (a
-    `required` file → migration refusal; a spec file →
-    `runtime_context_provider_unavailable`); the dev validator's
-    re-based keyset. Membership: W1–W4 (owner: this packet; driven in
+    `required` file → migration refusal; a FILE spec map → the
+    P4-deferred admission refusal, finding-6/C25 — never the shipped-CLI
+    START path); the dev validator's re-based keyset. Membership: W1–W4 (owner: this packet; driven in
     `ingress/ingress.test.ts`, `cli/cli.test.ts`, `cli/dev/dev.test.ts`).
   - **T (types):** the out-of-shape probes (a raw ref in the packet, a
     non-`RuntimeContextRequirement` template field) are compile errors;
@@ -1219,7 +1255,72 @@ value-ripple sweep — their derivation notes are in-row.
 
 ## Build record
 
-<Filled at build close.>
+Built at `cfabfe46`; six build-close aftermath findings folded (uncommitted at
+report time). Two P1 product fixes: (F1) the completion seam lost a provider's
+ASYNC post-conclusion READY (buffered but never re-flushed) — fixed with a
+`concluded` set + a DIRECT post-conclusion delivery (`deliverCompletion`) and a
+`settleRuntimeContextDeliveries` drain that returns the delivery outcomes; (F6)
+the file-channel runtime-context spec-map source form (a `mapAsMap` JS `Map`)
+was degenerately accepted — `admitTemplate` now refuses it CLEANLY as
+P4-deferred (C25), the direct-construction plain-object spec unaffected.
+
+**R-DERIVED-PROBES (family → what breaks → expected red → observed).** Every
+row's cited test goes RED when its rule is violated (each fail-first-verified by
+disabling the rule):
+
+| Family | What breaks | Red-proven probe |
+|---|---|---|
+| PR | provider returns a lossy projection ungated | `testkit/scriptedRuntimeContextProvider.test.ts` — "projectForActor GATES its return canonical-JSON-safe (PR4)". OBSERVED (mutation: disable the provider's `isCanonicalizable` gate): `AssertionError: expected [Function] to throw an error` |
+| S | an unresolved provider consumes the op_id / commits pre-detach | `kernel/lifecycle.test.ts` — "S2: an UNRESOLVED provider → Rejected(...) PRE-commit; op_id NOT consumed" + "S4: a synchronous provision throw is a PORT BREACH". OBSERVED (mutation: disable S2's `provider === null` pre-commit reject): `TypeError: Cannot read properties of null (reading 'provision')` |
+| K | the terminal-sink rung is absent (resurrection) / the correlation rung is absent | PER-RUNG (the two inert rejections are outcome-INDISTINGUISHABLE — both `{ignored}` — so the rung ORDER itself is CODE-REVIEW-asserted, NOT outcome-provable, stated in the test): `kernel/lifecycle.test.ts` — "K2 terminal-sink (per-rung): a post-terminal READY whose correlation WOULD match is still rejected — no resurrection" (red-proven: disabling the rung → the run ACTIVATES) + the correlation inventory ("K3 correlation (unsolicited / already-ready-duplicate)", "K2 kind boundary") + "K2 required(spec) bind" (integrity throw, runtime_context UNCHANGED). OBSERVED (mutation: disable the terminal-sink rung): `AssertionError: expected { kind: 'activated', …(3) } to deeply equal { kind: 'ignored' }` (the post-terminal correct-req READY resurrects the run) |
+| SM | a completion delivered before commit / dropped post-conclusion / a HELD completion not flushed at a superseded/failed/duplicate/collision conclusion | `kernel/lifecycle.test.ts` — "SM1" (held until commit), "SM2 (finding 1)" (async post-conclusion delivered, not dropped), "SM2 (finding 2b)" (superseded post-conclusion delivered-inert), "SM (finding 2 held-a)" (CAS-superseded HELD completion released inert), "SM (finding 2 held-b/held-c)" (duplicate_op / op_id_collision exits flush the held completion), "SM3"/"SM (finding 2c)" (port-breach / throwing-commit exits flush) — red-proven per lane by the lane-appropriate mutation: the POST-CONCLUSION DIRECT lanes ("SM2 finding 1", "finding 2b") red by disabling the `deliverCompletion` DIRECT-delivery branch (drain returns `[]` not `[activated]`/`[{ignored}]`); the HELD lanes (held-a/b/c, port-breach, throwing-commit) red by disabling `concludeAttempt`'s buffer-flush (load-count observable); and "SM drain (concurrent arrival)" — `settle` DRAINS FULLY then throws, so an integrity-erroring delivery does not leave a concurrently-arriving delivery undrained (red-proven by restoring the mid-loop throw: the leftover second-drain returns `[{ignored}]` instead of `[]`); and "SM (pre-conclusion buffer)" — `concludeAttempt` delivers EVERY held completion (deliver-all-then-throw), so a transport-gate throw on an EARLIER held completion does not drop a LATER one (two held completions for one request_id: first non-canonical → integrity throw, second valid → still delivered to ready/ACTIVE; red-proven by restoring the abort-on-throw form: the run stays `CREATED` instead of `ACTIVE`). OBSERVED transcripts: held-a (mutation: disable `concludeAttempt`'s buffer-flush) `AssertionError: expected 2 to be greater than 2` (the CAS-superseded held completion dropped, load delta 2 vs 3); drain-concurrent (mutation: restore the mid-loop throw in `settle`) `AssertionError: expected [ { kind: 'ignored' } ] to deeply equal []` (the concurrently-arrived delivery left undrained); pre-conclusion-buffer (mutation: restore `concludeAttempt`'s abort-on-throw) `AssertionError: expected 'CREATED' to be 'ACTIVE'` (the later held completion dropped) |
+| E | the raw ref leaks into the packet / a vanished provider silently ignored | `kernel/dispatchIntent.test.ts` — "E1: ... the RAW ref never enters the packet", "E2: a vanished provider ... INVARIANT throw". OBSERVED (mutation: `projectRuntimeContext` returns `rc.ref` instead of `projectForActor(ref)`): `AssertionError: expected { kind: 'worktree', …(1) } to deeply equal { workspace: '/w/inst-1', branch: 'b' }` |
+| R | the retired `required` string / a file-channel spec map is accepted | `definition/admit.test.ts` — "R2 ... LOUD migration refusal", "R4 ... C5 SUPPRESSED"; `definition/load.test.ts` — "a YAML SPEC MAP → admission REJECTS with the P4-deferred finding" (C25). OBSERVED (mutation: disable R2's `runtimeContext === "required"` refusal): `AssertionError: expected 'runtimeContext must be "none" or a sp…' to contain 'retired'` (the bare `required` falls through to the generic illegal-value finding, losing the migration text) |
+| W | a retired seam key survives as a live path | `ingress/ingress.test.ts` — "W2 ... UNKNOWN-KEY rejection"; `cli/cli.test.ts` — "W3 ... a FILE-authored spec-map template → the C25 P4-deferred admission refusal" + "a residual `required` template → the R2 migration refusal"; `cli/dev/dev.test.ts` — "W4 ... UNKNOWN FIELD". OBSERVED (mutation: re-add `runtimeContextRef` to the ingress `start` keyset): `AssertionError: expected { kind: 'accepted' } to deeply equal { kind: 'rejected', …(1) }` (the surviving key passes through instead of the unknown-key rejection) |
+| T | a raw ref assigned to the packet field / a missing field compiles | `kernel/dispatchIntent.test.ts` — the `@ts-expect-error` T2 probes (branded projection rejects the raw ref; the field is non-optional) — enforced by `v3:typecheck` (TS2578). OBSERVED (mutation: make the raw-ref probe's assignment valid, so its `@ts-expect-error` is unused): `src/kernel/dispatchIntent.test.ts(20,1): error TS2578: Unused '@ts-expect-error' directive.` |
+
+C25 note (F6): the FILE-channel runtime-context spec-map SOURCE FORM stays
+P4-deferred (R3); admission refuses a `mapAsMap` JS `Map` cleanly at P3 (the
+window's file domain is `none`/absent; the ch11 `required` string is R2-refused).
+The DIRECT-construction plain-object spec is the P3 value-level channel (the
+golden traces provision through it).
+
+**Round + yield history (arm-gate legs; measurement stage — the two
+transitional external-arm gates ran agent-invoked).** GATE 1 (approve, on
+the packet bytes): 1 infra timeout + 6 verdict rounds, yield 4→2→2→1→1→0
+findings, CLEAN at basis `58a0cca8`. GATE 2 (build-close, on the
+implementation, sensitivity pass): round 1 → 6 findings incl. a P1 PRODUCT
+bug; re-checks yield 6→2→1→1→2→(this record's fill), converging to product-
+and test-clean (the arm confirmed both buffer-consumers hardened, no third
+instance, no product-side contract divergence). All folds landed as this
+uncommitted aftermath; the internal Opus panel's prior clean close is the
+baseline the two arm gates measured against. **Test delta:** the v3 suite
+grew from 1155 (pre-build) to 1194 (+39): the build's l0e/l0d golden traces +
+the scripted-provider contract + the S/K/SM/E/R/W/T family lanes + the
+value-ripple re-base, then the build-close aftermath's fail-able SM held/direct
+lanes, the drain concurrent-arrival regression, and the `concludeAttempt`
+never-dropped regression. **Leg close (diminishing-returns cutoff, README §6):**
+the gate-2 arm's round-6 re-check confirmed the implementation product- and
+test-clean and the `packet_metrics` complete, yielding only a P3
+bookkeeping-class format item (the observed-red transcript on the K/SM rows,
+2/8), now folded — so the build-close arm leg CLOSES on a bookkeeping-only round
+rather than a further churning re-check.
+
+**Detector-misses (the measurement-stage yield — what the internal panel
+cleared that the cross-model arm caught; each feeds the boundary review):**
+(DM1, gate 1) the requirement was materialized at the kernel READ, not AT
+ADMISSION per ratified C4 — a type-level faithfulness gap the projection
+lens read past (captured in the process-log gate-1 retro). (DM2, gate 1) the
+`projection-never-the-ref` invariant is ratified `type/schema`, but a
+structural `Record`/`unknown` projection type NEVER excludes a `{kind,locator}`
+ref — only a declared-unique-symbol BRAND does; the panel accepted the type
+without checking realizability. (DM3, gate 2) the completion seam LOST a
+provider READY firing async AFTER START concluded (the normal path) —
+buffered, never re-flushed; a real product bug the panel + gate 1 both missed
+(the SM review never walked the post-conclusion timeline). (DM4/DM5, gate 2)
+the abort-on-throw-drop class in the two sequential-await buffer consumers
+(`settle`, `concludeAttempt`) — an earlier held completion's transport throw
+dropped the rest, violating SM2's unconditional never-dropped.
 
 ```json
 {
@@ -1227,10 +1328,17 @@ value-ripple sweep — their derivation notes are in-row.
     "class": "kernel-semantic",
     "prediction": { "predicted": "projection", "reasoning": "plan §12.4 P3 row: l0e-pseudocode + ledger §2/§3/§4 + the ratified chapter draft", "discovered": "projection" },
     "provenance": { "anchored": 28, "derived": 6, "new_decision": 0 },
-    "rounds": { "review": 0, "doc_refinement": 0, "implementation": 0 },
-    "stops": [],
-    "detector_misses": [],
-    "learned": ""
+    "rounds": { "review": 12, "doc_refinement": 0, "implementation": 6 },
+    "stops": [
+      { "type": "2:contested-ratified-vs-reality", "what": "gate-2 finding 6 — the C25 file-channel spec-map staging (accepted-degenerate vs cleanly P4-deferred); the gate-1 T1/C4 materialization point was a recommendation-first surfacing, folded to conform, not a registry STOP", "resolution": "human-ratified fold — the clean P4-deferred admission guard (option 1); gate-1 yields 4→2→2→1→1→0, gate-2 yields 6→6→2→1→1→2→0 (arm-round history, prose above)" }
+    ],
+    "detector_misses": [
+      { "found_at": "arm-approve", "what": "the requirement was materialized at kernel-read, not at admission per ratified C4", "why_missed": "the projection lens read past a type-level materialization-point faithfulness gap" },
+      { "found_at": "arm-approve", "what": "projection-never-the-ref is ratified type/schema but a structural Record/unknown never excludes a {kind,locator} ref — only a declared-unique-symbol brand does", "why_missed": "the panel accepted the declared type without a type/schema realizability check" },
+      { "found_at": "arm-build-close", "what": "the completion seam lost an async post-conclusion READY — a real product bug (buffered, never re-flushed)", "why_missed": "the SM review never operationally-walked the post-conclusion delivery timeline" },
+      { "found_at": "arm-build-close", "what": "abort-on-throw dropped later held completions in settle + concludeAttempt, violating SM2 never-dropped", "why_missed": "sequential-await-in-a-loop drop-on-throw was not probed against the never-dropped contract" }
+    ],
+    "learned": "Three boundary-review candidates: (1) a type/schema-DISPOSITION REALIZABILITY check — for every invariant a packet declares type/schema, confirm the named type NOMINALLY excludes the invariant's negative (a brand), not merely structurally coincides (the DM2 class). (2) operational-simulation of ASYNC seams — walk the post-conclusion delivery timeline, not just the pre-commit hold (the DM3 class). (3) the abort-on-throw-drop class in sequential-await buffer consumers — deliver-all-then-throw (the DM4 class). Also: the fresh-context-delegated build worked (§5.3 self-containment held), but the agent's folds needed orchestrator correction on subtle async correctness (the void-finally, the two twins) — the build-execution-context boundary-review item (docs b8ceeb69) should weigh whether such fixes are the orchestrator's by default."
   }
 }
 ```
