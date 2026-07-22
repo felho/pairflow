@@ -3706,3 +3706,30 @@ final CLEAN.
   Heavies = the five highest observed loads; the owner-estimate
   difficulty note was REJECTED by the owner as unanchored — the index
   is computed from declared machine blocks at approve time instead).
+
+- 2026-07-22 · ch12 boundary review · VERDICT — the ch11-P3b ARMED
+  falling-yield prediction MEASURED on ch12's arm gates: gate-1 content
+  yields P0:8 / P1a:6 / P1b:8 / P2:flag / P3:10 / P4:5 against the ch11
+  band of 5–10 — the yield is FLAT, not falling, and the arm kept
+  minting NEW catch-classes all chapter (record-precision,
+  entailment-depth, type/schema realizability, async-timeline,
+  code-substrate assumption) even though the ch11-adopted duties were
+  in force. Per the prediction's own pre-registered branches: the
+  different-question-generator property is NOT reducible to listed
+  duties — the ARM IS LOAD-BEARING indefinitely at current maturity;
+  the two mandatory gates stay, narrowing is off the table until the
+  model-tier-experiment-2 paired data offers a cleaner read. Named
+  confound: ch12-P2/P3/P4 main threads ran Opus-class (the REVERTed
+  experiment), which may have raised the error supply — but the two
+  clean Fable points (P1a:6, P1b:8) sit in the old band, so FLAT stands
+  either way. Secondary observation recorded as INPUT TO the boundary's
+  mutation-testing item: gate-2's product needle fell to 0 by P4 while
+  the green-but-blind needle held at 4–8 per packet — gate-2 is
+  morphing into a specialized test-sensitivity auditor, so any
+  mechanization of sensitivity checking directly absorbs gate-2's
+  current niche and must be weighed against it (incl. the owner's
+  standing question: run the deterministic system and the external arm
+  IN PARALLEL for a period before any substitution). OWNER CAVEAT
+  recorded with the verdict: the experiment count is very low — these
+  assessments may not generalize; treat them as current-best working
+  conclusions, re-read as data accumulates, not as settled truths.
