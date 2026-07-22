@@ -4036,3 +4036,31 @@ final CLEAN.
   cleanest small-scale demonstration yet. Boundary candidate queued
   (WATCH-first respected: single occurrence of the artifact class):
   close artifacts built by delegation get an arm pass by default.
+
+- 2026-07-23 · ch8 realized_map ARM-AUDIT SWEEP (the goal-driven
+  overnight sweep, map 1 of 3) — the owner's follow-through on the
+  ch12 audit's lesson: if a fresh map carried 8 defects, the OLDER
+  maps built by the same close process likely do too. They did.
+  Arm run on basis df4cdaf0 (pin-conform gpt-5.6-sol/high, byte
+  guard intact): FINDINGS (11) — ten the manifest cross-check
+  CONFIRMED (the same omission/mis-attribution class as ch12: E5
+  missing from C20/C21/C31, S4 from C28, B4 from C29/C31/C38, M5
+  from C32, G8 from C36, A3 from C31/C37, W2 from C31; plus the C22
+  G1 citation formally anchored at C36 — reattributed to context),
+  and one OUTSIDE the manifest's reach: C16 cites start.ts, deleted
+  later by ch12-P1b (6aec56d4) — a TEMPORAL-DRIFT class, not a
+  close-time defect; folded as an annotation, not a rewrite. The
+  cross-check again out-caught the arm: TWO machine-only finds (C8
+  missing the P2 T2 co-lane; C25's "the V8 lane stands in" reading
+  as a V8 attribution — reworded to C13-anchored context). 13 rows
+  folded total; packet-lint green; hash-citing re-check on 5640c002
+  CLEAN; a FRESH INDEPENDENT full-scope run on the folded bytes also
+  CLEAN — the convergence rule (fresh-run-clean, not
+  changed-rows-clean) satisfied in one fold round. Two notes for the
+  ch13 tally: (a) the arm's first verdict cited a 63-of-64-hex BASIS
+  (a transcription slip; the machine cross-check adjudicated all
+  folds, and the re-check + fresh run cited the full hash) — the
+  citation-exactness demand moved into the prompt template; (b) the
+  independence split so far across two maps: arm-only 1 (the
+  temporal-drift C16 — file reality is invisible to the manifest
+  scan), cross-check-only 3, both 17.
