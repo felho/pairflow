@@ -4390,3 +4390,23 @@ final CLEAN.
   the ch12-P3 SM3 precedent; K2 testkit-grain) were
   REFUTATION-ACCEPTED by the arm — the refute-with-evidence lane is
   live and does not flag-bear.
+
+- 2026-07-23 · ch9-P2 PRIOR-ART GAP AT THE DRAFT ROUND (the C7
+  dir-default reopen) — the ch9 draft's C7 pinned the worktree-parent
+  default INSIDE the repo working tree (`<repo>/.pairflow-worktrees`)
+  with a DECIDED-HERE, and neither the draft panel nor the arm ran a
+  v1 prior-art comparison; the USER's reality-check prompt surfaced
+  that v1 (`bubblePaths.ts`) and omnigent (`host/git_worktree.py`)
+  both independently place worktrees BESIDE the repo — in-repo
+  placement exposes live worktrees to host `git clean`, status
+  pollution (probe P4d), tree-wide sweep poisoning, and
+  linked-worktree nesting. Resolved by a ratified→reopened→ratified
+  amendment (commits 09825f78 + 4db149b1, user-elected option A).
+  Boundary candidate: a PRIOR-ART CHECK duty for draft rounds on
+  surfaces v1/studied systems already implement (lens 5 or a
+  DraftContract §-step) — v1 iterated on these mechanics for months;
+  diverging must be conscious, never accidental. Second observation:
+  the deliberate v1 divergences found in the same check (loud
+  collision vs omnigent's suffix-retry; enc vs branch-name
+  validation) were all CONSCIOUS and documented — the gap class is
+  the un-run comparison, not the divergence itself.
