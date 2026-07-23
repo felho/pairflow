@@ -153,3 +153,8 @@ design and this divergence is informative, not a defect. Spread:
   chapter ratification per §5). Panel lenses and the external arm
   unchanged (arm-pin.md). The chapter's per-packet difficulty scores
   append here at each approve.
+- 2026-07-23 — ch9-P0 sys-rename APPROVED (flag-free autonomous;
+  arm gate-1 CLEAN @ d4b238e8): difficulty A0 (9 rows) B0 (2
+  derived + 0 new-decision) C1 (16 boundary files) D0 (pure sync
+  respelling — no stateful/async seam) E0 (kernel-alignment class,
+  ch12-P0 precedent) — **Σ 1, Light**.
