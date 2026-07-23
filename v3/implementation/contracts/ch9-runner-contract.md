@@ -1,7 +1,7 @@
 # ch9 — runner contract
 
 ```json
-{"contract_draft": {"chapter": "ch9", "surface": "runner", "status": "reopened"}}
+{"contract_draft": {"chapter": "ch9", "surface": "runner", "status": "ratified"}}
 ```
 
 ## Context (non-normative by declaration)
@@ -191,4 +191,8 @@ packet-time split candidates.
 
 ```json
 {"ratification": {"date": "2026-07-23", "arms": ["agent-invoked codex gpt-5.6-sol/high — one full adversarial round (13 findings: 12 folded, 1 refuted with an executed-grep receipt) + four re-checks converging 4 \u2192 3 \u2192 1 \u2192 CLEAN on the final basis"], "commit": "5c68f206f153539c63403517240139f9d4dec59f"}}
+```
+
+```json
+{"ratification": {"date": "2026-07-23", "arms": ["in-session v1/omnigent prior-art reality check (v1 bubblePaths.ts, omnigent host/git_worktree.py) \u2014 scope: C7 dir-default + C10's dependent leak clause; no external arm on the one-value amendment (the ch9-P2 packet panel and its approve-arm review the amended rows in situ); user-elected option A"], "commit": "09825f78c3e0fbc28eed007075897ab77dc20137"}}
 ```
