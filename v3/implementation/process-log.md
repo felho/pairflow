@@ -4238,3 +4238,15 @@ final CLEAN.
   expected ch9 outcomes. The reflection loop is the owner's own
   addition: the gate must LEARN from each model touch, but rule
   edits happen only at boundaries.
+
+- 2026-07-23 · WATCH (boundary-review item, owner-raised at the ch9
+  opening): should the PLAN-ASSEMBLY layer (chapter-section
+  ratification + process-rule text) get a standing external-arm
+  round? The owner caught the C22 ADR-lift gap "partly by accident"
+  during the ch9 chapter/draft discussion — the layer now mints
+  cross-chapter shapes (the decision-home triage was born here) with
+  no adversarial pass of its own. First data point: the ch9 draft
+  arm run's scope EXTENDED to the ratified chapter section + the
+  README §6 triage text (zero extra cost, same run). The boundary
+  review disposes: standing gate / scope-extension convention /
+  non-issue.

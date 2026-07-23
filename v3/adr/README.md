@@ -30,6 +30,9 @@ Integrity check: [`check.sh`](check.sh) — root bridge `pnpm v3:adr-check`.
 | [ADR-013](ADR-013-gates-module-and-registry.md) | the gates module — evaluators, static registry, injected composition | accepted | 2026-07-11 |
 | [ADR-014](ADR-014-runtime-core-module-homes-and-provider-seam.md) | runtime-core module homes — lifecycle in the kernel, the provider seam as a port | accepted | 2026-07-18 |
 | [ADR-015](ADR-015-v3-plane-consolidation.md) | v3 plane consolidation — `docs/v3/` merges into `v3/` | accepted | 2026-07-21 |
+| [ADR-016](ADR-016-delivery-errand-ledger-shape.md) | the delivery-errand ledger — runner-owned, scheduling-only claims, kernel-evidence confirmation | proposed | 2026-07-23 |
+| [ADR-017](ADR-017-spawn-confinement-boundary.md) | one spawn discipline — cwd confinement, env allowlist, timeout kill | proposed | 2026-07-23 |
+| [ADR-018](ADR-018-sys-reason-token-namespace.md) | the `sys:` reason-token namespace convention | proposed | 2026-07-23 |
 
 ## Trigger watch (dormant ADRs)
 

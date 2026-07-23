@@ -1,0 +1,167 @@
+# ch9 — runner contract
+
+```json
+{"contract_draft": {"chapter": "ch9", "surface": "runner", "status": "draft"}}
+```
+
+## Context (non-normative by declaration)
+
+**Business invariant.** A committed dispatch is eventually delivered to
+a real actor with effectively-once semantics — delivery may repeat,
+but repeated delivery collapses at the kernel (content-addressed
+`op_id` → `Duplicate`), so correctness never depends on the runner
+plane's discipline. A declared runtime-context requirement is either
+provisioned for real or the run FAILs visibly through the correlated
+kernel channel — never a silent hang once a real provider exists.
+
+**Control model.** The kernel stays the single authority (commit-based,
+ADR-003/ADR-004). The runner plane is host-local composition: a
+delivery loop, the worktree provider, and process spawns. It talks to
+the kernel ONLY through normal ingress ops and the ch12 L0e provider
+port; its own bookkeeping (the delivery-errand ledger) is
+runner-owned durable state, never kernel state. Claiming is
+scheduling-only, never semantics (the ADR-003 stance; ADR-016).
+
+**Read path.** The delivery loop discovers work by reading COMMITTED
+rows through the store/floor read seams; actors see only the
+projected packet; the attach channel observes the actor's terminal,
+never kernel state.
+
+**Forbidden fallback.** No production provider registration without
+the realized failure→FAIL channel (the ch12-C15 D5 gate). No errand
+marked confirmed without committed kernel evidence (a delivery
+self-report is not evidence). No system reason token outside the
+`sys:` namespace. No kernel-state write from the runner plane outside
+ingress.
+
+**Allowed resolution.** Durable bounded retry; a distinct visible
+`unconfirmed` state with the operator re-spawn recourse (C14/C25);
+run-level operator recourse stays CANCEL (ch12) plus floor
+visibility.
+
+**Missing data.** A spec whose config the provider cannot honor is a
+correlated FAILED completion (reasoned), never a guess and never a
+silent hang.
+
+**Substrate probes (2026-07-23, in-session; scripts in the session
+scratchpad `probes/` — git 2.x on darwin, tmux 3.7b, node 24.18):**
+
+| Probe | Question | Observed |
+|---|---|---|
+| P1a | `git worktree add <path> -b <branch>` fresh | exit 0, dir + branch created |
+| P1b | same branch name again | fatal "branch already exists", exit 255 |
+| P1c | existing non-empty target path | fatal "already exists", exit 128 |
+| P1d | dirty main worktree blocks add? | NO — exit 0 |
+| P1e | `worktree add` from WITHIN a linked worktree | exit 0 |
+| P1f | `worktree list` from a linked worktree | all worktrees listed, exit 0 (context probe — floor findability, no row's proof) |
+| P1g | `--detach` at a specific commit | exit 0 (context probe — C9 uses P1h's branch form) |
+| P1h | `worktree add <path> -b <branch> <committish>` | exit 0, new branch created AT the committish |
+| P2a | tmux present + version | `/opt/homebrew/bin/tmux`, tmux 3.7b |
+| P2b | detached tmux session create/has/kill | all exit 0 |
+| P2e | session auto-death on the command's NATURAL exit | `has-session` 0 while running, 1 after exit (default remain-on-exit off) |
+| P2c | send-keys + capture-pane round trip | content observed (async — settle delay needed) |
+| P2d | read-only attach flag (`attach -r`) | accepted (fails only on missing tty) |
+| P3a | node `spawn` with `timeout` option | kill delivered as `signal: "SIGTERM"`, `code: null` |
+| P3b | child writes stdout then exits 3 | BOTH observable: `code: 3` + captured stdout |
+| P3c | spawn of a nonexistent binary | `error` event `ENOENT` (a distinct lane, no exit code) |
+| P3d | `spawn` with an explicit `env` object | full replacement — the child sees ONLY the passed variables (5 vars incl. shell builtins; `SECRET` empty) |
+
+(P2c — send-keys/capture-pane round trip — is a retained context probe:
+the load-bearing actor handoff is file-based (C17/C20), pane capture is
+no row's proof. P3b — stdout + nonzero exit both observable — backs
+C19's captured-stdio lane.)
+
+**Prepared reopen payload (ch11-gate-format — consumed by C27's act at
+ratification; bookkeeping until then).** RECOMMENDED successor form
+for ch11-C31 (amendable at the act if the C27-recorded alternative is
+elected):
+
+> A runner-outcome block REJECTS at HANDLE as
+> `gate_blocked(reason=<fixed token>)` — the SAME rejection name as a
+> business block, audited distinctly BY the reason (the l2a trace:
+> `gate_blocked(reason=sys:runner_error)`). Reason tokens — authored
+> (C17, grammar `^[a-z][a-z0-9_]*$`) and fixed (`sys:round_below_min`,
+> `sys:no_previous_verdict`, `sys:exit_zero`, `sys:exit_nonzero`,
+> `sys:runner_error`, `sys:timeout`,
+> `sys:malformed_gate_decision_json`) — are `gate_blocked` REASON
+> PAYLOAD, never registry rejection names: a reason token never
+> occupies a rejection-name position (the POSITIONAL boundary).
+> System-vs-authored disjointness holds BY CONSTRUCTION (the authored
+> grammar cannot express `:` — ADR-018), and no `sys:`-prefixed token
+> can equal a registry name (no registry name contains `:`); an
+> authored token that SPELLS a registry name remains payload-only and
+> positionally harmless — the earlier set-disjointness promise is
+> NARROWED to this positional rule (re-ratified at the ch9 draft act,
+> 2026-07-23).
+
+Per-site token edits (the reopen's full ROW scope; every id in this
+paragraph is a ch11-gate-format row — ch9's own C10/C11/C17/C25/C26
+are unrelated): ch11-C10 `round_below_min` → `sys:round_below_min`;
+ch11-C11 `no_previous_verdict` → `sys:no_previous_verdict`; ch11-C17
+`exit_zero` / `exit_nonzero` / `runner_error` / `timeout` /
+`malformed_gate_decision_json` → the `sys:` forms; ch11-C25
+`malformed_gate_decision_json` → the `sys:` form; ch11-C26's
+classification REFERENCE ("whose C25 classification is
+`malformed_gate_decision_json`") → the `sys:` form (the row's
+`ProcessResult.kind` values themselves stay bare); ch11-C31 → the
+successor text above. ch11-C29 is OUT of scope: its spellings are
+the six-outcome DRIVE labels (`allow` / `warn` / `block` / `timeout`
+/ `runner_error` / `malformed` — kind-adjacent), not reason tokens —
+they stay bare, as does the `ProcessResult.kind` domain
+(`ok | timeout | runner_error`, ch11-C26/C34) — see C27. MAP scope
+(commit 2's "map restored" is an UPDATE, not a verbatim restore —
+the `v3:realized-map` lint is token-blind, so these edits are named
+here, never left to inference): ch11-C31's map entry RESOLVES its
+"REALIZATION GAP, owner ruling pending" language to the ratified
+positional-narrowing form with realization delegated to ch9-P0;
+ch11-C10 / ch11-C11 / ch11-C25's map entries track the `sys:`
+spellings.
+
+**Seed-row disposition (plan §9.3's indicative list → rows; bookkeeping,
+non-normative):** FAIL wire shape / correlation / reason domain →
+C1–C5; provider failure single-shot semantics → C1, C11; worktree spec
+grammar + ref + projection → C7, C10; worktree git mechanics
+(naming, collision, dirty-state, probes) → C8, C9; delivery-errand
+contract (claim / crash-window / no-ack / budget) → C12–C16; actor
+adapter contract (spawn env, handoff, capture, IC-E) → C17–C20;
+process-gate spawn rows (timeout / exit lanes / malformed) → C21;
+attach verb + capability rules → C23, C24; CLI schemas + exit lanes →
+C25; production-registry successor → C6; the §9.3 draft-time question
+"do failure reasons adopt a `sys:`-consistent namespace?" → YES (C3,
+C22, ADR-018). Beyond the seed list: C22 (the uniform `sys:`
+convention), C26 (diagnostic-channel reuse), and C27 (the ch11-C31
+reopen carrier) — additions, each DECIDED-HERE-marked.
+
+## Contract rows (every normative statement is a C-row)
+
+| ID | Rule |
+|---|---|
+| C1 | The `RuntimeContextProvider` port gains a SECOND completion — `RUNTIME_CONTEXT_FAILED(instance_id, request_id, reason, detail?)` — fired through the SAME in-process event seam as READY (ch12-C13); READY and FAILED are mutually exclusive PER REQUEST: a provider fires at most ONE completion per `request_id`, and any second completion (either kind) is rejected by WHICHEVER admission rung the first admission left standing — after a READY-first admission the CORRELATION rung (the marker moved to `ready(ref)`, so `requested(request_id)` no longer holds); after a FAILED-first admission the TERMINAL-SINK rung (the run is TERMINAL and C2 keeps the marker `requested`, so correlation alone would still pass) — either way inert, bare-REQUIRE, no state change (ch12-C15's safety, both rungs jointly). DECIDED HERE — this realizes the failure-routing prose the model already carries and ch12-C15 explicitly deferred to this chapter; K0 answered: the semantic (failure → `FAIL`) is already model-side, the wire form is seam contract — no model wave (packet-time re-check stands: a discovered need for FAILED-side model units routes through the divergence stop, never assumed away here). |
+| C2 | FAILED admission runs the SAME ordered rungs as READY (ch12-C18's order: terminal-sink state rung first — `kernel_status ≠ TERMINAL` — then correlation), and an ADMITTED completion commits the EXISTING kernel `FAIL` disposition atomically (single-write `terminal_disposition = failed`, `kernel_status → TERMINAL`, the run's `failure_reason` ← the completion's `reason`); the `runtime_context` marker keeps its last committed value (`requested(request_id)`) as diagnostic state — the terminal disposition IS the record. A rung-rejected FAILED completion mutates NOTHING. |
+| C3 | The provisioning-failure `reason` domain is a CLOSED, kernel-owned enum — at ch9 exactly two members: `sys:provision_rejected` (the provider determined the spec/config cannot be honored — e.g. missing or non-git `repo`) and `sys:provision_failed` (the provisioning mechanics failed — e.g. a git command's nonzero exit, P1b/P1c). Members grow ONLY by contract successor rows; the domain is validated at the completion's own transport gate (C5). DECIDED HERE → ADR-018 (the convention's second instantiation). |
+| C4 | `detail` on a FAILED completion is OPTIONAL untrusted diagnostic free text (e.g. a stderr tail): it is confined to the diagnostic/audit surface (kernel log + floor detail), is NEVER parsed, NEVER matched against any token domain, and NEVER enters `failure_reason` — the reason token (C3) is the only classified value. DECIDED HERE (the free-text boundary classification). |
+| C5 | The FAILED completion rides the READY completion's transport rules — unchanged in MECHANISM, PLUS one additional check at the same gate point: the reason-domain membership gate (C3) (ch12-C15's rules cited, not restated): canonical-JSON-safe by port contract, violations = kernel/config integrity throw at the value's own gate; ordered-after-commit hold/release applies IDENTICALLY (a provider that DETACHES and then fires its FAILED completion synchronously — never a throwing/rejecting `provision()`, which stays ch12-C18's port-breach lane — is HELD and delivered only after the initiating START attempt concludes; a held completion is never dropped and never delivered mid-attempt); an unknown `reason` token (outside C3's domain) is a transport-gate integrity throw — fail-closed, never stored. |
+| C6 | The production `ProviderRegistry` gains `pairflow.worktree` at ch9 (the ch12-C16 successor): the join is LEGAL because the failure→FAIL channel (C1–C5) is ratified with this draft and REALIZED by the packet ORDERED BEFORE the registration packet (plan §9.4: P1 before P2) — the ch12-C15 D5 production-provider gate discharges by packet ordering; every FUTURE registry member remains bound by the same gate shape (channel realized before registration). |
+| C7 | The `pairflow.worktree` spec grammar: `kind = "worktree"`; `config` is a CLOSED keyset — `repo` (required; absolute path to the host git repository), `base` (optional committish; default = the repo's HEAD at provision time), `dir` (optional worktree parent directory; default `<repo>/.pairflow-worktrees`). Admission still validates SHAPE only (ch12-C16's asymmetry, cited); the provider evaluates the config AT PROVISION — an unknown config key, a missing/relative `repo`, or a non-repository `repo` is `FAILED(sys:provision_rejected)`. DECIDED HERE. |
+| C8 | Worktree identity is keyed by BOTH ids: directory `<dir>/<instance_id>--<request_id>` and branch `pairflow/<instance_id>/<request_id>` — so the ch12-C18 crash-retry window's DELIBERATE duplicate provisioning (a fresh `request_id` per re-run) can never collide (P1b/P1c prove git fails loud on collision — a collision therefore surfaces as `FAILED(sys:provision_failed)`, never silent reuse); superseded worktrees persist as orphans (teardown is the named Absent; the floor makes them findable via the ref). DECIDED HERE. |
+| C9 | Provisioning mechanics: the worktree is created with a NEW branch at `base` (P1a; the at-committish form P1h); a dirty host repository does NOT block provisioning (P1d); provisioning from a host that is itself a linked worktree works (P1e) and is NOT rejected. The provider's git invocations run with an explicit working directory (`repo`) and NEVER touch the host repo's index or checked-out tree. |
+| C10 | The ref (opaque to the kernel, ch12-C18's kind-boundary cited): `{ kind: "worktree", locator: { path, branch, repo, base_commit } }` — canonical-JSON-safe values only. The actor projection (`project_for_actor`): `{ kind: "worktree", path, branch }` — the projection CARRIES only these fields; the kernel-side `repo` and `base_commit` ref fields are not propagated. This is FIELD OMISSION, not confinement (the substrate leaks both to a curious actor: the default `dir` makes `path` embed the repo path as a prefix, the linked worktree's `.git` backpointer names the host repo, and `git rev-parse HEAD` in the fresh worktree equals the base commit) — actor-side secrecy of the host repo is NOT a boundary this chapter claims (the trusted-local-host stance, ADR-017). DECIDED HERE. |
+| C11 | The worktree provider's detach acknowledgment is UNCONDITIONAL: `provision()` accepts and detaches for every shape-valid call; EVERY provisioning failure — config rejection included — travels the FAILED channel (C1–C5). The ch12-C18 pre-commit port-breach lane remains reserved for genuine programming errors, never used for business/config failure. Packet ownership splits at the seam: the CHANNEL half (the unconditional-detach obligation as port contract) is ch9-P1's, the worktree provider's own failure ROUTING onto it is ch9-P2's. DECIDED HERE. |
+| C12 | The runner plane keeps its delivery bookkeeping in a RUNNER-OWNED durable store (host-local SQLite, WAL, same mount/agent-unreachability rules as the kernel DB) that is SEPARATE from the kernel store file — the kernel schema and its ADR-003 fence stay untouched by runner-plane evolution. Kernel state is written ONLY through normal ingress ops. DECIDED HERE → ADR-016 (K1: binds every future adapter). |
+| C13 | The delivery-errand ledger: one row per committed dispatch, keyed `(instance_id, context_packet_id)`, created idempotently on discovery (INSERT-or-ignore). Discovery = POLLING the committed transcript through the read seam (interval composition-configured, default 1000ms) — reads only, never a kernel write. DECIDED HERE. |
+| C14 | Errand lifecycle enum (durable, single-owner): `pending → claimed → attempting → (confirmed | unconfirmed | exhausted | mooted)`, with `failed attempt → pending` while budget remains; `unconfirmed` is NON-TERMINAL with exactly one ERRAND-LEVEL exit — the operator re-spawn (C25's verb), whose edge returns to `attempting` under the FROZEN budget (entering `unconfirmed` freezes the remaining budget; re-spawn is out-of-band to it) and re-partitions onto the same outcomes with one narrowing: a failed or silent re-spawn returns to `unconfirmed`, never to `pending` or `exhausted`; `mooted` is a RUN-LEVEL SINK edge: a run reaching TERMINAL before confirmation (a mid-flight CANCEL or FAIL) flips ANY non-terminal errand state — `pending`, `claimed`, `attempting`, or `unconfirmed` — to `mooted`, observed by the C13 poll (the read seam is the TERMINAL observer; the errand-level qualifier above reserves exactly this run-level exit); terminal at the runner plane, no further attempts. DISPOSITION PRECEDENCE (stated once, applied by C15/C16): `confirmed > mooted > (unconfirmed | exhausted)` — EVERY terminal-disposition write (`mooted` included) runs C15's committed-row check FIRST, and reads of `exhausted` or `mooted` re-run it (C16); a re-spawn attempt is UNBUDGETED — C16's decrement and return-to-pending apply to BUDGETED attempts only. A claim carries `(worker_id, claimed_at)` and is SCHEDULING-ONLY (ADR-003's stance): a stale claim (age > the composition-configured lease window, default 15 min) is reclaimable by any worker; correctness NEVER depends on claim exclusivity — duplicate delivery is collapsed by the kernel's content-addressed `op_id` (`Duplicate`), the CT-B two-worker re-run's basis. DECIDED HERE → ADR-016. |
+| C15 | CONFIRMATION is committed kernel evidence, never runner self-report: an errand is `confirmed` iff the actor's emitted op landed as a COMMITTED transcript row (a `Duplicate` rejection on submission is evidence-already-exists → `confirmed`); confirmation detection is a COMMITTED-ROW CHECK independent of any attempt's liveness (a crash after commit but before the submitting attempt observed its response must still confirm — the durable row alone decides, never the attempt's memory). The exit-0 lane's ingress-outcome set is TOTAL and DISJOINT UNDER the C14 precedence order (submit-time kernel-integrity throws are not outcomes — they fall to C16's crash path): committed → `confirmed`; `Duplicate` → `confirmed` (dominant even from a terminal run — evidence exists); a run observed TERMINAL → `mooted` (checked BEFORE the unconfirmed lanes; the KEY is the run-TERMINAL observation itself — C14's poll/state read — for which the `not_active` submit response is the sufficient reachable signal; any other idempotency-rung outcome from a terminal run, e.g. the negligible-reachability `op_id_collision`, falls to the same poll backstop); NO readable/parseable emitted output → `unconfirmed`; any OTHER structured admit-outcome ON A STILL-ACTIVE RUN (the `stale` kind, or a non-`Duplicate` `RejectionName`) → `unconfirmed` with the STRUCTURED admit-outcome recorded on the errand row (a classified closed-domain value — an `AdmitResult` kind or `RejectionName`, never free text — the C4 boundary's mirror). `unconfirmed`'s widened definition: exit 0 WITHOUT committed evidence on a still-active run. `unconfirmed` is never success and never auto-retried (a silent actor may have done host work; resubmission safety is `op_id`'s, but re-SPAWN is the operator's call — C25's verb), floor-visible; CANCEL remains the RUN-level recourse (its errand landing is `mooted`). This realizes `CT-A2-CONFIRM`. → ADR-016 (decision point 4). |
+| C16 | The retry budget is DURABLE errand state (never process memory): attempts-per-errand default 3 (composition-configured); the budget row decrements ON ATTEMPT START (a durable write BEFORE the spawn — a crash between decrement and spawn consumes the attempt: bounded beats optimistic); spawn/infra errors, nonzero exits, AND `code: null` kills not attributable to the runner's own timeout (foreign signal — C21's `sys:runner_error` class) consume an attempt and return the errand to `pending`; budget exhaustion → `exhausted` ONLY AFTER the FULL C14 precedence is consulted — a final C15 committed-row confirmation check (evidence found → `confirmed`) AND a run-terminal check (a TERMINAL run resolves the errand `mooted`, never `exhausted`), AND the dominance is re-evaluated AT READ TIME too: a floor/report read of an `exhausted` OR `mooted` errand re-runs the committed-row check and a later-discovered committed row flips it `confirmed` (closing the crash-after-commit races on both paths — a submission committing concurrently with another worker's exhaustion flip, and a commit landing before a CANCEL moots the errand; the errand ledger is runner-plane bookkeeping, so the flip is legal; the C14 precedence holds on every path — `confirmed` dominates both); the decrement and return-to-pending rules above apply to BUDGETED attempts only (a C14 re-spawn attempt is out-of-band); `exhausted` is runner-plane terminal, floor-visible, kernel state untouched. This realizes `CT-A2-RETRY-DURABLE`, and the two crash windows (kill between claim and effect / between effect and confirmation) land in `CT-A2-CRASH`: after restart the durable errand row alone decides — an attempted-but-unconfirmed errand retries under budget, duplicate spawn being the deliberate, kernel-safe cost (the ch12-C18 duplicate-provisioning precedent). → ADR-016 (decision point 5). |
+| C17 | The actor adapter's delivery effect: materialize the dispatched ContextPacket as canonical JSON at `<cwd>/.pairflow/packet.json` and spawn the actor process there — where `<cwd>` is the projected worktree path when the run has a runtime context, and the composition-configured `default_cwd` on the `requirement: none` lane (ONE path variable covers both lanes, mirroring C20's read side); the same confinement rules (C19) apply to both lanes. DECIDED HERE. |
+| C18 | The adapter maps `effective_agent_config` to a spawnable argv through an ADAPTER-OWNED, composition-injected mapping (config → command template); the mapping is host configuration, NEVER kernel semantics — the kernel's contract ends at issuing `effective_agent_config` in the packet (ch12-C7/C10 cited; `issued ≠ proven runtime` stands). An unresolvable mapping (no template for the config) is a spawn-infra failure lane (C16), never a kernel rejection. Scope: this realizes the ARGV-MAPPING half of ch12-C7's named consumer expectation; the declared-ref value classes (`*_refs`) stay UNINTERPRETED at ch9 — their interpreting consumer is the later ContextAssembly surface (L2b, the named §1.3 candidate). DECIDED HERE. |
+| C19 | ONE spawn discipline serves both consumers (actor adapter + process-gate runner): explicit `cwd` (C17/C21), an ENV ALLOWLIST (the child receives ONLY the composition-declared allowlist + adapter-injected pairflow variables — never the full host environment), a composition-configured timeout delivered as SIGTERM (P3a: `code null, signal SIGTERM` is the observable), stdout/stderr captured (P3b: output and exit code are both observable), env replacement full by substrate (P3d: the child sees ONLY the passed object). Spawn of a missing binary is a DISTINCT infra lane (P3c: the `error` event fires with `ENOENT`; no exit code is produced). DECIDED HERE → ADR-017 (K4: confinement boundary). |
+| C20 | Actor-emit capture: after actor exit 0, the adapter reads the actor's emitted envelope from `<cwd>/.pairflow/emit.json` (the mirror of C17's packet handoff), derives the content-addressed `op_id` VIA emit-lib on the actor's behalf (ADR-004's actor-emit scheme — the adapter is the emit-lib caller; a real LLM actor cannot be), and submits through NORMAL ingress — every ingress admission rule binds unchanged (IC-E cited: ingress never assumes a particular adapter). Exit 0 with no readable/parseable `emit.json` is the C15 `unconfirmed` lane. DECIDED HERE. |
+| C21 | The process-gate runner's real spawn realizes the ch11 kernel contract's spawn half under C19's discipline, `cwd` = the run's worktree when `runtime_context = ready(ref)`, else the composition's `default_cwd`; its outcome mapping onto the FIXED reason tokens (the ch11-C31 successor's `sys:` forms — the C27 reopen): the runner's OWN timeout → `sys:timeout`; nonzero exit → `sys:exit_nonzero`; exit 0 without a parseable verdict → `sys:exit_zero`; parseable-but-malformed decision JSON → `sys:malformed_gate_decision_json`; spawn-infra error (e.g. ENOENT, P3c) AND a signal-terminated child NOT attributable to the runner's own timeout (foreign SIGKILL/SIGTERM — `code: null` with no pending runner timer) → `sys:runner_error` (the mapping is TOTAL over NON-VERDICT child terminations: every child termination that does not yield a parseable verdict reaches exactly one token — a parseable verdict rides the ch11 verdict path, outside this mapping; the RUNNER process's own crash mid-spawn is outside the child-outcome domain by construction — no runner outcome is produced, the gate attempt simply never concludes and the run's recovery is the kernel's existing no-commit surface). The parse/verdict shapes themselves are ch11's (cited, not restated). |
+| C22 | The `sys:` namespace is a UNIFORM convention: EVERY system-minted token in ANY reason-payload domain carries the `sys:` prefix (the ch11-C31 successor's seven fixed tokens; C3's two provisioning reasons), and externally-authored tokens can NEVER contain `:` (the authored grammar `^[a-z][a-z0-9_]*$`, ch11-C17 cited) — disjointness holds BY CONSTRUCTION in every present and future reason domain, with no runtime cross-check. Registry rejection names are UNTOUCHED by this convention (reason tokens are payload, never registry names — ch11-C31's boundary stands). DECIDED HERE → ADR-018 (K1: binds every present and future reason domain; K2: the by-construction rationale is invisible in code). |
+| C23 | The actor process runs INSIDE a tmux session named `pairflow-<instance_id>--<request_id>` (P2a/P2b mechanics; the `pairflow-` prefix keeps the one naming family — C7/C8/C17); sessions are PER-ACTIVATION and EPHEMERAL — the session dies with the actor process (no remain-on-exit), so attach availability equals process liveness, and the floor's liveness signal is the session's existence (`has-session`; P2b + P2e — auto-death on natural exit probed). Composition with C19: the tmux session WRAPS the C19-disciplined command (ADR-017's "tmux above the seam"); the actor's LOAD-BEARING handoff is file-based (C17/C20), so pane-vs-pipe capture is diagnostic-only for actors — while C21's process-gate spawns are NOT tmux-wrapped (their stdout parse is load-bearing, pipe-captured per C19). DECIDED HERE. |
+| C24 | The attach channel is a PER-RUNTIME-CONTEXT verb (the settled pane-binding decision cited; pane-layout config stays none-in-v1): `observe` = read-only attach (`tmux attach -r`, P2d), `takeover` = writable attach; the CLI verb resolves `instance_id → session name` and EXECS tmux; attach NEVER writes kernel state and its availability window is C23's liveness. A missing session is a clean CLI error lane ("not running"), never a kernel read failure. DECIDED HERE — `takeover` (writable access to a live actor terminal) is a K4-adjacent authority decision recorded under ADR-017's trusted-local-host stance; the CLI's DEFAULT is `observe` (read-only), takeover an explicit flag. |
+| C25 | The chapter's CLI surface: `runner run` (foreground composition: delivery loop + provider registry + spawn seams — the operator's single entry to the runner plane), `attach <instance> [--takeover]` (DEFAULT = read-only observe, C24 — takeover only by the explicit flag), and `runner respawn <instance>` (the C14 `unconfirmed` exit's surface — re-spawns the errand's delivery under the frozen-budget rules); all follow the ch6 CLI pattern (JSON output contract, exit-code lanes: 0 ok / 2 usage / 3 domain error) — the exact flag/output schemas are packet-time detail under these lanes. The floor's instance detail gains: the runtime-context projection summary (path/branch), the errand state + remaining budget, and attach availability (C23). |
+| C26 | Runner-plane observability rides the EXISTING diagnostic channel (ch7 structured kernel log + audit stream, cited): every errand state transition, every provisioning completion (both kinds), and every spawn outcome emits a structured diagnostic event — the runner plane is fully reconstructable from its ledger + the diagnostic stream; no new observability machinery is minted. DECIDED HERE (channel REUSE as a decision — the alternative, a runner-plane observability stack, is declined). |
+| C27 | THE ch11-C31 REOPEN CARRIER (the act rides this draft's ratification — one GO, two named acts): the realized `ch11-gate-format` contract REOPENS for the `sys:` rename with scope = EVERY site spelling a reason token — the five token-defining rows ch11-C10, ch11-C11, ch11-C17, ch11-C25, ch11-C31 PLUS ch11-C26's classification reference (ch11-C29 stays out: drive labels, not reason tokens) — per the PREPARED REOPEN PAYLOAD in Context (recommended successor text + per-site row edits + the named MAP-entry updates), under the template-§4 realized-reopen choreography: commit 1 = row edits + status `reopened` + map lifted; commit 2 = re-ratification block + the reopen-record prose block (the ch11 file's own convention) + map RESTORED-AS-UPDATED (the payload's map scope: ch11-C31's gap-status resolved, ch11-C10/C11/C25 spellings tracked — the token-blind `v3:realized-map` lint cannot catch these, so the act performs them by the payload's list) + the ch11 Close-metrics reopenings count 2 → 3. The `ProcessResult.kind` domain (`ok | timeout | runner_error`, ch11-C26/C34) stays BARE — an outcome KIND, not reason payload; ch9-P0 realizes the kind→`sys:`-reason mapping without touching the kind domain. RATIFIER DECISION AT THE ACT (the panel detected, never resolves): the authored-vs-registry-name residual — an authored token may SPELL a registry name (colon-free) — is resolved by the payload's RECOMMENDED form (the ch11-C31 disjointness claim NARROWS to the positional rule: a reason token never occupies a rejection-name position); the alternative (a fail-closed registry-name check on authored tokens) is recorded in ADR-018 Alternatives and remains electable at the act. ADR-016 / ADR-017 / ADR-018 are born `proposed` with this draft's content commit and flip `accepted` BY the same ratification act (the README §4 draft-ratified ADR lane). DECIDED HERE. |
+
+## Ratification history (empty at `draft` — blocks are appended by the lifecycle acts)

@@ -2378,7 +2378,9 @@ resolved stepwise at the chapter opening):**
    express `:`) — closing the arm-audit's material
    under-realization (an authored process returning `gate_blocked`
    is accepted verbatim today). Code realization = ch9-P0, BEFORE
-   any runner packet builds on the tokens.
+   any runner packet builds on the tokens. (Scope aligned at the ch9
+   draft rounds: the rename's ratified-text footprint is five ch11
+   rows + one reference + map entries — §9.3 and the draft's C27.)
 
 ### 9.1 Scope and boundaries
 
@@ -2491,7 +2493,12 @@ ADR candidate (K4); the provider seam is ALREADY model-side (the
 ch12 L0e precedent) — its git mechanics stay code-side. The
 RATIFICATION ACT
 also carries the ch11-C31 reopen + re-ratification (opening
-disposition 4) — one GO, two named acts, the reopen window closed
+disposition 4; SCOPE aligned at the ch9 draft rounds, 2026-07-23:
+the rename touches the five token-defining ch11 rows
+C10/C11/C17/C25/C31 PLUS C26's classification reference and the
+named realized_map entries — the draft's C27 carries the full act,
+"C31 reopen" stays the act's shorthand) — one GO, two named acts,
+the reopen window closed
 inside the act (zero reopened drafts at any packet approve).
 Ratification is permanently human; packets anchor as
 `contract:ch9-runner#Cn`.
