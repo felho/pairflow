@@ -73,6 +73,8 @@
     "v3:packet-lint": "python3 ./tools/v3-plan/check_packet.py --selftest && python3 ./tools/v3-plan/check_packet.py",
     "v3:deferred": "python3 ./tools/v3-plan/check_deferred.py --selftest && python3 ./tools/v3-plan/check_deferred.py",
     "v3:realized-map": "python3 ./tools/v3-plan/check_realized_map.py --selftest && python3 ./tools/v3-plan/check_realized_map.py",
+    "v3:check-docs": "python3 ./tools/v3-plan/check_docs.py",
+    "v3:commit": "python3 ./tools/v3-plan/commit_helper.py",
     "v3:cli": "tsx ./v3/src/cli/main.ts",
     "v3:cli:dev": "tsx ./v3/src/cli/dev/main.ts"
   },
