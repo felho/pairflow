@@ -166,3 +166,13 @@ design and this divergence is informative, not a defect. Spread:
   pre-batch, the next (Opus) chapter fully post-batch. Yield
   comparisons at the boundary should weigh this; quality gates
   themselves are unchanged (wrapper-not-replacement).
+- 2026-07-23 — ch9-P1 fail-channel APPROVED + BUILT (flag-free
+  autonomous; arm gate-1 CLEAN @ packet-basis 30ceb0eb, yield
+  8→3→2→1→0 with two refutations accepted; build 14be9b3f; gate-2
+  leg CLOSED on a bookkeeping-only re-check @ aftermath aeae92d4,
+  yield 9 test-evidence / 0 product): difficulty A1 (19 rows) B1
+  (6 derived + 0 new-decision) C1 (16 boundary files) D2
+  (async/temporal completion seam — hold/release, CAS restarts) E0
+  (extends the ch12-P3 completion-machinery class) — **Σ 5,
+  Medium**. Mutation dual-run 82.03% (six semantic production
+  files; whole-file scope caveat recorded in the packet).

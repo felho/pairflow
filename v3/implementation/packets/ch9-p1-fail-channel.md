@@ -749,6 +749,16 @@ protocol, restores byte-verified):**
 | SM | abort deliver-all on the first throw | the sibling FAILED dropped, no TERMINAL failed | RED (exit 1) | `SM.receipt.json` |
 | K | `failOnProvision` never fires through the sink | the K1 sink assert fails | RED (exit 1) | `K.receipt.json` |
 | T | drop the `RuntimeContextCompletion` export | typecheck breaks | RED (exit 2) | `T.receipt.json` |
+| X | (aftermath P7) inject a `kind: "failed"` construction literal into `cli/main.ts` | the X1 dormancy grep's match count leaves its baseline 1 | RED (exit 1 — 2 matches) | `aftermath/P7-X1-dormancy-grep.receipt.json` |
+| D | (aftermath P8) rename one registry member in `domain/rejections.ts` | the drift ledger-set-equality test | RED | `aftermath/P8-D-drift-registry-rename.receipt.json` |
+
+The aftermath SENSITIVITY probes P1–P6 (the gate-2 folds: W1 ingress
+no-route, G1 exhaustiveness, G3 number-gate + whole-row confinement,
+SM drain-drop, K1 record-before-fire, l0e seam-router) live in the
+same receipt home (`ch9p1-probes/aftermath/`), each RED with a
+byte-verified restore; the invocation-site dormancy sweep's receipt
+is `aftermath/X-invocation-grep-receipt.txt` (zero production call
+sites).
 
 X1 dormancy grep executed (the pinned `kind:\s*"failed"`
 construction-position pattern, production sources, testkit/dev
@@ -783,7 +793,13 @@ survived / 58 no-coverage / 0 errors. Survivor caveat for the
 boundary read: the scoped files carry ALL prior chapters' kernel
 code, so the survivor set is not per-delta; classification
 (code-mutation vs input-domain) is the boundary review's, no fix
-owed at the pilot stage.
+owed at the pilot stage. **Leg close** (the README §6
+diminishing-returns cutoff; the ch12-P3 precedent): the gate-2
+re-check at `aeae92d4` resolved 8/9, accepted the W3 narrowing,
+audited every probe receipt RED, and yielded ONLY the probe-table
+carrier item (the X/D rows absent from the canonical table) — folded
+here, so the build-close arm leg CLOSES on this bookkeeping-only
+round.
 
 ```json
 {
@@ -798,7 +814,7 @@ owed at the pilot stage.
       { "found_at": "arm-approve", "what": "representation foreclosure: W3 left the seam representation open while T1/T2/embedding gates MANDATED the union — the openness was illusory packet-wide", "why_missed": "the derived-row entailment attack checked W3 in isolation, never the cross-row conjunction" },
       { "found_at": "arm-approve", "what": "the Claim's 'outcome-total over delivered completions' omitted the gate-throw exit (a delivered hostile completion yields no outcome) — decision-total wording owed", "why_missed": "totality was audited against the outcome union, not walked through the gate-violation path" },
       { "found_at": "arm-approve", "what": "quote-fidelity: partial C6 excerpt labeled verbatim; punctuation silently changed", "why_missed": "the panel verified quoted bytes but not the labeling of what was elided" },
-      { "found_at": "arm-build-close", "what": "six green-but-blind lanes: the build realized lane PRESENCE at the declared strength but sensitivity gaps survived (no-route negatives, closed-set exhaustiveness, non-string sub-shapes, drain-path vanished case, fire-time ordering, trace bypassing the declared seam)", "why_missed": "the spec-time altitude rule correctly defers member-level sensitivity to build close — the gate worked as designed; the miss is the BUILD agent's lane-strength reading, caught by the mandatory sensitivity pass" }
+      { "found_at": "arm-build-close", "what": "six green-but-blind lanes: the build realized lane PRESENCE at the declared strength but sensitivity gaps survived (no-route negatives, the single-buffer property, closed-set exhaustiveness, non-string sub-shapes, drain-path vanished case, fire-time ordering)", "why_missed": "the spec-time altitude rule correctly defers member-level sensitivity to build close — the gate worked as designed; the miss is the BUILD agent's lane-strength reading, caught by the mandatory sensitivity pass" }
     ],
     "learned": "the arm's approve leg again out-caught the panel on record-precision classes (sizing counts, cross-row foreclosure conjunctions, quote-fidelity labels) — the ch12-P0 churn class; and a 600s doc-review arm leg can time out on a five-surface prompt (infra retry converged at 440s)",
     "main_thread_model": "claude-fable-5"

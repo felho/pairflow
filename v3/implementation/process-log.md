@@ -4367,3 +4367,26 @@ final CLEAN.
   realized-map lint (98db5bbb) landed WITHOUT an arm round under the
   old floors — no defect known, but it is the rule's named
   back-audit candidate at the next boundary.
+
+- 2026-07-23 · ch9-P1 gate-1 ARM-LEG TIMEOUT (infra, retried clean) —
+  the first arm gate-1 leg (a five-attack-surface prompt) hit the
+  600s doc-review timeout; the §6 item-8 retry converged at 440s
+  with a full verdict. Boundary candidate: approve-gate prompt SIZE
+  guidance (attack surfaces per leg) vs a mode-timeout bump — one
+  data point, WATCH by the admission bias.
+
+- 2026-07-23 · ch9-P1 DETECTOR-MISS READ (both gates) — gate 1: the
+  arm again out-caught the internal panel on record-precision
+  classes (surface counting vs the ch12-P3 precedent, cross-row
+  representation-foreclosure CONJUNCTION the per-row entailment
+  attack missed, delivered-total vs gate-throw walk, quote-fidelity
+  labeling) — the ch12-P0 churn class, now with a conjunction-attack
+  candidate for lens 2 (audit derived-row openness against EVERY
+  row that consumes the open choice, not the row in isolation).
+  Gate 2: 9/9 test-evidence, 0 product — six green-but-blind lanes
+  closed by the mandatory sensitivity pass + executed probes; the
+  altitude split (spec defers member sensitivity to build close)
+  worked as designed. Two refutations (W3 representation class per
+  the ch12-P3 SM3 precedent; K2 testkit-grain) were
+  REFUTATION-ACCEPTED by the arm — the refute-with-evidence lane is
+  live and does not flag-bear.
