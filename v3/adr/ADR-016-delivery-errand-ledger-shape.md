@@ -58,9 +58,14 @@ decision outlives the ch9 contract-draft's realized-freeze.
    a run-level sink from every non-terminal errand state). The
    disposition precedence is `confirmed > mooted > (unconfirmed |
    exhausted)`: every terminal-disposition write runs the
-   committed-row check first, and reads of `exhausted` or `mooted`
-   re-check — a delivered dispatch is never reported exhausted or
-   mooted.
+   committed-row check first, and reads of any non-confirmed
+   RESTING disposition (`unconfirmed` / `exhausted` / `mooted`)
+   re-check (the transient states run the same check at their own
+   decision points) — a delivered dispatch is never reported
+   exhausted or mooted. Attempt starts mint a durable `attempt_id`;
+   handoff files and session names are attempt-scoped, so a stale
+   or parallel attempt's artifacts are never attributed to another
+   attempt.
 
 ## Alternatives Considered
 

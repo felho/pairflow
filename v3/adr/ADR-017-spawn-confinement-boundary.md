@@ -33,7 +33,10 @@ process-gate runner + any future spawning component):
    SIGKILL escalation** (grace composition-configured, default
    10 s) — the normal observable is `code: null, signal: "SIGTERM"`
    (probe P3a); a SIGTERM-ignoring child is SIGKILLed at grace
-   expiry, so no spawn is unbounded.
+   expiry, so no spawn is unbounded — short of an
+   uninterruptible-I/O wedge (D-state), which even SIGKILL cannot
+   clear: that residual belongs to the store substrate's
+   mount-loss class, not this seam.
 4. **Captured stdio** — stdout/stderr captured, never inherited; a
    missing binary is a DISTINCT infra lane (probe P3c: `error` event
    `ENOENT`; no exit code is produced). Env replacement is full by
