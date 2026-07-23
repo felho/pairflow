@@ -148,3 +148,8 @@ design and this divergence is informative, not a defect. Spread:
   index is computed from declared machine data instead). First
   assignment: ch9 = Fable-class; the following implementation chapter
   opens the Opus arm, gated on the K3 hardenings having landed.
+- 2026-07-23 — ch9 (runner MVP) RATIFIED with main-thread arm =
+  **Fable-class** (the pre-registered first assignment, recorded at
+  chapter ratification per §5). Panel lenses and the external arm
+  unchanged (arm-pin.md). The chapter's per-packet difficulty scores
+  append here at each approve.

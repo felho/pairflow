@@ -32,6 +32,15 @@ from the packets, would this row still be true and decidable?"*
 - **Out (packet-time):** embedding gates, mutation boundaries,
   inventory source-site columns, fixtures, acceptance counts.
 
+**Decision-home triage at row authoring (README §6; adopted
+2026-07-23):** every NEW-DECISION row on an off-model surface answers
+the K0→K4 question sequence — K0 model-shaped (→ the fix-FIRST
+model-wave path, user-gated; never a draft-local decision), K1–K4
+ADR-shaped (→ the row births its ADR under the packet-flow ADR
+lanes), else the row itself is the decision's home — and the outcome
+is recorded with the row's DECIDED-HERE marker (an ADR-born row
+names its ADR).
+
 A chapter may have MORE than one draft (one per memo-born surface);
 the chapter's draft set = the drafts its plan Packets-and-flow-mode
 table references.

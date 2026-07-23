@@ -1,7 +1,7 @@
 # V3 Implementation Plan
 
 Written chapter by chapter, each chapter proposed → ratified → committed
-(process: [`README.md`](README.md) §3). Chapters present: 1–8, 11–12.
+(process: [`README.md`](README.md) §3). Chapters present: 1–9, 11–12.
 
 **Genre note.** This is the implementation **master plan** — it is NOT a
 directly `ExecutePairflowPlan`-executable task list, and it carries no
@@ -103,7 +103,7 @@ convention is itself a chapter-1 rule.
 | 8 | Template file-format spec: the canonical authoring format; **migrates MD-1** | PI-5 | realized |
 | 11 | **Gate core** (appended chapter, build order: BEFORE ch 9 — §11): the L1 authority slice, the L2 gate pipeline + inline evaluators (the ch-4 provisional `round` aligned to its L2 contract), the L2a process-gate contract (kernel side — the spawn is ch 9's), a minimal runtime-context representation, the format's gate-declaration surface (§8.2 stance) | — (map-extension, §8.1) | realized |
 | 12 | **Runtime core** (appended chapter, build order: BEFORE ch 9 — §12): the L0c run profile (AgentConfig cascade + issued provenance), the L0d lifecycle/activation axis (kernel_status, source-routed entry, the CREATE/START split, typed waits, terminal dispositions, KICKOFF/CANCEL), the L0e runtime-context provider contract (requirement + registry + packet projection; testkit provider — the real worktree provider stays ch 9's), the gate-field watchpoint realization (model fix `6dd8bd15`), the format's runtime keys (§8.2 stance) + lifecycle operator verbs + floor extension | — (map-extension, §1.3) | realized |
-| 9 | Runner MVP: local worktree provider (`pairflow.worktree` — the ch-12 L0e contract's first real provider), one real actor adapter, process-gate runner spawn side, attach channel (tmux observe/takeover); **MVP scope RESOLVED (user, 2026-07-18): local-worktree only** — headless/cloud is a later provider behind the same contract (its async ready-event + opaque-ref shape keeps that additive; the deferred teardown/health/failure-handling Absents are the named rework surface); **watchpoint RESOLVED (user, 2026-07-18):** the gate-block observability fix landed as a model-plane change (ratified @ `6dd8bd15` — `Rejected(gate_blocked)` carries the blocking binding's `uses` as `gate`), code realization owned by ch12-P0; prerequisites: ch 11 (gate call site) + ch 12 (runtime core) + **the production-provider gate (the ch12 ratifier's D5 condition, 2026-07-19 — the ch12 draft's C15):** no production provider registers until the provisioning-failure → correlated kernel `FAIL` channel is ratified and realized; **ch12-boundary work item (2026-07-22):** wire the MUTATION-TESTING PILOT — StrykerJS+vitest scoped to the packet `mutation_boundary` (`pnpm v3:mutation` bridge; first step = feasibility proof), DUAL-RUN beside arm gate-2 for two chapters, catches labeled code-mutation vs input-domain (the ch12 boundary's test-reliability verdict; ch9 ratification disposes it) | PI-8 | planned(ch 9) |
+| 9 | Runner MVP (chapter §9): local worktree provider (`pairflow.worktree` — the ch-12 L0e contract's first real provider), one real actor adapter, process-gate runner spawn side, attach channel (tmux observe/takeover); **MVP scope RESOLVED (user, 2026-07-18): local-worktree only** — headless/cloud is a later provider behind the same contract (its async ready-event + opaque-ref shape keeps that additive; the deferred teardown/health/failure-handling Absents are the named rework surface); **watchpoint RESOLVED (user, 2026-07-18):** the gate-block observability fix landed as a model-plane change (ratified @ `6dd8bd15` — `Rejected(gate_blocked)` carries the blocking binding's `uses` as `gate`), code realization owned by ch12-P0; prerequisites: ch 11 (gate call site) + ch 12 (runtime core) + **the production-provider gate (the ch12 ratifier's D5 condition, 2026-07-19 — the ch12 draft's C15):** no production provider registers until the provisioning-failure → correlated kernel `FAIL` channel is ratified and realized; **ch12-boundary work item (2026-07-22):** wire the MUTATION-TESTING PILOT — StrykerJS+vitest scoped to the packet `mutation_boundary` (`pnpm v3:mutation` bridge; first step = feasibility proof), DUAL-RUN beside arm gate-2 for two chapters, catches labeled code-mutation vs input-domain (the ch12 boundary's test-reliability verdict; ch9 ratification disposes it) | PI-8 | planned(ch 9) |
 | 10 | Operator recourse card: one page (query via the floor, cancel, deleteRequested; no watchdog/retry until L9) | PI-9 | planned(ch 10) |
 
 **Predicted-class convention (process-v2, added at the Phase-1 flip;
@@ -2324,3 +2324,226 @@ create → start → held → kickoff → cancel lifecycle on the CLI);
 process-log review held at the boundary, including the ARMED
 falling-yield measurement (gate-1/gate-2 yields vs the P3b
 prediction) and the second map-extension exercise verdict.
+
+## Chapter 9 — Runner MVP: worktree provider + real adapter + process-runner spawn + attach (ratified 2026-07-23)
+
+(autonomy stage: **measurement** — flag-free panel approves proceed
+to build autonomously THROUGH the two transitional external-arm gates
+(README §5.5, arm-pin.md); flags, STOPs, the draft ratification, and
+every first-of-a-kind packet route to the human. Main-thread arm:
+**Fable-class** — the `model-tier-experiment-2.md` first assignment,
+recorded in its §8 log at this ratification; panel lenses and the
+external arm stay as ratified. The mutation-testing pilot DUAL-RUNS
+beside arm gate-2 on every packet of this chapter — see the flow
+note in §9.4.)
+
+The ORIGINAL ch-9 row's chapter (PI-8 — the runner-MVP reserved
+chapter, the trio: `pairflow.worktree` provider / one real actor
+adapter / process-gate runner spawn side, plus the attach channel).
+Both build-order prerequisites are realized: ch 11 (the gate call
+site) and ch 12 (the runtime core — the L0e provider contract this
+chapter's provider implements). MVP scope stands as resolved
+(user, 2026-07-18): **local-worktree only** — headless/cloud is a
+later provider behind the same contract.
+
+**Opening dispositions (user, 2026-07-23 — the four parked items,
+resolved stepwise at the chapter opening):**
+
+1. **Mutation-testing pilot:** feasibility PROVEN and wired AT the
+   opening (commit `c95e9889`): Stryker 9.6.1 + vitest-runner on
+   vitest 4.1.10, 171 mutants on `emit/opId.ts` in ~11s, score
+   81.29% with real survivors — the `v3:mutation` bridge exists.
+   The pilot's dual-run rule binds in this chapter (§9.4 flow note).
+2. **The production-provider gate (ch12-C15's D5 condition)
+   discharges IN-CHAPTER:** the provisioning-failure → correlated
+   kernel `FAIL` channel's rows land in THIS chapter's contract
+   draft (the rows ch12-C15 explicitly deferred to "that later
+   chapter"), and an EARLY packet realizes them BEFORE the
+   provider-registration packet — the gate is carried by packet
+   ordering (§9.4), never by a registered-but-unprotected provider.
+3. **Map-extension disposed:** NO further appended chapter is needed
+   before ch 9 (the FAIL channel moved in-chapter; ch 11 + ch 12
+   closed the earlier gaps). The deferred teardown / provider-health
+   / cloud-provider topics STAY named Absents (rework surface,
+   mention-level) — they get a chapter when they come due, cut with
+   this chapter's experience. The §1.3 candidate list is unchanged.
+4. **The ch11-C31 `sys:` reopen rides THIS chapter's draft
+   ratification act** (one GO covers both — the ch12 precedent):
+   the seven FIXED runner-outcome reason tokens gain the `sys:`
+   prefix (`sys:round_below_min`, `sys:no_previous_verdict`,
+   `sys:exit_zero`, `sys:exit_nonzero`, `sys:runner_error`,
+   `sys:timeout`, `sys:malformed_gate_decision_json`) so the
+   authored/fixed disjointness the ratified C31 claims holds BY
+   CONSTRUCTION (the authored grammar `^[a-z][a-z0-9_]*$` cannot
+   express `:`) — closing the arm-audit's material
+   under-realization (an authored process returning `gate_blocked`
+   is accepted verbatim today). Code realization = ch9-P0, BEFORE
+   any runner packet builds on the tokens.
+
+### 9.1 Scope and boundaries
+
+**In scope:**
+
+1. **The ch11-C31 `sys:` namespace realization (ch9-P0).** The
+   seven fixed reason tokens renamed per the reopened +
+   re-ratified C31: code, tests, the l2a golden trace, and the
+   transcript/audit surface. NO registry rejection name changes
+   (reason tokens are `gate_blocked` REASON PAYLOAD — the 54-name
+   registry is untouched, drift lanes stay green).
+2. **The provisioning-failure → `FAIL` channel.** The
+   `RuntimeContextProvider` port gains its failure completion (the
+   wire shape), correlated exactly like READY (request_id
+   correlation + the terminal-sink state rung; ordered-after-commit
+   under the same C15 seam), routing to the EXISTING kernel `FAIL`
+   event with a draft-decided reason domain; single-shot — retry,
+   health, and teardown machinery stay Absent. The testkit scripted
+   provider gains the failure script. This is the C15 D5 gate's
+   realization half.
+3. **The `pairflow.worktree` provider.** Local git worktree
+   mechanics behind the ch12 L0e port: the spec's config surface,
+   worktree/branch creation, the opaque ref (locator
+   provider-defined, kernel never interprets), the actor-facing
+   projection; REGISTERED into the production registry (the
+   ch12-C16 successor composition) — legal only after item 2 is
+   realized. Worktree teardown is Absent (worktrees persist;
+   named rework surface).
+4. **The real actor adapter + the durable delivery loop.** One real
+   adapter delivering committed dispatch packets to a real actor
+   process in its runtime context and feeding the emitted op back
+   through normal ingress (commit ≠ deliver — the delivery half the
+   kernel deliberately does not own). Delivery runs as a durable
+   errand: the IC-A2 contract family lands here (`CT-A2-CRASH`
+   crash-window kills, `CT-A2-CONFIRM` no-error/no-ack as a
+   distinct non-terminal state, `CT-A2-RETRY-DURABLE` restart-
+   surviving retry budget), and `CT-B-TWOWORKER` re-runs under the
+   real runner (the ch-5 kit-driven result re-proven).
+5. **The process-gate runner spawn side.** The real child-process
+   spawn behind the ch11 kernel contract: timeout enforcement,
+   exit-code lanes, gate-decision JSON capture — producing the
+   (now `sys:`-prefixed) fixed reason tokens the kernel already
+   classifies.
+6. **The attach channel.** The per-runtime-context observe/takeover
+   verb on the adapter (tmux mechanics; pane-layout config stays
+   none-in-v1 per the settled pane-binding decision), plus the
+   minimal CLI/floor surface the chapter's dogfooding needs.
+
+**Out of scope (deliberate):**
+
+- **Teardown / provider health / retry-on-FAILED / cloud-headless
+  provider** — named Absents, mention-level (opening disposition 3).
+- **L2b context blocks** — the named §1.3 candidate, naturally after
+  this chapter.
+- **Pane-layout configuration** — none-in-v1 (settled 2026-07-07).
+- **Capability-query op family** — scoped out since ch 1.
+- **Any second adapter or provider** — one real adapter, one real
+  provider; breadth is later work behind the same contracts.
+
+### 9.2 Coverage and intake impact
+
+Unit ownership: a NEAR-EMPTY ledger slice — the runner surfaces
+(git mechanics, spawn, delivery, attach) are adapter/runtime-side,
+outside the unit tree; their claim surface is the draft's canonical
+contract matrices (the operability-packet shape). ONE candidate id:
+`l0d-pseudocode/RUNTIME_CONTEXT_READY` — the sole unowned l0d rung
+(ch12-P3 owns the l0e version) — expected `alias/inherited`;
+authoring-time projection confirms or corrects. The FAIL-channel
+rows are draft-owned decisions ch12-C15 explicitly deferred here —
+no model-plane change is expected (the model's failure→`FAIL` prose
+already exists; a divergence discovered at authoring routes through
+the standing model↔code stop, never a silent patch). Rejections:
+no new registry names expected (failure reasons are `FAIL` payload
+domain — the draft decides its tokens; the `sys:` rename touches
+payload tokens only). Invariants: none newly owned. Traces: no new
+ledger section trace; the chapter's acceptance vehicles are the
+IC-A2 CT family, the CT-B re-run, and the end-to-end dogfooding
+journey (§9.5). Intake flips at DoD: the three IC-A2 rows +
+`CT-B-TWOWORKER`'s ch-9 re-run annotation + §1.3 row 9 (PI-8
+closes).
+
+### 9.3 The draft phase
+
+Before ANY packet (README §4): `contracts/ch9-runner-contract.md`
+(surface: `runner`). Indicative C-row set — the draft decides, this
+list only scopes it: the FAIL-channel wire shape / correlation /
+reason domain (the C15-anticipated rows; whether failure reasons
+adopt a namespace form consistent with the `sys:` convention is a
+draft-time decision); the provider failure single-shot semantics;
+the `pairflow.worktree` spec grammar (kind, config keys) + ref +
+projection shapes; the worktree git-mechanics contract (directory/
+branch naming, collision and dirty-state guards, substrate probes
+for git worktree behavior — probes ARE draft-time work); the
+delivery-errand contract (claim, crash-window atomicity, the
+distinct no-ack state, the durable retry budget — the IC-A2 family's
+row basis); the real actor adapter contract (spawn environment,
+packet handoff, emitted-op capture back through ingress — ingress
+never assumes a particular adapter impl, IC-E); the process-gate
+spawn contract rows (timeout, exit-code lanes, malformed-JSON —
+realizing the ch11 kernel contract's spawn side); the attach verb's
+schema + capability rules (per-runtime-context, observe/takeover);
+CLI schemas + exit-code lanes; the production-registry composition
+successor (C16's `pairflow.worktree` join). The K0→K4 decision-home
+triage (README §6, adopted at this chapter's opening) runs on every
+new-decision row; expected outcomes, named at ratification: the
+delivery-errand durability semantics get the K0 question EXPLICITLY
+(L8 is a modeled-but-deferred surface) plus an ADR candidate for
+the errand shape (K1); the spawn/attach confinement boundary is an
+ADR candidate (K4); the provider seam is ALREADY model-side (the
+ch12 L0e precedent) — its git mechanics stay code-side. The
+RATIFICATION ACT
+also carries the ch11-C31 reopen + re-ratification (opening
+disposition 4) — one GO, two named acts, the reopen window closed
+inside the act (zero reopened drafts at any packet approve).
+Ratification is permanently human; packets anchor as
+`contract:ch9-runner#Cn`.
+
+### 9.4 Packets and flow mode
+
+Draft reference (§1.3 convention): `contracts/ch9-runner-contract.md`
+— ratification pending (the draft round runs first, before any
+packet; prediction bases below are conditional on it).
+
+**Mutation-pilot flow note (binds every packet):** arm gate-2
+dual-runs `pnpm v3:mutation` scoped to the packet's
+`mutation_boundary`; catches are labeled code-mutation vs
+input-domain and recorded with the packet's metrics — two chapters
+of paired data, then the boundary review disposes the pilot.
+
+| Packet | Content | Mode |
+|---|---|---|
+| ch9-P0 | the ch11-C31 `sys:` rename realization: the seven fixed reason tokens gain the prefix in code + tests + the l2a golden trace + the transcript/audit surface; registry names untouched (drift lanes green before and after) | flag-free approve → autonomous build (measurement); predicted: projection (basis: the re-ratified C31 row) |
+| ch9-P1 | the provisioning-failure → `FAIL` channel: the port's failure completion + ordered-after-commit hold/release + correlation & terminal-sink rungs + reason domain + kernel `FAIL` routing; testkit failure script; the C15 D5 gate's realization half — MUST land before ch9-P2 | flag-free approve → autonomous build (measurement); predicted: projection + derived (basis: the ratified ch9 draft rows + the ch12-C15/C18 mechanics) |
+| ch9-P2 | the `pairflow.worktree` provider: git worktree mechanics, spec/ref/projection, production-registry registration (legal here — the gate discharged at P1); the `l0d-pseudocode/RUNTIME_CONTEXT_READY` candidate id resolves in this packet's slice | HUMAN approve — first-of-a-kind (first real provider; external side effects on the host) |
+| ch9-P3 | the real actor adapter + the durable delivery loop: the errand ledger, the IC-A2 CT family (crash / confirm / retry-durable), the CT-B two-worker re-run under the real runner | HUMAN approve — first-of-a-kind (first real adapter); declared sizing-split candidate (template §2 step 0) |
+| ch9-P4 | the process-gate runner real spawn + the attach channel (tmux observe/takeover) + the CLI/floor surface + the end-to-end dogfooding journey | HUMAN approve — first-of-a-kind (first real spawn + attach); declared sizing-split candidate |
+
+Order: draft ratification (carrying the C31 reopen act) → P0 → P1 →
+P2 → P3 → P4 (P1-before-P2 is the production-provider gate's
+ordering; P0-first keeps every runner packet on the renamed tokens).
+One packet = packet file + code + tests in ONE commit. Per-packet
+difficulty scores + `main_thread_model: fable` recorded per
+`model-tier-experiment-2.md` §5.
+
+### 9.5 Deliverables and DoD
+
+Shipped: this section; the ratified-then-realized `ch9-runner`
+contract-draft (+ the re-ratified ch11-C31); the `sys:` token
+realization; the FAIL channel; the registered `pairflow.worktree`
+provider; the real adapter + durable delivery errand; the
+process-gate spawn side; the attach channel + CLI/floor bits; the
+wired mutation pilot's first full-chapter dual-run data.
+
+DoD: the packets' contract tests green with claim-derived negatives
+EXECUTED; the IC-A2 CT family + the CT-B re-run green under the real
+runner; the drift suite green (registry names unchanged by the
+`sys:` rename); coverage validation green; all v3 bridges + the FULL
+`pnpm ci:local` gate green; the draft flipped `realized`-in-place
+with its `realized_map` and `pnpm v3:realized-map` GREEN inside the
+close act (the arm map-audit layer runs DETACHED, deadline = the
+next chapter's close); the ch-9 map row + the IC-A2 intake rows
+flipped; `pnpm v3:deferred --closed ch9` clean; the dogfooding
+checkpoint run-or-waived (a hand-driven REAL run: create → start →
+worktree provisioned → attach observed → the actor's emitted op
+lands → a process gate runs — the first live end-to-end journey);
+process-log review held at the boundary, including the
+model-tier-experiment-2 §7 arm-comparison entry and the
+mutation-pilot yield read.

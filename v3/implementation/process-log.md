@@ -4198,3 +4198,43 @@ final CLEAN.
   machine-only now includes a 29-catch batch the arm sampled past
   twice — the blocking-machine + sampling-arm split is the right
   order.
+
+- 2026-07-23 · CH9 OPENING — the four parked items disposed stepwise
+  (the human-gate presentation discipline; the owner asked for EZX
+  re-explanations twice — self-containment held): (1) mutation-pilot
+  feasibility PROVEN + wired AT the opening (commit c95e9889:
+  Stryker 9.6.1 / vitest-runner on vitest 4.1.10, 171 mutants on
+  emit/opId.ts in ~11s, score 81.29% with real survivors; pnpm
+  gotchas: explicit plugins list needed under isolated node_modules,
+  subprocess-spawning CLI smoke tests excluded via a dedicated
+  vitest profile); (2) the ch12-C15 D5 production-provider gate
+  discharges IN-chapter (FAIL-channel rows in the ch9 draft +
+  P1-before-P2 packet ordering); (3) NO further map extension
+  (teardown / provider-health / cloud stay mention-level Absents;
+  the §1.3 candidate list unchanged); (4) the ch11-C31 sys: reopen
+  rides the ch9 draft-ratification act, code realization = ch9-P0.
+  Chapter 9 section authored + ratified same day (Fable arm recorded
+  per model-tier-experiment-2 §5; three of five packets are
+  first-of-a-kind → human-approved — the first chapter since the
+  autonomy flip where the human-approve share DOMINATES by design).
+
+- 2026-07-23 · DECISION-HOME TRIAGE ADOPTED (README §6 — the
+  four-home rule), born from two converging observations at the ch9
+  opening: (a) the ch11-C31 audit case proved realized rows still
+  BIND (the audit held ratified text against code and the CODE was
+  wrong) — yet off-model code's durable grounding after the
+  realized-freeze was rule-less: the CLI listing surface and the
+  worktree provider clearly deserve DIFFERENT durability, and
+  nothing said so; (b) the owner's reframing: the model was being
+  read implicitly as kernel-only — it is actually a SEMANTICS plane
+  with standing non-kernel precedents (storage-scope, the config
+  cascade, the L0e provider seam), so the triage's model bucket must
+  admit by CONTENT NATURE (K0), never by subsystem — otherwise the
+  triage itself would mis-route decisions whose logical home is the
+  model. Landed: the README §6 bullet (K0 admission + the fix-FIRST
+  user-gated model-wave path + the K1–K4 ADR lift test + the
+  per-model-touch K0 reflection line with boundary disposal), the
+  contract-draft-template §1 row-authoring question, the plan §9.3
+  expected ch9 outcomes. The reflection loop is the owner's own
+  addition: the gate must LEARN from each model touch, but rule
+  edits happen only at boundaries.

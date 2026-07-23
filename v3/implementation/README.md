@@ -701,6 +701,36 @@ invariants-vs-tooling).
   model plane (`../model` edit + `check.sh` + ratification) and returns to
   code through the regenerated ledger. The drift tests stay truthful; the two
   planes cannot shear.
+- **Decision-home triage (the four-home rule; adopted at the ch9
+  opening, 2026-07-23 — born from the ch11-C31 audit case plus the
+  owner's model-rigidity reframing).** Every durable decision has
+  exactly ONE home, chosen by CONTENT NATURE, never by subsystem:
+  (1) **the model** — system semantics: a behavioral contract every
+  implementation must honor, expressible in the model's forms
+  (units / invariants / traces / registries). The model is a
+  SEMANTICS plane, not a kernel plane — standing non-kernel
+  precedents: `storage-scope`, the config cascade (l0c /
+  l0f-mode), the L0e provider seam. Admission test **K0**: *"would
+  a second, independent implementation of this surface have to
+  behave exactly this way — and can it be written as a
+  unit/invariant/trace?"* A K0-yes is NEVER a direct edit: it
+  routes through the fix-FIRST model-wave path (model edit +
+  `check.sh` + ratification — the divergence-stop road),
+  user-gated; the model's cost is its protection, deliberately
+  kept. (2) **an ADR** — an architecture-SHAPE decision, lifted
+  when ANY of **K1–K4** holds: K1 binds beyond its chapter; K2
+  rationale not recoverable from the code; K3 violable by an
+  innocent-looking diff; K4 safety/irreversibility class (host
+  effects, confinement, authority boundaries). (3) **a
+  contract-draft C-row** — chapter-scoped decisions (frozen at
+  realize; a reopenable anchor — the ch11-C31 audit precedent).
+  (4) **code + tests** — everything else; the realized freeze is
+  the record. **Reflection rule:** every model-touching act
+  appends a one-line K0-gate reflection to the process-log ("did
+  the admission rule route this case correctly?"); the boundary
+  review disposes the accumulated lines (rule adjustment OR
+  acknowledged non-issue) — the gate learns at boundaries, never
+  mid-chapter.
 - **Chapter definition of done:** contract tests green + drift tests green +
   the chapter-1 intake tables updated (status flipped) + any born ADRs in
   `accepted` state + the process-log review (§7) held + **the full local
