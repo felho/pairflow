@@ -26,6 +26,7 @@ function capturingKernel(): { kernel: Kernel; seen: EventEnvelope[] } {
     cancel: unused,
     fail: unused,
     runtimeContextReady: unused,
+    runtimeContextFailed: unused,
     deliverCompletion: () => {
       /* unused in ingress tests */
     },
@@ -414,6 +415,8 @@ function intentKernel(): IntentCapture {
     },
     fail: () => Promise.reject(new Error("kernel events have no ingress endpoint (C13)")),
     runtimeContextReady: () =>
+      Promise.reject(new Error("kernel events have no ingress endpoint (C13)")),
+    runtimeContextFailed: () =>
       Promise.reject(new Error("kernel events have no ingress endpoint (C13)")),
     deliverCompletion: () => {
       /* unused in ingress intent tests */

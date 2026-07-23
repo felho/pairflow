@@ -97,6 +97,33 @@ export type RuntimeContextReadyOutcome =
   | { readonly kind: "ignored" }
   | { readonly kind: "rejected"; readonly reason: "unknown_instance" };
 
+/**
+ * RUNTIME_CONTEXT_FAILED's return vocabulary (packet ch9-p1, F4): an ADMITTED
+ * failure commits the terminal `FAIL` disposition and returns `Terminated`
+ * (`disposition: "failed"`); a rung-rejected completion (terminal-sink or
+ * correlation) is INERT — it mutates NOTHING and returns `ignored` (never a
+ * business rejection, never a throw — the seam delivers superseded/second
+ * completions and they must be inert). A vanished instance is the L8 inert
+ * `unknown_instance` (droppable). The union mirrors READY's inert vocabulary
+ * plus `fail`'s `Terminated` — the transport-gate integrity throw (an unknown
+ * reason token / a non-string detail, G2/G3) is NOT an outcome: it surfaces as
+ * a thrown kernel/config error, fail-closed, never a return value.
+ */
+export type RuntimeContextFailedOutcome =
+  | Terminated
+  | { readonly kind: "ignored" }
+  | { readonly kind: "rejected"; readonly reason: "unknown_instance" };
+
+/**
+ * The completion seam's KIND-BLIND drain return (packet ch9-p1, T1): the union
+ * of both completion kinds' outcomes — `settleRuntimeContextDeliveries` returns
+ * these so a caller can prove a delivered-inert completion (of either kind) was
+ * DELIVERED, not silently dropped (SM2's fail-able distinction).
+ */
+export type RuntimeContextCompletionOutcome =
+  | RuntimeContextReadyOutcome
+  | RuntimeContextFailedOutcome;
+
 export type KickoffOutcome =
   | Activated
   | { readonly kind: "duplicate" }

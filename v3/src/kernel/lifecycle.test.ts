@@ -79,7 +79,7 @@ function makeHarness(
     processRunner,
     providerRegistry: createStaticProviderRegistry({ "pairflow.worktree": provider }),
   });
-  provider.bindCompletionSink((i, r, ref) => kernel.deliverCompletion(i, r, ref));
+  provider.bindCompletionSink((i, r, completion) => kernel.deliverCompletion(i, r, completion));
   return { kernel, store: handle.store, diag, provider, close: () => handle.close() };
 }
 
@@ -778,7 +778,7 @@ describe("START (L2/L3) — the fork and the window lanes", () => {
         requestId,
       });
       // The provider fires READY ASYNCHRONOUSLY, post-conclusion, through the seam.
-      h.kernel.deliverCompletion("i1", requestId, SPEC_REF);
+      h.kernel.deliverCompletion("i1", requestId, { kind: "ready", ref: SPEC_REF });
       const outcomes = await h.kernel.settleRuntimeContextDeliveries();
       // DELIVERED (not lost to a never-flushed buffer) → activated.
       expect(outcomes.map((o) => o.kind)).toEqual(["activated"]);
@@ -801,7 +801,7 @@ describe("START (L2/L3) — the fork and the window lanes", () => {
       expect(before.runtimeContext).toEqual({ state: "requested", requestId: surviving });
       // The superseded provider fires READY late (post-conclusion): delivered
       // DIRECTLY, correlation rejects (requested(surviving) ≠ superseded) → inert.
-      h.kernel.deliverCompletion("i1", superseded, SPEC_REF);
+      h.kernel.deliverCompletion("i1", superseded, { kind: "ready", ref: SPEC_REF });
       const outcomes = await h.kernel.settleRuntimeContextDeliveries();
       expect(outcomes).toEqual([{ kind: "ignored" }]); // DELIVERED (not dropped) AND inert
       expect(await loadOrThrow(h, "i1")).toEqual(before); // zero state change
@@ -947,12 +947,12 @@ describe("START (L2/L3) — the fork and the window lanes", () => {
       // Arm r2 to arrive when the NEXT instance load RESOLVES — i.e. inside
       // settle's await of r1, after r1's batch was snapshot-and-cleared.
       probe.armOnLoadOnce(() => {
-        h.kernel.deliverCompletion("i1", superseded, SPEC_REF); // valid ref → correlation rejects inert
+        h.kernel.deliverCompletion("i1", superseded, { kind: "ready", ref: SPEC_REF }); // valid ref → correlation rejects inert
       });
       // r1: the surviving id with a non-canonical ref → the transport gate throws.
       h.kernel.deliverCompletion("i1", surviving, {
-        kind: "worktree",
-        locator: { bad: Number.POSITIVE_INFINITY },
+        kind: "ready",
+        ref: { kind: "worktree", locator: { bad: Number.POSITIVE_INFINITY } },
       });
       // settle DRAINS FULLY, THEN throws r1's integrity error — r2, arriving
       // mid-drain, is still drained (a mid-loop throw would leave it undrained).
@@ -989,6 +989,467 @@ describe("START (L2/L3) — the fork and the window lanes", () => {
       expect(inst.runtimeContext).toEqual({ state: "ready", ref: SPEC_REF });
       h.close();
     });
+  });
+});
+
+describe("RUNTIME_CONTEXT_FAILED (F/G family) + the FAILED completion seam (SM)", () => {
+  // Bring a required-context run to CREATED + requested(req) (the FAILED
+  // channel's precondition) and return its request_id.
+  async function provisionedFail(h: Harness): Promise<string> {
+    await h.kernel.create({ instanceId: "i1", templateRef: REF, task: "T" });
+    await h.kernel.start({ instanceId: "i1", opId: "op" });
+    return h.provider.provisionCalls[0]?.requestId ?? "";
+  }
+
+  /**
+   * A store wrap intercepting the FIRST FAILED-handler commit (identified by
+   * `newTerminalDisposition === "failed"`) — start's own `requested` commit
+   * (disposition null) passes through untouched:
+   *  - "casOnce": return `cas_conflict` once → the FAILED handler restarts and
+   *    re-commits on fresh state (F4's CAS-restart re-admission).
+   *  - "cancelThenCas": a concurrent CANCEL lands FIRST (bumping the version,
+   *    taking the run TERMINAL(cancelled) — CANCEL never writes
+   *    runtime_context), then `cas_conflict` → the FAILED handler restarts,
+   *    reloads TERMINAL, and the terminal-sink rung rejects it inert (F4's
+   *    concurrently-terminal clause; the terminalized-supersession member).
+   */
+  function interceptFailCommitStore(
+    real: StorePort,
+    mode: "casOnce" | "cancelThenCas",
+  ): { readonly store: StorePort; count(): number } {
+    let hits = 0;
+    const store: StorePort = {
+      loadInstance: (id) => real.loadInstance(id),
+      findOp: (id, opId) => real.findOp(id, opId),
+      createInstance: (instance) => real.createInstance(instance),
+      commitTransition: (input) => real.commitTransition(input),
+      commitLifecycle: async (input) => {
+        if (input.newTerminalDisposition === "failed" && hits === 0) {
+          hits += 1;
+          if (mode === "cancelThenCas") {
+            const cancelResult = await real.commitLifecycle({
+              instanceId: input.instanceId,
+              expectedVersion: input.expectedVersion,
+              fact: null,
+              newKernelStatus: "TERMINAL",
+              newTerminalDisposition: "cancelled",
+              newWait: null,
+            });
+            if (cancelResult.kind !== "committed") {
+              throw new Error(
+                `test wiring: injected cancel did not commit (${cancelResult.kind})`,
+              );
+            }
+          }
+          return { kind: "cas_conflict" };
+        }
+        return real.commitLifecycle(input);
+      },
+      listInstances: () => real.listInstances(),
+      getInstanceDetail: (id) => real.getInstanceDetail(id),
+      getTimeline: (id, afterSeq) => real.getTimeline(id, afterSeq),
+    };
+    return { store, count: () => hits };
+  }
+
+  // ── F2: the admitted commit — ALL FIVE written facets + marker retention ──
+
+  it("F2: an admitted FAILED commits the FULL terminal shape and RETAINS the marker (equality)", async () => {
+    const h = makeHarness(requiredContext);
+    const requestId = await provisionedFail(h);
+    const outcome = await h.kernel.runtimeContextFailed("i1", requestId, "sys:provision_failed");
+    // Facet: the outcome vocabulary.
+    expect(outcome).toEqual({ kind: "terminated", disposition: "failed" });
+    // Facets: TERMINAL, failed, failure_reason = token, wait null, marker RETAINED
+    // (requested(request_id) survives), version = start's + 1 (ONE commit, no
+    // version-arithmetic beyond one), currentStep/round untouched.
+    expect(await loadOrThrow(h, "i1")).toEqual({
+      instanceId: "i1",
+      templateRef: REF,
+      task: "T",
+      binding: { implementer: "codex", reviewer: "claude" },
+      currentStep: null,
+      round: 0,
+      kernelStatus: "TERMINAL",
+      terminalDisposition: "failed",
+      activationMode: "immediate",
+      wait: null,
+      runtimeContext: { state: "requested", requestId },
+      failureReason: "sys:provision_failed",
+      runOverrides: {},
+      version: 3,
+    });
+    // NO fact row — a kernel event carries no op fact (only START's fact stands).
+    expect(await transcriptOf(h, "i1")).toEqual([
+      { entryKind: "STARTED", seq: 1, opId: "op", committedAt: 1_000 },
+    ]);
+    h.close();
+  });
+
+  it("G1: BOTH domain members admit and land VERBATIM in failure_reason", async () => {
+    for (const reason of ["sys:provision_rejected", "sys:provision_failed"] as const) {
+      const h = makeHarness(requiredContext);
+      const requestId = await provisionedFail(h);
+      const outcome = await h.kernel.runtimeContextFailed("i1", requestId, reason);
+      expect(outcome).toEqual({ kind: "terminated", disposition: "failed" });
+      expect((await loadOrThrow(h, "i1")).failureReason).toBe(reason);
+      h.close();
+    }
+  });
+
+  it("G4: an admitted FAILED emits NO kernel diag event (the classification-only culture)", async () => {
+    const h = makeHarness(requiredContext);
+    const requestId = await provisionedFail(h);
+    // create + start succeeded silently; an admitted FAILED is a success return,
+    // so lifecycleOp emits nothing (kernel diag emits classifications, not events).
+    expect(await h.kernel.runtimeContextFailed("i1", requestId, "sys:provision_failed")).toEqual({
+      kind: "terminated",
+      disposition: "failed",
+    });
+    expect(h.diag.events).toEqual([]);
+    h.close();
+  });
+
+  // ── F3: mutual exclusion PER REQUEST — each lane asserts BOTH the inert
+  // outcome AND the unchanged instance row (status/disposition/reason/marker). ──
+
+  it("F3a: READY-first then FAILED(same id) → the CORRELATION rung rejects, inert", async () => {
+    const h = makeHarness(requiredContext);
+    const requestId = await provisionedFail(h);
+    const ready = await h.kernel.runtimeContextReady("i1", requestId, SPEC_REF);
+    expect(ready.kind).toBe("activated");
+    const afterReady = await loadOrThrow(h, "i1"); // marker moved to ready(ref)
+    expect(afterReady.runtimeContext).toEqual({ state: "ready", ref: SPEC_REF });
+    // FAILED for the same id: correlation rejects (no longer requested(req)).
+    expect(await h.kernel.runtimeContextFailed("i1", requestId, "sys:provision_failed")).toEqual({
+      kind: "ignored",
+    });
+    expect(await loadOrThrow(h, "i1")).toEqual(afterReady); // zero state change
+    h.close();
+  });
+
+  it("F3b: FAILED-first then READY(same id) → the TERMINAL-SINK rung rejects (load-bearing, no resurrection)", async () => {
+    const h = makeHarness(requiredContext);
+    const requestId = await provisionedFail(h);
+    const failed = await h.kernel.runtimeContextFailed("i1", requestId, "sys:provision_failed");
+    expect(failed).toEqual({ kind: "terminated", disposition: "failed" });
+    const terminal = await loadOrThrow(h, "i1");
+    // The marker is STILL requested(req) (F2 retention) — so correlation ALONE
+    // would MATCH; only the terminal-sink rung stops a READY from resurrecting.
+    expect(terminal.runtimeContext).toEqual({ state: "requested", requestId });
+    expect(terminal.kernelStatus).toBe("TERMINAL");
+    expect(await h.kernel.runtimeContextReady("i1", requestId, SPEC_REF)).toEqual({
+      kind: "ignored",
+    });
+    expect(await loadOrThrow(h, "i1")).toEqual(terminal); // stays TERMINAL failed, not resurrected
+    h.close();
+  });
+
+  it("F3c: FAILED-first then FAILED(same id) → the TERMINAL-SINK rung rejects, inert", async () => {
+    const h = makeHarness(requiredContext);
+    const requestId = await provisionedFail(h);
+    await h.kernel.runtimeContextFailed("i1", requestId, "sys:provision_failed");
+    const terminal = await loadOrThrow(h, "i1");
+    expect(await h.kernel.runtimeContextFailed("i1", requestId, "sys:provision_rejected")).toEqual({
+      kind: "ignored",
+    });
+    // Zero state change — the second FAILED's reason never overwrites the first.
+    expect(await loadOrThrow(h, "i1")).toEqual(terminal);
+    expect((await loadOrThrow(h, "i1")).failureReason).toBe("sys:provision_failed");
+    h.close();
+  });
+
+  it("F3d: a FAILED for a DIFFERENT request_id on a live run → the CORRELATION rung rejects, inert", async () => {
+    const h = makeHarness(requiredContext);
+    const requestId = await provisionedFail(h);
+    const before = await loadOrThrow(h, "i1");
+    expect(await h.kernel.runtimeContextFailed("i1", "some-other-req", "sys:provision_failed")).toEqual({
+      kind: "ignored",
+    });
+    expect(await loadOrThrow(h, "i1")).toEqual(before); // still requested(requestId), CREATED
+    expect(requestId).not.toBe("some-other-req");
+    h.close();
+  });
+
+  it("F1: an unknown-instance FAILED is the inert droppable unknown_instance", async () => {
+    const h = makeHarness(requiredContext);
+    expect(await h.kernel.runtimeContextFailed("ghost", "r", "sys:provision_failed")).toEqual({
+      kind: "rejected",
+      reason: "unknown_instance",
+    });
+    h.close();
+  });
+
+  it("F4: a CAS conflict on the FAILED commit RESTARTS from load and re-admits → TERMINAL failed", async () => {
+    let counter: { count(): number } | undefined;
+    const h = makeHarness(requiredContext, (real) => {
+      const wrapped = interceptFailCommitStore(real, "casOnce");
+      counter = wrapped;
+      return wrapped.store;
+    });
+    const requestId = await provisionedFail(h);
+    const outcome = await h.kernel.runtimeContextFailed("i1", requestId, "sys:provision_failed");
+    expect(outcome).toEqual({ kind: "terminated", disposition: "failed" });
+    expect(counter?.count()).toBe(1); // the injected conflict fired exactly once
+    const inst = await loadOrThrow(h, "i1");
+    expect(inst.kernelStatus).toBe("TERMINAL");
+    expect(inst.failureReason).toBe("sys:provision_failed");
+    h.close();
+  });
+
+  // ── G: the transport gate (reason domain + detail), AFTER the rungs ──
+
+  it("G2: an unknown reason token integrity-throws fail-closed with ZERO state change (three shapes)", async () => {
+    // bare un-prefixed, an authored-grammar token, and a NON-STRING — each
+    // asserted via a direct store read (loadOrThrow + toEqual(before)).
+    const cases: { label: string; reason: string }[] = [
+      { label: "bare un-prefixed", reason: "provision_failed" },
+      { label: "authored-grammar", reason: "some_authored_reason" },
+      // A non-string reason cast onto the untrusted wire — the gate's typeof guard.
+      { label: "non-string", reason: 42 as unknown as string },
+    ];
+    for (const { reason } of cases) {
+      const h = makeHarness(requiredContext);
+      const requestId = await provisionedFail(h);
+      const before = await loadOrThrow(h, "i1");
+      await expect(h.kernel.runtimeContextFailed("i1", requestId, reason)).rejects.toThrow(
+        /transport gate|closed provisioning-failure domain/,
+      );
+      // status / marker / failure_reason all unchanged (no partial write).
+      expect(await loadOrThrow(h, "i1")).toEqual(before);
+      h.close();
+    }
+  });
+
+  it("G2: the gate is AFTER the rungs — a RUNG-REJECTED completion with a HOSTILE reason is `ignored`, never a throw", async () => {
+    const h = makeHarness(requiredContext);
+    const requestId = await provisionedFail(h);
+    const before = await loadOrThrow(h, "i1");
+    // Correlation rejects (wrong id) BEFORE the gate — the hostile payload is
+    // never inspected: one outcome per event, no throw.
+    expect(
+      await h.kernel.runtimeContextFailed("i1", "wrong-req", "totally-hostile:token"),
+    ).toEqual({ kind: "ignored" });
+    expect(await loadOrThrow(h, "i1")).toEqual(before);
+    // Post-terminal (terminal-sink rejects) with a hostile reason — same: inert.
+    await h.kernel.runtimeContextFailed("i1", requestId, "sys:provision_failed");
+    const terminal = await loadOrThrow(h, "i1");
+    expect(
+      await h.kernel.runtimeContextFailed("i1", requestId, "another-hostile-token"),
+    ).toEqual({ kind: "ignored" });
+    expect(await loadOrThrow(h, "i1")).toEqual(terminal);
+    h.close();
+  });
+
+  it("G3: a present string `detail` admits and is NOWHERE in kernel state (failure_reason ≠ detail)", async () => {
+    const h = makeHarness(requiredContext);
+    const requestId = await provisionedFail(h);
+    const outcome = await h.kernel.runtimeContextFailed(
+      "i1",
+      requestId,
+      "sys:provision_failed",
+      "git: fatal: not a git repository (stderr tail)",
+    );
+    expect(outcome).toEqual({ kind: "terminated", disposition: "failed" });
+    const inst = await loadOrThrow(h, "i1");
+    // The reason token is the ONLY classified value — detail never enters state.
+    expect(inst.failureReason).toBe("sys:provision_failed");
+    expect(inst.failureReason).not.toBe("git: fatal: not a git repository (stderr tail)");
+    h.close();
+  });
+
+  it("G3: a present NON-STRING `detail` integrity-throws fail-closed with ZERO state change", async () => {
+    const h = makeHarness(requiredContext);
+    const requestId = await provisionedFail(h);
+    const before = await loadOrThrow(h, "i1");
+    await expect(
+      h.kernel.runtimeContextFailed("i1", requestId, "sys:provision_failed", { tail: 1 }),
+    ).rejects.toThrow(/transport gate/);
+    expect(await loadOrThrow(h, "i1")).toEqual(before);
+    h.close();
+  });
+
+  // ── SM: the seam (hold / release / drain), FAILED joining ──
+
+  it("SM1: a synchronous FAILED completion is HELD until the START commit — the run reaches TERMINAL failed", async () => {
+    // The provider fires FAILED INSIDE provision() (before the requested marker
+    // commits). A deliver-BEFORE-commit impl would lose it (correlation would
+    // reject on CREATED+none, the run stuck `requested`); the seam holds it until
+    // conclusion → the rungs admit → TERMINAL failed (discipline line 8).
+    const h = makeHarness(requiredContext, undefined, {
+      script: [{ failOnProvision: { reason: "sys:provision_failed" } }],
+    });
+    await h.kernel.create({ instanceId: "i1", templateRef: REF, task: "T" });
+    const started = await h.kernel.start({ instanceId: "i1", opId: "op" });
+    expect(started).toEqual({ kind: "accepted" });
+    const inst = await loadOrThrow(h, "i1");
+    expect(inst.kernelStatus).toBe("TERMINAL");
+    expect(inst.terminalDisposition).toBe("failed");
+    expect(inst.failureReason).toBe("sys:provision_failed");
+    expect(inst.runtimeContext).toEqual({
+      state: "requested",
+      requestId: h.provider.provisionCalls[0]?.requestId,
+    });
+    h.close();
+  });
+
+  it("SM (held superseded — correlation on a LIVE run): a CAS-superseded id's HELD FAILED releases inert, run ends requested(surviving)", async () => {
+    const probes: ReturnType<typeof instrumentedStore>[] = [];
+    const h = makeHarness(
+      requiredContext,
+      (real) => {
+        const probe = instrumentedStore(real, { casOnceLifecycle: true });
+        probes.push(probe);
+        return probe.store;
+      },
+      { script: [{ failOnProvision: { reason: "sys:provision_failed" } }] }, // ONLY the superseded attempt fires
+    );
+    const probe = probes[0];
+    if (probe === undefined) throw new Error("wiring: store wrap not invoked");
+    await h.kernel.create({ instanceId: "i1", templateRef: REF, task: "T" });
+    const loadsBefore = probe.loadCount();
+    const started = await h.kernel.start({ instanceId: "i1", opId: "op" });
+    expect(started).toEqual({ kind: "accepted" });
+    const ids = h.provider.provisionCalls.map((c) => c.requestId);
+    expect(ids.length).toBeGreaterThanOrEqual(2);
+    // req-1's held FAILED flushed at concludeAttempt(req-1): the extra load
+    // proves it was DELIVERED (correlation rejects on the live run) not dropped.
+    expect(probe.loadCount() - loadsBefore).toBeGreaterThan(2);
+    const inst = await loadOrThrow(h, "i1");
+    expect(inst.runtimeContext).toEqual({ state: "requested", requestId: ids[ids.length - 1] });
+    expect(inst.kernelStatus).toBe("CREATED"); // NOT failed — the superseded FAILED was inert
+    h.close();
+  });
+
+  it("SM (held terminalized-supersession): a concurrent CANCEL takes the run TERMINAL — the held FAILED rejects on the TERMINAL-SINK rung (CAS-restart)", async () => {
+    let counter: { count(): number } | undefined;
+    const h = makeHarness(
+      requiredContext,
+      (real) => {
+        const wrapped = interceptFailCommitStore(real, "cancelThenCas");
+        counter = wrapped;
+        return wrapped.store;
+      },
+      { script: [{ failOnProvision: { reason: "sys:provision_failed" } }] },
+    );
+    await h.kernel.create({ instanceId: "i1", templateRef: REF, task: "T" });
+    // start commits requested(req) + returns Accepted; the finally flushes the
+    // held FAILED → its commit races the injected CANCEL → cas_conflict → restart
+    // → reload TERMINAL(cancelled) → terminal-sink rejects (inert, no throw).
+    const started = await h.kernel.start({ instanceId: "i1", opId: "op" });
+    expect(started).toEqual({ kind: "accepted" });
+    expect(counter?.count()).toBe(1);
+    const inst = await loadOrThrow(h, "i1");
+    expect(inst.kernelStatus).toBe("TERMINAL");
+    expect(inst.terminalDisposition).toBe("cancelled"); // the CANCEL won, not the FAILED
+    expect(inst.failureReason).toBeNull();
+    // The marker is retained (CANCEL never writes runtime_context).
+    expect(inst.runtimeContext).toEqual({
+      state: "requested",
+      requestId: h.provider.provisionCalls[0]?.requestId,
+    });
+    h.close();
+  });
+
+  it("SM (LONE held hostile-reason FAILED): the throw SURFACES from start(), with ZERO state change", async () => {
+    const h = makeHarness(requiredContext, undefined, {
+      script: [{ failOnProvision: { reason: "totally-hostile:token" } }],
+    });
+    await h.kernel.create({ instanceId: "i1", templateRef: REF, task: "T" });
+    // The held FAILED flushes at conclusion; the gate throws; the conclusion
+    // backstop re-throws, REPLACING the Accepted return — start() rejects.
+    await expect(h.kernel.start({ instanceId: "i1", opId: "op" })).rejects.toThrow(
+      /transport gate|closed provisioning-failure domain/,
+    );
+    // Zero state change from the FAILED — start's requested commit stands, no FAIL.
+    const inst = await loadOrThrow(h, "i1");
+    expect(inst.kernelStatus).toBe("CREATED");
+    expect(inst.runtimeContext).toEqual({
+      state: "requested",
+      requestId: h.provider.provisionCalls[0]?.requestId,
+    });
+    expect(inst.failureReason).toBeNull();
+    h.close();
+  });
+
+  it("SM (held sibling-survival, KIND-BLIND): a non-canonical READY throws but a valid FAILED sibling still ADMITS → TERMINAL failed, first error re-surfaced", async () => {
+    // Two held completions for ONE request_id (fired inside provision, DECLARED
+    // order: READY first, FAILED second). The READY's ref is non-canonical → it
+    // throws at the transport gate; the deliver-all loop is KIND-BLIND, so the
+    // FAILED survivor STILL admits → TERMINAL failed. The first error re-surfaces.
+    const NON_CANONICAL: RuntimeContextRef = {
+      kind: "worktree",
+      locator: { bad: Number.POSITIVE_INFINITY },
+    };
+    const h = makeHarness(requiredContext, undefined, {
+      script: [
+        { fireOnProvision: NON_CANONICAL, failOnProvision: { reason: "sys:provision_failed" } },
+      ],
+    });
+    await h.kernel.create({ instanceId: "i1", templateRef: REF, task: "T" });
+    await expect(h.kernel.start({ instanceId: "i1", opId: "op" })).rejects.toThrow(
+      /transport gate|integrity|canonical/,
+    );
+    // Proof the FAILED survivor was delivered (not dropped by the READY's throw).
+    const inst = await loadOrThrow(h, "i1");
+    expect(inst.kernelStatus).toBe("TERMINAL");
+    expect(inst.terminalDisposition).toBe("failed");
+    expect(inst.failureReason).toBe("sys:provision_failed");
+    h.close();
+  });
+
+  it("SM2 (direct admitted): a post-conclusion FAILED is DELIVERED → drain returns [terminated], run TERMINAL failed", async () => {
+    const h = makeHarness(requiredContext); // detach mode
+    const requestId = await provisionedFail(h);
+    // The attempt has concluded; the run is stuck requested until the completion.
+    expect((await loadOrThrow(h, "i1")).runtimeContext).toEqual({ state: "requested", requestId });
+    h.kernel.deliverCompletion("i1", requestId, { kind: "failed", reason: "sys:provision_failed" });
+    const outcomes = await h.kernel.settleRuntimeContextDeliveries();
+    expect(outcomes).toEqual([{ kind: "terminated", disposition: "failed" }]);
+    const inst = await loadOrThrow(h, "i1");
+    expect(inst.kernelStatus).toBe("TERMINAL");
+    expect(inst.failureReason).toBe("sys:provision_failed");
+    h.close();
+  });
+
+  it("SM2 (direct inert — superseded): a superseded id's post-conclusion FAILED → drain [ignored] (delivered, not dropped)", async () => {
+    const h = makeHarness(requiredContext, (real) => casOnceStore(real).store);
+    await h.kernel.create({ instanceId: "i1", templateRef: REF, task: "T" });
+    await h.kernel.start({ instanceId: "i1", opId: "op" });
+    const ids = h.provider.provisionCalls.map((c) => c.requestId);
+    const superseded = ids[0] ?? "";
+    const before = await loadOrThrow(h, "i1");
+    h.kernel.deliverCompletion("i1", superseded, { kind: "failed", reason: "sys:provision_failed" });
+    expect(await h.kernel.settleRuntimeContextDeliveries()).toEqual([{ kind: "ignored" }]);
+    expect(await loadOrThrow(h, "i1")).toEqual(before); // zero state change
+    h.close();
+  });
+
+  it("SM2 (direct inert — CANCEL-terminated terminal-sink member): a late FAILED at a CANCELLED run → drain [ignored], marker retained", async () => {
+    const h = makeHarness(requiredContext);
+    const requestId = await provisionedFail(h);
+    await h.kernel.cancel({ instanceId: "i1", opId: "op-c" });
+    const cancelled = await loadOrThrow(h, "i1");
+    expect(cancelled.kernelStatus).toBe("TERMINAL");
+    // The marker is STILL requested(req) (CANCEL never writes runtime_context) —
+    // so the TERMINAL-SINK rung, not correlation, rejects the late FAILED.
+    expect(cancelled.runtimeContext).toEqual({ state: "requested", requestId });
+    h.kernel.deliverCompletion("i1", requestId, { kind: "failed", reason: "sys:provision_failed" });
+    expect(await h.kernel.settleRuntimeContextDeliveries()).toEqual([{ kind: "ignored" }]);
+    expect(await loadOrThrow(h, "i1")).toEqual(cancelled); // stays cancelled, marker retained
+    h.close();
+  });
+
+  it("SM2 (direct hostile-reason): a post-conclusion unknown-token FAILED is captured and re-surfaced after full drain", async () => {
+    const h = makeHarness(requiredContext);
+    const requestId = await provisionedFail(h);
+    const before = await loadOrThrow(h, "i1");
+    h.kernel.deliverCompletion("i1", requestId, { kind: "failed", reason: "not-a-domain-token" });
+    await expect(h.kernel.settleRuntimeContextDeliveries()).rejects.toThrow(
+      /transport gate|closed provisioning-failure domain/,
+    );
+    expect(await loadOrThrow(h, "i1")).toEqual(before); // fail-closed, never stored
+    h.close();
   });
 });
 

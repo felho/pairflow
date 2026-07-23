@@ -104,7 +104,7 @@ describe("l2a golden trace — the HANDLE process branch end-to-end (09-l2a Runt
       gates: catalog,
       processRunner: runner,
     });
-    provider.bindCompletionSink((i, r, ref) => kernel.deliverCompletion(i, r, ref));
+    provider.bindCompletionSink((i, r, completion) => kernel.deliverCompletion(i, r, completion));
     const ingress = createIngress({ kernel, diag: noopDiagnosticsSink });
 
     // create (immediate) → start (provision, Accepted, requested) → READY.

@@ -47,6 +47,15 @@ export interface ScriptedProvisionBehavior {
    * buffered PRE-conclusion (the `concludeAttempt` deliver-all path). Requires
    * a bound completion sink. */
   readonly fireManyOnProvision?: readonly RuntimeContextRef[];
+  /** K1 (packet ch9-p1): fire a FAILED completion SYNCHRONOUSLY inside
+   * `provision()` through the bound sink (the SM1 hold hazard), AFTER the record
+   * — the provisioning-failure channel. `reason` is deliberately typed WIDE
+   * (`string`, NOT the closed enum) so tests can drive the G2 unknown-token
+   * integrity lane; `detail` is optional untrusted free text. Fired in the
+   * DECLARED field order — AFTER any READY fire(s) (K2): the both-kinds-one-
+   * request driver for the F3 mutual-exclusion lanes through the REAL seam.
+   * Requires a bound completion sink. */
+  readonly failOnProvision?: { readonly reason: string; readonly detail?: string };
 }
 
 export interface ScriptedRuntimeContextProviderOptions {
@@ -96,7 +105,7 @@ export function createScriptedRuntimeContextProvider(
         // must HOLD it until the START commit lands (SM1); the sink returns
         // immediately (SM2, no circular wait). Fired BEFORE any breach so the
         // held-then-failed-attempt SM3 backstop is exercisable.
-        sink(instanceId, requestId, behavior.fireOnProvision);
+        sink(instanceId, requestId, { kind: "ready", ref: behavior.fireOnProvision });
       }
       if (behavior?.fireManyOnProvision !== undefined) {
         if (sink === null) {
@@ -107,8 +116,25 @@ export function createScriptedRuntimeContextProvider(
         // Multiple held completions for the SAME request_id, both buffered
         // pre-conclusion — the concludeAttempt deliver-all path.
         for (const ref of behavior.fireManyOnProvision) {
-          sink(instanceId, requestId, ref);
+          sink(instanceId, requestId, { kind: "ready", ref });
         }
+      }
+      if (behavior?.failOnProvision !== undefined) {
+        if (sink === null) {
+          throw new Error(
+            "scriptedRuntimeContextProvider: failOnProvision requires a bound completion sink (bindCompletionSink)",
+          );
+        }
+        // K1/K2: the FAILED completion fires AFTER any READY fire(s), in the
+        // declared field order — the both-kinds-one-request driver for the F3
+        // mutual-exclusion lanes (both held, flushed in order at conclusion:
+        // the first admits, the second rung-rejects). Fired BEFORE any breach.
+        const { reason, detail } = behavior.failOnProvision;
+        sink(instanceId, requestId, {
+          kind: "failed",
+          reason,
+          ...(detail !== undefined ? { detail } : {}),
+        });
       }
       if (behavior?.throwOnProvision === true) {
         // S4 port breach — a synchronous throw (fail-loud, no state change).

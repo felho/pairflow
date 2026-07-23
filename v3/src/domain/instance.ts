@@ -59,6 +59,37 @@ export type RuntimeContext =
   | { readonly state: "requested"; readonly requestId: string }
   | { readonly state: "ready"; readonly ref: RuntimeContextRef | null };
 
+/**
+ * ch9/ProvisioningFailureReason (packet ch9-p1, G1; contract:ch9-runner#C3,
+ * #C22 → ADR-018): the CLOSED, kernel-owned reason domain of the FAILED
+ * completion channel — at ch9 exactly two members. `sys:provision_rejected`:
+ * the provider determined the spec/config cannot be honored (e.g. a missing or
+ * non-git `repo`). `sys:provision_failed`: the provisioning mechanics failed
+ * (e.g. a git command's nonzero exit). Both carry the ADR-018 `sys:` prefix —
+ * system-minted, disjoint from every authored token BY CONSTRUCTION (the
+ * authored grammar cannot express `:`), never a registry rejection name.
+ * Members grow ONLY by contract successor rows; the domain is validated at the
+ * completion's own transport gate (G2).
+ */
+export type ProvisioningFailureReason = "sys:provision_rejected" | "sys:provision_failed";
+
+/**
+ * ch9/RuntimeContextCompletion (packet ch9-p1, W3 — the reference realization):
+ * the discriminated completion a provider fires through the composition-injected
+ * seam when its async provisioning concludes — ONE union carried by ONE sink and
+ * ONE delivery endpoint, so the seam's hold/release/drain serve BOTH kinds with
+ * zero per-kind seam logic (C1's "same seam" + C5's "unchanged in MECHANISM").
+ *   - `ready(ref)` — the readiness for the request the kernel issued (the ch12-P3
+ *     completion, unchanged in effect).
+ *   - `failed(reason, detail?)` — a provisioning failure (C1): `reason` is an
+ *     UNTRUSTED wire token classified to `ProvisioningFailureReason` at the
+ *     transport gate (G2); `detail` is OPTIONAL untrusted diagnostic free text
+ *     (C4) — string-gated (G3), never parsed, never in `failure_reason`.
+ */
+export type RuntimeContextCompletion =
+  | { readonly kind: "ready"; readonly ref: RuntimeContextRef }
+  | { readonly kind: "failed"; readonly reason: string; readonly detail?: unknown };
+
 /** l0d/ActivationMode (T3): how the run activates. At P1a the one-shot
  * only ever writes `immediate`; `deferred_kickoff` is P1b's. */
 export type ActivationMode = "immediate" | "deferred_kickoff";

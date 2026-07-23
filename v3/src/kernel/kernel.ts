@@ -12,6 +12,9 @@ import type {
   Outcome,
   RejectionName,
   RetainedGateDecision,
+  RuntimeContextCompletion,
+  RuntimeContextCompletionOutcome,
+  RuntimeContextFailedOutcome,
   RuntimeContextReadyOutcome,
   RuntimeContextRef,
   StartOutcome,
@@ -32,7 +35,15 @@ import { capability } from "./capability.js";
 import { deriveDispatchIntent } from "./dispatchIntent.js";
 import { deriveGateProjection } from "./gateProjection.js";
 import { runProcessGate } from "./processGate.js";
-import { cancel, createInstance, fail, kickoff, runtimeContextReady, start } from "./lifecycle.js";
+import {
+  cancel,
+  createInstance,
+  fail,
+  kickoff,
+  runtimeContextFailed,
+  runtimeContextReady,
+  start,
+} from "./lifecycle.js";
 import type {
   CancelInput,
   CreateInput,
@@ -122,23 +133,46 @@ export interface Kernel {
     ref: RuntimeContextRef,
   ): Promise<RuntimeContextReadyOutcome>;
   /**
+   * l0d-pseudocode/FAIL channel — the correlated RUNTIME_CONTEXT_FAILED kernel
+   * event (packet ch9-p1, W1/F family): the NEW in-process-only handler beside
+   * `runtimeContextReady`/`fail` (C13, no ingress), wired via `lifecycleOp`
+   * exactly as `fail` is. Driven by the completion seam (via `deliverCompletion`
+   * with a `failed` completion) or directly by tests. `reason` is an UNTRUSTED
+   * wire token classified to `ProvisioningFailureReason` at the transport gate
+   * (G2); `detail` is optional untrusted free text, string-gated (G3).
+   */
+  runtimeContextFailed(
+    instanceId: InstanceId,
+    requestId: string,
+    reason: string,
+    detail?: unknown,
+  ): Promise<RuntimeContextFailedOutcome>;
+  /**
    * The provider-completion delivery endpoint (SM seam): a resolved provider
-   * fires its READY completion HERE; the seam HOLDS it until the START
+   * fires its completion HERE — ONE `RuntimeContextCompletion` (a `ready(ref)`
+   * OR a `failed(reason, detail?)`, W3); the seam HOLDS it until the START
    * attempt's atomic commit lands (ordered-after-commit, C15), releasing it
    * CONCLUSION-SIGNALLED at the attempt's conclusion — never on an event-loop
-   * scheduling primitive (SM3). Wired at the dev/test composition root to the
-   * scripted provider; dormant in production (the empty registry never fires).
+   * scheduling primitive (SM3). ONE buffer, ONE discipline for both kinds
+   * (W3's foreclosure of a second buffer). Wired at the dev/test composition
+   * root to the scripted provider; dormant in production (the empty registry
+   * never fires).
    */
-  deliverCompletion(instanceId: InstanceId, requestId: string, ref: RuntimeContextRef): void;
+  deliverCompletion(
+    instanceId: InstanceId,
+    requestId: string,
+    completion: RuntimeContextCompletion,
+  ): void;
   /**
    * Await every in-flight DETACHED post-conclusion runtime-context delivery
-   * (a provider that fired READY after its START attempt concluded — the
-   * normal async path) and RETURN their READY outcomes (a delivered-inert
-   * completion yields `{kind:"ignored"}`, so a caller can prove it was
-   * delivered, not dropped). A drain seam: tests await it before asserting; a
-   * real shutdown awaits it before teardown. Empty when none pend.
+   * (a provider that fired its completion after its START attempt concluded —
+   * the normal async path) and RETURN their outcomes (a delivered-inert
+   * completion of EITHER kind yields `{kind:"ignored"}`, so a caller can prove
+   * it was delivered, not dropped — SM2's fail-able distinction). A drain seam:
+   * tests await it before asserting; a real shutdown awaits it before teardown.
+   * Empty when none pend.
    */
-  settleRuntimeContextDeliveries(): Promise<RuntimeContextReadyOutcome[]>;
+  settleRuntimeContextDeliveries(): Promise<RuntimeContextCompletionOutcome[]>;
 }
 
 async function loadTemplate(
@@ -209,9 +243,11 @@ export function createKernel(deps: KernelDeps): Kernel {
   // event-loop primitive — a microtask FIFO would deliver READY before the
   // `requested` marker commits and LOSE it (SM3's excluded anti-pattern). ──
   const lifecycleDeps: LifecycleDeps = { store, definitions, providerRegistry };
+  // W3: ONE buffer carrying the completion UNION, routed by kind at delivery —
+  // never a second buffer per kind (W3's foreclosure).
   const completionBuffer = new Map<
     string,
-    { readonly instanceId: InstanceId; readonly ref: RuntimeContextRef }[]
+    { readonly instanceId: InstanceId; readonly completion: RuntimeContextCompletion }[]
   >();
   let requestCounter = 0;
   // A FRESH unique request_id per provisioning attempt (S3/S5); a kernel-local
@@ -263,6 +299,32 @@ export function createKernel(deps: KernelDeps): Kernel {
       instanceId,
     });
   }
+  // F family: the FAILED handler wired via lifecycleOp (the `fail`/READY
+  // culture); deps = LifecycleDeps (no template load, no canonicality injection
+  // — the G2 membership check and the G3 string gate are pure).
+  function failedOp(
+    instanceId: InstanceId,
+    requestId: string,
+    reason: string,
+    detail?: unknown,
+  ): Promise<RuntimeContextFailedOutcome> {
+    return lifecycleOp(
+      () => runtimeContextFailed(lifecycleDeps, instanceId, requestId, reason, detail),
+      { instanceId },
+    );
+  }
+  // W3 KIND-BLIND delivery: route ONE completion to its handler and return the
+  // union outcome. The seam's hold/release/drain call THIS — zero per-kind seam
+  // logic (the only branch is the terminal dispatch to a handler).
+  function deliverOne(
+    instanceId: InstanceId,
+    requestId: string,
+    completion: RuntimeContextCompletion,
+  ): Promise<RuntimeContextCompletionOutcome> {
+    return completion.kind === "ready"
+      ? readyOp(instanceId, requestId, completion.ref)
+      : failedOp(instanceId, requestId, completion.reason, completion.detail);
+  }
   // The request_ids whose START attempt has CONCLUDED (its commit landed,
   // failed, or was superseded). NOTE: this Set grows by request_id per run —
   // bounded by the run's provisioning attempts; real cleanup (on run teardown)
@@ -275,30 +337,30 @@ export function createKernel(deps: KernelDeps): Kernel {
   // readyOp is captured as `{ok:false}` and re-surfaced by the drain), so a
   // detached delivery never leaks an unhandled rejection.
   type DeliveryResult =
-    | { readonly ok: true; readonly outcome: RuntimeContextReadyOutcome }
+    | { readonly ok: true; readonly outcome: RuntimeContextCompletionOutcome }
     | { readonly ok: false; readonly error: unknown };
   const pendingDeliveries = new Set<Promise<DeliveryResult>>();
   function deliverCompletion(
     instanceId: InstanceId,
     requestId: string,
-    ref: RuntimeContextRef,
+    completion: RuntimeContextCompletion,
   ): void {
     // The HOLD/enqueue returns to the provider IMMEDIATELY (SM2) — never
     // blocks the completion call, so no circular wait with C18's detach await.
     if (concluded.has(requestId)) {
-      // The normal real-world path: the provider fires READY ASYNCHRONOUSLY
-      // AFTER the START attempt concluded — the commit has ALREADY landed, so
-      // buffering would be LOST (concludeAttempt ran once, will not run again).
-      // Deliver DIRECTLY (SM2 "never dropped"): correlation matches on the
-      // committed marker → ready/ACTIVE; a superseded id's late completion
-      // correlation-rejects inert. DETACHED (fire-and-track, not awaited by the
-      // provider); no ordering hazard post-conclusion (the marker is committed).
-      // WRAP so the tracked promise never rejects (a readyOp integrity throw
-      // is captured, re-surfaced by the drain) — no unhandled rejection on a
-      // detached delivery. No self-delete here: the drain snapshots-and-clears
-      // (a `.finally` self-delete races the drain's snapshot).
+      // The normal real-world path: the provider fires its completion
+      // ASYNCHRONOUSLY AFTER the START attempt concluded — the commit has
+      // ALREADY landed, so buffering would be LOST (concludeAttempt ran once,
+      // will not run again). Deliver DIRECTLY (SM2 "never dropped"): correlation
+      // matches on the committed marker → ready/ACTIVE or FAIL; a superseded
+      // id's late completion correlation-rejects inert. DETACHED (fire-and-track,
+      // not awaited by the provider); no ordering hazard post-conclusion (the
+      // marker is committed). WRAP so the tracked promise never rejects (a
+      // handler integrity throw is captured, re-surfaced by the drain) — no
+      // unhandled rejection on a detached delivery. No self-delete here: the
+      // drain snapshots-and-clears (a `.finally` self-delete races the snapshot).
       pendingDeliveries.add(
-        readyOp(instanceId, requestId, ref).then(
+        deliverOne(instanceId, requestId, completion).then(
           (outcome): DeliveryResult => ({ ok: true, outcome }),
           (error: unknown): DeliveryResult => ({ ok: false, error }),
         ),
@@ -307,9 +369,9 @@ export function createKernel(deps: KernelDeps): Kernel {
     }
     const held = completionBuffer.get(requestId);
     if (held === undefined) {
-      completionBuffer.set(requestId, [{ instanceId, ref }]);
+      completionBuffer.set(requestId, [{ instanceId, completion }]);
     } else {
-      held.push({ instanceId, ref });
+      held.push({ instanceId, completion });
     }
   }
   async function concludeAttempt(requestId: string): Promise<void> {
@@ -327,9 +389,12 @@ export function createKernel(deps: KernelDeps): Kernel {
       // never-dropped; the buffer was already deleted). Collect errors, deliver
       // all, then throw the first (mirrors settleRuntimeContextDeliveries).
       const errors: unknown[] = [];
-      for (const completion of held) {
+      for (const buffered of held) {
         try {
-          await readyOp(completion.instanceId, requestId, completion.ref);
+          // KIND-BLIND (SM2): an integrity-throwing completion of EITHER kind
+          // must NOT drop a sibling — collect, deliver all, then re-surface the
+          // first (a FAILED survivor after a READY throw proves the discipline).
+          await deliverOne(buffered.instanceId, requestId, buffered.completion);
         } catch (error) {
           errors.push(error);
         }
@@ -339,7 +404,7 @@ export function createKernel(deps: KernelDeps): Kernel {
       }
     }
   }
-  async function settleRuntimeContextDeliveries(): Promise<RuntimeContextReadyOutcome[]> {
+  async function settleRuntimeContextDeliveries(): Promise<RuntimeContextCompletionOutcome[]> {
     // Await every in-flight detached post-conclusion delivery (a test drain;
     // a real shutdown would await this before teardown) and RETURN their
     // outcomes — a delivered-inert completion yields `{kind:"ignored"}`, a
@@ -347,7 +412,7 @@ export function createKernel(deps: KernelDeps): Kernel {
     // Snapshot-and-CLEAR before awaiting (a delivery arriving mid-drain is
     // caught by the next loop turn); a post-conclusion integrity throw is
     // re-surfaced, never swallowed.
-    const outcomes: RuntimeContextReadyOutcome[] = [];
+    const outcomes: RuntimeContextCompletionOutcome[] = [];
     const errors: unknown[] = [];
     while (pendingDeliveries.size > 0) {
       const batch = [...pendingDeliveries];
@@ -689,6 +754,9 @@ export function createKernel(deps: KernelDeps): Kernel {
     // K1: the RUNTIME_CONTEXT_READY kernel event, wired via lifecycleOp (the
     // `fail` culture). deliverCompletion is the SM seam's provider fire endpoint.
     runtimeContextReady: (instanceId, requestId, ref) => readyOp(instanceId, requestId, ref),
+    // ch9-P1 F family: the RUNTIME_CONTEXT_FAILED kernel event, wired the same way.
+    runtimeContextFailed: (instanceId, requestId, reason, detail) =>
+      failedOp(instanceId, requestId, reason, detail),
     deliverCompletion,
     settleRuntimeContextDeliveries,
   };

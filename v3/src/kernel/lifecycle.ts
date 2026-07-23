@@ -7,8 +7,10 @@ import type {
   InstanceId,
   KickoffOutcome,
   OpId,
+  ProvisioningFailureReason,
   RoleName,
   RuntimeContext,
+  RuntimeContextFailedOutcome,
   RuntimeContextReadyOutcome,
   RuntimeContextRef,
   StartOutcome,
@@ -695,6 +697,143 @@ export async function fail(
           `kernel integrity: fact-less FAIL commit reported '${result.kind}' for instance '${instanceId}'`,
         );
       case "cas_conflict":
+        continue;
+      case "committed":
+        return { kind: "terminated", disposition: "failed" };
+    }
+  }
+}
+
+/** The closed provisioning-failure reason domain (G1) — the membership set the
+ * G2 transport gate validates against. Members grow ONLY by contract successor
+ * rows. */
+const PROVISIONING_FAILURE_REASONS: readonly ProvisioningFailureReason[] = [
+  "sys:provision_rejected",
+  "sys:provision_failed",
+];
+
+/**
+ * G2 reason-domain membership gate (packet ch9-p1; contract:ch9-runner#C3/#C5):
+ * PURE, at the completion's own transport gate AFTER the rungs — an unknown
+ * `reason` token (outside the closed domain, INCLUDING a non-string wire value)
+ * is a kernel/config INTEGRITY THROW, fail-closed, NEVER stored. Typed over
+ * `unknown` (the wire is untrusted) and narrows to the closed enum.
+ */
+function assertReasonInDomain(
+  instanceId: InstanceId,
+  requestId: string,
+  reason: unknown,
+): asserts reason is ProvisioningFailureReason {
+  if (
+    typeof reason !== "string" ||
+    !(PROVISIONING_FAILURE_REASONS as readonly string[]).includes(reason)
+  ) {
+    throw new Error(
+      `kernel integrity: runtime-context failure reason for instance '${instanceId}' (request '${requestId}') is outside the closed provisioning-failure domain (transport gate): ${String(reason)}`,
+    );
+  }
+}
+
+/**
+ * G3 detail string-gate (packet ch9-p1; contract:ch9-runner#C4/#C5): PURE,
+ * the SAME gate point — a PRESENT `detail` that is not a plain string is the
+ * same fail-closed integrity throw (a string is trivially canonical-JSON-safe,
+ * so no digest gate is needed). `detail` is untrusted-confined: NEVER parsed,
+ * NEVER matched against any token domain, NEVER stored in `failure_reason`.
+ */
+function assertDetailWellFormed(instanceId: InstanceId, requestId: string, detail: unknown): void {
+  if (detail !== undefined && typeof detail !== "string") {
+    throw new Error(
+      `kernel integrity: runtime-context failure detail for instance '${instanceId}' (request '${requestId}') is present but not a string (transport gate)`,
+    );
+  }
+}
+
+/**
+ * l0d-pseudocode/FAIL channel — the correlated RUNTIME_CONTEXT_FAILED handler
+ * (packet ch9-p1, F family; contract:ch9-runner#C1–#C5): the NEW kernel event
+ * beside `fail` — in-process only (C13, no ingress), driven by the completion
+ * seam or directly by tests. It carries NO ref and loads NO template: a failure
+ * report needs only IDENTITY (the rungs) and CLASSIFICATION (the gate). The
+ * checks run in the ch12-C18 ORDER (F1): load the instance (a vanished instance
+ * → the inert `rejected(unknown_instance)`, the L8 droppable-event culture);
+ * ADMISSION rung 1 — terminal-sink (`kernel_status ≠ TERMINAL`); rung 2 —
+ * correlation (`runtime_context = requested(request_id)`); a rung-rejected
+ * completion returns `ignored`, mutates NOTHING, and its payload is NEVER
+ * inspected (one outcome per event). THEN the transport gate (AFTER the rungs,
+ * BEFORE the commit): the G2 reason-domain membership check + the G3 detail
+ * string-gate — a violation is a fail-closed integrity throw, never stored. An
+ * ADMITTED completion commits the EXISTING `FAIL` disposition atomically (F2 —
+ * the built `fail` shape): `kernel_status → TERMINAL`, `terminal_disposition =
+ * failed`, `failure_reason ← reason`, wait cleared, NO fact row; the
+ * `runtime_context` marker is NOT written — it keeps `requested(request_id)` as
+ * diagnostic state (the terminal disposition IS the record). A CAS conflict
+ * restarts from load (F4 — a concurrently-terminal or -resolved run then
+ * rung-rejects inert on fresh state).
+ */
+export async function runtimeContextFailed(
+  deps: LifecycleDeps,
+  instanceId: InstanceId,
+  requestId: string,
+  reason: string,
+  detail?: unknown,
+): Promise<RuntimeContextFailedOutcome> {
+  for (;;) {
+    const instance = await deps.store.loadInstance(instanceId);
+    if (instance === null) {
+      // F1/L8: an in-process event answered with an inert rejection is
+      // droppable without a crash (the C15 event-anomaly semantics).
+      return { kind: "rejected", reason: "unknown_instance" };
+    }
+    // F1 admission rung 1 — terminal-sink (inert). A late FAILED after a
+    // concurrent CANCEL/FAIL took the run TERMINAL must not resurrect it; and
+    // after a FAILED-first admission this rung rejects the second FAILED (F3c —
+    // the run is already TERMINAL, C2 kept the marker `requested`, so
+    // correlation alone would still pass: the terminal-sink rung is load-bearing).
+    if (instance.kernelStatus === "TERMINAL") {
+      return { kind: "ignored" };
+    }
+    // F1 admission rung 2 — correlation (inert: a completion for a superseded /
+    // different request_id, and — after a READY-first admission — the marker
+    // moved to `ready(ref)` so `requested(request_id)` no longer holds, F3a).
+    if (
+      instance.runtimeContext.state !== "requested" ||
+      instance.runtimeContext.requestId !== requestId
+    ) {
+      return { kind: "ignored" };
+    }
+    // G2/G3 transport gate — AFTER the rungs, BEFORE the commit (a rung-rejected
+    // completion's payload is never inspected; one outcome per event): the
+    // reason-domain membership check + the detail string-gate. Fail-closed — a
+    // violation throws with ZERO state change (no partial write, no
+    // `failure_reason` pollution).
+    assertReasonInDomain(instanceId, requestId, reason);
+    assertDetailWellFormed(instanceId, requestId, detail);
+    // F2 admitted FAIL commit: ONE atomic commitLifecycle (the built `fail`
+    // shape) — TERMINAL + failed + `failure_reason ← reason` + wait cleared +
+    // NO fact (a kernel event carries no op fact). The `runtime_context` field
+    // is NOT written: the marker keeps `requested(request_id)` as diagnostic
+    // state (do NOT "clean up" — the terminal disposition IS the record).
+    const result = await deps.store.commitLifecycle({
+      instanceId: instance.instanceId,
+      expectedVersion: instance.version,
+      fact: null,
+      newKernelStatus: "TERMINAL",
+      newTerminalDisposition: "failed",
+      newWait: null,
+      newFailureReason: reason,
+    });
+    switch (result.kind) {
+      case "duplicate_op":
+      case "op_id_collision":
+        // Structurally unreachable: a fact-less commit consumes no idempotency key.
+        throw new Error(
+          `kernel integrity: fact-less RUNTIME_CONTEXT_FAILED commit reported '${result.kind}' for instance '${instanceId}'`,
+        );
+      case "cas_conflict":
+        // F4: this attempt raced a concurrent commit — restart from load and
+        // re-run the rungs on fresh state (a now-terminal / now-resolved run
+        // rung-rejects inert).
         continue;
       case "committed":
         return { kind: "terminated", disposition: "failed" };

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { InstanceId, RuntimeContextRef } from "../domain/index.js";
+import type { InstanceId, RuntimeContextCompletion, RuntimeContextRef } from "../domain/index.js";
 import { createScriptedRuntimeContextProvider } from "./scriptedRuntimeContextProvider.js";
 
 /**
@@ -23,18 +23,73 @@ describe("scriptedRuntimeContextProvider (PR3)", () => {
     ]);
   });
 
-  it("fireOnProvision fires the configured READY through the bound completion sink", async () => {
-    const delivered: { instanceId: InstanceId; requestId: string; ref: RuntimeContextRef }[] = [];
+  it("fireOnProvision fires the configured READY completion through the bound sink", async () => {
+    const delivered: { instanceId: InstanceId; requestId: string; completion: RuntimeContextCompletion }[] =
+      [];
     const provider = createScriptedRuntimeContextProvider({ script: [{ fireOnProvision: REF }] });
-    provider.bindCompletionSink((instanceId, requestId, ref) => {
-      delivered.push({ instanceId, requestId, ref });
+    provider.bindCompletionSink((instanceId, requestId, completion) => {
+      delivered.push({ instanceId, requestId, completion });
     });
     await provider.provision("i1", "r1", SPEC);
-    expect(delivered).toEqual([{ instanceId: "i1", requestId: "r1", ref: REF }]);
+    expect(delivered).toEqual([
+      { instanceId: "i1", requestId: "r1", completion: { kind: "ready", ref: REF } },
+    ]);
   });
 
   it("fireOnProvision without a bound sink throws (a wiring error)", () => {
     const provider = createScriptedRuntimeContextProvider({ script: [{ fireOnProvision: REF }] });
+    expect(() => void provider.provision("i1", "r1", SPEC)).toThrow(/bound completion sink/);
+  });
+
+  it("K1: failOnProvision fires a FAILED completion through the sink AFTER the record", async () => {
+    const delivered: RuntimeContextCompletion[] = [];
+    const provider = createScriptedRuntimeContextProvider({
+      script: [{ failOnProvision: { reason: "sys:provision_failed", detail: "git exit 128" } }],
+    });
+    provider.bindCompletionSink((_i, _r, completion) => {
+      delivered.push(completion);
+    });
+    await provider.provision("i1", "r1", SPEC);
+    // Record-before-outcome: the call is recorded regardless of the fire.
+    expect(provider.provisionCalls).toEqual([{ instanceId: "i1", requestId: "r1", spec: SPEC }]);
+    expect(delivered).toEqual([
+      { kind: "failed", reason: "sys:provision_failed", detail: "git exit 128" },
+    ]);
+  });
+
+  it("K1: the WIDE reason type passes a HOSTILE (out-of-domain) token through UNALTERED", async () => {
+    const delivered: RuntimeContextCompletion[] = [];
+    const provider = createScriptedRuntimeContextProvider({
+      // A bare un-prefixed token — the player never classifies; the kernel gate does.
+      script: [{ failOnProvision: { reason: "provision_failed" } }],
+    });
+    provider.bindCompletionSink((_i, _r, completion) => {
+      delivered.push(completion);
+    });
+    await provider.provision("i1", "r1", SPEC);
+    // No `detail` when the script omits it (exactOptionalPropertyTypes: absent, not undefined).
+    expect(delivered).toEqual([{ kind: "failed", reason: "provision_failed" }]);
+  });
+
+  it("K2: a READY-then-FAILED combination script fires in the DECLARED field order (ready first)", async () => {
+    const delivered: RuntimeContextCompletion[] = [];
+    const provider = createScriptedRuntimeContextProvider({
+      script: [{ fireOnProvision: REF, failOnProvision: { reason: "sys:provision_rejected" } }],
+    });
+    provider.bindCompletionSink((_i, _r, completion) => {
+      delivered.push(completion);
+    });
+    await provider.provision("i1", "r1", SPEC);
+    expect(delivered).toEqual([
+      { kind: "ready", ref: REF },
+      { kind: "failed", reason: "sys:provision_rejected" },
+    ]);
+  });
+
+  it("failOnProvision without a bound sink throws (a wiring error, the fireOnProvision culture)", () => {
+    const provider = createScriptedRuntimeContextProvider({
+      script: [{ failOnProvision: { reason: "sys:provision_failed" } }],
+    });
     expect(() => void provider.provision("i1", "r1", SPEC)).toThrow(/bound completion sink/);
   });
 

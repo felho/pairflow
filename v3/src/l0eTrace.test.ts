@@ -95,7 +95,7 @@ function makeKernel(
     diag: noopDiagnosticsSink,
     providerRegistry: createStaticProviderRegistry({ [providerName]: provider }),
   });
-  provider.bindCompletionSink((i, r, ref) => kernel.deliverCompletion(i, r, ref));
+  provider.bindCompletionSink((i, r, completion) => kernel.deliverCompletion(i, r, completion));
   return { kernel, store: handle.store, provider, close: () => handle.close() };
 }
 
@@ -213,6 +213,37 @@ describe("l0e golden trace — the provisioned-immediate run (TR family)", () =>
     expect(hostile).toEqual({ kind: "ignored" });
     // runtime_context stays requested(r1); NO state change.
     expect(await store.loadInstance("inst-l0e")).toEqual(requested);
+    close();
+  });
+
+  it("FAILED variant: the provider fails → TERMINAL failed, failure_reason = the token, the marker RETAINED (the floor asserts all three)", async () => {
+    const admitted = admit(l0eTemplate(WORKTREE_SPEC));
+    const { kernel, store, provider, close } = makeKernel(admitted, "pairflow.worktree");
+    await kernel.create({
+      instanceId: "inst-l0e",
+      templateRef: admitted.ref,
+      task: "ship it",
+      mode: "immediate",
+    });
+    // start → resolve → provision(detach) → requested(r1); the provisioning then
+    // FAILS: RUNTIME_CONTEXT_FAILED(r1, sys:provision_failed) routes to FAIL.
+    const started = await kernel.start({ instanceId: "inst-l0e", opId: "op1" });
+    expect(started).toEqual({ kind: "accepted" });
+    const requestId = provider.provisionCalls[0]?.requestId ?? "";
+    const failed = await kernel.runtimeContextFailed(
+      "inst-l0e",
+      requestId,
+      "sys:provision_failed",
+      "git clone exited 128",
+    );
+    expect(failed).toEqual({ kind: "terminated", disposition: "failed" });
+    // The floor read asserts all three: TERMINAL failed, failure_reason = token,
+    // the marker retained as diagnostic state (the detail is NOWHERE in state).
+    const terminal = await store.loadInstance("inst-l0e");
+    expect(terminal?.kernelStatus).toBe("TERMINAL");
+    expect(terminal?.terminalDisposition).toBe("failed");
+    expect(terminal?.failureReason).toBe("sys:provision_failed");
+    expect(terminal?.runtimeContext).toEqual({ state: "requested", requestId });
     close();
   });
 });

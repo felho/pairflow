@@ -1,5 +1,6 @@
 import type {
   InstanceId,
+  RuntimeContextCompletion,
   RuntimeContextProjection,
   RuntimeContextRef,
   RuntimeContextSpec,
@@ -18,10 +19,20 @@ export interface RuntimeContextProvider {
    * Start provisioning. ASYNC, fire-and-forget from the kernel's view: the
    * awaited fulfillment is the DETACH ACKNOWLEDGMENT (the provider accepted
    * and detached its async work), NEVER the completion — the completion fires
-   * `RUNTIME_CONTEXT_READY(instanceId, requestId, ref)` LATER through the
-   * in-process completion seam. A SYNCHRONOUS throw, or the awaited
-   * acknowledgment settling REJECTED before the START commit, is a PORT
-   * BREACH (fail-loud, no state change; C18's must-detach obligation, S4).
+   * LATER through the in-process completion seam as ONE of two mutually
+   * exclusive kinds per `request_id` (ch9-P1 W1):
+   *   - `ready(ref)` — the readiness for the request the kernel issued, OR
+   *   - `failed(reason, detail?)` — a provisioning failure (the `RUNTIME_CONTEXT_
+   *     FAILED` channel: `reason` a `ProvisioningFailureReason`, `detail`
+   *     optional untrusted free text).
+   *
+   * The unconditional-detach obligation (ch9-P1 W2; contract:ch9-runner#C11):
+   * `provision()` ACCEPTS and DETACHES for every shape-valid call, and EVERY
+   * provisioning failure — config rejection INCLUDED — travels the FAILED
+   * completion channel, NEVER a throw. A SYNCHRONOUS throw, or the awaited
+   * acknowledgment settling REJECTED before the START commit, is a PORT BREACH
+   * (fail-loud, no state change; C18's must-detach obligation, S4) — RESERVED
+   * for genuine programming errors, never a business/config failure.
    */
   provision(instanceId: InstanceId, requestId: string, spec: RuntimeContextSpec): Promise<void>;
   /**
@@ -47,13 +58,15 @@ export interface ProviderRegistry {
 
 /**
  * The completion delivered by a provider (via the composition-injected seam)
- * when its async provisioning finishes: the readiness for the request the
- * kernel issued.
+ * when its async provisioning concludes: ONE `RuntimeContextCompletion` per
+ * request — a `ready(ref)` readiness OR a `failed(reason, detail?)` failure
+ * (ch9-P1 W3 — the ONE sink carrying both kinds; the seam holds/releases/drains
+ * with zero per-kind seam logic).
  */
 export type RuntimeContextCompletionSink = (
   instanceId: InstanceId,
   requestId: string,
-  ref: RuntimeContextRef,
+  completion: RuntimeContextCompletion,
 ) => void;
 
 /**

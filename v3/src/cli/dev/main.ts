@@ -591,7 +591,9 @@ async function verbReplay(ctx: VerbContext): Promise<number> {
       processRunner,
       providerRegistry: createStaticProviderRegistry({ "pairflow.worktree": scriptedProvider }),
     });
-    scriptedProvider.bindCompletionSink((i, r, ref) => kernel.deliverCompletion(i, r, ref));
+    scriptedProvider.bindCompletionSink((i, r, completion) =>
+      kernel.deliverCompletion(i, r, completion),
+    );
     const ingress = createIngress({ kernel, diag: noopDiagnosticsSink });
     const result = await replayTrace(fixture, {
       submit: (raw) => ingress.submit(raw),

@@ -75,7 +75,7 @@ describe("l0d golden trace — the deferred-kickoff provisioned hold + cancel (T
       diag: noopDiagnosticsSink,
       providerRegistry: createStaticProviderRegistry({ "pairflow.worktree": provider }),
     });
-    provider.bindCompletionSink((i, r, ref) => kernel.deliverCompletion(i, r, ref));
+    provider.bindCompletionSink((i, r, completion) => kernel.deliverCompletion(i, r, completion));
 
     // create (deferred_kickoff, NO task — legal over the mode default) → v1.
     const created = await kernel.create({
