@@ -47,3 +47,41 @@ an enforced invariant without persisting a full dispatch record (the
 fingerprint is O(1) state, the invariant's original objection). Home:
 a later definition-store / runtime chapter; cheap to add when instance
 creation or the store schema is next touched.
+
+## FH-2 — nightly "dreaming" pass: ad-hoc-script distillation into tool candidates
+
+**Provenance:** owner idea, 2026-07-23 (the ch9 speedup-batch day) —
+explicitly capture-only, not to be built now. Process-plane item (a
+deliberate genre stretch of this file — recorded here because it is
+exactly a deferred enhancement with a human decision point).
+
+**The premise (proven twice, manually):** session transcripts contain
+ad-hoc scripts the LLM writes and discards; recurring ones mark
+missing tools. The realized-map lint was born this way (scratchpad →
+promoted tool), and the 2026-07-23 speedup batch was a one-off manual
+run of exactly this loop (session-log mining → 5 tools, ~45+ min/
+session yield). The README §7 WATCH-first admission bias is the same
+rule at process grain: capture at occurrence, promote at recurrence.
+
+**The proposal:** a scheduled nightly job reads the day's NEW session
+logs for this project, classifies the ad-hoc scripts encountered, and
+appends distilled CAPTURE lines — never code, and generalized: never
+ANY verbatim log content (transcripts may carry sensitive material) —
+only "what it did / why it was useful / session+date". A recurrence
+threshold (~3) promotes a use-case to an IMPLEMENTATION CANDIDATE
+list. Implementation is NEVER automated: candidates are reviewed by
+the owner (boundary reviews are the natural point), and any
+implemented tool then falls under the §5.5 verification-surface
+tooling review automatically (arm before load-bearing use).
+
+**Known hard parts (recorded, unsolved):** the use-case identity key
+(when are two ad-hoc scripts "the same"? — without a stable key the
+recurrence counter never converges; the errand-identity lesson at
+process grain); digest size discipline (a noisy daily output dies
+unread — the honcho-dreamer lesson from the research corpus:
+consolidation earns its keep only when its output feeds a real
+decision point, which the candidate-list + boundary review provides);
+cost bounding (scan only new sessions daily).
+
+**Revisit:** any boundary review, or when the manual mining pattern
+recurs a third time (its own admission rule applied to itself).
