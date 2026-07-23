@@ -34,9 +34,13 @@ decision outlives the ch9 contract-draft's realized-freeze.
    on claim exclusivity.
 3. **Correctness = the kernel's content-addressed idempotency.**
    Duplicate delivery collapses at the kernel: the adapter derives
-   the actor-emit `op_id` via emit-lib (ADR-004), so a re-delivered
-   packet re-derives the SAME op id and lands `Duplicate`. Duplicate
-   spawn work is the deliberate, kernel-safe cost.
+   the actor-emit `op_id` via emit-lib (ADR-004) — its
+   `contextPacketId` input is the ratified packet identity
+   `"<instance_id>@v<expected_version>"` (ch9-C13; every future
+   adapter derives the same string for the same dispatch) — so a
+   re-delivered packet re-derives the SAME op id and lands
+   `Duplicate`. Duplicate spawn work is the deliberate, kernel-safe
+   cost.
 4. **Confirmation is committed kernel evidence, never runner
    self-report:** an errand is `confirmed` only when the actor's
    emitted op exists as a COMMITTED transcript row (`Duplicate` on

@@ -29,9 +29,11 @@ process-gate runner + any future spawning component):
    composition-declared allowlist plus adapter-injected pairflow
    variables; the full host environment is NEVER inherited (secrets
    in the operator's shell must not leak into actor/gate processes).
-3. **Composition-configured timeout, delivered as SIGTERM** — the
-   observable is `code: null, signal: "SIGTERM"` (probe P3a); no
-   spawn is unbounded.
+3. **Composition-configured timeout: SIGTERM, then a bounded-grace
+   SIGKILL escalation** (grace composition-configured, default
+   10 s) — the normal observable is `code: null, signal: "SIGTERM"`
+   (probe P3a); a SIGTERM-ignoring child is SIGKILLed at grace
+   expiry, so no spawn is unbounded.
 4. **Captured stdio** — stdout/stderr captured, never inherited; a
    missing binary is a DISTINCT infra lane (probe P3c: `error` event
    `ENOENT`; no exit code is produced). Env replacement is full by
@@ -67,8 +69,8 @@ bypass the model↔code divergence stop.
   construction; no unbounded child; uniform failure lanes
   (timeout/ENOENT/nonzero) every consumer classifies identically.
 - Negative: legitimate env needs must be declared (allowlist
-  friction); SIGTERM-only kill means an ignoring child lingers until
-  a later hardening adds the KILL escalation (named rework, not MVP).
+  friction); the SIGKILL escalation forfeits graceful-shutdown work a
+  slow-but-honest child was doing (the grace window is the dial).
 - Neutral: tmux wrapping (the attach channel) sits ABOVE this seam —
   the session wraps the spawned command, the discipline is unchanged.
   The attach channel's `takeover` verb (writable access to a live

@@ -724,6 +724,10 @@ invariants-vs-tooling).
   effects, confinement, authority boundaries). (3) **a
   contract-draft C-row** — chapter-scoped decisions (frozen at
   realize; a reopenable anchor — the ch11-C31 audit precedent).
+  AUTHORITY when a row is ADR-lifted: the ADR owns the durable
+  decision, the C-row is its chapter REALIZATION (a projection with
+  the verification surface) — on divergence the ADR wins and the
+  row's contract reopens; the two never compete as peers.
   (4) **code + tests** — everything else; the realized freeze is
   the record. **Reflection rule:** every model-touching act
   appends a one-line K0-gate reflection to the process-log ("did

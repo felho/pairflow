@@ -32,8 +32,10 @@ prefixed strings.
   cross-check and no central token registry. The same construction
   separates system tokens from REGISTRY names (no registry name
   contains `:`).
-- **The authored-vs-registry residual is resolved POSITIONALLY** (the
-  ch9 draft act's recommended form): an authored token may SPELL a
+- **The authored-vs-registry residual — RECOMMENDED resolution:
+  positional** (final at the ratification act; electing the
+  Alternatives' registry-name check instead refreshes the prepared
+  payload and re-checks the bytes before the GO): an authored token may SPELL a
   registry name (colon-free), but a reason token never occupies a
   rejection-name position — payload-only, positionally harmless; the
   ch11-C31 successor text NARROWS its earlier set-disjointness
