@@ -76,15 +76,25 @@ def run_gate(name: str, cmd: list[str], cwd: str | None = None,
     try:
         out_s, _ = proc.communicate(timeout=timeout)
     except subprocess.TimeoutExpired:
+        pgid = None
         try:
-            os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+            pgid = os.getpgid(proc.pid)
+            os.killpg(pgid, signal.SIGTERM)
             proc.wait(timeout=5)
         except Exception:
+            pass
+        # the KILL is UNCONDITIONAL after the grace (the final arm
+        # round's NEW-FOLD-01: a direct child exiting while a
+        # descendant ignores TERM must not skip the group KILL)
+        if pgid is not None:
             try:
-                os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
-            except Exception:
+                os.killpg(pgid, signal.SIGKILL)
+            except (ProcessLookupError, PermissionError):
                 pass
-            proc.wait()
+        try:
+            proc.wait(timeout=5)
+        except Exception:
+            pass
         return False, f"TIMEOUT after {timeout}s (process group killed)", ""
     out = (out_s or "").strip().split("\n")
     tail = out[-1] if out else ""
