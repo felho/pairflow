@@ -4250,3 +4250,29 @@ final CLEAN.
   README §6 triage text (zero extra cost, same run). The boundary
   review disposes: standing gate / scope-extension convention /
   non-issue.
+
+- 2026-07-23 · CH9 DRAFT RATIFIED — the full act executed (user GO
+  after a three-decision stepwise digest; ratifying commit on content
+  5c68f206): (1) the authored-vs-registry residual resolved OPTION A
+  (positional narrowing — the prepared payload final as written; the
+  fail-closed registry-name check declined, recorded electable-never-
+  elected in ADR-018); (2) the K0-NO ratified for the delivery-errand
+  semantics — K0-GATE REFLECTION (the README §6 rule's first live
+  line): the gate routed correctly — the kernel halves were already
+  model-side, the runner-plane shape stayed contract-grain, and the
+  open L8 question is PARKED as a named model-wave input rather than
+  lost; no rule adjustment proposed; (3) the ch11 reopen executed
+  (commits 45fcac96 + 99c80ca0: six row sites + successor C31 + map
+  restored-as-updated + dated metrics 2→3 — the loud anchor window
+  opened and closed inside the act; a missing-fence lint red was
+  caught PRE-commit by exit-code-gated execution, the ch8-fixup
+  lesson holding); ADR-016/017/018 accepted. Loop stats for the
+  boundary: 5 panel rounds + 2 closes + re-bind + recon; arm 1 full +
+  4 re-checks (yield 13→4→3→1→0; ARM-08 refuted with a grep receipt);
+  draft 27 rows / 38.5 KB (+53%, advisory breached — C14/C27 split
+  candidates recorded). The PLAN-ASSEMBLY-ARM WATCH item's first data
+  point: the arm's four plan/process-layer catches (ARM-09..12 — the
+  K0 mandate, the dual-home authority rule, the stale §1.3 Absents,
+  the unprepared-alternative framing) all bit on the layer the owner
+  flagged — evidence FOR some standing form; boundary review decides.
+  NEXT: ch9-P0 (the sys: rename realization) on the user's go.

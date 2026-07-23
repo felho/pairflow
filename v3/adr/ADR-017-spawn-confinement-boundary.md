@@ -1,6 +1,6 @@
 # ADR-017: one spawn discipline — cwd confinement, env allowlist, timeout kill
 
-Status: proposed
+Status: accepted
 Date: 2026-07-23
 Links: supersedes — · amends — · depends-on — · related ADR-014, ADR-016
 

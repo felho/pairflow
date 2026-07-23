@@ -1,7 +1,7 @@
 # ch9 — runner contract
 
 ```json
-{"contract_draft": {"chapter": "ch9", "surface": "runner", "status": "draft"}}
+{"contract_draft": {"chapter": "ch9", "surface": "runner", "status": "ratified"}}
 ```
 
 ## Context (non-normative by declaration)
@@ -144,6 +144,17 @@ C22, ADR-018). Beyond the seed list: C22 (the uniform `sys:`
 convention), C26 (diagnostic-channel reuse), and C27 (the ch11-C31
 reopen carrier) — additions, each DECIDED-HERE-marked.
 
+**Draft metrics** (template §5, recorded at the 2026-07-23
+ratification): rounds to ratify: 5 fresh-context five-lens panel
+rounds (3 full + 1 targeted + 1 full post-arm) + 2 top-level closes +
+1 re-bind + 1 delta reconciliation; external arm: 1 full round + 4
+re-checks (final CLEAN — finder-lane yield 13 → 4 → 3 → 1 → 0);
+new-decision rows: 20 DECIDED-HERE of 27; post-ratification
+reopenings: 0. Size 38.5 KB — +53% over the round-1 baseline, the
+advisory threshold consciously exceeded (the arm-deepened errand /
+attempt-id / exit-result mechanisms); C14 and C27 are recorded
+packet-time split candidates.
+
 ## Contract rows (every normative statement is a C-row)
 
 | ID | Rule |
@@ -176,4 +187,8 @@ reopen carrier) — additions, each DECIDED-HERE-marked.
 | C26 | Runner-plane observability rides the EXISTING diagnostic channel (ch7 structured kernel log + audit stream, cited — a BEST-EFFORT, fail-open, non-authoritative channel by its own ratified contract): every errand state transition, every provisioning completion (both kinds), and every spawn outcome emits a structured diagnostic event. The authority split is honest: the errand LEDGER is the authoritative runner-plane CURRENT state; the diagnostic stream is best-effort HISTORY (events may be lost on channel failure — no full-history reconstruction is claimed); no new observability machinery is minted. DECIDED HERE (channel REUSE as a decision — the alternative, a runner-plane authoritative transition ledger, is declined as a separate later decision). |
 | C27 | THE ch11-C31 REOPEN CARRIER (the act rides this draft's ratification — one GO, two named acts): the realized `ch11-gate-format` contract REOPENS for the `sys:` rename with scope = EVERY site spelling a reason token — the five token-defining rows ch11-C10, ch11-C11, ch11-C17, ch11-C25, ch11-C31 PLUS ch11-C26's classification reference (ch11-C29 stays out: drive labels, not reason tokens) — per the PREPARED REOPEN PAYLOAD in Context (recommended successor text + per-site row edits + the named MAP-entry updates), under the template-§4 realized-reopen choreography: commit 1 = row edits + status `reopened` + map lifted; commit 2 = re-ratification block + the reopen-record prose block (the ch11 file's own convention) + map RESTORED-AS-UPDATED (the payload's map scope: ch11-C31's gap-status resolved, ch11-C10/C11/C25 spellings tracked — the token-blind `v3:realized-map` lint cannot catch these, so the act performs them by the payload's list) + the ch11 Close-metrics reopenings count 2 → 3 recorded as a DATED update line (the 2026-07-18 close-time record stays untouched; the count is cumulative with dated increments — never a silent edit of a dated line). The `ProcessResult.kind` domain (`ok | timeout | runner_error`, ch11-C26/C34) stays BARE — an outcome KIND, not reason payload; ch9-P0 realizes the kind→`sys:`-reason mapping without touching the kind domain. RATIFIER DECISION AT THE ACT (the panel detected, never resolves): the authored-vs-registry-name residual — an authored token may SPELL a registry name (colon-free) — is resolved by the payload's RECOMMENDED form (the ch11-C31 disjointness claim NARROWS to the positional rule: a reason token never occupies a rejection-name position); the alternative (a fail-closed registry-name check on authored tokens) is recorded in ADR-018 Alternatives and remains electable — and ELECTING IT TRIGGERS a payload refresh + an arm re-check on the refreshed bytes BEFORE the GO (the act never ratifies unreviewed bytes; the decision point is presented AHEAD of the GO in the digest). ADR-016 / ADR-017 / ADR-018 are born `proposed` with this draft's content commit and flip `accepted` BY the same ratification act (the README §4 draft-ratified ADR lane). DECIDED HERE. |
 
-## Ratification history (empty at `draft` — blocks are appended by the lifecycle acts)
+## Ratification history
+
+```json
+{"ratification": {"date": "2026-07-23", "arms": ["agent-invoked codex gpt-5.6-sol/high — one full adversarial round (13 findings: 12 folded, 1 refuted with an executed-grep receipt) + four re-checks converging 4 \u2192 3 \u2192 1 \u2192 CLEAN on the final basis"], "commit": "5c68f206f153539c63403517240139f9d4dec59f"}}
+```

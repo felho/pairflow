@@ -1,6 +1,6 @@
 # ADR-018: the `sys:` reason-token namespace convention
 
-Status: proposed
+Status: accepted
 Date: 2026-07-23
 Links: supersedes — · amends — · depends-on — · related ADR-016
 

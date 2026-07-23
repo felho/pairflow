@@ -2506,8 +2506,9 @@ Ratification is permanently human; packets anchor as
 ### 9.4 Packets and flow mode
 
 Draft reference (§1.3 convention): `contracts/ch9-runner-contract.md`
-— ratification pending (the draft round runs first, before any
-packet; prediction bases below are conditional on it).
+— RATIFIED 2026-07-23 (the draft round ran first, before any packet;
+the prediction bases below are unconditional now; the ratification
+act also executed the ch11-C31 `sys:` reopen per C27).
 
 **Mutation-pilot flow note (binds every packet):** arm gate-2
 dual-runs `pnpm v3:mutation` scoped to the packet's

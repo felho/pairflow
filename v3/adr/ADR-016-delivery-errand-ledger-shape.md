@@ -1,6 +1,6 @@
 # ADR-016: the delivery-errand ledger — runner-owned, scheduling-only claims, kernel-evidence confirmation
 
-Status: proposed
+Status: accepted
 Date: 2026-07-23
 Links: supersedes — · amends — · depends-on ADR-003, ADR-004 · related ADR-010, ADR-014
 
