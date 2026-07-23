@@ -556,6 +556,25 @@ selftest armor scales with the declared surface — shrinking the
 surface shrinks the armor without shrinking confidence. This
 principle decides every future "should the lint check this?" dispute.
 
+**Verification-surface tooling review (adopted 2026-07-23, the
+speedup-batch lesson — owner decision on the batch's own evidence):**
+any internal tool that PARTICIPATES IN THE VERIFICATION SURFACE — a
+tier-0 gate, a wrapper/composite over ratified gates, a choreography
+executor over ratified text (the reopen-runner class), or arm
+infrastructure (guard / pin / invocation) — receives an EXTERNAL-ARM
+review BEFORE its first load-bearing use, in addition to the standing
+floors (claim-derived negative tests, §4 step 2; the selftest armor
+above). Rationale, from the adopting batch's three arm rounds
+(11 → 7 → 1 findings): every P1 was a WRAPPER-BOUNDARY breach —
+silent gate-weakening or gate-substitution — exactly the class the
+tool's own author is structurally blind to (the author's premise IS
+"the wrapper does the same thing", so its violations are invisible
+from inside; the false-green chapter-close lane is the canonical
+example). Ordinary convenience scripts (report generators, one-off
+analysis) stay at the selftest floor — the trigger is verification
+PARTICIPATION, not tool-ness; a disputed classification defaults to
+the arm (fail-closed).
+
 **One-off model-sync exception (user-ratified 2026-07-11, extended by
 the ratified Lane-4 addendum; EXPIRES at ch11-P0 build-close or P0
 abandonment — the boundary review decides promotion-or-expiry):** the

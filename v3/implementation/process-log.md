@@ -4351,3 +4351,19 @@ final CLEAN.
   draft P1 classes AND the re-check's sharpest new find
   (false-green chapter-close) — arm review on tooling earns its
   cost exactly at that boundary.
+
+- 2026-07-23 · VERIFICATION-SURFACE TOOLING REVIEW adopted (README
+  §5.5, beside the tier-0 scoping principle) — the owner's capture
+  after the speedup batch: the existing tooling floors (claim-derived
+  negatives §4/2, selftest armor, the review taxonomy's TOOLING
+  threat-model judgment) never REQUIRED an external arm on internal
+  tools; the batch's ad-hoc arm (owner-requested) proved the gap —
+  three rounds, every P1 a wrapper-boundary breach, the class the
+  tool author is structurally blind to. New rule: verification-
+  participating tools (gates, gate wrappers, choreography executors,
+  arm infrastructure) get an arm review before first load-bearing
+  use; convenience scripts stay at the selftest floor; disputed
+  classification defaults to the arm. Retroactive note: the
+  realized-map lint (98db5bbb) landed WITHOUT an arm round under the
+  old floors — no defect known, but it is the rule's named
+  back-audit candidate at the next boundary.
