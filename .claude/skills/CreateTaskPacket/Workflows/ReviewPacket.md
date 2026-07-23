@@ -551,6 +551,19 @@ mirror). The scoping governs COST, never the review definition.
   applies). Bookkeeping findings from any round BATCH into one fold
   and one reconciliation pass — they never restart the loop one at
   a time.
+- **Fold execution discipline (adopted at the ch9 speedup batch,
+  2026-07-23):** a fold-batch's file edits are emitted as ONE
+  response — every Edit/Write call of the batch in a single message
+  (independent edits in parallel), never one-edit-per-turn; the
+  session-log mining measured the per-edit round-trip as the largest
+  avoidable latency class (82/135/57 single-edit turns in the three
+  mined sessions). The batch's BETWEEN-EDITS verification is one
+  `pnpm v3:check-docs` call (quick mode — an additive BASELINE,
+  never a gate-point substitute: the approve/close columns' own
+  inventories stay canonical, served by the tool's explicit
+  `--mode packet-approve` / `--mode chapter-close` forms, which run
+  those columns' exact doc-family commands and PRINT what they do
+  not cover).
 - **Model policy (the Agent-launch discipline — never inherit the
   session default silently; amended 2026-07-10):** EVERY panel pass
   — full, targeted, reconciliation, and the close — runs on an
@@ -713,6 +726,18 @@ Elsewhere it stays an option:
      DraftContract §5; the machine half is `pnpm v3:realized-map` —
      run it on every arm finding batch BEFORE folding (the arm and
      the scanner each catch what the other misses).
+- **Mechanization (the ch9 speedup batch, 2026-07-23):** items 1, 2,
+  5 and 6's MECHANICAL halves (availability preflight, byte guard
+  before/after with untracked-content hashes, pinned foreground
+  launch with the mode timeout, guard re-take, header-pin
+  validation, rc-first failure classification) are mechanized by
+  `tools/v3-plan/arm_run.sh <promptfile> <outfile> (--target f |
+  --no-target) [--timeout 600|1200]` — exit codes: 2
+  usage/preflight, 3 pin-mismatch, 4 guard-trip, 5 codex/timeout,
+  6 guard-infra (3–6 are INVALID verdicts on the item-8 ladder).
+  The prompt shape (item 7), the retry ladder itself, and verdict
+  processing stay the caller's; the sandbox trust decision is
+  unchanged.
 - **Rules:** the arm's verdict is admissible ONLY citing the basis
   hash (a verdict on stale bytes is no verdict); its findings fold
   as ORDINARY folds per README §5.5; the run and verdict enter the

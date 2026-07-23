@@ -158,3 +158,11 @@ design and this divergence is informative, not a defect. Spread:
   derived + 0 new-decision) C1 (16 boundary files) D0 (pure sync
   respelling — no stateful/async seam) E0 (kernel-alignment class,
   ch12-P0 precedent) — **Σ 1, Light**.
+- 2026-07-23 — CONDITION NOTE (tooling change mid-ch9, the owner's
+  explicit early-landing decision at the ch9 speedup batch): the
+  speed-up tool batch (v3:check-docs, v3:commit, reopen_runner,
+  arm_run.sh) + the fold-execution edit-batching discipline landed
+  AFTER ch9-P0 and before ch9-P1 — the ch9 Fable chapter runs partly
+  pre-batch, the next (Opus) chapter fully post-batch. Yield
+  comparisons at the boundary should weigh this; quality gates
+  themselves are unchanged (wrapper-not-replacement).

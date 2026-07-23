@@ -4301,3 +4301,31 @@ final CLEAN.
   mutants (input-domain class, e.g. `x !== undefined ? {x} : {}` →
   `true` — toEqual cannot see the difference) — labeled, recorded,
   no fix owed at the pilot stage.
+
+- 2026-07-23 · SPEED-UP TOOL BATCH LANDED (owner decision: at the
+  first settled point — ch9-P0 committed — NOT the boundary review;
+  rationale recorded: significant win / small risk / early quirks
+  surface sooner). Born from session-log mining of three transcripts
+  (ch12-P4, close-sweep, ch9-opening): per-edit round-trips were the
+  largest avoidable latency class (82/135/57 single-edit turns),
+  then per-gate round-trips (28 bridge runs), commit boilerplate
+  (11–23 × checklist prose), the hand-scripted reopen choreography
+  (3 executions, 2 live bug classes), and arm-guard boilerplate.
+  Landed: tools/v3-plan/{check_docs,commit_helper,reopen_runner}.py
+  + arm_run.sh, bridges v3:check-docs / v3:commit, the ReviewPacket
+  §5 fold-execution discipline + §6 mechanization note + AuthorPacket
+  mirror + README §5.5 composite-runner lines. The batch's OWN
+  ad-hoc external-arm review ran PRE-landing on the drafts (owner-
+  requested): 11 findings, all three P1 classes were wrapper-not-
+  replacement boundary breaches (gate-substitution risk, skip-flag,
+  staged-vs-worktree bytes) — all folded before landing; the landing
+  commit itself was v3:commit's first live run (its nothing-staged
+  gate fired correctly first). KNOWN GAP, consciously recorded: the
+  global pre-commit reminder hook pattern-matches `git commit` and
+  does not fire on v3:commit — the discipline is preserved by the
+  tool printing the mechanical checklist and demanding the judgment
+  lines in the calling reply; extending the hook is a ~/.claude
+  (cross-repo) follow-up. Experiment-2 §8 carries the dated
+  condition note (tooling change mid-ch9). NEXT measurement: the
+  ch9-P1 session's edit-turn and commit-turn counts vs the mined
+  baseline.

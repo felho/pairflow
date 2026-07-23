@@ -590,6 +590,16 @@ overrides a precondition.
   audit pass after the close — non-blocking, parallel to the next
   chapter's build, settled before the NEXT chapter's close
   (DraftContract §5 carries the full two-layer rule + fold policy).
+- **Composite runner (the ch9 speedup batch, 2026-07-23):**
+  `pnpm v3:check-docs` = a composite RUNNER for the doc-family gates
+  (one call, same gates, any red = red; per-mode canonical
+  arguments: quick / packet-approve / chapter-close) — a wrapper,
+  never a new gate and never a gate-point substitute: each column
+  above stays canonical, and the tool prints per mode what it does
+  NOT cover (drift tests, probes, ci:local). `pnpm v3:commit` runs
+  the pre-commit checklist's MECHANICAL half (staged scope, doc
+  gates, staged-vs-worktree purity) fail-closed; the judgment items
+  stay the caller's, answered in the calling reply.
 
 **Standing human checkpoints (never automated away, never inferred —
 restated identically on AGENTS.md and the skill):** plan-chapter

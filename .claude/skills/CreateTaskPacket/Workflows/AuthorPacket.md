@@ -268,7 +268,7 @@ ch7-P1 dangling-"flagged below" lesson).
 1. Run the **ReviewPacket** panel on the draft — the SINGLE engine
    (one review DEFINITION; ReviewPacket §5's fold-class scoping
    decides which lenses re-run after a fold: targeted by default
-   after a CONTENT fold, one reconciliation pass after a BOOKKEEPING
+   after a CONTENT fold, one reconciliation pass after a BOOKKEEPING — and ReviewPacket §5's fold-EXECUTION discipline binds here too: a fold-batch's edits go out as ONE response, verified by one `pnpm v3:check-docs` call
    fold, with mandatory full-escalation triggers; the approve gate =
    the v1-shape CLOSE — a top-level reconciliation decision over the
    final hash, per ReviewPacket §4; model policy per the same
