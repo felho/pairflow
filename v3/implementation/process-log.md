@@ -4145,3 +4145,29 @@ final CLEAN.
   (contract-level); (3) the ch12 dogfooding-vs-sweep interplay: none
   — closed clean. Sweep commits: 2f2d5aa7 (ch8), 226393cd (ch11),
   this entry (close).
+
+- 2026-07-23 · ch11 sweep EXTENSION (owner-authorized extra rounds) —
+  the owner ruled on the residue: (1) C14 was never a decision, only
+  the round budget — "document reality" — folded
+  (processGate.test.ts M1 kind×mode grid). Two further independent
+  full-scope passes (rounds 4-5, basis 991578ad → 2040f76f): round 4
+  caught C26's both-halves over-attribution (storeCheckers.ts covers
+  the STORE-VISIBLE half only; the run-level persist-before-return
+  half is proven in scriptedProcessGateRunner.test.ts — split
+  folded) and ESCALATED C31: the ratified row text binds the
+  disjointness rule to authored tokens TOO ("authored (C17) and
+  fixed ... DISJOINT by rule"), the admission validator applies the
+  grammar regex only, and the arm's live probe got reason
+  "gate_blocked" accepted ok:true — a MATERIAL UNDER-REALIZATION,
+  not a wording nit. The map now names it plainly (REALIZATION GAP,
+  owner ruling pending). Round 5 returned exactly ONE finding: that
+  self-declared gap — the map has no remaining faithfulness defect;
+  the letter-CLEAN verdict is unreachable until the code gap closes.
+  OWNER DIRECTION (decided this morning, implementation pending):
+  namespace the system's fixed reason tokens (e.g. sys:runner_error)
+  — the authored grammar cannot express ":", so disjointness holds
+  BY CONSTRUCTION, no runtime check needed. Cost: renames the
+  ratified fixed-token list (C31 text, M4, the l2a trace, tests,
+  transcript surface) — a contract reopen + successor-row change,
+  queued as a ch9+ work item, not an overnight edit. The C31 open
+  item converts from QUESTION to DECIDED-DIRECTION.
