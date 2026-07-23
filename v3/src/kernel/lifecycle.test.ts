@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { PROVISIONING_FAILURE_REASONS } from "../domain/index.js";
 import type { RuntimeContextRef, TranscriptEntry, WorkflowInstance } from "../domain/index.js";
 import { admitTemplate } from "../definition/index.js";
 import { deriveEmitDigest } from "../emit/index.js";
@@ -1097,6 +1098,29 @@ describe("RUNTIME_CONTEXT_FAILED (F/G family) + the FAILED completion seam (SM)"
     }
   });
 
+  it("G1: the closed reason domain is EXACTLY the two `sys:` members (exhaustiveness — the exported gate set)", () => {
+    // The domain value the gate validates against is homed beside its type
+    // (domain/instance.ts) and is EXACTLY the ch9 pair — no more, no less. A
+    // successor member is a deliberate type+list edit, never a silent addition.
+    expect(PROVISIONING_FAILURE_REASONS).toEqual([
+      "sys:provision_rejected",
+      "sys:provision_failed",
+    ]);
+  });
+
+  it("G1: the gate accepts EXACTLY the domain set — a THIRD plausible member (sys:provision_timeout) integrity-throws", async () => {
+    // A superficially-well-formed `sys:`-prefixed token that is NOT a domain
+    // member is still fail-closed: closed-set membership, not prefix-matching.
+    const h = makeHarness(requiredContext);
+    const requestId = await provisionedFail(h);
+    const before = await loadOrThrow(h, "i1");
+    await expect(
+      h.kernel.runtimeContextFailed("i1", requestId, "sys:provision_timeout"),
+    ).rejects.toThrow(/transport gate|closed provisioning-failure domain/);
+    expect(await loadOrThrow(h, "i1")).toEqual(before); // zero state change
+    h.close();
+  });
+
   it("G4: an admitted FAILED emits NO kernel diag event (the classification-only culture)", async () => {
     const h = makeHarness(requiredContext);
     const requestId = await provisionedFail(h);
@@ -1241,32 +1265,49 @@ describe("RUNTIME_CONTEXT_FAILED (F/G family) + the FAILED completion seam (SM)"
     h.close();
   });
 
-  it("G3: a present string `detail` admits and is NOWHERE in kernel state (failure_reason ≠ detail)", async () => {
+  it("G3: a present string `detail` admits but appears NOWHERE in the committed row (full-row confinement, not just failure_reason)", async () => {
     const h = makeHarness(requiredContext);
     const requestId = await provisionedFail(h);
+    // A distinctive needle so a serialized-row scan proves the ABSENCE of the
+    // whole detail, not merely that failure_reason differs from it.
+    const NEEDLE = "DISTINCTIVE-detail-needle-9f3a";
+    const DETAIL = `git: fatal: not a git repository (${NEEDLE})`;
     const outcome = await h.kernel.runtimeContextFailed(
       "i1",
       requestId,
       "sys:provision_failed",
-      "git: fatal: not a git repository (stderr tail)",
+      DETAIL,
     );
     expect(outcome).toEqual({ kind: "terminated", disposition: "failed" });
     const inst = await loadOrThrow(h, "i1");
-    // The reason token is the ONLY classified value — detail never enters state.
+    // The reason token is the ONLY classified value.
     expect(inst.failureReason).toBe("sys:provision_failed");
-    expect(inst.failureReason).not.toBe("git: fatal: not a git repository (stderr tail)");
+    // Confinement: the detail is NOWHERE in the serialized committed instance row
+    // — not in failure_reason, not smuggled into any other field.
+    expect(JSON.stringify(inst)).not.toContain(NEEDLE);
+    // Nor in the persisted transcript surface.
+    expect(JSON.stringify(await transcriptOf(h, "i1"))).not.toContain(NEEDLE);
     h.close();
   });
 
-  it("G3: a present NON-STRING `detail` integrity-throws fail-closed with ZERO state change", async () => {
-    const h = makeHarness(requiredContext);
-    const requestId = await provisionedFail(h);
-    const before = await loadOrThrow(h, "i1");
-    await expect(
-      h.kernel.runtimeContextFailed("i1", requestId, "sys:provision_failed", { tail: 1 }),
-    ).rejects.toThrow(/transport gate/);
-    expect(await loadOrThrow(h, "i1")).toEqual(before);
-    h.close();
+  it("G3: a present NON-STRING `detail` (object, number, null) integrity-throws fail-closed with ZERO state change", async () => {
+    // The wire is untrusted — a non-string detail of ANY shape is the same
+    // fail-closed transport-gate throw, asserted per-case via a direct store read.
+    const cases: { label: string; detail: unknown }[] = [
+      { label: "object", detail: { tail: 1 } },
+      { label: "number", detail: 42 },
+      { label: "null", detail: null },
+    ];
+    for (const { detail } of cases) {
+      const h = makeHarness(requiredContext);
+      const requestId = await provisionedFail(h);
+      const before = await loadOrThrow(h, "i1");
+      await expect(
+        h.kernel.runtimeContextFailed("i1", requestId, "sys:provision_failed", detail),
+      ).rejects.toThrow(/transport gate/);
+      expect(await loadOrThrow(h, "i1")).toEqual(before); // zero state change
+      h.close();
+    }
   });
 
   // ── SM: the seam (hold / release / drain), FAILED joining ──
@@ -1449,6 +1490,27 @@ describe("RUNTIME_CONTEXT_FAILED (F/G family) + the FAILED completion seam (SM)"
       /transport gate|closed provisioning-failure domain/,
     );
     expect(await loadOrThrow(h, "i1")).toEqual(before); // fail-closed, never stored
+    h.close();
+  });
+
+  it("SM2 (direct vanished instance): a post-conclusion FAILED for a NONEXISTENT instance → drain returns [rejected(unknown_instance)] (delivered, not dropped)", async () => {
+    // The grid's DIRECT × vanished-instance cell (F1), driven THROUGH THE DRAIN
+    // — not just the handler: a delivered inert rejection must be REPORTED by
+    // settleRuntimeContextDeliveries, never silently swallowed.
+    const h = makeHarness(requiredContext);
+    // Conclude a real request id (req-1 concludes at start's finally); reusing a
+    // CONCLUDED id routes deliverCompletion down the direct (post-conclusion) path.
+    const requestId = await provisionedFail(h);
+    // Address the FAILED at a GHOST instance: the direct path fires, the handler
+    // loads the ghost → null → inert rejected(unknown_instance) — and the drain
+    // carries that outcome out (delivered, not dropped).
+    h.kernel.deliverCompletion("ghost", requestId, {
+      kind: "failed",
+      reason: "sys:provision_failed",
+    });
+    expect(await h.kernel.settleRuntimeContextDeliveries()).toEqual([
+      { kind: "rejected", reason: "unknown_instance" },
+    ]);
     h.close();
   });
 });

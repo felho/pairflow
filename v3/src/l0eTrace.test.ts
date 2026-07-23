@@ -21,6 +21,7 @@ import {
   createScriptedRuntimeContextProvider,
   fixtureDefinitionStore,
 } from "./testkit/index.js";
+import type { ScriptedProvisionBehavior } from "./testkit/index.js";
 
 /**
  * The l0e chapter trace as a golden test (packet ch12-p3, TR family): the
@@ -75,6 +76,7 @@ function makeKernel(
   admitted: AdmittedTemplate,
   providerName: string,
   projection?: unknown,
+  script?: readonly ScriptedProvisionBehavior[],
 ): {
   kernel: ReturnType<typeof createKernel>;
   store: ReturnType<typeof openStore>["store"];
@@ -82,9 +84,10 @@ function makeKernel(
   close: () => void;
 } {
   const handle = openStore(":memory:", createControlledClock(1_000));
-  const provider = createScriptedRuntimeContextProvider(
-    projection !== undefined ? { projection } : {},
-  );
+  const provider = createScriptedRuntimeContextProvider({
+    ...(projection !== undefined ? { projection } : {}),
+    ...(script !== undefined ? { script } : {}),
+  });
   const kernel = createKernel({
     processRunner: createScriptedProcessGateRunner([]),
     store: handle.store,
@@ -216,27 +219,27 @@ describe("l0e golden trace — the provisioned-immediate run (TR family)", () =>
     close();
   });
 
-  it("FAILED variant: the provider fails → TERMINAL failed, failure_reason = the token, the marker RETAINED (the floor asserts all three)", async () => {
+  it("FAILED variant: the provider FAILS THROUGH THE DECLARED SEAM (failOnProvision, held path) → TERMINAL failed, failure_reason = the token, the marker RETAINED (the floor asserts all three)", async () => {
     const admitted = admit(l0eTemplate(WORKTREE_SPEC));
-    const { kernel, store, provider, close } = makeKernel(admitted, "pairflow.worktree");
+    // Drive the failure through the REAL provider seam — the scripted provider
+    // fires RUNTIME_CONTEXT_FAILED synchronously inside provision() (the SM1 hold
+    // hazard); the seam holds it until start's commit lands, then flushes it into
+    // the FAILED handler. NOT a direct kernel.runtimeContextFailed() call — this
+    // exercises the bound sink + the held-then-released completion path.
+    const { kernel, store, provider, close } = makeKernel(admitted, "pairflow.worktree", undefined, [
+      { failOnProvision: { reason: "sys:provision_failed", detail: "git clone exited 128" } },
+    ]);
     await kernel.create({
       instanceId: "inst-l0e",
       templateRef: admitted.ref,
       task: "ship it",
       mode: "immediate",
     });
-    // start → resolve → provision(detach) → requested(r1); the provisioning then
-    // FAILS: RUNTIME_CONTEXT_FAILED(r1, sys:provision_failed) routes to FAIL.
+    // start → resolve → provision (RECORDS + fires FAILED through the sink, HELD)
+    // → requested(r1) commits → conclusion flushes the held FAILED → FAIL routed.
     const started = await kernel.start({ instanceId: "inst-l0e", opId: "op1" });
     expect(started).toEqual({ kind: "accepted" });
     const requestId = provider.provisionCalls[0]?.requestId ?? "";
-    const failed = await kernel.runtimeContextFailed(
-      "inst-l0e",
-      requestId,
-      "sys:provision_failed",
-      "git clone exited 128",
-    );
-    expect(failed).toEqual({ kind: "terminated", disposition: "failed" });
     // The floor read asserts all three: TERMINAL failed, failure_reason = token,
     // the marker retained as diagnostic state (the detail is NOWHERE in state).
     const terminal = await store.loadInstance("inst-l0e");
@@ -244,6 +247,8 @@ describe("l0e golden trace — the provisioned-immediate run (TR family)", () =>
     expect(terminal?.terminalDisposition).toBe("failed");
     expect(terminal?.failureReason).toBe("sys:provision_failed");
     expect(terminal?.runtimeContext).toEqual({ state: "requested", requestId });
+    // The untrusted detail rode the seam but is NOWHERE in committed state.
+    expect(JSON.stringify(terminal)).not.toContain("git clone exited 128");
     close();
   });
 });

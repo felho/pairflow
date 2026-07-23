@@ -524,6 +524,39 @@ describe("submitIntent — refusal lanes (I3/I4): fail-closed, one token per gat
     await refuse({ intent: "reboot", instanceId: "i1" }, "unknown_intent");
   });
 
+  it("W1: the runtimeContextFailed kernel event has NO ingress route (C13) — neither an intent nor an envelope reaches the FAILED handler", async () => {
+    // The FAILED completion is an IN-PROCESS kernel event (packet ch9-p1, W1):
+    // no external endpoint. This asserts BOTH ingress faces refuse it fail-closed.
+    // (a) The operator-intent route: `runtimeContextFailed` is not a member of
+    // INTENT_KINDS — unknown_intent (kernel events have no operator endpoint, C13).
+    const cap = intentKernel();
+    expect(
+      await ingressOf(cap.kernel).submitIntent({
+        intent: "runtimeContextFailed",
+        instanceId: "i1",
+        requestId: "r1",
+        reason: "sys:provision_failed",
+      }),
+    ).toEqual({ kind: "rejected", reason: "invalid_shape" });
+    // (b) The actor-envelope route: the FAILED payload's own keys (requestId,
+    // reason) are unknown top-level keys — invalid_shape, never reaching the
+    // kernel (the strict, fail-closed unknown-key culture). Even a
+    // RUNTIME_CONTEXT_FAILED-shaped `type` cannot smuggle the payload in.
+    const env = capturingKernel();
+    expect(
+      await ingressOf(env.kernel).submit({
+        instanceId: "i1",
+        opId: "op",
+        type: "RUNTIME_CONTEXT_FAILED",
+        actorId: "kernel",
+        requestId: "r1",
+        reason: "sys:provision_failed",
+      }),
+    ).toEqual({ kind: "rejected", reason: "invalid_shape" });
+    // Neither route reached the kernel — no envelope was handled.
+    expect(env.seen).toEqual([]);
+  });
+
   it("an unknown key on ANY intent → unknown_key (per-intent keysets are exact)", async () => {
     await refuse(
       { intent: "cancel", instanceId: "i1", opId: "op", task: "smuggled" },

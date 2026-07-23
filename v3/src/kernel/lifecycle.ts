@@ -19,7 +19,7 @@ import type {
   WorkflowInstance,
   WorkflowTemplate,
 } from "../domain/index.js";
-import { resolveRuntimeContextRequirement } from "../domain/index.js";
+import { PROVISIONING_FAILURE_REASONS, resolveRuntimeContextRequirement } from "../domain/index.js";
 import type { DefinitionStore } from "../ports/definition.js";
 import type { LifecycleFactKind } from "../domain/index.js";
 import type { ProviderRegistry } from "../ports/runtimeContextProvider.js";
@@ -703,14 +703,6 @@ export async function fail(
     }
   }
 }
-
-/** The closed provisioning-failure reason domain (G1) — the membership set the
- * G2 transport gate validates against. Members grow ONLY by contract successor
- * rows. */
-const PROVISIONING_FAILURE_REASONS: readonly ProvisioningFailureReason[] = [
-  "sys:provision_rejected",
-  "sys:provision_failed",
-];
 
 /**
  * G2 reason-domain membership gate (packet ch9-p1; contract:ch9-runner#C3/#C5):

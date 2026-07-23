@@ -57,6 +57,22 @@ describe("scriptedRuntimeContextProvider (PR3)", () => {
     ]);
   });
 
+  it("K1: record-before-outcome is observable AT FIRE TIME — the FAILED sink sees its own provision call already recorded", async () => {
+    // The blindness this closes: asserting provisionCalls AFTER the await cannot
+    // distinguish record-before-fire from record-after-fire. Read the record
+    // length INSIDE the sink callback (at the synchronous fire point) instead.
+    let recordedAtFire: number | null = null;
+    const provider = createScriptedRuntimeContextProvider({
+      script: [{ failOnProvision: { reason: "sys:provision_failed" } }],
+    });
+    provider.bindCompletionSink(() => {
+      recordedAtFire = provider.provisionCalls.length;
+    });
+    await provider.provision("i1", "r1", SPEC);
+    // The call was ALREADY recorded when the FAILED completion fired.
+    expect(recordedAtFire).toBe(1);
+  });
+
   it("K1: the WIDE reason type passes a HOSTILE (out-of-domain) token through UNALTERED", async () => {
     const delivered: RuntimeContextCompletion[] = [];
     const provider = createScriptedRuntimeContextProvider({

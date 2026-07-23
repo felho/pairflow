@@ -16,6 +16,7 @@ export type {
   WorkflowTemplate,
 } from "./template.js";
 export { resolveRuntimeContextRequirement } from "./template.js";
+export { PROVISIONING_FAILURE_REASONS } from "./instance.js";
 export type {
   EffectiveProcessConfig,
   GateBinding,

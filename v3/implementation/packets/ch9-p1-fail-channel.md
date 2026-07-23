@@ -326,7 +326,7 @@ per the plan rows.
 |---|---|---|
 | W1 | The port's completion channel gains the SECOND completion kind: `RUNTIME_CONTEXT_FAILED(instanceId, requestId, reason, detail?)` — an IN-PROCESS kernel event (no external ingress endpoint; the ch12-C13 event class cited), fired by a provider through the SAME composition-injected completion seam as READY. `reason` is a C3-domain token; `detail` is optional free text (G3). The `Kernel` interface gains the `runtimeContextFailed(instanceId, requestId, reason, detail?)` handler, wired via `lifecycleOp` exactly as `runtimeContextReady`/`fail` are (anchored: contract:ch9-runner#C1, #C5) |
 | W2 | The unconditional-detach obligation becomes PORT CONTRACT (the C11 CHANNEL half — this packet's ownership): `provision()` accepts and detaches for every shape-valid call, and EVERY provisioning failure — config rejection included — travels the FAILED channel; the ch12-C18 pre-commit port-breach lane (a synchronous throw / a pre-commit-rejecting detach ack) stays RESERVED for genuine programming errors, never business/config failure. The worktree provider's own failure ROUTING onto the channel is ch9-P2's — at P1 the obligation is stated on the port and drivable via the scripted player only (anchored: contract:ch9-runner#C11 + contract:ch12-runtime-core#C18) |
-| W3 | The seam's REPRESENTATION — the BINDING property is C1's "same seam" + C5's "unchanged in MECHANISM": ONE buffer, ONE hold/release discipline, hold/release/direct-delivery/drain serving BOTH kinds with zero per-kind seam logic. The REFERENCE realization: a discriminated completion union — `{ kind: "ready", ref }` \| `{ kind: "failed", reason, detail? }` — carried by ONE sink type (`RuntimeContextCompletionSink`) and ONE delivery endpoint (`Kernel.deliverCompletion(instanceId, requestId, completion)`). An equivalent realization (e.g. a parallel typed endpoint over the SAME buffer and conclusion signal) is admissible PROVIDED the property holds — what is FORECLOSED is a second buffer or a second ordering discipline. READING RULE (packet-wide): every mention of the union, the broadened sink, or a both-kinds `deliverCompletion` elsewhere in this packet READS AS the W3 reference realization and carries T1's representation-independence — an admissible equivalent substitutes its corresponding surface throughout, with no per-mention re-qualification (derived: contract:ch9-runner#C1, #C5 + prose:built SM seam (kernel.ts#202-371) — DERIVATION: C1 fixes the event and the same-seam rule, C5 fixes mechanism-identity; the union-typed single sink is the minimal representation in which mechanism-identity is true BY CONSTRUCTION rather than by duplicated code; the D1-grain representation choice stays the build's within the stated property) |
+| W3 | The seam's REPRESENTATION — the BINDING property is C1's "same seam" + C5's "unchanged in MECHANISM": ONE buffer, ONE hold/release discipline, hold/release/direct-delivery/drain serving BOTH kinds with zero per-kind seam logic. The REFERENCE realization: a discriminated completion union — `{ kind: "ready", ref }` \| `{ kind: "failed", reason, detail? }` — carried by ONE sink type (`RuntimeContextCompletionSink`) and ONE delivery endpoint (`Kernel.deliverCompletion(instanceId, requestId, completion)`). An equivalent realization (e.g. a parallel typed endpoint over the SAME buffer and conclusion signal) is admissible PROVIDED the property holds — what is FORECLOSED is a second buffer or a second ordering discipline; the single-buffer/single-discipline property is CODE-REVIEW-ASSERTED (outcome-indistinguishable from a behavior-preserving second buffer — the ch12-P3 K-rung-order precedent; the arm's product review is its named verification surface). READING RULE (packet-wide): every mention of the union, the broadened sink, or a both-kinds `deliverCompletion` elsewhere in this packet READS AS the W3 reference realization and carries T1's representation-independence — an admissible equivalent substitutes its corresponding surface throughout, with no per-mention re-qualification (derived: contract:ch9-runner#C1, #C5 + prose:built SM seam (kernel.ts#202-371) — DERIVATION: C1 fixes the event and the same-seam rule, C5 fixes mechanism-identity; the union-typed single sink is the minimal representation in which mechanism-identity is true BY CONSTRUCTION rather than by duplicated code; the D1-grain representation choice stays the build's within the stated property) |
 
 ### F — the FAILED handler (`runtimeContextFailed`)
 
@@ -675,7 +675,13 @@ by C1/C5, the representation class the build's within it).
     construction site and fails the assertion); the looser
     `: "failed"` value pattern is NOT the assertion — under it the
     `disposition: "failed"` / `newTerminalDisposition: "failed"` /
-    egress `status: "failed"` spellings would false-positive). Membership: X1 (owner: this packet; the P2-side join
+    egress `status: "failed"` spellings would false-positive). The
+    dormancy claim is TWO-pattern (the gate-2 single-form finding's
+    fold): the construction-literal grep above PLUS an
+    INVOCATION-SITE grep — zero production
+    `runtimeContextFailed(`/`deliverCompletion(` call sites outside
+    the kernel's own definition/wiring (tests/testkit/dev excluded)
+    — each pattern receipt-backed at build close. Membership: X1 (owner: this packet; the P2-side join
     legality is ch9-P2's to prove).
   - **D (drift):** the standing drift suite green before AND after;
     the rejection-registry lock proves no name added. Membership: D1
@@ -750,8 +756,34 @@ excluded): the ONLY match is the T1 union declaration arm
 (`domain/instance.ts`), zero construction sites — the channel is
 dormant as claimed (receipt `X1-grep-receipt.txt`).
 
-**Aftermath:** arm gate 2 (build-close sensitivity pass) + the
-mutation-pilot dual-run recorded below at close.
+**Aftermath (build close):** post-build boundary audit 0 errors @
+`14be9b3f`; coverage validation green. Arm gate 2 (codex
+gpt-5.6-sol/high, agent-invoked, 1200s mode): **9 findings, ALL
+test-evidence class, ZERO product findings** — the sensitivity pass
+caught six plausibly-blind lanes (W1 no-ingress-route, W3
+single-buffer, G1 exact-two-members, G3 non-string/confinement, SM
+direct-vanished-drain, K1 record-before-outcome) plus the l0e trace
+bypassing the provider seam, the single-form X1 grep, and the
+missing X/D probe rows. Dispositions: 8 FOLDED by a fresh-context
+aftermath agent (new/raised tests, test delta 1292 → 1297; probes
+P1–P8 through the probe runner, each RED with byte-verified restore,
+receipts under the session scratchpad `ch9p1-probes/aftermath/`) — 
+incl. the l0e FAILED variant re-routed through the DECLARED
+`failOnProvision` seam and the exported
+`PROVISIONING_FAILURE_REASONS` const making G1's closed set
+exhaustiveness-assertable (the one production line class touched);
+1 NARROWED — W3's single-buffer property is code-review-asserted
+(recorded in-row; the ch12-P3 rung-order precedent). The X1 dormancy
+claim gained its second (invocation-site) pattern, receipt-backed.
+Aftermath authorship: tests + probes = the delegated aftermath
+agent; packet-text folds = the orchestrator. Mutation-pilot
+dual-run (the §9.4 flow note; scoped to the boundary's six semantic
+production files, 19 s): **82.03%** — 705 killed / 16 timeout / 100
+survived / 58 no-coverage / 0 errors. Survivor caveat for the
+boundary read: the scoped files carry ALL prior chapters' kernel
+code, so the survivor set is not per-delta; classification
+(code-mutation vs input-domain) is the boundary review's, no fix
+owed at the pilot stage.
 
 ```json
 {
@@ -759,13 +791,14 @@ mutation-pilot dual-run recorded below at close.
     "class": "kernel-semantic",
     "prediction": { "predicted": "projection", "reasoning": "plan §9.4 P1 row: the ratified ch9 draft rows C1-C6/C11/C22 + the ch12-C15/C18 mechanics", "discovered": "projection" },
     "provenance": { "anchored": 13, "derived": 6, "new_decision": 0 },
-    "rounds": { "review": 8, "doc_refinement": 0, "implementation": 1 },
+    "rounds": { "review": 8, "doc_refinement": 0, "implementation": 2 },
     "stops": [],
     "detector_misses": [
       { "found_at": "arm-approve", "what": "the sizing counted 2 surfaces where the ch12-P3 counting precedent yields 3 (ports/domain shared-contract face) — hard-stop-2 letter-trip + closure proof were owed", "why_missed": "the panel accepted the packet's own surface-class reading without re-deriving the count from the precedent packet" },
       { "found_at": "arm-approve", "what": "representation foreclosure: W3 left the seam representation open while T1/T2/embedding gates MANDATED the union — the openness was illusory packet-wide", "why_missed": "the derived-row entailment attack checked W3 in isolation, never the cross-row conjunction" },
       { "found_at": "arm-approve", "what": "the Claim's 'outcome-total over delivered completions' omitted the gate-throw exit (a delivered hostile completion yields no outcome) — decision-total wording owed", "why_missed": "totality was audited against the outcome union, not walked through the gate-violation path" },
-      { "found_at": "arm-approve", "what": "quote-fidelity: partial C6 excerpt labeled verbatim; punctuation silently changed", "why_missed": "the panel verified quoted bytes but not the labeling of what was elided" }
+      { "found_at": "arm-approve", "what": "quote-fidelity: partial C6 excerpt labeled verbatim; punctuation silently changed", "why_missed": "the panel verified quoted bytes but not the labeling of what was elided" },
+      { "found_at": "arm-build-close", "what": "six green-but-blind lanes: the build realized lane PRESENCE at the declared strength but sensitivity gaps survived (no-route negatives, closed-set exhaustiveness, non-string sub-shapes, drain-path vanished case, fire-time ordering, trace bypassing the declared seam)", "why_missed": "the spec-time altitude rule correctly defers member-level sensitivity to build close — the gate worked as designed; the miss is the BUILD agent's lane-strength reading, caught by the mandatory sensitivity pass" }
     ],
     "learned": "the arm's approve leg again out-caught the panel on record-precision classes (sizing counts, cross-row foreclosure conjunctions, quote-fidelity labels) — the ch12-P0 churn class; and a 600s doc-review arm leg can time out on a five-surface prompt (infra retry converged at 440s)",
     "main_thread_model": "claude-fable-5"

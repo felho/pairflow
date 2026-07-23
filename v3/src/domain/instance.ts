@@ -74,6 +74,18 @@ export type RuntimeContext =
 export type ProvisioningFailureReason = "sys:provision_rejected" | "sys:provision_failed";
 
 /**
+ * ch9/PROVISIONING_FAILURE_REASONS (packet ch9-p1, G1): the CLOSED reason
+ * domain's member list AS A VALUE — the single membership set the G2 transport
+ * gate (kernel/lifecycle.ts) validates against, homed BESIDE its type so the
+ * two cannot drift. EXACTLY the two ch9 members; members grow ONLY by contract
+ * successor rows (a new member is a type edit AND a list edit in lockstep).
+ */
+export const PROVISIONING_FAILURE_REASONS: readonly ProvisioningFailureReason[] = [
+  "sys:provision_rejected",
+  "sys:provision_failed",
+];
+
+/**
  * ch9/RuntimeContextCompletion (packet ch9-p1, W3 — the reference realization):
  * the discriminated completion a provider fires through the composition-injected
  * seam when its async provisioning concludes — ONE union carried by ONE sink and
