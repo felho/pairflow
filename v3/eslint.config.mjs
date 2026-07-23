@@ -99,7 +99,7 @@ const dynamicGatesBanSelector = {
 
 export default tseslint.config(
   {
-    ignores: ["node_modules/**", "eslint.config.mjs", "vitest.config.ts"],
+    ignores: ["node_modules/**", "eslint.config.mjs", "vitest.config.ts", "vitest.stryker.config.ts"],
   },
   js.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,

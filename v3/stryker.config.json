@@ -1,0 +1,10 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "testRunner": "vitest",
+  "plugins": ["@stryker-mutator/vitest-runner"],
+  "vitest": { "configFile": "vitest.stryker.config.ts" },
+  "mutate": ["src/emit/opId.ts"],
+  "reporters": ["clear-text", "progress"],
+  "tempDirName": ".stryker-tmp",
+  "cleanTempDir": "always"
+}
