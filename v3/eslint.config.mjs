@@ -185,6 +185,9 @@ export default tseslint.config(
       "src/cli/**",
       // ch8-P1 (plan §8.7): the production bans extend to definition/.
       "src/definition/**",
+      // ch9-P2 (ADR-014 point 4): the providers/ module home joins the
+      // production bans WITH the first real provider.
+      "src/providers/**",
     ],
     ignores: ["src/**/*.test.ts", "src/cli/dev/**"],
     rules: {
@@ -365,7 +368,7 @@ export default tseslint.config(
   {
     // ch8-P1: src/definition/** joins the plain dynamic group — it
     // claims no other no-restricted-syntax selectors (plan §8.7).
-    files: ["src/ports/**", "src/store/**", "src/ingress/**", "src/emit/**", "src/diag/**", "src/definition/**"],
+    files: ["src/ports/**", "src/store/**", "src/ingress/**", "src/emit/**", "src/diag/**", "src/definition/**", "src/providers/**"],
     ignores: ["src/**/*.test.ts"],
     rules: {
       "no-restricted-syntax": [

@@ -17,6 +17,7 @@ import {
   fixtureTemplate,
 } from "../testkit/index.js";
 import type {
+  ControlledClock,
   ScriptedRuntimeContextProvider,
   ScriptedRuntimeContextProviderOptions,
 } from "../testkit/index.js";
@@ -837,10 +838,10 @@ describe("START (L2/L3) — the fork and the window lanes", () => {
 
     it("SM (finding 2 held-a): a CAS-SUPERSEDED id's HELD completion (fired BEFORE conclusion) is RELEASED inert at concludeAttempt (load count), state = requested(surviving)", async () => {
       // The HELD path (not the post-conclusion direct path): the FIRST attempt
-      // fires READY inside provision() (buffered under req-1), then its commit
-      // CAS-conflicts → concludeAttempt(req-1) RELEASES the held completion
+      // fires READY inside provision() (buffered under req-1000-1), then its commit
+      // CAS-conflicts → concludeAttempt(req-1000-1) RELEASES the held completion
       // inert (the run is still CREATED+none, correlation rejects). The retry
-      // (req-2) detaches. A dropping impl loses req-1's held completion.
+      // (req-1000-2) detaches. A dropping impl loses req-1000-1's held completion.
       const probes: ReturnType<typeof instrumentedStore>[] = [];
       const h = makeHarness(
         requiredContext,
@@ -858,10 +859,10 @@ describe("START (L2/L3) — the fork and the window lanes", () => {
       const started = await h.kernel.start({ instanceId: "i1", opId: "op" });
       expect(started).toEqual({ kind: "accepted" });
       const ids = h.provider.provisionCalls.map((c) => c.requestId);
-      expect(ids.length).toBeGreaterThanOrEqual(2); // req-1 superseded, req-2 surviving
+      expect(ids.length).toBeGreaterThanOrEqual(2); // req-1000-1 superseded, req-1000-2 surviving
       expect(new Set(ids).size).toBe(ids.length);
-      // req-1's held completion flushed at concludeAttempt(req-1): start's two
-      // attempt-loads PLUS the extra req-1 flush load. A dropping impl skips it
+      // req-1000-1's held completion flushed at concludeAttempt(req-1000-1): start's two
+      // attempt-loads PLUS the extra req-1000-1 flush load. A dropping impl skips it
       // (only the two attempt-loads).
       expect(probe.loadCount() - loadsBefore).toBeGreaterThan(2);
       const inst = await loadOrThrow(h, "i1"); // real store — never inflates the probe
@@ -923,10 +924,10 @@ describe("START (L2/L3) — the fork and the window lanes", () => {
     });
 
     it("SM drain (finding — concurrent arrival): settle DRAINS FULLY then throws — an integrity-erroring delivery does NOT leave a concurrently-arriving delivery undrained", async () => {
-      // Two concluded request_ids via a CAS-restart (req-1 superseded, req-2
-      // surviving; run = requested(req-2)). r1 = req-2 delivered with a
+      // Two concluded request_ids via a CAS-restart (req-1000-1 superseded, req-1000-2
+      // surviving; run = requested(req-1000-2)). r1 = req-1000-2 delivered with a
       // NON-CANONICAL ref (correlation matches, then the transport gate throws
-      // a kernel-integrity error). r2 = req-1 delivered with a valid ref
+      // a kernel-integrity error). r2 = req-1000-1 delivered with a valid ref
       // (correlation rejects inert). r2 ARRIVES DURING settle's await of r1 —
       // fired from a one-shot load-RESOLUTION hook, so it lands in
       // pendingDeliveries AFTER settle snapshot-and-cleared r1's batch, forcing
@@ -1353,7 +1354,7 @@ describe("RUNTIME_CONTEXT_FAILED (F/G family) + the FAILED completion seam (SM)"
     expect(started).toEqual({ kind: "accepted" });
     const ids = h.provider.provisionCalls.map((c) => c.requestId);
     expect(ids.length).toBeGreaterThanOrEqual(2);
-    // req-1's held FAILED flushed at concludeAttempt(req-1): the extra load
+    // req-1000-1's held FAILED flushed at concludeAttempt(req-1000-1): the extra load
     // proves it was DELIVERED (correlation rejects on the live run) not dropped.
     expect(probe.loadCount() - loadsBefore).toBeGreaterThan(2);
     const inst = await loadOrThrow(h, "i1");
@@ -1498,7 +1499,7 @@ describe("RUNTIME_CONTEXT_FAILED (F/G family) + the FAILED completion seam (SM)"
     // — not just the handler: a delivered inert rejection must be REPORTED by
     // settleRuntimeContextDeliveries, never silently swallowed.
     const h = makeHarness(requiredContext);
-    // Conclude a real request id (req-1 concludes at start's finally); reusing a
+    // Conclude a real request id (req-1000-1 concludes at start's finally); reusing a
     // CONCLUDED id routes deliverCompletion down the direct (post-conclusion) path.
     const requestId = await provisionedFail(h);
     // Address the FAILED at a GHOST instance: the direct path fires, the handler
@@ -1918,5 +1919,81 @@ describe("actor path completion probes (J3 — machinery-reachable states)", () 
     });
     expect(outcome).toEqual({ kind: "rejected", reason: "not_active" });
     h.close();
+  });
+});
+
+// ── packet ch9-p2, N5: cross-process request-id freshness ─────────────────
+// `newRequestId` composes the injected TimeSource epoch-millis with the
+// per-kernel counter — `req-<epochMillis>-<n>` — so a request id is fresh
+// across process RESTARTS on a REAL clock. The one-shot shipped CLI builds a
+// kernel PER process; a bare per-kernel counter would restart at 1, and a
+// crash between worktree creation (PB2 runs it pre-commit) and the marker
+// commit would make the retry RE-MINT the crashed attempt's id — colliding
+// with its own orphan. Driven with TWO kernels over ONE store.
+describe("start — N5 cross-process request-id freshness (two kernels, one store)", () => {
+  const REQ_CTX = requiredContext(fixtureTemplate());
+
+  function buildKernel(
+    store: StorePort,
+    clock: ControlledClock,
+  ): { kernel: Kernel; provider: ScriptedRuntimeContextProvider } {
+    const gates = createGateRegistry();
+    const admitted = admitTemplate(REQ_CTX, gates);
+    if (!admitted.ok) {
+      throw new Error(`N5 harness admission: ${JSON.stringify(admitted.findings)}`);
+    }
+    const processRunner: ProcessGateRunner = {
+      run: () => Promise.reject(new Error("no process gates in N5 lanes")),
+    };
+    const provider = createScriptedRuntimeContextProvider(); // plain detach — no completion
+    const kernel = createKernel({
+      store,
+      definitions: fixtureDefinitionStore(admitted.template),
+      time: clock,
+      digest: deriveEmitDigest,
+      diag: createRecordingDiagnosticsSink().sink,
+      gates,
+      processRunner,
+      providerRegistry: createStaticProviderRegistry({ "pairflow.worktree": provider }),
+    });
+    provider.bindCompletionSink((i, r, c) => kernel.deliverCompletion(i, r, c));
+    return { kernel, provider };
+  }
+
+  async function firstMintedId(
+    store: StorePort,
+    clock: ControlledClock,
+    instanceId: string,
+    opId: string,
+  ): Promise<string> {
+    const { kernel, provider } = buildKernel(store, clock);
+    await kernel.create({ instanceId, templateRef: REF, task: "T" });
+    const outcome = await kernel.start({ instanceId, opId });
+    expect(outcome).toEqual({ kind: "accepted" });
+    return provider.provisionCalls[0]?.requestId ?? "";
+  }
+
+  it("crash-window freshness: a fresh kernel at a LATER clock re-mints a DISTINCT first id — an orphan at a PRIOR kernel's id cannot silently collide with the retry", async () => {
+    const handle = openStore(":memory:", createControlledClock(1_000));
+    // Kernel A ("the crashed process") at t=1000 → the orphan's id.
+    const idA = await firstMintedId(handle.store, createControlledClock(1_000), "i1", "opA");
+    // Kernel B ("the restart") at t=2000 → a DISTINCT first id.
+    const idB = await firstMintedId(handle.store, createControlledClock(2_000), "i2", "opB");
+    expect(idA).toBe("req-1000-1");
+    expect(idB).toBe("req-2000-1");
+    expect(idB).not.toBe(idA);
+    handle.close();
+  });
+
+  it("SAME-CLOCK control: two kernels under an IDENTICAL controlled clock re-mint the SAME first id — the N5 residual (a same-millisecond restart) lands on the LOUD collision lane, never silent reuse", async () => {
+    const handle = openStore(":memory:", createControlledClock(1_000));
+    const idA = await firstMintedId(handle.store, createControlledClock(1_000), "i1", "opA");
+    const idB = await firstMintedId(handle.store, createControlledClock(1_000), "i2", "opB");
+    // Both mint req-1000-1 (the per-kernel counter restarts at 1): the residual
+    // the provider surfaces LOUD on N4's collision lane, never as silent reuse.
+    expect(idA).toBe("req-1000-1");
+    expect(idB).toBe("req-1000-1");
+    expect(idB).toBe(idA);
+    handle.close();
   });
 });

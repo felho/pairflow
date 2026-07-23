@@ -80,6 +80,9 @@ const BODY_KEYS: Record<keyof DiagnosticEventBody, true> = {
   type: true,
   reason: true,
   detail: true,
+  requestId: true,
+  providerReason: true,
+  providerDetail: true,
   expectedVersion: true,
   currentVersion: true,
   payloadDigest: true,
@@ -93,6 +96,9 @@ const KINDS: ReadonlySet<string> = new Set([
   "duplicate",
   "cas_restart",
   "internal_failure",
+  // packet ch9-p2, DG2 — the runner-plane provisioning kinds.
+  "provision_ready",
+  "provision_failed",
 ]);
 const DETAIL_TOKENS: ReadonlySet<string> = new Set([
   "not_plain_object",
@@ -135,6 +141,9 @@ function project(body: DiagnosticEventBody): Record<string, unknown> {
     type,
     reason,
     detail,
+    requestId,
+    providerReason,
+    providerDetail,
     expectedVersion,
     currentVersion,
     payloadDigest,
@@ -147,6 +156,9 @@ function project(body: DiagnosticEventBody): Record<string, unknown> {
   if (type !== undefined) out.type = type;
   if (reason !== undefined) out.reason = reason;
   if (detail !== undefined) out.detail = detail;
+  if (requestId !== undefined) out.requestId = requestId;
+  if (providerReason !== undefined) out.providerReason = providerReason;
+  if (providerDetail !== undefined) out.providerDetail = providerDetail;
   if (expectedVersion !== undefined) out.expectedVersion = expectedVersion;
   if (currentVersion !== undefined) out.currentVersion = currentVersion;
   if (payloadDigest !== undefined) out.payloadDigest = payloadDigest;
@@ -181,7 +193,9 @@ function validateShape(row: unknown): DiagnosticEventBody {
   }
   const source = row.source;
   const kind = row.kind;
-  if (source !== "ingress" && source !== "kernel") bad("source not in enum");
+  if (source !== "ingress" && source !== "kernel" && source !== "runner") {
+    bad("source not in enum");
+  }
   if (typeof kind !== "string" || !KINDS.has(kind)) bad("kind not in enum");
 
   // Common field types (for every present field).
@@ -196,6 +210,16 @@ function validateShape(row: unknown): DiagnosticEventBody {
   }
   if (present(row, "detail") && (typeof row.detail !== "string" || !DETAIL_TOKENS.has(row.detail))) {
     bad("detail not an IngressDetailToken");
+  }
+  // Runner-plane fields (packet ch9-p2, DG3) — STRING-typed. providerReason
+  // is an UNTRUSTED report, so its enum membership is deliberately NOT
+  // read-gated: a hostile token can never fail the whole read.
+  if (present(row, "requestId") && typeof row.requestId !== "string") bad("requestId not a string");
+  if (present(row, "providerReason") && typeof row.providerReason !== "string") {
+    bad("providerReason not a string");
+  }
+  if (present(row, "providerDetail") && typeof row.providerDetail !== "string") {
+    bad("providerDetail not a string");
   }
   for (const k of ["expectedVersion", "currentVersion"] as const) {
     if (present(row, k) && !isSafeVersion(row[k])) bad(`${k} not a nonnegative safe integer`);
@@ -222,6 +246,30 @@ function validateShape(row: unknown): DiagnosticEventBody {
     bad("both versions iff kind=stale");
   }
   if (present(row, "detail") !== (source === "ingress")) bad("detail iff source=ingress");
+
+  // Runner-plane presence iffs (packet ch9-p2, DG3 — both directions):
+  // requestId ⇔ source runner; providerReason ⇔ kind provision_failed;
+  // providerDetail ⇒ kind provision_failed; runner kinds ⇔ runner source.
+  const isRunnerKind = kind === "provision_ready" || kind === "provision_failed";
+  if (isRunnerKind !== (source === "runner")) bad("runner kinds iff source=runner");
+  if (present(row, "requestId") !== (source === "runner")) bad("requestId iff source=runner");
+  if (present(row, "providerReason") !== (kind === "provision_failed")) {
+    bad("providerReason iff kind=provision_failed");
+  }
+  if (present(row, "providerDetail") && kind !== "provision_failed") {
+    bad("providerDetail requires kind=provision_failed");
+  }
+
+  if (source === "runner") {
+    // A runner completion carries instanceId + requestId (+ the failure
+    // fields on provision_failed) and NOTHING from the op/envelope world.
+    if (!present(row, "instanceId")) bad("runner row requires instanceId");
+    for (const k of ["opId", "actorId", "type"] as const) {
+      if (present(row, k)) bad(`runner source carries no ${k}`);
+    }
+    if (present(row, "payloadDigest")) bad("runner carries no payloadDigest");
+    return row as unknown as DiagnosticEventBody;
+  }
 
   const fullEnvelope = (): void => {
     for (const k of ATTRIBUTION) {

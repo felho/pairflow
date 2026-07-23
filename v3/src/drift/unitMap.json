@@ -197,7 +197,9 @@
     "status": "realized"
   },
   "l0d-pseudocode/RUNTIME_CONTEXT_READY": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/lifecycle.ts#runtimeContextReady",
+    "disposition": "alias/inherited",
+    "status": "realized"
   },
   "l0d-pseudocode/START": {
     "codeRef": "v3/src/kernel/lifecycle.ts#start",

@@ -6,14 +6,20 @@ import type { EpochMillis } from "./time.js";
  * ch7-P1; PI-4 / memo Addendum 2 B1). Events are observation ONLY:
  * separate from the transcript, best-effort, never an authority.
  */
-export type DiagnosticSource = "ingress" | "kernel";
+export type DiagnosticSource = "ingress" | "kernel" | "runner";
 
 export type DiagnosticKind =
   | "rejected"
   | "stale"
   | "duplicate"
   | "cas_restart"
-  | "internal_failure";
+  | "internal_failure"
+  // The runner-plane provisioning-completion kinds (packet ch9-p2, DG2;
+  // contract:ch9-runner#C26): every provisioning completion emits ONE of
+  // these — `provision_ready` on success, `provision_failed` on any
+  // provisioning failure. VALID ONLY with source = "runner" (bidirectional).
+  | "provision_ready"
+  | "provision_failed";
 
 /**
  * One token per admission-gate block in the ingress parseEnvelope —
@@ -60,6 +66,30 @@ export interface DiagnosticEventBody {
   readonly reason?: RejectionName;
   /** Present iff source = "ingress" — the failed admission gate. */
   readonly detail?: IngressDetailToken;
+  /**
+   * Present iff source = "runner" (packet ch9-p2, DG2): the provisioning
+   * completion's correlation id — BOTH runner kinds carry it. The
+   * source-grain iff is scoped to the two provisioning kinds this packet
+   * mints; a sibling packet introducing further `runner` kinds RE-EXAMINES it.
+   */
+  readonly requestId?: string;
+  /**
+   * Present iff kind = "provision_failed" (packet ch9-p2, DG2): the RAW
+   * reason token AS THE PROVIDER REPORTED IT — a plain string,
+   * UNTRUSTED-CONFINED exactly like `error.message`, NEVER the classified
+   * enum. The event precedes the kernel's transport gate, so a
+   * hostile/unknown token is carried VERBATIM (the kernel's gate throw
+   * proceeds unchanged); membership is deliberately NOT read-gated.
+   */
+  readonly providerReason?: string;
+  /**
+   * Present iff the report's `detail` value is a plain string (packet
+   * ch9-p2, DG2): PB3's bounded stderr/error tail — only on
+   * "provision_failed", UNTRUSTED-CONFINED to the diag store + local read
+   * surfaces. A non-string hostile detail is OMITTED at emit and the event
+   * still fires.
+   */
+  readonly providerDetail?: string;
   /** Present iff kind = "stale" — the envelope's expected version. */
   readonly expectedVersion?: number;
   /** Present iff kind = "stale" — the outcome's current version. */

@@ -431,10 +431,12 @@ round:
     { timeout: 30_000 },
     async () => {
       // The R-ACTIVATION-JOURNEY discharge (V7): the full CREATE→START→hold→
-      // KICKOFF lifecycle drivable through the SHIPPED subprocess CLI, over the
-      // EMPTY production provider registry (C16). Deterministic by
-      // construction (context-free + deferred: no provider leg, and every
-      // state read lands BEFORE any immediate dispatch would spawn an actor).
+      // KICKOFF lifecycle drivable through the SHIPPED subprocess CLI. This
+      // template is CONTEXT-FREE (no runtimeContext spec), so it never touches
+      // the production provider registry — behavior is registry-independent.
+      // Deterministic by construction (context-free + deferred: no provider
+      // leg, and every state read lands BEFORE any immediate dispatch would
+      // spawn an actor).
       const tsxBin = join(process.cwd(), "..", "node_modules", ".bin", "tsx");
       const mainPath = join(process.cwd(), "src", "cli", "main.ts");
       const templatesDir = join(process.cwd(), "templates");

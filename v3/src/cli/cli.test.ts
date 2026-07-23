@@ -1243,15 +1243,16 @@ describe("cli — ch12-P4 V6: the spec-declaring-template unstartable lane + the
     expect(JSON.stringify(res)).toMatch(/retired|spec map/);
   });
 
-  it("a FILE-authored spec-map template now WALKS (F3): create ADMITS, start → Rejected(runtime_context_provider_unavailable) exit 3 (V6, the EMPTY production registry)", async () => {
+  it("a FILE-authored spec-map template naming an UNREGISTERED provider → start → Rejected(runtime_context_provider_unavailable) exit 3 (the resolution lane survives; ch9-P2 T1 re-base)", async () => {
     // ch12-P4 Claim 6 item 4 / V6 (the C25 P4-deferral RETIRED): a
-    // YAML-authored runtimeContext spec map is now MATERIALIZED by F3 and
-    // ADMITS. `start` then resolves the provider against the EMPTY production
-    // registry (C16) and the KERNEL returns the runtime_context lane — a
-    // spec-declaring template is honestly unstartable through the shipped CLI
-    // until ch9 (no eager CLI guard resurrected).
+    // YAML-authored runtimeContext spec map is MATERIALIZED by F3 and ADMITS.
+    // `start` then resolves the provider against the production registry — the
+    // ch9-P2 T1 re-base: `pairflow.worktree` is now REGISTERED (it would
+    // provision), so this lane names an UNREGISTERED provider to keep the
+    // name-resolution-failure lane driven. The premise moved off the
+    // production registry's emptiness (registration flipped it).
     const dir = stageTemplates({
-      "local-pair-v0@1.yaml": `${CANONICAL_BYTES()}runtimeContext:\n  kind: worktree\n  provider: pairflow.worktree\n`,
+      "local-pair-v0@1.yaml": `${CANONICAL_BYTES()}runtimeContext:\n  kind: worktree\n  provider: pairflow.unregistered\n`,
     });
     const db = tempDbPath();
     const deps = testDeps();

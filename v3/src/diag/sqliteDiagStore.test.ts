@@ -423,6 +423,105 @@ describe("R3 shape gate — every counterexample fails the WHOLE read as read_fa
 });
 
 // ===========================================================================
+// packet ch9-p2, DG3 — the runner-plane provisioning rows: emit/read parity,
+// every new presence iff violated in BOTH directions → read_failed.
+// ===========================================================================
+const B_RUN_READY: DiagnosticEventBody = {
+  source: "runner",
+  kind: "provision_ready",
+  instanceId: "inst-1",
+  requestId: "req-1000-1",
+};
+const B_RUN_FAILED: DiagnosticEventBody = {
+  source: "runner",
+  kind: "provision_failed",
+  instanceId: "inst-1",
+  requestId: "req-1000-1",
+  providerReason: "sys:provision_rejected",
+  providerDetail: 'fatal: not a git repository éü {payload:"x"}',
+};
+const B_RUN_FAILED_NODETAIL: DiagnosticEventBody = {
+  source: "runner",
+  kind: "provision_failed",
+  instanceId: "inst-1",
+  requestId: "req-1000-1",
+  providerReason: "sys:provision_failed",
+};
+
+describe("runner rows — emit/read round-trip + confinement (DG3)", () => {
+  it("the store ROUND-TRIPS runner rows (ready, failed+detail, failed w/o detail) with exact keysets", async () => {
+    const handle = openDiagStore(":memory:", createControlledClock(9));
+    handle.sink.emit(B_RUN_READY);
+    handle.sink.emit(B_RUN_FAILED);
+    handle.sink.emit(B_RUN_FAILED_NODETAIL);
+    const events = await handle.reader.getGlobalDiagnostics(0);
+    expect(events).toEqual([
+      { ...B_RUN_READY, at: 9, ordinal: 1 },
+      { ...B_RUN_FAILED, at: 9, ordinal: 2 },
+      { ...B_RUN_FAILED_NODETAIL, at: 9, ordinal: 3 },
+    ]);
+    handle.close();
+  });
+
+  it("an UNKNOWN providerReason token round-trips VERBATIM — membership is NOT read-gated (the untrusted-report rule)", async () => {
+    const handle = openDiagStore(":memory:", createControlledClock(0));
+    // A hostile/unknown token the kernel's transport gate would reject: the
+    // event still emits and reads it verbatim (the event precedes the verdict).
+    handle.sink.emit({ ...B_RUN_FAILED_NODETAIL, providerReason: "totally-made-up-token" });
+    const events = await handle.reader.getGlobalDiagnostics(0);
+    expect((events[0] as DiagnosticEvent).providerReason).toBe("totally-made-up-token");
+    handle.close();
+  });
+
+  it("attributed runner rows read back on the instance surface", async () => {
+    const handle = openDiagStore(":memory:", createControlledClock(0));
+    handle.sink.emit(B_RUN_READY);
+    const events = await handle.reader.getDiagnostics("inst-1", 0);
+    expect(events.map((e) => e.kind)).toEqual(["provision_ready"]);
+    handle.close();
+  });
+
+  it("FAIL-OPEN: emitting a runner row AFTER close() is swallowed (never throws) — the delivery outcome is unchanged", () => {
+    const handle = openDiagStore(tempDbPath(), createControlledClock(0));
+    handle.close();
+    expect(() => handle.sink.emit(B_RUN_FAILED)).not.toThrow();
+  });
+});
+
+const RUNNER_R3_FIXTURES: readonly { name: string; body: string }[] = [
+  // runner kinds ⇔ runner source (both directions).
+  { name: "runner kind with source kernel", body: JSON.stringify({ source: "kernel", kind: "provision_ready", instanceId: "i", requestId: "r" }) },
+  { name: "runner kind with source ingress", body: JSON.stringify({ source: "ingress", kind: "provision_failed", requestId: "r", providerReason: "x" }) },
+  { name: "runner source with a kernel kind (duplicate)", body: JSON.stringify({ source: "runner", kind: "duplicate", instanceId: "i", requestId: "r" }) },
+  // requestId iff source runner (both directions).
+  { name: "kernel row carrying requestId", body: JSON.stringify({ ...KDUP, requestId: "r" }) },
+  { name: "runner row MISSING requestId", body: JSON.stringify({ source: "runner", kind: "provision_ready", instanceId: "i" }) },
+  { name: "requestId not a string", body: JSON.stringify({ source: "runner", kind: "provision_ready", instanceId: "i", requestId: 5 }) },
+  // providerReason iff kind provision_failed (both directions).
+  { name: "provision_ready carrying providerReason", body: JSON.stringify({ source: "runner", kind: "provision_ready", instanceId: "i", requestId: "r", providerReason: "x" }) },
+  { name: "provision_failed MISSING providerReason", body: JSON.stringify({ source: "runner", kind: "provision_failed", instanceId: "i", requestId: "r" }) },
+  { name: "kernel duplicate carrying providerReason", body: JSON.stringify({ ...KDUP, providerReason: "x" }) },
+  // providerDetail ⇒ provision_failed; string-typed.
+  { name: "provision_ready carrying providerDetail", body: JSON.stringify({ source: "runner", kind: "provision_ready", instanceId: "i", requestId: "r", providerDetail: "d" }) },
+  { name: "providerDetail not a string", body: JSON.stringify({ source: "runner", kind: "provision_failed", instanceId: "i", requestId: "r", providerReason: "x", providerDetail: 5 }) },
+  // runner attribution exclusions.
+  { name: "runner row MISSING instanceId", body: JSON.stringify({ source: "runner", kind: "provision_ready", requestId: "r" }) },
+  { name: "runner row carrying opId", body: JSON.stringify({ source: "runner", kind: "provision_ready", instanceId: "i", requestId: "r", opId: "o" }) },
+  { name: "runner row carrying type", body: JSON.stringify({ source: "runner", kind: "provision_ready", instanceId: "i", requestId: "r", type: "PASS" }) },
+  { name: "runner row carrying payloadDigest", body: JSON.stringify({ source: "runner", kind: "provision_ready", instanceId: "i", requestId: "r", payloadDigest: "d" }) },
+];
+
+describe("runner rows — every new presence iff violated (both directions) → read_failed", () => {
+  it.each(RUNNER_R3_FIXTURES)("$name", async ({ body }) => {
+    const path = tempDbPath();
+    const handle = openDiagStore(path, createControlledClock(0));
+    insertRaw(path, body, "i");
+    expect(await reasonOf(handle.reader.getGlobalDiagnostics(0))).toBe("read_failed");
+    handle.close();
+  });
+});
+
+// ===========================================================================
 // Stamping, ordering, fidelity, projection (dimensions 4, 5).
 // ===========================================================================
 describe("stamping + ordering + fidelity", () => {

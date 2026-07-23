@@ -99,9 +99,9 @@ export interface KernelDeps {
   /**
    * T3/PR2 (packet ch12-p3): the STATIC injected runtime-context provider
    * registry — ONE new REQUIRED dependency (the `diag`/`gates` explicit-wiring
-   * culture). The shipped CLI injects the EMPTY production registry (C16 — a
-   * spec-declaring template is honestly unstartable); the dev/test roots
-   * inject the scripted-provider registry.
+   * culture). Since ch9-P2 (C6) the shipped CLI injects the PRODUCTION
+   * registry whose sole member is `pairflow.worktree` (the real worktree
+   * provider); the dev/test roots inject the scripted-provider registry.
    */
   readonly providerRegistry: ProviderRegistry;
 }
@@ -155,8 +155,9 @@ export interface Kernel {
    * CONCLUSION-SIGNALLED at the attempt's conclusion — never on an event-loop
    * scheduling primitive (SM3). ONE buffer, ONE discipline for both kinds
    * (W3's foreclosure of a second buffer). Wired at the dev/test composition
-   * root to the scripted provider; dormant in production (the empty registry
-   * never fires).
+   * root to the scripted provider; since ch9-P2 the shipped CLI wires the
+   * real `pairflow.worktree` provider onto it through the DG4 diag-wrapping
+   * sink (the first production firing path).
    */
   deliverCompletion(
     instanceId: InstanceId,
@@ -234,7 +235,7 @@ function envelopeAttribution(
 }
 
 export function createKernel(deps: KernelDeps): Kernel {
-  const { store, definitions, digest, diag, gates, processRunner, providerRegistry } = deps;
+  const { store, definitions, time, digest, diag, gates, processRunner, providerRegistry } = deps;
 
   // ── The ordered-after-commit completion seam (packet ch12-p3, SM family;
   // composition wiring, the store uninvolved). The buffer HOLDS a provider's
@@ -250,12 +251,21 @@ export function createKernel(deps: KernelDeps): Kernel {
     { readonly instanceId: InstanceId; readonly completion: RuntimeContextCompletion }[]
   >();
   let requestCounter = 0;
-  // A FRESH unique request_id per provisioning attempt (S3/S5); a kernel-local
-  // counter (deterministic, no randomness — the CHK-noRandom seam) since the
-  // recorded provision call carries the id downstream.
+  // A FRESH unique request_id per provisioning attempt (S3/S5): the injected
+  // TimeSource's epoch-millis COMPOSED with a kernel-local counter —
+  // `req-<epochMillis>-<n>` (packet ch9-p2, N5; contract:ch9-runner#C8 crash-
+  // retry freshness). The one-shot shipped CLI builds a kernel PER process, so
+  // a bare per-kernel counter would restart at 1 and a crash between worktree
+  // creation and the marker commit would RE-MINT the crashed attempt's id —
+  // colliding with its own orphan. The epoch-millis prefix keeps ids fresh
+  // ACROSS restarts on a REAL clock (a same-millisecond restart re-mints the
+  // same first id — that residual lands on N4's LOUD collision lane, never on
+  // silent reuse); deterministic under the testkit's controlled clock (the
+  // CHK-noRandom seam untouched), the counter suffix keeping same-millis
+  // in-process attempts distinct.
   const newRequestId = (): string => {
     requestCounter += 1;
-    return `req-${String(requestCounter)}`;
+    return `req-${String(time.now())}-${String(requestCounter)}`;
   };
   // PR4 ref transport gate: reuse the injected emit-lib (DigestSource) — a
   // non-canonical ref throws at digest, exactly the isCanonicalizable culture

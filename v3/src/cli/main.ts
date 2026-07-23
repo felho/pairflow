@@ -20,8 +20,16 @@ import {
 import { createIngress } from "../ingress/index.js";
 import { createKernel } from "../kernel/index.js";
 import type { Kernel } from "../kernel/index.js";
+import type { RuntimeContextCompletion } from "../domain/index.js";
 import type { DefinitionStore } from "../ports/definition.js";
+import type { DiagnosticEventBody, DiagnosticsSink } from "../ports/diagnostics.js";
 import type { GateCatalog } from "../ports/gate.js";
+import type {
+  ProviderRegistry,
+  RuntimeContextCompletionSink,
+} from "../ports/runtimeContextProvider.js";
+import { createWorktreeProvider } from "../providers/index.js";
+import type { WorktreeProvider } from "../providers/index.js";
 import type { VerbContext, VerbHandler, VerbOptions } from "./common.js";
 import {
   dispatch,
@@ -225,12 +233,84 @@ function parseRunOverrides(
 }
 
 /**
+ * R1 (packet ch9-p2; contract:ch9-runner#C6): the shared PRODUCTION provider
+ * registry — sole member `pairflow.worktree` (the real worktree provider).
+ * The C12 empty-map call retires from production. Returns the registry plus
+ * the provider handle so the caller can bind its completion sink AFTER the
+ * kernel exists (R2/DG4). The join is legal by ordering — ch9-P1 realized the
+ * FAILED channel this provider routes onto.
+ */
+function createProductionProviderRegistry(): {
+  readonly registry: ProviderRegistry;
+  readonly provider: WorktreeProvider;
+} {
+  const provider = createWorktreeProvider();
+  return {
+    registry: createStaticProviderRegistry({ "pairflow.worktree": provider }),
+    provider,
+  };
+}
+
+/**
+ * DG4 (packet ch9-p2; contract:ch9-runner#C26): the runner-plane diagnostic
+ * event for a provisioning completion — provider-anonymous, built at the
+ * composition sink wrapper. `provider_ready` carries instanceId + requestId;
+ * `provider_failed` adds the RAW reason token AS REPORTED (`providerReason`,
+ * never the kernel's classified verdict) and — iff the report's `detail` is a
+ * plain string — the PB3 tail (`providerDetail`). A non-string hostile detail
+ * is OMITTED and the event still fires.
+ */
+function runnerDiagEvent(
+  instanceId: string,
+  requestId: string,
+  completion: RuntimeContextCompletion,
+): DiagnosticEventBody {
+  if (completion.kind === "ready") {
+    return { source: "runner", kind: "provision_ready", instanceId, requestId };
+  }
+  return {
+    source: "runner",
+    kind: "provision_failed",
+    instanceId,
+    requestId,
+    providerReason: completion.reason,
+    ...(typeof completion.detail === "string" ? { providerDetail: completion.detail } : {}),
+  };
+}
+
+/**
+ * R2/DG4: bind the provider's completion sink to `Kernel.deliverCompletion`,
+ * WRAPPED by the diag-emitting sink. The wrapper emits the DG2 event BARE
+ * (the fail-open `DiagnosticsSink` contract, REV-DIAG-FAILOPEN — no defensive
+ * try/catch) at completion-FIRE time, independent of the later admission
+ * outcome (the event records the provider's REPORT, never the kernel's
+ * verdict), THEN delivers.
+ */
+function bindProductionCompletionSink(
+  provider: WorktreeProvider,
+  kernel: Kernel,
+  diag: DiagnosticsSink,
+): void {
+  const sink: RuntimeContextCompletionSink = (instanceId, requestId, completion) => {
+    diag.emit(runnerDiagEvent(instanceId, requestId, completion));
+    kernel.deliverCompletion(instanceId, requestId, completion);
+  };
+  provider.bindCompletionSink(sink);
+}
+
+/**
  * V1 (packet ch12-P4): the shared kernel wiring for the lifecycle write
  * verbs — the fail-closed process-gate runner beside the derived-path
- * store DB (W2, ch11-P3b), the EMPTY production provider registry (C16 —
- * the shipped CLI ships no runtime-context provider), and the built
- * kernel injected the SAME gate catalog the definition store admits with
- * (ch11-P2b T1). No CLI handler writes through `StorePort` directly.
+ * store DB (W2, ch11-P3b), the PRODUCTION provider registry (ch9-P2 C6 — the
+ * shipped CLI's sole member is `pairflow.worktree`, wired onto the completion
+ * seam through the DG4 diag-wrapping sink), and the built kernel injected the
+ * SAME gate catalog the definition store admits with (ch11-P2b T1). No CLI
+ * handler writes through `StorePort` directly. R2: the START verb (the ONLY
+ * `provision()` caller) runs here, so `withKernel` AWAITS
+ * `settleRuntimeContextDeliveries()` after its verb body — the seam's own
+ * shutdown-drain rule made real at the first composition that can produce
+ * deliveries (empty in the normal PB2-synchronous path; the belt for any
+ * direct-path residue).
  */
 async function withKernel<T>(
   ctx: VerbContext,
@@ -242,6 +322,7 @@ async function withKernel<T>(
     const processRunner = createFailClosedProcessGateRunner(
       deriveProcessEvidenceDbPath(resolveDbPath(flagString(ctx, "db"), ctx.deps)),
     );
+    const { registry, provider } = createProductionProviderRegistry();
     try {
       const kernel = createKernel({
         store: handle.store,
@@ -251,9 +332,15 @@ async function withKernel<T>(
         diag: diag.sink,
         gates,
         processRunner,
-        providerRegistry: createStaticProviderRegistry({}),
+        providerRegistry: registry,
       });
-      return await run(kernel);
+      bindProductionCompletionSink(provider, kernel, diag.sink);
+      const result = await run(kernel);
+      // R2 shutdown drain — await every in-flight post-conclusion delivery
+      // before process exit (a permanent no-op under PB2's synchronous shape;
+      // the belt for any direct-path residue).
+      await kernel.settleRuntimeContextDeliveries();
+      return result;
     } finally {
       processRunner.close();
     }
@@ -456,10 +543,11 @@ async function verbCreate(ctx: VerbContext): Promise<number> {
  * V3/V4/V6 (packet ch12-P4, C20/C24): `start <instance-id>` — the real
  * single-op START verb (the C25 in-handler CREATE→START bridge RETIRED).
  * Calls `kernel.start` alone with a minted nonce `op_id` (C13); NO
- * create. A spec-declaring template resolves the provider against the
- * EMPTY production registry and the kernel returns
- * `Rejected(runtime_context_provider_unavailable)` (C16/V6 — honestly
- * unstartable through the shipped CLI until ch9). No convenience
+ * create. Since ch9-P2 (C6) a spec-declaring template resolves
+ * `pairflow.worktree` against the PRODUCTION registry and provisions a live
+ * worktree (the run lands READY-committed or FAILED through the ch9 channel);
+ * an UNREGISTERED provider name still returns
+ * `Rejected(runtime_context_provider_unavailable)`. No convenience
  * CREATE+START verb ships (C19).
  */
 async function verbStart(ctx: VerbContext): Promise<number> {
@@ -599,6 +687,12 @@ async function verbSubmit(ctx: VerbContext): Promise<number> {
       const processRunner = createFailClosedProcessGateRunner(
         deriveProcessEvidenceDbPath(resolveDbPath(flagString(ctx, "db"), ctx.deps)),
       );
+      // R1: the SAME shared production registry helper (the empty-map call
+      // retired). This site builds a kernel but NEVER provisions (submit
+      // handles actor envelopes) — the provider is wired for uniformity /
+      // provider-anonymity, and a settle here would be a permanent no-op
+      // across one-shot processes, so none is awaited (R2).
+      const { registry, provider } = createProductionProviderRegistry();
       try {
         // V5 (ch7-P4): kernel AND ingress emit into the derived-path store.
         const kernel = createKernel({
@@ -609,8 +703,9 @@ async function verbSubmit(ctx: VerbContext): Promise<number> {
           diag: diag.sink,
           gates,
           processRunner,
-          providerRegistry: createStaticProviderRegistry({}),
+          providerRegistry: registry,
         });
+        bindProductionCompletionSink(provider, kernel, diag.sink);
         const outcome = await createIngress({ kernel, diag: diag.sink }).submit(envelope);
         // The outcome IS the surface's answer — DATA on stdout, always;
         // the exit code classifies it (duplicate = idempotent success).

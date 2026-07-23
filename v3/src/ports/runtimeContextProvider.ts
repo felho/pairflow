@@ -48,9 +48,10 @@ export interface RuntimeContextProvider {
  * l0e/ProviderRegistry (packet ch12-p3, PR2; contract:ch12-runtime-core
  * #C16/#C22): the STATIC, INJECTED, PER-CHAPTER registry — a pure lookup by
  * provider name. Injected at the composition root as ONE new required kernel
- * dependency; the PRODUCTION registry is EMPTY at ch12 (a spec-declaring
- * template is honestly unstartable through the shipped CLI —
- * `Rejected(runtime_context_provider_unavailable)` at START).
+ * dependency. The PRODUCTION registry was EMPTY at ch12; since ch9-P2 (C6) it
+ * carries `pairflow.worktree` (the real worktree provider) — a spec-declaring
+ * template now provisions a live worktree or lands FAILED through the ch9
+ * channel, no longer `Rejected(runtime_context_provider_unavailable)` at START.
  */
 export interface ProviderRegistry {
   resolve(providerName: string): RuntimeContextProvider | null;
@@ -71,8 +72,10 @@ export type RuntimeContextCompletionSink = (
 
 /**
  * PR2: build the static injected registry from a fixed member map (own-key
- * lookup; a non-member resolves to `null`). The EMPTY production registry is
- * a call with no members (`createStaticProviderRegistry({})`).
+ * lookup; a non-member resolves to `null`). The ch12 EMPTY production registry
+ * was a call with no members; since ch9-P2 (C6) the production call carries
+ * `{ "pairflow.worktree": <the worktree provider> }` (the shared production
+ * helper at the CLI composition roots).
  */
 export function createStaticProviderRegistry(
   members: Readonly<Record<string, RuntimeContextProvider>>,
