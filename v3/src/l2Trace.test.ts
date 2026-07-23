@@ -17,7 +17,7 @@ import type { TraceFixture } from "./testkit/index.js";
  * The l2 chapter trace as a golden test (packet ch11-P2b, T3 — the
  * 08-l2 Runtime trace verbatim as a committed-row sequence): a gated
  * pipeline at (review, CONVERGED) blocks in round 1 (threshold
- * `round >= 2` → `round_below_min`) and allows in round 2 through BOTH
+ * `round >= 2` → `sys:round_below_min`) and allows in round 2 through BOTH
  * evaluators end-to-end (dimension 11). AT-LEVEL: `expectedRole` and
  * `expectedVersion` explicit on every emit, no lift (the l1Trace
  * precedent). The gated template is DIRECTLY CONSTRUCTED and admitted
@@ -199,7 +199,7 @@ describe("l2 golden trace — the gate rung + both evaluators end-to-end (08-l2 
     ]);
 
     // Supplemental (from ReplayResult.outcomes): the step-2 blocked
-    // outcome's gateReason is round_below_min (a blocked step commits no
+    // outcome's gateReason is sys:round_below_min (a blocked step commits no
     // row — the harness ExpectedOutcome carries `reason` only, so the
     // gateReason assert reads the outcomes array).
     const blocked = result.outcomes[2] as Outcome;
@@ -207,7 +207,7 @@ describe("l2 golden trace — the gate rung + both evaluators end-to-end (08-l2 
       kind: "rejected",
       reason: "gate_blocked",
       gate: "declarative.threshold",
-      gateReason: "round_below_min",
+      gateReason: "sys:round_below_min",
     });
 
     handle.close();

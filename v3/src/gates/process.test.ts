@@ -197,6 +197,14 @@ describe("external.process — the V2 lane inventory (a–q), by name with code 
     expect(findings[0]?.path).toBe("reason.zero");
     expect(findings[0]).not.toHaveProperty("code");
   });
+
+  it("lane q COLON member: an authored token spelling a sys:-prefixed form (colon-bearing) → uncoded grammar finding at reason.<bucket> (ADR-018: the authored grammar cannot express ':')", () => {
+    const findings = fail({ ...validExitCode, reason: { zero: "sys:exit_zero" } });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.path).toBe("reason.zero");
+    expect(findings[0]?.message).toBe("reason.zero must match ^[a-z][a-z0-9_]*$");
+    expect(findings[0]).not.toHaveProperty("code");
+  });
 });
 
 describe("external.process — the o/p no-double rule (V2 lanes o/p, the operative authority note)", () => {
@@ -224,10 +232,10 @@ describe("external.process — defaults materialization (V1), both directions", 
   });
 
   it("exitCode-mode reason: absent → COMPLETE authored-or-default; partial authored → completed per bucket; full → carried", () => {
-    expect(effective(validExitCode).reason).toEqual({ zero: "exit_zero", nonzero: "exit_nonzero" });
+    expect(effective(validExitCode).reason).toEqual({ zero: "sys:exit_zero", nonzero: "sys:exit_nonzero" });
     expect(effective({ ...validExitCode, reason: { zero: "custom_ok" } }).reason).toEqual({
       zero: "custom_ok",
-      nonzero: "exit_nonzero",
+      nonzero: "sys:exit_nonzero",
     });
     expect(effective({ ...validExitCode, reason: { zero: "a", nonzero: "b" } }).reason).toEqual({ zero: "a", nonzero: "b" });
   });
@@ -240,7 +248,7 @@ describe("external.process — defaults materialization (V1), both directions", 
       onExit: { zero: "allow", nonzero: "block" },
       onRunnerError: "blockTransition",
       onTimeout: "blockTransition",
-      reason: { zero: "exit_zero", nonzero: "exit_nonzero" },
+      reason: { zero: "sys:exit_zero", nonzero: "sys:exit_nonzero" },
     });
   });
 });
@@ -383,7 +391,14 @@ describe("external.process — V1 JSON-mode effective-config FULL-ROW equality (
       onExit: { zero: "allow", nonzero: "block" },
       onRunnerError: "blockTransition",
       onTimeout: "blockTransition",
-      reason: { zero: "exit_zero", nonzero: "custom_nz" },
+      reason: { zero: "sys:exit_zero", nonzero: "custom_nz" },
+    });
+  });
+
+  it("the COLLIDING member: an authored bare fixed name (runner_error) is LEGAL (colon-free grammar) and carried VERBATIM — never renamed to its sys: sibling", () => {
+    expect(effective({ ...validExitCode, reason: { nonzero: "runner_error" } }).reason).toEqual({
+      zero: "sys:exit_zero",
+      nonzero: "runner_error",
     });
   });
 });
@@ -466,7 +481,7 @@ describe("external.process — own-property hostility extended (__proto__/inheri
     const reason = Object.create({ zero: "Bad Token" }) as object; // inherited invalid token
     // The inherited (invalid) token is never read; the own reason map is empty,
     // so exitCode-mode defaults BOTH buckets and the config ADMITS.
-    expect(effective({ ...validExitCode, reason }).reason).toEqual({ zero: "exit_zero", nonzero: "exit_nonzero" });
+    expect(effective({ ...validExitCode, reason }).reason).toEqual({ zero: "sys:exit_zero", nonzero: "sys:exit_nonzero" });
   });
 });
 

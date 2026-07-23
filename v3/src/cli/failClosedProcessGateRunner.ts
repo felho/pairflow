@@ -9,7 +9,7 @@ import type { ProcessGateEvidence, ProcessGateRunner, ProcessResult } from "../p
  * and NEVER allows: on its normal path every `run()` durably persists a
  * COMPLETE C26 evidence record BEFORE resolving, returns
  * `{ kind: "runner_error", logRef, durationMs: 0 }`, and classification then
- * blocks (`gate_blocked(runner_error)`).
+ * blocks (`gate_blocked(sys:runner_error)`).
  *
  * Durability grain (entailed for THIS slot): its refs must survive the emitting
  * CLI invocation — records resolve across a re-open of the same path — so the

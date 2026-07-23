@@ -97,17 +97,17 @@ function exitBucket(exitCode: number): "zero" | "nonzero" {
  * M1: the kind × mode grid over the EFFECTIVE config. `timeout` / `runner_error`
  * kinds route to `runner_outcome`; `ok` + `exitCode` reads `onExit[bucket]` and
  * the total `reason[bucket]` (V1); `ok` + `gateDecisionJson` runs M2's strict
- * parse (a failure is `malformed_gate_decision_json`, never a business block).
+ * parse (a failure is `sys:malformed_gate_decision_json`, never a business block).
  */
 export function classifyProcessResult(
   result: ProcessResult,
   effective: EffectiveProcessConfig,
 ): GateDecision {
   if (result.kind === "timeout") {
-    return runnerOutcome(effective.onTimeout, "timeout", result.logRef);
+    return runnerOutcome(effective.onTimeout, "sys:timeout", result.logRef);
   }
   if (result.kind === "runner_error") {
-    return runnerOutcome(effective.onRunnerError, "runner_error", result.logRef);
+    return runnerOutcome(effective.onRunnerError, "sys:runner_error", result.logRef);
   }
   // kind === "ok"
   if (effective.output.mode === "exitCode") {
@@ -132,7 +132,7 @@ export function classifyProcessResult(
   // gateDecisionJson mode (M2).
   const parsed = tryParseGateDecision(result.stdout);
   if (parsed === null) {
-    return runnerOutcome(effective.onRunnerError, "malformed_gate_decision_json", result.logRef);
+    return runnerOutcome(effective.onRunnerError, "sys:malformed_gate_decision_json", result.logRef);
   }
   return withEvidence(parsed, result.logRef);
 }
@@ -172,7 +172,7 @@ function isNonEmptyString(value: unknown): value is string {
  * evidence_refs?}`; `verdict` ∈ {allow, warn, block}; `reason`/`message`
  * NONEMPTY strings; `evidence_refs` a list of NONEMPTY strings (an empty LIST
  * is legal, an empty ELEMENT is not). ALL reads are own-property (G8). Any
- * member of the malformed inventory → `null` (→ `malformed_gate_decision_json`).
+ * member of the malformed inventory → `null` (→ `sys:malformed_gate_decision_json`).
  * The wire `evidence_refs` renames to the domain `evidenceRefs`.
  */
 function tryParseGateDecision(stdout: string): GateDecision | null {

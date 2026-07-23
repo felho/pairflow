@@ -374,7 +374,7 @@ round:
         kind: "rejected",
         reason: "gate_blocked",
         gate: "declarative.threshold",
-        gateReason: "round_below_min",
+        gateReason: "sys:round_below_min",
       });
 
       // review →(PASS, pass back — arrival at start)→ implement; round → 2

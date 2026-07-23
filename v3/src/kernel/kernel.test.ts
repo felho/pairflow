@@ -778,7 +778,7 @@ const exitCodeEffective: EffectiveProcessConfig = {
   onExit: { zero: "allow", nonzero: "block" },
   onRunnerError: "blockTransition",
   onTimeout: "blockTransition",
-  reason: { zero: "exit_zero", nonzero: "test_failed" },
+  reason: { zero: "sys:exit_zero", nonzero: "test_failed" },
 };
 
 const jsonEffective: EffectiveProcessConfig = {
@@ -1110,7 +1110,7 @@ describe("gate rung — dimension 4: fail-closed backstop lanes", () => {
     // The retained allow decision rides the committed entry (reason + refs).
     const detail = await handle.store.getInstanceDetail("inst-1");
     expect(gatesOf(detail?.transcript[0])).toEqual([
-      { uses: "g.proc", verdict: "allow", reason: "exit_zero", evidenceRefs: ["ev-1"] },
+      { uses: "g.proc", verdict: "allow", reason: "sys:exit_zero", evidenceRefs: ["ev-1"] },
     ]);
   });
 
@@ -1346,7 +1346,7 @@ describe("gate rung — dimension 10: confinement", () => {
 });
 
 describe("gate rung — dimension 11: the packaged evaluator's first-arrival block e2e", () => {
-  it("pairflow.previous_reviewer_verdict blocks on empty history at the start step (no_previous_verdict)", async () => {
+  it("pairflow.previous_reviewer_verdict blocks on empty history at the start step (sys:no_previous_verdict)", async () => {
     const realCat = createGateRegistry();
     const gatedStart: WorkflowTemplate = {
       ...template,
@@ -1385,7 +1385,7 @@ describe("gate rung — dimension 11: the packaged evaluator's first-arrival blo
         kind: "rejected",
         reason: "gate_blocked",
         gate: "pairflow.previous_reviewer_verdict",
-        gateReason: "no_previous_verdict",
+        gateReason: "sys:no_previous_verdict",
       });
     });
   });
@@ -1643,12 +1643,12 @@ describe("gate rung — the six-outcome family end-to-end (M1, full-decision equ
     return gatesOf(detail?.transcript[0]);
   }
 
-  it("ok/exit 0 → allow → commit; retained decision carries reason=exit_zero + [logRef]", async () => {
+  it("ok/exit 0 → allow → commit; retained decision carries reason=sys:exit_zero + [logRef]", async () => {
     const { outcome, runner, store } = await runProcess(exitCodeEffective, okResult(0, "e0"));
     expect(outcome.kind).toBe("committed");
     expect(runner.calls).toHaveLength(1);
     expect(await retained(store)).toEqual([
-      { uses: "g.proc", verdict: "allow", reason: "exit_zero", evidenceRefs: ["e0"] },
+      { uses: "g.proc", verdict: "allow", reason: "sys:exit_zero", evidenceRefs: ["e0"] },
     ]);
   });
 
@@ -1668,7 +1668,7 @@ describe("gate rung — the six-outcome family end-to-end (M1, full-decision equ
     const warnEffective: EffectiveProcessConfig = {
       ...exitCodeEffective,
       onExit: { zero: "allow", nonzero: "warn" },
-      reason: { zero: "exit_zero", nonzero: "flaky" },
+      reason: { zero: "sys:exit_zero", nonzero: "flaky" },
     };
     const { outcome, store } = await runProcess(warnEffective, okResult(2, "e2"));
     expect(outcome.kind).toBe("committed");
@@ -1677,7 +1677,7 @@ describe("gate rung — the six-outcome family end-to-end (M1, full-decision equ
     ]);
   });
 
-  it("timeout → block(timeout) → Rejected with [logRef]", async () => {
+  it("timeout → block(sys:timeout) → Rejected with [logRef]", async () => {
     const { outcome } = await runProcess(exitCodeEffective, {
       kind: "timeout",
       logRef: "t1",
@@ -1687,12 +1687,12 @@ describe("gate rung — the six-outcome family end-to-end (M1, full-decision equ
       kind: "rejected",
       reason: "gate_blocked",
       gate: "g.proc",
-      gateReason: "timeout",
+      gateReason: "sys:timeout",
       evidenceRefs: ["t1"],
     });
   });
 
-  it("runner_error → block(runner_error) → Rejected with [logRef], DISTINCT from test_failed", async () => {
+  it("runner_error → block(sys:runner_error) → Rejected with [logRef], DISTINCT from test_failed", async () => {
     const { outcome } = await runProcess(exitCodeEffective, {
       kind: "runner_error",
       logRef: "r1",
@@ -1702,7 +1702,7 @@ describe("gate rung — the six-outcome family end-to-end (M1, full-decision equ
       kind: "rejected",
       reason: "gate_blocked",
       gate: "g.proc",
-      gateReason: "runner_error",
+      gateReason: "sys:runner_error",
       evidenceRefs: ["r1"],
     });
   });
@@ -1732,13 +1732,13 @@ describe("gate rung — the six-outcome family end-to-end (M1, full-decision equ
     });
   });
 
-  it("ok/JSON-malformed → block(malformed_gate_decision_json), NEVER a business block", async () => {
+  it("ok/JSON-malformed → block(sys:malformed_gate_decision_json), NEVER a business block", async () => {
     const { outcome } = await runProcess(jsonEffective, okResult(0, "j3", "not json at all"));
     expect(outcome).toEqual({
       kind: "rejected",
       reason: "gate_blocked",
       gate: "g.proc",
-      gateReason: "malformed_gate_decision_json",
+      gateReason: "sys:malformed_gate_decision_json",
       evidenceRefs: ["j3"],
     });
   });

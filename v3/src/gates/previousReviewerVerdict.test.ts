@@ -118,10 +118,10 @@ describe("pairflow.previous_reviewer_verdict — evaluate (G6)", () => {
     return first;
   }
 
-  it("empty history ⇒ block(no_previous_verdict) (frozen + deterministic)", () => {
+  it("empty history ⇒ block(sys:no_previous_verdict) (frozen + deterministic)", () => {
     expect(evaluateFrozen([])).toEqual({
       verdict: "block",
-      reason: "no_previous_verdict",
+      reason: "sys:no_previous_verdict",
     });
   });
 
@@ -139,7 +139,7 @@ describe("pairflow.previous_reviewer_verdict — evaluate (G6)", () => {
       ]),
     ).toEqual({
       verdict: "block",
-      reason: "no_previous_verdict",
+      reason: "sys:no_previous_verdict",
     });
   });
 });

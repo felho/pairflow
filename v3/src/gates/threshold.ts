@@ -78,7 +78,7 @@ function validateAndNormalizeConfig(raw: unknown): GateConfigResult {
 function evaluate(effectiveConfig: unknown, projection: GateProjection): GateDecision {
   const { value } = effectiveConfig as ThresholdConfig;
   if (projection.round < value) {
-    return { verdict: "block", reason: "round_below_min" };
+    return { verdict: "block", reason: "sys:round_below_min" };
   }
   return { verdict: "allow" };
 }

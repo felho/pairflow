@@ -56,7 +56,7 @@ describe("failClosedProcessGateRunner — the W2 durable slot", () => {
     runner.close();
   });
 
-  it("classification of the returned result blocks (gate_blocked(runner_error))", async () => {
+  it("classification of the returned result blocks (gate_blocked(sys:runner_error))", async () => {
     const runner = createFailClosedProcessGateRunner(":memory:");
     const result = await runner.run("cmd", OPTS);
     const effective: EffectiveProcessConfig = {
@@ -66,11 +66,11 @@ describe("failClosedProcessGateRunner — the W2 durable slot", () => {
       onExit: { zero: "allow", nonzero: "block" },
       onRunnerError: "blockTransition",
       onTimeout: "blockTransition",
-      reason: { zero: "exit_zero", nonzero: "test_failed" },
+      reason: { zero: "sys:exit_zero", nonzero: "test_failed" },
     };
     expect(classifyProcessResult(result, effective)).toEqual({
       verdict: "block",
-      reason: "runner_error",
+      reason: "sys:runner_error",
       evidenceRefs: [result.logRef],
     });
     runner.close();

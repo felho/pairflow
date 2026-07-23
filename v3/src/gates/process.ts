@@ -36,8 +36,8 @@ const CODE_NOT_SUPPORTED = "gate_config_not_supported";
 const TOKEN_RE = /^[a-z][a-z0-9_]*$/;
 
 /** The C17 exitCode-mode default reason tokens, per bucket. */
-const DEFAULT_REASON_ZERO = "exit_zero";
-const DEFAULT_REASON_NONZERO = "exit_nonzero";
+const DEFAULT_REASON_ZERO = "sys:exit_zero";
+const DEFAULT_REASON_NONZERO = "sys:exit_nonzero";
 
 const TOP_KEYS = ["command", "timeoutMs", "output", "onExit", "onRunnerError", "onTimeout", "reason"];
 const OUTPUT_MODES = ["exitCode", "gateDecisionJson"] as const;

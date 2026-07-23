@@ -34,7 +34,7 @@ const exitCode: EffectiveProcessConfig = {
   onExit: { zero: "allow", nonzero: "block" },
   onRunnerError: "blockTransition",
   onTimeout: "blockTransition",
-  reason: { zero: "exit_zero", nonzero: "test_failed" },
+  reason: { zero: "sys:exit_zero", nonzero: "test_failed" },
 };
 
 const json: EffectiveProcessConfig = {
@@ -50,24 +50,24 @@ function ok(exitCode: number, stdout = "", logRef = "log"): ProcessResult {
 }
 
 describe("classifyProcessResult — the kind × mode grid (M1)", () => {
-  it("timeout → runner_outcome(onTimeout, timeout, logRef)", () => {
+  it("timeout → runner_outcome(onTimeout, sys:timeout, logRef)", () => {
     expect(classifyProcessResult({ kind: "timeout", logRef: "t", durationMs: 9 }, exitCode)).toEqual({
       verdict: "block",
-      reason: "timeout",
+      reason: "sys:timeout",
       evidenceRefs: ["t"],
     });
   });
 
-  it("runner_error → runner_outcome(onRunnerError, runner_error, logRef)", () => {
+  it("runner_error → runner_outcome(onRunnerError, sys:runner_error, logRef)", () => {
     expect(
       classifyProcessResult({ kind: "runner_error", logRef: "r", durationMs: 0 }, exitCode),
-    ).toEqual({ verdict: "block", reason: "runner_error", evidenceRefs: ["r"] });
+    ).toEqual({ verdict: "block", reason: "sys:runner_error", evidenceRefs: ["r"] });
   });
 
   it("ok/exitCode zero bucket → onExit.zero verdict + reason.zero + [logRef]", () => {
     expect(classifyProcessResult(ok(0, "", "e0"), exitCode)).toEqual({
       verdict: "allow",
-      reason: "exit_zero",
+      reason: "sys:exit_zero",
       evidenceRefs: ["e0"],
     });
   });
@@ -121,6 +121,18 @@ describe("classifyProcessResult — the kind × mode grid (M1)", () => {
       evidenceRefs: ["n"],
     });
   });
+
+  it("the COLLIDING member: an authored reason spelling the bare fixed name (runner_error) rides classification UNCHANGED — never renamed to sys:runner_error", () => {
+    const cfg: EffectiveProcessConfig = {
+      ...exitCode,
+      reason: { zero: "sys:exit_zero", nonzero: "runner_error" },
+    };
+    expect(classifyProcessResult(ok(1, "", "c"), cfg)).toEqual({
+      verdict: "block",
+      reason: "runner_error",
+      evidenceRefs: ["c"],
+    });
+  });
 });
 
 describe("classifyProcessResult — the numeric bucket boundary (M1 ladder)", () => {
@@ -133,7 +145,7 @@ describe("classifyProcessResult — the numeric bucket boundary (M1 ladder)", ()
   for (const [code, bucket] of cases) {
     it(`exitCode ${String(code)} lands in the ${bucket} bucket`, () => {
       const decision = classifyProcessResult(ok(code, "", "l"), exitCode);
-      expect(decision.reason).toBe(bucket === "zero" ? "exit_zero" : "test_failed");
+      expect(decision.reason).toBe(bucket === "zero" ? "sys:exit_zero" : "test_failed");
       expect(decision.verdict).toBe(bucket === "zero" ? "allow" : "block");
     });
   }
@@ -144,7 +156,7 @@ describe("classifyProcessResult — the numeric bucket boundary (M1 ladder)", ()
     // bucket fired — the bucket comparison itself must NOT be Object.is.
     expect(Object.is(-0, 0)).toBe(false);
     expect(decision.verdict).toBe("allow");
-    expect(decision.reason).toBe("exit_zero");
+    expect(decision.reason).toBe("sys:exit_zero");
   });
 });
 
@@ -167,10 +179,10 @@ describe("classifyProcessResult — the M2 malformed inventory (gateDecisionJson
     ["a non-string evidence_refs element", '{"verdict":"allow","evidence_refs":[1]}'],
   ];
   for (const [label, stdout] of malformed) {
-    it(`${label} → malformed_gate_decision_json (never a business block)`, () => {
+    it(`${label} → sys:malformed_gate_decision_json (never a business block)`, () => {
       expect(classifyProcessResult(ok(0, stdout, "m"), json)).toEqual({
         verdict: "block",
-        reason: "malformed_gate_decision_json",
+        reason: "sys:malformed_gate_decision_json",
         evidenceRefs: ["m"],
       });
     });
@@ -208,7 +220,7 @@ describe("classifyProcessResult — the M2 malformed inventory (gateDecisionJson
     const stdout = '{"__proto__":{"verdict":"allow"}}';
     expect(classifyProcessResult(ok(0, stdout, "m"), json)).toEqual({
       verdict: "block",
-      reason: "malformed_gate_decision_json",
+      reason: "sys:malformed_gate_decision_json",
       evidenceRefs: ["m"],
     });
   });
@@ -268,9 +280,9 @@ describe("evidence propagation (E1) — append-iff-absent, both directions", () 
 
 describe("runner_outcome (M3)", () => {
   it("always blocks with the given reason + [logRef]", () => {
-    expect(runnerOutcome("blockTransition", "timeout", "L")).toEqual({
+    expect(runnerOutcome("blockTransition", "sys:timeout", "L")).toEqual({
       verdict: "block",
-      reason: "timeout",
+      reason: "sys:timeout",
       evidenceRefs: ["L"],
     });
   });

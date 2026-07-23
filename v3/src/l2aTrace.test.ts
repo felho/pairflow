@@ -158,7 +158,7 @@ describe("l2a golden trace — the HANDLE process branch end-to-end (09-l2a Runt
     expect(op2.kind).toBe("committed");
     // 3 · codex PASS on implement (round 2): exit 1 → block(test_failed).
     const op3 = await emit("op-3", "codex", 5, "implementer", "codex:op-3");
-    // 4 · codex PASS on implement: runner error → block(runner_error), distinct.
+    // 4 · codex PASS on implement: runner error → block(sys:runner_error), distinct.
     const op4 = await emit("op-4", "codex", 5, "implementer", "codex:op-4");
 
     // The runner ran ONCE per process-gated emit (op-1, op-3, op-4); op-2 is
@@ -176,7 +176,7 @@ describe("l2a golden trace — the HANDLE process branch end-to-end (09-l2a Runt
       (r): r is TransitionEntry => r.entryKind === "transition",
     );
     expect(rows.map((r) => r.gateDecisions)).toEqual([
-      [{ uses: "external.process", verdict: "allow", reason: "exit_zero", evidenceRefs: ["ev-pass"] }],
+      [{ uses: "external.process", verdict: "allow", reason: "sys:exit_zero", evidenceRefs: ["ev-pass"] }],
       [],
     ]);
 
@@ -191,7 +191,7 @@ describe("l2a golden trace — the HANDLE process branch end-to-end (09-l2a Runt
       kind: "rejected",
       reason: "gate_blocked",
       gate: "external.process",
-      gateReason: "runner_error",
+      gateReason: "sys:runner_error",
       evidenceRefs: ["ev-error"],
     });
 

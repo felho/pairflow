@@ -66,7 +66,7 @@ function evaluate(_effectiveConfig: unknown, projection: GateProjection): GateDe
   if (hasPriorFromThisStep) {
     return { verdict: "allow" };
   }
-  return { verdict: "block", reason: "no_previous_verdict" };
+  return { verdict: "block", reason: "sys:no_previous_verdict" };
 }
 
 export const previousReviewerVerdictRegistration: InlineGateRegistration = {

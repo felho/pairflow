@@ -566,7 +566,7 @@ describe("admitTemplate — external.process code propagation (V4/A9) at the adm
       onExit: { zero: "allow", nonzero: "block" },
       onRunnerError: "blockTransition",
       onTimeout: "blockTransition",
-      reason: { zero: "exit_zero", nonzero: "exit_nonzero" },
+      reason: { zero: "sys:exit_zero", nonzero: "sys:exit_nonzero" },
     });
   });
 });

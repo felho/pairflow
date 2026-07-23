@@ -143,9 +143,9 @@ describe("declarative.threshold — evaluate (G4)", () => {
     return first;
   }
 
-  it("blocks with round_below_min iff round < value; no reason/message/evidence otherwise (frozen + deterministic per branch)", () => {
+  it("blocks with sys:round_below_min iff round < value; no reason/message/evidence otherwise (frozen + deterministic per branch)", () => {
     const effective = { metric: "round", op: ">=", value: 2 } as const;
-    expect(evaluateFrozen({ ...effective }, 1)).toEqual({ verdict: "block", reason: "round_below_min" });
+    expect(evaluateFrozen({ ...effective }, 1)).toEqual({ verdict: "block", reason: "sys:round_below_min" });
     // the at-boundary allow (round === value): an off-by-one `<=` fails here.
     expect(evaluateFrozen({ ...effective }, 2)).toEqual({ verdict: "allow" });
     expect(evaluateFrozen({ ...effective }, 3)).toEqual({ verdict: "allow" });
