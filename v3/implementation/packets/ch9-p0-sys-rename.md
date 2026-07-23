@@ -456,6 +456,18 @@ RED with byte-verified restore):
 | ch9p0-P5-authored-rename | production `reasonToken` renames authored bare `runner_error` → `sys:runner_error` (the blanket-rewrite simulation) | authored-invariance lane | RED — 1 failed: the COLLIDING member (verbatim-carry assert) | ch9p0-P5-authored-rename |
 | ch9p0-P6-diag-leak | `kernel.ts` diag rejected emit leaks `gateReason` (mutate-run-restore only; `kernel.ts` byte-identical after, git-diff-clean) | diag exact-keyset confinement lane | RED — 1 failed: the dimension-10 exact-keyset lane | ch9p0-P6-diag-leak |
 
+Mutation-pilot dual-run (the chapter flow note, plan §9.4 — recorded
+at arm gate-2; aftermath append, orchestrator-authored): `stryker run
+--mutate` scoped to the boundary's four production files — score
+91.48% (655 killed / 54 survived / 7 no-coverage / 0 errors, 15 s).
+Survivor read: equality-invisible spread/optionality mutants
+(INPUT-DOMAIN class — e.g. `x !== undefined ? {x} : {}` → `true`,
+invisible to `toEqual`), zero code-mutation catches against this
+packet's rename semantics; pilot data for the boundary review, no
+fix owed at the pilot stage. Gate verdicts: arm gate-1 CLEAN @
+packet-basis d4b238e8; arm gate-2 CLEAN @ commit 2ca2f8f8 (receipts
+audited); post-build boundary audit 0 errors.
+
 ```json
 {
   "packet_metrics": {

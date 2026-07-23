@@ -4276,3 +4276,28 @@ final CLEAN.
   the unprepared-alternative framing) all bit on the layer the owner
   flagged — evidence FOR some standing form; boundary review decides.
   NEXT: ch9-P0 (the sys: rename realization) on the user's go.
+- 2026-07-23 · CH9-P0 BUILT (flag-free autonomous end-to-end — the
+  chapter's first packet, the Fable-arm's first live packet). Loop
+  stats: 1 full five-lens panel (0 P0–P2, 9 P3 precision folds) + 2
+  top-level closes + 5 reconciliation passes; arm gate-1: 1 full + 2
+  re-checks (yield 4→1→0, final CLEAN @ d4b238e8); gate-2 CLEAN @
+  2ca2f8f8 (receipts audited, 0 findings, no plausibly-blind lane);
+  build 1 round, 1262→1265, 6/6 probes red via probe_runner with
+  byte-verified restores; post-build boundary audit 0 errors.
+  FRICTION (method-level, the packet's learned line): the residual
+  family's per-occurrence COUNT-SUBTRACTION (bare grep -o minus
+  sys:-prefixed count) silently no-ops for a QUOTED sweep pattern —
+  `"sys:timeout"` does not contain `"timeout"` as a substring, so
+  the subtraction under-reports (7 computed vs 12 actual). The
+  builder substituted a lookbehind occurrence LISTING
+  (`grep -rnoP '(?<!sys:)…'`) and classified per occurrence; zero
+  bare reason-position hits either way. Candidate rule (boundary
+  review; single occurrence → WATCH bias): residual/completeness
+  checks classify by occurrence LISTING, never count arithmetic —
+  R-INSTRUMENT-PROBE's arithmetic-side sibling. Mutation-pilot
+  dual-run (chapter flow note, first data point): 91.48% score on
+  the four production files (655 killed / 54 survived / 7 no-cov /
+  0 errors, 15 s); survivors are equality-invisible spread/optional
+  mutants (input-domain class, e.g. `x !== undefined ? {x} : {}` →
+  `true` — toEqual cannot see the difference) — labeled, recorded,
+  no fix owed at the pilot stage.
