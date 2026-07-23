@@ -4329,3 +4329,25 @@ final CLEAN.
   condition note (tooling change mid-ch9). NEXT measurement: the
   ch9-P1 session's edit-turn and commit-turn counts vs the mined
   baseline.
+
+- 2026-07-23 · SPEEDUP BATCH — the arm RE-CHECK round (the "all
+  folded" line above was the DRAFT round's truth; the landed-bytes
+  re-check found 5 resolved / 6 partial / 7 NEW — the fold round
+  here): chapter-close mode gained `--forbid-reopened` (a
+  false-green lane died), the purity gate now catches
+  staged-delete + untracked-reappearance, the arm runner's timeout
+  lane runs the POST-guard before classifying (a timed-out
+  reviewer's tree writes surface as a guard trip) with a real
+  process-group kill, commit1 validates the candidate BEFORE
+  writing the sidecar, selftests exercise REAL refusal/timeout
+  fixtures (4/7/5 cases), arg validation + the split AuthorPacket
+  sentence fixed. Consciously ACCEPTED partials (proportionality,
+  recorded not hidden): reopen_runner stays a regex scanner with
+  newline-bounded scopes (not the canonical CommonMark parser) and
+  `--no-git-check` exists for fixtures; the sha→content-commit
+  MATCHING stays the ratifying digest's duty; arm_run has no
+  descendant-tree proof beyond the group kill. The tool-yield
+  lesson: the wrapper-boundary (gate-substitution) was ALL THREE
+  draft P1 classes AND the re-check's sharpest new find
+  (false-green chapter-close) — arm review on tooling earns its
+  cost exactly at that boundary.

@@ -30,6 +30,33 @@ def sh(args: list[str], cwd: str) -> tuple[int, str]:
     return p.returncode, (p.stdout or "") + (p.stderr or "")
 
 
+def purity_violations(porcelain_entries: list[str]) -> list[str]:
+    """Fail-closed purity (COMMIT-03 + the re-check's NEW-COMMIT-04):
+    a staged file with unstaged edits, AND a staged DELETE whose path
+    reappears untracked, both mean the gates judge different bytes
+    than the commit ships."""
+    staged_mixed, staged_deleted, untracked = [], set(), set()
+    for e in porcelain_entries:
+        if len(e) < 4:
+            continue
+        x, y, path = e[0], e[1], e[3:]
+        if x == "?" or y == "?":
+            if x == "?" and y == "?":
+                untracked.add(path)
+            continue
+        if x != " " and y != " ":
+            staged_mixed.append(path)
+        if x == "D":
+            staged_deleted.add(path)
+    reappeared = sorted(staged_deleted & untracked)
+    return staged_mixed + [f"{p} (staged-delete reappears untracked)"
+                           for p in reappeared]
+
+
+def check_scope(files: list[str], scopes: list[str]) -> list[str]:
+    return [f for f in files if not any(f.startswith(s) for s in scopes)]
+
+
 def repo_root() -> str:
     here = os.path.dirname(os.path.abspath(__file__))
     cand = os.path.abspath(os.path.join(here, "..", ".."))
@@ -50,11 +77,15 @@ def main() -> int:
     ap.add_argument("--selftest", action="store_true")
     a = ap.parse_args()
     if a.selftest:
-        # the refuse-lanes are exercised against a throwaway repo
-        import tempfile
-        with tempfile.TemporaryDirectory() as td:
-            sh(["git", "init", "-q", td], td)
-            print("v3:commit selftest: 1 case(s) exercised, 0 failure(s)")
+        # REAL refuse-lane fixtures (the re-check's NEW-TEST-01)
+        assert check_scope(["v3/a", "x/b"], ["v3/"]) == ["x/b"]
+        assert check_scope(["v3/a"], ["v3/"]) == []
+        assert purity_violations(["MM v3/a"]) == ["v3/a"]
+        assert purity_violations(["AM v3/a"]) == ["v3/a"]
+        assert purity_violations(["M  v3/a", " M v3/b"]) == []
+        assert purity_violations(["D  v3/a", "?? v3/a"]) ==             ["v3/a (staged-delete reappears untracked)"]
+        assert purity_violations(["D  v3/a", "?? v3/other"]) == []
+        print("v3:commit selftest: 7 case(s) exercised, 0 failure(s)")
         return 0
     root = repo_root()
     if not a.scope:
@@ -66,17 +97,14 @@ def main() -> int:
     files = [f for f in raw.split("\0") if f]
     if not files:
         sys.exit("v3:commit: nothing staged")
-    outside = [f for f in files if not any(f.startswith(s) for s in a.scope)]
+    outside = check_scope(files, a.scope)
     if outside:
         sys.exit(f"v3:commit: staged OUTSIDE scope {a.scope}: {outside}")
     rc, porc = sh(["git", "status", "--porcelain=v1", "-z"], root)
-    dirty_staged = []
-    for entry in porc.split("\0"):
-        if len(entry) >= 3 and entry[0] not in " ?" and entry[1] not in " ?":
-            dirty_staged.append(entry[3:])
-    if dirty_staged:
-        sys.exit("v3:commit: staged files ALSO carry unstaged edits "
-                 f"(gates would judge different bytes than the commit ships — COMMIT-03): {dirty_staged}")
+    violations = purity_violations([e for e in porc.split("\0") if e])
+    if violations:
+        sys.exit("v3:commit: staged-vs-worktree purity violation "
+                 f"(gates would judge different bytes than the commit ships — COMMIT-03/-04): {violations}")
     # gate 2: the doc composite — ALWAYS (COMMIT-01)
     rc, out = sh([sys.executable,
                   os.path.join(os.path.dirname(os.path.abspath(__file__)),

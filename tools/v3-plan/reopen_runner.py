@@ -127,10 +127,14 @@ def cmd_commit1(payload: dict) -> None:
     m = re.search(r"```json\n\{\"realized_map\": \{.*?\n\}\n\}\n```\n", text_mut, re.S) \
         or re.search(r"```json\n\{\"realized_map\": \{.*?\n\}\}\n```\n", text_mut, re.S)
     if m:
-        open(path + LIFT_SUFFIX, "w").write(m.group(0))
         text_mut = text_mut.replace(m.group(0), "")
     elif payload.get("expect_map", True):
         die(f"{path}: realized_map block not found (set expect_map=false for pre-close reopens)")
+    # validate the candidate BEFORE any side effect (the re-check's
+    # NEW-REOPEN-04: a failing fence check must leave NO sidecar)
+    fence_check(text_mut, path)
+    if m:
+        open(path + LIFT_SUFFIX, "w").write(m.group(0))
     save(path, text_mut)
     print(f"reopen_runner commit1: {len(payload.get('row_edits', []))} row edit(s), "
           f"status → {payload.get('status_reopened', 'reopened')}, map "
