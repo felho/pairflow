@@ -465,3 +465,29 @@ entities). This makes the domain vocabulary a semantic checksum on model edits, 
 the source for the implementation's type-layer drift test. Requirement recorded and
 motivated in `../design/topics/_closed-v1-operability.md` Q4.4 (v1-operability round,
 2026-07-07); the lift itself is this thread's work.
+
+### T2. Render-plane scalability — lazy diff-render + multi-page split
+
+> STATUS: OPEN (captured 2026-07-23 at the ch9 opening; decide at the
+> Block B opening). Not a model-truth issue — the semantics plane
+> (units/deltas/records + generated registries + check.sh) already
+> scales; this is the HUMAN VIEW's limit.
+
+`core-model.html` is a 1.3 MB single-page render whose load cost
+(~5–10 s in-browser) is dominated by the diff-viewer JS folding every
+unit-delta chain at load time; it grows linearly with each modeled
+section, so the Block B waves (L6 / L8 / L9) would roughly double it
+exactly when the intensive design reading happens. Two steps, ordered
+by cost:
+
+1. **Lazy diff-render (cheap, pull-anytime):** fold/diff a section's
+   code blocks on first EXPAND instead of at load — a pure
+   `_postlude.html` JS change; file layout untouched, the check.sh
+   golden test unaffected. Expected to bring load under a second.
+2. **Multi-page split (the real scalability step; decide at the
+   Block B opening):** `build.py` gains a split mode (per-section
+   pages + index); the golden test extends per page. Requires an
+   explicit ANCHOR RE-PIN act (the ADR-015 pattern): ratified text
+   cites model locations, so every existing anchor must survive or
+   be mapped in one visible relocation act — never a silent
+   restructure.
