@@ -583,6 +583,13 @@ overrides a precondition.
   substrate-probe scripts.
 - **Build-close:** the `--post-build` audit (§4 step 8) and coverage's
   DEFAULT mode (the owned==realized three-way lock).
+- **Chapter-close:** `pnpm v3:deferred --closed chN` (zero open
+  markers) and `pnpm v3:realized-map` (the map cites every
+  manifest-reffed co-realizing lane; adopted 2026-07-23 from the
+  arm-audit sweep). The map additionally gets a DETACHED external-arm
+  audit pass after the close — non-blocking, parallel to the next
+  chapter's build, settled before the NEXT chapter's close
+  (DraftContract §5 carries the full two-layer rule + fold policy).
 
 **Standing human checkpoints (never automated away, never inferred —
 restated identically on AGENTS.md and the skill):** plan-chapter

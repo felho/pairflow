@@ -4171,3 +4171,30 @@ final CLEAN.
   transcript surface) — a contract reopen + successor-row change,
   queued as a ch9+ work item, not an overnight edit. The C31 open
   item converts from QUESTION to DECIDED-DIRECTION.
+
+- 2026-07-23 · REALIZED_MAP AUDIT CODIFIED (owner-ratified, the
+  WATCH candidate graduates at n=3) — the two-layer rule lands:
+  (1) MACHINE layer `v3:realized-map` (check_realized_map.py
+  promoted from the sweep's scratchpad script: missing = hard-fail,
+  extras report-only, new-decision exemption, en-dash ranges)
+  BLOCKING inside the chapter-close act, listed in the README
+  tier-0 inventory's new Chapter-close family beside v3:deferred;
+  (2) ARM layer DETACHED from the close — non-blocking, explicitly
+  allowed parallel to the next chapter's build (the owner's
+  attention-bottleneck ruling: the map is a record, fold policy
+  guarantees no surface the next chapter reads changes; substantive
+  finds route as work items — the C31 precedent), deadline = the
+  next chapter's close; the map-audit prompt variant is ReviewPacket
+  §6 item 11. THE TOOL'S FIRST LIVE RUN immediately proved the layer
+  split: on the ch12 map — which TWO independent arm passes had
+  called CLEAN — it found 29 real uncited co-lanes (C11 L1, C15
+  T4/D2, C17 D2, C18 X1, C22 I1, C24 E2/E5/X3, C25's sixteen) plus
+  two notation classes it now enforces: en-dash ranges (S1–S10
+  parsed as no range by an ASCII-hyphen tokenizer) and BARE packet
+  tags (ch12-C25 cited "P2 A1/A2" — invisible without the canonical
+  chN-PM form; the map entries normalized). All 29 folded
+  manifest-confirmed; v3:realized-map green over all three maps;
+  packet-lint green. The independence tally extends again:
+  machine-only now includes a 29-catch batch the arm sampled past
+  twice — the blocking-machine + sampling-arm split is the right
+  order.

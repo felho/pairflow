@@ -107,6 +107,35 @@ act; the file never moves; row ids never change
 ADRs land `accepted` WITH the draft ratification (the packet-flow ADR
 lanes, README §4).
 
+**The realized_map audit (adopted 2026-07-23 — the sweep that found
+50+ attribution defects across three subagent-built close maps; the
+occurrence bar for graduation from WATCH was met at n=3):**
+
+1. **Machine layer, INSIDE the close act (blocking, seconds):**
+   `pnpm v3:realized-map` must be GREEN before the close commit — it
+   catches the dominant defect class (a manifest lane refs a C-row
+   the map's entry does not cite). Citations use the canonical
+   `chN-PM <lanes>` tag form (bare `P2`/`P1b` tags are invisible to
+   the scanner — the ch12-C25 lesson). EXTRA citations are
+   report-only by design (deliberate context mentions and
+   new-decision rows — empty manifest refs, lane-text anchor — are
+   legitimate).
+2. **Arm layer, DETACHED from the close (non-blocking):** an
+   external-arm audit pass over the map (ReviewPacket §6 mechanics;
+   the map-audit prompt variant) runs AFTER the close, explicitly
+   allowed in parallel with the next chapter's build — the map is a
+   record, the fold policy guarantees no surface the next chapter
+   reads changes. DEADLINE anchor: settled before the NEXT chapter's
+   close. Fold policy: the map block ONLY, never ratified row texts;
+   manifest/grep-confirmed folds only; a substantive find (code vs
+   ratified text) becomes an OPEN item for the owner — the audit can
+   surface real under-realizations (the ch11-C31 precedent), which
+   route as work items, never as silent map edits. Convergence: a
+   fresh independent full-scope arm run returns CLEAN (or
+   clean-modulo-declared-gaps); round budget 3, owner-extendable.
+   Neither layer subsumes the other (the sweep's independence tally:
+   arm-only 12 / machine-only 7 / both ~27).
+
 ## Report
 
 ```

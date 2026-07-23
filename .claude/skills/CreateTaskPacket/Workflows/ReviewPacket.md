@@ -701,6 +701,18 @@ Elsewhere it stays an option:
   10. **Yield accounting:** findings counted by GROUP with class
      labels — product / packet-docs / test-evidence — the boundary
      review's arm-yield metric.
+  11. **The realized_map audit variant (adopted 2026-07-23 —
+     DraftContract §5's detached arm layer):** target = ONLY the
+     closed contract's `realized_map` block; per-row checks = lane
+     attribution (manifest ref / lane-table anchor), file reality,
+     disposition fidelity (stance/act/deferral/reopen rows keep
+     their ratified form), over/under-claim vs the manifest refs.
+     A file deleted/renamed by LATER chapters is a TEMPORAL-DRIFT
+     note, never a P0 (annotation fold, not a rewrite). Runs
+     doc-review timeout (10 min); fold policy and convergence per
+     DraftContract §5; the machine half is `pnpm v3:realized-map` —
+     run it on every arm finding batch BEFORE folding (the arm and
+     the scanner each catch what the other misses).
 - **Rules:** the arm's verdict is admissible ONLY citing the basis
   hash (a verdict on stale bytes is no verdict); its findings fold
   as ORDINARY folds per README §5.5; the run and verdict enter the
