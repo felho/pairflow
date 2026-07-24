@@ -13,6 +13,7 @@ import {
   ERRAND_BIRTH_EDGES,
   ERRAND_EDGES,
   ERRAND_STATES,
+  SPAWN_OUTCOMES,
 } from "../ports/diagnostics.js";
 import type { TimeSource } from "../ports/time.js";
 
@@ -95,6 +96,9 @@ const BODY_KEYS: Record<keyof DiagnosticEventBody, true> = {
   errandTo: true,
   errandFrom: true,
   attemptId: true,
+  // packet ch9-p3b, DG2 — the spawn_outcome body fields.
+  spawnOutcome: true,
+  spawnDetail: true,
   expectedVersion: true,
   currentVersion: true,
   payloadDigest: true,
@@ -113,9 +117,12 @@ const KINDS: ReadonlySet<string> = new Set([
   "provision_failed",
   // packet ch9-p3a, DG1 — the errand state-transition kind.
   "errand_transition",
+  // packet ch9-p3b, DG2 — the spawn-outcome kind.
+  "spawn_outcome",
 ]);
 const ERRAND_STATE_SET: ReadonlySet<string> = new Set(ERRAND_STATES);
 const ERRAND_EDGE_SET: ReadonlySet<string> = new Set(ERRAND_EDGES);
+const SPAWN_OUTCOME_SET: ReadonlySet<string> = new Set(SPAWN_OUTCOMES);
 const ATTEMPT_SCOPED_EDGE_SET: ReadonlySet<string> = new Set(ATTEMPT_SCOPED_ERRAND_EDGES);
 const ERRAND_BIRTH_EDGE_SET: ReadonlySet<string> = new Set(ERRAND_BIRTH_EDGES);
 const DETAIL_TOKENS: ReadonlySet<string> = new Set([
@@ -167,6 +174,8 @@ function project(body: DiagnosticEventBody): Record<string, unknown> {
     errandTo,
     errandFrom,
     attemptId,
+    spawnOutcome,
+    spawnDetail,
     expectedVersion,
     currentVersion,
     payloadDigest,
@@ -187,6 +196,8 @@ function project(body: DiagnosticEventBody): Record<string, unknown> {
   if (errandTo !== undefined) out.errandTo = errandTo;
   if (errandFrom !== undefined) out.errandFrom = errandFrom;
   if (attemptId !== undefined) out.attemptId = attemptId;
+  if (spawnOutcome !== undefined) out.spawnOutcome = spawnOutcome;
+  if (spawnDetail !== undefined) out.spawnDetail = spawnDetail;
   if (expectedVersion !== undefined) out.expectedVersion = expectedVersion;
   if (currentVersion !== undefined) out.currentVersion = currentVersion;
   if (payloadDigest !== undefined) out.payloadDigest = payloadDigest;
@@ -255,6 +266,15 @@ function validateShape(row: unknown): DiagnosticEventBody {
   }
   if (present(row, "attemptId") && typeof row.attemptId !== "string") bad("attemptId not a string");
   if (
+    present(row, "spawnOutcome") &&
+    (typeof row.spawnOutcome !== "string" || !SPAWN_OUTCOME_SET.has(row.spawnOutcome))
+  ) {
+    bad("spawnOutcome not a SpawnOutcome");
+  }
+  if (present(row, "spawnDetail") && typeof row.spawnDetail !== "string") {
+    bad("spawnDetail not a string");
+  }
+  if (
     present(row, "errandEdge") &&
     (typeof row.errandEdge !== "string" || !ERRAND_EDGE_SET.has(row.errandEdge))
   ) {
@@ -298,7 +318,8 @@ function validateShape(row: unknown): DiagnosticEventBody {
   // keyed on `errandEdge` (from/to alone could not decide the attemptId iff).
   const isProvisionKind = kind === "provision_ready" || kind === "provision_failed";
   const isErrandKind = kind === "errand_transition";
-  const isRunnerKind = isProvisionKind || isErrandKind;
+  const isSpawnKind = kind === "spawn_outcome";
+  const isRunnerKind = isProvisionKind || isErrandKind || isSpawnKind;
   if (isRunnerKind !== (source === "runner")) bad("runner kinds iff source=runner");
   if (present(row, "requestId") !== isProvisionKind) bad("requestId iff a provisioning kind");
   if (present(row, "providerReason") !== (kind === "provision_failed")) {
@@ -307,12 +328,24 @@ function validateShape(row: unknown): DiagnosticEventBody {
   if (present(row, "providerDetail") && kind !== "provision_failed") {
     bad("providerDetail requires kind=provision_failed");
   }
-  // The errand fields ride ONLY errand_transition (both directions).
-  for (const k of ["contextPacketId", "errandEdge", "errandTo"] as const) {
+  // contextPacketId is SHARED by errand_transition + spawn_outcome (ch9-p3b
+  // DG2 re-scope — split OUT of the errand-only loop); required on both.
+  if (present(row, "contextPacketId") !== (isErrandKind || isSpawnKind)) {
+    bad("contextPacketId iff kind ∈ {errand_transition, spawn_outcome}");
+  }
+  // errandEdge/errandTo ride ONLY errand_transition (both directions).
+  for (const k of ["errandEdge", "errandTo"] as const) {
     if (present(row, k) !== isErrandKind) bad(`${k} iff kind=errand_transition`);
   }
   if (present(row, "errandFrom") && !isErrandKind) bad("errandFrom requires kind=errand_transition");
-  if (present(row, "attemptId") && !isErrandKind) bad("attemptId requires kind=errand_transition");
+  // spawnOutcome iff spawn_outcome (both directions); spawnDetail requires it.
+  if (present(row, "spawnOutcome") !== isSpawnKind) bad("spawnOutcome iff kind=spawn_outcome");
+  if (present(row, "spawnDetail") && !isSpawnKind) bad("spawnDetail requires kind=spawn_outcome");
+  // attemptId is legal on errand_transition (edge-gated below) AND on
+  // spawn_outcome (always, gated in the runner branch below).
+  if (present(row, "attemptId") && !isErrandKind && !isSpawnKind) {
+    bad("attemptId requires kind ∈ {errand_transition, spawn_outcome}");
+  }
 
   if (source === "runner") {
     // A runner event carries instanceId and NOTHING from the op/envelope world.
@@ -323,14 +356,24 @@ function validateShape(row: unknown): DiagnosticEventBody {
     if (present(row, "payloadDigest")) bad("runner carries no payloadDigest");
     if (isErrandKind) {
       // errandFrom iff a NON-birth edge; attemptId iff an attempt-scoped edge —
-      // both keyed on errandEdge (DG3).
+      // both keyed on errandEdge (DG3). The two H5 successor edges
+      // (evidence-at-claim/evidence-at-respawn) are non-birth + non-attempt-
+      // scoped, so they carry errandFrom and NO attemptId.
       const edge = row.errandEdge as string;
       const isBirth = ERRAND_BIRTH_EDGE_SET.has(edge);
       if (present(row, "errandFrom") === isBirth) bad("errandFrom iff a non-birth errand edge");
       if (present(row, "attemptId") !== ATTEMPT_SCOPED_EDGE_SET.has(edge)) {
         bad("attemptId iff an attempt-scoped errand edge");
       }
+    } else if (isSpawnKind) {
+      // spawn_outcome (ch9-p3b, DG2): contextPacketId, attemptId, spawnOutcome
+      // are ALWAYS present (the presence iffs above already force
+      // contextPacketId + spawnOutcome; attemptId is REQUIRED here — a
+      // silently-swallowed reject would eat every spawn_outcome event behind
+      // the fail-open fence).
+      if (!present(row, "attemptId")) bad("spawn_outcome requires attemptId");
     } else if (present(row, "attemptId")) {
+      // A provisioning kind carries no attemptId.
       bad("a provisioning kind carries no attemptId");
     }
     return row as unknown as DiagnosticEventBody;

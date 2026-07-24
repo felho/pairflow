@@ -99,7 +99,18 @@ const dynamicGatesBanSelector = {
 
 export default tseslint.config(
   {
-    ignores: ["node_modules/**", "eslint.config.mjs", "vitest.config.ts", "vitest.stryker.config.ts"],
+    // packet ch9-p3b (T3): the `.mjs` wrapper asset is spawned, never imported,
+    // and lives OUTSIDE the TS program — a typed lint rule on it is a parser
+    // error (the `src/runner/**` typed-lint blocks would match it). It is
+    // ignored here (its source hygiene is covered by the drift gate's `.mjs`
+    // walk). `eslint.config.mjs` itself is likewise a non-program file.
+    ignores: [
+      "node_modules/**",
+      "eslint.config.mjs",
+      "vitest.config.ts",
+      "vitest.stryker.config.ts",
+      "src/runner/attemptWrapper.mjs",
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,

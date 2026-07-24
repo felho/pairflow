@@ -34,6 +34,15 @@ export type {
   DeliveryWait,
 } from "./deliveryLoop.js";
 
+// packet ch9-p3b (T1): the runner-plane spawn seam, the real actor adapter,
+// the relocated C8 encoding + session-name derivation, and AV2's env-name
+// constant pair. The wrapper asset is spawned, never imported.
+export { disciplinedSpawn, validateTimerKnobs, TimerKnobError } from "./spawn.js";
+export type { SpawnConclusion, DisciplinedSpawnInput, TimerKnob, DerivedTimer } from "./spawn.js";
+export { enc, defaultSessionNamer } from "./enc.js";
+export { createActorAdapter, PAIRFLOW_PACKET, PAIRFLOW_EMIT } from "./actorAdapter.js";
+export type { ActorAdapterDeps, ActorAdapterOptions, ArgvMapper } from "./actorAdapter.js";
+
 /** The module-public errand read API (ES1/CF3/CF4 — ch9-P4's floor basis). */
 export interface ErrandReader {
   getErrand(instanceId: string, contextPacketId: string): Promise<ErrandRow | null>;

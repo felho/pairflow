@@ -49,6 +49,28 @@ export interface RuntimeContextProvider {
 }
 
 /**
+ * l0e/LocalExecutionCapability (packet ch9-p3b, H1 — flag F5; contract:ch9-
+ * runner#C17): a SEPARATE optional capability interface beside the base
+ * `RuntimeContextProvider` port — the ch12-C15 model-verbatim base member set
+ * stays BYTE-UNTOUCHED. A provider whose contexts execute ON THIS HOST
+ * ADDITIONALLY implements it (the worktree provider: from its own minted
+ * `locator.path`); a future cloud provider simply does not claim the facet.
+ * The loop resolves it at intent-derivation time for a `ready(ref)` run and
+ * hands the executor an explicit `cwd` input — so the working directory is a
+ * CONTRACT obligation of the provider ("you cannot be a local provider without
+ * answering where"), never a value read out of the actor's projection. The
+ * returned VALUE is byte-identical to C17's "projected worktree path" (the
+ * provider mints both from one source — `locator.path`); only the resolution
+ * MECHANISM moves below contract grain.
+ */
+export interface LocalExecutionCapability {
+  /** The absolute local working directory for a provisioned ref (C17). A
+   * throwing resolution is D6's config-integrity lane (fail-closed loud at the
+   * loop's derivation). */
+  resolveLocalWorkingDirectory(ref: RuntimeContextRef): string;
+}
+
+/**
  * l0e/ProviderRegistry (packet ch12-p3, PR2; contract:ch12-runtime-core
  * #C16/#C22): the STATIC, INJECTED, PER-CHAPTER registry — a pure lookup by
  * provider name. Injected at the composition root as ONE new required kernel

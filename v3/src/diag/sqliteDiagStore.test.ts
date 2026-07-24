@@ -1116,3 +1116,142 @@ describe("errand_transition rows — every new presence iff violated (both direc
     handle.close();
   });
 });
+
+// ===========================================================================
+// packet ch9-p3b, DG2 — the spawn_outcome rows + the two H5 successor edges:
+// emit/read parity, every new presence iff violated in BOTH directions →
+// read_failed, the contextPacketId re-scope split, the new-edge iffs.
+// ===========================================================================
+const B_SPAWN: DiagnosticEventBody = {
+  source: "runner",
+  kind: "spawn_outcome",
+  instanceId: "inst-1",
+  contextPacketId: "inst-1@v2",
+  attemptId: "att-1",
+  spawnOutcome: "submitted",
+};
+const B_SPAWN_DETAIL: DiagnosticEventBody = {
+  source: "runner",
+  kind: "spawn_outcome",
+  instanceId: "inst-1",
+  contextPacketId: "inst-1@v2",
+  attemptId: "att-2",
+  spawnOutcome: "spawn_infra",
+  spawnDetail: "stderr tail: fatal boom",
+};
+const B_EVID_CLAIM: DiagnosticEventBody = {
+  source: "runner",
+  kind: "errand_transition",
+  instanceId: "inst-1",
+  contextPacketId: "inst-1@v2",
+  errandEdge: "evidence-at-claim",
+  errandFrom: "claimed",
+  errandTo: "confirmed",
+};
+const B_EVID_RESPAWN: DiagnosticEventBody = {
+  source: "runner",
+  kind: "errand_transition",
+  instanceId: "inst-1",
+  contextPacketId: "inst-1@v2",
+  errandEdge: "evidence-at-respawn",
+  errandFrom: "unconfirmed",
+  errandTo: "confirmed",
+};
+
+describe("spawn_outcome rows — emit/read round-trip + the new evidence edges (DG2)", () => {
+  it("ROUND-TRIPS a spawn_outcome (with and without spawnDetail) and both new evidence edges", async () => {
+    const handle = openDiagStore(":memory:", createControlledClock(5));
+    handle.sink.emit(B_SPAWN);
+    handle.sink.emit(B_SPAWN_DETAIL);
+    handle.sink.emit(B_EVID_CLAIM);
+    handle.sink.emit(B_EVID_RESPAWN);
+    const events = await handle.reader.getGlobalDiagnostics(0);
+    expect(events).toEqual([
+      { ...B_SPAWN, at: 5, ordinal: 1 },
+      { ...B_SPAWN_DETAIL, at: 5, ordinal: 2 },
+      { ...B_EVID_CLAIM, at: 5, ordinal: 3 },
+      { ...B_EVID_RESPAWN, at: 5, ordinal: 4 },
+    ]);
+    handle.close();
+  });
+
+  it("every SPAWN_OUTCOMES token round-trips; the name_collision exclusion is NOT admitted", async () => {
+    const handle = openDiagStore(":memory:", createControlledClock(0));
+    for (const token of ["submitted", "no_output", "spawn_infra", "nonzero_exit", "own_timeout", "foreign_kill"] as const) {
+      handle.sink.emit({ ...B_SPAWN, spawnOutcome: token });
+    }
+    const events = await handle.reader.getGlobalDiagnostics(0);
+    expect(events.map((e) => e.spawnOutcome)).toEqual([
+      "submitted",
+      "no_output",
+      "spawn_infra",
+      "nonzero_exit",
+      "own_timeout",
+      "foreign_kill",
+    ]);
+    handle.close();
+  });
+
+  it("attributed spawn_outcome rows read back on the instance surface", async () => {
+    const handle = openDiagStore(":memory:", createControlledClock(0));
+    handle.sink.emit(B_SPAWN);
+    const events = await handle.reader.getDiagnostics("inst-1", 0);
+    expect(events.map((e) => e.kind)).toEqual(["spawn_outcome"]);
+    handle.close();
+  });
+});
+
+const SPAWN_R3_FIXTURES: readonly { name: string; body: string }[] = [
+  // spawn_outcome kind ⇔ runner source (both directions).
+  { name: "spawn_outcome with source kernel", body: JSON.stringify({ source: "kernel", kind: "spawn_outcome", instanceId: "i", contextPacketId: "i@v2", attemptId: "a", spawnOutcome: "submitted" }) },
+  { name: "runner source with an unknown kind", body: JSON.stringify({ source: "runner", kind: "not_a_kind", instanceId: "i" }) },
+  // spawnOutcome iff spawn_outcome (both directions).
+  { name: "spawn_outcome MISSING spawnOutcome", body: JSON.stringify({ source: "runner", kind: "spawn_outcome", instanceId: "i", contextPacketId: "i@v2", attemptId: "a" }) },
+  { name: "errand_transition carrying spawnOutcome", body: JSON.stringify({ source: "runner", kind: "errand_transition", instanceId: "i", contextPacketId: "i@v2", errandEdge: "create", errandTo: "pending", spawnOutcome: "submitted" }) },
+  { name: "kernel kind carrying spawnOutcome", body: JSON.stringify({ ...KDUP, spawnOutcome: "submitted" }) },
+  // spawnOutcome domain membership (the name_collision exclusion + a nonsense token).
+  { name: "spawnOutcome = name_collision (the scoped exclusion, not admitted here)", body: JSON.stringify({ source: "runner", kind: "spawn_outcome", instanceId: "i", contextPacketId: "i@v2", attemptId: "a", spawnOutcome: "name_collision" }) },
+  { name: "spawnOutcome not in the token domain", body: JSON.stringify({ source: "runner", kind: "spawn_outcome", instanceId: "i", contextPacketId: "i@v2", attemptId: "a", spawnOutcome: "teleported" }) },
+  // spawnDetail ⇒ spawn_outcome; string-typed.
+  { name: "errand_transition carrying spawnDetail", body: JSON.stringify({ source: "runner", kind: "errand_transition", instanceId: "i", contextPacketId: "i@v2", errandEdge: "create", errandTo: "pending", spawnDetail: "x" }) },
+  { name: "spawnDetail not a string", body: JSON.stringify({ source: "runner", kind: "spawn_outcome", instanceId: "i", contextPacketId: "i@v2", attemptId: "a", spawnOutcome: "submitted", spawnDetail: 5 }) },
+  // contextPacketId re-scope: required on spawn_outcome; a kernel kind carrying it rejects.
+  { name: "spawn_outcome MISSING contextPacketId", body: JSON.stringify({ source: "runner", kind: "spawn_outcome", instanceId: "i", attemptId: "a", spawnOutcome: "submitted" }) },
+  { name: "kernel kind carrying contextPacketId (re-scope reaches only the two runner kinds)", body: JSON.stringify({ ...KDUP, contextPacketId: "i@v2" }) },
+  // attemptId ALWAYS present on spawn_outcome.
+  { name: "spawn_outcome MISSING attemptId", body: JSON.stringify({ source: "runner", kind: "spawn_outcome", instanceId: "i", contextPacketId: "i@v2", spawnOutcome: "submitted" }) },
+  // spawn_outcome carries NO errand fields.
+  { name: "spawn_outcome carrying errandEdge", body: JSON.stringify({ source: "runner", kind: "spawn_outcome", instanceId: "i", contextPacketId: "i@v2", attemptId: "a", spawnOutcome: "submitted", errandEdge: "create" }) },
+  { name: "spawn_outcome carrying errandTo", body: JSON.stringify({ source: "runner", kind: "spawn_outcome", instanceId: "i", contextPacketId: "i@v2", attemptId: "a", spawnOutcome: "submitted", errandTo: "pending" }) },
+  // spawn_outcome carries NO op-world attribution / requestId.
+  { name: "spawn_outcome carrying opId", body: JSON.stringify({ source: "runner", kind: "spawn_outcome", instanceId: "i", contextPacketId: "i@v2", attemptId: "a", spawnOutcome: "submitted", opId: "o" }) },
+  { name: "spawn_outcome carrying requestId", body: JSON.stringify({ source: "runner", kind: "spawn_outcome", instanceId: "i", contextPacketId: "i@v2", attemptId: "a", spawnOutcome: "submitted", requestId: "r" }) },
+  { name: "spawn_outcome MISSING instanceId", body: JSON.stringify({ source: "runner", kind: "spawn_outcome", contextPacketId: "i@v2", attemptId: "a", spawnOutcome: "submitted" }) },
+  // the two H5 successor edges are NON-attempt-scoped AND non-birth (both directions).
+  { name: "evidence-at-claim carrying attemptId (non-attempt-scoped)", body: JSON.stringify({ source: "runner", kind: "errand_transition", instanceId: "i", contextPacketId: "i@v2", errandEdge: "evidence-at-claim", errandFrom: "claimed", errandTo: "confirmed", attemptId: "a" }) },
+  { name: "evidence-at-respawn carrying attemptId (non-attempt-scoped)", body: JSON.stringify({ source: "runner", kind: "errand_transition", instanceId: "i", contextPacketId: "i@v2", errandEdge: "evidence-at-respawn", errandFrom: "unconfirmed", errandTo: "confirmed", attemptId: "a" }) },
+  { name: "evidence-at-claim MISSING errandFrom (non-birth)", body: JSON.stringify({ source: "runner", kind: "errand_transition", instanceId: "i", contextPacketId: "i@v2", errandEdge: "evidence-at-claim", errandTo: "confirmed" }) },
+  { name: "evidence-at-respawn MISSING errandFrom (non-birth)", body: JSON.stringify({ source: "runner", kind: "errand_transition", instanceId: "i", contextPacketId: "i@v2", errandEdge: "evidence-at-respawn", errandTo: "confirmed" }) },
+];
+
+describe("spawn_outcome + evidence-edge rows — every new presence iff violated (both directions) → read_failed", () => {
+  it.each(SPAWN_R3_FIXTURES)("$name", async ({ body }) => {
+    const path = tempDbPath();
+    const handle = openDiagStore(path, createControlledClock(0));
+    insertRaw(path, body, "i");
+    expect(await reasonOf(handle.reader.getGlobalDiagnostics(0))).toBe("read_failed");
+    handle.close();
+  });
+
+  it("the ingress `detail` iff is UNTOUCHED by the spawnDetail sibling (a runner row carrying detail still rejects)", async () => {
+    const path = tempDbPath();
+    const handle = openDiagStore(path, createControlledClock(0));
+    insertRaw(
+      path,
+      JSON.stringify({ source: "runner", kind: "spawn_outcome", instanceId: "i", contextPacketId: "i@v2", attemptId: "a", spawnOutcome: "submitted", detail: "unknown_key" }),
+      "i",
+    );
+    expect(await reasonOf(handle.reader.getGlobalDiagnostics(0))).toBe("read_failed");
+    handle.close();
+  });
+});

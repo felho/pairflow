@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
+import { createHash } from "node:crypto";
+
 import {
+  canonicalize,
   deriveActorEmitOpId,
   deriveEmitDigest,
   deriveOperatorOpId,
@@ -298,5 +301,33 @@ describe("deriveEmitDigest — the transcript/collision digest (packet ch5-P4, A
       /not canonicalizable|undefined/,
     );
     expect(() => deriveEmitDigest({ type: "PASS", payload: -0 })).toThrow(/negative zero/);
+  });
+});
+
+// packet ch9-p3b, H2: the newly-public `canonicalize` export — the ONE
+// canonicalization authority the actor adapter materializes packet.json with.
+describe("canonicalize (the public serializer export, H2)", () => {
+  it("sorts object keys recursively (the handoff's stable byte form)", () => {
+    expect(canonicalize({ b: 1, a: 2 })).toBe('{"a":2,"b":1}');
+    expect(canonicalize({ z: { y: 1, x: 2 }, a: 3 })).toBe('{"a":3,"z":{"x":2,"y":1}}');
+  });
+
+  it("byte-equality with the digest path's material (digestPayload = sha256 of these bytes)", () => {
+    for (const payload of [
+      { verdict: "approve", note: "ok" },
+      { nested: { b: [1, 2], a: "x" } },
+      "a string",
+      42,
+      [true, false, null],
+    ]) {
+      const bytes = canonicalize(payload);
+      const viaCanonicalize = createHash("sha256").update(bytes, "utf8").digest("hex");
+      expect(viaCanonicalize).toBe(digestPayload(payload));
+    }
+  });
+
+  it("throws on a non-canonicalizable value (the shared admissibility predicate's basis)", () => {
+    expect(() => canonicalize({ x: undefined })).toThrow(/not canonicalizable/);
+    expect(() => canonicalize(() => 1)).toThrow(/not canonicalizable/);
   });
 });

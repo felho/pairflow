@@ -12,6 +12,13 @@ export default defineConfig({
       "src/cli/dev/dev.test.ts",
       "src/cli/journey.test.ts",
       "src/cli/worktreeJourney.test.ts",
+      // packet ch9-p3b (T3): the real-spawn test files exec repo-external bins
+      // (node + the wrapper asset), which Stryker's sandbox copy cannot resolve
+      // — the logged subprocess blind class. Mutation coverage for this packet
+      // is therefore PARTIAL by the profile's own declared mechanism.
+      "src/runner/spawn.test.ts",
+      "src/runner/actorAdapter.test.ts",
+      "src/ctBRealRunner.test.ts",
     ],
   },
 });

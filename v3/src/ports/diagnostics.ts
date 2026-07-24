@@ -23,7 +23,11 @@ export type DiagnosticKind =
   // The delivery-errand state-transition kind (packet ch9-p3a, DG1;
   // contract:ch9-runner#C26): EVERY errand state transition (every L1 edge,
   // creation included) emits ONE of these. VALID ONLY with source = "runner".
-  | "errand_transition";
+  | "errand_transition"
+  // The spawn-outcome kind (packet ch9-p3b, DG1; contract:ch9-runner#C26):
+  // EVERY attempt execution that concludes (incl. the EM3 rejecting path)
+  // emits ONE of these. VALID ONLY with source = "runner".
+  | "spawn_outcome";
 
 /**
  * The durable delivery-errand lifecycle states (L1; packet ch9-p3a). The
@@ -65,6 +69,12 @@ export const ERRAND_EDGES = [
   "moot",
   "respawn",
   "evidence-promotion",
+  // packet ch9-p3b, H5/DG2 — the attempt-start evidence-first successor edges.
+  // BOTH non-birth (errandFrom present) and NON-attempt-scoped (attemptId
+  // ABSENT — each fires at its attempt-start HOLD, before any attempt id is
+  // minted, the exhaust-at-claim precedent's bucket).
+  "evidence-at-claim", // claimed → confirmed (the budgeted hold)
+  "evidence-at-respawn", // unconfirmed → confirmed (the re-spawn hold)
 ] as const;
 export type ErrandEdge = (typeof ERRAND_EDGES)[number];
 
@@ -88,6 +98,23 @@ export const ATTEMPT_SCOPED_ERRAND_EDGES = [
 
 /** The two birth edges (DG1): `errandFrom` is ABSENT on these (no prior state). */
 export const ERRAND_BIRTH_EDGES = ["create", "reconcile-backfill"] as const;
+
+/**
+ * The `spawn_outcome` token domain (packet ch9-p3b, DG1): the CLOSED token
+ * naming the produced attempt-result member at CLASS grain. `name_collision`
+ * is RS4's scoped exclusion (the direct-spawn path has no host session
+ * namespace) and joins the domain when ch9-P4 activates the tmux lane. A LIST,
+ * not a count — grows only by a contract successor row.
+ */
+export const SPAWN_OUTCOMES = [
+  "submitted",
+  "no_output",
+  "spawn_infra",
+  "nonzero_exit",
+  "own_timeout",
+  "foreign_kill",
+] as const;
+export type SpawnOutcome = (typeof SPAWN_OUTCOMES)[number];
 
 /**
  * One token per admission-gate block in the ingress parseEnvelope —
@@ -161,8 +188,10 @@ export interface DiagnosticEventBody {
    */
   readonly providerDetail?: string;
   /**
-   * Present iff kind = "errand_transition" (packet ch9-p3a, DG1): the C13
-   * errand key `<instance_id>@v<expected_version>`.
+   * Present iff kind ∈ {"errand_transition", "spawn_outcome"} (packet ch9-p3a
+   * DG1 + ch9-p3b DG2 — RE-SCOPED, split out of the shared errand-field iff):
+   * the C13 errand key `<instance_id>@v<expected_version>`. Required on BOTH
+   * kinds.
    */
   readonly contextPacketId?: string;
   /**
@@ -178,10 +207,26 @@ export interface DiagnosticEventBody {
    */
   readonly errandFrom?: ErrandState;
   /**
-   * Present iff kind = "errand_transition" AND `errandEdge` is attempt-scoped
-   * (ATTEMPT_SCOPED_ERRAND_EDGES). The remint event carries the FRESH id.
+   * Present on `spawn_outcome` ALWAYS (packet ch9-p3b, DG1), and on
+   * `errand_transition` iff `errandEdge` is attempt-scoped
+   * (ATTEMPT_SCOPED_ERRAND_EDGES — the remint event carries the FRESH id). The
+   * two H5 successor edges (`evidence-at-claim`/`evidence-at-respawn`) are
+   * NON-attempt-scoped, so `attemptId` is ABSENT on them.
    */
   readonly attemptId?: string;
+  /**
+   * Present iff kind = "spawn_outcome" (packet ch9-p3b, DG1): the CLOSED token
+   * naming the produced attempt-result member at class grain (SPAWN_OUTCOMES).
+   */
+  readonly spawnOutcome?: SpawnOutcome;
+  /**
+   * Present ONLY on kind = "spawn_outcome", OPTIONAL (packet ch9-p3b, DG1): an
+   * UNTRUSTED diagnostic free-text tail (a captured-stderr tail, bounded by the
+   * PB3 2000-code-unit cap precedent). A DISTINCT kind-scoped field per the
+   * `providerDetail` precedent — NEVER the ingress-scoped closed-token
+   * `detail`; confined to the diagnostic surface, never parsed, never matched.
+   */
+  readonly spawnDetail?: string;
   /** Present iff kind = "stale" — the envelope's expected version. */
   readonly expectedVersion?: number;
   /** Present iff kind = "stale" — the outcome's current version. */

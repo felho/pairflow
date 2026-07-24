@@ -5,8 +5,11 @@ import type {
   AdmittedTemplate,
   EventEnvelope,
   Outcome,
+  RuntimeContextProjection,
+  RuntimeContextRef,
   TranscriptEntry,
   WorkflowInstance,
+  WorkflowTemplate,
 } from "../domain/index.js";
 import { createGateRegistry } from "../gates/index.js";
 import { deriveDispatchIntent } from "../kernel/dispatchIntent.js";
@@ -14,7 +17,11 @@ import type { AttemptResult } from "../ports/delivery.js";
 import type { DefinitionStore } from "../ports/definition.js";
 import type { DiagnosticEventBody, DiagnosticsSink } from "../ports/diagnostics.js";
 import { createStaticProviderRegistry } from "../ports/index.js";
-import type { ProviderRegistry } from "../ports/runtimeContextProvider.js";
+import type {
+  LocalExecutionCapability,
+  ProviderRegistry,
+  RuntimeContextProvider,
+} from "../ports/runtimeContextProvider.js";
 import type { InstanceDetail } from "../ports/store.js";
 import {
   createControlledClock,
@@ -639,20 +646,35 @@ describe("B — budget / attempts", () => {
   });
 
   it("B4 rescue: late evidence at the exhaust point lands confirmed, never exhausted", async () => {
+    // ch9-P3b (H5): the front evidence gate would shadow evidence present
+    // BEFORE the start, so the exhaust-point double-check stays DRIVEN only if
+    // evidence lands MID-EXECUTE — added inside the final attempt via observe,
+    // AFTER the front check ran clean.
+    const seam = new FakeSeam();
+    seam.set(mkInstance());
     const h = wire({
+      seam,
       script: [
         { kind: "infra_failure", class: "nonzero_exit" },
         { kind: "infra_failure", class: "nonzero_exit" },
         { kind: "infra_failure", class: "nonzero_exit" },
       ],
+      observe: ({ attemptId }) => {
+        if (attemptId === "att-3") {
+          seam.addTransition("inst-1", mkTransition(1, "codex", 2));
+        }
+      },
     });
-    h.seam.set(mkInstance());
     await h.loop.tick();
     await h.loop.tick();
-    // Evidence lands just before the final (exhausting) attempt concludes.
-    h.seam.addTransition("inst-1", mkTransition(1, "codex", 2));
     await h.loop.tick();
     expect(h.store.getErrand("inst-1", KEY)?.state).toBe("confirmed");
+    // The exhaust-point double-check (not the front gate) is the driven lane:
+    // the confirm rode the attempt's OWN conclusion (an attempt-scoped edge).
+    expect(h.events.some((e) => e.errandEdge === "confirm" && e.errandTo === "confirmed")).toBe(
+      true,
+    );
+    expect(h.events.some((e) => e.errandEdge === "evidence-at-claim")).toBe(false);
     h.close();
   });
 
@@ -1112,6 +1134,213 @@ describe("Finding 7 — DG1 edge-label sensitivity across trigger contexts", () 
     const advanced = wire({ store: h.store, seam: h.seam, leaseMs: 1_000, clockStart: 5_000 });
     await advanced.loop.poll();
     expect(advanced.events.some((e) => e.errandEdge === "reclaim" && e.errandTo === "pending")).toBe(true);
+    h.close();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ch9-P3b — H5 (the attempt-start evidence/version gate, flag F10) + H1 (the
+// provider-contract cwd resolution, flag F5).
+// ═══════════════════════════════════════════════════════════════════════════
+
+const READY_REF: RuntimeContextRef = {
+  kind: "worktree",
+  locator: { path: "/ws/ready", branch: "b", repo: "/r", base_commit: "c0ffee" },
+};
+
+function localProvider(): RuntimeContextProvider & LocalExecutionCapability {
+  return {
+    provision: () => Promise.resolve(),
+    projectForActor: (ref) =>
+      ({ kind: "worktree", path: (ref.locator as { path: string }).path, branch: "b" }) as unknown as RuntimeContextProjection,
+    resolveLocalWorkingDirectory: (ref) => (ref.locator as { path: string }).path,
+  };
+}
+function plainProvider(): RuntimeContextProvider {
+  return {
+    provision: () => Promise.resolve(),
+    projectForActor: (ref) =>
+      ({ kind: "worktree", path: (ref.locator as { path: string }).path, branch: "b" }) as unknown as RuntimeContextProjection,
+  };
+}
+function throwingProvider(): RuntimeContextProvider & LocalExecutionCapability {
+  return {
+    provision: () => Promise.resolve(),
+    projectForActor: (ref) =>
+      ({ kind: "worktree", path: (ref.locator as { path: string }).path, branch: "b" }) as unknown as RuntimeContextProjection,
+    resolveLocalWorkingDirectory: () => {
+      throw new Error("cwd resolution boom");
+    },
+  };
+}
+function rcTemplate(): WorkflowTemplate {
+  return { ...fixtureTemplate(), runtimeContext: { kind: "worktree", provider: "test.local", config: { repo: "/r" } } };
+}
+function admittedRc(): AdmittedTemplate {
+  const result = admitTemplate(rcTemplate(), gateCatalog);
+  if (!result.ok) {
+    throw new Error(`rc fixture admission failed: ${JSON.stringify(result.findings)}`);
+  }
+  return result.template;
+}
+
+describe("H5 — the attempt-start evidence/version gate (flag F10)", () => {
+  it("budgeted hold: a reclaimed STALE errand whose instance advanced resolves confirmed by evidence, NO spawn (evidence-at-claim edge)", async () => {
+    const seam = new FakeSeam();
+    // The instance advanced to v3 (a sibling committed v2→v3), with the v2
+    // commit as evidence; the stale @v2 errand sits claimed (reclaimed remnant).
+    seam.set(mkInstance({ version: 3 }), [mkTransition(1, "codex", 2)]);
+    const h = wire({ seam }); // no script — a spawn here would exhaust it (red)
+    // Suppress @v3 discovery with a pre-confirmed @v3 row; work skips it.
+    h.store.backfillConfirmed({ instanceId: "inst-1", contextPacketId: "inst-1@v3", expectedVersion: 3, actorId: "claude", budget: 3 });
+    h.store.createErrand({ instanceId: "inst-1", contextPacketId: "inst-1@v2", expectedVersion: 2, actorId: "codex", budget: 2 });
+    h.store.claim({ instanceId: "inst-1", contextPacketId: "inst-1@v2", workerId: "w", now: 1_000 });
+    await h.loop.tick();
+    expect(h.store.getErrand("inst-1", "inst-1@v2")?.state).toBe("confirmed");
+    expect(h.executor.calls).toHaveLength(0); // ZERO spawn
+    expect(
+      h.events.some((e) => e.errandEdge === "evidence-at-claim" && e.errandFrom === "claimed" && e.errandTo === "confirmed" && e.attemptId === undefined),
+    ).toBe(true);
+    h.close();
+  });
+
+  it("budgeted hold: the version-gate SKIP (mismatch, no evidence) — no spawn, no decrement, row byte-unchanged", async () => {
+    const seam = new FakeSeam();
+    seam.set(mkInstance({ version: 3 })); // no v2 evidence
+    const h = wire({ seam });
+    h.store.backfillConfirmed({ instanceId: "inst-1", contextPacketId: "inst-1@v3", expectedVersion: 3, actorId: "claude", budget: 3 });
+    h.store.createErrand({ instanceId: "inst-1", contextPacketId: "inst-1@v2", expectedVersion: 2, actorId: "codex", budget: 2 });
+    h.store.claim({ instanceId: "inst-1", contextPacketId: "inst-1@v2", workerId: "w", now: 1_000 });
+    await h.loop.tick();
+    const row = h.store.getErrand("inst-1", "inst-1@v2");
+    expect(row?.state).toBe("claimed"); // unchanged
+    expect(row?.remainingBudget).toBe(2); // no decrement
+    expect(row?.activeAttemptId).toBeNull();
+    expect(h.executor.calls).toHaveLength(0);
+    h.close();
+  });
+
+  it("re-spawn hold: evidence resolves confirmed by evidence, NO spawn (evidence-at-respawn edge)", async () => {
+    const seam = new FakeSeam();
+    seam.set(mkInstance({ version: 3 }), [mkTransition(1, "codex", 2)]);
+    const h = wire({ seam });
+    // Drive the @v2 errand to `unconfirmed` (a no-output attempt).
+    h.store.createErrand({ instanceId: "inst-1", contextPacketId: "inst-1@v2", expectedVersion: 2, actorId: "codex", budget: 2 });
+    h.store.claim({ instanceId: "inst-1", contextPacketId: "inst-1@v2", workerId: "w", now: 1_000 });
+    const started = h.store.startBudgetedAttempt({ instanceId: "inst-1", contextPacketId: "inst-1@v2", workerId: "w", now: 1_000, attemptIdSource: () => "a1", sessionNamer: () => "s1" });
+    if (started.kind !== "started") throw new Error("setup");
+    h.store.concludeNoOutput({ instanceId: "inst-1", contextPacketId: "inst-1@v2", attemptId: started.attemptId });
+    expect(h.store.getErrand("inst-1", "inst-1@v2")?.state).toBe("unconfirmed");
+    await h.loop.respawn("inst-1", "inst-1@v2");
+    expect(h.store.getErrand("inst-1", "inst-1@v2")?.state).toBe("confirmed");
+    expect(h.executor.calls).toHaveLength(0);
+    expect(
+      h.events.some((e) => e.errandEdge === "evidence-at-respawn" && e.errandFrom === "unconfirmed" && e.errandTo === "confirmed" && e.attemptId === undefined),
+    ).toBe(true);
+    h.close();
+  });
+
+  it("re-spawn hold: the version-gate SKIP (mismatch, no evidence) — no spawn, stays unconfirmed", async () => {
+    const seam = new FakeSeam();
+    seam.set(mkInstance({ version: 3 })); // no v2 evidence
+    const h = wire({ seam });
+    h.store.createErrand({ instanceId: "inst-1", contextPacketId: "inst-1@v2", expectedVersion: 2, actorId: "codex", budget: 2 });
+    h.store.claim({ instanceId: "inst-1", contextPacketId: "inst-1@v2", workerId: "w", now: 1_000 });
+    const started = h.store.startBudgetedAttempt({ instanceId: "inst-1", contextPacketId: "inst-1@v2", workerId: "w", now: 1_000, attemptIdSource: () => "a1", sessionNamer: () => "s1" });
+    if (started.kind !== "started") throw new Error("setup");
+    h.store.concludeNoOutput({ instanceId: "inst-1", contextPacketId: "inst-1@v2", attemptId: started.attemptId });
+    await h.loop.respawn("inst-1", "inst-1@v2");
+    expect(h.store.getErrand("inst-1", "inst-1@v2")?.state).toBe("unconfirmed");
+    expect(h.executor.calls).toHaveLength(0);
+    h.close();
+  });
+
+  it("ORDER: TERMINAL + mismatch + no evidence → mooted (the SKIP never shadows the terminal moot)", async () => {
+    const seam = new FakeSeam();
+    seam.set(mkInstance({ version: 3, kernelStatus: "TERMINAL", terminalDisposition: "done", currentStep: "done" }));
+    const h = wire({ seam });
+    h.store.createErrand({ instanceId: "inst-1", contextPacketId: "inst-1@v2", expectedVersion: 2, actorId: "codex", budget: 2 });
+    h.store.claim({ instanceId: "inst-1", contextPacketId: "inst-1@v2", workerId: "w", now: 1_000 });
+    await h.loop.tick();
+    expect(h.store.getErrand("inst-1", "inst-1@v2")?.state).toBe("mooted");
+    expect(h.executor.calls).toHaveLength(0);
+    h.close();
+  });
+
+  it("ORDER: evidence + TERMINAL + mismatch → confirmed (evidence beats the terminal moot)", async () => {
+    const seam = new FakeSeam();
+    seam.set(
+      mkInstance({ version: 3, kernelStatus: "TERMINAL", terminalDisposition: "done", currentStep: "done" }),
+      [mkTransition(1, "codex", 2)],
+    );
+    const h = wire({ seam });
+    h.store.createErrand({ instanceId: "inst-1", contextPacketId: "inst-1@v2", expectedVersion: 2, actorId: "codex", budget: 2 });
+    h.store.claim({ instanceId: "inst-1", contextPacketId: "inst-1@v2", workerId: "w", now: 1_000 });
+    await h.loop.tick();
+    expect(h.store.getErrand("inst-1", "inst-1@v2")?.state).toBe("confirmed");
+    expect(h.executor.calls).toHaveLength(0);
+    h.close();
+  });
+});
+
+describe("H1 — the provider-contract cwd resolution (flag F5)", () => {
+  it("a ready(ref) run hands the executor an explicit cwd = the capability-resolved path (byte-equal to locator.path AND projection.path)", async () => {
+    const seam = new FakeSeam();
+    seam.set(mkInstance({ runtimeContext: { state: "ready", ref: READY_REF } }));
+    const h = wire({
+      seam,
+      script: [submitted(committed)],
+      definitions: fixtureDefinitionStore(admittedRc()),
+      providerRegistry: createStaticProviderRegistry({ "test.local": localProvider() }),
+    });
+    await h.loop.tick();
+    const call = h.executor.calls[0];
+    const locatorPath = (READY_REF.locator as { path: string }).path;
+    expect(call?.input.cwd).toBe(locatorPath);
+    // C17 value-identity: equal to the actor projection's path too.
+    expect((call?.input.intent.packet.runtimeContext as unknown as { path: string }).path).toBe(locatorPath);
+    h.close();
+  });
+
+  it("the `none` lane carries NO cwd field (the adapter derives its own)", async () => {
+    const h = wire({ script: [submitted(committed)] });
+    h.seam.set(mkInstance()); // ready ref null → the none lane
+    await h.loop.tick();
+    expect(h.executor.calls[0]?.input.cwd).toBeUndefined();
+    h.close();
+  });
+
+  it("D6: a ready-ref run whose provider LACKS the capability throws fail-closed at derivation; errand unmutated, no budget burn", async () => {
+    const seam = new FakeSeam();
+    seam.set(mkInstance({ runtimeContext: { state: "ready", ref: READY_REF } }));
+    const h = wire({
+      seam,
+      definitions: fixtureDefinitionStore(admittedRc()),
+      providerRegistry: createStaticProviderRegistry({ "test.local": plainProvider() }),
+    });
+    await h.loop.poll(); // discovery derives the actor only → pending
+    await expect(h.loop.tick()).rejects.toThrow(/not a local-execution provider/);
+    const row = h.store.getErrand("inst-1", KEY);
+    expect(row?.state).toBe("claimed"); // never advanced to attempting
+    expect(row?.remainingBudget).toBe(3); // no decrement
+    expect(h.executor.calls).toHaveLength(0);
+    h.close();
+  });
+
+  it("D6: a THROWING capability resolution propagates fail-closed; errand unmutated, no budget burn", async () => {
+    const seam = new FakeSeam();
+    seam.set(mkInstance({ runtimeContext: { state: "ready", ref: READY_REF } }));
+    const h = wire({
+      seam,
+      definitions: fixtureDefinitionStore(admittedRc()),
+      providerRegistry: createStaticProviderRegistry({ "test.local": throwingProvider() }),
+    });
+    await h.loop.poll();
+    await expect(h.loop.tick()).rejects.toThrow(/cwd resolution boom/);
+    const row = h.store.getErrand("inst-1", KEY);
+    expect(row?.state).toBe("claimed");
+    expect(row?.remainingBudget).toBe(3);
+    expect(h.executor.calls).toHaveLength(0);
     h.close();
   });
 });

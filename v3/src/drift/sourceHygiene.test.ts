@@ -24,7 +24,7 @@ function walk(dir: string, out: string[] = []): string[] {
     const path = join(dir, entry);
     if (statSync(path).isDirectory()) {
       walk(path, out);
-    } else if (/\.(ts|mts|cts|tsx|json|yaml|yml)$/.test(entry)) {
+    } else if (/\.(ts|mts|cts|mjs|tsx|json|yaml|yml)$/.test(entry)) {
       out.push(path);
     }
   }

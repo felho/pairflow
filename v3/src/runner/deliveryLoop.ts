@@ -3,14 +3,19 @@ import type {
   InstanceId,
   TranscriptEntry,
   WorkflowInstance,
+  WorkflowTemplate,
 } from "../domain/index.js";
+import { resolveRuntimeContextRequirement } from "../domain/index.js";
 import { deriveDispatchIntent } from "../kernel/dispatchIntent.js";
 import type { AttemptExecutor, AttemptResult } from "../ports/delivery.js";
 import type { DefinitionStore } from "../ports/definition.js";
 import type { DiagnosticEventBody, DiagnosticsSink, ErrandEdge, ErrandState } from "../ports/diagnostics.js";
 import { ATTEMPT_SCOPED_ERRAND_EDGES } from "../ports/diagnostics.js";
 import type { InstanceDetail } from "../ports/store.js";
-import type { ProviderRegistry } from "../ports/runtimeContextProvider.js";
+import type {
+  LocalExecutionCapability,
+  ProviderRegistry,
+} from "../ports/runtimeContextProvider.js";
 import type { TimeSource } from "../ports/time.js";
 import type { AttemptKind, ErrandRow, ErrandStore } from "./errandStore.js";
 
@@ -184,8 +189,17 @@ export function createDeliveryLoop(
     return actor;
   }
 
-  /** The D6 intent re-derivation (throws propagate fail-closed). */
-  async function deriveIntent(instance: WorkflowInstance, detail: InstanceDetail): Promise<DispatchIntent> {
+  /**
+   * The D6 intent re-derivation PLUS H1's cwd resolution (throws propagate
+   * fail-closed, BEFORE any durable start write — a config-integrity fault
+   * never consumes an attempt). The `cwd` is present iff the run has a runtime
+   * context; on the `"none"` lane it is ABSENT and the adapter derives C17's
+   * per-run subdirectory itself.
+   */
+  async function deriveExecution(
+    instance: WorkflowInstance,
+    detail: InstanceDetail,
+  ): Promise<{ intent: DispatchIntent; cwd?: string }> {
     if (instance.currentStep === null) {
       throw new Error(
         `delivery integrity: instance '${instance.instanceId}' is dispatchable with a null current step`,
@@ -198,7 +212,53 @@ export function createDeliveryLoop(
       );
     }
     const handoff = lastHandoff(detail.transcript);
-    return deriveDispatchIntent(instance, template, instance.currentStep, providerRegistry, handoff);
+    const intent = deriveDispatchIntent(
+      instance,
+      template,
+      instance.currentStep,
+      providerRegistry,
+      handoff,
+    );
+    const cwd = resolveLocalCwd(instance, template);
+    return cwd === undefined ? { intent } : { intent, cwd };
+  }
+
+  /**
+   * H1 (flag F5): resolve the local working directory at derivation, from the
+   * provider's LocalExecutionCapability. Present iff the run has a runtime
+   * context (`ready(ref)`). A ready-ref run whose provider lacks the capability,
+   * or a throwing resolution, is D6's config-integrity lane — fail-closed loud
+   * (throws propagate; the caller runs this BEFORE the durable start, so the
+   * errand is unmutated and no budget is burned). A value-shape check, never a
+   * provider-TYPE branch (REV-E-NO-ADAPTER-BRANCH).
+   */
+  function resolveLocalCwd(
+    instance: WorkflowInstance,
+    template: WorkflowTemplate,
+  ): string | undefined {
+    const rc = instance.runtimeContext;
+    if (rc.state !== "ready" || rc.ref === null) {
+      return undefined; // the `"none"` lane — the adapter derives its own cwd
+    }
+    const requirement = resolveRuntimeContextRequirement(template.runtimeContext);
+    if (requirement.state !== "required") {
+      throw new Error(
+        `delivery integrity: instance '${instance.instanceId}' has a provisioned runtime-context ref but its pinned template declares no runtime context`,
+      );
+    }
+    const provider = providerRegistry.resolve(requirement.spec.provider);
+    if (provider === null) {
+      throw new Error(
+        `delivery integrity: provider '${requirement.spec.provider}' for active instance '${instance.instanceId}' is no longer resolvable (the registry must stay stable for the life of the run)`,
+      );
+    }
+    const capability = provider as Partial<LocalExecutionCapability>;
+    if (typeof capability.resolveLocalWorkingDirectory !== "function") {
+      throw new Error(
+        `delivery integrity: provider '${requirement.spec.provider}' has a runtime context but is not a local-execution provider (cannot resolve the working directory) for instance '${instance.instanceId}'`,
+      );
+    }
+    return capability.resolveLocalWorkingDirectory(rc.ref);
   }
 
   // ── Poll sub-passes ────────────────────────────────────────────────────
@@ -410,9 +470,39 @@ export function createDeliveryLoop(
       }
       return;
     }
-    // Derive the intent (D6 — throws propagate fail-closed) BEFORE the durable
-    // start write, so a config-integrity fault never consumes an attempt.
-    const intent = await deriveIntent(instance, detail);
+    // ── H5 (flag F10): the ACTIVE budget≥1 hold — evidence-first + the C13
+    // version gate BEFORE the durable start (the terminal + zero-budget holds
+    // above already ran CF1 with their own edges; this closes the previously
+    // unguarded B1 start so a reclaimed stale errand can never spawn the NEXT
+    // dispatch's packet under the OLD errand row).
+    // (1) evidence → confirmed, with ZERO mint/spawn/decrement — the successor
+    //     edge `evidence-at-claim` (claimed→confirmed, attemptId ABSENT).
+    if (hasEvidence(detail, errand)) {
+      const res = store.concludeConfirmed({
+        instanceId: errand.instanceId,
+        contextPacketId: errand.contextPacketId,
+      });
+      if (res.applied) {
+        emitTransition(
+          "evidence-at-claim",
+          errand.instanceId,
+          errand.contextPacketId,
+          "claimed",
+          "confirmed",
+        );
+      }
+      return;
+    }
+    // (3) ACTIVE + version mismatch (no evidence — unreachable on a healthy
+    //     ACTIVE run by the evidence⇔version coupling) → the fail-closed SKIP:
+    //     no spawn, no decrement, no state write; the next tick re-derives.
+    if (instance.version !== errand.expectedVersion) {
+      return;
+    }
+    // (4) else start. Derive intent + H1 cwd (D6 — throws propagate fail-closed)
+    // BEFORE the durable start write, so a config-integrity fault never consumes
+    // an attempt.
+    const { intent, cwd } = await deriveExecution(instance, detail);
     const started = store.startBudgetedAttempt({
       instanceId: errand.instanceId,
       contextPacketId: errand.contextPacketId,
@@ -432,7 +522,7 @@ export function createDeliveryLoop(
       "attempting",
       started.attemptId,
     );
-    await runAttempt(errand, started.attemptId, started.sessionName, "budgeted", intent);
+    await runAttempt(errand, started.attemptId, started.sessionName, "budgeted", intent, cwd);
   }
 
   async function runAttempt(
@@ -441,16 +531,22 @@ export function createDeliveryLoop(
     sessionName: string,
     kind: AttemptKind,
     intent: DispatchIntent,
+    cwd?: string,
   ): Promise<void> {
     let result: AttemptResult;
     try {
-      result = await executor.execute({ intent, attemptId, sessionName });
+      result = await executor.execute({
+        intent,
+        attemptId,
+        sessionName,
+        ...(cwd !== undefined ? { cwd } : {}),
+      });
     } catch {
       // K2: a rejecting/throwing executor IS the infra-error class arriving on
       // the promise channel — the same B2 CAS path, never a loop crash.
       result = { kind: "infra_failure", class: "spawn_infra" };
     }
-    await conclude(errand, attemptId, kind, result, intent);
+    await conclude(errand, attemptId, kind, result, intent, cwd);
   }
 
   /**
@@ -495,6 +591,7 @@ export function createDeliveryLoop(
     kind: AttemptKind,
     result: AttemptResult,
     intent: DispatchIntent,
+    cwd?: string,
   ): Promise<void> {
     const key = { instanceId: errand.instanceId, contextPacketId: errand.contextPacketId };
     switch (result.kind) {
@@ -551,8 +648,9 @@ export function createDeliveryLoop(
           // The remint's fresh attempt is executed IMMEDIATELY (same tick) —
           // otherwise the errand strands in `attempting` until lease expiry
           // (which would burn real budget). Bounded by the id source's
-          // collision resistance.
-          await runAttempt(errand, res.attemptId, res.sessionName, kind, intent);
+          // collision resistance. (name_collision is RS4(a)-unreachable from
+          // the real adapter; the same cwd rides the re-run for completeness.)
+          await runAttempt(errand, res.attemptId, res.sessionName, kind, intent, cwd);
         }
         return;
       }
@@ -672,7 +770,23 @@ export function createDeliveryLoop(
       }
       return;
     }
-    const intent = await deriveIntent(detail.instance, detail);
+    // ── H5 (flag F10): the re-spawn hold (B5's B1-shaped start) — evidence-first
+    // + the version gate BEFORE the durable start, symmetric with the budgeted
+    // hold. (1) evidence → confirmed via the successor edge `evidence-at-respawn`
+    // (unconfirmed→confirmed, attemptId ABSENT).
+    if (hasEvidence(detail, errand)) {
+      const res = store.concludeConfirmed({ instanceId, contextPacketId });
+      if (res.applied) {
+        emitTransition("evidence-at-respawn", instanceId, contextPacketId, "unconfirmed", "confirmed");
+      }
+      return;
+    }
+    // (3) ACTIVE + version mismatch (no evidence) → the fail-closed SKIP.
+    if (detail.instance.version !== errand.expectedVersion) {
+      return;
+    }
+    // (4) else start.
+    const { intent, cwd } = await deriveExecution(detail.instance, detail);
     const started = store.startRespawnAttempt({
       instanceId,
       contextPacketId,
@@ -685,7 +799,7 @@ export function createDeliveryLoop(
       return;
     }
     emitTransition("respawn", instanceId, contextPacketId, "unconfirmed", "attempting", started.attemptId);
-    await runAttempt(errand, started.attemptId, started.sessionName, "respawn", intent);
+    await runAttempt(errand, started.attemptId, started.sessionName, "respawn", intent, cwd);
   }
 
   return { tick, poll, run, respawn };

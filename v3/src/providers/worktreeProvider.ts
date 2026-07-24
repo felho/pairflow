@@ -1,4 +1,3 @@
-import { spawn } from "node:child_process";
 import { realpathSync } from "node:fs";
 import { basename, dirname, isAbsolute, join } from "node:path";
 
@@ -10,9 +9,12 @@ import type {
   RuntimeContextSpec,
 } from "../domain/index.js";
 import type {
+  LocalExecutionCapability,
   RuntimeContextCompletionSink,
   RuntimeContextProvider,
 } from "../ports/runtimeContextProvider.js";
+import { enc } from "../runner/enc.js";
+import { disciplinedSpawn, validateTimerKnobs } from "../runner/spawn.js";
 
 /**
  * The `pairflow.worktree` provider (packet ch9-p2; contract:ch9-runner
@@ -46,8 +48,10 @@ export interface WorktreeProviderOptions {
 }
 
 /** The worktree provider's public face — the port plus the late-bound sink
- * (the kernel is created after the provider is registered). */
-export interface WorktreeProvider extends RuntimeContextProvider {
+ * (the kernel is created after the provider is registered) plus the
+ * LocalExecutionCapability facet (packet ch9-p3b, H1: its contexts execute on
+ * this host, so it answers WHERE from its own minted `locator.path`). */
+export interface WorktreeProvider extends RuntimeContextProvider, LocalExecutionCapability {
   bindCompletionSink(sink: RuntimeContextCompletionSink): void;
 }
 
@@ -71,43 +75,22 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-/**
- * N2 reference `enc` — the SANITIZING, INJECTIVE, host-safe encoding at
- * UTF-16 CODE-UNIT grain (ids are JS strings and may be ILL-FORMED Unicode).
- * A code unit whose character is `[a-z0-9]` passes through; EVERY other unit
- * (uppercase, `_`, multibyte, lone surrogates included) encodes as `_` + FOUR
- * lowercase hex digits of the unit value. Output alphabet `[a-z0-9_]`:
- * injective over arbitrary JS strings (fixed-width escape, raw chars never
- * `_`), all-lowercase (case-fold-stable on the case-insensitive host), and
- * `-`/`/`/`.` are unexpressible (so the composite `--` and `/` delimiters
- * cannot alias). `\uD800` → `_d800`, `�` → `_fffd` — distinct by
- * construction. enc of a nonempty id is nonempty.
- */
-export function enc(id: string): string {
-  let out = "";
-  for (let i = 0; i < id.length; i += 1) {
-    const code = id.charCodeAt(i);
-    // Pass-through for lowercase ASCII letters and digits ONLY.
-    if ((code >= 0x61 && code <= 0x7a) || (code >= 0x30 && code <= 0x39)) {
-      out += id[i];
-    } else {
-      out += `_${code.toString(16).padStart(4, "0")}`;
-    }
-  }
-  return out;
-}
-
 // ── The git child-process runner (M4 — ADR-017 spawn discipline) ──────────
-// DEFERRED(ch9-p3): fold into the shared C19 spawn seam. P3 births the seam
-// (actor adapter + process-gate runner) and this discipline folds into it,
-// closing ADR-017's one-enforcement-point intent — but the seam is NOT a
-// functional prerequisite here: the git spawns are complete under M4's own
-// discipline (explicit cwd, {PATH} allowlist default, bounded SIGTERM→SIGKILL
-// timeout, captured stdio).
+// SD2 (packet ch9-p3b): the git runner is RE-EXPRESSED over the shared C19
+// spawn seam (`disciplinedSpawn`), closing ADR-017's one-enforcement-point
+// intent (the P2-minted ch9-p3 fold-in marker is discharged in this change).
+// The M4 discipline properties are preserved EXACTLY — explicit cwd = `repo`,
+// `{PATH}` default allowlist, 30 s/10 s defaults, captured stdio, the
+// SIGTERM→grace→SIGKILL escalation — and the fold changes WHERE the discipline
+// lives, never what it does. The provider's git-specific timeout MESSAGE
+// construction lives HERE (the seam's `timedOut`-flagged exit carries no git
+// text); the retired `code ?? -1` coercion yields to the seam's faithful
+// `code: null` (the `code !== 0` checks are shape-robust; the internal exit
+// type widens `code` to `number | null` in the same change).
 
 interface GitExit {
   readonly kind: "exit";
-  readonly code: number;
+  readonly code: number | null;
   readonly stdout: string;
   readonly stderr: string;
 }
@@ -127,71 +110,34 @@ interface GitRunConfig {
   readonly graceMs: number;
 }
 
-function runGit(cfg: GitRunConfig, args: readonly string[], cwd: string): Promise<GitResult> {
-  return new Promise<GitResult>((resolve) => {
-    let settled = false;
-    const finish = (result: GitResult): void => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      clearTimeout(killTimer);
-      if (graceTimer !== undefined) {
-        clearTimeout(graceTimer);
-      }
-      resolve(result);
-    };
-
-    let child;
-    try {
-      child = spawn(cfg.bin, [...args], {
-        cwd,
-        env: cfg.env,
-        stdio: ["ignore", "pipe", "pipe"],
-      });
-    } catch (error) {
-      // A synchronous spawn-setup throw — the infra lane (S3).
-      resolve({ kind: "infra", message: errorMessage(error) });
-      return;
-    }
-
-    let stdout = "";
-    let stderr = "";
-    let timedOut = false;
-    let graceTimer: ReturnType<typeof setTimeout> | undefined;
-    child.stdout?.on("data", (chunk: Buffer) => {
-      stdout += chunk.toString("utf8");
-    });
-    child.stderr?.on("data", (chunk: Buffer) => {
-      stderr += chunk.toString("utf8");
-    });
-    // Bounded timeout: SIGTERM at the deadline, then SIGKILL after the grace
-    // (a TERM-ignoring child is killed at the grace).
-    const killTimer = setTimeout(() => {
-      timedOut = true;
-      child.kill("SIGTERM");
-      graceTimer = setTimeout(() => {
-        child.kill("SIGKILL");
-      }, cfg.graceMs);
-      graceTimer.unref();
-    }, cfg.timeoutMs);
-    killTimer.unref();
-
-    child.on("error", (error: Error) => {
-      // ENOENT (missing binary) and kin — the distinct infra lane.
-      finish({ kind: "infra", message: error.message });
-    });
-    child.on("close", (code, signal) => {
-      if (timedOut) {
-        finish({
-          kind: "infra",
-          message: `git '${args.join(" ")}' timed out after ${String(cfg.timeoutMs)}ms (killed ${signal ?? "SIGTERM"})`,
-        });
-        return;
-      }
-      finish({ kind: "exit", code: code ?? -1, stdout, stderr });
-    });
+async function runGit(
+  cfg: GitRunConfig,
+  args: readonly string[],
+  cwd: string,
+): Promise<GitResult> {
+  const conclusion = await disciplinedSpawn({
+    cmd: cfg.bin,
+    args,
+    cwd,
+    env: cfg.env,
+    timeoutMs: cfg.timeoutMs,
+    graceMs: cfg.graceMs,
   });
+  if (conclusion.kind === "infra") {
+    // A synchronous spawn-setup throw or an ENOENT error event (S3/M4).
+    return { kind: "infra", message: conclusion.message };
+  }
+  if (conclusion.timedOut) {
+    // The runner's OWN timeout kill — `sys:provision_failed` in every phase
+    // (S3); the provider owns the git-specific message (the seam is text-blind).
+    return {
+      kind: "infra",
+      message: `git '${args.join(" ")}' timed out after ${String(cfg.timeoutMs)}ms (killed ${conclusion.signal ?? "SIGTERM"})`,
+    };
+  }
+  // Faithful exit — `code: null` on a (non-timeout) signal conclusion rides
+  // through; the provider's `code !== 0` checks treat it as a mechanics fault.
+  return { kind: "exit", code: conclusion.code, stdout: conclusion.stdout, stderr: conclusion.stderr };
 }
 
 // ── Evaluation (S) ────────────────────────────────────────────────────────
@@ -364,6 +310,13 @@ export function createWorktreeProvider(
     timeoutMs: options.timeoutMs ?? 30_000,
     graceMs: options.graceMs ?? 10_000,
   };
+  // SD2/T2: the shared timer-knob validator, fail-closed at construction — the
+  // seam's SIGTERM→grace escalation rests on validated arithmetic, and SD2's
+  // unchanged-pin is thereby SCOPED to valid configurations.
+  validateTimerKnobs([
+    { label: "timeoutMs", value: cfg.timeoutMs },
+    { label: "graceMs", value: cfg.graceMs },
+  ]);
   let sink: RuntimeContextCompletionSink | null = null;
 
   const fireReady = (instanceId: InstanceId, requestId: string, ref: RuntimeContextRef): void => {
@@ -459,6 +412,26 @@ export function createWorktreeProvider(
         branch: ref.locator.branch,
       };
       return projection as unknown as RuntimeContextProjection;
+    },
+    resolveLocalWorkingDirectory(ref: RuntimeContextRef): string {
+      // H1 (packet ch9-p3b): the LocalExecutionCapability facet — the absolute
+      // working directory is a CONTRACT obligation of this local provider,
+      // answered from its OWN minted `locator.path` (byte-identical to the
+      // actor projection's `path`; C17 value-identity). The same RP3 integrity
+      // gate as `projectForActor`: a foreign-kind or malformed-locator ref is a
+      // LOUD synchronous throw (the loop routes it to D6's config-integrity
+      // lane, fail-closed, errand unmutated).
+      if (ref.kind !== "worktree") {
+        throw new Error(
+          `worktreeProvider: resolveLocalWorkingDirectory received a foreign-kind ref '${ref.kind}' (expected 'worktree')`,
+        );
+      }
+      if (!isWorktreeLocator(ref.locator)) {
+        throw new Error(
+          "worktreeProvider: resolveLocalWorkingDirectory received a worktree ref with a malformed locator",
+        );
+      }
+      return ref.locator.path;
     },
   };
 }

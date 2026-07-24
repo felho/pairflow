@@ -7,7 +7,9 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import type { RuntimeContextCompletion, RuntimeContextRef, RuntimeContextSpec } from "../domain/index.js";
 import type { RuntimeContextCompletionSink } from "../ports/runtimeContextProvider.js";
-import { createWorktreeProvider, enc } from "./worktreeProvider.js";
+import { enc } from "../runner/enc.js";
+import { TimerKnobError } from "../runner/spawn.js";
+import { createWorktreeProvider } from "./worktreeProvider.js";
 import type { WorktreeProviderOptions } from "./worktreeProvider.js";
 
 /**
@@ -341,24 +343,9 @@ describe("worktreeProvider — S: spec/config evaluation", () => {
 
 // ─────────────────────────────────────────────────────────────────────────
 describe("worktreeProvider — N: naming/identity (the enc scheme)", () => {
-  it("enc property-level: lowercase-stable, delimiters unexpressible, nonempty, code-unit injective", () => {
-    // (iv) enc of a nonempty id is nonempty.
-    expect(enc("a").length).toBeGreaterThan(0);
-    expect(enc("\uD800").length).toBeGreaterThan(0);
-    // all-lowercase, alphabet [a-z0-9_].
-    expect(enc("ABC/..--x")).toMatch(/^[a-z0-9_]*$/);
-    // (iii) `/`, `--`, `.` unexpressible.
-    const out = enc("a/b--c.d");
-    expect(out).not.toContain("/");
-    expect(out).not.toContain("--");
-    expect(out).not.toContain(".");
-    // (i) case-fold injectivity by construction: 'a' vs 'A' distinct.
-    expect(enc("a")).not.toBe(enc("A"));
-    // ILL-FORMED-Unicode injectivity: lone surrogate vs U+FFFD distinct.
-    expect(enc("\uD800")).toBe("_d800");
-    expect(enc("�")).toBe("_fffd");
-    expect(enc("\uD800")).not.toBe(enc("�"));
-  });
+  // The pure `enc` property lanes RELOCATED to runner/enc.test.ts with the
+  // function (packet ch9-p3b, T1); the provider suite keeps its COMPOSED-
+  // identity lanes below — enc exercised THROUGH real provisioning.
 
   it("hostile ids never appear RAW in the created path/branch (path-safe, ref-safe)", async () => {
     const root = tempRoot();
@@ -512,8 +499,8 @@ describe("worktreeProvider — M: git mechanics", () => {
       const hang = writeScript(root, "hang.sh", "#!/bin/sh\nsleep 30\n");
       const { completion } = await provisionOnce(worktreeSpec(repo), {
         gitBinary: hang,
-        timeoutMs: 100,
-        graceMs: 100,
+        timeoutMs: 1000,
+        graceMs: 1000,
       });
       expect(completion.kind).toBe("failed");
       if (completion.kind !== "failed") return;
@@ -530,8 +517,8 @@ describe("worktreeProvider — M: git mechanics", () => {
       const stubborn = writeScript(root, "stubborn.sh", '#!/bin/sh\ntrap "" TERM\nsleep 30\n');
       const { completion } = await provisionOnce(worktreeSpec(repo), {
         gitBinary: stubborn,
-        timeoutMs: 100,
-        graceMs: 100,
+        timeoutMs: 1000,
+        graceMs: 1000,
       });
       expect(completion.kind).toBe("failed");
       if (completion.kind !== "failed") return;
@@ -730,8 +717,8 @@ describe("worktreeProvider — D: the failure grid site×shape cells", () => {
       const fake = writeSiteAwareGit(root, "br-timeout.sh", "base-resolution", "timeout");
       const { completion } = await provisionOnce(worktreeSpec(repo), {
         gitBinary: fake,
-        timeoutMs: 150,
-        graceMs: 150,
+        timeoutMs: 1000,
+        graceMs: 1000,
       });
       expect(completion.kind).toBe("failed");
       if (completion.kind !== "failed") return;
@@ -758,8 +745,8 @@ describe("worktreeProvider — D: the failure grid site×shape cells", () => {
       const fake = writeSiteAwareGit(root, "wt-timeout.sh", "worktree-add", "timeout");
       const { completion } = await provisionOnce(worktreeSpec(repo), {
         gitBinary: fake,
-        timeoutMs: 150,
-        graceMs: 150,
+        timeoutMs: 1000,
+        graceMs: 1000,
       });
       expect(completion.kind).toBe("failed");
       if (completion.kind !== "failed") return;
@@ -928,5 +915,46 @@ describe("worktreeProvider — F: identity/ref/detail", () => {
     if (completion.kind !== "failed") return;
     expect(completion.detail).toBe(tail);
     expect(completion.detail).not.toContain("HEADMARKER");
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// SD2/H1 (packet ch9-p3b): the fold-in's construction-time validator (the
+// shared seam validator driven at THIS consumer factory) + the
+// LocalExecutionCapability facet.
+describe("worktreeProvider — SD2/H1 the seam fold-in", () => {
+  it("the shared timer-knob validator throws at construction on an invalid timeoutMs/graceMs", () => {
+    expect(() => createWorktreeProvider({ timeoutMs: 500 })).toThrow(TimerKnobError);
+    expect(() => createWorktreeProvider({ graceMs: Number.NaN })).toThrow(TimerKnobError);
+    expect(() => createWorktreeProvider({ timeoutMs: 2 ** 31 })).toThrow(TimerKnobError);
+  });
+
+  it("valid knobs (and the defaults) construct without throwing", () => {
+    expect(() => createWorktreeProvider()).not.toThrow();
+    expect(() => createWorktreeProvider({ timeoutMs: 1000, graceMs: 1000 })).not.toThrow();
+  });
+
+  it("resolveLocalWorkingDirectory returns the ref's own locator.path (byte-identical to the actor projection's path)", async () => {
+    const root = tempRoot();
+    const repo = makeRepo(root, "host");
+    const provider = createWorktreeProvider();
+    const rec = recorder();
+    provider.bindCompletionSink(rec.sink);
+    await provider.provision("i1", "r1", worktreeSpec(repo));
+    const completion = rec.completions[0]?.completion;
+    expect(completion?.kind).toBe("ready");
+    if (completion?.kind !== "ready") return;
+    const cwd = provider.resolveLocalWorkingDirectory(completion.ref);
+    const projection = provider.projectForActor(completion.ref) as unknown as { path: string };
+    expect(cwd).toBe((completion.ref.locator as { path: string }).path);
+    expect(cwd).toBe(projection.path);
+  });
+
+  it("resolveLocalWorkingDirectory throws LOUD on a foreign-kind or malformed ref (D6 config-integrity)", () => {
+    const provider = createWorktreeProvider();
+    expect(() => provider.resolveLocalWorkingDirectory({ kind: "container", locator: {} })).toThrow();
+    expect(() =>
+      provider.resolveLocalWorkingDirectory({ kind: "worktree", locator: { path: 5 } }),
+    ).toThrow();
   });
 });

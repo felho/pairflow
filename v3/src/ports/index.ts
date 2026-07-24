@@ -24,6 +24,7 @@ export type {
 } from "./store.js";
 export type { DefinitionStore } from "./definition.js";
 export type {
+  LocalExecutionCapability,
   ProviderRegistry,
   RuntimeContextCompletionSink,
   RuntimeContextProvider,
@@ -43,11 +44,13 @@ export type {
   ErrandEdge,
   ErrandState,
   IngressDetailToken,
+  SpawnOutcome,
 } from "./diagnostics.js";
 export {
   ATTEMPT_SCOPED_ERRAND_EDGES,
   ERRAND_BIRTH_EDGES,
   ERRAND_EDGES,
   ERRAND_STATES,
+  SPAWN_OUTCOMES,
 } from "./diagnostics.js";
 export type { AttemptExecutor, AttemptExecutorInput, AttemptResult } from "./delivery.js";

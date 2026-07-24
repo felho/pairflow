@@ -42,8 +42,14 @@ function sha256Hex(input: string): string {
  * dropped undefined property, symbol key, or non-plain object (Date, Map,
  * Set, class instance — all of which Object.entries flattens toward {})
  * would break that promise quietly.
+ *
+ * PUBLIC EXPORT (packet ch9-p3b, H2): the ONE canonicalization authority in
+ * the tree. The actor adapter materializes the dispatched ContextPacket as
+ * canonical `packet.json` through exactly this serializer, so the handoff bytes
+ * are byte-identical to the material the op-id identity digests. A new name on
+ * the existing implementation — internals untouched.
  */
-function canonicalize(value: unknown): string {
+export function canonicalize(value: unknown): string {
   if (value === null) {
     return "null";
   }

@@ -16,6 +16,17 @@ export interface AttemptExecutorInput {
   /** The live session name recorded in the same B1 transaction (opaque here;
    * the C23 derivation binds at ch9-P3b/P4). */
   readonly sessionName: string;
+  /**
+   * The loop-resolved local working directory (packet ch9-p3b, H1 — flag F5):
+   * PRESENT iff the run has a runtime context (a `ready(ref)` run, resolved
+   * from the provider's `LocalExecutionCapability` at intent-derivation time);
+   * ABSENT on the `"none"` lane, where the adapter derives C17's per-run
+   * subdirectory under its composition-configured `default_cwd`. The scripted
+   * executor's recorded input widens compile-only. Reviewed here per P3a-F2's
+   * never-silent spirit (F2's letter anticipated OUTPUT-union growth; this is
+   * the input triple's reviewed sibling).
+   */
+  readonly cwd?: string;
 }
 
 /**
