@@ -4444,3 +4444,48 @@ final CLEAN.
   new-module-only sweeps / retire the sweep and keep only the
   receipt-backed probe lane / promote survivors into a triaged
   boundary checklist.
+
+- 2026-07-24 · ch9-P3a PACKET FORM vs HUMAN REVIEWABILITY (user-raised
+  at the P3a pre-approval; boundary-review topic — capture, don't
+  solve): the packet file is DELIBERATELY optimized as the builder's
+  one-root context (full projection, verbatim quotes, exhaustive
+  matrices/inventories — ~74 KB at P3a), and exactly that optimization
+  makes the HUMAN approve hard: the flags and genuine decision points
+  drown in mechanically-projected material the human cannot usefully
+  review (that layer rides on model capability + the panel/arm
+  machinery, not on human reading). Boundary question: a structure
+  with a CLEAR SEPARATION between the human-facing decision surface
+  (claim, flags, new-decisions, narrowings, risk records — the
+  approve's actual object) and the builder-facing projection body
+  (operative material, matrices, grids, inventories) — same file with
+  a layered layout, or a split artifact — WITHOUT breaking
+  self-containment (§5.3) or the machine blocks' single-home rules.
+  No change owed before the boundary; the P3a/P3b packets stay on the
+  current template.
+
+- 2026-07-24 · ch9-P3a ARM GATE-1 TIMEOUT (operational, user-caught
+  live): the first gate-1 leg ran with the ReviewPacket §6 letter's
+  doc-review timeout (600 s) and died on the runner's own kill at
+  600 s (exit 5, guards clean, work lost) — the THIRD 600s-leg death
+  (ch9-P2 logged two before the 1200 s mode converged). The §6
+  letter still says 10 min for approve-gate/doc-review runs; the
+  retry ran at 1200 s. Boundary question: extend the 1200 s default
+  from build-close to ALL arm legs (the 600 s tier has now killed
+  three legs and saved nothing).
+
+- 2026-07-24 · ch9-P3a BOUNDARY NOTES (user-raised during the approve
+  rounds; capture, don't fix): (1) MULTI-SITE RUNNER PLANES — the
+  errand ledger is one-file-per-runner-plane (today: one host, one
+  plane); a cloud/headless runner site cannot share a host-local
+  SQLite file, so the multi-site future needs a run-ownership
+  partition rule (the run's runtime-context provider and its delivery
+  site travel together — the omnigent model) with the C13 totality
+  invariant scoped per owned-run set; correctness is already
+  topology-independent (claims scheduling-only, kernel op_id dedup).
+  The cloud-provider Absent's companion question. (2) PERSISTENT
+  ACTOR SESSIONS (omnigent parity) — C23's sessions are
+  per-activation/ephemeral; a warm multi-dispatch conversation
+  session (codex app-server / SDK-stdio class adapters) would need
+  contract successors (session lifecycle, liveness, possibly
+  ActorSessionRef) behind the SAME AttemptExecutor seam; the K1
+  union and the ledger's opaque session_name column do not block it.
