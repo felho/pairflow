@@ -6,6 +6,12 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     include: ["src/**/*.test.ts"],
-    exclude: ["**/node_modules/**", "src/cli/cli.test.ts", "src/cli/dev/dev.test.ts"],
+    exclude: [
+      "**/node_modules/**",
+      "src/cli/cli.test.ts",
+      "src/cli/dev/dev.test.ts",
+      "src/cli/journey.test.ts",
+      "src/cli/worktreeJourney.test.ts",
+    ],
   },
 });
