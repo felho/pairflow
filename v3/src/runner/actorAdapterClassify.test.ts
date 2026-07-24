@@ -34,8 +34,10 @@ function result(cls: Extract<AttemptResult, { kind: "infra_failure" }>["class"])
 
 describe("classifyConclusion — the CL1 total precedence (pure, member-by-member)", () => {
   // Each row: a human name, the seam conclusion, the (row-4-only) record, and
-  // the EXACT expected decision. `record` is null wherever the precedence does
-  // not consult it (rows 1-3), mirroring the adapter's own conditional read.
+  // the EXACT expected decision. `record` is null on the rows the real caller
+  // leaves unread (it passes null off the exit-0 lane) — but the gate-2 re-check
+  // group below deliberately DRIVES rows 2-3 with a NON-NULL record to prove the
+  // earlier row concludes and the record is never consulted.
   const CASES: readonly {
     name: string;
     conclusion: SpawnConclusion;
@@ -64,6 +66,23 @@ describe("classifyConclusion — the CL1 total precedence (pure, member-by-membe
     // Row 4 — recorded ACTOR EXIT 0: the EM lanes, NEVER reclassified by a late timer (P6h).
     { name: "row4 actor-0: unflagged → emit", conclusion: exit({ code: 0, timedOut: false }), record: rec({ exitCode: 0 }), expected: { kind: "emit" } },
     { name: "row4 actor-0: FLAGGED → emit (P6h: completed work never reclassified)", conclusion: exit({ code: 0, timedOut: true }), record: rec({ exitCode: 0 }), expected: { kind: "emit" } },
+    // ── ch9-P3b gate-2 re-check: EARLIER-ROW precedence with a NON-NULL record ──
+    // Rows 2-3 conclude BEFORE the record is read; a valid-looking record present
+    // here must stay INERT. These drive the flag×record combinations the real
+    // caller never produces (off the exit-0 lane it passes null), so the row-2/
+    // row-3 mutants fall: a condition forced false OR a block emptied would fall
+    // THROUGH to row 4, read the record, and mis-classify (emit / foreign_kill /
+    // nonzero_exit — each ≠ the earlier row's member on both `timedOut` values).
+    // Row 2 (wrapper SIGNAL, code null) — record inert.
+    { name: "gate2 row2 signal + exit-0 record, UNFLAGGED → foreign_kill (record inert)", conclusion: exit({ code: null, signal: "SIGKILL", timedOut: false }), record: rec({ exitCode: 0 }), expected: { kind: "result", result: result("foreign_kill") } },
+    { name: "gate2 row2 signal + exit-0 record, FLAGGED → own_timeout (record inert)", conclusion: exit({ code: null, signal: "SIGKILL", timedOut: true }), record: rec({ exitCode: 0 }), expected: { kind: "result", result: result("own_timeout") } },
+    { name: "gate2 row2 signal + nonzero record, FLAGGED → own_timeout (record inert)", conclusion: exit({ code: null, signal: "SIGKILL", timedOut: true }), record: rec({ exitCode: 9 }), expected: { kind: "result", result: result("own_timeout") } },
+    // Row 3 (wrapper NONZERO exit) — record inert. exit-0 record would fall to
+    // emit; signal record to foreign_kill; nonzero record to nonzero_exit.
+    { name: "gate2 row3 nonzero + exit-0 record, UNFLAGGED → spawn_infra (record inert)", conclusion: exit({ code: 7, timedOut: false }), record: rec({ exitCode: 0 }), expected: { kind: "result", result: result("spawn_infra") } },
+    { name: "gate2 row3 nonzero + exit-0 record, FLAGGED → own_timeout (record inert)", conclusion: exit({ code: 7, timedOut: true }), record: rec({ exitCode: 0 }), expected: { kind: "result", result: result("own_timeout") } },
+    { name: "gate2 row3 nonzero + signal record, UNFLAGGED → spawn_infra (record inert)", conclusion: exit({ code: 7, timedOut: false }), record: rec({ exitCode: null, signal: "SIGTERM", termForwarded: false }), expected: { kind: "result", result: result("spawn_infra") } },
+    { name: "gate2 row3 nonzero + nonzero record, FLAGGED → own_timeout (record inert)", conclusion: exit({ code: 7, timedOut: true }), record: rec({ exitCode: 4 }), expected: { kind: "result", result: result("own_timeout") } },
   ];
 
   it.each(CASES)("$name", ({ conclusion, record, expected }) => {
@@ -124,6 +143,15 @@ describe("parseResult — RS2 fail-closed keyset + echo (pure)", () => {
     expect(p("f8.json", JSON.stringify({ attemptId: "att-1", exitCode: 0, signal: 5, termForwarded: false }))).toBeNull();
   });
 
+  it("JSON primitives (null, string, number, boolean) are each fail-closed null — valid JSON but not a plain object, NEVER a throw", () => {
+    const root = tempRoot();
+    const p = (n: string, c: string) => parseResult(planted(root, n, c), "att-1");
+    expect(p("p-null.json", "null")).toBeNull();
+    expect(p("p-str.json", '"a string"')).toBeNull();
+    expect(p("p-num.json", "42")).toBeNull();
+    expect(p("p-bool.json", "true")).toBeNull();
+  });
+
   it("a valid signal record parses (exactly-one-of holds)", () => {
     const root = tempRoot();
     const p = planted(root, "sig.json", JSON.stringify({ attemptId: "att-1", exitCode: null, signal: "SIGKILL", termForwarded: true }));
@@ -143,5 +171,14 @@ describe("parseEmit — EM1 fail-closed schema (pure)", () => {
     expect(w("unk.json", JSON.stringify({ type: "PASS", payload: {}, extra: 1 }))).toBeNull();
     expect(w("arr.json", "[1,2]")).toBeNull();
     expect(w("badjson.json", "{not json")).toBeNull();
+  });
+
+  it("JSON primitives (null, string, number, boolean) are each fail-closed null — valid JSON but not a plain object, NEVER a throw", () => {
+    const root = tempRoot();
+    const w = (n: string, c: string) => parseEmit(planted(root, n, c));
+    expect(w("p-null.json", "null")).toBeNull();
+    expect(w("p-str.json", '"x"')).toBeNull();
+    expect(w("p-num.json", "7")).toBeNull();
+    expect(w("p-bool.json", "false")).toBeNull();
   });
 });

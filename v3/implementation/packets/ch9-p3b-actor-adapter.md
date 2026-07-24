@@ -1140,7 +1140,7 @@ change under the ratified rows; no canonical-row-forcing case arose.
    `packet.json`) and the EXACT actor argv (`[execPath, stub, mode,
    dump]` — the mapped argv verbatim, in order). The DG iff walk is
    parameterized over EVERY sibling `DiagnosticKind` (a valid base of
-   each kind reads clean; `+spawnOutcome`/`+spawnDetail` each → 
+   each kind reads clean; `+spawnOutcome`/`+spawnDetail` each →
    `read_failed`). The swallowing-sink lane now also asserts the attempt
    directory holds EXACTLY the three exchange files (no diag artifact).
 4. **(rolled into 2)** — the split file is the Stryker-coverage home for
@@ -1169,7 +1169,7 @@ change under the ratified rows; no canonical-row-forcing case arose.
 Test delta (1592 → 1619, +27): `actorAdapterClassify.test.ts` NEW (21
 — the CL1 matrix + the relocated parser lanes); `actorAdapter.test.ts`
 net (the pure parser describe RELOCATED out; the finding-1 negative, the
-wider-allowlist env lane added; the env/argv lane rewritten); 
+wider-allowlist env lane added; the env/argv lane rewritten);
 `sqliteDiagStore.test.ts` +9 (the sibling-kind iff walk);
 `ctBRealRunner.test.ts` unchanged count (barrier/lease/bookkeeping
 hardened in place).
@@ -1192,6 +1192,8 @@ All six probes observed RED with byte-verified restores — the arm's
 "plausibly red" lanes are now OBSERVED red. The `af-classify` probe
 runs against `actorAdapterClassify.test.ts` (the NON-excluded file),
 confirming the split logic is Stryker-reachable.
+
+Re-check fold (gate-2, tests-only + whitespace; a delegated leg on the orchestrator's instruction): the CL1 matrix gained EARLIER-ROW precedence members that drive rows 2-3 with a NON-NULL record (the record must stay inert), and the parser suites gained JSON-primitive fail-closed negatives (`null`/string/number/boolean) — three further residual mutants (row-3 condition forced false, row-3 block emptied, `isPlainObject → true`) OBSERVED RED via `probe_runner.py` (receipts `rc-row3-cond`, `rc-row3-block`, `rc-plain`).
 
 ```json
 {
