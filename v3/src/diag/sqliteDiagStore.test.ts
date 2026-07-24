@@ -1255,3 +1255,44 @@ describe("spawn_outcome + evidence-edge rows — every new presence iff violated
     handle.close();
   });
 });
+
+// A VALID representative body of EVERY sibling kind (guards the iff walk against
+// vacuity — each base reads clean; injecting spawnOutcome/spawnDetail then flips
+// it to read_failed). This parameterizes the spawn_outcome field iffs over the
+// COMPLETE sibling-kind set, not just the two hand-picked ones (finding 3).
+const SIBLING_VALID_BODIES: readonly { kind: string; body: Record<string, unknown> }[] = [
+  { kind: "rejected (kernel, post-digest)", body: { source: "kernel", kind: "rejected", reason: "not_authorized", instanceId: "i", opId: "o", actorId: "a", type: "t", payloadDigest: "d" } },
+  { kind: "stale", body: { source: "kernel", kind: "stale", instanceId: "i", opId: "o", actorId: "a", type: "t", payloadDigest: "d", expectedVersion: 1, currentVersion: 2 } },
+  { kind: "duplicate", body: { source: "kernel", kind: "duplicate", instanceId: "i", opId: "o", actorId: "a", type: "t", payloadDigest: "d" } },
+  { kind: "cas_restart", body: { source: "kernel", kind: "cas_restart", instanceId: "i", opId: "o", actorId: "a", type: "t", payloadDigest: "d" } },
+  { kind: "internal_failure", body: { source: "kernel", kind: "internal_failure", instanceId: "i", opId: "o", actorId: "a", type: "t", error: { name: "E", message: "m" } } },
+  { kind: "provision_ready", body: { source: "runner", kind: "provision_ready", instanceId: "i", requestId: "r" } },
+  { kind: "provision_failed", body: { source: "runner", kind: "provision_failed", instanceId: "i", requestId: "r", providerReason: "x" } },
+  { kind: "errand_transition", body: { source: "runner", kind: "errand_transition", instanceId: "i", contextPacketId: "i@v2", errandEdge: "create", errandTo: "pending" } },
+  { kind: "ingress rejected", body: { source: "ingress", kind: "rejected", reason: "invalid_shape", detail: "not_plain_object" } },
+];
+
+describe("spawn_outcome field iffs — parameterized over EVERY sibling kind (finding 3)", () => {
+  it.each(SIBLING_VALID_BODIES)(
+    "$kind: base reads clean; +spawnOutcome and +spawnDetail each → read_failed",
+    async ({ body }) => {
+      // (a) the base is a VALID projection (a wrong base would make the iff vacuous).
+      const clean = openDiagStore(":memory:", createControlledClock(0));
+      clean.sink.emit(body as unknown as DiagnosticEventBody);
+      expect((await clean.reader.getGlobalDiagnostics(0)).length).toBe(1);
+      clean.close();
+      // (b) spawnOutcome present on a NON-spawn_outcome kind → read_failed (the iff).
+      const p1 = tempDbPath();
+      const h1 = openDiagStore(p1, createControlledClock(0));
+      insertRaw(p1, JSON.stringify({ ...body, spawnOutcome: "submitted" }), "i");
+      expect(await reasonOf(h1.reader.getGlobalDiagnostics(0))).toBe("read_failed");
+      h1.close();
+      // (c) spawnDetail present on a NON-spawn_outcome kind → read_failed.
+      const p2 = tempDbPath();
+      const h2 = openDiagStore(p2, createControlledClock(0));
+      insertRaw(p2, JSON.stringify({ ...body, spawnDetail: "tail" }), "i");
+      expect(await reasonOf(h2.reader.getGlobalDiagnostics(0))).toBe("read_failed");
+      h2.close();
+    },
+  );
+});

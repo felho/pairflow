@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -8,21 +8,16 @@ import type { ContextPacket, DispatchIntent, Outcome } from "../domain/index.js"
 import { canonicalize, deriveActorEmitOpId } from "../emit/index.js";
 import type { AttemptExecutorInput } from "../ports/delivery.js";
 import type { DiagnosticEventBody } from "../ports/diagnostics.js";
-import {
-  createActorAdapter,
-  PAIRFLOW_EMIT,
-  PAIRFLOW_PACKET,
-  parseEmit,
-  parseResult,
-} from "./actorAdapter.js";
+import { createActorAdapter, PAIRFLOW_EMIT, PAIRFLOW_PACKET } from "./actorAdapter.js";
 import { enc } from "./enc.js";
 
 /**
  * The real actor adapter families (packet ch9-p3b, H/AV/RS/CL/EM/DG) — driven
  * with REAL wrapper spawns of a deterministic stub actor (integration-grain BY
- * DESIGN) + a scripted ingress for the submit lanes. The RS2 keyset/foreign
- * result lanes (unreachable through the trivial real wrapper) are unit-driven
- * against the exported fail-closed parser.
+ * DESIGN) + a scripted ingress for the submit lanes. The PURE fail-closed
+ * parsers (`parseResult`/`parseEmit`) and the CL1 precedence classifier
+ * (`classifyConclusion`) are unit-driven — SPLIT into `actorAdapterClassify.
+ * test.ts` (a NON-subprocess file, so Stryker covers those mutants).
  */
 
 const roots: string[] = [];
@@ -44,7 +39,9 @@ const STUB = [
   "const mode = process.argv[2];",
   "const a3 = process.argv[3];",
   "const a4 = process.argv[4];",
-  "const emitPath = process.env.PAIRFLOW_EMIT;",
+  // AV2 (finding 7): reference the EXPORTED env-name constants — never a raw
+  // string literal — so an in-repo rename stays a one-line change.
+  `const emitPath = process.env.${PAIRFLOW_EMIT};`,
   'if (mode === "raw") {',
   '  if (a3 !== "__none__") fs.writeFileSync(emitPath, a3);',
   "  process.exit(a4 === undefined ? 0 : Number(a4));",
@@ -67,11 +64,13 @@ const STUB = [
   "  fs.mkdirSync(emitPath);",
   "  process.exit(0);",
   '} else if (mode === "dump-env") {',
-  "  fs.writeFileSync(a3, JSON.stringify(process.env));",
+  // Dump BOTH the full env and the full argv (finding 3/6): the exact env
+  // key/value map AND the exact actor argv order are asserted from this.
+  "  fs.writeFileSync(a3, JSON.stringify({ env: process.env, argv: process.argv }));",
   '  fs.writeFileSync(emitPath, JSON.stringify({ type: "PASS", payload: { note: "env" } }));',
   "  process.exit(0);",
   '} else if (mode === "dump-packet") {',
-  '  fs.writeFileSync(a3, fs.readFileSync(process.env.PAIRFLOW_PACKET, "utf8"));',
+  `  fs.writeFileSync(a3, fs.readFileSync(process.env.${PAIRFLOW_PACKET}, "utf8"));`,
   '  fs.writeFileSync(emitPath, JSON.stringify({ type: "PASS", payload: { note: "pkt" } }));',
   "  process.exit(0);",
   "} else {",
@@ -232,8 +231,26 @@ describe("actorAdapter — AV (argv mapping)", () => {
     expect(result).toEqual({ kind: "infra_failure", class: "spawn_infra" });
   });
 
-  it("PAIRFLOW_PACKET/PAIRFLOW_EMIT are injected with the attempt's absolute paths, alongside the allowlist and NOTHING else (both cwd lanes)", async () => {
-    // NONE lane.
+  // The ONLY substrate keys the OS injects regardless of the passed env object
+  // (macOS CoreFoundation) — excluded by EXACT name, never a prefix wildcard,
+  // so any OTHER unexpected key fails the complete-map compare (finding 6).
+  const OS_SUBSTRATE_KEYS: readonly string[] = ["__CF_USER_TEXT_ENCODING"];
+  function actorDump(dumpPath: string): { env: Record<string, string>; argv: string[] } {
+    return JSON.parse(readFileSync(dumpPath, "utf8")) as { env: Record<string, string>; argv: string[] };
+  }
+  /** The observed env minus ONLY the exact OS substrate keys — the COMPLETE
+   * remaining key/value map the adapter is responsible for. */
+  function adapterEnv(env: Record<string, string>): Record<string, string> {
+    const out: Record<string, string> = {};
+    for (const [k, v] of Object.entries(env)) {
+      if (!OS_SUBSTRATE_KEYS.includes(k)) out[k] = v;
+    }
+    return out;
+  }
+
+  it("PAIRFLOW_PACKET/PAIRFLOW_EMIT + the allowlist are the COMPLETE child env (key AND value), and the actor argv is the mapped argv verbatim — both cwd lanes", async () => {
+    const PATH = process.env.PATH ?? "";
+    // ── NONE lane ────────────────────────────────────────────────────────────
     const rootN = tempRoot();
     const stubN = writeStub(rootN);
     const dumpN = join(rootN, "env-none.json");
@@ -241,25 +258,24 @@ describe("actorAdapter — AV (argv mapping)", () => {
       mapper: mapTo(stubN, "dump-env", dumpN),
       ingress: ingressReturning({ kind: "committed", version: 3, intent: null }),
       defaultCwd: rootN,
-      envAllowlist: { PATH: process.env.PATH ?? "" },
+      envAllowlist: { PATH },
     });
     const cwdN = noneCwd(rootN);
     const dirN = attemptDirOf(cwdN);
-    const envN = JSON.parse(readFileSync(dumpN, "utf8")) as Record<string, string>;
-    expect(envN[PAIRFLOW_PACKET]).toBe(join(dirN, "packet.json"));
-    expect(envN[PAIRFLOW_EMIT]).toBe(join(dirN, "emit.json"));
-    // The adapter adds NOTHING beyond the allowlist + the two PAIRFLOW vars
-    // (the OS-injected `__CF_*` CoreFoundation key is a macOS substrate quirk,
-    // present for wrapper and actor alike — not an adapter addition).
-    expect(
-      Object.keys(envN)
-        .filter((k) => !k.startsWith("__CF"))
-        .sort(),
-    ).toEqual([PAIRFLOW_EMIT, PAIRFLOW_PACKET, "PATH"].sort());
-    // A forbidden host var is proven ABSENT (full env replacement).
-    expect(envN.HOME).toBeUndefined();
+    // Finding 3 (H4): the REALIZED filesystem paths exist (not just helper-derived).
+    expect(existsSync(dirN)).toBe(true);
+    expect(existsSync(join(dirN, "packet.json"))).toBe(true);
+    const dumpedN = actorDump(dumpN);
+    // Finding 6: the COMPLETE remaining key/value map — exact, nothing more.
+    expect(adapterEnv(dumpedN.env)).toEqual({
+      PATH,
+      [PAIRFLOW_PACKET]: join(dirN, "packet.json"),
+      [PAIRFLOW_EMIT]: join(dirN, "emit.json"),
+    });
+    // Finding 3: the actor argv is EXACTLY the mapped argv, in order.
+    expect(dumpedN.argv).toEqual([process.execPath, stubN, "dump-env", dumpN]);
 
-    // CONTEXT lane (explicit cwd).
+    // ── CONTEXT lane (explicit cwd) ──────────────────────────────────────────
     const rootC = tempRoot();
     const stubC = writeStub(rootC);
     const ctxCwd = tempRoot();
@@ -269,12 +285,39 @@ describe("actorAdapter — AV (argv mapping)", () => {
       ingress: ingressReturning({ kind: "committed", version: 3, intent: null }),
       defaultCwd: rootC,
       cwd: ctxCwd,
-      envAllowlist: { PATH: process.env.PATH ?? "" },
+      envAllowlist: { PATH },
     });
     const dirC = attemptDirOf(ctxCwd);
-    const envC = JSON.parse(readFileSync(dumpC, "utf8")) as Record<string, string>;
-    expect(envC[PAIRFLOW_PACKET]).toBe(join(dirC, "packet.json"));
-    expect(envC[PAIRFLOW_EMIT]).toBe(join(dirC, "emit.json"));
+    expect(existsSync(join(dirC, "packet.json"))).toBe(true);
+    const dumpedC = actorDump(dumpC);
+    expect(adapterEnv(dumpedC.env)).toEqual({
+      PATH,
+      [PAIRFLOW_PACKET]: join(dirC, "packet.json"),
+      [PAIRFLOW_EMIT]: join(dirC, "emit.json"),
+    });
+    expect(dumpedC.argv).toEqual([process.execPath, stubC, "dump-env", dumpC]);
+  });
+
+  it("a wider allowlist flows through COMPLETE (key AND value) — a custom var reaches the actor, a forbidden host var stays absent", async () => {
+    const root = tempRoot();
+    const stub = writeStub(root);
+    const dump = join(root, "env-wide.json");
+    const PATH = process.env.PATH ?? "";
+    await run({
+      mapper: mapTo(stub, "dump-env", dump),
+      ingress: ingressReturning({ kind: "committed", version: 3, intent: null }),
+      defaultCwd: root,
+      envAllowlist: { PATH, HOME: "/composition/home", API_TOKEN: "sk-xyz" },
+    });
+    const dir = attemptDirOf(noneCwd(root));
+    const dumped = actorDump(dump);
+    expect(adapterEnv(dumped.env)).toEqual({
+      PATH,
+      HOME: "/composition/home", // the composition's value, NOT the host's
+      API_TOKEN: "sk-xyz",
+      [PAIRFLOW_PACKET]: join(dir, "packet.json"),
+      [PAIRFLOW_EMIT]: join(dir, "emit.json"),
+    });
   });
 });
 
@@ -316,46 +359,6 @@ describe("actorAdapter — H (handoff)", () => {
     const badCwd = join(filePath, "under");
     const result = await run({ mapper: mapTo(stub, "emit", "ok"), defaultCwd: root, cwd: badCwd });
     expect(result).toEqual({ kind: "infra_failure", class: "spawn_infra" });
-  });
-});
-
-describe("actorAdapter — RS (result seam, parser fail-closed)", () => {
-  const dir = () => tempRoot();
-  function planted(root: string, name: string, contents: string): string {
-    const p = join(root, name);
-    writeFileSync(p, contents);
-    return p;
-  }
-
-  it("a valid result echoing the attempt id parses; a FOREIGN attemptId is rejected (fail-closed)", () => {
-    const root = dir();
-    const ok = planted(root, "ok.json", JSON.stringify({ attemptId: "att-1", exitCode: 0, signal: null, termForwarded: false }));
-    expect(parseResult(ok, "att-1")).toEqual({ attemptId: "att-1", exitCode: 0, signal: null, termForwarded: false });
-    expect(parseResult(ok, "att-OTHER")).toBeNull();
-  });
-
-  it("missing and unparseable files are null", () => {
-    const root = dir();
-    expect(parseResult(join(root, "nope.json"), "att-1")).toBeNull();
-    const bad = planted(root, "bad.json", "{not json");
-    expect(parseResult(bad, "att-1")).toBeNull();
-  });
-
-  it("keyset-violation lanes are null: non-integer exitCode, -0, both-null, both-non-null, extra key", () => {
-    const root = dir();
-    const p = (n: string, c: string) => parseResult(planted(root, n, c), "att-1");
-    expect(p("f1.json", JSON.stringify({ attemptId: "att-1", exitCode: 1.5, signal: null, termForwarded: false }))).toBeNull();
-    expect(p("f2.json", '{"attemptId":"att-1","exitCode":-0,"signal":null,"termForwarded":false}')).toBeNull();
-    expect(p("f3.json", JSON.stringify({ attemptId: "att-1", exitCode: null, signal: null, termForwarded: false }))).toBeNull();
-    expect(p("f4.json", JSON.stringify({ attemptId: "att-1", exitCode: 0, signal: "SIGTERM", termForwarded: false }))).toBeNull();
-    expect(p("f5.json", JSON.stringify({ attemptId: "att-1", exitCode: 0, signal: null, termForwarded: false, extra: 1 }))).toBeNull();
-    expect(p("f6.json", JSON.stringify({ attemptId: "att-1", exitCode: 0, signal: null, termForwarded: "no" }))).toBeNull();
-  });
-
-  it("a valid signal record parses (exactly-one-of holds)", () => {
-    const root = dir();
-    const p = planted(root, "sig.json", JSON.stringify({ attemptId: "att-1", exitCode: null, signal: "SIGKILL", termForwarded: true }));
-    expect(parseResult(p, "att-1")).toEqual({ attemptId: "att-1", exitCode: null, signal: "SIGKILL", termForwarded: true });
   });
 });
 
@@ -520,20 +523,6 @@ describe("actorAdapter — EM (emit capture + submission)", () => {
       /sync kernel throw/,
     );
   });
-
-  it("parseEmit unit lanes: valid parses; missing/empty-type/missing-payload/non-canonicalizable are null", () => {
-    const root = tempRoot();
-    const w = (n: string, c: string) => {
-      const p = join(root, n);
-      writeFileSync(p, c);
-      return parseEmit(p);
-    };
-    expect(w("ok.json", JSON.stringify({ type: "PASS", payload: { a: 1 } }))).toEqual({ type: "PASS", payload: { a: 1 } });
-    expect(parseEmit(join(root, "gone.json"))).toBeNull();
-    expect(w("empty.json", JSON.stringify({ type: "", payload: {} }))).toBeNull();
-    expect(w("nopl.json", JSON.stringify({ type: "PASS" }))).toBeNull();
-    expect(w("nc.json", '{"type":"PASS","payload":-0}')).toBeNull();
-  });
 });
 
 describe("actorAdapter — DG (observability)", () => {
@@ -588,7 +577,7 @@ describe("actorAdapter — DG (observability)", () => {
     expect(diag.events[0]).toMatchObject({ kind: "spawn_outcome", spawnOutcome: "spawn_infra" });
   });
 
-  it("a SWALLOWING sink (fail-open per the port) changes no conclusion", async () => {
+  it("a SWALLOWING sink (fail-open per the port) changes no conclusion AND no attempt-directory artifact (DG1's exact boundary)", async () => {
     const root = tempRoot();
     const stub = writeStub(root);
     // A VALID fail-open sink: it internally hits a fault and SWALLOWS it (the
@@ -609,6 +598,11 @@ describe("actorAdapter — DG (observability)", () => {
       diag: swallowingSink,
     });
     expect(result).toEqual({ kind: "submitted", outcome: { kind: "committed", version: 3, intent: null } });
+    // DG1: the sink writes NOTHING into the attempt directory — it holds EXACTLY
+    // the three exchange files (the diag store's own file is the sink's normal
+    // write surface, never an attempt-directory artifact).
+    const dir = attemptDirOf(noneCwd(root));
+    expect(readdirSync(dir).sort()).toEqual(["emit.json", "packet.json", "result.json"]);
   });
 
   it("spawnDetail carries a captured-stderr tail bounded by the 2000-code-unit cap", async () => {
@@ -639,5 +633,16 @@ describe("actorAdapter — construction knob validation (the shared validator, T
       createActorAdapter(deps, { defaultCwd: root, graceMs: 2_000_000_000, backstopMarginMs: 2_000_000_000 }),
     ).toThrow();
     expect(() => createActorAdapter(deps, { defaultCwd: root })).not.toThrow();
+  });
+
+  it("REJECTS a non-absolute defaultCwd at construction (finding 1 — the AV2 relative-path breach)", () => {
+    const deps = { ingress: neverIngress, argvMapper: () => null, diag: recordingDiag().sink };
+    // A relative defaultCwd yields relative PAIRFLOW_* paths the child resolves
+    // from its OWN cwd — a config-integrity fault, fail-closed LOUD.
+    expect(() => createActorAdapter(deps, { defaultCwd: "relative/scratch" })).toThrow(/absolute/i);
+    expect(() => createActorAdapter(deps, { defaultCwd: "./also-relative" })).toThrow(/absolute/i);
+    expect(() => createActorAdapter(deps, { defaultCwd: "" })).toThrow(/absolute/i);
+    // An absolute path passes (the tempRoot lanes above already exercise this).
+    expect(() => createActorAdapter(deps, { defaultCwd: tempRoot() })).not.toThrow();
   });
 });

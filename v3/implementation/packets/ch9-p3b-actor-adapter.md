@@ -631,6 +631,10 @@ before handing back.
     grace escalation — real children).
   - `v3/src/runner/actorAdapter.test.ts` — NEW: H/AV/RS/CL/EM/DG
     lanes (real wrapper spawns; scripted ingress for submit lanes).
+  - `v3/src/runner/actorAdapterClassify.test.ts` — NEW (gate-2
+    aftermath): the PURE `classifyConclusion` CL1 matrix + the RS2/EM1
+    parsers, NO subprocess — so Stryker covers the pure logic (the
+    split OUT of the subprocess-excluded real-spawn file).
   - `v3/src/runner/deliveryLoop.test.ts` — H5/F10: the
     reclaim × sibling-commit race lanes on both start kinds (stale
     errand + advanced instance → confirmed-by-evidence, no spawn;
@@ -684,6 +688,7 @@ before handing back.
       "v3/src/runner/attemptWrapper.mjs",
       "v3/src/runner/actorAdapter.ts",
       "v3/src/runner/actorAdapter.test.ts",
+      "v3/src/runner/actorAdapterClassify.test.ts",
       "v3/src/runner/enc.ts",
       "v3/src/runner/enc.test.ts",
       "v3/src/runner/index.ts",
@@ -1097,6 +1102,96 @@ Spec ambiguity: none required invention — every canonical row (SD/H/AV/
 RS/CL/EM/DG/T/U/CB) was realized as written; the build-grain decisions
 above are host-convention/representation choices under the ratified rows,
 not semantic reinterpretations.
+
+### Build-close aftermath (gate-2 folds)
+
+Authorship: the code + test edits are a DELEGATED build leg executed on
+the orchestrator's PER-FINDING instruction (the arm raised the 7
+gate-2 findings on commit `18870eb5`; this leg folded them). No
+canonical row was edited — every fold lands as a product/test-evidence
+change under the ratified rows; no canonical-row-forcing case arose.
+
+1. **PRODUCT (finding 1, P2) — `actorAdapter.ts` rejects a
+   non-absolute `defaultCwd` at construction.** A RELATIVE `defaultCwd`
+   produced relative none-lane `cwd`, hence relative
+   `PAIRFLOW_PACKET`/`PAIRFLOW_EMIT` paths the child would resolve from
+   its OWN (changed) cwd — an AV2 breach. Fixed with a config-integrity
+   throw alongside the timer-knob validation (`isAbsolute` gate) + a
+   negative test (relative / `./` / empty all throw; absolute passes).
+2. **TEST (findings 2 + 4, P2) — the CL1 flag×record precedence is now
+   able-to-fail ROW-BY-ROW, under Stryker.** The pure conclusion
+   classifier is SPLIT out of `execute()` as an exported
+   `classifyConclusion(conclusion, record)`; a new NON-subprocess file
+   `actorAdapterClassify.test.ts` walks EVERY CL1 row × `timedOut` ×
+   record shape to its exact K1 member — including the trivial-wrapper-
+   unreachable combinations (a FLAGGED natural exit-0 → EM lanes, P6h;
+   a flagged nonzero → `nonzero_exit`; a foreign kill overlapping a
+   fired timer → `foreign_kill`; the `termForwarded` discrimination
+   only-under-timer). Because the file spawns no subprocess it stays
+   OUT of the Stryker subprocess-exclude, so the classifier + the
+   RS2/EM1 parsers (moved here) now carry mutation coverage. The
+   SD3/two-tier escalation, the 2 000 ms drain-deadline-with-live-orphan,
+   and the real-process own-timeout lanes already stood in
+   `spawn.test.ts`/`actorAdapter.test.ts` (real children) and are
+   unchanged.
+3. **TEST (finding 3, P2) — realized paths, exact argv, DG sibling-iff
+   walk, sink-artifact invariance.** The env/argv lane now asserts the
+   CREATED filesystem paths (`existsSync` on the attempt dir +
+   `packet.json`) and the EXACT actor argv (`[execPath, stub, mode,
+   dump]` — the mapped argv verbatim, in order). The DG iff walk is
+   parameterized over EVERY sibling `DiagnosticKind` (a valid base of
+   each kind reads clean; `+spawnOutcome`/`+spawnDetail` each → 
+   `read_failed`). The swallowing-sink lane now also asserts the attempt
+   directory holds EXACTLY the three exchange files (no diag artifact).
+4. **(rolled into 2)** — the split file is the Stryker-coverage home for
+   `actorAdapter.ts`'s pure logic; the remaining real-spawn-only branches
+   keep their derived mutation probes.
+5. **PACKET-TEST (finding 5, P2) — `ctBRealRunner.test.ts`.** The
+   test-side presence barrier is now EVENT-DRIVEN (`fs.watch`, no aliased
+   real timer / polling sleep; the vitest per-test timeout is the sole
+   backstop). Worker-1 carries the CB1/F8 PAIRING lease EXPLICITLY
+   (`2 700 000` ms — a margin above the adapter's 1 800 000 ms timeout);
+   worker-2's 100 ms lease stays the deliberate reclaimer. Budget/attempt
+   bookkeeping is now asserted: BOTH real attempts durably recorded, the
+   two budgeted starts decremented 3 → 1, the confirm cleared the active
+   hold.
+6. **TEST (finding 6, P2) — env full-map compare.** The env assertion no
+   longer prefix-filters `__CF*` or skips values: it excludes ONLY the
+   EXACT OS substrate key (`__CF_USER_TEXT_ENCODING`) and deep-equals the
+   COMPLETE remaining key/value map on BOTH cwd lanes; a wider-allowlist
+   lane proves a composition var flows through with its value while a
+   forbidden host var stays absent.
+7. **DOCS (finding 7, P3) — the inline stubs reference the exported
+   `PAIRFLOW_*` constants** (interpolated into the generated stub
+   scripts in both `actorAdapter.test.ts` and `ctBRealRunner.test.ts`),
+   never a raw string literal.
+
+Test delta (1592 → 1619, +27): `actorAdapterClassify.test.ts` NEW (21
+— the CL1 matrix + the relocated parser lanes); `actorAdapter.test.ts`
+net (the pure parser describe RELOCATED out; the finding-1 negative, the
+wider-allowlist env lane added; the env/argv lane rewritten); 
+`sqliteDiagStore.test.ts` +9 (the sibling-kind iff walk);
+`ctBRealRunner.test.ts` unchanged count (barrier/lease/bookkeeping
+hardened in place).
+
+Aftermath mutation-probe table (R-DERIVED-PROBES; run EXCLUSIVELY
+through `tools/v3-plan/probe_runner.py` — byte backup/restore/receipt
+per probe; git-restore never used; receipts under
+`scratchpad/ch9p3b-aftermath-probes/`):
+
+| Finding | Target | Mutation | Expected | Observed | Receipt |
+|---|---|---|---|---|---|
+| 1 | `runner/actorAdapter.ts` | disable the `isAbsolute(defaultCwd)` gate | RED | RED (exit 1) | `af-abs` |
+| 2/4 | `runner/actorAdapter.ts` | classifier actor-nonzero → `spawn_infra` (not `nonzero_exit`) | RED | RED | `af-classify` |
+| 3 (argv) | `runner/actorAdapter.ts` | drop `...mapped.args` from the wrapper spawn | RED | RED | `af-argv` |
+| 6 | `runner/actorAdapter.ts` | inject an extra `EXTRA_LEAK` child-env var | RED | RED | `af-env` |
+| 3 (DG) | `diag/sqliteDiagStore.ts` | disable the `spawnOutcome iff kind` read-gate | RED | RED | `dg-walk` |
+| 5 | `runner/errandStore.ts` | budgeted start decrements by 0 (not 1) | RED | RED | `ctb-budget` |
+
+All six probes observed RED with byte-verified restores — the arm's
+"plausibly red" lanes are now OBSERVED red. The `af-classify` probe
+runs against `actorAdapterClassify.test.ts` (the NON-excluded file),
+confirming the split logic is Stryker-reachable.
 
 ```json
 {

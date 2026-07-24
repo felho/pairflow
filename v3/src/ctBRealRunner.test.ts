@@ -1,7 +1,6 @@
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, rmSync, watch, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { setTimeout as delay } from "node:timers/promises";
 
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -13,7 +12,7 @@ import { createGateRegistry } from "./gates/index.js";
 import { createIngress } from "./ingress/index.js";
 import { createKernel } from "./kernel/index.js";
 import { createStaticProviderRegistry } from "./ports/index.js";
-import { createActorAdapter, createDeliveryLoop, openErrandStore } from "./runner/index.js";
+import { createActorAdapter, createDeliveryLoop, openErrandStore, PAIRFLOW_EMIT } from "./runner/index.js";
 import type { DeliveryReadSeam } from "./runner/index.js";
 import { openStore } from "./store/index.js";
 import {
@@ -64,7 +63,8 @@ const STUB = [
   'const path = require("node:path");',
   "const presenceDir = process.argv[2];",
   "const releaseFile = process.argv[3];",
-  "const emitPath = process.env.PAIRFLOW_EMIT;",
+  // Finding 7: reference the EXPORTED env-name constant, never a raw literal.
+  `const emitPath = process.env.${PAIRFLOW_EMIT};`,
   "const presenceName = path.basename(path.dirname(emitPath));", // = enc(attemptId)
   'fs.writeFileSync(path.join(presenceDir, presenceName), "here");',
   "const sab = new Int32Array(new SharedArrayBuffer(4));",
@@ -74,14 +74,33 @@ const STUB = [
   "",
 ].join("\n");
 
-async function waitForCount(dir: string, n: number): Promise<void> {
-  for (let i = 0; i < 600; i += 1) {
-    if (existsSync(dir) && readdirSync(dir).length >= n) {
-      return;
-    }
-    await delay(20);
-  }
-  throw new Error(`timed out waiting for ${String(n)} presence file(s) in ${dir}`);
+/**
+ * EVENT-DRIVEN presence-count barrier (finding 5): resolve as soon as the
+ * directory holds `n` entries, driven by `fs.watch` (no polling sleep, no
+ * aliased real timer). The initial read catches files created before the
+ * watcher armed. The vitest per-test timeout is the sole backstop — this
+ * promise carries no clock of its own.
+ */
+function waitForCount(dir: string, n: number): Promise<void> {
+  return new Promise<void>((resolve) => {
+    let done = false;
+    const check = (): void => {
+      if (done) return;
+      let count = 0;
+      try {
+        count = readdirSync(dir).length;
+      } catch {
+        /* the dir may not be readable yet — treated as count 0 */
+      }
+      if (count >= n) {
+        done = true;
+        watcher.close();
+        resolve();
+      }
+    };
+    const watcher = watch(dir, check);
+    check(); // files may already exist before the watcher armed
+  });
 }
 
 describe("CB1 — CT-B-TWOWORKER under the real runner (op-id collapse, real processes)", () => {
@@ -160,8 +179,12 @@ describe("CB1 — CT-B-TWOWORKER under the real runner (op-id collapse, real pro
         { leaseMs },
       );
     }
-    // Worker 1 holds its lease; worker 2 reclaims aggressively (the interleave).
-    const loop1 = makeLoop(eh1.store, "worker-1", "w1", 10_000_000);
+    // Worker 1 carries the CB1/F8 PAIRING lease: 2 700 000 ms — a margin ABOVE
+    // the adapter's effective 1 800 000 ms delivery timeout (T2's pairing rule,
+    // so a sibling never reclaims a still-live attempt on the primary path).
+    // Worker 2 is the deliberately-aggressive reclaimer (a 100 ms lease) that
+    // FORCES the staged interleave — the misconfigured-sibling half of the race.
+    const loop1 = makeLoop(eh1.store, "worker-1", "w1", 2_700_000);
     const loop2 = makeLoop(eh2.store, "worker-2", "w2", 100);
 
     try {
@@ -190,6 +213,15 @@ describe("CB1 — CT-B-TWOWORKER under the real runner (op-id collapse, real pro
       // The errand converges confirmed (under L2's precedence).
       const errand = eh1.store.getErrand("inst-1", "inst-1@v2");
       expect(errand?.state).toBe("confirmed");
+
+      // Budget/attempt bookkeeping stays consistent (CB1): BOTH real attempts
+      // were durably recorded (worker-1's "w1-1" and worker-2's reclaim "w2-1"),
+      // the two budgeted starts decremented the errand's budget from 3 → 1, and
+      // confirm cleared the active-attempt hold.
+      expect(eh1.store.getAttempt("w1-1")).not.toBeNull();
+      expect(eh1.store.getAttempt("w2-1")).not.toBeNull();
+      expect(errand?.remainingBudget).toBe(1);
+      expect(errand?.activeAttemptId).toBeNull();
     } finally {
       eh1.close();
       eh2.close();

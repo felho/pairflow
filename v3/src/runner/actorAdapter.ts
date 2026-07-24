@@ -1,5 +1,5 @@
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { isAbsolute, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import type { DispatchIntent, Outcome } from "../domain/index.js";
@@ -8,6 +8,7 @@ import type { Ingress } from "../ingress/index.js";
 import type { AttemptExecutor, AttemptExecutorInput, AttemptResult } from "../ports/delivery.js";
 import type { DiagnosticsSink, SpawnOutcome } from "../ports/diagnostics.js";
 import { enc } from "./enc.js";
+import type { SpawnConclusion } from "./spawn.js";
 import { disciplinedSpawn, validateTimerKnobs } from "./spawn.js";
 
 /**
@@ -76,7 +77,7 @@ function atomicWrite(path: string, contents: string): void {
 }
 
 /** The RS2 fail-closed result record (the wrapper's closed keyset). */
-interface ResultRecord {
+export interface ResultRecord {
   readonly attemptId: string;
   readonly exitCode: number | null;
   readonly signal: string | null;
@@ -145,6 +146,77 @@ export function parseResult(path: string, expectedAttemptId: string): ResultReco
   return { attemptId, exitCode, signal, termForwarded };
 }
 
+/**
+ * CL1: the TOTAL fail-closed conclusion PRECEDENCE as a PURE function — every
+ * (SpawnConclusion × result record) input maps to exactly one decision. Split
+ * out of `execute()` so the whole precedence is unit-drivable ROW-BY-ROW (the
+ * flag×record combinations the trivial real wrapper cannot reach — a flagged
+ * natural exit-0, a flagged nonzero, a flagged foreign kill — and so the
+ * classifier's mutants fall under Stryker via a NON-subprocess test file).
+ *
+ * `record` is the parsed `result.json` (RS2). It is CONSULTED ONLY on the
+ * exit-0 lane (CL1 row 4); on the infra / signal / nonzero lanes the caller
+ * passes null (the record is not read — CL1 rows 1-3). Returns `{ kind: "emit" }`
+ * when the actor exited 0 (the EM lanes decide submitted/no_output next);
+ * otherwise the terminal `AttemptResult`.
+ */
+export type ClassifyDecision =
+  | { readonly kind: "result"; readonly result: AttemptResult }
+  | { readonly kind: "emit" };
+
+export function classifyConclusion(
+  conclusion: SpawnConclusion,
+  record: ResultRecord | null,
+): ClassifyDecision {
+  // Row 1: the seam reports infra (wrapper spawn setup / ENOENT).
+  if (conclusion.kind === "infra") {
+    return { kind: "result", result: { kind: "infra_failure", class: "spawn_infra" } };
+  }
+  const timedOut = conclusion.timedOut;
+  // Row 2: the wrapper concluded by SIGNAL (result normally absent, not consulted).
+  if (conclusion.code === null) {
+    return {
+      kind: "result",
+      result: { kind: "infra_failure", class: timedOut ? "own_timeout" : "foreign_kill" },
+    };
+  }
+  // Row 3: the wrapper exited NONZERO (its contract is exit 0 after the write).
+  if (conclusion.code !== 0) {
+    return {
+      kind: "result",
+      result: { kind: "infra_failure", class: timedOut ? "own_timeout" : "spawn_infra" },
+    };
+  }
+  // Row 4: the wrapper exited 0 → the parsed result record (RS2/RS3) decides.
+  if (record === null) {
+    // Invalid / missing / foreign result — fail-closed both ways.
+    return {
+      kind: "result",
+      result: { kind: "infra_failure", class: timedOut ? "own_timeout" : "spawn_infra" },
+    };
+  }
+  if (record.signal !== null) {
+    // (timedOut AND termForwarded) → own_timeout (C23's forwarded-kill letter);
+    // else foreign_kill (C21's class). `termForwarded` discriminates ONLY under
+    // a fired own timer.
+    return {
+      kind: "result",
+      result: {
+        kind: "infra_failure",
+        class: timedOut && record.termForwarded ? "own_timeout" : "foreign_kill",
+      },
+    };
+  }
+  if (record.exitCode !== 0) {
+    // A nonzero exit is the actor's OWN conclusion, never a kill record — even
+    // under a fired timer.
+    return { kind: "result", result: { kind: "infra_failure", class: "nonzero_exit" } };
+  }
+  // Actor exit 0 → the EM lanes. COMPLETED WORK IS NEVER RECLASSIFIED by a late
+  // timer (the P6h delayed-exit race — even with `timedOut` set).
+  return { kind: "emit" };
+}
+
 /** The validated emit envelope contents (EM1's closed keyset). */
 interface EmitRecord {
   readonly type: string;
@@ -199,6 +271,18 @@ export function createActorAdapter(
   options: ActorAdapterOptions,
 ): AttemptExecutor {
   const defaultCwd = options.defaultCwd;
+  // Config-integrity (AV2): a RELATIVE `defaultCwd` yields a relative none-lane
+  // `cwd`, hence RELATIVE `PAIRFLOW_PACKET`/`PAIRFLOW_EMIT` paths — which the
+  // spawned child would resolve from its OWN (changed) cwd, not the adapter's,
+  // so the actor reads/writes the wrong location (an AV2 breach). Fail-closed
+  // LOUD at construction, alongside the timer-knob validation.
+  if (!isAbsolute(defaultCwd)) {
+    throw new Error(
+      `actor-adapter config: 'defaultCwd' must be an ABSOLUTE path (got ${JSON.stringify(
+        defaultCwd,
+      )}) — a relative defaultCwd yields relative PAIRFLOW_* paths the child would resolve from its own cwd (AV2 breach)`,
+    );
+  }
   const envAllowlist = options.envAllowlist ?? { PATH: process.env.PATH ?? "" };
   const timeoutMs = options.timeoutMs ?? 1_800_000;
   const graceMs = options.graceMs ?? 10_000;
@@ -305,56 +389,23 @@ export function createActorAdapter(
         graceMs: graceMs + backstopMarginMs,
       });
 
-      // ── CONCLUDE (CL1's total fail-closed precedence) ───────────────────
-      if (conclusion.kind === "infra") {
-        // Row 1: seam spawn setup / ENOENT.
-        return { kind: "infra_failure", class: "spawn_infra" };
+      // ── CONCLUDE (CL1's total fail-closed precedence, via the pure
+      //    classifier so the whole precedence is unit-drivable) ─────────────
+      if (conclusion.kind === "exit") {
+        detailTail = stderrTail(conclusion.stderr);
       }
-      detailTail = stderrTail(conclusion.stderr);
-      const timedOut = conclusion.timedOut;
-
-      // Row 2: the wrapper concluded by SIGNAL (its result — normally absent —
-      // is not consulted).
-      if (conclusion.code === null) {
-        return {
-          kind: "infra_failure",
-          class: timedOut ? "own_timeout" : "foreign_kill",
-        };
+      // RS2/RS3: the result record is CONSULTED ONLY on the exit-0 lane (CL1
+      // row 4); on the infra/signal/nonzero lanes it is not read.
+      const record =
+        conclusion.kind === "exit" && conclusion.code === 0
+          ? parseResult(resultPath, attemptId)
+          : null;
+      const decision = classifyConclusion(conclusion, record);
+      if (decision.kind === "emit") {
+        // Actor exit 0 → the EM lanes (submitted / no_output).
+        return submitEmit(emitPath);
       }
-      // Row 3: the wrapper exited NONZERO (its contract is exit 0 after the
-      // write — a nonzero exit is a wrapper-integrity case).
-      if (conclusion.code !== 0) {
-        return {
-          kind: "infra_failure",
-          class: timedOut ? "own_timeout" : "spawn_infra",
-        };
-      }
-      // Row 4: the wrapper exited 0 → read result.json under RS2/RS3.
-      const record = parseResult(resultPath, attemptId);
-      if (record === null) {
-        return {
-          kind: "infra_failure",
-          class: timedOut ? "own_timeout" : "spawn_infra",
-        };
-      }
-      // The RECORDED ACTOR conclusion decides.
-      if (record.signal !== null) {
-        // (timedOut AND termForwarded) → own_timeout (C23's letter: our
-        // forwarded kill); else foreign_kill (C21's class). `termForwarded`
-        // discriminates ONLY under a fired own timer.
-        return {
-          kind: "infra_failure",
-          class: timedOut && record.termForwarded ? "own_timeout" : "foreign_kill",
-        };
-      }
-      if (record.exitCode !== 0) {
-        // A nonzero exit is the actor's OWN conclusion, never a kill record —
-        // even under a fired timer.
-        return { kind: "infra_failure", class: "nonzero_exit" };
-      }
-      // Actor exit 0 → the EM lanes (COMPLETED WORK IS NEVER RECLASSIFIED by a
-      // late timer — the P6h delayed-exit race).
-      return submitEmit(emitPath);
+      return decision.result;
     }
 
     async function submitEmit(emitPath: string): Promise<AttemptResult> {
