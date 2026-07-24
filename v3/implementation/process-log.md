@@ -4489,3 +4489,75 @@ final CLEAN.
   contract successors (session lifecycle, liveness, possibly
   ActorSessionRef) behind the SAME AttemptExecutor seam; the K1
   union and the ledger's opaque session_name column do not block it.
+
+- 2026-07-24 · ch9-P3b BOUNDARY NOTE (user-raised at the pre-approval
+  STOP; capture, don't fix): ACTOR-RESPONSE PROVENANCE — a future
+  full-provenance capability wants, per actor response, the
+  underlying agent-session id (codex/claude), the model id, token
+  counts and kin. Design check run at the STOP: nothing in ch9-P3b
+  forecloses it — the natural capture point is the ADAPTER (the
+  agent CLI's own stream/output carries these; v1's plan-watch
+  already records `codexSessionId` as precedent), and the landing
+  zones in order of reach are (1) runner-store attempt-record
+  columns (runner-plane evolution, C12/ADR-016-legal, kernel
+  untouched), (2) an OPTIONAL provenance field on the
+  AttemptExecutor result (the F2-anticipated union-growth path,
+  own review), (3) kernel-side envelope provenance if it must
+  become committed truth (model-plane/contract-successor work).
+  The closed emit.json/result.json keysets are contract-versioned,
+  successor-extendable — closure is current discipline, not a
+  permanent bar. Boundary question: when provenance comes due,
+  which zone opens first, and does the diag channel's best-effort
+  character disqualify it as a provenance carrier (C26's honest
+  split says yes — provenance wants the ledger, not the stream).
+
+- 2026-07-24 · ch9-P3b BOUNDARY NOTE (user-raised at the pre-approval
+  STOP, from the v1 reality check; capture, don't fix): TWO
+  delivery-robustness items. (1) SILENT-SUCCESS AUTO-RESPAWN — the
+  ratified C15 freezes an exit-0-no-emit conclusion at `unconfirmed`
+  (operator re-spawn the only exit; side-effect ambiguity is the
+  rationale), while crash/nonzero paths auto-retry under budget; the
+  user flags a possible future softening (e.g. ONE automatic
+  re-spawn before freezing) — a C15-successor candidate, contract
+  work. (2) STUCK-ACTOR DETECTION — the daily-frequency failure
+  class (API error / credits exhausted / "overloaded, try later" —
+  the agent CLI sits forever): the blunt delivery timeout has NO
+  good natural value for LLM runs (legit runs outlast any safe
+  bound). The v1 pane-hash watchdog is the ancestor; the v3 home is
+  a RUNNER-PLANE health/watchdog component (the named
+  provider-health/watchdog Absent's chapter) fed by: (a) the spawn
+  seam's ALREADY-CAPTURED stdout/stderr activity (an output-silence
+  window — tmux-free, available at the direct-spawn substrate), (b)
+  P4's tmux pane capture (TUI grain), (c) the L9 model
+  reconsiderations (workload-declared silence budget; stuck is an
+  intelligence problem, not a timer — gastown/nanoclaw). Killing a
+  stuck attempt lands in the EXISTING K1 classes (attempt consumed,
+  budget-bounded retry) — the watcher is pure runner-plane addition,
+  zero kernel change. Boundary question: does the watchdog Absent's
+  chapter come due right after ch9 (the user runs into this class
+  near-daily), and does the silence-budget knob belong to the
+  template (per-step declared) or the composition.
+
+- 2026-07-24 · ch9-P3b BOUNDARY NOTE (user-raised at the pre-approval
+  STOP; capture, don't fix): LEASE AS A PLATFORM-INTERNAL DERIVED
+  VALUE + TEMPLATE-DECLARED PER-ACTOR TIMEOUTS — two entangled
+  design directions parked together. (1) The lease is a PLATFORM
+  term: the pairflow user (template author) must never need to know
+  it; the platform should DERIVE it (lease = the effective delivery
+  timeout + a managed margin of a few minutes), never expose it as
+  a user-facing knob. (2) The template author is the one who knows
+  a meaningful timeout PER ACTOR — the natural carrier is the
+  already-flowing opaque effectiveAgentConfig (the C18 mapper's
+  output could gain an optional per-spawn timeoutMs). (3) The open
+  scoping question that binds the two: today's lease is a LOOP-level
+  knob (one window per composition); per-actor timeouts force the
+  lease to per-errand/per-attempt grain (each claim's staleness
+  window derived from ITS attempt's effective timeout + margin) —
+  otherwise a single global lease cannot stay "always a few minutes
+  above the timeout". The ch9-P3b state (composition-level timeout
+  30 min default paired with a 45 min loop lease, both
+  composition-API knobs, F8) is the coarse-grain interim; the
+  fine-grain design (derived per-attempt lease, template-declared
+  timeout, zero user-visible lease) is a later chapter's discussion
+  — natural companions: the watchdog/silence-budget item and the
+  P4 C25 operator-surface question.
