@@ -1039,8 +1039,35 @@ W2 committed-row check) — ALL RED, every restore byte-verified
 (`cmp`), receipts in the session scratchpad
 `ch9p3a-probes/receipts/`; zero green-but-blind probes.
 
-**Aftermath:** filled after the build-close arm leg (gate-2 +
-the §9.4 mutation-pilot dual-run).
+**Aftermath (gate-2 + the mutation dual-run):** the §9.4 pilot
+dual-run scored the boundary at 65.81 all-files / 73.47
+covered-only (deliveryLoop 59.54, errandStore 69.87, index 81.13,
+scriptedExecutor 95.24; 692 killed / 3 timeout / 251 survived /
+110 no-cov, 18 s) — telemetry per the pilot rules; the run needed
+a stryker-profile fix (the ch9-P2 journey smokes joined the
+subprocess-exclude list — the logged P2 blind class, chore
+`d9f6885b`). ARM GATE-2 on `c4fb8edf` yielded 9 findings (4
+product: the B6 remint stranded without re-execution, the
+unconfirmed-landing conclusions skipped the L2 precedence
+re-check, `respawn()` bypassed the B1 preconditions, the open
+failure was untyped; 5 test-evidence: proven-blind members across
+the D/CF, L/B/K, DG-label, CT-A2/two-worker, and ES-read-IO
+inventories). ALL folded by a delegated aftermath leg: the four
+product fixes (the remint path now re-executes the fresh attempt
+in-tick; a shared evidence-first conclusion runs CF1 + the
+terminal check before every `unconfirmed` landing; `respawn` runs
+the B1 terminal-load precedence; the open path is
+typed-wrapped) + 19 new/strengthened tests (suite 1473 → 1492)
+— EVERY arm-named blind mutation re-driven RED through the probe
+runner (receipts 11 → 30, all restore-verified). RECORDED
+RESIDUAL: the `moot` edge label has no dedicated single-mutation
+probe — its emit string occurs at four byte-identical call sites,
+so no unique anchor satisfies the runner's single-replacement
+contract; the label is asserted by four tests across all four
+contexts (an honest gap kept over a fragile contrived anchor).
+Aftermath authorship: code + tests = the delegated build agent on
+the orchestrator's per-finding instruction; packet-text folds +
+this record = the orchestrator.
 
 ```json
 {

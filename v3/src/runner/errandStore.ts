@@ -354,13 +354,23 @@ export function openErrandStore(
   time: TimeSource,
   options: OpenErrandStoreOptions = {},
 ): ErrandStoreHandle {
-  const db = new DatabaseSync(path);
-  if (path !== ":memory:") {
-    db.exec("PRAGMA journal_mode = WAL");
+  // ES5: open failure (a bad path, an unopenable file, a rejected open-time
+  // PRAGMA) is the fail-loud authority's typed throw — never a raw
+  // ERR_SQLITE_ERROR leaking past the store boundary.
+  let db: DatabaseSync;
+  try {
+    db = new DatabaseSync(path);
+    if (path !== ":memory:") {
+      db.exec("PRAGMA journal_mode = WAL");
+    }
+    // ES6: the bounded busy wait — the probe-mandated explicit wait discipline
+    // the single-process topology never needed.
+    db.exec(`PRAGMA busy_timeout = ${String(options.busyTimeoutMs ?? 5000)}`);
+  } catch (error) {
+    throw new ErrandStoreError(
+      `errand store open failed: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
-  // ES6: the bounded busy wait — the probe-mandated explicit wait discipline
-  // the single-process topology never needed.
-  db.exec(`PRAGMA busy_timeout = ${String(options.busyTimeoutMs ?? 5000)}`);
   try {
     ensureSchema(db);
   } catch (error) {

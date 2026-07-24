@@ -415,3 +415,47 @@ describe("errandStore — the write machinery (claim CAS, decrement, precedence,
     h.close();
   });
 });
+
+// ── Aftermath (gate-2 findings 4, 9, 6): typed open failure, real read-path
+// IO failure, stale other-admit inert.
+describe("errandStore ES5 — open + read IO failures are typed (never raw, never null)", () => {
+  it("finding 4: opening a DIRECTORY path throws a typed ErrandStoreError (not raw ERR_SQLITE_ERROR)", () => {
+    const dir = tempDir(); // a directory, not a file
+    expect(() => openErrandStore(dir, createControlledClock(1))).toThrow(ErrandStoreError);
+  });
+
+  it("finding 9: a read after the underlying handle is closed is a typed throw, never a swallow-to-null", () => {
+    const h = openErrandStore(join(tempDir(), "errands.db"), createControlledClock(1));
+    seedPending(h.store);
+    h.close(); // a real read-path IO failure: the handle is gone
+    expect(() => h.store.getErrand("inst-1", KEY)).toThrow(ErrandStoreError);
+    expect(() => h.store.listErrands()).toThrow(ErrandStoreError);
+  });
+});
+
+describe("errandStore — a STALE other-admit conclusion is inert (finding 6, B2 CAS)", () => {
+  it("a stale other-admit demotes nothing", () => {
+    const h = openErrandStore(join(tempDir(), "errands.db"), createControlledClock(1));
+    seedPending(h.store);
+    h.store.claim({ instanceId: "inst-1", contextPacketId: KEY, workerId: "w", now: 1 });
+    h.store.startBudgetedAttempt({
+      instanceId: "inst-1",
+      contextPacketId: KEY,
+      workerId: "w",
+      now: 1,
+      attemptIdSource: () => "active",
+      sessionNamer: () => "s",
+    });
+    // A conclusion for a stale (superseded) attempt id is inert under the CAS.
+    expect(
+      h.store.concludeOtherAdmit({
+        instanceId: "inst-1",
+        contextPacketId: KEY,
+        attemptId: "stale",
+        recordedAdmitOutcome: "stale",
+      }).applied,
+    ).toBe(false);
+    expect(h.store.getErrand("inst-1", KEY)?.state).toBe("attempting");
+    h.close();
+  });
+});

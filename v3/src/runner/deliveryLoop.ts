@@ -450,7 +450,43 @@ export function createDeliveryLoop(
       // the promise channel — the same B2 CAS path, never a loop crash.
       result = { kind: "infra_failure", class: "spawn_infra" };
     }
-    await conclude(errand, attemptId, kind, result);
+    await conclude(errand, attemptId, kind, result, intent);
+  }
+
+  /**
+   * A conclusion whose default landing is `unconfirmed` (no_output, other-admit,
+   * negative-respawn). L2/CF2: the precedence's committed-row check runs FIRST
+   * at EVERY conclusion — evidence found → confirmed; run TERMINAL → mooted;
+   * else the frozen `unconfirmed` landing (through B2's CAS). The confirmed /
+   * mooted writes are attempt-independent precedence writes (a stale attempt's
+   * committed evidence still promotes; its no-evidence CAS landing is inert).
+   */
+  async function concludeToUnconfirmed(
+    errand: ErrandRow,
+    attemptId: string,
+    unconfirmedEdge: ErrandEdge,
+    land: () => { applied: boolean },
+  ): Promise<void> {
+    const key = { instanceId: errand.instanceId, contextPacketId: errand.contextPacketId };
+    const detail = await readSeam.getInstanceDetail(errand.instanceId);
+    if (detail !== null && hasEvidence(detail, errand)) {
+      const res = store.concludeConfirmed(key);
+      if (res.applied) {
+        emitTransition("confirm", key.instanceId, key.contextPacketId, "attempting", "confirmed", attemptId);
+      }
+      return;
+    }
+    if (detail !== null && detail.instance.kernelStatus === "TERMINAL") {
+      const res = store.concludeMooted(key);
+      if (res.applied) {
+        emitTransition("moot", key.instanceId, key.contextPacketId, "attempting", "mooted");
+      }
+      return;
+    }
+    const res = land();
+    if (res.applied) {
+      emitTransition(unconfirmedEdge, key.instanceId, key.contextPacketId, "attempting", "unconfirmed", attemptId);
+    }
   }
 
   async function conclude(
@@ -458,6 +494,7 @@ export function createDeliveryLoop(
     attemptId: string,
     kind: AttemptKind,
     result: AttemptResult,
+    intent: DispatchIntent,
   ): Promise<void> {
     const key = { instanceId: errand.instanceId, contextPacketId: errand.contextPacketId };
     switch (result.kind) {
@@ -469,10 +506,9 @@ export function createDeliveryLoop(
             emitTransition("confirm", key.instanceId, key.contextPacketId, "attempting", "confirmed", attemptId);
           }
         } else if (outcome.kind === "stale") {
-          const res = store.concludeOtherAdmit({ ...key, attemptId, recordedAdmitOutcome: "stale" });
-          if (res.applied) {
-            emitTransition("other-admit", key.instanceId, key.contextPacketId, "attempting", "unconfirmed", attemptId);
-          }
+          await concludeToUnconfirmed(errand, attemptId, "other-admit", () =>
+            store.concludeOtherAdmit({ ...key, attemptId, recordedAdmitOutcome: "stale" }),
+          );
         } else if (outcome.reason === "not_active") {
           // Run TERMINAL → mooted (CF1 FIRST).
           const detail = await readSeam.getInstanceDetail(errand.instanceId);
@@ -488,18 +524,17 @@ export function createDeliveryLoop(
             }
           }
         } else {
-          const res = store.concludeOtherAdmit({ ...key, attemptId, recordedAdmitOutcome: outcome.reason });
-          if (res.applied) {
-            emitTransition("other-admit", key.instanceId, key.contextPacketId, "attempting", "unconfirmed", attemptId);
-          }
+          const reason = outcome.reason;
+          await concludeToUnconfirmed(errand, attemptId, "other-admit", () =>
+            store.concludeOtherAdmit({ ...key, attemptId, recordedAdmitOutcome: reason }),
+          );
         }
         return;
       }
       case "no_output": {
-        const res = store.concludeNoOutput({ ...key, attemptId });
-        if (res.applied) {
-          emitTransition("no-output", key.instanceId, key.contextPacketId, "attempting", "unconfirmed", attemptId);
-        }
+        await concludeToUnconfirmed(errand, attemptId, "no-output", () =>
+          store.concludeNoOutput({ ...key, attemptId }),
+        );
         return;
       }
       case "name_collision": {
@@ -513,15 +548,19 @@ export function createDeliveryLoop(
         });
         if (res.kind === "reminted") {
           emitTransition("remint", key.instanceId, key.contextPacketId, "attempting", "attempting", res.attemptId);
+          // The remint's fresh attempt is executed IMMEDIATELY (same tick) —
+          // otherwise the errand strands in `attempting` until lease expiry
+          // (which would burn real budget). Bounded by the id source's
+          // collision resistance.
+          await runAttempt(errand, res.attemptId, res.sessionName, kind, intent);
         }
         return;
       }
       case "infra_failure": {
         if (kind === "respawn") {
-          const res = store.concludeNegativeRespawn({ ...key, attemptId });
-          if (res.applied) {
-            emitTransition("negative-respawn", key.instanceId, key.contextPacketId, "attempting", "unconfirmed", attemptId);
-          }
+          await concludeToUnconfirmed(errand, attemptId, "negative-respawn", () =>
+            store.concludeNegativeRespawn({ ...key, attemptId }),
+          );
           return;
         }
         const current = store.getErrand(errand.instanceId, errand.contextPacketId);
@@ -614,6 +653,23 @@ export function createDeliveryLoop(
     }
     const detail = await readSeam.getInstanceDetail(instanceId);
     if (detail === null) {
+      return;
+    }
+    // The same B1/D5 instance-load precondition set BEFORE any attempt starts:
+    // a TERMINAL run moots (CF1 FIRST — late evidence lands confirmed, never
+    // mooted), no attempt, no executor invocation.
+    if (detail.instance.kernelStatus === "TERMINAL") {
+      if (hasEvidence(detail, errand)) {
+        const res = store.concludeConfirmed({ instanceId, contextPacketId });
+        if (res.applied) {
+          emitTransition("moot", instanceId, contextPacketId, "unconfirmed", "confirmed");
+        }
+      } else {
+        const res = store.concludeMooted({ instanceId, contextPacketId });
+        if (res.applied) {
+          emitTransition("moot", instanceId, contextPacketId, "unconfirmed", "mooted");
+        }
+      }
       return;
     }
     const intent = await deriveIntent(detail.instance, detail);

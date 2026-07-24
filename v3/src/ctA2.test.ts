@@ -312,14 +312,20 @@ describe("CT-A2-CONFIRM — the no-output conclusion lands unconfirmed", () => {
     h.close();
   });
 
-  it("the re-spawn edge is its only errand-level exit (and a silent re-spawn returns to unconfirmed)", async () => {
+  it("the re-spawn edge is its only errand-level exit — the respawned attempt ACTUALLY starts/executes under the frozen budget", async () => {
     const h = openErrandStore(":memory:", createControlledClock(1_000));
     const seam = new FakeSeam();
     seam.set(mkInstance());
-    const loop = loopOver(h.store, seam, { script: [{ kind: "no_output" }, { kind: "no_output" }] });
-    await loop.tick(); // unconfirmed
-    await loop.respawn("inst-1", KEY); // the ONLY exit — re-enters attempting, silent again → unconfirmed
-    expect(h.store.getErrand("inst-1", KEY)?.state).toBe("unconfirmed");
+    const exec = createScriptedAttemptExecutor([{ kind: "no_output" }, { kind: "no_output" }]);
+    const loop = loopOver(h.store, seam, { executor: exec });
+    await loop.tick(); // att-1 no_output → unconfirmed
+    const frozen = h.store.getErrand("inst-1", KEY)?.remainingBudget;
+    const callsBefore = exec.calls.length;
+    await loop.respawn("inst-1", KEY); // must START + EXECUTE the fresh attempt (no-op respawn would not)
+    expect(exec.calls.length).toBe(callsBefore + 1); // the respawned attempt was executed
+    expect(exec.calls[exec.calls.length - 1]?.input.attemptId).toBe("att-2");
+    expect(h.store.getErrand("inst-1", KEY)?.state).toBe("unconfirmed"); // silent respawn → unconfirmed
+    expect(h.store.getErrand("inst-1", KEY)?.remainingBudget).toBe(frozen); // frozen
     h.close();
   });
 });
@@ -389,20 +395,28 @@ describe("Two-worker (errand-plane): one errand file, one kernel store", () => {
     wb.close();
   });
 
-  it("claim race: two racing workers settle by scheduling — exactly one disposition, never a double", async () => {
+  it("claim race: two racing workers settle by scheduling — exactly one ATTEMPTS, one disposition, both read it", async () => {
     const errandPath = tempPath("errands.db");
     const seam = new FakeSeam();
     seam.set(mkInstance());
     const committed: Outcome = { kind: "committed", version: 3, intent: null };
+    const execA = createScriptedAttemptExecutor([{ kind: "submitted", outcome: committed }]);
+    const execB = createScriptedAttemptExecutor([{ kind: "submitted", outcome: committed }]);
     const wa = openErrandStore(errandPath, createControlledClock(1_000));
     const wb = openErrandStore(errandPath, createControlledClock(1_000));
     await Promise.all([
-      loopOver(wa.store, seam, { workerId: "A", idPrefix: "a", script: [{ kind: "submitted", outcome: committed }] }).tick(),
-      loopOver(wb.store, seam, { workerId: "B", idPrefix: "b", script: [{ kind: "submitted", outcome: committed }] }).tick(),
+      loopOver(wa.store, seam, { workerId: "A", idPrefix: "a", executor: execA }).tick(),
+      loopOver(wb.store, seam, { workerId: "B", idPrefix: "b", executor: execB }).tick(),
     ]);
     const rows = wa.store.listErrands();
     expect(rows).toHaveLength(1);
     expect(rows[0]?.state).toBe("confirmed"); // one disposition, no double-create
+    // The claim CAS let exactly ONE worker attempt; the loser never
+    // double-submitted (correctness rests on scheduling only, REV-B).
+    expect(execA.calls.length + execB.calls.length).toBe(1);
+    // The SECOND worker's outcome: it observes the SAME confirmed truth (one
+    // errand, both handles), never a conflicting disposition of its own.
+    expect(wb.store.getErrand("inst-1", KEY)?.state).toBe("confirmed");
     wa.close();
     wb.close();
   });
