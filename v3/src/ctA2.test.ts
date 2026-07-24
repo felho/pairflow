@@ -102,10 +102,12 @@ function evidenceEntry(actorId: string, expectedVersion: number): TranscriptEntr
 
 class FakeSeam implements DeliveryReadSeam {
   private readonly runs = new Map<string, InstanceDetail>();
+  listInstancesCalls = 0;
   set(instance: WorkflowInstance, transcript: readonly TranscriptEntry[] = []): void {
     this.runs.set(instance.instanceId, { instance, transcript });
   }
   listInstances(): Promise<readonly WorkflowInstance[]> {
+    this.listInstancesCalls += 1;
     return Promise.resolve([...this.runs.values()].map((r) => r.instance));
   }
   loadInstance(id: string): Promise<WorkflowInstance | null> {
@@ -385,10 +387,14 @@ describe("Two-worker (errand-plane): one errand file, one kernel store", () => {
     seam.set(mkInstance());
     const wa = openErrandStore(errandPath, createControlledClock(1_000));
     const wb = openErrandStore(errandPath, createControlledClock(1_000));
-    await Promise.all([
-      loopOver(wa.store, seam, { workerId: "A", idPrefix: "a" }).poll(),
-      loopOver(wb.store, seam, { workerId: "B", idPrefix: "b" }).poll(),
-    ]);
+    const aLoop = loopOver(wa.store, seam, { workerId: "A", idPrefix: "a" });
+    const bLoop = loopOver(wb.store, seam, { workerId: "B", idPrefix: "b" });
+    await Promise.all([aLoop.poll(), bLoop.poll()]);
+    // B ACTIVELY discovered too — an observable only worker B's own pass can
+    // produce (a no-op B leaves this at 1, not 2).
+    expect(seam.listInstancesCalls).toBe(2);
+    // …and the concurrent discovery still collapses to exactly one row (the
+    // other direction: idempotency under two concurrent creators).
     expect(wa.store.listErrands()).toHaveLength(1);
     expect(wb.store.listErrands()).toHaveLength(1);
     wa.close();
@@ -404,16 +410,18 @@ describe("Two-worker (errand-plane): one errand file, one kernel store", () => {
     const execB = createScriptedAttemptExecutor([{ kind: "submitted", outcome: committed }]);
     const wa = openErrandStore(errandPath, createControlledClock(1_000));
     const wb = openErrandStore(errandPath, createControlledClock(1_000));
-    await Promise.all([
-      loopOver(wa.store, seam, { workerId: "A", idPrefix: "a", executor: execA }).tick(),
-      loopOver(wb.store, seam, { workerId: "B", idPrefix: "b", executor: execB }).tick(),
-    ]);
+    const aLoop = loopOver(wa.store, seam, { workerId: "A", idPrefix: "a", executor: execA });
+    const bLoop = loopOver(wb.store, seam, { workerId: "B", idPrefix: "b", executor: execB });
+    await Promise.all([aLoop.tick(), bLoop.tick()]);
     const rows = wa.store.listErrands();
     expect(rows).toHaveLength(1);
     expect(rows[0]?.state).toBe("confirmed"); // one disposition, no double-create
     // The claim CAS let exactly ONE worker attempt; the loser never
     // double-submitted (correctness rests on scheduling only, REV-B).
     expect(execA.calls.length + execB.calls.length).toBe(1);
+    // BOTH workers ACTIVELY ran their pass and CONTESTED the claim — an
+    // observable only B's own participation produces (a no-op B → 1, not 2).
+    expect(seam.listInstancesCalls).toBe(2);
     // The SECOND worker's outcome: it observes the SAME confirmed truth (one
     // errand, both handles), never a conflicting disposition of its own.
     expect(wb.store.getErrand("inst-1", KEY)?.state).toBe("confirmed");

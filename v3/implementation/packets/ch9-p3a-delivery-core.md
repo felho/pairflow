@@ -1065,6 +1065,12 @@ probe — its emit string occurs at four byte-identical call sites,
 so no unique anchor satisfies the runner's single-replacement
 contract; the label is asserted by four tests across all four
 contexts (an honest gap kept over a fragile contrived anchor).
+The gate-2 RE-CHECK leg (on `9ea1b0db`) reproduced all folds RED
+and yielded ONE residual — the two-worker tests were blind to a
+no-op second worker — folded tests-only (worker B's ACTIVE
+discovery asserted via the seam's call count; the arm's exact
+mutation probe-runner-verified RED on both tests; receipts
+30 → 31); the leg closes on the final arm confirmation.
 Aftermath authorship: code + tests = the delegated build agent on
 the orchestrator's per-finding instruction; packet-text folds +
 this record = the orchestrator.
