@@ -4410,3 +4410,37 @@ final CLEAN.
   collision vs omnigent's suffix-retry; enc vs branch-name
   validation) were all CONSCIOUS and documented — the gap class is
   the un-run comparison, not the divergence itself.
+
+- 2026-07-24 · ch9-P2 MUTATION-PILOT OBSERVATIONS (input for the
+  boundary's pilot-disposal read — the §9.4 flow note's "two
+  chapters of paired data" evaluation; capture, don't decide):
+  (1) YIELD vs THE PROBE RUNNER — the pilot's broad Stryker sweep
+  and the R-DERIVED-PROBES targeted probes OVERLAP in purpose but
+  not in evidence grade: the 19 receipt-backed probes each pin a
+  NAMED lane red; the sweep's 55 P2 survivors are unattributed (the
+  scoped files carry prior chapters' code too, so the survivor set
+  is not per-delta — the P1 caveat repeated). Boundary question:
+  does the sweep CATCH anything the derived probes + arm
+  sensitivity pass miss, or is it redundant assurance at ~1 min/run?
+  (2) THE SUBPROCESS BLIND SPOT — `cli/main.ts` scored 0% (475
+  no-coverage): Stryker's in-process vitest runner cannot see
+  child-process coverage, so every journey-driven surface is
+  invisible to it — exactly the surfaces the activation-journey
+  rule cares about. A pilot verdict must weigh that its blind spot
+  sits on the highest-risk class. (3) SCORES AS DATA — P1 82.03%
+  (six files, 19 s); P2 providers 77.47 / kernel 88.72 / diag 75.57
+  / ports 100 / cli 0 (65 s). Cheap enough to keep; the question is
+  what DECISION a score change would ever drive (no fix is owed at
+  pilot grade — a number nobody acts on is telemetry, not a gate).
+  (4) ONE REAL ASSIST — the gate-2 aftermath's kill-coverage note
+  (the failure-grid classification living at TWO sites, no
+  single-point mutation reds the whole grid) came from PROBE work,
+  not the sweep — but the sweep's per-file survivor counts are what
+  made the two-site structure visible to inspect. (5) TOOLING
+  FRICTION — regex-unsafe vitest `-t` filters produced one false
+  green during probe work (zero tests run); the probe protocol
+  gained a ≥1-test-ran receipt check in-session. Boundary options
+  to weigh: keep-as-is (dual-run telemetry) / narrow to
+  new-module-only sweeps / retire the sweep and keep only the
+  receipt-backed probe lane / promote survivors into a triaged
+  boundary checklist.
