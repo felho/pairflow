@@ -16,11 +16,15 @@ import type {
  */
 export interface RuntimeContextProvider {
   /**
-   * Start provisioning. ASYNC, fire-and-forget from the kernel's view: the
-   * awaited fulfillment is the DETACH ACKNOWLEDGMENT (the provider accepted
-   * and detached its async work), NEVER the completion — the completion fires
-   * LATER through the in-process completion seam as ONE of two mutually
-   * exclusive kinds per `request_id` (ch9-P1 W1):
+   * Start provisioning. ASYNC from the kernel's view: the awaited fulfillment
+   * is the DETACH ACKNOWLEDGMENT (the provider accepted the call), NEVER the
+   * completion ITSELF. The completion fires through the in-process completion
+   * seam as ONE of two mutually exclusive kinds per `request_id` (ch9-P1 W1) —
+   * and it MAY fire SYNCHRONOUSLY inside `provision()`, BEFORE the
+   * acknowledgment resolves (the worktree provider does exactly this; the seam
+   * HOLDS the fired completion and releases it at the START attempt's
+   * conclusion — contract:ch9-runner PB2), OR later async. Either way the
+   * acknowledgment is never the completion; the two kinds are:
    *   - `ready(ref)` — the readiness for the request the kernel issued, OR
    *   - `failed(reason, detail?)` — a provisioning failure (the `RUNTIME_CONTEXT_
    *     FAILED` channel: `reason` a `ProvisioningFailureReason`, `detail`

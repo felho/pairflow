@@ -327,17 +327,32 @@ function buildRef(plan: CreatePlan): RuntimeContextRef {
   return { kind: "worktree", locator };
 }
 
+/** The RP1 locator's EXACT own-key set — no more, no less. */
+const LOCATOR_KEYS = ["path", "branch", "repo", "base_commit"] as const;
+
 function isWorktreeLocator(locator: unknown): locator is WorktreeLocator {
-  if (typeof locator !== "object" || locator === null) {
+  if (typeof locator !== "object" || locator === null || Array.isArray(locator)) {
     return false;
   }
-  const l = locator as Record<string, unknown>;
-  return (
-    typeof l.path === "string" &&
-    typeof l.branch === "string" &&
-    typeof l.repo === "string" &&
-    typeof l.base_commit === "string"
-  );
+  // RP3: the RP1 shape is the EXACT own-key set {path, branch, repo,
+  // base_commit}, all strings — NO extra own keys, and INHERITED/prototype
+  // keys never satisfy it (own-property reads only). A corrupted store row that
+  // carries the four fields on its PROTOTYPE (an `Object.create` carrier) or an
+  // extra own key must fail loud at the ch12-C15 projection gate, never project
+  // lossily. `Object.keys` returns OWN enumerable keys only, so a length !== 4
+  // rejects both the extra-key and the inherited-only carriers.
+  if (Object.keys(locator).length !== LOCATOR_KEYS.length) {
+    return false;
+  }
+  for (const key of LOCATOR_KEYS) {
+    if (
+      !Object.prototype.hasOwnProperty.call(locator, key) ||
+      typeof (locator as Record<string, unknown>)[key] !== "string"
+    ) {
+      return false;
+    }
+  }
+  return true;
 }
 
 export function createWorktreeProvider(

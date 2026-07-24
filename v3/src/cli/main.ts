@@ -254,8 +254,8 @@ function createProductionProviderRegistry(): {
 /**
  * DG4 (packet ch9-p2; contract:ch9-runner#C26): the runner-plane diagnostic
  * event for a provisioning completion — provider-anonymous, built at the
- * composition sink wrapper. `provider_ready` carries instanceId + requestId;
- * `provider_failed` adds the RAW reason token AS REPORTED (`providerReason`,
+ * composition sink wrapper. `provision_ready` carries instanceId + requestId;
+ * `provision_failed` adds the RAW reason token AS REPORTED (`providerReason`,
  * never the kernel's classified verdict) and — iff the report's `detail` is a
  * plain string — the PB3 tail (`providerDetail`). A non-string hostile detail
  * is OMITTED and the event still fires.

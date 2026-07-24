@@ -6,6 +6,10 @@ import { promisify } from "node:util";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { openDiagStore } from "../diag/index.js";
+import { createControlledClock } from "../testkit/index.js";
+import { deriveDiagDbPath } from "./common.js";
+
 const execFileAsync = promisify(execFile);
 
 /**
@@ -98,6 +102,27 @@ interface Detail {
   };
 }
 
+/**
+ * Fix G — the PRODUCTION diag path readback: the shipped composition emits the
+ * runner-plane provisioning event through the DG4 sink WRAPPER onto the
+ * derived-path diag store (`<db>.diag.sqlite`). Reading it back (a READ, never
+ * a seam in the emission path — the twin of J1's host-git reads) proves the
+ * production composition emitted the DG2 event: REMOVING the DG4 wrapper leaves
+ * ZERO runner rows, and a mis-spelled kind fails the read gate — either way RED.
+ */
+async function readRunnerRows(
+  db: string,
+  instanceId: string,
+): Promise<readonly { kind: string; requestId?: string; providerReason?: string }[]> {
+  const handle = openDiagStore(deriveDiagDbPath(db), createControlledClock(0));
+  try {
+    const rows = await handle.reader.getDiagnostics(instanceId, 0);
+    return rows.filter((r) => r.source === "runner");
+  } finally {
+    handle.close();
+  }
+}
+
 describe("cli — the worktree activation journey (packet ch9-p2: J1/J2)", () => {
   const tsxBin = join(process.cwd(), "..", "node_modules", ".bin", "tsx");
   const mainPath = join(process.cwd(), "src", "cli", "main.ts");
@@ -147,6 +172,19 @@ describe("cli — the worktree activation journey (packet ch9-p2: J1/J2)", () =>
       expect(loc.base_commit).toBe(head);
       // The fresh worktree's HEAD equals the base commit.
       expect(gitOut(loc.path, "rev-parse", "HEAD")).toBe(head);
+
+      // Fix G — the production diag path: exactly ONE runner-plane row, a
+      // `provision_ready` carrying the kernel-minted requestId (the composed
+      // `req-<epochMillis>-<n>` form). The READY-committed floor read above ALSO
+      // proves R2's `withKernel` settle drain: under PB2's synchronous shape the
+      // completion is held and flushed at the START attempt's conclusion — the
+      // run could not be READY-committed at process exit unless the drain
+      // completed. (`withKernel` is composition-internal, not exported; the
+      // journey is its proof surface.)
+      const runnerRows = await readRunnerRows(db, id);
+      expect(runnerRows).toHaveLength(1);
+      expect(runnerRows[0]?.kind).toBe("provision_ready");
+      expect(runnerRows[0]?.requestId).toMatch(/^req-\d+-\d+$/);
     },
   );
 
@@ -177,6 +215,16 @@ describe("cli — the worktree activation journey (packet ch9-p2: J1/J2)", () =>
       expect(detail.instance.kernelStatus).toBe("TERMINAL");
       expect(detail.instance.terminalDisposition).toBe("failed");
       expect(detail.instance.failureReason).toBe("sys:provision_rejected");
+
+      // Fix G — the production diag path: exactly ONE runner-plane row, a
+      // `provision_failed` carrying the requestId and the VERBATIM provider
+      // reason (the provider's REPORT, never the kernel's classified verdict —
+      // here they coincide, but the field is the report).
+      const runnerRows = await readRunnerRows(db, id);
+      expect(runnerRows).toHaveLength(1);
+      expect(runnerRows[0]?.kind).toBe("provision_failed");
+      expect(runnerRows[0]?.requestId).toMatch(/^req-\d+-\d+$/);
+      expect(runnerRows[0]?.providerReason).toBe("sys:provision_rejected");
     },
   );
 });

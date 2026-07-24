@@ -12,13 +12,14 @@ import { createIngress } from "../ingress/index.js";
 import { createKernel } from "../kernel/index.js";
 import type { DiagnosticEvent, DiagnosticEventBody, DiagnosticsSink } from "../ports/diagnostics.js";
 import type { TimeSource } from "../ports/time.js";
+import { createDebugBundleExporter, redactPayloadsPolicy } from "../floor/index.js";
 import { openStore } from "../store/index.js";
 import {
   createControlledClock,
   fixtureDefinitionStore,
   fixtureTemplate,
 } from "../testkit/index.js";
-import type { AdmittedTemplate, WorkflowTemplate } from "../domain/index.js";
+import type { AdmittedTemplate, WorkflowInstance, WorkflowTemplate } from "../domain/index.js";
 import { admitTemplate } from "../definition/index.js";
 import { createGateRegistry } from "../gates/index.js";
 
@@ -507,8 +508,11 @@ const RUNNER_R3_FIXTURES: readonly { name: string; body: string }[] = [
   // runner attribution exclusions.
   { name: "runner row MISSING instanceId", body: JSON.stringify({ source: "runner", kind: "provision_ready", requestId: "r" }) },
   { name: "runner row carrying opId", body: JSON.stringify({ source: "runner", kind: "provision_ready", instanceId: "i", requestId: "r", opId: "o" }) },
+  { name: "runner row carrying actorId", body: JSON.stringify({ source: "runner", kind: "provision_ready", instanceId: "i", requestId: "r", actorId: "a" }) },
   { name: "runner row carrying type", body: JSON.stringify({ source: "runner", kind: "provision_ready", instanceId: "i", requestId: "r", type: "PASS" }) },
   { name: "runner row carrying payloadDigest", body: JSON.stringify({ source: "runner", kind: "provision_ready", instanceId: "i", requestId: "r", payloadDigest: "d" }) },
+  // runner row carrying an INGRESS detail token — detail is source=ingress only.
+  { name: "runner row carrying (ingress) detail", body: JSON.stringify({ source: "runner", kind: "provision_failed", instanceId: "i", requestId: "r", providerReason: "x", detail: "unknown_key" }) },
 ];
 
 describe("runner rows — every new presence iff violated (both directions) → read_failed", () => {
@@ -518,6 +522,78 @@ describe("runner rows — every new presence iff violated (both directions) → 
     insertRaw(path, body, "i");
     expect(await reasonOf(handle.reader.getGlobalDiagnostics(0))).toBe("read_failed");
     handle.close();
+  });
+});
+
+// The debug-bundle exclusion over a STORED runner row (DG3): the closed
+// BundleDiagRow projection structurally excludes the runner fields —
+// providerDetail (untrusted) can never enter the redacted bundle.
+const BUNDLE_INSTANCE: WorkflowInstance = {
+  instanceId: "inst-1",
+  templateRef: { id: "local-pair-v0", version: 1 },
+  task: "t",
+  binding: { implementer: "codex", reviewer: "claude" },
+  currentStep: "implement",
+  round: 1,
+  kernelStatus: "ACTIVE",
+  terminalDisposition: null,
+  activationMode: "immediate",
+  wait: null,
+  runtimeContext: { state: "ready", ref: null },
+  failureReason: null,
+  runOverrides: {},
+  version: 1,
+};
+
+describe("runner rows — the debug-bundle projection EXCLUDES the runner fields (DG3)", () => {
+  it("a STORED provision_failed runner row projects to a BundleDiagRow WITHOUT providerReason/providerDetail/requestId", async () => {
+    // A real diag file carrying an attributed runner failure row (providerDetail
+    // present — the untrusted tail that must never reach the redacted bundle).
+    const diagPath = tempDbPath();
+    buildRawDiag(diagPath, {
+      rows: [
+        {
+          instanceId: "inst-1",
+          body: JSON.stringify({
+            source: "runner",
+            kind: "provision_failed",
+            instanceId: "inst-1",
+            requestId: "req-1000-1",
+            providerReason: "sys:provision_rejected",
+            providerDetail: "fatal: not a git repository (secret-marker)",
+          }),
+        },
+      ],
+    });
+    const diag = openDiagStore(diagPath, createControlledClock(0));
+    const main = openStore(":memory:", createControlledClock(0));
+    try {
+      await main.store.createInstance(BUNDLE_INSTANCE);
+      const bundle = await createDebugBundleExporter(
+        main.store,
+        redactPayloadsPolicy,
+        diag.reader,
+      ).exportDebugBundle("inst-1");
+      expect(bundle).not.toBeNull();
+      const section = bundle?.rejectedInputs;
+      expect(section?.status).toBe("present");
+      if (section?.status !== "present") return;
+      expect(section.rows).toHaveLength(1);
+      const row = section.rows[0];
+      expect(row?.kind).toBe("provision_failed");
+      expect(row?.source).toBe("runner");
+      // The closed projection carries kind/source/at/ordinal only — the runner
+      // report fields are structurally absent (providerDetail never leaks).
+      const keys = Object.keys(row ?? {});
+      expect(keys).not.toContain("providerReason");
+      expect(keys).not.toContain("providerDetail");
+      expect(keys).not.toContain("requestId");
+      // The untrusted detail marker is nowhere in the serialized bundle.
+      expect(JSON.stringify(bundle)).not.toContain("secret-marker");
+    } finally {
+      diag.close();
+      main.close();
+    }
   });
 });
 

@@ -1024,6 +1024,38 @@ green, re-run by the orchestrator (never trusted from the builder's
 self-report). The changed-file set equals the declared 16-file
 boundary exactly.
 
+**The PB1 throw-site inventory (the Acceptance-mandated LIST — every
+throw site in the provider body + helpers + awaited spawn
+boundaries, each mapped to a completion or the named port-breach
+class, bound to the failure grid's cells):**
+
+1. `fireReady()` unbound-sink throw → PORT BREACH (programming
+   error; no grid cell — never reachable from config).
+2. `fireFailed()` unbound-sink throw → PORT BREACH (same class).
+3. `projectForActor()` foreign-kind throw → PORT BREACH (RP3
+   integrity; the kernel's kind boundary makes it unreachable in a
+   healthy composition).
+4. `projectForActor()` malformed-locator throw → PORT BREACH (RP3,
+   the corrupted-store-row class; exact own-keyset since the gate-2
+   aftermath).
+5. `runGit()` spawn setup try/catch → resolves `{kind:"infra"}` →
+   `failed(sys:provision_failed)` — the grid's spawn-infra column
+   (sync-setup-throw member), every git site.
+6. `runGit()` child `error` event (ENOENT) → resolves infra →
+   `failed(sys:provision_failed)` — the spawn-infra column, every
+   git site.
+7. `runGit()` timeout kill (SIGTERM→grace→SIGKILL) → resolves infra
+   → `failed(sys:provision_failed)` — the timeout column, every git
+   site.
+8. `evaluate()` `realpathSync(repo)` try/catch → `failed(sys:
+   provision_rejected)` — the grid's realpath row (its single
+   failure shape).
+9. Every `await runGit(...)`/`await evaluate(...)` boundary in
+   `provision()` — the promises ALWAYS resolve, never reject; no
+   await surfaces a throw, so every outcome maps to exactly one
+   completion (PB1's totality; sites 1–4 are the reserved
+   port-breach class, structurally unreachable from hostile config).
+
 **R-DERIVED-PROBES (family → mutation → expected red → observed;
 receipts under the session scratchpad `ch9p2-probes/build/`, probe
 runner protocol, every restore byte-verified):**
@@ -1054,13 +1086,61 @@ vitest `-t "(c) repo"` filter parsed as a regex and matched zero
 tests (a false green) — caught in-session, re-run with a regex-safe
 filter; the receipt logs carry both runs.
 
+**Aftermath (build close):** post-build boundary audit 0 errors @
+`4088b7a0`; coverage green. Mutation-pilot dual-run (the §9.4 flow
+note; scoped to the boundary's six production files, 65 s):
+providers 77.47% (243 killed / 55 survived / 18 no-coverage), kernel
+88.72%, diag 75.57%, ports 100%, `cli/main.ts` 0% (475 no-coverage —
+the subprocess-journey class: Stryker's in-process runner cannot see
+child-process coverage; the ch9-P1 caveat's sibling, boundary-review
+data, no fix owed at the pilot stage). Arm gate 2 (codex
+gpt-5.6-sol/high, agent-invoked, 1200 s): **7 findings — 1 product,
+2 packet-docs, 4 test-evidence, 0 P0/P1** — plus a long
+plausibly-blind lane list; the receipt audit (S→S2 story included)
+and repo integrity passed. Dispositions: RP3's loose locator check
+FOLDED (exact own-keyset + extra/inherited-key negatives — the one
+product fix); the DG4 token finding NARROWED on verification — the
+EMITTED kinds were already correct (`provision_*`; a wrong kind
+cannot typecheck against the closed union), the wrong tokens lived
+only in the wrapper's DOC COMMENT, fixed, and the substance landed
+as the new unfakeable journey diag-readback lanes; the port timing
+doc FOLDED (sync-before-ack legality stated); the missing PB1
+throw-site inventory FOLDED into this record (orchestrator-authored,
+grid-bound); the four test-evidence batches FOLDED — the site-aware
+git fake driving the remaining grid cells + a UNIVERSAL exactly-one
+assert in the shared helper, the M4 env-allowlist NEGATIVE and the
+SIGTERM→grace→SIGKILL ORDER observer, the request-only identity
+pair + provider-grain orphan-retry + RP1 repo-value + PB3
+tail-CONTENT lanes, and the production-composition lanes (journey
+diag readback through the shipped subprocess; DG3 actorId/detail
+negatives; the stored-runner bundle exclusion). Test delta
+**1356 → 1371 (+15)**. EVERY arm-flagged plausibly-blind lane that
+gained a test was then EXECUTED-verified through the probe runner:
+probes AP-RP3 / AP-DG4 / AP-GRID / AP-ENV / AP-SIG / AP-NAME /
+AP-TAIL / AP-BUNDLE — all 8 RED with byte-verified restores
+(receipts under the session scratchpad `ch9p2-probes/aftermath/`;
+zero exit-3). One kill-coverage note for the boundary read: the
+failure-grid classification lives at TWO sites (`evaluate`'s
+`infraFail` + the create-phase inline classification), so no
+single-point mutation reds the whole grid — AP-GRID reds 4 cells,
+the create-phase ENOENT cell is driven by its own lane. AP-BUNDLE's
+target (`floor/debugBundle.ts` `toDiagRow`) sits OUTSIDE the
+boundary — probed read-only-mutation via the runner (restored
+byte-clean), no boundary change: the driving TEST lives in-boundary
+and the projection was not edited. Aftermath authorship: code +
+tests = the delegated aftermath agent; packet-text folds (this
+record, the inventory) = the orchestrator. R2's settle lane is
+journey-covered by declaration (the `withKernel` helper is
+composition-internal; the READY-committed floor read at process
+exit is its proof — recorded here, not a new unit lane).
+
 ```json
 {
   "packet_metrics": {
     "class": "kernel-semantic",
     "prediction": { "predicted": "projection", "reasoning": "plan §9.4 P2 row carries no explicit prediction; the ratified ch9 draft rows C6-C11 fix every provider surface, predicting projection", "discovered": "projection" },
     "provenance": { "anchored": 14, "derived": 14, "new_decision": 4 },
-    "rounds": { "review": 4, "doc_refinement": 0, "implementation": 1 },
+    "rounds": { "review": 4, "doc_refinement": 0, "implementation": 2 },
     "stops": [
       { "type": "2:contested-ratified-vs-reality", "what": "the ratified C7 in-repo dir default vs the v1/omnigent prior-art placement (host git-clean/status/sweep hazards, linked-worktree nesting) — a user-initiated reality check", "resolution": "user elected option A: draft reopen act 09825f78/4db149b1 amended the default to <repo-parent>/.pairflow-worktrees/<repo-name>" },
       { "type": "2:contested-ratified-vs-reality", "what": "the C8/C18 crash-retry freshness premise vs the per-process req-N counter (arm gate-1 P1: a crash between worktree creation and the marker commit bricks the retry on its own orphan)", "resolution": "user elected O1: newRequestId composes the injected TimeSource epoch-millis with the counter (N5/F5); the claim split into by-construction loud-collision + real-clock practical freshness" },
@@ -1069,9 +1149,10 @@ filter; the receipt logs carry both runs.
     "detector_misses": [
       { "found_at": "approve", "what": "USER-caught at the approve gate: the ratified draft's C7 dir default diverged from v1's deliberate parent-of-repo placement — neither the draft panel nor its arm ran a prior-art comparison", "why_missed": "no prior-art-check duty exists in the draft round; the boundary candidate is logged (a lens-5/DraftContract duty for v1-covered surfaces)" },
       { "found_at": "arm-approve", "what": "the per-process request-counter falsifying the crash-retry freshness premise; the subdir root-identity hole in the repository check; the pre-gate emission typing conflict (raw report vs classified enum)", "why_missed": "the panel verified claims against ratified rows and the built seam but did not walk cross-process lifecycles or attack the git-dir check with a non-root repo path; the arm's falsification-first framing found all three" },
-      { "found_at": "implementation", "what": "PROBE-RUNNER-caught: the S relative-repo lane was green-but-blind (the nonexistent-path fixture let the realpath rejection mask the isAbsolute guard)", "why_missed": "the lane text was correct but the fixture collapsed two rejection channels; the probe runner's exit-3 class caught it exactly as designed" }
+      { "found_at": "implementation", "what": "PROBE-RUNNER-caught: the S relative-repo lane was green-but-blind (the nonexistent-path fixture let the realpath rejection mask the isAbsolute guard)", "why_missed": "the lane text was correct but the fixture collapsed two rejection channels; the probe runner's exit-3 class caught it exactly as designed" },
+      { "found_at": "arm-build-close", "what": "one product defect (RP3 accepted extra/inherited locator keys) + four green-but-blind test batches (grid site cells, the M4 env/signal halves, identity/tail content, the production diag composition — static-body diag tests could not catch a wrapper or kind regression)", "why_missed": "the spec-time altitude rule defers member sensitivity to build close BY DESIGN; the build agent realized lane presence at declared strength but content-sensitivity gaps survived — the mandatory gate-2 sensitivity pass caught them, the aftermath folded all, and every fold was probe-runner-verified RED" }
     ],
-    "learned": "the arm's approve leg out-caught a four-round panel on cross-process lifecycle walks and check-bypass attacks (9 findings incl. 3 P1); a user prior-art reality check reopened a same-day-ratified draft row — prior-art comparison is a missing draft-round duty; two 600s arm legs died on the invocation's own timeout before the 1200s mode converged",
+    "learned": "the arm's approve leg out-caught a four-round panel on cross-process lifecycle walks and check-bypass attacks (9 findings incl. 3 P1); a user prior-art reality check reopened a same-day-ratified draft row — prior-art comparison is a missing draft-round duty; two 600s arm legs died on the invocation's own timeout before the 1200s mode converged; gate-2 again yielded mostly test-evidence (1 product / 4 sensitivity batches) and every aftermath fold was probe-runner-verified RED — the altitude split worked as designed on both gates",
     "main_thread_model": "claude-fable-5"
   }
 }

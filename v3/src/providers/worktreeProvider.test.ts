@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, relative } from "node:path";
 
@@ -87,11 +87,58 @@ async function provisionOnce(
   const rec = recorder();
   provider.bindCompletionSink(rec.sink);
   await provider.provision(ids.instanceId ?? "i1", ids.requestId ?? "r1", spec);
+  // EXACTLY-ONE completion is UNIVERSAL (PB1): the shared helper asserts it on
+  // EVERY provision lane (S/N/M/PB/RP), never in one representative test — a
+  // lane that double-fires or drops a completion reds here.
+  expect(rec.completions).toHaveLength(1);
   const completion = rec.completions[0]?.completion;
   if (completion === undefined) {
     throw new Error("test wiring: provision fired no completion");
   }
   return { completion, completions: rec.completions };
+}
+
+/**
+ * A SITE-AWARE git fake (D): delegates to REAL git except at ONE injected
+ * fault site — the provider's git invocations are, in order, repo-check
+ * (`rev-parse --git-dir`), root (`rev-parse --show-toplevel`), base-resolution
+ * (`rev-parse --verify`), and worktree-add (`worktree add`). `mode`:
+ *  - "timeout": the target site SLEEPS past the provider's tiny timeout (the
+ *    provider's SIGTERM→SIGKILL kill → infra(timeout));
+ *  - "infra": the invocation IMMEDIATELY BEFORE the target runs real git and
+ *    then REMOVES this binary, so the target site's `spawn` hits ENOENT (the
+ *    provider's child `error` event → infra) — a SITE-specific spawn-infra with
+ *    the earlier sites succeeding.
+ */
+function writeSiteAwareGit(
+  root: string,
+  name: string,
+  failSite: "base-resolution" | "worktree-add",
+  mode: "timeout" | "infra",
+): string {
+  const priorSite = failSite === "base-resolution" ? "root" : "base-resolution";
+  const lines = [
+    "#!/bin/sh",
+    'site=""',
+    'if [ "$1" = "worktree" ] && [ "$2" = "add" ]; then site="worktree-add"; fi',
+    'if [ "$1" = "rev-parse" ]; then',
+    '  case "$2" in',
+    '    --git-dir) site="repo-check" ;;',
+    '    --show-toplevel) site="root" ;;',
+    '    --verify) site="base-resolution" ;;',
+    "  esac",
+    "fi",
+  ];
+  if (mode === "timeout") {
+    lines.push(`if [ "$site" = "${failSite}" ]; then sleep 30; exit 0; fi`);
+  } else {
+    // Run the prior site normally, then self-remove so the TARGET site ENOENTs.
+    lines.push(
+      `if [ "$site" = "${priorSite}" ]; then git "$@"; rc=$?; rm -f "$0"; exit $rc; fi`,
+    );
+  }
+  lines.push('exec git "$@"', "");
+  return writeScript(root, name, lines.join("\n"));
 }
 
 function worktreeSpec(repo: string, extra: Record<string, unknown> = {}): RuntimeContextSpec {
@@ -618,6 +665,7 @@ describe("worktreeProvider — RP: ref + projection", () => {
     const rec = recorder();
     provider.bindCompletionSink(rec.sink);
     await provider.provision("i1", "r1", worktreeSpec(repo));
+    expect(rec.completions).toHaveLength(1);
     const ready = rec.completions[0]?.completion;
     if (ready === undefined || ready.kind !== "ready") throw new Error("no ready ref");
     const projection = provider.projectForActor(ready.ref) as unknown as Record<string, unknown>;
@@ -638,5 +686,247 @@ describe("worktreeProvider — RP: ref + projection", () => {
     expect(() => provider.projectForActor({ kind: "worktree", locator: "not-an-object" })).toThrow(
       /malformed locator/,
     );
+  });
+
+  it("RP3 EXACT shape: an EXTRA-key locator throws; an INHERITED-key carrier throws; four-string projects", async () => {
+    const root = tempRoot();
+    const repo = makeRepo(root, "host");
+    const provider = createWorktreeProvider();
+    // The happy four-string OWN-key shape projects.
+    const rec = recorder();
+    provider.bindCompletionSink(rec.sink);
+    await provider.provision("i1", "r1", worktreeSpec(repo));
+    expect(rec.completions).toHaveLength(1);
+    const ready = rec.completions[0]?.completion;
+    if (ready === undefined || ready.kind !== "ready") throw new Error("no ready ref");
+    expect(() => provider.projectForActor(ready.ref)).not.toThrow();
+    // An EXTRA own key beyond the RP1 set → LOUD throw (never project lossily).
+    expect(() =>
+      provider.projectForActor({
+        kind: "worktree",
+        locator: { path: "/p", branch: "b", repo: "/r", base_commit: "c", evil: "x" },
+      }),
+    ).toThrow(/malformed locator/);
+    // An INHERITED/prototype carrier — the four fields live on the PROTOTYPE,
+    // zero own keys → LOUD throw (own-property reads only).
+    const carrier = Object.create({ path: "/p", branch: "b", repo: "/r", base_commit: "c" }) as object;
+    expect(() => provider.projectForActor({ kind: "worktree", locator: carrier })).toThrow(
+      /malformed locator/,
+    );
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// D — the failure grid's remaining site×shape cells, driven with a SITE-AWARE
+// git fake (base-resolution / worktree-add × timeout / spawn-infra) + the
+// synchronous spawn-setup throw lane. Every cell → sys:provision_failed.
+describe("worktreeProvider — D: the failure grid site×shape cells", () => {
+  it(
+    "base-resolution × timeout → sys:provision_failed",
+    { timeout: 15_000 },
+    async () => {
+      const root = tempRoot();
+      const repo = makeRepo(root, "host");
+      const fake = writeSiteAwareGit(root, "br-timeout.sh", "base-resolution", "timeout");
+      const { completion } = await provisionOnce(worktreeSpec(repo), {
+        gitBinary: fake,
+        timeoutMs: 150,
+        graceMs: 150,
+      });
+      expect(completion.kind).toBe("failed");
+      if (completion.kind !== "failed") return;
+      expect(completion.reason).toBe("sys:provision_failed");
+    },
+  );
+
+  it("base-resolution × spawn-infra (ENOENT) → sys:provision_failed", async () => {
+    const root = tempRoot();
+    const repo = makeRepo(root, "host");
+    const fake = writeSiteAwareGit(root, "br-infra.sh", "base-resolution", "infra");
+    const { completion } = await provisionOnce(worktreeSpec(repo), { gitBinary: fake });
+    expect(completion.kind).toBe("failed");
+    if (completion.kind !== "failed") return;
+    expect(completion.reason).toBe("sys:provision_failed");
+  });
+
+  it(
+    "worktree-add × timeout → sys:provision_failed",
+    { timeout: 15_000 },
+    async () => {
+      const root = tempRoot();
+      const repo = makeRepo(root, "host");
+      const fake = writeSiteAwareGit(root, "wt-timeout.sh", "worktree-add", "timeout");
+      const { completion } = await provisionOnce(worktreeSpec(repo), {
+        gitBinary: fake,
+        timeoutMs: 150,
+        graceMs: 150,
+      });
+      expect(completion.kind).toBe("failed");
+      if (completion.kind !== "failed") return;
+      expect(completion.reason).toBe("sys:provision_failed");
+    },
+  );
+
+  it("worktree-add × spawn-infra (ENOENT) → sys:provision_failed", async () => {
+    const root = tempRoot();
+    const repo = makeRepo(root, "host");
+    const fake = writeSiteAwareGit(root, "wt-infra.sh", "worktree-add", "infra");
+    const { completion } = await provisionOnce(worktreeSpec(repo), { gitBinary: fake });
+    expect(completion.kind).toBe("failed");
+    if (completion.kind !== "failed") return;
+    expect(completion.reason).toBe("sys:provision_failed");
+  });
+
+  it("a SYNCHRONOUS spawn-setup throw → sys:provision_failed (infra in every phase)", async () => {
+    const root = tempRoot();
+    const repo = makeRepo(root, "host");
+    // A git-binary path containing a NUL byte makes node's `spawn` throw
+    // SYNCHRONOUSLY (ERR_INVALID_ARG_VALUE) before any child exists — the
+    // provider's try/catch infra lane (S3), classified sys:provision_failed.
+    const nulBin = `git${String.fromCharCode(0)}x`;
+    const { completion } = await provisionOnce(worktreeSpec(repo), { gitBinary: nulBin });
+    expect(completion.kind).toBe("failed");
+    if (completion.kind !== "failed") return;
+    expect(completion.reason).toBe("sys:provision_failed");
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// E — the M4 spawn-discipline halves: the env allowlist (NEGATIVE) and the
+// SIGTERM→grace→SIGKILL escalation ORDER.
+describe("worktreeProvider — E: M4 spawn discipline (env allowlist + signal order)", () => {
+  it("env allowlist NEGATIVE: a forbidden sentinel env var never reaches the git child (PATH-only positive)", async () => {
+    const root = tempRoot();
+    const repo = makeRepo(root, "host");
+    const marker = join(root, "child-env.txt");
+    const sentinel = "PAIRFLOW_FORBIDDEN_SENTINEL_9f3";
+    // A git fake that DUMPS its own environment (last write wins across the
+    // invocations, all sharing the same allowlisted env) then delegates to real
+    // git so provisioning still completes.
+    const dumper = writeScript(root, "envdump.sh", `#!/bin/sh\nprintenv > "${marker}"\nexec git "$@"\n`);
+    process.env[sentinel] = "leak";
+    try {
+      const { completion } = await provisionOnce(worktreeSpec(repo), { gitBinary: dumper });
+      expect(completion.kind).toBe("ready");
+    } finally {
+      delete process.env[sentinel];
+    }
+    const dumped = readFileSync(marker, "utf8");
+    // NEGATIVE: a forbidden var set in THIS process never crosses the allowlist.
+    expect(dumped).not.toContain(sentinel);
+    // POSITIVE: PATH (the {PATH} allowlist default) IS present.
+    expect(dumped).toMatch(/^PATH=/m);
+  });
+
+  it(
+    "SIGTERM→grace→SIGKILL ORDER: the child receives SIGTERM first and survives the grace window; SIGKILL ends it",
+    { timeout: 15_000 },
+    async () => {
+      const root = tempRoot();
+      const repo = makeRepo(root, "host");
+      const marker = join(root, "signals.log");
+      // A node child (deterministic signal handling — a shell `trap` DEFERS
+      // during a foreground `sleep`, which node-spawn makes flaky) that catches
+      // SIGTERM (records it + keeps running) — only the UNCATCHABLE SIGKILL can
+      // end it. It records SURVIVED 100 ms AFTER SIGTERM to prove it lived into
+      // the grace window. An immediate-SIGKILL provider would leave NO "TERM"
+      // line (SIGKILL cannot be trapped) → this test RED. The timeout is set
+      // well above node's cold-start so SIGTERM never races the boot.
+      const signalChild = writeScript(
+        root,
+        "signal-order.js",
+        [
+          "#!/usr/bin/env node",
+          'const fs = require("node:fs");',
+          `const m = ${JSON.stringify(marker)};`,
+          'fs.appendFileSync(m, "START\\n");',
+          'process.on("SIGTERM", () => {',
+          '  fs.appendFileSync(m, "TERM\\n");',
+          '  setTimeout(() => fs.appendFileSync(m, "SURVIVED\\n"), 100);',
+          "});",
+          "setInterval(() => {}, 1000);",
+          "",
+        ].join("\n"),
+      );
+      const { completion } = await provisionOnce(worktreeSpec(repo), {
+        gitBinary: signalChild,
+        timeoutMs: 1500,
+        graceMs: 1000,
+      });
+      expect(completion.kind).toBe("failed");
+      if (completion.kind !== "failed") return;
+      expect(completion.reason).toBe("sys:provision_failed");
+      const log = readFileSync(marker, "utf8").split("\n").filter(Boolean);
+      // SIGTERM arrived FIRST (the child recorded it) — an immediate-SIGKILL
+      // impl can't leave this line.
+      expect(log).toContain("TERM");
+      // The child SURVIVED past SIGTERM into the grace window, and SIGKILL —
+      // the only thing it cannot catch — ended it: SURVIVED appears AFTER TERM.
+      const firstTerm = log.indexOf("TERM");
+      expect(log.slice(firstTerm + 1)).toContain("SURVIVED");
+    },
+  );
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// F — identity/ref/detail: request-only variation, the N5 orphan-retry at
+// provider grain, the RP1 `repo` VALUE, and the PB3 tail CONTENT (last-2000).
+describe("worktreeProvider — F: identity/ref/detail", () => {
+  it("SAME instance, DIFFERENT request → DISTINCT worktrees (request-only variation)", async () => {
+    const root = tempRoot();
+    const repo = makeRepo(root, "host");
+    const a = await provisionOnce(worktreeSpec(repo), {}, { instanceId: "inst", requestId: "reqA" });
+    const b = await provisionOnce(worktreeSpec(repo), {}, { instanceId: "inst", requestId: "reqB" });
+    expect(a.completion.kind).toBe("ready");
+    expect(b.completion.kind).toBe("ready");
+    if (a.completion.kind !== "ready" || b.completion.kind !== "ready") return;
+    expect(locatorOf(a.completion.ref).path).not.toBe(locatorOf(b.completion.ref).path);
+    expect(locatorOf(a.completion.ref).branch).not.toBe(locatorOf(b.completion.ref).branch);
+  });
+
+  it("N5 orphan-retry (provider grain): a worktree pre-created at (inst, reqA) does not block (inst, reqB) — the orphan PERSISTS", async () => {
+    const root = tempRoot();
+    const repo = makeRepo(root, "host");
+    // reqA provisions its worktree (the crashed attempt's would-be orphan).
+    const a = await provisionOnce(worktreeSpec(repo), {}, { instanceId: "inst", requestId: "reqA" });
+    expect(a.completion.kind).toBe("ready");
+    if (a.completion.kind !== "ready") return;
+    const orphanPath = locatorOf(a.completion.ref).path as string;
+    expect(existsSync(orphanPath)).toBe(true);
+    // The retry under a FRESH request id (reqB) SUCCEEDS — no collision.
+    const b = await provisionOnce(worktreeSpec(repo), {}, { instanceId: "inst", requestId: "reqB" });
+    expect(b.completion.kind).toBe("ready");
+    if (b.completion.kind !== "ready") return;
+    expect(locatorOf(b.completion.ref).path).not.toBe(orphanPath);
+    // Orphan PERSISTENCE (teardown is the named Absent): reqA's worktree remains.
+    expect(existsSync(orphanPath)).toBe(true);
+  });
+
+  it("RP1: the locator `repo` VALUE equals the EVALUATED repo path (root/realpath), not just a string", async () => {
+    const root = tempRoot();
+    const repo = makeRepo(root, "host");
+    const evaluated = gitOut(repo, "rev-parse", "--show-toplevel");
+    const { completion } = await provisionOnce(worktreeSpec(repo));
+    expect(completion.kind).toBe("ready");
+    if (completion.kind !== "ready") return;
+    expect(locatorOf(completion.ref).repo).toBe(evaluated);
+  });
+
+  it("PB3: the detail tail keeps the LAST 2000 code units (a prefix-keeping impl fails)", async () => {
+    const root = tempRoot();
+    const repo = makeRepo(root, "host");
+    const tail = "T".repeat(2000);
+    // stderr = a DISTINCT head marker + exactly 2000 trailing units; the tail
+    // must be the LAST 2000 (the marker dropped), never the first 2000.
+    const noisy = writeScript(
+      root,
+      "tailcontent.sh",
+      `#!/bin/sh\n>&2 printf '%s' 'HEADMARKER${tail}'\nexit 1\n`,
+    );
+    const { completion } = await provisionOnce(worktreeSpec(repo), { gitBinary: noisy });
+    expect(completion.kind).toBe("failed");
+    if (completion.kind !== "failed") return;
+    expect(completion.detail).toBe(tail);
+    expect(completion.detail).not.toContain("HEADMARKER");
   });
 });
