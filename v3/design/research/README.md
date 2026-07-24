@@ -23,6 +23,12 @@ V3 design memos (open questions, design syntheses) live in
   verdicts, plus a second-pass delta section. `nanoclaw` is the runtime
   component behind the `bitsafe-ai-os-capture.md` fleet — the
   transport/supervision/isolation reference, explicitly *not* a kernel.
+- **`sakana-fugu-study.md`** — a web/paper research capture (not a codebase
+  study): Sakana AI's Fugu product and its TRINITY/Conductor papers — a
+  *trained* dynamic orchestrator in production. Serves as an external checksum
+  on the settled direction of
+  [`../topics/_dynamic-orchestrator-workflow.md`](../topics/_dynamic-orchestrator-workflow.md),
+  plus a reception/adoption snapshot (2026-07-24).
 - **`bitsafe-ai-os-capture.md`** — a raw information capture (not analysis) of
   BitSafe's "How BitSafe Runs on AI" public writing. Internal links inside the
   captured material point at the *source* repo and intentionally do not

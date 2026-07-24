@@ -29,6 +29,19 @@ Relation to other research:
 > surface") should be re-read against those three items: they may jointly dissolve
 > it, or reduce it to the session-reuse residue (Q1/Q3).
 
+> **Evidence update (2026-07-24, Sakana Fugu —
+> `../research/sakana-fugu-study.md`):** external confirmation of the settled
+> direction from a *trained* orchestrator. Sakana's Fugu-Ultra — an RL-trained
+> production orchestrator — converges on emitting a **declared workflow object**
+> (steps + worker IDs + per-step context access lists) that is *fixed at
+> generation time*, with no mid-flight re-delegation: dynamism is *which plan
+> gets generated*, exactly this memo's "chooses at runtime — among declared
+> possibilities." Their access-list isolation (motivated by a failure they name
+> **"orchestration collapse"**) independently corroborates issued-context
+> strictness. One forward pointer: a model-authored plan submitted through
+> normal ingress is a viable *use pattern* of the template pattern — keep that
+> door open when the orchestrator template gets authored.
+
 ---
 
 ## 1. The correction
