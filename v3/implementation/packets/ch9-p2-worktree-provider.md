@@ -1149,12 +1149,16 @@ byte-verified):**
 
 **Recorded residuals + declines (the gate-2 re-check's remaining
 items, disposed):** (1) RP3 vs NON-ENUMERABLE/SYMBOL extra own keys
-— `declined — out of threat model`: the locator reaches
-`projectForActor` from the kernel's STORED ref, a canonical-JSON
-round-trip, and `JSON.parse` can only construct enumerable
-string-keyed properties; a programmatic caller handing a
-symbol-keyed carrier is the port-breach programming-error class,
-not a reachable input. (2) The R2 `withKernel` settle is
+— `declined — out of threat model`, on the TRANSPORT-GATE mechanism:
+every ref the kernel projects has passed the pre-commit
+canonical-JSON transport gate (the kernel's canonicality check —
+`kernel.ts#270` — rejects values that are not plain enumerable
+string-keyed data), so BOTH projection paths are covered: the
+immediate-activation path projects the post-gate IN-MEMORY value,
+later dispatches the JSON-parsed stored form; a symbol-keyed or
+non-enumerable carrier cannot pass the gate, and a programmatic
+caller bypassing the kernel is the port-breach programming-error
+class. (2) The R2 `withKernel` settle is
 CODE-REVIEW-ASSERTED, not probe-driven — under PB2's synchronous
 shape its removal is outcome-indistinguishable BY DESIGN (the drain
 is empty on every reachable path; the belt exists for a future
@@ -1166,7 +1170,16 @@ composition code (the equivalent-mutant class mutation testing
 cannot kill). Aftermath authorship: code +
 tests = the delegated aftermath agent; probe execution = two
 delegated probe agents through the runner; packet-text folds (this
-record, the inventory, the tables) = the orchestrator. R2's settle lane is
+record, the inventory, the tables) = the orchestrator. **Leg close**
+(the README §6 diminishing-returns cutoff; the ch9-P1 precedent):
+the gate-2 re-check #2 at `e84ffe28` resolved/accepted every
+disposition (AP-CREATE's three red cells + the recorded timing
+blindness; AP-WRAP + the identity-mutant residual; the R2
+synchronous-shape narrowing; the 13-receipt table audit) and
+yielded ONLY the RP3-decline RATIONALE correction (the
+transport-gate mechanism replacing the stored-ref round-trip claim
+— corrected in this record) — the build-close arm leg CLOSES on
+this bookkeeping-only round. R2's settle lane is
 journey-covered by declaration (the `withKernel` helper is
 composition-internal; the READY-committed floor read at process
 exit is its proof — recorded here, not a new unit lane).
