@@ -1127,9 +1127,46 @@ the create-phase ENOENT cell is driven by its own lane. AP-BUNDLE's
 target (`floor/debugBundle.ts` `toDiagRow`) sits OUTSIDE the
 boundary — probed read-only-mutation via the runner (restored
 byte-clean), no boundary change: the driving TEST lives in-boundary
-and the projection was not edited. Aftermath authorship: code +
-tests = the delegated aftermath agent; packet-text folds (this
-record, the inventory) = the orchestrator. R2's settle lane is
+and the projection was not edited. **The aftermath probe table (family → mutation → expected red →
+observed; receipts under `ch9p2-probes/aftermath/`, all restores
+byte-verified):**
+
+| Probe | Mutation | Expected red | Observed |
+|---|---|---|---|
+| AP-RP3 | locator gate relaxed to a 4-field type check | the RP3 exact-shape negatives | RED |
+| AP-DG4 | the production wrapper's diag emit deleted | the J1/J2 diag readback | RED (both) |
+| AP-GRID | `evaluate`'s `infraFail` reason flipped | the evaluation grid cells | RED (4 cells) |
+| AP-CREATE | the CREATE-phase classification flipped (both inline branches) | the create-phase `provision_failed` lanes | RED (over-length, collision, worktree-add×ENOENT; the worktree-add×timeout cell is TIMING-BLIND to this single mutation — under load the 150 ms budget can expire at an earlier evaluation site, still yielding `provision_failed` vacuously — the create site stays pinned by the three red cells) |
+| AP-ENV | children spawned with the full `process.env` | the env-allowlist negative | RED |
+| AP-SIG | immediate SIGKILL, no SIGTERM/grace | the signal-order observer | RED |
+| AP-NAME | names derived from the instanceId only | the request-only distinctness pair | RED |
+| AP-ORPHAN | pre-existing sibling worktrees removed before create | the orphan-persistence assert | RED |
+| AP-REPO | the locator `repo` hardcoded to a constant | the RP1 repo-value assert | RED |
+| AP-TAIL | the detail tail keeps the FIRST 2000 units | the last-2000 content assert | RED |
+| AP-BUNDLE | `providerDetail` added to the bundle projection (`floor/debugBundle.ts` — outside the boundary, probed read-only-mutation, restored byte-clean) | the stored-runner bundle exclusion | RED |
+| AP-DG3 | the runner branch's `actorId` forbidden-check dropped | the runner-row-with-actorId negative | RED |
+| AP-WRAP | the wrapper's `providerReason` hardcoded to the OTHER token | the J2 verbatim-reason assert | RED (substitution-detectable for any non-expected value; the IDENTITY substitution — hardcoding exactly the J2 journey's own token — is the equivalent-mutant residual, recorded below) |
+
+**Recorded residuals + declines (the gate-2 re-check's remaining
+items, disposed):** (1) RP3 vs NON-ENUMERABLE/SYMBOL extra own keys
+— `declined — out of threat model`: the locator reaches
+`projectForActor` from the kernel's STORED ref, a canonical-JSON
+round-trip, and `JSON.parse` can only construct enumerable
+string-keyed properties; a programmatic caller handing a
+symbol-keyed carrier is the port-breach programming-error class,
+not a reachable input. (2) The R2 `withKernel` settle is
+CODE-REVIEW-ASSERTED, not probe-driven — under PB2's synchronous
+shape its removal is outcome-indistinguishable BY DESIGN (the drain
+is empty on every reachable path; the belt exists for a future
+async provider), the ch9-P1 W3 single-buffer narrowing's precedent
+class. (3) The AP-WRAP identity-substitution residual: a wrapper
+hardcoding exactly `sys:provision_rejected` survives J2 — the
+verbatim pass-through's remaining guarantee is one line of reviewed
+composition code (the equivalent-mutant class mutation testing
+cannot kill). Aftermath authorship: code +
+tests = the delegated aftermath agent; probe execution = two
+delegated probe agents through the runner; packet-text folds (this
+record, the inventory, the tables) = the orchestrator. R2's settle lane is
 journey-covered by declaration (the `withKernel` helper is
 composition-internal; the READY-committed floor read at process
 exit is its proof — recorded here, not a new unit lane).
