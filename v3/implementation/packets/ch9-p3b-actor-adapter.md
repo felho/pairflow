@@ -1195,16 +1195,52 @@ confirming the split logic is Stryker-reachable.
 
 Re-check fold (gate-2, tests-only + whitespace; a delegated leg on the orchestrator's instruction): the CL1 matrix gained EARLIER-ROW precedence members that drive rows 2-3 with a NON-NULL record (the record must stay inert), and the parser suites gained JSON-primitive fail-closed negatives (`null`/string/number/boolean) — three further residual mutants (row-3 condition forced false, row-3 block emptied, `isPlainObject → true`) OBSERVED RED via `probe_runner.py` (receipts `rc-row3-cond`, `rc-row3-block`, `rc-plain`).
 
+**Gates + approve record:** gate-1 arm = 10 legs on the approve path (codex gpt-5.6-sol/high per arm-pin; yield 10-6-4-4-3-3-1-1-2-0, leg 10 CLEAN citing 701af719...); HUMAN approve 2026-07-25 on 701af719... (flags F1-F10 walked individually; Case-B = NOT-B). Build commit 18870eb5 (post-build boundary audit 0 errors); mutation dual-run (SS9.4 pilot): all-files 66.40 / covered-only 79.03 (enc 100, worktreeProvider 83.33, opId 82.46, sqliteDiagStore 74.71, spawn 72.63, deliveryLoop 70.43; actorAdapter 0.00 by the declared subprocess-profile partiality, closed by the aftermath's classifier split - 310 mutants stryker-reachable after). Gate-2 arm: full leg (7 findings) -> aftermath 9044e68d (+27 tests, 6 observed-red receipts) -> re-check (3 residuals) -> fold 09926ed4 (+9 tests, 3 observed-red receipts) -> FINAL CLEAN citing 09926ed4. Suite 1592 -> 1628 across the aftermath.
+
 ```json
 {
   "packet_metrics": {
     "class": "operability",
-    "prediction": { "predicted": "projection", "reasoning": "the ratified draft rows C17-C23 fix the adapter surface densely; the split's activation share inherits the P3 row's projection prediction", "discovered": "projection" },
-    "provenance": { "anchored": 6, "derived": 14, "new_decision": 6 },
-    "rounds": { "review": 0, "doc_refinement": 0, "implementation": 1 },
-    "stops": [],
-    "detector_misses": [],
-    "learned": "The trivial real wrapper cannot produce malformed/foreign result records, so the RS2 keyset/foreign lanes and the EM1 shape lanes are unit-driven against exported fail-closed parsers while the reachable classification lanes drive end-to-end; a validator floor retro-invalidates a sibling suite's fast-timeout fixtures (SD2's pin is scoped to valid configs).",
+    "prediction": {
+      "predicted": "projection",
+      "reasoning": "the ratified draft rows C17-C23 fix the adapter surface densely; the split's activation share inherits the P3 row's projection prediction",
+      "discovered": "projection"
+    },
+    "provenance": {
+      "anchored": 6,
+      "derived": 14,
+      "new_decision": 6
+    },
+    "rounds": {
+      "review": 6,
+      "doc_refinement": 12,
+      "implementation": 3
+    },
+    "stops": [
+      {
+        "type": "4:flagged-approve",
+        "what": "first-of-a-kind human approve with flags F1-F10 (six new-decision rows, all approve-ratified) + the Case-B verdict",
+        "resolution": "the ratifier walked every flag individually across the STOP (EZX walkthroughs; two flags REDESIGNED at the STOP: F5 cwd-from-provider-contract on the ratifier's layering argument, F8 timeout-default raised to 30 min with the pairing made a composition duty after the arm's C14-letter catch); Case-B = NOT-B; approved on 701af719... (2026-07-25); arm gate-1 leg 10 CLEAN on the same basis"
+      }
+    ],
+    "detector_misses": [
+      {
+        "found_at": "arm-approve",
+        "what": "the substrate-probe classes behind the SD1/CL1 triple redesign: the Node timer-delay 1ms-collapse (NaN/Infinity/>=2^31), the delayed-exit-event race (timer callback outrunning a dead child's exit event), and the normal-own-timeout misclassification the attribution rewrite itself introduced",
+        "why_missed": "the panel verified text-vs-contract; the arm ran live runtime probes (P6h/P6i were arm-minted) and re-attacked each fold's own consequences"
+      },
+      {
+        "found_at": "arm-approve",
+        "what": "the leg-9 C14-letter catch: raising the loop lease default would have contradicted the ratified C14 row's own 'default 15 min' text",
+        "why_missed": "the fold treated the value as composition-grain; the arm re-read the ratified byte"
+      },
+      {
+        "found_at": "approve",
+        "what": "the cwd-source layering flaw (the adapter duck-typing the ACTOR-facing projection for its own operational parameter) — caught by the RATIFIER, not by five lenses or nine arm legs; became the LocalExecutionCapability design",
+        "why_missed": "every mechanical reviewer accepted value-correctness; the layering judgment (whose view is the projection?) needed the owner's architectural instinct"
+      }
+    ],
+    "learned": "gate-1 ran 10 arm legs (yield 10-6-4-4-3-3-1-1-2-0) with two ratifier-directed redesigns landing mid-loop; the human caught the one layering flaw all machine reviewers passed; gate-2 1+1+1 legs converged on 09926ed4; mutation dual-run 66.40/79.03 with the declared adapter subprocess blind spot closed by the classifier split (310 mutants stryker-reachable post-split)",
     "main_thread_model": "claude-fable-5"
   }
 }
