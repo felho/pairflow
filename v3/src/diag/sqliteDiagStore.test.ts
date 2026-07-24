@@ -997,3 +997,122 @@ describe("L1 allowlist growth — the ingress token (D2)", () => {
     handle.close();
   });
 });
+
+// ===========================================================================
+// packet ch9-p3a, DG3 — the errand_transition rows: emit/read parity, every
+// new presence iff violated in BOTH directions → read_failed; the requestId
+// re-scope's both-direction pair; the bundle exclusion unchanged.
+// ===========================================================================
+const B_ERR_CREATE: DiagnosticEventBody = {
+  source: "runner",
+  kind: "errand_transition",
+  instanceId: "inst-1",
+  contextPacketId: "inst-1@v2",
+  errandEdge: "create",
+  errandTo: "pending",
+};
+const B_ERR_ATTEMPT: DiagnosticEventBody = {
+  source: "runner",
+  kind: "errand_transition",
+  instanceId: "inst-1",
+  contextPacketId: "inst-1@v2",
+  errandEdge: "attempt-start",
+  errandFrom: "claimed",
+  errandTo: "attempting",
+  attemptId: "att-1",
+};
+const B_ERR_MOOT: DiagnosticEventBody = {
+  source: "runner",
+  kind: "errand_transition",
+  instanceId: "inst-1",
+  contextPacketId: "inst-1@v2",
+  errandEdge: "moot",
+  errandFrom: "pending",
+  errandTo: "mooted",
+};
+const B_ERR_PROMO: DiagnosticEventBody = {
+  source: "runner",
+  kind: "errand_transition",
+  instanceId: "inst-1",
+  contextPacketId: "inst-1@v2",
+  errandEdge: "evidence-promotion",
+  errandFrom: "unconfirmed",
+  errandTo: "confirmed",
+};
+
+describe("errand_transition rows — emit/read round-trip with exact keysets (DG3)", () => {
+  it("ROUND-TRIPS a birth edge, an attempt-scoped edge, a moot, and a promotion", async () => {
+    const handle = openDiagStore(":memory:", createControlledClock(7));
+    handle.sink.emit(B_ERR_CREATE);
+    handle.sink.emit(B_ERR_ATTEMPT);
+    handle.sink.emit(B_ERR_MOOT);
+    handle.sink.emit(B_ERR_PROMO);
+    const events = await handle.reader.getGlobalDiagnostics(0);
+    expect(events).toEqual([
+      { ...B_ERR_CREATE, at: 7, ordinal: 1 },
+      { ...B_ERR_ATTEMPT, at: 7, ordinal: 2 },
+      { ...B_ERR_MOOT, at: 7, ordinal: 3 },
+      { ...B_ERR_PROMO, at: 7, ordinal: 4 },
+    ]);
+    handle.close();
+  });
+
+  it("attributed errand rows read back on the instance surface", async () => {
+    const handle = openDiagStore(":memory:", createControlledClock(0));
+    handle.sink.emit(B_ERR_ATTEMPT);
+    const events = await handle.reader.getDiagnostics("inst-1", 0);
+    expect(events.map((e) => e.kind)).toEqual(["errand_transition"]);
+    handle.close();
+  });
+});
+
+const ERRAND_R3_FIXTURES: readonly { name: string; body: string }[] = [
+  // errand kind ⇔ runner source.
+  { name: "errand_transition with source kernel", body: JSON.stringify({ source: "kernel", kind: "errand_transition", instanceId: "i", contextPacketId: "i@v2", errandEdge: "create", errandTo: "pending" }) },
+  // contextPacketId/errandEdge/errandTo iff errand_transition (both directions).
+  { name: "errand row MISSING contextPacketId", body: JSON.stringify({ source: "runner", kind: "errand_transition", instanceId: "i", errandEdge: "create", errandTo: "pending" }) },
+  { name: "errand row MISSING errandEdge", body: JSON.stringify({ source: "runner", kind: "errand_transition", instanceId: "i", contextPacketId: "i@v2", errandTo: "pending" }) },
+  { name: "errand row MISSING errandTo", body: JSON.stringify({ source: "runner", kind: "errand_transition", instanceId: "i", contextPacketId: "i@v2", errandEdge: "create" }) },
+  { name: "provisioning kind carrying contextPacketId", body: JSON.stringify({ source: "runner", kind: "provision_ready", instanceId: "i", requestId: "r", contextPacketId: "i@v2" }) },
+  { name: "kernel kind carrying errandEdge", body: JSON.stringify({ ...KDUP, errandEdge: "create" }) },
+  // errandEdge / errandTo / errandFrom domain membership.
+  { name: "errandEdge not in the edge domain", body: JSON.stringify({ source: "runner", kind: "errand_transition", instanceId: "i", contextPacketId: "i@v2", errandEdge: "teleport", errandTo: "pending" }) },
+  { name: "errandTo not an ErrandState", body: JSON.stringify({ source: "runner", kind: "errand_transition", instanceId: "i", contextPacketId: "i@v2", errandEdge: "create", errandTo: "levitating" }) },
+  { name: "errandFrom not an ErrandState", body: JSON.stringify({ source: "runner", kind: "errand_transition", instanceId: "i", contextPacketId: "i@v2", errandEdge: "claim", errandFrom: "levitating", errandTo: "claimed" }) },
+  // errandFrom iff a NON-birth edge (both directions).
+  { name: "a BIRTH edge (create) carrying errandFrom", body: JSON.stringify({ source: "runner", kind: "errand_transition", instanceId: "i", contextPacketId: "i@v2", errandEdge: "create", errandFrom: "pending", errandTo: "pending" }) },
+  { name: "a NON-birth edge (claim) MISSING errandFrom", body: JSON.stringify({ source: "runner", kind: "errand_transition", instanceId: "i", contextPacketId: "i@v2", errandEdge: "claim", errandTo: "claimed" }) },
+  { name: "reconcile-backfill (birth) carrying errandFrom", body: JSON.stringify({ source: "runner", kind: "errand_transition", instanceId: "i", contextPacketId: "i@v2", errandEdge: "reconcile-backfill", errandFrom: "pending", errandTo: "confirmed" }) },
+  // attemptId iff an attempt-scoped edge (both directions).
+  { name: "an attempt-scoped edge (attempt-start) MISSING attemptId", body: JSON.stringify({ source: "runner", kind: "errand_transition", instanceId: "i", contextPacketId: "i@v2", errandEdge: "attempt-start", errandFrom: "claimed", errandTo: "attempting" }) },
+  { name: "a NON-attempt-scoped edge (moot) carrying attemptId", body: JSON.stringify({ source: "runner", kind: "errand_transition", instanceId: "i", contextPacketId: "i@v2", errandEdge: "moot", errandFrom: "pending", errandTo: "mooted", attemptId: "a" }) },
+  { name: "a birth edge (create) carrying attemptId", body: JSON.stringify({ source: "runner", kind: "errand_transition", instanceId: "i", contextPacketId: "i@v2", errandEdge: "create", errandTo: "pending", attemptId: "a" }) },
+  { name: "attemptId not a string", body: JSON.stringify({ source: "runner", kind: "errand_transition", instanceId: "i", contextPacketId: "i@v2", errandEdge: "confirm", errandFrom: "attempting", errandTo: "confirmed", attemptId: 5 }) },
+  // the requestId re-scope's both-direction pair.
+  { name: "errand_transition carrying requestId (the re-scope)", body: JSON.stringify({ source: "runner", kind: "errand_transition", instanceId: "i", contextPacketId: "i@v2", errandEdge: "create", errandTo: "pending", requestId: "r" }) },
+  { name: "provision_ready MISSING requestId (re-scope unchanged)", body: JSON.stringify({ source: "runner", kind: "provision_ready", instanceId: "i" }) },
+  // runner attribution exclusions carry to errand rows too.
+  { name: "errand row MISSING instanceId", body: JSON.stringify({ source: "runner", kind: "errand_transition", contextPacketId: "i@v2", errandEdge: "create", errandTo: "pending" }) },
+  { name: "errand row carrying opId", body: JSON.stringify({ source: "runner", kind: "errand_transition", instanceId: "i", contextPacketId: "i@v2", errandEdge: "create", errandTo: "pending", opId: "o" }) },
+  { name: "errand row carrying payloadDigest", body: JSON.stringify({ source: "runner", kind: "errand_transition", instanceId: "i", contextPacketId: "i@v2", errandEdge: "create", errandTo: "pending", payloadDigest: "d" }) },
+  // a provisioning kind carrying attemptId.
+  { name: "provision_ready carrying attemptId", body: JSON.stringify({ source: "runner", kind: "provision_ready", instanceId: "i", requestId: "r", attemptId: "a" }) },
+];
+
+describe("errand_transition rows — every new presence iff violated (both directions) → read_failed", () => {
+  it.each(ERRAND_R3_FIXTURES)("$name", async ({ body }) => {
+    const path = tempDbPath();
+    const handle = openDiagStore(path, createControlledClock(0));
+    insertRaw(path, body, "i");
+    expect(await reasonOf(handle.reader.getGlobalDiagnostics(0))).toBe("read_failed");
+    handle.close();
+  });
+
+  it("the provisioning kinds STILL carry requestId (the re-scope left them unchanged)", async () => {
+    const handle = openDiagStore(":memory:", createControlledClock(0));
+    handle.sink.emit(B_RUN_READY);
+    const events = await handle.reader.getGlobalDiagnostics(0);
+    expect((events[0] as DiagnosticEvent).requestId).toBe("req-1000-1");
+    handle.close();
+  });
+});

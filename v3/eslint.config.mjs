@@ -188,6 +188,8 @@ export default tseslint.config(
       // ch9-P2 (ADR-014 point 4): the providers/ module home joins the
       // production bans WITH the first real provider.
       "src/providers/**",
+      // ch9-P3a (T2): the runner-plane module home joins the production bans.
+      "src/runner/**",
     ],
     ignores: ["src/**/*.test.ts", "src/cli/dev/**"],
     rules: {
@@ -368,7 +370,7 @@ export default tseslint.config(
   {
     // ch8-P1: src/definition/** joins the plain dynamic group — it
     // claims no other no-restricted-syntax selectors (plan §8.7).
-    files: ["src/ports/**", "src/store/**", "src/ingress/**", "src/emit/**", "src/diag/**", "src/definition/**", "src/providers/**"],
+    files: ["src/ports/**", "src/store/**", "src/ingress/**", "src/emit/**", "src/diag/**", "src/definition/**", "src/providers/**", "src/runner/**"],
     ignores: ["src/**/*.test.ts"],
     rules: {
       "no-restricted-syntax": [

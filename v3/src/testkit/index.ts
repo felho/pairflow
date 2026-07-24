@@ -7,6 +7,13 @@ export { createFakeEgress } from "./fakeEgress.js";
 export type { FakeEgress, RecordedEgressCall } from "./fakeEgress.js";
 export { createScriptedActor } from "./scriptedActor.js";
 export type { DeliverFn, ScriptedActor } from "./scriptedActor.js";
+export { createScriptedAttemptExecutor } from "./scriptedAttemptExecutor.js";
+export type {
+  RecordedAttemptCall,
+  ScriptedAttemptExecutor,
+  ScriptedAttemptExecutorOptions,
+  ScriptedAttemptStep,
+} from "./scriptedAttemptExecutor.js";
 export {
   createScriptedProcessGateRunner,
   SCRIPTED_GIT_STATUS_HASH,

@@ -8,6 +8,12 @@ import type {
   DiagnosticsSink,
   DiagUnavailableReason,
 } from "../ports/diagnostics.js";
+import {
+  ATTEMPT_SCOPED_ERRAND_EDGES,
+  ERRAND_BIRTH_EDGES,
+  ERRAND_EDGES,
+  ERRAND_STATES,
+} from "../ports/diagnostics.js";
 import type { TimeSource } from "../ports/time.js";
 
 /**
@@ -83,6 +89,12 @@ const BODY_KEYS: Record<keyof DiagnosticEventBody, true> = {
   requestId: true,
   providerReason: true,
   providerDetail: true,
+  // packet ch9-p3a, DG1 — the errand_transition body fields.
+  contextPacketId: true,
+  errandEdge: true,
+  errandTo: true,
+  errandFrom: true,
+  attemptId: true,
   expectedVersion: true,
   currentVersion: true,
   payloadDigest: true,
@@ -99,7 +111,13 @@ const KINDS: ReadonlySet<string> = new Set([
   // packet ch9-p2, DG2 — the runner-plane provisioning kinds.
   "provision_ready",
   "provision_failed",
+  // packet ch9-p3a, DG1 — the errand state-transition kind.
+  "errand_transition",
 ]);
+const ERRAND_STATE_SET: ReadonlySet<string> = new Set(ERRAND_STATES);
+const ERRAND_EDGE_SET: ReadonlySet<string> = new Set(ERRAND_EDGES);
+const ATTEMPT_SCOPED_EDGE_SET: ReadonlySet<string> = new Set(ATTEMPT_SCOPED_ERRAND_EDGES);
+const ERRAND_BIRTH_EDGE_SET: ReadonlySet<string> = new Set(ERRAND_BIRTH_EDGES);
 const DETAIL_TOKENS: ReadonlySet<string> = new Set([
   "not_plain_object",
   "unknown_key",
@@ -144,6 +162,11 @@ function project(body: DiagnosticEventBody): Record<string, unknown> {
     requestId,
     providerReason,
     providerDetail,
+    contextPacketId,
+    errandEdge,
+    errandTo,
+    errandFrom,
+    attemptId,
     expectedVersion,
     currentVersion,
     payloadDigest,
@@ -159,6 +182,11 @@ function project(body: DiagnosticEventBody): Record<string, unknown> {
   if (requestId !== undefined) out.requestId = requestId;
   if (providerReason !== undefined) out.providerReason = providerReason;
   if (providerDetail !== undefined) out.providerDetail = providerDetail;
+  if (contextPacketId !== undefined) out.contextPacketId = contextPacketId;
+  if (errandEdge !== undefined) out.errandEdge = errandEdge;
+  if (errandTo !== undefined) out.errandTo = errandTo;
+  if (errandFrom !== undefined) out.errandFrom = errandFrom;
+  if (attemptId !== undefined) out.attemptId = attemptId;
   if (expectedVersion !== undefined) out.expectedVersion = expectedVersion;
   if (currentVersion !== undefined) out.currentVersion = currentVersion;
   if (payloadDigest !== undefined) out.payloadDigest = payloadDigest;
@@ -221,6 +249,22 @@ function validateShape(row: unknown): DiagnosticEventBody {
   if (present(row, "providerDetail") && typeof row.providerDetail !== "string") {
     bad("providerDetail not a string");
   }
+  // Runner-plane errand fields (packet ch9-p3a, DG3) — closed-domain / string.
+  if (present(row, "contextPacketId") && typeof row.contextPacketId !== "string") {
+    bad("contextPacketId not a string");
+  }
+  if (present(row, "attemptId") && typeof row.attemptId !== "string") bad("attemptId not a string");
+  if (
+    present(row, "errandEdge") &&
+    (typeof row.errandEdge !== "string" || !ERRAND_EDGE_SET.has(row.errandEdge))
+  ) {
+    bad("errandEdge not an ErrandEdge");
+  }
+  for (const k of ["errandTo", "errandFrom"] as const) {
+    if (present(row, k) && (typeof row[k] !== "string" || !ERRAND_STATE_SET.has(row[k]))) {
+      bad(`${k} not an ErrandState`);
+    }
+  }
   for (const k of ["expectedVersion", "currentVersion"] as const) {
     if (present(row, k) && !isSafeVersion(row[k])) bad(`${k} not a nonnegative safe integer`);
   }
@@ -247,27 +291,48 @@ function validateShape(row: unknown): DiagnosticEventBody {
   }
   if (present(row, "detail") !== (source === "ingress")) bad("detail iff source=ingress");
 
-  // Runner-plane presence iffs (packet ch9-p2, DG3 — both directions):
-  // requestId ⇔ source runner; providerReason ⇔ kind provision_failed;
-  // providerDetail ⇒ kind provision_failed; runner kinds ⇔ runner source.
-  const isRunnerKind = kind === "provision_ready" || kind === "provision_failed";
+  // Runner-plane presence iffs (packet ch9-p2 DG3 + ch9-p3a DG3 — both
+  // directions). The runner source now carries THREE kinds; requestId is
+  // RE-SCOPED to the two provisioning kinds (flag F5). The errand fields are
+  // KEYED on kind=errand_transition, and errandFrom/attemptId are further
+  // keyed on `errandEdge` (from/to alone could not decide the attemptId iff).
+  const isProvisionKind = kind === "provision_ready" || kind === "provision_failed";
+  const isErrandKind = kind === "errand_transition";
+  const isRunnerKind = isProvisionKind || isErrandKind;
   if (isRunnerKind !== (source === "runner")) bad("runner kinds iff source=runner");
-  if (present(row, "requestId") !== (source === "runner")) bad("requestId iff source=runner");
+  if (present(row, "requestId") !== isProvisionKind) bad("requestId iff a provisioning kind");
   if (present(row, "providerReason") !== (kind === "provision_failed")) {
     bad("providerReason iff kind=provision_failed");
   }
   if (present(row, "providerDetail") && kind !== "provision_failed") {
     bad("providerDetail requires kind=provision_failed");
   }
+  // The errand fields ride ONLY errand_transition (both directions).
+  for (const k of ["contextPacketId", "errandEdge", "errandTo"] as const) {
+    if (present(row, k) !== isErrandKind) bad(`${k} iff kind=errand_transition`);
+  }
+  if (present(row, "errandFrom") && !isErrandKind) bad("errandFrom requires kind=errand_transition");
+  if (present(row, "attemptId") && !isErrandKind) bad("attemptId requires kind=errand_transition");
 
   if (source === "runner") {
-    // A runner completion carries instanceId + requestId (+ the failure
-    // fields on provision_failed) and NOTHING from the op/envelope world.
+    // A runner event carries instanceId and NOTHING from the op/envelope world.
     if (!present(row, "instanceId")) bad("runner row requires instanceId");
     for (const k of ["opId", "actorId", "type"] as const) {
       if (present(row, k)) bad(`runner source carries no ${k}`);
     }
     if (present(row, "payloadDigest")) bad("runner carries no payloadDigest");
+    if (isErrandKind) {
+      // errandFrom iff a NON-birth edge; attemptId iff an attempt-scoped edge —
+      // both keyed on errandEdge (DG3).
+      const edge = row.errandEdge as string;
+      const isBirth = ERRAND_BIRTH_EDGE_SET.has(edge);
+      if (present(row, "errandFrom") === isBirth) bad("errandFrom iff a non-birth errand edge");
+      if (present(row, "attemptId") !== ATTEMPT_SCOPED_EDGE_SET.has(edge)) {
+        bad("attemptId iff an attempt-scoped errand edge");
+      }
+    } else if (present(row, "attemptId")) {
+      bad("a provisioning kind carries no attemptId");
+    }
     return row as unknown as DiagnosticEventBody;
   }
 

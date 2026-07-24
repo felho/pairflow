@@ -19,7 +19,75 @@ export type DiagnosticKind =
   // these — `provision_ready` on success, `provision_failed` on any
   // provisioning failure. VALID ONLY with source = "runner" (bidirectional).
   | "provision_ready"
-  | "provision_failed";
+  | "provision_failed"
+  // The delivery-errand state-transition kind (packet ch9-p3a, DG1;
+  // contract:ch9-runner#C26): EVERY errand state transition (every L1 edge,
+  // creation included) emits ONE of these. VALID ONLY with source = "runner".
+  | "errand_transition";
+
+/**
+ * The durable delivery-errand lifecycle states (L1; packet ch9-p3a). The
+ * value list is the single membership source for the diag read gate AND the
+ * runner store's own state validation (they cannot drift). Grows ONLY by a
+ * contract successor row.
+ */
+export const ERRAND_STATES = [
+  "pending",
+  "claimed",
+  "attempting",
+  "confirmed",
+  "unconfirmed",
+  "exhausted",
+  "mooted",
+] as const;
+export type ErrandState = (typeof ERRAND_STATES)[number];
+
+/**
+ * The L1 edge TRIGGER labels (packet ch9-p3a, DG1): the closed `errandEdge`
+ * domain that keys the per-edge presence iffs (from/to pairs alone collide
+ * across triggers). A LIST, not a count — grows only by a contract successor
+ * row.
+ */
+export const ERRAND_EDGES = [
+  "create",
+  "reconcile-backfill",
+  "claim",
+  "attempt-start",
+  "reclaim",
+  "negative-budgeted",
+  "negative-respawn",
+  "confirm",
+  "no-output",
+  "other-admit",
+  "exhaust",
+  "exhaust-at-claim",
+  "remint",
+  "moot",
+  "respawn",
+  "evidence-promotion",
+] as const;
+export type ErrandEdge = (typeof ERRAND_EDGES)[number];
+
+/**
+ * The attempt-scoped edges (DG1): `attemptId` is present on the
+ * `errand_transition` event IFF its `errandEdge` is one of these. The remint
+ * event carries the FRESH attempt's id; the collided id is recoverable from
+ * the attempts record.
+ */
+export const ATTEMPT_SCOPED_ERRAND_EDGES = [
+  "attempt-start",
+  "negative-budgeted",
+  "negative-respawn",
+  "confirm",
+  "no-output",
+  "other-admit",
+  "exhaust",
+  "remint",
+  "respawn",
+] as const;
+
+/** The two birth edges (DG1): `errandFrom` is ABSENT on these (no prior state). */
+export const ERRAND_BIRTH_EDGES = ["create", "reconcile-backfill"] as const;
 
 /**
  * One token per admission-gate block in the ingress parseEnvelope —
@@ -67,10 +135,12 @@ export interface DiagnosticEventBody {
   /** Present iff source = "ingress" — the failed admission gate. */
   readonly detail?: IngressDetailToken;
   /**
-   * Present iff source = "runner" (packet ch9-p2, DG2): the provisioning
-   * completion's correlation id — BOTH runner kinds carry it. The
-   * source-grain iff is scoped to the two provisioning kinds this packet
-   * mints; a sibling packet introducing further `runner` kinds RE-EXAMINES it.
+   * Present iff kind ∈ {provision_ready, provision_failed} (packet ch9-p2,
+   * DG2; RE-SCOPED at ch9-p3a, DG3/flag F5): the provisioning completion's
+   * correlation id. The ch9-p2 source-grain iff ("iff source = runner") is
+   * re-examined here as its own clause mandated — the `errand_transition`
+   * kind is `source: "runner"` yet carries NO requestId, so the iff is now
+   * KIND-grained (unchanged for the two provisioning kinds).
    */
   readonly requestId?: string;
   /**
@@ -90,6 +160,28 @@ export interface DiagnosticEventBody {
    * still fires.
    */
   readonly providerDetail?: string;
+  /**
+   * Present iff kind = "errand_transition" (packet ch9-p3a, DG1): the C13
+   * errand key `<instance_id>@v<expected_version>`.
+   */
+  readonly contextPacketId?: string;
+  /**
+   * Present iff kind = "errand_transition" (DG1): the L1 TRIGGER label — the
+   * wire discriminator keying the per-edge iffs (from/to pairs alone collide).
+   */
+  readonly errandEdge?: ErrandEdge;
+  /** Present iff kind = "errand_transition" (DG1): the resulting state. */
+  readonly errandTo?: ErrandState;
+  /**
+   * Present iff kind = "errand_transition" AND a prior state existed — absent
+   * on the two birth edges (create, reconcile-backfill).
+   */
+  readonly errandFrom?: ErrandState;
+  /**
+   * Present iff kind = "errand_transition" AND `errandEdge` is attempt-scoped
+   * (ATTEMPT_SCOPED_ERRAND_EDGES). The remint event carries the FRESH id.
+   */
+  readonly attemptId?: string;
   /** Present iff kind = "stale" — the envelope's expected version. */
   readonly expectedVersion?: number;
   /** Present iff kind = "stale" — the outcome's current version. */

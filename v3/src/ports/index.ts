@@ -40,5 +40,14 @@ export type {
   DiagnosticsReader,
   DiagnosticsSink,
   DiagUnavailableReason,
+  ErrandEdge,
+  ErrandState,
   IngressDetailToken,
 } from "./diagnostics.js";
+export {
+  ATTEMPT_SCOPED_ERRAND_EDGES,
+  ERRAND_BIRTH_EDGES,
+  ERRAND_EDGES,
+  ERRAND_STATES,
+} from "./diagnostics.js";
+export type { AttemptExecutor, AttemptExecutorInput, AttemptResult } from "./delivery.js";

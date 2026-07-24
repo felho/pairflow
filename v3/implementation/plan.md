@@ -2516,17 +2516,30 @@ dual-runs `pnpm v3:mutation` scoped to the packet's
 input-domain and recorded with the packet's metrics — two chapters
 of paired data, then the boundary review disposes the pilot.
 
+Process note: P3 was the declared sizing-split candidate (template
+§2 step 0); the split EXECUTED at ch9-p3a authoring (autonomous
+in-chapter split — sizing, not scope; hard stops 1 and 2 tripped on
+the bundled row — the errand-ledger authority introduction bundled
+with real-process activation, one delivery concept across 3+
+surfaces — and the single-packet closure proof failed on the
+separately-sequenceable foundation→activation buckets; the P3a/P3b
+rows below are the repartition on the row's own expected seam,
+coverage union preserved — aligned at ch9-p3a pre-approval).
+
 | Packet | Content | Mode |
 |---|---|---|
 | ch9-P0 | the ch11-C31 `sys:` rename realization: the seven fixed reason tokens gain the prefix in code + tests + the l2a golden trace + the transcript/audit surface; registry names untouched (drift lanes green before and after) | flag-free approve → autonomous build (measurement); predicted: projection (basis: the re-ratified C31 row) |
 | ch9-P1 | the provisioning-failure → `FAIL` channel: the port's failure completion + ordered-after-commit hold/release + correlation & terminal-sink rungs + reason domain + kernel `FAIL` routing; testkit failure script; the C15 D5 gate's realization half — MUST land before ch9-P2 | flag-free approve → autonomous build (measurement); predicted: projection + derived (basis: the ratified ch9 draft rows + the ch12-C15/C18 mechanics) |
 | ch9-P2 | the `pairflow.worktree` provider: git worktree mechanics, spec/ref/projection, production-registry registration (legal here — the gate discharged at P1); the `l0d-pseudocode/RUNTIME_CONTEXT_READY` candidate id resolves in this packet's slice | HUMAN approve — first-of-a-kind (first real provider; external side effects on the host) |
-| ch9-P3 | the real actor adapter + the durable delivery loop: the errand ledger, the IC-A2 CT family (crash / confirm / retry-durable), the CT-B two-worker re-run under the real runner | HUMAN approve — first-of-a-kind (first real adapter); declared sizing-split candidate (template §2 step 0) |
+| ch9-P3a | the durable delivery-errand core (the P3 split's FOUNDATION share; split executed at ch9-p3a authoring): the runner-owned errand ledger realizing ADR-016 — the C12 store, C13 discovery/identity, C14 lifecycle/claims/precedence, C15 kernel-evidence confirmation, C16 durable budget + attempt minting — the `AttemptExecutor` seam + scripted testkit executor, the C26 errand-transition diag share; the IC-A2 CT family (`CT-A2-CRASH` / `CT-A2-CONFIRM` / `CT-A2-RETRY-DURABLE`) lands here | HUMAN approve — first-of-a-kind (inherited from the P3 row: the first runner-plane durable coordination machinery) |
+| ch9-P3b | the real actor adapter (the split's ACTIVATION share): the C19 shared spawn seam born here (the P2 provider spawn's `DEFERRED(ch9-p3)` fold-in), C17 attempt-scoped handoff, C18 argv mapping, C20 emit capture + ingress submission, C23's exit-result seam on the direct-spawn path — the real `AttemptExecutor` behind the P3a seam; the `CT-B-TWOWORKER` re-run under the real runner | HUMAN approve — first-of-a-kind (first real adapter; inherited) |
 | ch9-P4 | the process-gate runner real spawn + the attach channel (tmux observe/takeover) + the CLI/floor surface + the end-to-end dogfooding journey | HUMAN approve — first-of-a-kind (first real spawn + attach); declared sizing-split candidate |
 
 Order: draft ratification (carrying the C31 reopen act) → P0 → P1 →
-P2 → P3 → P4 (P1-before-P2 is the production-provider gate's
-ordering; P0-first keeps every runner packet on the renamed tokens).
+P2 → P3a → P3b → P4 (P1-before-P2 is the production-provider gate's
+ordering; P0-first keeps every runner packet on the renamed tokens;
+the P3a/P3b order is the P3 split's foundation → activation shape —
+aligned at ch9-p3a pre-approval).
 One packet = packet file + code + tests in ONE commit. Per-packet
 difficulty scores + `main_thread_model: fable` recorded per
 `model-tier-experiment-2.md` §5.

@@ -1,0 +1,865 @@
+import { describe, expect, it } from "vitest";
+
+import { admitTemplate } from "../definition/index.js";
+import type {
+  AdmittedTemplate,
+  EventEnvelope,
+  Outcome,
+  TranscriptEntry,
+  WorkflowInstance,
+} from "../domain/index.js";
+import { createGateRegistry } from "../gates/index.js";
+import { deriveDispatchIntent } from "../kernel/dispatchIntent.js";
+import type { AttemptResult } from "../ports/delivery.js";
+import type { DefinitionStore } from "../ports/definition.js";
+import type { DiagnosticEventBody, DiagnosticsSink } from "../ports/diagnostics.js";
+import { createStaticProviderRegistry } from "../ports/index.js";
+import type { ProviderRegistry } from "../ports/runtimeContextProvider.js";
+import type { InstanceDetail } from "../ports/store.js";
+import {
+  createControlledClock,
+  createRecordingDiagnosticsSink,
+  createScriptedAttemptExecutor,
+  fixtureDefinitionStore,
+  fixtureTemplate,
+} from "../testkit/index.js";
+import type { ScriptedAttemptStep } from "../testkit/index.js";
+import { createDeliveryLoop, createErrandReader } from "./index.js";
+import type { DeliveryLoop, DeliveryReadSeam, DeliveryWait } from "./index.js";
+import { openErrandStore } from "./errandStore.js";
+import type { ErrandStore } from "./errandStore.js";
+
+// ── The D/L/CF/B/K/DG families (packet ch9-p3a): the delivery loop over the
+// durable ledger, driven by a scripted executor + a fake read seam.
+
+const gateCatalog = createGateRegistry();
+function admitted(): AdmittedTemplate {
+  const result = admitTemplate(fixtureTemplate(), gateCatalog);
+  if (!result.ok) {
+    throw new Error(`fixture admission failed: ${JSON.stringify(result.findings)}`);
+  }
+  return result.template;
+}
+
+function mkInstance(overrides: Partial<WorkflowInstance> = {}): WorkflowInstance {
+  return {
+    instanceId: "inst-1",
+    templateRef: { id: "local-pair-v0", version: 1 },
+    task: "build the thing",
+    binding: { implementer: "codex", reviewer: "claude" },
+    currentStep: "implement",
+    round: 1,
+    kernelStatus: "ACTIVE",
+    terminalDisposition: null,
+    activationMode: "immediate",
+    wait: null,
+    runtimeContext: { state: "ready", ref: null },
+    failureReason: null,
+    runOverrides: {},
+    version: 2,
+    ...overrides,
+  };
+}
+
+function mkTransition(
+  seq: number,
+  actorId: string,
+  expectedVersion: number,
+  type = "PASS",
+): TranscriptEntry {
+  const envelope: EventEnvelope = {
+    instanceId: "inst-1",
+    opId: `op-${String(seq)}`,
+    type,
+    actorId,
+    expectedVersion,
+    expectedRole: "implementer",
+    payload: { note: `${actorId}@${String(expectedVersion)}` },
+  };
+  return {
+    entryKind: "transition",
+    seq,
+    envelope,
+    payloadDigest: "digest",
+    gateDecisions: [],
+    issuedAgentConfig: {},
+    committedAt: 1,
+  };
+}
+
+/** A mutable in-memory read seam (the fake kernel store projection). */
+class FakeSeam implements DeliveryReadSeam {
+  private readonly runs = new Map<string, InstanceDetail>();
+
+  set(instance: WorkflowInstance, transcript: readonly TranscriptEntry[] = []): void {
+    this.runs.set(instance.instanceId, { instance, transcript });
+  }
+
+  patch(instanceId: string, overrides: Partial<WorkflowInstance>): void {
+    const run = this.runs.get(instanceId);
+    if (run === undefined) {
+      throw new Error(`FakeSeam.patch: unknown instance '${instanceId}'`);
+    }
+    this.runs.set(instanceId, {
+      instance: { ...run.instance, ...overrides },
+      transcript: run.transcript,
+    });
+  }
+
+  addTransition(instanceId: string, entry: TranscriptEntry): void {
+    const run = this.runs.get(instanceId);
+    if (run === undefined) {
+      throw new Error(`FakeSeam.addTransition: unknown instance '${instanceId}'`);
+    }
+    this.runs.set(instanceId, {
+      instance: run.instance,
+      transcript: [...run.transcript, entry],
+    });
+  }
+
+  remove(instanceId: string): void {
+    this.runs.delete(instanceId);
+  }
+
+  listInstances(): Promise<readonly WorkflowInstance[]> {
+    return Promise.resolve([...this.runs.values()].map((r) => r.instance));
+  }
+
+  loadInstance(instanceId: string): Promise<WorkflowInstance | null> {
+    return Promise.resolve(this.runs.get(instanceId)?.instance ?? null);
+  }
+
+  getInstanceDetail(instanceId: string): Promise<InstanceDetail | null> {
+    return Promise.resolve(this.runs.get(instanceId) ?? null);
+  }
+}
+
+interface Harness {
+  readonly loop: DeliveryLoop;
+  readonly store: ErrandStore;
+  readonly seam: FakeSeam;
+  readonly diag: DiagnosticsSink;
+  readonly events: DiagnosticEventBody[];
+  readonly close: () => void;
+}
+
+interface WireOptions {
+  readonly script?: readonly ScriptedAttemptStep[];
+  readonly observe?: (input: { attemptId: string }) => void;
+  readonly definitions?: DefinitionStore;
+  readonly providerRegistry?: ProviderRegistry;
+  readonly diag?: DiagnosticsSink;
+  readonly leaseMs?: number;
+  readonly attemptsPerErrand?: number;
+  readonly clockStart?: number;
+  readonly workerId?: string;
+  readonly store?: ErrandStore;
+  readonly seam?: FakeSeam;
+  readonly idPrefix?: string;
+}
+
+function wire(opts: WireOptions = {}): Harness {
+  const clock = createControlledClock(opts.clockStart ?? 1_000);
+  const handle = opts.store === undefined ? openErrandStore(":memory:", clock) : null;
+  const store = opts.store ?? handle!.store;
+  const seam = opts.seam ?? new FakeSeam();
+  const recording = createRecordingDiagnosticsSink();
+  const diag = opts.diag ?? recording.sink;
+  let attemptCounter = 0;
+  const idPrefix = opts.idPrefix ?? "att";
+  const observe = opts.observe;
+  const executor = createScriptedAttemptExecutor(
+    opts.script ?? [],
+    observe !== undefined ? { observe: (input) => observe({ attemptId: input.attemptId }) } : {},
+  );
+  const loop = createDeliveryLoop(
+    {
+      errandStore: store,
+      readSeam: seam,
+      definitions: opts.definitions ?? fixtureDefinitionStore(admitted()),
+      providerRegistry: opts.providerRegistry ?? createStaticProviderRegistry({}),
+      executor,
+      time: clock,
+      wait: () => Promise.resolve(),
+      attemptIdSource: () => `${idPrefix}-${String(++attemptCounter)}`,
+      sessionNamer: (instanceId, attemptId) => `sess:${instanceId}:${attemptId}`,
+      diag,
+      workerId: opts.workerId ?? "worker-A",
+    },
+    {
+      ...(opts.leaseMs !== undefined ? { leaseMs: opts.leaseMs } : {}),
+      ...(opts.attemptsPerErrand !== undefined ? { attemptsPerErrand: opts.attemptsPerErrand } : {}),
+    },
+  );
+  return {
+    loop,
+    store,
+    seam,
+    diag,
+    events: recording.events,
+    close: () => handle?.close(),
+  };
+}
+
+const KEY = "inst-1@v2";
+const committed: Outcome = { kind: "committed", version: 3, intent: null };
+const submitted = (outcome: Outcome): AttemptResult => ({ kind: "submitted", outcome });
+
+// ─────────────────────────────────────────────────────────────────────────
+// D — discovery
+// ─────────────────────────────────────────────────────────────────────────
+describe("D — discovery / identity", () => {
+  it("D1: exactly the ACTIVE instances acquire live rows; CREATED/WAITING/TERMINAL acquire none", async () => {
+    const h = wire();
+    h.seam.set(mkInstance({ instanceId: "act", kernelStatus: "ACTIVE" }));
+    h.seam.set(mkInstance({ instanceId: "cre", kernelStatus: "CREATED", currentStep: null }));
+    h.seam.set(mkInstance({ instanceId: "wai", kernelStatus: "WAITING", currentStep: null }));
+    h.seam.set(mkInstance({ instanceId: "ter", kernelStatus: "TERMINAL", terminalDisposition: "done" }));
+    await h.loop.poll();
+    const ids = h.store.listErrands().map((e) => e.instanceId);
+    expect(ids).toEqual(["act"]);
+    expect(h.store.getErrand("act", "act@v2")?.state).toBe("pending");
+    h.close();
+  });
+
+  it("D2: the key is <instance_id>@v<version>, the SAME value deriveDispatchIntent projects", async () => {
+    const h = wire();
+    const instance = mkInstance({ version: 2 });
+    h.seam.set(instance);
+    await h.loop.poll();
+    const errand = h.store.listErrands()[0];
+    expect(errand?.contextPacketId).toBe(`${instance.instanceId}@v${String(instance.version)}`);
+    const intent = deriveDispatchIntent(instance, admitted(), "implement", createStaticProviderRegistry({}));
+    expect(intent.packet.expectedVersion).toBe(instance.version);
+    expect(errand?.expectedVersion).toBe(intent.packet.expectedVersion);
+    expect(errand?.actorId).toBe("codex"); // the current-step role binding (D3)
+    h.close();
+  });
+
+  it("D3: N polls create at most one row per key (idempotent)", async () => {
+    const h = wire();
+    h.seam.set(mkInstance());
+    await h.loop.poll();
+    await h.loop.poll();
+    await h.loop.poll();
+    expect(h.store.listErrands()).toHaveLength(1);
+    // Only ONE create event emitted.
+    expect(h.events.filter((e) => e.errandEdge === "create")).toHaveLength(1);
+    h.close();
+  });
+
+  it("D4: run() runs one pass per wait cycle and hands the configured pollMs to the wait", async () => {
+    const msSeen: number[] = [];
+    let calls = 0;
+    const wait: DeliveryWait = (ms) => {
+      msSeen.push(ms);
+      calls += 1;
+      return calls >= 2 ? Promise.reject(new Error("stop")) : Promise.resolve();
+    };
+    const clock = createControlledClock(1_000);
+    const handle = openErrandStore(":memory:", clock);
+    const seam = new FakeSeam();
+    seam.set(mkInstance());
+    const loop = createDeliveryLoop(
+      {
+        errandStore: handle.store,
+        readSeam: seam,
+        definitions: fixtureDefinitionStore(admitted()),
+        providerRegistry: createStaticProviderRegistry({}),
+        executor: createScriptedAttemptExecutor([submitted(committed), submitted({ kind: "duplicate" })]),
+        time: clock,
+        wait,
+        attemptIdSource: () => "a",
+        sessionNamer: () => "s",
+        diag: createRecordingDiagnosticsSink().sink,
+        workerId: "w",
+      },
+      { pollMs: 250 },
+    );
+    await loop.run();
+    expect(msSeen).toEqual([250, 250]); // one wait per tick, the configured pollMs
+    expect(handle.store.getErrand("inst-1", KEY)?.state).toBe("confirmed"); // ticks ran
+    handle.close();
+  });
+
+  it("D5: a run read TERMINAL moots every non-terminal errand of that run (per state)", async () => {
+    for (const setup of ["pending", "claimed", "attempting", "unconfirmed"] as const) {
+      const h = wire({ script: [{ kind: "no_output" }] });
+      h.seam.set(mkInstance());
+      await h.loop.poll(); // pending
+      if (setup !== "pending") {
+        h.store.claim({ instanceId: "inst-1", contextPacketId: KEY, workerId: "w", now: 1_000 });
+      }
+      if (setup === "attempting") {
+        h.store.startBudgetedAttempt({ instanceId: "inst-1", contextPacketId: KEY, workerId: "w", now: 1_000, attemptIdSource: () => "a", sessionNamer: () => "s" });
+      }
+      if (setup === "unconfirmed") {
+        h.store.claim({ instanceId: "inst-1", contextPacketId: KEY, workerId: "w", now: 1_000 });
+        h.store.startBudgetedAttempt({ instanceId: "inst-1", contextPacketId: KEY, workerId: "w", now: 1_000, attemptIdSource: () => "a", sessionNamer: () => "s" });
+        h.store.concludeNoOutput({ instanceId: "inst-1", contextPacketId: KEY, attemptId: "a" });
+      }
+      h.seam.patch("inst-1", { kernelStatus: "TERMINAL", terminalDisposition: "cancelled" });
+      await h.loop.poll(); // moot pass observes terminal
+      expect(h.store.getErrand("inst-1", KEY)?.state, setup).toBe("mooted");
+      h.close();
+    }
+  });
+
+  it("D5: a mootable errand on a terminal run WITH late evidence flips confirmed, wearing the moot trigger label", async () => {
+    const h = wire();
+    h.store.createErrand({ instanceId: "inst-1", contextPacketId: KEY, expectedVersion: 2, actorId: "codex", budget: 3 });
+    h.seam.set(
+      mkInstance({ kernelStatus: "TERMINAL", terminalDisposition: "cancelled" }),
+      [mkTransition(1, "codex", 2)],
+    );
+    await h.loop.poll();
+    expect(h.store.getErrand("inst-1", KEY)?.state).toBe("confirmed"); // CF1 first, never mooted
+    // The D5-poll terminal context labels the precedence hit "moot" (L1).
+    expect(h.events.some((e) => e.errandEdge === "moot" && e.errandTo === "confirmed")).toBe(true);
+    expect(h.events.some((e) => e.errandEdge === "evidence-promotion")).toBe(false);
+    h.close();
+  });
+
+  it("D5 race: a stale live insert into a just-terminal run normalizes to mooted next tick", async () => {
+    const h = wire();
+    // A row inserted from a stale ACTIVE read; the run is already terminal.
+    h.store.createErrand({ instanceId: "inst-1", contextPacketId: KEY, expectedVersion: 2, actorId: "codex", budget: 3 });
+    h.seam.set(mkInstance({ kernelStatus: "TERMINAL", terminalDisposition: "cancelled" }));
+    await h.loop.poll();
+    expect(h.store.getErrand("inst-1", KEY)?.state).toBe("mooted");
+    h.close();
+  });
+});
+
+describe("D6 — the intent re-derivation integrity throws propagate fail-closed", () => {
+  it("a missing pinned template throws out of the pass; the errand is unmutated", async () => {
+    const h = wire({ script: [submitted(committed)], definitions: fixtureDefinitionStore() /* empty */ });
+    h.seam.set(mkInstance());
+    // discovery ITSELF resolves the actor via definitions.load — a missing
+    // template is a discovery-creation integrity throw.
+    await expect(h.loop.poll()).rejects.toThrow(/template.*not found/);
+    expect(h.store.listErrands()).toHaveLength(0); // nothing committed
+    h.close();
+  });
+
+  it("a provider-projection gate throw at attempt-start propagates; the errand row stays claimed", async () => {
+    // A provisioned ref whose provider is absent from the registry → the
+    // registry-stable-for-the-run integrity throw inside deriveDispatchIntent.
+    const h = wire({ script: [submitted(committed)] });
+    h.seam.set(
+      mkInstance({ runtimeContext: { state: "ready", ref: { kind: "worktree", locator: "x" } } }),
+    );
+    await h.loop.poll(); // discovery does NOT derive the full intent (actor only) → succeeds
+    expect(h.store.getErrand("inst-1", KEY)?.state).toBe("pending");
+    // work() derives the full intent → the projection gate throws fail-closed.
+    await expect(h.loop.tick()).rejects.toThrow(/kernel integrity/);
+    // The errand was claimed but never advanced to attempting (no decrement).
+    const row = h.store.getErrand("inst-1", KEY);
+    expect(row?.state).toBe("claimed");
+    expect(row?.remainingBudget).toBe(3);
+    h.close();
+  });
+});
+
+describe("D7 — the terminal reconciliation sweep + the totality AUDIT (F9)", () => {
+  it("a consumed-but-never-discovered dispatch acquires a terminal_backfill CONFIRMED row", async () => {
+    const h = wire();
+    // A run that reached DONE: two consumed dispatches (@v2 by codex, @v3 by claude).
+    h.seam.set(
+      mkInstance({ kernelStatus: "TERMINAL", terminalDisposition: "done", currentStep: "done", version: 4 }),
+      [mkTransition(1, "codex", 2), mkTransition(2, "claude", 3, "CONVERGED")],
+    );
+    await h.loop.poll();
+    const rows = h.store.listErrands();
+    expect(rows).toHaveLength(2);
+    expect(rows.every((r) => r.state === "confirmed" && r.discovery === "terminal_backfill")).toBe(true);
+    // AUDIT: rows == transition-row count + 0 (a `done` run fires no aggregate).
+    expect(rows).toHaveLength(2);
+    expect(h.store.isReconciled("inst-1")).toBe(true);
+    h.close();
+  });
+
+  it("a run cancelled mid-dispatch acquires its aggregate-proven terminal_backfill MOOTED row; AUDIT exact", async () => {
+    const h = wire();
+    // PASS committed @v2 (transition), reviewer dispatched @v3, CANCEL @v3→v4.
+    h.seam.set(
+      mkInstance({ kernelStatus: "TERMINAL", terminalDisposition: "cancelled", currentStep: "review", version: 4 }),
+      [mkTransition(1, "codex", 2)],
+    );
+    await h.loop.poll();
+    const rows = h.store.listErrands();
+    // AUDIT: 1 transition row + 1 (aggregate fires: cancelled ∧ currentStep≠null) = 2.
+    expect(rows).toHaveLength(2);
+    const confirmed = rows.find((r) => r.state === "confirmed");
+    const mooted = rows.find((r) => r.state === "mooted");
+    expect(confirmed?.contextPacketId).toBe("inst-1@v2");
+    expect(mooted?.contextPacketId).toBe("inst-1@v3"); // keyed at version-1
+    expect(mooted?.actorId).toBe("claude"); // the surviving currentStep's role binding
+    h.close();
+  });
+
+  it("a run cancelled while kickoff-pending (currentStep null) acquires NO dispatch row (aggregate negative)", async () => {
+    const h = wire();
+    h.seam.set(
+      mkInstance({ kernelStatus: "TERMINAL", terminalDisposition: "cancelled", currentStep: null, task: null, version: 2 }),
+      [],
+    );
+    await h.loop.poll();
+    expect(h.store.listErrands()).toHaveLength(0);
+    expect(h.store.isReconciled("inst-1")).toBe(true);
+    h.close();
+  });
+
+  it("a reconciled run is never re-walked (the skip gate), and the sweep is idempotent under re-run (W7)", async () => {
+    const h = wire();
+    h.seam.set(
+      mkInstance({ kernelStatus: "TERMINAL", terminalDisposition: "cancelled", currentStep: "review", version: 4 }),
+      [mkTransition(1, "codex", 2)],
+    );
+    await h.loop.poll();
+    await h.loop.poll();
+    await h.loop.poll();
+    // Idempotent: still exactly two rows, still marked, no backfill re-emitted.
+    expect(h.store.listErrands()).toHaveLength(2);
+    expect(h.events.filter((e) => e.errandEdge === "reconcile-backfill")).toHaveLength(2);
+    h.close();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// CF — confirmation / evidence
+// ─────────────────────────────────────────────────────────────────────────
+describe("CF1 — the evidence predicate + its three discriminating negatives", () => {
+  async function restingUnconfirmed(seam: FakeSeam, store: ErrandStore, loop: DeliveryLoop): Promise<void> {
+    seam.set(mkInstance());
+    await loop.tick(); // no_output → unconfirmed
+    expect(store.getErrand("inst-1", KEY)?.state).toBe("unconfirmed");
+  }
+
+  it("positive: a transition at expected_version by actor_id → confirmed (read-time flip)", async () => {
+    const h = wire({ script: [{ kind: "no_output" }] });
+    await restingUnconfirmed(h.seam, h.store, h.loop);
+    h.seam.addTransition("inst-1", mkTransition(1, "codex", 2));
+    const reader = createErrandReader(h.store, h.seam, h.diag);
+    expect((await reader.getErrand("inst-1", KEY))?.state).toBe("confirmed");
+    h.close();
+  });
+
+  it("negative: a lifecycle FACT at the version is not evidence", async () => {
+    const h = wire({ script: [{ kind: "no_output" }] });
+    await restingUnconfirmed(h.seam, h.store, h.loop);
+    // A fact row (entryKind != transition) at v2 is NOT evidence.
+    h.seam.addTransition("inst-1", { entryKind: "CANCELLED", seq: 1, opId: "c", committedAt: 1 });
+    const reader = createErrandReader(h.store, h.seam, h.diag);
+    expect((await reader.getErrand("inst-1", KEY))?.state).toBe("unconfirmed");
+    h.close();
+  });
+
+  it("negative: a transition by a DIFFERENT actor is not evidence", async () => {
+    const h = wire({ script: [{ kind: "no_output" }] });
+    await restingUnconfirmed(h.seam, h.store, h.loop);
+    h.seam.addTransition("inst-1", mkTransition(1, "claude", 2));
+    const reader = createErrandReader(h.store, h.seam, h.diag);
+    expect((await reader.getErrand("inst-1", KEY))?.state).toBe("unconfirmed");
+    h.close();
+  });
+
+  it("negative: a transition at a DIFFERENT version is not evidence", async () => {
+    const h = wire({ script: [{ kind: "no_output" }] });
+    await restingUnconfirmed(h.seam, h.store, h.loop);
+    h.seam.addTransition("inst-1", mkTransition(1, "codex", 3));
+    const reader = createErrandReader(h.store, h.seam, h.diag);
+    expect((await reader.getErrand("inst-1", KEY))?.state).toBe("unconfirmed");
+    h.close();
+  });
+});
+
+describe("CF2 — the total, disjoint submitted-outcome classification", () => {
+  async function runWith(step: ScriptedAttemptStep): Promise<Harness> {
+    const h = wire({ script: [step] });
+    h.seam.set(mkInstance());
+    await h.loop.tick();
+    return h;
+  }
+
+  it("committed → confirmed", async () => {
+    const h = await runWith(submitted(committed));
+    expect(h.store.getErrand("inst-1", KEY)?.state).toBe("confirmed");
+    h.close();
+  });
+
+  it("duplicate → confirmed (dominant even from a terminal run)", async () => {
+    // The attempt starts on an ACTIVE run; the run goes TERMINAL mid-attempt
+    // (the observe hook fires inside execute() before the duplicate result);
+    // duplicate still wins → confirmed (evidence exists), never mooted.
+    const seam = new FakeSeam();
+    seam.set(mkInstance());
+    const h = wire({
+      seam,
+      script: [submitted({ kind: "duplicate" })],
+      observe: () => seam.patch("inst-1", { kernelStatus: "TERMINAL", terminalDisposition: "cancelled" }),
+    });
+    await h.loop.tick();
+    expect(h.store.getErrand("inst-1", KEY)?.state).toBe("confirmed");
+    h.close();
+  });
+
+  it("rejected(not_active) → mooted (no evidence)", async () => {
+    const h = await runWith(submitted({ kind: "rejected", reason: "not_active" }));
+    expect(h.store.getErrand("inst-1", KEY)?.state).toBe("mooted");
+    h.close();
+  });
+
+  it("no_output → unconfirmed", async () => {
+    const h = await runWith({ kind: "no_output" });
+    expect(h.store.getErrand("inst-1", KEY)?.state).toBe("unconfirmed");
+    expect(h.store.getErrand("inst-1", KEY)?.recordedAdmitOutcome).toBeNull();
+    h.close();
+  });
+
+  it("stale → unconfirmed with recorded_admit_outcome='stale'", async () => {
+    const h = await runWith(submitted({ kind: "stale", currentVersion: 5 }));
+    const row = h.store.getErrand("inst-1", KEY);
+    expect(row?.state).toBe("unconfirmed");
+    expect(row?.recordedAdmitOutcome).toBe("stale");
+    h.close();
+  });
+
+  it("a non-duplicate rejection → unconfirmed with recorded_admit_outcome=<RejectionName>", async () => {
+    const h = await runWith(submitted({ kind: "rejected", reason: "not_authorized" }));
+    const row = h.store.getErrand("inst-1", KEY);
+    expect(row?.state).toBe("unconfirmed");
+    expect(row?.recordedAdmitOutcome).toBe("not_authorized");
+    h.close();
+  });
+
+  it("op_id_collision from a still-active run lands unconfirmed; the poll backstop moots it once terminal", async () => {
+    const h = wire({ script: [submitted({ kind: "rejected", reason: "op_id_collision" })] });
+    h.seam.set(mkInstance());
+    await h.loop.tick();
+    expect(h.store.getErrand("inst-1", KEY)?.recordedAdmitOutcome).toBe("op_id_collision");
+    expect(h.store.getErrand("inst-1", KEY)?.state).toBe("unconfirmed");
+    // Terminal → the poll's moot backstop.
+    h.seam.patch("inst-1", { kernelStatus: "TERMINAL", terminalDisposition: "cancelled" });
+    await h.loop.poll();
+    expect(h.store.getErrand("inst-1", KEY)?.state).toBe("mooted");
+    h.close();
+  });
+});
+
+describe("CF3 — read-time flip from EACH resting state (through the reader facade only)", () => {
+  it("unconfirmed / exhausted / mooted → confirmed on late evidence; a create/reconcile flip emits evidence-promotion", async () => {
+    for (const setup of ["unconfirmed", "exhausted", "mooted"] as const) {
+      const h = wire({ script: [{ kind: "no_output" }] });
+      h.seam.set(mkInstance());
+      await h.loop.poll();
+      if (setup === "unconfirmed") {
+        await h.loop.tick(); // no_output
+      } else if (setup === "mooted") {
+        h.store.concludeMooted({ instanceId: "inst-1", contextPacketId: KEY });
+      } else {
+        h.store.claim({ instanceId: "inst-1", contextPacketId: KEY, workerId: "w", now: 1 });
+        for (const id of ["a", "b", "c"]) {
+          h.store.startBudgetedAttempt({ instanceId: "inst-1", contextPacketId: KEY, workerId: "w", now: 1, attemptIdSource: () => id, sessionNamer: () => "s" });
+          h.store.concludeNegativeBudgeted({ instanceId: "inst-1", contextPacketId: KEY, attemptId: id });
+          h.store.claim({ instanceId: "inst-1", contextPacketId: KEY, workerId: "w", now: 1 });
+        }
+        h.store.exhaustAtClaim({ instanceId: "inst-1", contextPacketId: KEY });
+        expect(h.store.getErrand("inst-1", KEY)?.state).toBe("exhausted");
+      }
+      // Late evidence appears.
+      h.seam.addTransition("inst-1", mkTransition(9, "codex", 2));
+      const reader = createErrandReader(h.store, h.seam, h.diag);
+      expect((await reader.getErrand("inst-1", KEY))?.state, setup).toBe("confirmed");
+      expect(h.events.some((e) => e.errandEdge === "evidence-promotion" && e.errandFrom === setup)).toBe(true);
+      h.close();
+    }
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// B — budget / attempts
+// ─────────────────────────────────────────────────────────────────────────
+describe("B — budget / attempts", () => {
+  it("B1: the decrement PRECEDES the executor invocation (observable mid-attempt)", async () => {
+    let budgetMid: number | undefined;
+    const store = openErrandStore(":memory:", createControlledClock(1_000)).store;
+    const h = wire({
+      store,
+      script: [{ kind: "no_output" }],
+      observe: () => {
+        budgetMid = store.getErrand("inst-1", KEY)?.remainingBudget;
+      },
+    });
+    h.seam.set(mkInstance());
+    await h.loop.tick();
+    expect(budgetMid).toBe(2); // 3 → 2 BEFORE execute() ran
+    h.close();
+  });
+
+  it("B3: an infra failure on a BUDGETED attempt returns the errand to pending (budget remains)", async () => {
+    const h = wire({ script: [{ kind: "infra_failure", class: "nonzero_exit" }] });
+    h.seam.set(mkInstance());
+    await h.loop.tick();
+    const row = h.store.getErrand("inst-1", KEY);
+    expect(row?.state).toBe("pending");
+    expect(row?.remainingBudget).toBe(2);
+    h.close();
+  });
+
+  it("B3: no_output lands unconfirmed on BOTH kinds (never pending)", async () => {
+    const h = wire({ script: [{ kind: "no_output" }, { kind: "no_output" }] });
+    h.seam.set(mkInstance());
+    await h.loop.tick();
+    expect(h.store.getErrand("inst-1", KEY)?.state).toBe("unconfirmed");
+    await h.loop.respawn("inst-1", KEY); // respawn attempt → no_output again
+    expect(h.store.getErrand("inst-1", KEY)?.state).toBe("unconfirmed");
+    h.close();
+  });
+
+  it("B4: exhaustion fires only after the double final check; the exhaust edge lands exhausted", async () => {
+    const h = wire({
+      script: [
+        { kind: "infra_failure", class: "nonzero_exit" },
+        { kind: "infra_failure", class: "nonzero_exit" },
+        { kind: "infra_failure", class: "nonzero_exit" },
+      ],
+      attemptsPerErrand: 3,
+    });
+    h.seam.set(mkInstance());
+    await h.loop.tick(); // 3→2, pending
+    await h.loop.tick(); // 2→1, pending
+    await h.loop.tick(); // 1→0, exhaust
+    expect(h.store.getErrand("inst-1", KEY)?.state).toBe("exhausted");
+    h.close();
+  });
+
+  it("B4 rescue: late evidence at the exhaust point lands confirmed, never exhausted", async () => {
+    const h = wire({
+      script: [
+        { kind: "infra_failure", class: "nonzero_exit" },
+        { kind: "infra_failure", class: "nonzero_exit" },
+        { kind: "infra_failure", class: "nonzero_exit" },
+      ],
+    });
+    h.seam.set(mkInstance());
+    await h.loop.tick();
+    await h.loop.tick();
+    // Evidence lands just before the final (exhausting) attempt concludes.
+    h.seam.addTransition("inst-1", mkTransition(1, "codex", 2));
+    await h.loop.tick();
+    expect(h.store.getErrand("inst-1", KEY)?.state).toBe("confirmed");
+    h.close();
+  });
+
+  it("B4: the zero-budget claim resolution (exhaust-at-claim) resolves a claimed budget-0 errand", async () => {
+    // attemptsPerErrand 0 → a claimed errand cannot start a budgeted attempt.
+    const h = wire({ attemptsPerErrand: 0 });
+    h.seam.set(mkInstance());
+    await h.loop.tick(); // discover (budget 0) → claim → exhaust-at-claim (no evidence, not terminal)
+    expect(h.store.getErrand("inst-1", KEY)?.state).toBe("exhausted");
+    expect(h.events.some((e) => e.errandEdge === "exhaust-at-claim")).toBe(true);
+    h.close();
+  });
+
+  it("B4 rescue: the zero-budget resolution lands confirmed on late evidence, emitting the exhaust-at-claim edge", async () => {
+    const h = wire({ attemptsPerErrand: 0 });
+    h.seam.set(mkInstance(), [mkTransition(1, "codex", 2)]);
+    await h.loop.tick();
+    expect(h.store.getErrand("inst-1", KEY)?.state).toBe("confirmed");
+    // L1: the precedence hit inside the exhaust-at-claim context wears the
+    // TRIGGER's label, not "evidence-promotion".
+    expect(
+      h.events.some((e) => e.errandEdge === "exhaust-at-claim" && e.errandTo === "confirmed"),
+    ).toBe(true);
+    expect(h.events.some((e) => e.errandEdge === "evidence-promotion")).toBe(false);
+    h.close();
+  });
+
+  it("B2: a stale attempt's negative is inert while its committed evidence still promotes", async () => {
+    const h = wire({ script: [{ kind: "no_output" }] });
+    h.seam.set(mkInstance());
+    await h.loop.poll();
+    h.store.claim({ instanceId: "inst-1", contextPacketId: KEY, workerId: "w", now: 1_000 });
+    h.store.startBudgetedAttempt({ instanceId: "inst-1", contextPacketId: KEY, workerId: "w", now: 1_000, attemptIdSource: () => "active", sessionNamer: () => "s" });
+    // A stale (superseded) attempt's negative conclusion demotes nothing.
+    expect(h.store.concludeNegativeBudgeted({ instanceId: "inst-1", contextPacketId: KEY, attemptId: "stale" }).applied).toBe(false);
+    // The stale attempt's committed evidence STILL promotes (attempt-independent).
+    h.seam.addTransition("inst-1", mkTransition(1, "codex", 2));
+    const reader = createErrandReader(h.store, h.seam, h.diag);
+    // But the row is `attempting` (not resting) — the promotion happens at the
+    // attempt's OWN conclusion; drive it with a committed outcome.
+    expect((await reader.getErrand("inst-1", KEY))?.state).toBe("attempting");
+    expect(h.store.concludeConfirmed({ instanceId: "inst-1", contextPacketId: KEY }).applied).toBe(true);
+    expect(h.store.getErrand("inst-1", KEY)?.state).toBe("confirmed");
+    h.close();
+  });
+
+  it("B5: a re-spawn is UNBUDGETED (budget byte-identical), fresh claim pair set", async () => {
+    const h = wire({ script: [{ kind: "no_output" }, { kind: "no_output" }, { kind: "no_output" }] });
+    h.seam.set(mkInstance());
+    await h.loop.tick(); // no_output → unconfirmed, budget 2
+    const budget = h.store.getErrand("inst-1", KEY)?.remainingBudget;
+    await h.loop.respawn("inst-1", KEY);
+    await h.loop.respawn("inst-1", KEY);
+    expect(h.store.getErrand("inst-1", KEY)?.remainingBudget).toBe(budget); // frozen across respawns
+    h.close();
+  });
+
+  it("B6: a name_collision remints in place (net-zero budget, fresh id + session)", async () => {
+    const h = wire({ script: [{ kind: "name_collision" }] });
+    h.seam.set(mkInstance());
+    await h.loop.tick();
+    const row = h.store.getErrand("inst-1", KEY);
+    expect(row?.state).toBe("attempting"); // never leaves attempting
+    expect(row?.remainingBudget).toBe(2); // net-zero relative to the one start decrement
+    expect(row?.activeAttemptId).toBe("att-2"); // fresh minted id
+    expect(row?.liveSessionName).toBe("sess:inst-1:att-2");
+    expect(h.events.some((e) => e.errandEdge === "remint" && e.attemptId === "att-2")).toBe(true);
+    h.close();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// K — the executor seam
+// ─────────────────────────────────────────────────────────────────────────
+describe("K2 — the rejecting executor lane", () => {
+  it("a rejecting execute() is a CAS-applied infra failure; the loop stays alive and the next tick proceeds", async () => {
+    const h = wire({ script: [{ reject: "spawn boom" }, submitted(committed)] });
+    h.seam.set(mkInstance());
+    await h.loop.tick(); // reject → infra → back to pending
+    expect(h.store.getErrand("inst-1", KEY)?.state).toBe("pending");
+    expect(h.store.getErrand("inst-1", KEY)?.remainingBudget).toBe(2);
+    await h.loop.tick(); // next tick proceeds (loop alive)
+    expect(h.store.getErrand("inst-1", KEY)?.state).toBe("confirmed");
+    h.close();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// L — lifecycle / claims (closed machine + reclaim + respawn)
+// ─────────────────────────────────────────────────────────────────────────
+describe("L — lifecycle / claims", () => {
+  it("L1 closed machine: respawn from a NON-unconfirmed state is a no-op (rejected)", async () => {
+    const h = wire({ script: [submitted(committed)] });
+    h.seam.set(mkInstance());
+    await h.loop.tick(); // confirmed
+    await h.loop.respawn("inst-1", KEY); // from confirmed → rejected (no-op)
+    expect(h.store.getErrand("inst-1", KEY)?.state).toBe("confirmed");
+    h.close();
+  });
+
+  it("L1 closed machine: a second concurrent claim on a claimed errand is rejected (CAS)", async () => {
+    const h = wire();
+    h.seam.set(mkInstance());
+    await h.loop.poll();
+    expect(h.store.claim({ instanceId: "inst-1", contextPacketId: KEY, workerId: "w1", now: 1 }).claimed).toBe(true);
+    expect(h.store.claim({ instanceId: "inst-1", contextPacketId: KEY, workerId: "w2", now: 1 }).claimed).toBe(false);
+    h.close();
+  });
+
+  it("L3/L7 reclaim QUAD: pending (budgeted) / unconfirmed (respawn) / confirmed / mooted", async () => {
+    // budgeted stale attempt → pending
+    {
+      const h = wire({ leaseMs: 1_000 });
+      h.seam.set(mkInstance());
+      h.store.createErrand({ instanceId: "inst-1", contextPacketId: KEY, expectedVersion: 2, actorId: "codex", budget: 3 });
+      h.store.claim({ instanceId: "inst-1", contextPacketId: KEY, workerId: "gone", now: 1_000 });
+      h.store.startBudgetedAttempt({ instanceId: "inst-1", contextPacketId: KEY, workerId: "gone", now: 1_000, attemptIdSource: () => "a", sessionNamer: () => "s" });
+      // A fresh loop over the same store/seam with an advanced clock (lease crossed).
+      const advanced = wire({ store: h.store, seam: h.seam, leaseMs: 1_000, clockStart: 5_000 });
+      await advanced.loop.poll();
+      expect(h.store.getErrand("inst-1", KEY)?.state).toBe("pending");
+      h.close();
+    }
+    // respawn-kind stale attempt → unconfirmed (L7)
+    {
+      const h = wire({ leaseMs: 1_000 });
+      h.seam.set(mkInstance());
+      h.store.createErrand({ instanceId: "inst-1", contextPacketId: KEY, expectedVersion: 2, actorId: "codex", budget: 3 });
+      h.store.claim({ instanceId: "inst-1", contextPacketId: KEY, workerId: "w", now: 1_000 });
+      h.store.startBudgetedAttempt({ instanceId: "inst-1", contextPacketId: KEY, workerId: "w", now: 1_000, attemptIdSource: () => "a", sessionNamer: () => "s" });
+      h.store.concludeNoOutput({ instanceId: "inst-1", contextPacketId: KEY, attemptId: "a" });
+      h.store.startRespawnAttempt({ instanceId: "inst-1", contextPacketId: KEY, workerId: "gone", now: 1_000, attemptIdSource: () => "r", sessionNamer: () => "s" });
+      const advanced = wire({ store: h.store, seam: h.seam, leaseMs: 1_000, clockStart: 5_000 });
+      await advanced.loop.poll();
+      expect(h.store.getErrand("inst-1", KEY)?.state).toBe("unconfirmed");
+      h.close();
+    }
+    // stale attempt with evidence → confirmed
+    {
+      const h = wire({ leaseMs: 1_000 });
+      h.seam.set(mkInstance(), [mkTransition(1, "codex", 2)]);
+      h.store.createErrand({ instanceId: "inst-1", contextPacketId: KEY, expectedVersion: 2, actorId: "codex", budget: 3 });
+      h.store.claim({ instanceId: "inst-1", contextPacketId: KEY, workerId: "gone", now: 1_000 });
+      h.store.startBudgetedAttempt({ instanceId: "inst-1", contextPacketId: KEY, workerId: "gone", now: 1_000, attemptIdSource: () => "a", sessionNamer: () => "s" });
+      const advanced = wire({ store: h.store, seam: h.seam, leaseMs: 1_000, clockStart: 5_000 });
+      await advanced.loop.poll();
+      expect(h.store.getErrand("inst-1", KEY)?.state).toBe("confirmed");
+      // L1: a precedence hit inside the reclaim context wears the "reclaim"
+      // trigger label (not "evidence-promotion"), whichever way it lands.
+      expect(advanced.events.some((e) => e.errandEdge === "reclaim" && e.errandTo === "confirmed")).toBe(true);
+      expect(advanced.events.some((e) => e.errandEdge === "evidence-promotion")).toBe(false);
+      h.close();
+    }
+    // stale attempt on a terminal run → mooted
+    {
+      const h = wire({ leaseMs: 1_000 });
+      h.seam.set(mkInstance({ kernelStatus: "TERMINAL", terminalDisposition: "cancelled" }));
+      h.store.createErrand({ instanceId: "inst-1", contextPacketId: KEY, expectedVersion: 2, actorId: "codex", budget: 3 });
+      h.store.claim({ instanceId: "inst-1", contextPacketId: KEY, workerId: "gone", now: 1_000 });
+      h.store.startBudgetedAttempt({ instanceId: "inst-1", contextPacketId: KEY, workerId: "gone", now: 1_000, attemptIdSource: () => "a", sessionNamer: () => "s" });
+      const advanced = wire({ store: h.store, seam: h.seam, leaseMs: 1_000, clockStart: 5_000 });
+      await advanced.loop.poll();
+      expect(h.store.getErrand("inst-1", KEY)?.state).toBe("mooted");
+      h.close();
+    }
+  });
+
+  it("L5: the re-spawn edge is unconfirmed's only errand-level exit; a failed re-spawn returns to unconfirmed", async () => {
+    const h = wire({ script: [{ kind: "no_output" }, { kind: "infra_failure", class: "spawn_infra" }] });
+    h.seam.set(mkInstance());
+    await h.loop.tick(); // unconfirmed
+    await h.loop.respawn("inst-1", KEY); // respawn → infra → back to unconfirmed (never pending)
+    expect(h.store.getErrand("inst-1", KEY)?.state).toBe("unconfirmed");
+    h.close();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// DG — observability
+// ─────────────────────────────────────────────────────────────────────────
+describe("DG — one best-effort event per edge; fail-open leaves outcomes unchanged", () => {
+  it("DG1: a create → claim → attempt-start → confirm sequence emits the edge labels with the right fields", async () => {
+    const h = wire({ script: [submitted(committed)] });
+    h.seam.set(mkInstance());
+    await h.loop.tick();
+    const edges = h.events.filter((e) => e.kind === "errand_transition").map((e) => e.errandEdge);
+    expect(edges).toEqual(["create", "claim", "attempt-start", "confirm"]);
+    const create = h.events.find((e) => e.errandEdge === "create");
+    expect(create).toMatchObject({ source: "runner", errandTo: "pending", contextPacketId: KEY });
+    expect(create?.errandFrom).toBeUndefined(); // birth edge — no from
+    expect(create?.attemptId).toBeUndefined();
+    const attemptStart = h.events.find((e) => e.errandEdge === "attempt-start");
+    expect(attemptStart).toMatchObject({ errandFrom: "claimed", errandTo: "attempting", attemptId: "att-1" });
+    const confirm = h.events.find((e) => e.errandEdge === "confirm");
+    expect(confirm).toMatchObject({ errandFrom: "attempting", errandTo: "confirmed", attemptId: "att-1" });
+    h.close();
+  });
+
+  it("DG2: a swallowing sink changes no disposition and no timing", async () => {
+    const noop: DiagnosticsSink = { emit: () => { /* swallow */ } };
+    const withNoop = wire({ script: [submitted(committed)], diag: noop });
+    withNoop.seam.set(mkInstance());
+    await withNoop.loop.tick();
+    const withRecording = wire({ script: [submitted(committed)] });
+    withRecording.seam.set(mkInstance());
+    await withRecording.loop.tick();
+    expect(withNoop.store.getErrand("inst-1", KEY)?.state).toBe(
+      withRecording.store.getErrand("inst-1", KEY)?.state,
+    );
+    expect(withNoop.store.getErrand("inst-1", KEY)?.state).toBe("confirmed");
+    withNoop.close();
+    withRecording.close();
+  });
+});
