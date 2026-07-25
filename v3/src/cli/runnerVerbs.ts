@@ -575,8 +575,10 @@ export async function verbAttach(
   const db = resolveDbPath(flagString(ctx, "db"), ctx.deps);
   const errandPath = deriveErrandDbPath(db);
   // AT1: existence-check first — a read verb mints no ledger (the no-mint rule).
+  // Each absence is named for the ACTUAL absence per AT1's letter: no ledger vs
+  // no errand vs no live attempt are THREE distinct names, never conflated.
   if (!existsSync(errandPath)) {
-    throw notFound("NotRunning", `instance '${id}' is not running (no runner ledger)`);
+    throw notFound("NoRunnerLedger", `instance '${id}' is not running (no runner ledger)`);
   }
   // AT1: resolution is a runner-LEDGER read THROUGH the reader facade — the
   // session name is the ROW's recorded `liveSessionName` VERBATIM. The facade
@@ -589,9 +591,14 @@ export async function verbAttach(
   try {
     const reader = createErrandReader(errandHandle.store, handle.store, noopDiagnosticsSink);
     const mine = (await reader.listErrands()).filter((e) => e.instanceId === id);
+    if (mine.length === 0) {
+      // A ledger exists but holds no row for this instance — a DISTINCT absence
+      // from "no live attempt" (the build conflated the two under one null).
+      throw notFound("NoErrand", `instance '${id}' has no errand in the runner ledger`);
+    }
     const live = resolveLiveAttempt(mine);
     if (live === null) {
-      throw notFound("NotRunning", `instance '${id}' is not running (no live attempt)`);
+      throw notFound("NoLiveAttempt", `instance '${id}' is not running (no live attempt)`);
     }
     sessionName = live.sessionName;
   } finally {
@@ -600,11 +607,22 @@ export async function verbAttach(
   }
   // AT1: the liveness classification PRECEDES the exec — the interactive exit
   // alone cannot discriminate (a real `tmux attach` exits 1 for BOTH a missing
-  // session and a missing tty), so a dead/missing session is the not-running
-  // domain lane (exit 3) with NO exec invoked.
+  // session and a missing tty). A CLEAN-DEAD session is the not-running domain
+  // lane (exit 3) with NO exec; a probe ANOMALY (neither alive nor clean-dead —
+  // tmux infra, an anomalous client conclusion) is INTERNAL (exit 1),
+  // fail-closed, NEVER conflated with the dead lane (the DETAIL surface keeps
+  // its own `probe-failed` discriminant; here, at the exec boundary, an
+  // undiscriminated probe cannot license an exec — it fails loud).
   const liveness = await seams.liveness(sessionName);
-  if (liveness !== "alive") {
-    throw notFound("NotRunning", `instance '${id}' session '${sessionName}' is not running`);
+  if (liveness === "dead") {
+    throw notFound("SessionDead", `instance '${id}' session '${sessionName}' is not running`);
+  }
+  if (liveness === "probe-failed") {
+    throw new CliError(
+      "internal",
+      "AttachProbeFailed",
+      `instance '${id}' session '${sessionName}' liveness probe failed (tmux infra or an anomalous client exit) — attach cannot proceed`,
+    );
   }
   // AT2: EXEC through the injected interactive seam — observe (`-r`) by default,
   // takeover drops `-r`. Pane bytes flow through the inherited tty (no CLI

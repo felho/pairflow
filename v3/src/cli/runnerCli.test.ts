@@ -1,5 +1,5 @@
 import { DatabaseSync } from "node:sqlite";
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
@@ -233,6 +233,32 @@ async function seedKernelWithEvidence(db: string): Promise<{ id: string; version
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// CW — the composition swaps (source-grain wiring pins)
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("CW — the operator gate-runner swap + the dev-plane slot retention", () => {
+  const count = (haystack: string, needle: string): number => haystack.split(needle).length - 1;
+
+  it("CW1: BOTH operator wiring sites construct the REAL ProcessGateRunner; NO operator site keeps the fail-closed slot", () => {
+    const src = readFileSync(join(process.cwd(), "src", "cli", "main.ts"), "utf8");
+    // RED if ONE operator site is swapped back to the slot (the real count drops
+    // to 1 and a fail-closed-slot construction appears) — the J-GATE journey
+    // proves the RUNNER-composition site; this pins the two main.ts sites the
+    // journey does not exercise (withKernel + verbSubmit).
+    expect(count(src, "createProcessGateRunner(")).toBe(2);
+    expect(count(src, "createFailClosedProcessGateRunner(")).toBe(0);
+  });
+
+  it("CW2: the dev plane KEEPS the fail-closed slot at BOTH its sites (replay must never spawn)", () => {
+    const src = readFileSync(join(process.cwd(), "src", "cli", "dev", "main.ts"), "utf8");
+    // RED if a dev site is "finished" onto the real runner — replay re-drives
+    // committed history and MUST NOT re-execute gate side effects (CW2).
+    expect(count(src, "createFailClosedProcessGateRunner(")).toBe(2);
+    expect(count(src, "createProcessGateRunner(")).toBe(0);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
 // RR — runner run: config lanes, run modes, the composition boundary
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -284,6 +310,24 @@ describe("RR — runner run config + run modes", () => {
     // Flag-free defaults satisfy the rule by the derived arithmetic.
     const ok = await runRunner(onceArgs(db), mkDeps());
     expect(ok.code).toBe(EXIT.ok);
+
+    // The bound is EXACTLY the four-term sum (timeout+grace+backstop+poll). With
+    // CUSTOM knobs: a lease AT the bound passes, one BELOW it fails naming the
+    // computed bound, and the DERIVED default (no --lease-ms) satisfies it.
+    const knobs = [
+      "--timeout-ms", "1200000",
+      "--grace-ms", "20000",
+      "--backstop-margin-ms", "8000",
+      "--poll-ms", "2000",
+    ];
+    const bound = 1_200_000 + 20_000 + 8_000 + 2_000; // 1_230_000
+    const atBound = await runRunner(onceArgs(db, [...knobs, "--lease-ms", String(bound)]), mkDeps());
+    expect(atBound.code).toBe(EXIT.ok);
+    const belowBound = await runRunner(onceArgs(db, [...knobs, "--lease-ms", String(bound - 1)]), mkDeps());
+    expect(belowBound.code).toBe(EXIT.usage);
+    expect((errorDoc(belowBound).details as { bound: number }).bound).toBe(bound);
+    const derived = await runRunner(onceArgs(db, knobs), mkDeps());
+    expect(derived.code).toBe(EXIT.ok);
   });
 
   it("config-time timer validation runs over EVERY timer flag (poll included) BEFORE any store open", async () => {
@@ -298,6 +342,23 @@ describe("RR — runner run config + run modes", () => {
     const low = await runRunner(onceArgs(db, ["--timeout-ms", "10"]), mkDeps());
     expect(low.code).toBe(EXIT.usage);
     expect(errorDoc(low).name).toBe("InvalidTimerKnob");
+    // EVERY timer-bearing flag rides the shared validator — grace, backstop, and
+    // the (default-derived) lease each below their named floor → usage/2. A
+    // below-floor lease must ALSO satisfy the pairing bound; use a large enough
+    // envelope so the timer floor (not the pairing rule) is the rejecting lane.
+    for (const [flag, value] of [
+      ["--grace-ms", "10"],
+      ["--backstop-margin-ms", "10"],
+    ] as const) {
+      const r = await runRunner(onceArgs(db, [flag, value]), mkDeps());
+      expect(r.code).toBe(EXIT.usage);
+      expect(errorDoc(r).name).toBe("InvalidTimerKnob");
+    }
+    // A ≥2^31 lease → the shared validator rejects at config (usage/2), NOT the
+    // pairing rule (which it satisfies) — the lease flag is timer-validated too.
+    const bigLease = await runRunner(onceArgs(db, ["--lease-ms", "2147483648"]), mkDeps());
+    expect(bigLease.code).toBe(EXIT.usage);
+    expect(errorDoc(bigLease).name).toBe("InvalidTimerKnob");
   });
 
   it("a numeric flag's lexical violation → the shared usage lane", async () => {
@@ -359,22 +420,25 @@ describe("RR — runner run config + run modes", () => {
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe("AT — attach resolution, exec, exit mapping", () => {
-  it("the resolution walk → the not-running domain lane (exit 3): no ledger / no errand / no live attempt", async () => {
+  it("the resolution walk → the not-running domain lane (exit 3): no ledger / no errand / no live attempt, each named DISTINCTLY (AT1)", async () => {
     const db = tempDb();
-    // (a) no ledger file — the no-mint check.
+    // (a) no ledger file — the no-mint check; named for the ACTUAL absence.
     const noLedger = await runAttach(["inst-a", "--db", db], mkDeps());
     expect(noLedger.code).toBe(EXIT.notFound);
-    expect(errorDoc(noLedger).name).toBe("NotRunning");
+    expect(errorDoc(noLedger).name).toBe("NoRunnerLedger");
     expect(existsSync(deriveErrandDbPath(db))).toBe(false); // read verb minted nothing
-    // (b) ledger exists, no errand for the instance.
+    // (b) ledger exists, no errand for the instance → NoErrand (never conflated
+    // with the no-live-attempt name — the build's misnaming, corrected).
     seedErrand(db, "other", "other@v2", { state: "attempting", sessionName: "s-other" });
     openKernel(db).close();
     const noErrand = await runAttach(["inst-a", "--db", db], mkDeps());
     expect(noErrand.code).toBe(EXIT.notFound);
+    expect(errorDoc(noErrand).name).toBe("NoErrand");
     // (c) errand exists but no live attempt (unconfirmed → activeAttemptId null).
     seedErrand(db, "inst-a", "inst-a@v2", { state: "unconfirmed" });
     const noLive = await runAttach(["inst-a", "--db", db], mkDeps());
     expect(noLive.code).toBe(EXIT.notFound);
+    expect(errorDoc(noLive).name).toBe("NoLiveAttempt");
   });
 
   it("a live recorded session → the exec seam invoked with `attach-session -r -t <LEDGER name>` VERBATIM (never derived)", async () => {
@@ -402,22 +466,27 @@ describe("AT — attach resolution, exec, exit mapping", () => {
     expect(interactions[0]?.args).toEqual(["attach-session", "-t", "sess-1"]);
   });
 
-  it("the exit mapping: dead-at-probe → 3 with NO exec; clean detach → 0; nonzero interactive exit → 1; probe fault → 3", async () => {
+  it("the exit mapping: clean-dead → 3 with NO exec; a probe ANOMALY → internal 1 (fail-closed, distinct from dead); clean detach → 0; nonzero interactive exit → 1", async () => {
     const db = tempDb();
     openKernel(db).close();
     seedErrand(db, "inst-a", "inst-a@v2", { state: "attempting", sessionName: "sess-1" });
 
-    // dead at probe → exit 3, the exec seam NEVER invoked (probe-classified).
+    // CLEAN-DEAD at probe → exit 3 (domain not-running), the exec seam NEVER
+    // invoked (probe-classified).
     const deadDeps = mkDeps();
     const deadInteractions = (deadDeps as unknown as { interactions: unknown[] }).interactions;
     const dead = await runAttach(["inst-a", "--db", db], deadDeps, fakeSeams({ liveness: () => Promise.resolve("dead") }));
     expect(dead.code).toBe(EXIT.notFound);
+    expect(errorDoc(dead).name).toBe("SessionDead");
     expect(deadInteractions).toEqual([]);
 
-    // probe fault → also not-running (exit 3), no exec.
+    // a probe ANOMALY (neither alive nor clean-dead — tmux infra/weird exit) →
+    // INTERNAL exit 1, fail-closed, NEVER conflated with the clean-dead lane; no
+    // exec. RED if a probe anomaly is folded back into the exit-3 dead lane.
     const probeDeps = mkDeps();
     const probe = await runAttach(["inst-a", "--db", db], probeDeps, fakeSeams({ liveness: () => Promise.resolve("probe-failed") }));
-    expect(probe.code).toBe(EXIT.notFound);
+    expect(probe.code).toBe(EXIT.internal);
+    expect(errorDoc(probe).name).toBe("AttachProbeFailed");
     expect((probeDeps as unknown as { interactions: unknown[] }).interactions).toEqual([]);
 
     // live + clean detach (rc 0) → 0.
@@ -469,7 +538,17 @@ describe("RS — runner respawn precondition + exit asymmetry", () => {
   it("the precondition walk → exit 3 (no errand / non-unconfirmed naming the found state); duplicate unconfirmed → exit 1", async () => {
     const respawnArgs = (db: string, id: string): string[] => ["respawn", id, "--db", db, "--templates-dir", TEMPLATES, "--actor-cmd", ACTOR_CMD];
 
-    // no errand for the instance.
+    // no errand LEDGER at all: respawn is a WRITE surface (RR2 create-or-opens),
+    // so no-mint does not apply — the freshly-opened empty ledger yields the
+    // same NoErrand lane (exit 3), never a mint-then-crash.
+    const dbFresh = tempDb();
+    openKernel(dbFresh).close();
+    expect(existsSync(deriveErrandDbPath(dbFresh))).toBe(false);
+    const noLedger = await runRunner(respawnArgs(dbFresh, "inst-z"), mkDeps());
+    expect(noLedger.code).toBe(EXIT.notFound);
+    expect(errorDoc(noLedger).name).toBe("NoErrand");
+
+    // no errand for the instance (ledger exists, holds another instance).
     const dbA = tempDb();
     openKernel(dbA).close();
     seedErrand(dbA, "other", "other@v2", { state: "unconfirmed" });
@@ -477,7 +556,7 @@ describe("RS — runner respawn precondition + exit asymmetry", () => {
     expect(noErrand.code).toBe(EXIT.notFound);
     expect(errorDoc(noErrand).name).toBe("NoErrand");
 
-    // a non-unconfirmed state → exit 3 naming the state.
+    // a non-unconfirmed state → exit 3 naming the state (confirmed).
     const dbB = tempDb();
     openKernel(dbB).close();
     seedErrand(dbB, "inst-b", "inst-b@v2", { state: "confirmed" });
@@ -485,6 +564,16 @@ describe("RS — runner respawn precondition + exit asymmetry", () => {
     expect(notUnc.code).toBe(EXIT.notFound);
     expect(errorDoc(notUnc).name).toBe("NotUnconfirmed");
     expect(errorDoc(notUnc).message).toContain("confirmed");
+
+    // a SECOND non-unconfirmed state → exit 3 naming THAT state (attempting —
+    // a live attempt is not a respawn precondition).
+    const dbAtt = tempDb();
+    openKernel(dbAtt).close();
+    seedErrand(dbAtt, "inst-att", "inst-att@v2", { state: "attempting", sessionName: "s-att" });
+    const attempting = await runRunner(respawnArgs(dbAtt, "inst-att"), mkDeps());
+    expect(attempting.code).toBe(EXIT.notFound);
+    expect(errorDoc(attempting).name).toBe("NotUnconfirmed");
+    expect(errorDoc(attempting).message).toContain("attempting");
 
     // two unconfirmed errands for one instance → internal exit 1.
     const dbC = tempDb();
@@ -630,6 +719,63 @@ describe("DT — detail runner section", () => {
     }
   });
 
+  it("the errand member: equal createdAt → the contextPacketId TIEBREAK decides (RED under a wrong-order pick)", async () => {
+    const db = tempDb();
+    openKernel(db).close();
+    // Two rows with EQUAL createdAt — the selection rule's tiebreak is the ONLY
+    // discriminator: the LARGER contextPacketId (`inst-x@v3` > `inst-x@v2`) wins.
+    seedErrand(db, "inst-x", "inst-x@v2", { state: "unconfirmed", createdClock: 3_000 });
+    seedErrand(db, "inst-x", "inst-x@v3", { state: "confirmed", expectedVersion: 3, createdClock: 3_000 });
+    const kernel = openKernel(db);
+    try {
+      const section = await enrichDetailRunner(detailCtx(db), kernel.store, noneInstance("inst-x"), fakeSeams());
+      // RED if the tiebreak were reversed/absent (it would surface `inst-x@v2`).
+      expect("state" in section.errand ? section.errand : {}).toMatchObject({
+        state: "confirmed",
+        contextPacketId: "inst-x@v3",
+      });
+    } finally {
+      kernel.close();
+    }
+  });
+
+  it("the errand member: all SIX projected fields carry the row's VALUES exactly", async () => {
+    const db = tempDb();
+    openKernel(db).close();
+    // An `attempting` errand: budget decremented once (3 → 2), a live attempt id
+    // + recorded session, no admit outcome yet.
+    seedErrand(db, "inst-x", "inst-x@v2", { state: "attempting", sessionName: "sess-six" });
+    const kernel = openKernel(db);
+    try {
+      const section = await enrichDetailRunner(detailCtx(db), kernel.store, noneInstance("inst-x"), fakeSeams());
+      expect(section.errand).toEqual({
+        state: "attempting",
+        remainingBudget: 2,
+        contextPacketId: "inst-x@v2",
+        activeAttemptId: "seed-attempt-inst-x@v2",
+        liveSessionName: "sess-six",
+        recordedAdmitOutcome: null,
+      });
+    } finally {
+      kernel.close();
+    }
+  });
+
+  it("the attach member: a ledgered errand with NO live attempt → { available: false, reason: 'no-live-attempt' }", async () => {
+    const db = tempDb();
+    openKernel(db).close();
+    // A confirmed errand: present in the ledger, but activeAttemptId is null.
+    seedErrand(db, "inst-x", "inst-x@v2", { state: "confirmed" });
+    const kernel = openKernel(db);
+    try {
+      const section = await enrichDetailRunner(detailCtx(db), kernel.store, noneInstance("inst-x"), fakeSeams());
+      expect("state" in section.errand ? section.errand.state : "").toBe("confirmed");
+      expect(section.attach).toEqual({ available: false, reason: "no-live-attempt" });
+    } finally {
+      kernel.close();
+    }
+  });
+
   it("ledger exists but no row for the instance → { unavailable: 'no-errand' }", async () => {
     const db = tempDb();
     openKernel(db).close();
@@ -691,11 +837,35 @@ describe("DT — detail runner section", () => {
       const absent = await enrichDetailRunner({ ...ctxOk, values: { db, "templates-dir": emptyDir } }, kernel.store, readyInstance("inst-x", WORKTREE_REF));
       expect(absent.runtimeContextSummary).toEqual({ unavailable: "template-unavailable" });
 
-      // provider-unresolvable: the template names a provider the registry lacks.
+      // template-unavailable (MALFORMED): the pinned file EXISTS but is not
+      // loadable YAML — absent and malformed alike land on template-unavailable
+      // (DT2's letter), distinct from the provider-unresolvable member below.
+      const malformedDir = join(tempDir(), "tmpl-malformed");
+      mkdirSync(malformedDir, { recursive: true });
+      writeFileSync(join(malformedDir, "local-pair-v0@1.yaml"), "ref: {{{ this is: not valid yaml\n  steps broken");
+      const malformed = await enrichDetailRunner(
+        { ...ctxOk, values: { db, "templates-dir": malformedDir } },
+        kernel.store,
+        readyInstance("inst-x", WORKTREE_REF),
+      );
+      expect(malformed.runtimeContextSummary).toEqual({ unavailable: "template-unavailable" });
+
+      // provider-unresolvable (REGISTRY MISS): the template names a provider the
+      // registry lacks → registry.resolve returns null.
       const ghostDir = join(tempDir(), "tmpl-ghost");
       writeWorktreeTemplate(ghostDir, "ghost.provider");
       const ghost = await enrichDetailRunner({ ...ctxOk, values: { db, "templates-dir": ghostDir } }, kernel.store, readyInstance("inst-x", WORKTREE_REF));
       expect(ghost.runtimeContextSummary).toEqual({ unavailable: "provider-unresolvable" });
+
+      // provider-unresolvable (THROWING PROJECTION): the provider RESOLVES but
+      // projectForActor THROWS on a malformed ref — the throw is caught into the
+      // same discriminant, never propagated (a read verb degrades in-doc).
+      const throwing = await enrichDetailRunner(
+        { ...ctxOk, values: { db, "templates-dir": tdir } },
+        kernel.store,
+        readyInstance("inst-x", { kind: "worktree", locator: "not-an-object" }),
+      );
+      expect(throwing.runtimeContextSummary).toEqual({ unavailable: "provider-unresolvable" });
     } finally {
       kernel.close();
     }

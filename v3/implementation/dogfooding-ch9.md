@@ -21,7 +21,10 @@ bindings. No test seams.
 ## Fixtures
 
 A single-step worktree template (`local-pair-v0@1.yaml`) whose `config.repo`
-points at your throwaway host repo:
+points at your throwaway host repo. For the gate leg (step 5), uncomment the
+`gates:` block — it is a **step-level sibling of `transitions:`** (same
+four-space indent as `transitions:`, NOT nested under it); just remove the
+`# ` prefix from each of its four lines:
 
 ```yaml
 ref: { id: local-pair-v0, version: 1 }
@@ -32,11 +35,10 @@ steps:
     instruction: build it
     transitions:
       CONVERGED: done
-      # For the gate leg, add:
-      # gates:
-      #   CONVERGED:
-      #     - uses: external.process
-      #       config: { command: "true", timeoutMs: 5000, output: { mode: exitCode }, onExit: { zero: allow, nonzero: block } }
+    # gates:
+    #   CONVERGED:
+    #     - uses: external.process
+    #       config: { command: "true", timeoutMs: 5000, output: { mode: exitCode }, onExit: { zero: allow, nonzero: block } }
 terminal: [done]
 roles:
   implementer: { defaultActor: codex }

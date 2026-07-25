@@ -1,8 +1,9 @@
 import { execFile, execFileSync } from "node:child_process";
 import { DatabaseSync } from "node:sqlite";
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 import { promisify } from "node:util";
 
 import { afterEach, describe, expect, it } from "vitest";
@@ -145,6 +146,7 @@ interface OnceDoc {
     state: string;
     remainingBudget: number;
     contextPacketId: string;
+    liveSessionName: string | null;
   }[];
 }
 
@@ -154,12 +156,31 @@ function setup(): { root: string; db: string; templatesDir: string } {
   return { root, db: join(root, "store.db"), templatesDir: join(root, "templates") };
 }
 
+/**
+ * Finding 7 (journey race): START rides the ASYNC runtime-context READY path —
+ * `start` returns `accepted` before the worktree is necessarily provisioned.
+ * Under load a `runner run` staged immediately can observe the context still
+ * `requested`/`none`. Poll the SHIPPED `detail` until the context is `ready`
+ * (bounded retries) before staging anything that depends on it.
+ */
+async function waitForRuntimeContextReady(db: string, id: string): Promise<void> {
+  for (let i = 0; i < 100; i += 1) {
+    const detail = JSON.parse((await cli("detail", id, "--db", db)).stdout.trim()) as DetailDoc;
+    if (detail.instance.runtimeContext.state === "ready") {
+      return;
+    }
+    await delay(100);
+  }
+  throw new Error(`runtime context for '${id}' did not reach 'ready' within the bounded retries`);
+}
+
 async function createAndStart(db: string, templatesDir: string): Promise<string> {
   const created = await cli("create", "--db", db, "--task", "journey", "--templates-dir", templatesDir);
   expect(created.code).toBe(0);
   const id = (JSON.parse(created.stdout.trim()) as { instanceId: string }).instanceId;
   const started = await cli("start", id, "--db", db, "--templates-dir", templatesDir);
   expect(started.code).toBe(0);
+  await waitForRuntimeContextReady(db, id);
   return id;
 }
 
@@ -171,24 +192,72 @@ describe("cli — the operator runner activation journeys (packet ch9-p4b: J1)",
       const { root, db, templatesDir } = setup();
       const { repo } = makeHostRepo(root);
       writeTemplate(templatesDir, repo, false);
-      const stub = writeStub(root, "emit.mjs", true);
+      // Finding 4: a canary stub — it emits CONVERGED (so the errand confirms)
+      // AND records the two env canaries it observed. The actor env is a FULL
+      // REPLACEMENT with the allowlist (C19), so an `--env-allow`ed var must be
+      // PRESENT and an unlisted host var ABSENT.
+      const canaryOut = join(root, "canary.json");
+      const stub = join(root, "canary-emit.mjs");
+      writeFileSync(
+        stub,
+        [
+          `import { writeFileSync } from "node:fs";`,
+          `writeFileSync(process.env.PAIRFLOW_EMIT, JSON.stringify({ type: "CONVERGED", payload: {} }));`,
+          `writeFileSync(${JSON.stringify(canaryOut)}, JSON.stringify({ allowed: process.env.CANARY_ALLOWED ?? null, unlisted: process.env.CANARY_UNLISTED ?? null }));`,
+          ``,
+        ].join("\n"),
+      );
       const id = await createAndStart(db, templatesDir);
 
-      const run = await cli(
-        "runner",
-        "run",
-        "--db",
-        db,
-        "--templates-dir",
-        templatesDir,
-        "--actor-cmd",
-        actorCmd(stub),
-        "--once",
-      );
+      // Set both canaries on the host env; --env-allow only the ALLOWED one.
+      const priorAllowed = process.env.CANARY_ALLOWED;
+      const priorUnlisted = process.env.CANARY_UNLISTED;
+      process.env.CANARY_ALLOWED = "canary-allowed-value";
+      process.env.CANARY_UNLISTED = "canary-should-not-leak";
+      let run: CliResult;
+      try {
+        run = await cli(
+          "runner",
+          "run",
+          "--db",
+          db,
+          "--templates-dir",
+          templatesDir,
+          "--actor-cmd",
+          actorCmd(stub),
+          "--env-allow",
+          "CANARY_ALLOWED",
+          "--once",
+        );
+      } finally {
+        if (priorAllowed === undefined) delete process.env.CANARY_ALLOWED;
+        else process.env.CANARY_ALLOWED = priorAllowed;
+        if (priorUnlisted === undefined) delete process.env.CANARY_UNLISTED;
+        else process.env.CANARY_UNLISTED = priorUnlisted;
+      }
       expect(run.code).toBe(0);
       const once = JSON.parse(run.stdout.trim()) as OnceDoc;
       const errand = once.errands.find((e) => e.instanceId === id);
       expect(errand?.state).toBe("confirmed"); // the delivered op landed committed → confirmed
+
+      // Finding 4: the actor observed the allowed var and NOT the unlisted one
+      // (the full-replacement allowlist discipline, driven end-to-end).
+      const canary = JSON.parse(readFileSync(canaryOut, "utf8")) as {
+        allowed: string | null;
+        unlisted: string | null;
+      };
+      expect(canary.allowed).toBe("canary-allowed-value");
+      expect(canary.unlisted).toBeNull();
+
+      // Finding 3: the attempt ran inside its LEDGER-RECORDED tmux session — the
+      // errand row carries a `pairflow-…` session name (C23's derivation, the
+      // ledger recorded the namer's output).
+      const errandDb = new DatabaseSync(`${db}.errands.sqlite`);
+      const sessionRows = errandDb
+        .prepare("SELECT live_session_name FROM errands WHERE instance_id = ?")
+        .all(id) as { live_session_name: string | null }[];
+      errandDb.close();
+      expect(sessionRows.some((r) => (r.live_session_name ?? "").startsWith("pairflow-"))).toBe(true);
 
       // detail's runner section: the confirmed errand + the worktree
       // projection (the summary needs `--templates-dir` for the provider name —
@@ -264,7 +333,9 @@ describe("cli — the operator runner activation journeys (packet ch9-p4b: J1)",
       expect(attach.code).toBe(3);
       const doc = JSON.parse(attach.stderr.trim()) as { error: { class: string; name: string } };
       expect(doc.error.class).toBe("not_found");
-      expect(doc.error.name).toBe("NotRunning");
+      // No `runner run` ran, so no errand ledger exists — the absence is named
+      // for its ACTUAL form (AT1's three distinct absence names).
+      expect(doc.error.name).toBe("NoRunnerLedger");
     },
   );
 
@@ -296,6 +367,35 @@ describe("cli — the operator runner activation journeys (packet ch9-p4b: J1)",
       expect(afterSilent?.state).toBe("unconfirmed");
       const budgetAfterSilent = afterSilent?.remainingBudget;
       expect(typeof budgetAfterSilent).toBe("number");
+      const sessionAfterSilent = afterSilent?.liveSessionName;
+      expect(sessionAfterSilent).toMatch(/^pairflow-/); // the first attempt recorded a session
+
+      // Finding 5: a SILENT respawn (no emit) → the errand lands UNCONFIRMED
+      // AGAIN (C14's narrowing: never pending/exhausted), mints a FRESH attempt
+      // (a new recorded session, distinct from the prior one), and stays
+      // UNBUDGETED (remaining budget unchanged across the edge).
+      const silentRespawn = await cli(
+        "runner",
+        "respawn",
+        id,
+        "--db",
+        db,
+        "--templates-dir",
+        templatesDir,
+        "--actor-cmd",
+        actorCmd(silent),
+      );
+      expect(silentRespawn.code).toBe(0);
+      const afterSilentRespawn = JSON.parse(silentRespawn.stdout.trim()) as {
+        state: string;
+        remainingBudget: number;
+        liveSessionName: string | null;
+      };
+      expect(afterSilentRespawn.state).toBe("unconfirmed"); // narrowed back, never pending/exhausted
+      expect(afterSilentRespawn.remainingBudget).toBe(budgetAfterSilent); // unbudgeted
+      expect(afterSilentRespawn.liveSessionName).toMatch(/^pairflow-/); // a session recorded
+      // Fresh attempt id ⇒ a fresh session name (the namer is attempt-derived).
+      expect(afterSilentRespawn.liveSessionName).not.toBe(sessionAfterSilent);
 
       // The respawn edge with an EMITTING stub → the errand lands confirmed and
       // the respawn attempt is UNBUDGETED (remaining budget unchanged).

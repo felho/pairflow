@@ -454,7 +454,7 @@ Dimensions (enumerated before test rows — R-DIMENSIONS):
 
 | ID | Rule |
 |---|---|
-| AT1 | `attach <instance> [--takeover] [--db]`: resolution is a runner-LEDGER read THROUGH the reader facade (C24's letter; the in-context facade rule holds UNIFORMLY — the CF3 recheck is inert on a live attempt's row, so the facade here is discipline, not semantics): existence-check the derived errand DB first (a read verb mints no ledger — DT2's no-mint rule) — no ledger file, or no errand row for the instance, or no row with a non-null `activeAttemptId` + `liveSessionName` → the clean "not running" domain error, exit 3, doc naming what was absent; the session name is the ROW's recorded `liveSessionName` VERBATIM (never re-derived from ids, never read from the runtime ref). The verb then EXECS tmux through the injected interactive seam (AT2): default argv `["attach-session", "-r", "-t", <sessionName>]` (observe — read-only, C24/P2d); `--takeover` drops `-r` (the explicit writable flag). Attach never writes kernel state and never spawns anything but the tmux client; its sole possible ledger write is the reader facade's ratified CF3 evidence-promotion flip (a RESTING non-confirmed row with late evidence, read during resolution — the facade's own mechanism, benign and idempotent, never an attach-semantic write; the LIVE-attempt row the exec path rides is provably outside the flip's resting set). LIVENESS CLASSIFICATION PRECEDES THE EXEC (the substrate collapses the interactive client's failure modes onto ONE exit code — a real probe shows `tmux attach` exits 1 BOTH for a missing session and for a missing tty, so the interactive exit alone cannot discriminate AT1's lanes): after the ledger read, the verb runs ONE `has-session` probe through the C19 seam (DT2's liveness mechanism reused) — a dead/missing session → the "not running" domain lane (exit 3), NO exec invoked; a live session → the interactive exec (AT2), whose clean exit maps to 0 and whose ANY nonzero exit is internal (exit 1) — the died-in-window race and the missing-tty case both land there, bounded and named (tmux's own message reaches the operator on the inherited stderr — AT2's declared channel extension). |
+| AT1 | `attach <instance> [--takeover] [--db]`: resolution is a runner-LEDGER read THROUGH the reader facade (C24's letter; the in-context facade rule holds UNIFORMLY — the CF3 recheck is inert on a live attempt's row, so the facade here is discipline, not semantics): existence-check the derived errand DB first (a read verb mints no ledger — DT2's no-mint rule) — no ledger file, or no errand row for the instance, or no row with a non-null `activeAttemptId` + `liveSessionName` → the clean "not running" domain error, exit 3, the doc naming the ACTUAL absence with a DISTINCT error name per lane (gate-2 fold — the build conflated the missing-errand case under the no-live-attempt name): `NoRunnerLedger` (no ledger file) \| `NoErrand` (ledger exists, no row for the instance) \| `NoLiveAttempt` (a row but no live attempt) — three distinct names, never collapsed; the session name is the ROW's recorded `liveSessionName` VERBATIM (never re-derived from ids, never read from the runtime ref). The verb then EXECS tmux through the injected interactive seam (AT2): default argv `["attach-session", "-r", "-t", <sessionName>]` (observe — read-only, C24/P2d); `--takeover` drops `-r` (the explicit writable flag). Attach never writes kernel state and never spawns anything but the tmux client; its sole possible ledger write is the reader facade's ratified CF3 evidence-promotion flip (a RESTING non-confirmed row with late evidence, read during resolution — the facade's own mechanism, benign and idempotent, never an attach-semantic write; the LIVE-attempt row the exec path rides is provably outside the flip's resting set). LIVENESS CLASSIFICATION PRECEDES THE EXEC (the substrate collapses the interactive client's failure modes onto ONE exit code — a real probe shows `tmux attach` exits 1 BOTH for a missing session and for a missing tty, so the interactive exit alone cannot discriminate AT1's lanes): after the ledger read, the verb runs ONE `has-session` probe through the C19 seam (DT2's liveness mechanism reused) — a CLEAN-DEAD session (`has-session` exit 1) → the "not running" domain lane (exit 3, `SessionDead`), NO exec invoked; a probe ANOMALY (neither alive nor clean-dead — tmux infra absent, an anomalous client conclusion) → INTERNAL (exit 1, `AttachProbeFailed`), fail-closed, NEVER conflated with the dead lane (gate-2 fold — at the exec boundary an undiscriminated probe cannot license an exec, so it fails loud; the DETAIL surface keeps its own `probe-failed` discriminant, DT2's letter, because a read verb degrades in-doc rather than fails); a live session → the interactive exec (AT2), whose clean exit maps to 0 and whose ANY nonzero exit is internal (exit 1) — the died-in-window race and the missing-tty case both land there, bounded and named (tmux's own message reaches the operator on the inherited stderr — AT2's declared channel extension). |
 | AT2 | (NEW-DECISION — flag F6) The interactive exec seam: `CliDeps` gains `runInteractive(cmd: string, args: readonly string[]): Promise<number>` — production binds a `node:child_process` spawn with `stdio: "inherit"` awaiting exit (the operator's tty IS the pane view; nothing is captured — attach is C23's observe surface, diagnostic by contract, no row's proof rides pane bytes); tests bind a recording fake. THE PASSTHROUGH IS A DECLARED CHANNEL-CONTRACT EXTENSION (flag F6): during a live attach the tty passthrough is the surface — stdout/stderr carry pane bytes, not CLI documents; every NON-interactive lane of the verb (the not-running error, usage errors) keeps the ch6 one-doc channel rule. The seam deliberately does NOT ride `disciplinedSpawn` (whose captured-stdio discipline is the OPPOSITE of an interactive attach; ADR-017 item 4's capture rule governs runner-plane WORK spawns — an operator-initiated foreground attach inherits the operator's own tty by design, under the same trusted-local-host stance). CI proof boundary: the exec path is driven at unit grain through the seam (argv + flag composition + exit mapping); a REAL interactive attach needs a tty and is proven by the dogfooding checkpoint, not CI (the declared exclusion — Substrate probes). |
 
 ### RS — `runner respawn`
@@ -468,7 +468,7 @@ Dimensions (enumerated before test rows — R-DIMENSIONS):
 | ID | Rule |
 |---|---|
 | DT1 | The `detail` verb's document gains ONE sibling key `runner` beside the byte-preserved kernel detail (every existing key/value unchanged — the kernel doc is the floor's, this section is the CLI's composition; DERIVATION: C25's three named members as the keyset, C10's projection as the success value — the discriminant/field DESIGN is DT2's): `runner = { errand, attach, runtimeContextSummary }` — a CLOSED keyset, every member ALWAYS present with a value or a named unavailability discriminant per DT2's design (never silently absent): `errand` = the instance's MOST RECENT errand row (reader-facade read — CF3 re-checked; WHICH row is "most recent" is DT2's elected selection rule), carrying AT LEAST C25's named `state` + `remainingBudget` (the full projected field set is DT2's elected design); `attach` = availability per C23's liveness letter (`{ available: true, sessionName }` iff a live attempt's recorded session EXISTS by the liveness probe, else `{ available: false, reason }` from DT2's closed reason domain); `runtimeContextSummary` = the provider's ACTOR PROJECTION VERBATIM (C10 — `projectForActor(ref)`; for the worktree provider `{ kind, path, branch }`) iff the run's runtime context is `ready`, else `{ unavailable: <reason> }` from DT2's closed reason domain. |
-| DT2 | (NEW-DECISION — flag F5) The enrichment DESIGN + mechanisms + the read-verb discipline. SELECTION RULE (elected — the store's raw `listErrands()` order is rowid, read at source; no ratified order exists): the instance's errand rows sort by `createdAt` with `contextPacketId` as the deterministic tiebreak, and the MOST RECENT row is the projected one. FIELD SET: `errand`'s projected keyset is `{ state, remainingBudget, contextPacketId, activeAttemptId, liveSessionName, recordedAdmitOutcome }` (`recordedAdmitOutcome` is a store-validated closed-domain value — C15's classified-outcome letter — never free text), with `{ unavailable: "no-runner-ledger" }` (no ledger file) and `{ unavailable: "no-errand" }` (ledger exists, no row) as its absence forms. ATTACH REASON DOMAIN (closed): `"no-live-attempt"` (no active attempt/session recorded) \| `"session-dead"` (recorded but `has-session` reports gone — C23's record-to-liveness gap, C24's "not running" read) \| `"probe-failed"` (the probe's own infra — tmux absent, anomalous client conclusion; EXPLICIT, never silently mapped to dead). SUMMARY REASON DOMAIN (closed): `"no-runtime-context"` (state `none`/`requested`) \| `"templates-unavailable"` (no `--templates-dir`/env — the DEGRADE-VS-DEMAND election: detail degrades loud in-doc rather than demanding config the read otherwise never needs, the deliberate deviation from the write verbs' `resolveTemplatesDir` usage-lane precedent) \| `"template-unavailable"` (the configured dir does not hold, or cannot load, the pinned template — absent and malformed alike) \| `"provider-unresolvable"` (template loaded but the registry/projection path failed) — MEMBER-level failures land in discriminants, never a throw. MECHANISMS: the runner section is CLI-layer composition — the floor MODULE is byte-untouched (its ratified wide claim stands: committed kernel rows only). NO-MINT RULE: the errand ledger is opened ONLY after an existence check (`openErrandStore` create-or-opens; a detail read against a run that never saw a runner must leave ZERO new files). The liveness probe is ONE `tmux has-session -t <recorded name>` client invocation through the C19 seam (allowlist `{ PATH }`, the channel's client timeout discipline — P2b/P2e's observable: exit 0 alive, exit 1 dead, anything else = `probe-failed`), run IFF a live attempt's session is recorded — a plain kernel-only `detail` spawns NOTHING. The projection resolves through the H1/GR6 mechanism (pinned template → requirement → `registry.resolve(spec.provider)` → `projectForActor` — value-shape only, REV-E; the CLI NEVER interprets the locator — the projection is the sanctioned read). The reader facade's CF3 evidence-promotion flip (+ its BARE diag event) is the section's ONE permitted write — the ratified mechanism, reused not reinvented. MEMBER-vs-SUBSTRATE LINE: the discriminants classify MEMBER-level unavailability (a value legitimately not there); SUBSTRATE faults (a corrupt or unopenable EXISTING ledger, post-open IO failures, row-shape integrity drift, contention past the store's busy-timeout) stay ES5-fail-loud → the internal lane (exit 1) — a read verb degrades on absence, crashes loud on corruption. CONCURRENCY TOPOLOGY, acknowledged: this packet makes concurrent errand-DB writers REAL for the first time (a foreground `runner run` worker in one terminal, `detail`/`respawn` in another — the intended operating mode); the store's own `BEGIN IMMEDIATE` + busy-timeout discipline bounds every wait, contention past the bound surfaces on the loud lane above (bounded, idempotently re-invokable), and no new coordination primitive is minted. |
+| DT2 | (NEW-DECISION — flag F5) The enrichment DESIGN + mechanisms + the read-verb discipline. SELECTION RULE (elected — the store's raw `listErrands()` order is rowid, read at source; no ratified order exists): the instance's errand rows sort by `createdAt` with `contextPacketId` as the deterministic tiebreak, and the MOST RECENT row is the projected one. FIELD SET: `errand`'s projected keyset is `{ state, remainingBudget, contextPacketId, activeAttemptId, liveSessionName, recordedAdmitOutcome }` (`recordedAdmitOutcome` is a store-validated closed-domain value — C15's classified-outcome letter — never free text), with `{ unavailable: "no-runner-ledger" }` (no ledger file) and `{ unavailable: "no-errand" }` (ledger exists, no row) as its absence forms. ATTACH REASON DOMAIN (closed): `"no-live-attempt"` (no active attempt/session recorded) \| `"session-dead"` (recorded but `has-session` reports gone — C23's record-to-liveness gap, C24's "not running" read) \| `"probe-failed"` (the probe's own infra — tmux absent, anomalous client conclusion; EXPLICIT, never silently mapped to dead). SUMMARY REASON DOMAIN (closed): `"no-runtime-context"` (state `none`/`requested`) \| `"templates-unavailable"` (no `--templates-dir`/env — the DEGRADE-VS-DEMAND election: detail degrades loud in-doc rather than demanding config the read otherwise never needs, the deliberate deviation from the write verbs' `resolveTemplatesDir` usage-lane precedent) \| `"template-unavailable"` (the configured dir does not hold, or cannot load, the pinned template — absent and malformed alike) \| `"provider-unresolvable"` (template loaded but the registry/projection path failed) — MEMBER-level failures land in discriminants, never a throw. MECHANISMS: the runner section is CLI-layer composition — the floor MODULE is byte-untouched (its ratified wide claim stands: committed kernel rows only). NO-MINT RULE: the errand ledger is opened ONLY after an existence check (`openErrandStore` create-or-opens; a detail read against a run that never saw a runner must leave ZERO new files). The liveness probe is ONE `tmux has-session -t <recorded name>` client invocation through the C19 seam (allowlist `{ PATH }`, the channel's client timeout discipline — P2b/P2e's observable: exit 0 alive, exit 1 dead, anything else = `probe-failed`), run IFF a live attempt's session is recorded — a plain kernel-only `detail` spawns NOTHING. The projection resolves through the H1/GR6 mechanism (pinned template → requirement → `registry.resolve(spec.provider)` → `projectForActor` — value-shape only, REV-E; the CLI NEVER interprets the locator — the projection is the sanctioned read). The reader facade's CF3 evidence-promotion flip is the section's ONE permitted write — the ratified mechanism, reused not reinvented. DIAG-SINK BINDING ON THE READ VERBS (gate-2 fold — the arm-adjudicated resolution of builder note (3)): on the two READ verbs (`detail`/`attach`) the facade binds the NOOP diagnostics sink, because the committed C3 invariant (committed-only verbs never create the diag file) DOMINATES; the flip's LEDGER write is the load-bearing half and stands, while the evidence-promotion diag EVENT is DROPPED on detail/attach (fail-open by the channel's own contract, REV-DIAG-FAILOPEN — the flip is observed via the errand-state change, not the event). The evidence-promotion EVENT rides only the surfaces that ALREADY open the diag store (`runner run`, `runner respawn`), where the composition's real diag sink is bound. MEMBER-vs-SUBSTRATE LINE: the discriminants classify MEMBER-level unavailability (a value legitimately not there); SUBSTRATE faults (a corrupt or unopenable EXISTING ledger, post-open IO failures, row-shape integrity drift, contention past the store's busy-timeout) stay ES5-fail-loud → the internal lane (exit 1) — a read verb degrades on absence, crashes loud on corruption. CONCURRENCY TOPOLOGY, acknowledged: this packet makes concurrent errand-DB writers REAL for the first time (a foreground `runner run` worker in one terminal, `detail`/`respawn` in another — the intended operating mode); the store's own `BEGIN IMMEDIATE` + busy-timeout discipline bounds every wait, contention past the bound surfaces on the loud lane above (bounded, idempotently re-invokable), and no new coordination primitive is minted. |
 
 ### J — the activation journeys
 
@@ -513,8 +513,8 @@ suites'.)
 | errand-store reads/facade at read/report time (RR5's doc, RS1's post-call read, AT1/DT1's reads) | post-open IO failure / row-shape integrity drift / contention past the busy-timeout under a concurrent worker / a corrupt EXISTING ledger opened by a read verb | execute→report | driven: the ES5 fail-loud `ErrandStoreError` → internal (exit 1), loud — DT2's member-vs-substrate line (never a discriminant); the contention wait bounded by the store's own busy-timeout |
 | `tick()` / `run()` (RR5) | D6 config-integrity throw (missing template/step/binding, capability faults) | execute | driven: propagates loud → internal exit 1 (never swallowed; the loop's own fail-closed letter) |
 | foreground kill (RR5) | SIGINT/SIGTERM mid-attempt | execute | ruled out AS A LANE by the durable-convergence design (C14/C16's crash windows, CT-A2-CRASH — P3a's committed proof); the journey family displays convergence across process boundaries (`--once` iterations) |
-| attach resolution (AT1) | no ledger file / no errand / no live attempt | execute | driven: the "not running" domain lane, exit 3, reason named |
-| attach: liveness probe + exec (AT1/AT2) | dead session at the probe / live + clean detach / live + nonzero interactive exit (died-in-window race, missing tty) | execute | driven: not-running (3 — PROBE-classified, no exec) / ok (0) / internal (1) — the probe discriminates because the interactive exit cannot (the substrate collapses both failures onto rc 1) |
+| attach resolution (AT1) | no ledger file / no errand / no live attempt | execute | driven: the "not running" domain lane, exit 3, with a DISTINCT error name per absence (`NoRunnerLedger` / `NoErrand` / `NoLiveAttempt` — gate-2 fold: never conflated) |
+| attach: liveness probe + exec (AT1/AT2) | clean-dead session at the probe / probe ANOMALY (infra, anomalous exit) / live + clean detach / live + nonzero interactive exit (died-in-window race, missing tty) | execute | driven: clean-dead → not-running (3 — PROBE-classified, no exec, `SessionDead`) / a probe ANOMALY → internal (1, `AttachProbeFailed`, gate-2 fold — never folded into the dead lane) / ok (0) / internal (1) — the probe discriminates the exec's rc-1 collapse (missing session vs missing tty) |
 | respawn resolution (RS1) | no ledger / no errand / not `unconfirmed` / duplicate `unconfirmed` | execute | driven: domain error (3) with the found state; duplicate → internal (1), fail-closed |
 | `loop.respawn` silent no-op (RS1) | the errand resolved by the loop's own precondition path between read and call | execute | driven: the post-call read reports the ACTUAL resulting state as data — the verb never fabricates an outcome |
 | detail: errand read (DT1/DT2) | ledger absent / errand absent | execute | driven: the named unavailability discriminants; the NO-MINT negative (no file created by the read) |
@@ -992,6 +992,109 @@ describes carry a scoped `{ retry: 2 }` (vitest reports retries as
 flaky — visible; a semantic break still fails all three attempts).
 Process-log line filed; suite-level load robustness is a named
 boundary candidate.
+
+### Aftermath — gate-2 build-close review (fresh-context aftermath agent)
+
+The build-close external arm returned **10 findings** (1 P3 comment;
+9 P2 — one product/attach, one packet-docs, four test-evidence
+plausibly-blind lanes, one test-evidence journey race, one
+mutation-record gap, one runbook YAML defect); the orchestrator
+elected the fold directions and a fresh-context aftermath agent
+(the README §4 default) folded ALL ten. Fix AUTHOR: the fresh-context
+aftermath agent (this section, the AT1/DT2/grid amendments, the code
++ test deltas below); the orchestrator retained the verdict elections
+and the independent chain re-run.
+
+Per-finding disposition:
+
+1. **(P2 product, attach) probe anomaly conflated with dead; missing
+   errand misnamed.** FOLDED (code + tests + AT1/grid): the attach
+   verb now maps a probe ANOMALY → internal (exit 1,
+   `AttachProbeFailed`), distinct from a CLEAN-DEAD session (exit 3,
+   `SessionDead`); the three absences carry DISTINCT names
+   (`NoRunnerLedger`/`NoErrand`/`NoLiveAttempt`). Builder note (5) is
+   thereby reversed on the ATTACH surface (the DETAIL `probe-failed`
+   discriminant stands — DT2). AT1 + the grid attach rows amended.
+2. **(P2 packet-docs) CF3 evidence-promotion diag EVENT dropped on the
+   read verbs.** FOLDED as a PACKET AMENDMENT (code unchanged — the
+   committed C3 no-diag-file invariant dominates): DT2 gained the
+   noop-diag-sink clause (the flip's LEDGER write is load-bearing; the
+   EVENT rides only `runner run`/`respawn`). Resolves builder note (3).
+3. **(P2 test-evidence) CW main.ts operator-site swap-back blind.**
+   FOLDED: a source-grain CW1/CW2 wiring pin in `runnerCli.test.ts`
+   (both operator sites construct the real runner, 0 fail-closed; the
+   dev plane keeps the slot at both sites); the J-DELIVER
+   ledger-recorded `pairflow-…` session assert added.
+4. **(P2 test-evidence) RR config-validation + pairing + env-allow
+   under-driven.** FOLDED: grace/backstop/lease timer members added;
+   the pairing bound's exact four-term arithmetic driven (a
+   custom-knob AT-bound/below-bound/derived-default triple); the
+   env-allow canary driven through the ACTOR in J-DELIVER (allowed var
+   PRESENT, unlisted host var ABSENT).
+5. **(P2 test-evidence) RS lanes under-driven.** FOLDED: the no-ledger
+   precondition member + a second non-unconfirmed state (attempting)
+   added; the silent-respawn → unconfirmed-again narrowing + a FRESH
+   recorded session (fresh attempt id) + unchanged budget driven in
+   J-RESPAWN.
+6. **(P2 test-evidence) DT lanes under-driven.** FOLDED: an
+   equal-createdAt contextPacketId-tiebreak fixture; full six-field
+   VALUE asserts; a ledgered no-live-attempt member; a malformed
+   (loadable-but-invalid) template fixture; a throwing-provider
+   fixture (distinct from the registry-miss).
+7. **(P2 test-evidence) journey race — createAndStart staged before
+   runtime-context READY.** FOLDED: `createAndStart` now polls the
+   shipped `detail` until the runtime context is `ready` (bounded
+   retries) before staging, in every journey.
+8. **(P2 mutation record) the probe table was absent.** FOLDED: the
+   table below (6 build + 12 aftermath probes).
+9. **(P3→P2 runbook) the commented `gates:` block uncommented to
+   invalid YAML (indented under `transitions:`).** FOLDED: the block
+   is now a step-level SIBLING of `transitions:`; the uncommented form
+   was parsed once in a scratch dir (no repo artifacts) — it admits,
+   `gates` sits as a step sibling.
+10. **(P3 comment) `main.ts:306` withKernel doc named the fail-closed
+    runner.** FOLDED: updated to the real-runner wiring (CW1, ch9-p4b).
+
+R-DERIVED-PROBES table (mutate → run → restore, all through
+`probe_runner.py`, restores byte-verified; receipts in the session
+scratchpad `ch9p4b-probes/receipts/`). The 6 build probes:
+
+| Family | Mutation (family grain) | Expected red | Receipt |
+|---|---|---|---|
+| CW | the operator gate-runner swap reverted to the slot | the J-GATE terminalization RED | `CW-gate-swap` |
+| RR | the pairing bound weakened | the lease-below-envelope lane RED | `RR-pairing` |
+| AT | the takeover `-r`-drop inverted | the observe/takeover argv lane RED | `AT-takeover` |
+| RS | the duplicate-unconfirmed guard removed | the exit-1 integrity lane RED | `RS-duplicate` |
+| DT | dead folded into probe-failed | the dead-vs-probe-failed lane RED | `DT-attach-reason` |
+| J | the once-delivers path broken | the J-DELIVER confirm RED | `J-deliver` |
+
+The 12 aftermath probes (exact mutation → observed red test → receipt):
+
+| Probe id | Exact mutation | Observed red test | Receipt |
+|---|---|---|---|
+| aftermath-at-probe-anomaly | `if (liveness === "dead")` → `if (liveness !== "alive")` (fold probe-anomaly into dead) | AT › the exit mapping: clean-dead → 3 … probe ANOMALY → internal 1 | `aftermath-at-probe-anomaly` |
+| aftermath-at-distinct-names | attach `notFound("NoErrand", …)` → `"NoLiveAttempt"` | AT › the resolution walk … each named DISTINCTLY (AT1) | `aftermath-at-distinct-names` |
+| aftermath-cw-main-swap | `main.ts` one `createProcessGateRunner(` → `createFailClosedProcessGateRunner(` | CW › CW1: BOTH operator wiring sites construct the REAL runner | `aftermath-cw-main-swap` |
+| aftermath-rr-timer-grace | drop the `graceMs` entry from `validateTimers` | RR › config-time timer validation over EVERY timer flag | `aftermath-rr-timer-grace` |
+| aftermath-rr-pairing-arith | pairing `bound` drops the `+ pollMs` term | RR › the pairing rule … the DERIVED default passes | `aftermath-rr-pairing-arith` |
+| aftermath-rs-state-naming | respawn `'${found.state}'` → `'redacted'` in the not-unconfirmed doc | RS › the precondition walk … naming the found state | `aftermath-rs-state-naming` |
+| aftermath-dt-tiebreak | `mostRecent` `[rows.length - 1]` → `[0]` (drop the tiebreak's high pick) | DT › the errand member … multi-errand … tiebreak | `aftermath-dt-tiebreak` |
+| aftermath-dt-six-field | errand projection `remainingBudget: row.remainingBudget` → `999` | DT › the errand member: all SIX projected fields … VALUES exactly | `aftermath-dt-six-field` |
+| aftermath-dt-throwing-provider | remove the try/catch around `projectForActor` | DT › the projection walk … the four degrade discriminants | `aftermath-dt-throwing-provider` |
+| aftermath-dt-malformed-template | the template-load catch returns `provider-unresolvable` | DT › the projection walk … the four degrade discriminants | `aftermath-dt-malformed-template` |
+| aftermath-j-session-namer | loop `sessionNamer: defaultSessionNamer` → `() => "not-pairflow"` | J-DELIVER (session) + J-RESPAWN (fresh session) | `aftermath-j-session-namer` |
+| aftermath-j-env-canary | `resolveActorEnvAllowlist` `allow[name] = value` no-op'd | J-DELIVER (the env-allow canary) | `aftermath-j-env-canary` |
+
+Each receipt carries the exact `test_command` + the captured full
+output (the red test names) + the byte-verified restore. Test delta:
+1714 → 1745 at the build, then +7 unit lanes (32 in
+`runnerCli.test.ts`, was 27 — the CW pin describe (2), the RR
+timer/pairing extensions, the RS precondition members, the DT
+tiebreak/six-field/no-live-attempt lanes) plus the strengthened
+J-DELIVER/J-RESPAWN journey bodies (membership unchanged at 4). Full
+chain re-run green (`v3:typecheck` / `v3:lint` / `v3:test` /
+`v3:coverage` / `v3:deferred` / `v3:packet-lint` / `v3:adr-check`);
+the tmux real-substrate retries stay expected-visible.
 
 ```json
 {

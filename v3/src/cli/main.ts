@@ -305,8 +305,10 @@ export function bindProductionCompletionSink(
 
 /**
  * V1 (packet ch12-P4): the shared kernel wiring for the lifecycle write
- * verbs — the fail-closed process-gate runner beside the derived-path
- * store DB (W2, ch11-P3b), the PRODUCTION provider registry (ch9-P2 C6 — the
+ * verbs — the REAL `ProcessGateRunner` beside the derived-path store DB
+ * (CW1, packet ch9-p4b — the operator gate-runner swap replaced the
+ * fail-closed slot on this shipped operator path; C21 activated), the
+ * PRODUCTION provider registry (ch9-P2 C6 — the
  * shipped CLI's sole member is `pairflow.worktree`, wired onto the completion
  * seam through the DG4 diag-wrapping sink), and the built kernel injected the
  * SAME gate catalog the definition store admits with (ch11-P2b T1). No CLI
