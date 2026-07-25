@@ -4615,3 +4615,37 @@ final CLEAN.
   (wait/waive, the user elected wait), resolved by status-page-gated
   re-probes. The unavailable-arm STOP discipline held: no silent
   skip, probes ≠ the formal retry.
+- 2026-07-25 · ch9-P4b APPROVE — arm gate-1 infra, THIRD recurrence of
+  the timeout class: the 600 s approve-gate cap KILLED an
+  actively-working review (live transcript progress, not a hang) —
+  rc=5, one §6-item-8 retry burned; the retry ran clean on the 1200 s
+  mode (1000 s actual). USER-NAMED boundary item (frustration
+  explicitly voiced): RAISE the approve-gate arm timeout to 20
+  minutes (align with build-close) in ReviewPacket §6 +
+  arm-pin/arm_run defaults at the ch9 boundary. Meta lesson, also
+  user-named: this limit's insufficiency was re-derived per incident
+  (ch12-P1b, ch9-P4a gate-2, now P4b gate-1) instead of being
+  captured authoritatively at first recurrence — the §7
+  capture-don't-fix rule applies to PROCESS knobs too.
+- 2026-07-25 · ch9-P4b APPROVE — boundary candidate (user-elected at
+  the re-approve dialogue): a `--strict` opt-in flag for
+  `runner respawn` (nonzero exit iff the post-call state is not
+  `confirmed`) — the ratified base semantics stay
+  invocation-classified (exit = did the edge run; state = data); the
+  opt-in mapping is for bare-exit-code scripting without a JSON
+  parser. Route: boundary-review; the ch9 dogfooding checkpoint
+  prices whether the need is real.
+- 2026-07-25 · ch9-P4b BUILD-CLOSE — suite-load flake, SECOND occurrence
+  of the real-tmux pacing class (the P4a build note already flagged
+  pacing as a gate-2 look item): the p4b suite's +2 subprocess-heavy
+  files grew parallel load, and TWO DIFFERENT tmuxChannel.test.ts
+  real-tmux lanes flaked on different full runs (TX5 TERM-ignoring:
+  the outer backstop killed a CPU-starved wrapper inside its 2 000 ms
+  margin before the result write; then TX6 dead-benign) while every
+  isolated run stayed green. Stabilized by the ORCHESTRATOR (outside
+  the p4b boundary, separate commit): the TX5 lane's backstop margin
+  widened to 8 000 ms + scoped `{ retry: 2 }` on the four real-tmux
+  describes (vitest reports retries as flaky — visible; a semantic
+  break still fails 3×, sensitivity kept). Boundary candidate: load
+  robustness of real-substrate tests is a SUITE-level property —
+  price it at the packet that grows the load.

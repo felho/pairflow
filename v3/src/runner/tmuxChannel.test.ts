@@ -192,7 +192,14 @@ function launch(opts: LaunchOpts) {
   };
 }
 
-describe("tmuxChannel — TX2/TX3 session creation, confinement basis, collision", () => {
+// REAL-TMUX LOAD ROBUSTNESS (ch9-p4b build-close, orchestrator edit): the
+// real-tmux lanes race OS scheduling under FULL-SUITE parallel load (the
+// p4b suite grew the subprocess population; two different lanes flaked on
+// different full runs while every isolated run stayed green). The
+// load-sensitive describes carry { retry: 2 } — vitest REPORTS retried
+// tests as flaky (visible, never silent), and a genuine semantic break
+// still fails all three attempts, so lane sensitivity is preserved.
+describe("tmuxChannel — TX2/TX3 session creation, confinement basis, collision", { retry: 2 }, () => {
   it("a natural exit concludes via SESSION DEATH and the wrapper's result file carries the attempt echo (the P3b result seam preserved inside the session)", async () => {
     const name = sessionName();
     const { conclusion, resultPath } = launch({
@@ -277,7 +284,7 @@ describe("tmuxChannel — TX2/TX3 session creation, confinement basis, collision
   });
 });
 
-describe("tmuxChannel — TX5 session-timeout escalation (pane-grain TERM → inner grace → backstop)", () => {
+describe("tmuxChannel — TX5 session-timeout escalation (pane-grain TERM → inner grace → backstop)", { retry: 2 }, () => {
   it("a TERM-compliant actor: the wrapper receives the pane TERM, forwards it, and records termForwarded (own_timeout's basis)", async () => {
     const name = sessionName();
     const { conclusion, resultPath } = launch({
@@ -302,7 +309,12 @@ describe("tmuxChannel — TX5 session-timeout escalation (pane-grain TERM → in
       name,
       timeoutMs: 400,
       graceMs: 700,
-      backstopMarginMs: 2_000,
+      // The margin must dwarf the wrapper's inner path (grace timer +
+      // SIGKILL + atomic result write) under FULL-SUITE parallel load —
+      // at 2 000 ms the outer backstop killed a CPU-starved wrapper
+      // before its result write, flaking this lane (observed when the
+      // ch9-p4b suite grew the parallel subprocess load).
+      backstopMarginMs: 8_000,
     });
     const c = await conclusion;
     expect(c).toEqual({ kind: "session-concluded", timedOut: true });
@@ -409,7 +421,7 @@ describe("tmuxChannel — TX5 wall-clock windows (the injected TimeSource is the
   });
 });
 
-describe("tmuxChannel — TX6 the pin-failure branches (dead-benign / live-abort)", () => {
+describe("tmuxChannel — TX6 the pin-failure branches (dead-benign / live-abort)", { retry: 2 }, () => {
   it("a pin failing on an ALREADY-DEAD session (the fast-exit race) is BENIGN: observation proceeds and the present result is honored", async () => {
     const name = sessionName();
     const intercepted = interceptClient({
@@ -707,7 +719,7 @@ function adapterRun(opts: {
   });
 }
 
-describe("tmuxChannel × actorAdapter — the TX wrap round trip (RS1–RS3 end-to-end)", () => {
+describe("tmuxChannel × actorAdapter — the TX wrap round trip (RS1–RS3 end-to-end)", { retry: 2 }, () => {
   it("a real actor inside a real session: handoff read, emit written, result read after session death → submitted", async () => {
     const root = tempRoot();
     const stub = join(root, "stub.js");
