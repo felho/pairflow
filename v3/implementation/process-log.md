@@ -4561,3 +4561,38 @@ final CLEAN.
   timeout, zero user-visible lease) is a later chapter's discussion
   — natural companions: the watchdog/silence-budget item and the
   P4 C25 operator-surface question.
+
+- 2026-07-25 · ch9-P4a AUTHORING — the kernel process-gate cwd read
+  is a LIVE cross-packet seam defect (agent-caught at projection):
+  the ch12-P1a X2 arm reads `ref.locator` as a STRING (the
+  testkit-provider era's shape), while the ch9-P2 worktree ref's
+  locator is an OBJECT — every worktree-run process gate today lands
+  on the kernel-integrity throw instead of C21's "cwd = the run's
+  worktree". Neither P2 nor P3a/P3b tripped it (no packet composed a
+  process gate with a worktree context). Fix owned by ch9-P4a (GR6:
+  the L0e LocalExecutionCapability resolution — the H1 mechanism at
+  the gate arm; flag F5), the P3b-F10 "harden the seam you realize
+  against" precedent. Class: cross-packet integration blind spot —
+  two packets each green in isolation, the composed pair unproven;
+  candidate boundary question: should a packet's consume-family scan
+  REQUIRE a composed-pair probe when two chapters' surfaces first
+  meet?
+- 2026-07-25 · ch9-P4a AUTHORING — tmux `-e` env injection is
+  ADDITIVE only (the pane inherits the FULL server env, 64 host keys
+  leaked in the probe): C19's full-replacement discipline under tmux
+  is only achievable by `env -i` embedding in the session command
+  (P7a/P7b). Recorded because the draft's tmux probes (P2a–P2e)
+  covered create/liveness/attach but NOT env propagation — the
+  probe-before-claim rule caught it at authoring, zero cost;
+  provider-shaped probe lists for a NEW substrate dimension (env,
+  cwd, signals) are worth a standing checklist line at the boundary.
+
+- 2026-07-25 · ch9-P4a BOUNDARY NOTE (user-raised at the pre-approval,
+  point-3 discussion): the tmux lane's absent `spawnDetail` tail
+  (F6(b) — no seam pipe under the pane pty) COULD be mitigated later
+  by a periodic `capture-pane` poll copying the pane's last N lines
+  into the diagnostic tail — a best-effort, diagnostic-only
+  enhancement consistent with C23's pane-vs-pipe stance. Explicitly
+  DEFERRED by the user at P4a ("oké, hogy ebbe most nem megyünk
+  bele"); candidate home: a later runner-observability slice or the
+  teardown/health chapter. Route: boundary-review.
