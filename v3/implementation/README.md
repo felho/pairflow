@@ -831,7 +831,13 @@ loop — pre-defined **capture**, deferred **structure**:
 - **Reflection point = the chapter boundary** (already a ratification
   checkpoint, now part of the chapter DoD): review the new log lines; each
   becomes a gate, a checkpoint rule, a README edit, a WATCH, or an
-  acknowledged non-issue. **Admission bias (adopted at the ch12
+  acknowledged non-issue — and **every verdict routed `later-chapter`
+  lands its plan-map row IN THE SAME boundary act** (the route's own
+  defined action, §5.5's table): a forward obligation captured only
+  in boundary prose is a defect — the next session's derivation
+  reads the plan map, never the log (adopted at the ch9 close,
+  user-ratified 2026-07-25 — the EPIPE carried-item miss).
+  **Admission bias (adopted at the ch12
   boundary):** a single-occurrence candidate defaults to WATCH (promoted
   on recurrence; severity-weighted exceptions only); when a rule IS
   warranted, the preference order is mechanize (lint/test/checker) →

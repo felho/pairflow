@@ -4712,3 +4712,19 @@ final CLEAN.
   gate-2 across P4a/P4b), R-DERIVED-PROBES (24 receipts),
   R-DELEGATION-CLOSURE, R-UNTRUNCATED-SWEEP, R-ALIGNED-UP (2
   repartitions), R-FIRST-STOP (5 firings) all earning keep.
+- 2026-07-25 · POST-ch9-CLOSE hardening (user-ratified after the
+  owner's reflection question — why did the reference-economy rule
+  not fire on the EPIPE/map-audit carried items?): root cause is a
+  BINDING-POINT gap (the rule is wired into packet authoring/review;
+  the boundary phase has no reviewer over the orchestrator's own
+  capture output) plus a vocabulary gap (the rule spoke of
+  cross-references, not forward obligations) plus a route-action
+  slip (the `later-chapter` route's OWN definition prescribes a
+  plan-map row; the boundary-review route's log-line action was
+  executed instead). ADOPTED A+B: (A) README §7's reflection-point
+  bullet now binds the later-chapter route's plan-map-row action
+  INTO the boundary act itself; (B) the R-PRESENT-TENSE
+  reference-economy clause's scope extended to forward
+  obligations/carried items with the conscious-carrier requirement.
+  The §1.3 carried-items block (402248a3) is the retroactive
+  execution of the route's defined action.
