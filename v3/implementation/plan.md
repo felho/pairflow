@@ -171,6 +171,17 @@ incl. one sanctioned reopen; seven packets with two in-chapter
 splits; the standard DoD close). One minted duty: the extension act
 ALSO updates this header's "Chapters present" range (the ch8/ch11
 insertions left it stale — caught and fixed at the ch11 close).
+**Carried cross-chapter items (recorded at the ch9 close,
+2026-07-25 — this block is on the next-step derivation's reading
+path, deliberately):** (1) the **EPIPE product item** (ch9 boundary
+verdict, ADOPTED later-chapter: the operator CLI's stdout sink
+crashes with a raw stack on a closed pipe — repro `pnpm v3:cli
+detail … | head -1`; a small fix + test lane, natural first-packet
+or hygiene content for the NEXT chapter); (2) the **detached
+realized-map arm audit for ch9** (plan §9.5's DoD clause: the arm's
+per-row map audit of `ch9-runner-contract.md` runs DETACHED,
+deadline = the NEXT chapter's close — the next chapter's DoD
+inherits it as a close obligation).
 
 **Ordering note (walking-skeleton-first, README §3.4).** Chapter 3 before
 chapter 4 does not contradict the principle: ch 3 is the constraint-sink /
