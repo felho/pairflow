@@ -106,7 +106,9 @@ The `--actor-cmd` binding is one JSON template:
    ```
 
    A non-attachable state is a clean `not_found` / exit-3 lane
-   (`{"error":{"class":"not_found","name":"NotRunning",…}}`), never a crash.
+   (`{"error":{"class":"not_found","name":"NoRunnerLedger",…}}` before any
+   `runner run` ever ran against this db — `NoErrand`/`NoLiveAttempt` on the
+   later paths), never a crash.
 
 5. **The gate leg** (uncomment the `gates:` block in the template). Re-run from
    step 1: the delivered `CONVERGED` submit drives the REAL process gate — the
