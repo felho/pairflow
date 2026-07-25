@@ -6,6 +6,7 @@ import type {
 } from "../domain/index.js";
 import { isCanonicalizable } from "../emit/index.js";
 import type {
+  LocalExecutionCapability,
   RuntimeContextCompletionSink,
   RuntimeContextProvider,
 } from "../ports/runtimeContextProvider.js";
@@ -69,7 +70,9 @@ export interface ScriptedRuntimeContextProviderOptions {
   readonly projection?: unknown;
 }
 
-export interface ScriptedRuntimeContextProvider extends RuntimeContextProvider {
+export interface ScriptedRuntimeContextProvider
+  extends RuntimeContextProvider,
+    LocalExecutionCapability {
   /** The recorded provision calls, in order (live view — REV-B). */
   readonly provisionCalls: readonly ProvisionCall[];
   /** Bind the SM completion seam sink (LATE-bound: the kernel is created after
@@ -152,6 +155,20 @@ export function createScriptedRuntimeContextProvider(
       }
       // The awaited fulfillment is the DETACH ACKNOWLEDGMENT (never the completion).
       return Promise.resolve();
+    },
+    resolveLocalWorkingDirectory(ref: RuntimeContextRef): string {
+      // TK1 (packet ch9-p4a): the scripted world's LocalExecutionCapability
+      // facet — required by the kernel's GR6 capability-based cwd resolution
+      // so the ch11/ch12 process-gate suites (string-locator era) stay
+      // composable without a kernel-side fallback (ONE mechanism, REV-E). The
+      // STRING locator is returned VERBATIM (its own minted shape); a
+      // non-string locator in the scripted world is a fixture-integrity throw.
+      if (typeof ref.locator !== "string") {
+        throw new Error(
+          "scriptedRuntimeContextProvider: resolveLocalWorkingDirectory requires a string locator (the scripted world's minted shape) — got a non-string (fixture integrity)",
+        );
+      }
+      return ref.locator;
     },
     projectForActor(ref: RuntimeContextRef): RuntimeContextProjection {
       const view: unknown =

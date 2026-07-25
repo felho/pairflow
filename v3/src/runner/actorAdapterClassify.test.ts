@@ -5,7 +5,12 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { AttemptResult } from "../ports/delivery.js";
-import { classifyConclusion, parseEmit, parseResult } from "./actorAdapter.js";
+import {
+  classifyConclusion,
+  classifySessionConclusion,
+  parseEmit,
+  parseResult,
+} from "./actorAdapter.js";
 import type { ResultRecord } from "./actorAdapter.js";
 import type { SpawnConclusion } from "./spawn.js";
 
@@ -97,6 +102,37 @@ describe("classifyConclusion — the CL1 total precedence (pure, member-by-membe
       kind: "result",
       result: result("foreign_kill"),
     });
+  });
+});
+
+// ── TX7 (packet ch9-p4a): the SESSION-GRAIN conclusion derivation — the pure
+//    classifier's session-concluded arm (Stryker-covered, no subprocess). The
+//    channel's own `timedOut` flag replaces the seam's; the RS2 record walk is
+//    the CL1 row-4 core REUSED verbatim. COMPLETED WORK IS NEVER RECLASSIFIED.
+describe("classifySessionConclusion — the TX7 session-grain precedence (pure, flag-composed)", () => {
+  const SESSION_CASES: readonly {
+    name: string;
+    timedOut: boolean;
+    record: ResultRecord | null;
+    expected: { kind: "emit" } | { kind: "result"; result: AttemptResult };
+  }[] = [
+    // absent / unparseable / keyset / foreign echo (record null) — the flag decides.
+    { name: "no result, UNFLAGGED → spawn_infra (C23's dead-session/no-result lane)", timedOut: false, record: null, expected: { kind: "result", result: result("spawn_infra") } },
+    { name: "no result, FLAGGED → own_timeout", timedOut: true, record: null, expected: { kind: "result", result: result("own_timeout") } },
+    // a valid SIGNAL record — CL1 row 4's flag branch, verbatim semantics.
+    { name: "signal record, FLAGGED + termForwarded → own_timeout (our forwarded kill)", timedOut: true, record: rec({ exitCode: null, signal: "SIGTERM", termForwarded: true }), expected: { kind: "result", result: result("own_timeout") } },
+    { name: "signal record, FLAGGED + NOT termForwarded → foreign_kill", timedOut: true, record: rec({ exitCode: null, signal: "SIGKILL", termForwarded: false }), expected: { kind: "result", result: result("foreign_kill") } },
+    { name: "signal record, UNFLAGGED → foreign_kill (fwd-bit inert without the timer)", timedOut: false, record: rec({ exitCode: null, signal: "SIGTERM", termForwarded: true }), expected: { kind: "result", result: result("foreign_kill") } },
+    // valid NONZERO — never a kill record, even under a fired timer.
+    { name: "nonzero record, UNFLAGGED → nonzero_exit", timedOut: false, record: rec({ exitCode: 4 }), expected: { kind: "result", result: result("nonzero_exit") } },
+    { name: "nonzero record, FLAGGED → nonzero_exit (a late timer never reclassifies)", timedOut: true, record: rec({ exitCode: 4 }), expected: { kind: "result", result: result("nonzero_exit") } },
+    // valid ZERO — the EM lanes; the completed-work-kept member under a fired timer.
+    { name: "exit-0 record, UNFLAGGED → emit", timedOut: false, record: rec({ exitCode: 0 }), expected: { kind: "emit" } },
+    { name: "exit-0 record, FLAGGED → emit (completed work is never reclassified)", timedOut: true, record: rec({ exitCode: 0 }), expected: { kind: "emit" } },
+  ];
+
+  it.each(SESSION_CASES)("$name", ({ timedOut, record, expected }) => {
+    expect(classifySessionConclusion(timedOut, record)).toEqual(expected);
   });
 });
 

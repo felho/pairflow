@@ -133,6 +133,57 @@ describe("disciplinedSpawn — SD1 the shared spawn discipline seam", () => {
     expect(realpathSync(c.stdout)).toBe(dir);
   });
 
+  // ── GR2 (packet ch9-p4a, flag F2): the OPTIONAL stdin capability ──────────
+  it("stdin PRESENT: the contents arrive on the child's stdin BYTE-EXACT (written then ended at spawn)", async () => {
+    const doc = 'the invocation document {"a":1}\nline twoé';
+    const c = await disciplinedSpawn({
+      cmd: NODE,
+      args: [
+        "-e",
+        'let d="";process.stdin.on("data",(x)=>{d+=x});process.stdin.on("end",()=>{process.stdout.write(d);process.exit(0)})',
+      ],
+      cwd: tempRoot(),
+      env: { PATH: process.env.PATH ?? "" },
+      timeoutMs: 30_000,
+      graceMs: 10_000,
+      stdin: doc,
+    });
+    expect(c.kind).toBe("exit");
+    if (c.kind !== "exit") return;
+    expect(c.code).toBe(0);
+    expect(c.stdout).toBe(doc);
+  });
+
+  it("stdin EPIPE negative: a fast-exiting child that never reads its (large) stdin — the kind follows the EXIT, never infra", async () => {
+    // ~1 MiB overflows the pipe buffer, so the write hits a closed pipe
+    // (EPIPE). GR2: the write is best-effort input delivery — its failure is
+    // observable only through the child's behavior; the child's own exit
+    // decides the conclusion.
+    const big = "x".repeat(1_048_576);
+    const c = await disciplinedSpawn({
+      cmd: NODE,
+      args: ["-e", "process.exit(7)"],
+      cwd: tempRoot(),
+      env: { PATH: process.env.PATH ?? "" },
+      timeoutMs: 30_000,
+      graceMs: 10_000,
+      stdin: big,
+    });
+    expect(c).toMatchObject({ kind: "exit", code: 7, signal: null, timedOut: false });
+  });
+
+  it("stdin ABSENT: stdio[0] stays 'ignore' — a stdin-reading child sees immediate EOF (the prior behavior pin)", async () => {
+    // With fd 0 ignored (/dev/null) the child's stdin ends immediately; the
+    // existing suite pins every other absent-stdin behavior byte-identical.
+    const c = await nodeScript(
+      'let d="";process.stdin.on("data",(x)=>{d+=x});process.stdin.on("end",()=>{process.stdout.write(JSON.stringify(d));process.exit(0)})',
+    );
+    expect(c.kind).toBe("exit");
+    if (c.kind !== "exit") return;
+    expect(c.code).toBe(0);
+    expect(c.stdout).toBe('""');
+  });
+
   it("exit-not-close + bounded drain: the seam settles on the child's EXIT even while a live orphan holds the pipes", async () => {
     // The parent spawns a grandchild that INHERITS the seam's pipes and
     // outlives the parent; the parent exits 0 immediately. The seam must

@@ -43,7 +43,21 @@ export { enc, defaultSessionNamer } from "./enc.js";
 export { createActorAdapter, PAIRFLOW_PACKET, PAIRFLOW_EMIT } from "./actorAdapter.js";
 export type { ActorAdapterDeps, ActorAdapterOptions, ArgvMapper } from "./actorAdapter.js";
 
-/** The module-public errand read API (ES1/CF3/CF4 — ch9-P4's floor basis). */
+// packet ch9-p4a (T1): the real-spawn machinery — the process-gate runner
+// (GR; NO shipped composition binds it until ch9-P4b, GR7), the spawn-channel
+// seam + the direct channel (TX1), and the tmux session channel (TX2–TX6).
+export { createProcessGateRunner, MEASUREMENT_FAILED_SENTINEL } from "./processGateRunner.js";
+export type {
+  ProcessGateRunnerDeps,
+  ProcessGateRunnerHandle,
+  ProcessGateRunnerOptions,
+} from "./processGateRunner.js";
+export { createDirectSpawnChannel } from "./spawnChannel.js";
+export type { ChannelConclusion, SpawnChannel, SpawnChannelInput } from "./spawnChannel.js";
+export { createTmuxSpawnChannel } from "./tmuxChannel.js";
+export type { TmuxChannelDeps } from "./tmuxChannel.js";
+
+/** The module-public errand read API (ES1/CF3/CF4 — ch9-P4b's floor basis). */
 export interface ErrandReader {
   getErrand(instanceId: string, contextPacketId: string): Promise<ErrandRow | null>;
   listErrands(): Promise<readonly ErrandRow[]>;

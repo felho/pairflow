@@ -140,4 +140,22 @@ describe("scriptedRuntimeContextProvider (PR3)", () => {
     const provider = createScriptedRuntimeContextProvider();
     expect(provider.projectForActor(REF)).toEqual({ workspace: "/ws/x", kind: "worktree" });
   });
+
+  // ── TK1 (packet ch9-p4a): the LocalExecutionCapability facet ──────────────
+  it("TK1: resolveLocalWorkingDirectory returns the ref's STRING locator VERBATIM (the scripted world's own minted shape)", () => {
+    const provider = createScriptedRuntimeContextProvider();
+    expect(provider.resolveLocalWorkingDirectory(REF)).toBe("/ws/x");
+    // Verbatim — untrimmed, un-normalized (the E2 confinement culture).
+    const hostile: RuntimeContextRef = { kind: "worktree", locator: "  ../x  " };
+    expect(provider.resolveLocalWorkingDirectory(hostile)).toBe("  ../x  ");
+  });
+
+  it("TK1: a NON-STRING locator in the scripted world is a fixture-integrity THROW", () => {
+    const provider = createScriptedRuntimeContextProvider();
+    const objectRef: RuntimeContextRef = {
+      kind: "worktree",
+      locator: { path: "/ws/x", branch: "b", repo: "r", base_commit: "c" },
+    };
+    expect(() => provider.resolveLocalWorkingDirectory(objectRef)).toThrow(/string locator/i);
+  });
 });

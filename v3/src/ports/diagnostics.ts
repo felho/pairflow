@@ -102,9 +102,9 @@ export const ERRAND_BIRTH_EDGES = ["create", "reconcile-backfill"] as const;
 /**
  * The `spawn_outcome` token domain (packet ch9-p3b, DG1): the CLOSED token
  * naming the produced attempt-result member at CLASS grain. `name_collision`
- * is RS4's scoped exclusion (the direct-spawn path has no host session
- * namespace) and joins the domain when ch9-P4 activates the tmux lane. A LIST,
- * not a count — grows only by a contract successor row.
+ * joined at ch9-P4a (DG3 — the P3b-pre-authorized growth: the tmux channel's
+ * host-namespace collision lane, TX3; unreachable on the direct channel).
+ * A LIST, not a count — grows only by a contract successor row.
  */
 export const SPAWN_OUTCOMES = [
   "submitted",
@@ -113,6 +113,7 @@ export const SPAWN_OUTCOMES = [
   "nonzero_exit",
   "own_timeout",
   "foreign_kill",
+  "name_collision",
 ] as const;
 export type SpawnOutcome = (typeof SPAWN_OUTCOMES)[number];
 

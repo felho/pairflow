@@ -1175,9 +1175,9 @@ describe("spawn_outcome rows — emit/read round-trip + the new evidence edges (
     handle.close();
   });
 
-  it("every SPAWN_OUTCOMES token round-trips; the name_collision exclusion is NOT admitted", async () => {
+  it("every SPAWN_OUTCOMES token round-trips — name_collision INCLUDED (packet ch9-p4a, DG3: the P3b-pre-authorized growth)", async () => {
     const handle = openDiagStore(":memory:", createControlledClock(0));
-    for (const token of ["submitted", "no_output", "spawn_infra", "nonzero_exit", "own_timeout", "foreign_kill"] as const) {
+    for (const token of ["submitted", "no_output", "spawn_infra", "nonzero_exit", "own_timeout", "foreign_kill", "name_collision"] as const) {
       handle.sink.emit({ ...B_SPAWN, spawnOutcome: token });
     }
     const events = await handle.reader.getGlobalDiagnostics(0);
@@ -1188,7 +1188,32 @@ describe("spawn_outcome rows — emit/read round-trip + the new evidence edges (
       "nonzero_exit",
       "own_timeout",
       "foreign_kill",
+      "name_collision",
     ]);
+    handle.close();
+  });
+
+  it("DG3: the name_collision token rides ONLY the spawn_outcome kind — on another kind it still rejects (the iff shape unchanged)", async () => {
+    const path = tempDbPath();
+    const handle = openDiagStore(path, createControlledClock(0));
+    handle.sink.emit(B_SPAWN); // a valid row so the read has something to fail over
+    const db = new DatabaseSync(path);
+    db.prepare("INSERT INTO diagnostics (at, instance_id, body) VALUES (1, 'i', ?)").run(
+      JSON.stringify({
+        source: "runner",
+        kind: "errand_transition",
+        instanceId: "i",
+        contextPacketId: "i@v2",
+        errandEdge: "create",
+        errandTo: "pending",
+        spawnOutcome: "name_collision",
+      }),
+    );
+    db.close();
+    await expect(handle.reader.getGlobalDiagnostics(0)).rejects.toMatchObject({
+      name: "DiagUnavailableError",
+      reason: "read_failed",
+    });
     handle.close();
   });
 
@@ -1209,8 +1234,9 @@ const SPAWN_R3_FIXTURES: readonly { name: string; body: string }[] = [
   { name: "spawn_outcome MISSING spawnOutcome", body: JSON.stringify({ source: "runner", kind: "spawn_outcome", instanceId: "i", contextPacketId: "i@v2", attemptId: "a" }) },
   { name: "errand_transition carrying spawnOutcome", body: JSON.stringify({ source: "runner", kind: "errand_transition", instanceId: "i", contextPacketId: "i@v2", errandEdge: "create", errandTo: "pending", spawnOutcome: "submitted" }) },
   { name: "kernel kind carrying spawnOutcome", body: JSON.stringify({ ...KDUP, spawnOutcome: "submitted" }) },
-  // spawnOutcome domain membership (the name_collision exclusion + a nonsense token).
-  { name: "spawnOutcome = name_collision (the scoped exclusion, not admitted here)", body: JSON.stringify({ source: "runner", kind: "spawn_outcome", instanceId: "i", contextPacketId: "i@v2", attemptId: "a", spawnOutcome: "name_collision" }) },
+  // spawnOutcome domain membership (name_collision JOINED the domain at
+  // ch9-P4a DG3 — its admitted round-trip lives above; a nonsense token
+  // still rejects).
   { name: "spawnOutcome not in the token domain", body: JSON.stringify({ source: "runner", kind: "spawn_outcome", instanceId: "i", contextPacketId: "i@v2", attemptId: "a", spawnOutcome: "teleported" }) },
   // spawnDetail ⇒ spawn_outcome; string-typed.
   { name: "errand_transition carrying spawnDetail", body: JSON.stringify({ source: "runner", kind: "errand_transition", instanceId: "i", contextPacketId: "i@v2", errandEdge: "create", errandTo: "pending", spawnDetail: "x" }) },

@@ -9,7 +9,9 @@ import type { AttemptExecutor, AttemptExecutorInput, AttemptResult } from "../po
 import type { DiagnosticsSink, SpawnOutcome } from "../ports/diagnostics.js";
 import { enc } from "./enc.js";
 import type { SpawnConclusion } from "./spawn.js";
-import { disciplinedSpawn, validateTimerKnobs } from "./spawn.js";
+import { validateTimerKnobs } from "./spawn.js";
+import type { SpawnChannel } from "./spawnChannel.js";
+import { createDirectSpawnChannel } from "./spawnChannel.js";
 
 /**
  * The REAL actor adapter (packet ch9-p3b; the AttemptExecutor behind the P3a
@@ -42,6 +44,14 @@ export interface ActorAdapterDeps {
   readonly ingress: Pick<Ingress, "submit">;
   readonly argvMapper: ArgvMapper;
   readonly diag: DiagnosticsSink;
+  /**
+   * TX1 (packet ch9-p4a, flag F1): the composition-injected spawn channel —
+   * the spawn/observe stage behind the seam. DEFAULT: the direct channel
+   * (the P3b behavior byte-preserved); the production tmux binding is
+   * ch9-P4b's `runner run` composition. Handoff, argv mapping, result parse,
+   * emit, and diag stages are byte-shared across channels.
+   */
+  readonly channel?: SpawnChannel;
 }
 
 export interface ActorAdapterOptions {
@@ -217,6 +227,27 @@ export function classifyConclusion(
   return { kind: "emit" };
 }
 
+/**
+ * TX7 (packet ch9-p4a): the SESSION-GRAIN conclusion derivation — on a tmux
+ * channel's `session-concluded` the parsed result record (RS2, unchanged)
+ * decides under the CHANNEL's own `timedOut` flag: absent/invalid/foreign →
+ * `timedOut ? own_timeout : spawn_infra` (C23's dead-session/no-result lane at
+ * session grain); a valid signal record → `timedOut && termForwarded ?
+ * own_timeout : foreign_kill`; valid nonzero → `nonzero_exit`; valid 0 → the
+ * EM lanes. COMPLETED WORK IS NEVER RECLASSIFIED. Realized as the CL1 row-4
+ * core REUSED verbatim (a synthetic clean-exit conclusion carrying the
+ * channel flag) — one precedence authority, no fork.
+ */
+export function classifySessionConclusion(
+  timedOut: boolean,
+  record: ResultRecord | null,
+): ClassifyDecision {
+  return classifyConclusion(
+    { kind: "exit", code: 0, signal: null, timedOut, stdout: "", stderr: "" },
+    record,
+  );
+}
+
 /** The validated emit envelope contents (EM1's closed keyset). */
 interface EmitRecord {
   readonly type: string;
@@ -287,6 +318,9 @@ export function createActorAdapter(
   const timeoutMs = options.timeoutMs ?? 1_800_000;
   const graceMs = options.graceMs ?? 10_000;
   const backstopMarginMs = options.backstopMarginMs ?? 5_000;
+  // TX1: the injected spawn channel; the DEFAULT stays direct (flag F1's
+  // staging clause — the production tmux binding is ch9-P4b's composition).
+  const channel = deps.channel ?? createDirectSpawnChannel();
   // T2: fail-closed knob validation at construction through the SHARED
   // validator — every knob a finite safe integer ≥ its floor, and every
   // derived timer (graceMs + backstopMarginMs) below Node's 2^31 bound, so
@@ -370,42 +404,78 @@ export function createActorAdapter(
       const emitPath = join(attemptDir, "emit.json");
       const resultPath = join(attemptDir, "result.json");
 
-      // ── SPAWN through the seam with the two-tier grace ──────────────────
+      // ── SPAWN through the injected CHANNEL (TX1) ────────────────────────
       // AV2: the actor locates its files through the injected env vars, added
       // to the composition allowlist; the mapped argv is spawned verbatim.
+      // The adapter composes the child env and the COMPLETE wrapper argv and
+      // hands both to the channel UNCHANGED; the sessionName is the
+      // ledger-recorded value (C23's resolution source — never derived here).
       const childEnv: Record<string, string> = {
         ...envAllowlist,
         [PAIRFLOW_PACKET]: packetPath,
         [PAIRFLOW_EMIT]: emitPath,
       };
-      const conclusion = await disciplinedSpawn({
-        cmd: process.execPath,
-        args: [WRAPPER_PATH, String(graceMs), resultPath, attemptId, mapped.cmd, ...mapped.args],
+      const channelConclusion = await channel.launch({
+        wrapperArgv: [
+          process.execPath,
+          WRAPPER_PATH,
+          String(graceMs),
+          resultPath,
+          attemptId,
+          mapped.cmd,
+          ...mapped.args,
+        ],
         cwd,
         env: childEnv,
+        sessionName: input.sessionName,
         timeoutMs,
-        // SD3: the seam's wrapper-spawn grace is provably LATER than the
-        // wrapper's own inner actor-grace, so the normal path is orphan-free.
-        graceMs: graceMs + backstopMarginMs,
+        graceMs,
+        backstopMarginMs,
       });
 
-      // ── CONCLUDE (CL1's total fail-closed precedence, via the pure
-      //    classifier so the whole precedence is unit-drivable) ─────────────
-      if (conclusion.kind === "exit") {
-        detailTail = stderrTail(conclusion.stderr);
+      // ── CONCLUDE (TX7): each channel conclusion maps through the same
+      //    fail-closed precedence onto the same closed K1 vocabulary ────────
+      switch (channelConclusion.kind) {
+        case "direct-exit": {
+          // CL1's total fail-closed precedence, via the pure classifier —
+          // the P3b flow byte-preserved.
+          const conclusion = channelConclusion.conclusion;
+          if (conclusion.kind === "exit") {
+            detailTail = stderrTail(conclusion.stderr);
+          }
+          // RS2/RS3: the result record is CONSULTED ONLY on the exit-0 lane
+          // (CL1 row 4); on the infra/signal/nonzero lanes it is not read.
+          const record =
+            conclusion.kind === "exit" && conclusion.code === 0
+              ? parseResult(resultPath, attemptId)
+              : null;
+          const decision = classifyConclusion(conclusion, record);
+          if (decision.kind === "emit") {
+            // Actor exit 0 → the EM lanes (submitted / no_output).
+            return submitEmit(emitPath);
+          }
+          return decision.result;
+        }
+        case "session-concluded": {
+          // TX7: the session-grain derivation — the result file decides under
+          // the CHANNEL's own flag. `spawnDetail` stays ABSENT on tmux
+          // conclusions (F6(b): the pane pty holds the actor's stdio; pane
+          // capture is no row's proof).
+          const record = parseResult(resultPath, attemptId);
+          const decision = classifySessionConclusion(channelConclusion.timedOut, record);
+          if (decision.kind === "emit") {
+            return submitEmit(emitPath);
+          }
+          return decision.result;
+        }
+        case "name_collision":
+          // TX3: reported BEFORE any spawn side effect — B6's non-consuming
+          // in-place remint lane (the loop's consumption, byte-untouched).
+          return { kind: "name_collision" };
+        case "infra":
+          // A channel-level fault — fail-closed CONSUMED, budget-bounded.
+          return { kind: "infra_failure", class: "spawn_infra" };
       }
-      // RS2/RS3: the result record is CONSULTED ONLY on the exit-0 lane (CL1
-      // row 4); on the infra/signal/nonzero lanes it is not read.
-      const record =
-        conclusion.kind === "exit" && conclusion.code === 0
-          ? parseResult(resultPath, attemptId)
-          : null;
-      const decision = classifyConclusion(conclusion, record);
-      if (decision.kind === "emit") {
-        // Actor exit 0 → the EM lanes (submitted / no_output).
-        return submitEmit(emitPath);
-      }
-      return decision.result;
     }
 
     async function submitEmit(emitPath: string): Promise<AttemptResult> {
@@ -448,8 +518,8 @@ function classToken(result: AttemptResult): SpawnOutcome {
     case "infra_failure":
       return result.class;
     case "name_collision":
-      // RS4(a): the direct-spawn adapter never returns this member — a scoped
-      // exclusion (deferral home ch9-P4). Defensive fallback only.
-      return "spawn_infra";
+      // DG3 (packet ch9-p4a): the token joined the domain with the tmux
+      // channel's TX3 collision lane (unreachable on the direct channel).
+      return "name_collision";
   }
 }

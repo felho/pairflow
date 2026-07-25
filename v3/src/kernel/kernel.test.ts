@@ -8,6 +8,8 @@ import type {
   GateDecision,
   GateProjection,
   Outcome,
+  RuntimeContextProjection,
+  RuntimeContextRef,
   RuntimeContextSpec,
   TranscriptEntry,
   TransitionEntry,
@@ -30,6 +32,8 @@ import type {
   ProcessGateRegistration,
   ProcessGateRunner,
   ProcessResult,
+  ProviderRegistry,
+  RuntimeContextProvider,
 } from "../ports/index.js";
 import type { EffectiveProcessConfig } from "../domain/index.js";
 import type { StorePort } from "../ports/store.js";
@@ -874,6 +878,10 @@ async function setupGatedReview(opts: {
   instance?: WorkflowInstance;
   processRunner?: ProcessGateRunner;
   runtimeContext?: RuntimeContextSpec;
+  /** GR6 (packet ch9-p4a): override the injected provider registry — the KC
+   * integrity-negative lanes need unresolvable / facet-less / throwing
+   * providers. Default: the scripted provider under `pairflow.worktree`. */
+  providerRegistry?: ProviderRegistry;
 }): Promise<{ kernel: Kernel; store: StorePort }> {
   const baseTemplate = gatedReviewTemplate(opts.pipeline);
   const template = opts.runtimeContext
@@ -892,11 +900,14 @@ async function setupGatedReview(opts: {
   }
   const kernel = createKernel({
     // A provider registered under the spec's name so a provisioned-ref
-    // instance's dispatch projection resolves (E2); context-free tests seed
-    // ready(∅) and never invoke it.
-    providerRegistry: createStaticProviderRegistry({
-      "pairflow.worktree": createScriptedRuntimeContextProvider(),
-    }),
+    // instance's dispatch projection resolves (E2) AND the process-gate arm's
+    // GR6 capability-based cwd resolution answers (TK1's facet); context-free
+    // tests seed ready(∅) and never invoke it.
+    providerRegistry:
+      opts.providerRegistry ??
+      createStaticProviderRegistry({
+        "pairflow.worktree": createScriptedRuntimeContextProvider(),
+      }),
     processRunner: opts.processRunner ?? createScriptedProcessGateRunner([]),
     store,
     definitions: defs,
@@ -1614,6 +1625,130 @@ describe("gate rung — the C36 runtime backstop plane (S5, dimension 3, both di
     });
     expect((await kernel.handle(reviewEmit("bs4", "CONVERGED", 1))).kind).toBe("committed");
     void store;
+  });
+});
+
+// ── ch9-P4a (GR6/TK1): the capability-based cwd resolution at the process
+//    arm — the X2 string-locator read RETIRED; the H1 mechanism (requirement →
+//    registry → LocalExecutionCapability value-shape check) resolves cwd. The
+//    C36 backstop AHEAD of it is byte-untouched (the describe above is the pin).
+describe("gate rung — GR6 capability-based cwd resolution (packet ch9-p4a; KC family)", () => {
+  /** The ch9-P2 worktree-shaped OBJECT locator (C10) — under the retired X2
+   * string read this ref landed a kernel-integrity throw (the F5 live seam
+   * defect); under GR6 the provider's OWN facet answers. */
+  const OBJECT_REF: RuntimeContextRef = {
+    kind: "worktree",
+    locator: { path: "/ws/minted/wt-1", branch: "b", repo: "/repo", base_commit: "c0" },
+  };
+
+  /** A minimal LOCAL provider answering the facet from its own minted
+   * `locator.path` (the worktree provider's shape, fixture grain). */
+  function objectLocatorProvider(): RuntimeContextProvider {
+    const provider: RuntimeContextProvider & {
+      resolveLocalWorkingDirectory(ref: RuntimeContextRef): string;
+    } = {
+      provision: () => Promise.resolve(),
+      projectForActor: (ref) =>
+        ({
+          workspace: (ref.locator as { path: string }).path,
+        }) as unknown as RuntimeContextProjection,
+      resolveLocalWorkingDirectory: (ref) => (ref.locator as { path: string }).path,
+    };
+    return provider;
+  }
+
+  /** A provider WITHOUT the facet (a non-local provider claiming nothing). */
+  function facetlessProvider(): RuntimeContextProvider {
+    return {
+      provision: () => Promise.resolve(),
+      projectForActor: () => ({ workspace: "opaque" }) as unknown as RuntimeContextProjection,
+    };
+  }
+
+  /** A provider whose facet THROWS (D6's config-integrity lane). */
+  function throwingFacetProvider(): RuntimeContextProvider {
+    const provider: RuntimeContextProvider & {
+      resolveLocalWorkingDirectory(ref: RuntimeContextRef): string;
+    } = {
+      provision: () => Promise.resolve(),
+      projectForActor: () => ({ workspace: "opaque" }) as unknown as RuntimeContextProjection,
+      resolveLocalWorkingDirectory: () => {
+        throw new Error("scripted facet resolution failure");
+      },
+    };
+    return provider;
+  }
+
+  async function runWithProvider(
+    provider: RuntimeContextProvider | null,
+  ): Promise<{ outcome: Promise<Outcome>; runner: ReturnType<typeof createScriptedProcessGateRunner>; store: StorePort }> {
+    const cat = catalogOf({ "g.proc": processRegWith(exitCodeEffective) });
+    const runner = createScriptedProcessGateRunner([okResult(0, "kc-ev")]);
+    const handle = openStore(":memory:", createControlledClock(0));
+    await handle.store.createInstance({
+      ...reviewInstance,
+      runtimeContext: { state: "ready", ref: OBJECT_REF },
+    });
+    const { kernel } = await setupGatedReview({
+      pipeline: [{ uses: "g.proc" }],
+      admitCatalog: cat,
+      kernelCatalog: cat,
+      store: handle.store,
+      processRunner: runner,
+      runtimeContext: KERNEL_WORKTREE_SPEC,
+      providerRegistry: createStaticProviderRegistry(
+        provider === null ? {} : { "pairflow.worktree": provider },
+      ),
+    });
+    return { outcome: kernel.handle(reviewEmit("kc1", "CONVERGED", 1)), runner, store: handle.store };
+  }
+
+  it("a worktree-shaped OBJECT-locator ready ref resolves cwd THROUGH the capability — the runner receives the provider-minted path BYTE-EQUAL", async () => {
+    const { outcome, runner } = await runWithProvider(objectLocatorProvider());
+    expect((await outcome).kind).toBe("committed");
+    expect(runner.calls).toHaveLength(1);
+    expect(runner.calls[0]?.cwd).toBe("/ws/minted/wt-1");
+  });
+
+  it("integrity negative 1: an UNRESOLVABLE provider → kernel-integrity throw, pre-commit, no state, ZERO runner calls", async () => {
+    const { outcome, runner, store } = await runWithProvider(null);
+    await expect(outcome).rejects.toThrow(/integrity/);
+    expect(runner.calls).toEqual([]);
+    expect((await store.getInstanceDetail("inst-1"))?.transcript).toHaveLength(0);
+  });
+
+  it("integrity negative 2: a FACET-LESS provider (no LocalExecutionCapability) → kernel-integrity throw, no state, zero runner calls", async () => {
+    const { outcome, runner, store } = await runWithProvider(facetlessProvider());
+    await expect(outcome).rejects.toThrow(/integrity/);
+    expect(runner.calls).toEqual([]);
+    expect((await store.getInstanceDetail("inst-1"))?.transcript).toHaveLength(0);
+  });
+
+  it("integrity negative 3: a THROWING resolution propagates (D6's fail-closed lane), no state, zero runner calls", async () => {
+    const { outcome, runner, store } = await runWithProvider(throwingFacetProvider());
+    await expect(outcome).rejects.toThrow(/scripted facet resolution failure/);
+    expect(runner.calls).toEqual([]);
+    expect((await store.getInstanceDetail("inst-1"))?.transcript).toHaveLength(0);
+  });
+
+  it("the string-locator scripted world keeps working through TK1's facet (the ch11/ch12 process-gate suites' composition)", async () => {
+    // The default setupGatedReview registry (the scripted provider) + a
+    // string-locator ready ref: GR6 resolves the SAME verbatim value the
+    // retired X2 read produced — the E2 confinement lanes above stay the pin.
+    const cat = catalogOf({ "g.proc": processRegWith(exitCodeEffective) });
+    const runner = createScriptedProcessGateRunner([okResult(0, "kc-str")]);
+    const handle = openStore(":memory:", createControlledClock(0));
+    await handle.store.createInstance(reviewInstanceReady);
+    const { kernel } = await setupGatedReview({
+      pipeline: [{ uses: "g.proc" }],
+      admitCatalog: cat,
+      kernelCatalog: cat,
+      store: handle.store,
+      processRunner: runner,
+      runtimeContext: KERNEL_WORKTREE_SPEC,
+    });
+    expect((await kernel.handle(reviewEmit("kc2", "CONVERGED", 1))).kind).toBe("committed");
+    expect(runner.calls[0]?.cwd).toBe(READY_REF);
   });
 });
 

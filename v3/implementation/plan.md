@@ -2526,6 +2526,20 @@ separately-sequenceable foundation→activation buckets; the P3a/P3b
 rows below are the repartition on the row's own expected seam,
 coverage union preserved — aligned at ch9-p3a pre-approval).
 
+Process note: P4 was the second declared sizing-split candidate
+(template §2 step 0); the split EXECUTED at ch9-p4a authoring
+(autonomous in-chapter split — sizing, not scope; hard stop 2
+tripped on the bundled row — the session-liveness concept alone
+spans the adapter's tmux wrap, the attach verb, and the floor's
+availability read (3+ surfaces for one concept) — the row couples
+new spawn machinery with its shipped-entrypoint activation (the
+foundation→activation shape), and the single-packet closure proof
+failed on the separately-sequenceable machinery vs operator-surface
+buckets with their distinct proof surfaces and consumer families;
+the P4a/P4b rows below are the repartition on the row's own
+machinery/surface seam, coverage union preserved (both slices
+empty) — aligned at ch9-p4a pre-approval).
+
 | Packet | Content | Mode |
 |---|---|---|
 | ch9-P0 | the ch11-C31 `sys:` rename realization: the seven fixed reason tokens gain the prefix in code + tests + the l2a golden trace + the transcript/audit surface; registry names untouched (drift lanes green before and after) | flag-free approve → autonomous build (measurement); predicted: projection (basis: the re-ratified C31 row) |
@@ -2533,13 +2547,16 @@ coverage union preserved — aligned at ch9-p3a pre-approval).
 | ch9-P2 | the `pairflow.worktree` provider: git worktree mechanics, spec/ref/projection, production-registry registration (legal here — the gate discharged at P1); the `l0d-pseudocode/RUNTIME_CONTEXT_READY` candidate id resolves in this packet's slice | HUMAN approve — first-of-a-kind (first real provider; external side effects on the host) |
 | ch9-P3a | the durable delivery-errand core (the P3 split's FOUNDATION share; split executed at ch9-p3a authoring): the runner-owned errand ledger realizing ADR-016 — the C12 store, C13 discovery/identity, C14 lifecycle/claims/precedence, C15 kernel-evidence confirmation, C16 durable budget + attempt minting — the `AttemptExecutor` seam + scripted testkit executor, the C26 errand-transition diag share; the IC-A2 CT family (`CT-A2-CRASH` / `CT-A2-CONFIRM` / `CT-A2-RETRY-DURABLE`) lands here | HUMAN approve — first-of-a-kind (inherited from the P3 row: the first runner-plane durable coordination machinery) |
 | ch9-P3b | the real actor adapter (the split's ACTIVATION share): the C19 shared spawn seam born here (the P2 provider spawn's `DEFERRED(ch9-p3)` fold-in), C17 attempt-scoped handoff, C18 argv mapping, C20 emit capture + ingress submission, C23's exit-result seam on the direct-spawn path — the real `AttemptExecutor` behind the P3a seam; the `CT-B-TWOWORKER` re-run under the real runner | HUMAN approve — first-of-a-kind (first real adapter; inherited) |
-| ch9-P4 | the process-gate runner real spawn + the attach channel (tmux observe/takeover) + the CLI/floor surface + the end-to-end dogfooding journey | HUMAN approve — first-of-a-kind (first real spawn + attach); declared sizing-split candidate |
+| ch9-P4a | the real-spawn machinery (the P4 split's FOUNDATION share; split executed at ch9-p4a authoring): the C21 real `ProcessGateRunner` — C19-seam spawn, total kind production, workspace-fact measurement, durable C26 evidence — WITHOUT the shipped-composition swap (the fail-closed slot stays until P4b; the milestone-gated activation rule), plus the process-gate cwd-resolution seam fix (the ch12-P1a string-locator read yields to the L0e `LocalExecutionCapability` resolution); the C23 tmux session channel on the actor adapter — the session wrap preserving the P3b result seam, liveness-derived conclusion, session-level timeout escalation, the `name_collision` lane activated (the C16 tmux collision half + the P3b-pre-authorized `SPAWN_OUTCOMES` growth) | HUMAN approve — first-of-a-kind (first real process-gate spawn; first tmux machinery; inherited from the P4 row) |
+| ch9-P4b | the operator surface (the split's ACTIVATION share): the composition swaps (the real gate runner into the shipped CLI kernel wiring; the tmux channel as the runner composition's delivery default), the C25 CLI verbs (`runner run` with the lease-above-timeout pairing validation — the P3b F8 obligation; `attach` per C24; `runner respawn`), the floor/CLI instance-detail growth (runtime-context projection summary, errand state + budget, attach availability), the R-ACTIVATION-JOURNEY smokes through the shipped entrypoints, and the chapter's dogfooding-checkpoint preparation | HUMAN approve — first-of-a-kind (first operator runner surface + attach; inherited) |
 
 Order: draft ratification (carrying the C31 reopen act) → P0 → P1 →
-P2 → P3a → P3b → P4 (P1-before-P2 is the production-provider gate's
-ordering; P0-first keeps every runner packet on the renamed tokens;
-the P3a/P3b order is the P3 split's foundation → activation shape —
-aligned at ch9-p3a pre-approval).
+P2 → P3a → P3b → P4a → P4b (P1-before-P2 is the production-provider
+gate's ordering; P0-first keeps every runner packet on the renamed
+tokens; the P3a/P3b order is the P3 split's foundation → activation
+shape — aligned at ch9-p3a pre-approval; the P4a/P4b order is the P4
+split's same shape — machinery before the operator surface that
+activates it — aligned at ch9-p4a pre-approval).
 One packet = packet file + code + tests in ONE commit. Per-packet
 difficulty scores + `main_thread_model: fable` recorded per
 `model-tier-experiment-2.md` §5.

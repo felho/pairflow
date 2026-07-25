@@ -22,11 +22,15 @@ import type {
   WorkflowInstance,
   WorkflowTemplate,
 } from "../domain/index.js";
+import { resolveRuntimeContextRequirement } from "../domain/index.js";
 import type { DefinitionStore } from "../ports/definition.js";
 import type { DiagnosticEventBody, DiagnosticsSink } from "../ports/diagnostics.js";
 import type { DigestSource } from "../ports/digest.js";
 import type { GateCatalog, ProcessGateRunner } from "../ports/gate.js";
-import type { ProviderRegistry } from "../ports/runtimeContextProvider.js";
+import type {
+  LocalExecutionCapability,
+  ProviderRegistry,
+} from "../ports/runtimeContextProvider.js";
 import type { StorePort } from "../ports/store.js";
 import type { TimeSource } from "../ports/time.js";
 import { admitLoaded } from "./admission.js";
@@ -559,17 +563,36 @@ export function createKernel(deps: KernelDeps): Kernel {
         if (context.state !== "ready" || context.ref === null) {
           return { kind: "rejected", reason: "runtime_context_required_for_process_gate" };
         }
-        // The ready ref's locator narrowed to a string — the runner `cwd`
-        // (X2, the single read site). A non-string locator here is a
-        // kernel/config integrity failure (the E4 REQUIRE pattern) —
-        // structurally unreachable at P1a (X1's sole writer stores a
-        // string), never a rejection.
-        if (typeof context.ref.locator !== "string") {
+        // GR6 (packet ch9-p4a, flag F5): the runner `cwd` is resolved through
+        // the provider's OWN LocalExecutionCapability (H1's mechanism) — the
+        // ch12-P1a X2 string-locator read is RETIRED (the ch9-P2 worktree
+        // locator is an OBJECT, so the string read was a live seam defect
+        // against C21's "cwd = the run's worktree"). The pinned template's
+        // requirement is already in scope; the facet check is a VALUE-SHAPE
+        // check, never a provider-TYPE branch (REV-E-NO-ADAPTER-BRANCH). A
+        // ready-ref run whose provider is unresolvable, lacks the facet, or
+        // throws is a kernel/config integrity failure (the E4 REQUIRE
+        // pattern, D6's lane) — pre-commit, no state, never a rejection. The
+        // kernel still never interprets the opaque ref.
+        const requirement = resolveRuntimeContextRequirement(template.runtimeContext);
+        if (requirement.state !== "required") {
           throw new Error(
-            `kernel integrity: runtime-context ref locator for instance '${instance.instanceId}' is not a string`,
+            `kernel integrity: instance '${instance.instanceId}' holds a ready runtime-context ref but its pinned template declares no runtime context`,
           );
         }
-        const workspace: string = context.ref.locator;
+        const provider = providerRegistry.resolve(requirement.spec.provider);
+        if (provider === null) {
+          throw new Error(
+            `kernel integrity: provider '${requirement.spec.provider}' for the process gate on instance '${instance.instanceId}' is not resolvable (the registry must stay stable for the life of the run)`,
+          );
+        }
+        const localCapability = provider as Partial<LocalExecutionCapability>;
+        if (typeof localCapability.resolveLocalWorkingDirectory !== "function") {
+          throw new Error(
+            `kernel integrity: provider '${requirement.spec.provider}' has a runtime context but is not a local-execution provider (cannot resolve the process-gate cwd) for instance '${instance.instanceId}'`,
+          );
+        }
+        const workspace: string = localCapability.resolveLocalWorkingDirectory(context.ref);
         decision = await runProcessGate(
           binding.config as EffectiveProcessConfig,
           instance,

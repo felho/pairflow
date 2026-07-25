@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -10,6 +10,7 @@ import type { AttemptExecutorInput } from "../ports/delivery.js";
 import type { DiagnosticEventBody } from "../ports/diagnostics.js";
 import { createActorAdapter, PAIRFLOW_EMIT, PAIRFLOW_PACKET } from "./actorAdapter.js";
 import { enc } from "./enc.js";
+import type { ChannelConclusion, SpawnChannel, SpawnChannelInput } from "./spawnChannel.js";
 
 /**
  * The real actor adapter families (packet ch9-p3b, H/AV/RS/CL/EM/DG) — driven
@@ -162,6 +163,7 @@ interface RunOpts {
   readonly mapper: () => Mapped | null;
   readonly ingress?: FakeIngress;
   readonly diag?: { emit(b: DiagnosticEventBody): void };
+  readonly channel?: SpawnChannel;
   readonly defaultCwd: string;
   readonly cwd?: string;
   readonly attemptId?: string;
@@ -178,6 +180,7 @@ function run(opts: RunOpts): Promise<Outcome | { kind: string; class?: string }>
       ingress: opts.ingress ?? neverIngress,
       argvMapper: opts.mapper,
       diag: opts.diag ?? recordingDiag().sink,
+      ...(opts.channel !== undefined ? { channel: opts.channel } : {}),
     },
     {
       defaultCwd: opts.defaultCwd,
@@ -644,5 +647,143 @@ describe("actorAdapter — construction knob validation (the shared validator, T
     expect(() => createActorAdapter(deps, { defaultCwd: "" })).toThrow(/absolute/i);
     // An absolute path passes (the tempRoot lanes above already exercise this).
     expect(() => createActorAdapter(deps, { defaultCwd: tempRoot() })).not.toThrow();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// packet ch9-p4a (TX1/TX7/DG3): the injected SpawnChannel — the adapter's
+// spawn/observe stage behind the seam. A SCRIPTED channel drives the
+// session-grain conclusions and the name_collision/infra lanes with NO real
+// spawn; the tmux end-to-end lanes live in tmuxChannel.test.ts, and the
+// entire suite ABOVE pins the direct default byte-unchanged.
+// ═══════════════════════════════════════════════════════════════════════════
+function scriptedChannel(conclusion: ChannelConclusion): {
+  channel: SpawnChannel;
+  inputs: SpawnChannelInput[];
+} {
+  const inputs: SpawnChannelInput[] = [];
+  return {
+    inputs,
+    channel: {
+      launch(input: SpawnChannelInput): Promise<ChannelConclusion> {
+        inputs.push(input);
+        return Promise.resolve(conclusion);
+      },
+    },
+  };
+}
+
+/** Plant a file inside the (deterministically derived) attempt dir BEFORE the
+ * run — the adapter's recursive mkdir tolerates the pre-created chain. */
+function plantAttemptFile(root: string, name: string, contents: string): void {
+  const dir = attemptDirOf(noneCwd(root));
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, name), contents);
+}
+
+describe("actorAdapter — TX1/TX7 (the injected channel; session-grain derivation)", () => {
+  it("the channel receives the COMPLETE wrapper argv, the composed child env, the ledger sessionName, and the adapter's timer knobs", async () => {
+    const scripted = scriptedChannel({ kind: "session-concluded", timedOut: false });
+    const root = tempRoot();
+    const stub = writeStub(root);
+    await run({ mapper: mapTo(stub, "emit", "x"), channel: scripted.channel, defaultCwd: root });
+    expect(scripted.inputs).toHaveLength(1);
+    const input = scripted.inputs[0];
+    if (input === undefined) return;
+    const dir = attemptDirOf(noneCwd(root));
+    // The wrapper argv shape (AV/RS1): [node, wrapper, graceMs, resultPath, attemptId, cmd, args…].
+    expect(input.wrapperArgv[0]).toBe(process.execPath);
+    expect(input.wrapperArgv[1]).toMatch(/attemptWrapper\.mjs$/);
+    expect(input.wrapperArgv[2]).toBe("10000");
+    expect(input.wrapperArgv[3]).toBe(join(dir, "result.json"));
+    expect(input.wrapperArgv[4]).toBe(ATTEMPT);
+    expect(input.wrapperArgv.slice(5)).toEqual([process.execPath, stub, "emit", "x"]);
+    // The adapter-composed env rides UNCHANGED (allowlist + the PAIRFLOW pair).
+    expect(input.env[PAIRFLOW_PACKET]).toBe(join(dir, "packet.json"));
+    expect(input.env[PAIRFLOW_EMIT]).toBe(join(dir, "emit.json"));
+    // The ledger-recorded session name (C23's resolution source) + the knobs.
+    expect(input.sessionName).toBe("sess:inst-1:att-1");
+    expect(input).toMatchObject({ timeoutMs: 1_800_000, graceMs: 10_000, backstopMarginMs: 5_000 });
+  });
+
+  it("name_collision from the channel → the K1 member, reported with NO result-file read (pre-side-effect) and the DG3 token", async () => {
+    const scripted = scriptedChannel({ kind: "name_collision" });
+    const root = tempRoot();
+    const stub = writeStub(root);
+    const diag = recordingDiag();
+    const result = await run({
+      mapper: mapTo(stub, "emit", "x"),
+      channel: scripted.channel,
+      defaultCwd: root,
+      diag: diag.sink,
+    });
+    expect(result).toEqual({ kind: "name_collision" });
+    // DG3: exactly one spawn_outcome event, the NEW token, no spawnDetail.
+    expect(diag.events).toHaveLength(1);
+    expect(diag.events[0]).toMatchObject({ kind: "spawn_outcome", spawnOutcome: "name_collision" });
+    expect(diag.events[0]).not.toHaveProperty("spawnDetail");
+  });
+
+  it("channel infra → spawn_infra (fail-closed, budget-bounded)", async () => {
+    const scripted = scriptedChannel({ kind: "infra", message: "tmux client fault" });
+    const root = tempRoot();
+    const stub = writeStub(root);
+    const result = await run({ mapper: mapTo(stub, "emit", "x"), channel: scripted.channel, defaultCwd: root });
+    expect(result).toEqual({ kind: "infra_failure", class: "spawn_infra" });
+  });
+
+  it("session-concluded + a WRITTEN exit-0 result + emit → the recorded outcome honored (the actor's emit submitted)", async () => {
+    const scripted = scriptedChannel({ kind: "session-concluded", timedOut: false });
+    const root = tempRoot();
+    const stub = writeStub(root);
+    plantAttemptFile(root, "result.json", JSON.stringify({ attemptId: ATTEMPT, exitCode: 0, signal: null, termForwarded: false }));
+    plantAttemptFile(root, "emit.json", JSON.stringify({ type: "PASS", payload: { note: "tmux" } }));
+    const ingress = ingressReturning({ kind: "committed", version: 3, intent: null });
+    const result = await run({ mapper: mapTo(stub, "emit", "x"), channel: scripted.channel, ingress, defaultCwd: root });
+    expect(result).toEqual({ kind: "submitted", outcome: { kind: "committed", version: 3, intent: null } });
+  });
+
+  it("the completed-but-stuck member: session-concluded FLAGGED with a WRITTEN exit-0 record → the recorded outcome honored, NEVER own_timeout (TX7: the last resort never bypasses the precedence)", async () => {
+    const scripted = scriptedChannel({ kind: "session-concluded", timedOut: true });
+    const root = tempRoot();
+    const stub = writeStub(root);
+    plantAttemptFile(root, "result.json", JSON.stringify({ attemptId: ATTEMPT, exitCode: 0, signal: null, termForwarded: false }));
+    plantAttemptFile(root, "emit.json", JSON.stringify({ type: "PASS", payload: { note: "done" } }));
+    const ingress = ingressReturning({ kind: "duplicate" });
+    const result = await run({ mapper: mapTo(stub, "emit", "x"), channel: scripted.channel, ingress, defaultCwd: root });
+    expect(result).toEqual({ kind: "submitted", outcome: { kind: "duplicate" } });
+  });
+
+  it("session-concluded FLAGGED with NO result → own_timeout; UNFLAGGED with no result → spawn_infra (the flag branches of the dead-session lane)", async () => {
+    for (const [timedOut, cls] of [
+      [true, "own_timeout"],
+      [false, "spawn_infra"],
+    ] as const) {
+      const scripted = scriptedChannel({ kind: "session-concluded", timedOut });
+      const root = tempRoot();
+      const stub = writeStub(root);
+      const result = await run({ mapper: mapTo(stub, "emit", "x"), channel: scripted.channel, defaultCwd: root });
+      expect(result).toEqual({ kind: "infra_failure", class: cls });
+    }
+  });
+
+  it("session-concluded with a FOREIGN-attemptId result → fail-closed (never an actor outcome): the flag decides", async () => {
+    const scripted = scriptedChannel({ kind: "session-concluded", timedOut: false });
+    const root = tempRoot();
+    const stub = writeStub(root);
+    plantAttemptFile(root, "result.json", JSON.stringify({ attemptId: "att-FOREIGN", exitCode: 0, signal: null, termForwarded: false }));
+    const result = await run({ mapper: mapTo(stub, "emit", "x"), channel: scripted.channel, defaultCwd: root });
+    expect(result).toEqual({ kind: "infra_failure", class: "spawn_infra" });
+  });
+
+  it("spawnDetail is ABSENT on session-grain (tmux-channel) spawn_outcome events — the F6(b) named diagnostic-only absence", async () => {
+    const scripted = scriptedChannel({ kind: "session-concluded", timedOut: true });
+    const root = tempRoot();
+    const stub = writeStub(root);
+    const diag = recordingDiag();
+    await run({ mapper: mapTo(stub, "emit", "x"), channel: scripted.channel, defaultCwd: root, diag: diag.sink });
+    expect(diag.events).toHaveLength(1);
+    expect(diag.events[0]).toMatchObject({ kind: "spawn_outcome", spawnOutcome: "own_timeout" });
+    expect(diag.events[0]).not.toHaveProperty("spawnDetail");
   });
 });

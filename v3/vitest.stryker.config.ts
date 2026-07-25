@@ -19,6 +19,14 @@ export default defineConfig({
       "src/runner/spawn.test.ts",
       "src/runner/actorAdapter.test.ts",
       "src/ctBRealRunner.test.ts",
+      // packet ch9-p4a (T1): the new subprocess/tmux test files — real /bin/sh
+      // and git children (gate runner), real node children (direct channel),
+      // real tmux sessions (tmux channel) — the same declared subprocess
+      // blind class; the pure TX7 rows stay Stryker-covered in
+      // actorAdapterClassify.test.ts.
+      "src/runner/processGateRunner.test.ts",
+      "src/runner/spawnChannel.test.ts",
+      "src/runner/tmuxChannel.test.ts",
     ],
   },
 });

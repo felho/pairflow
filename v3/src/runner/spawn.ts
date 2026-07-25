@@ -11,7 +11,7 @@ import type { ChildProcess } from "node:child_process";
  * verbatim, plus the own-timer flag), `infra` is the spawn-setup/ENOENT class
  * (P3c — a distinct lane, no exit code). Consumers: the actor adapter
  * (ch9-P3b), the worktree provider's git runner (SD2), the process-gate real
- * spawn (ch9-P4).
+ * spawn and the tmux channel's client invocations (ch9-P4a).
  */
 
 export type SpawnConclusion =
@@ -39,6 +39,16 @@ export interface DisciplinedSpawnInput {
   readonly env: Readonly<Record<string, string>>;
   readonly timeoutMs: number;
   readonly graceMs: number;
+  /**
+   * GR2 (packet ch9-p4a, flag F2): OPTIONAL stdin contents. When PRESENT,
+   * stdio[0] is `"pipe"` and the contents are written then ended at spawn;
+   * when ABSENT, stdio[0] stays `"ignore"` and the seam's behavior is
+   * BYTE-IDENTICAL to the pre-P4a form (the P3b/P2 suites are the pin). A
+   * write error on the pipe (EPIPE from a fast-exiting child) is NOT an infra
+   * conclusion — the write is best-effort input delivery; the child's own
+   * exit decides.
+   */
+  readonly stdin?: string;
 }
 
 /** The promise-resolution drain deadline (SD1): after the child's EXIT the
@@ -60,12 +70,22 @@ export function disciplinedSpawn(input: DisciplinedSpawnInput): Promise<SpawnCon
       child = spawn(input.cmd, [...input.args], {
         cwd: input.cwd,
         env: input.env,
-        stdio: ["ignore", "pipe", "pipe"],
+        // GR2: fd 0 is piped ONLY when stdin contents are passed; absent
+        // stdin keeps the pre-P4a "ignore" byte-identical.
+        stdio: [input.stdin !== undefined ? "pipe" : "ignore", "pipe", "pipe"],
       });
     } catch (error) {
       // A synchronous spawn-setup throw — the infra lane (P3c).
       resolve({ kind: "infra", message: errorMessage(error) });
       return;
+    }
+
+    if (input.stdin !== undefined) {
+      // GR2: best-effort input delivery — an EPIPE against a fast-exiting
+      // child is swallowed HERE (the stream error, not the child `error`
+      // event); the child's own exit decides the conclusion.
+      child.stdin?.on("error", () => {});
+      child.stdin?.end(input.stdin);
     }
 
     let settled = false; // the EXIT/INFRA settle (attribution decided ONCE)

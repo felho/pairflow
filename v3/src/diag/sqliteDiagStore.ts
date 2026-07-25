@@ -122,6 +122,8 @@ const KINDS: ReadonlySet<string> = new Set([
 ]);
 const ERRAND_STATE_SET: ReadonlySet<string> = new Set(ERRAND_STATES);
 const ERRAND_EDGE_SET: ReadonlySet<string> = new Set(ERRAND_EDGES);
+// The ONE membership source (ports/diagnostics.ts) — `name_collision` joined
+// at ch9-P4a (DG3), so the read gate admits it through this same derivation.
 const SPAWN_OUTCOME_SET: ReadonlySet<string> = new Set(SPAWN_OUTCOMES);
 const ATTEMPT_SCOPED_EDGE_SET: ReadonlySet<string> = new Set(ATTEMPT_SCOPED_ERRAND_EDGES);
 const ERRAND_BIRTH_EDGE_SET: ReadonlySet<string> = new Set(ERRAND_BIRTH_EDGES);
