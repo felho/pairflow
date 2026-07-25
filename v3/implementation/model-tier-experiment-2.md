@@ -239,3 +239,17 @@ design and this divergence is informative, not a defect. Spread:
   difficulty scores append here at each approve. Mutation pilot: this
   is its SECOND and final data chapter; the two-chapter window closes
   at the ch13 boundary with a keep/stop verdict.
+- 2026-07-26 — PROTOCOL DEVIATION recorded (self-reported at the ch13
+  draft-round opening): the ch13 PLAN-CHAPTER section (a §2
+  Fable-mandatory surface) was authored on the session's Opus-class
+  main thread on 2026-07-25, before the mismatch was noticed. Owner
+  disposition: NOT rewritten — the section went through seven
+  stepwise owner-review rounds (four scoping decisions, two carrier
+  acts) and a deliberate ratification, so a rewrite would carry less
+  information than the deviation record. Remedy going forward: the
+  session switched to Fable-class BEFORE any draft work; the ch13
+  contract-draft and ratification support run Fable per the standing
+  category rule. Data handling: the ch13 plan-section authoring joins
+  the Fable-mandatory-surface pool FLAGGED as an Opus-authored
+  exception (non-random, owner-reviewed); packet-level Opus data is
+  unaffected (no packet work had started).
