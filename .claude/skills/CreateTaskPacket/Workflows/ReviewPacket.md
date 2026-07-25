@@ -248,7 +248,9 @@ sweep)*
    place [R-STRUCTURE-SEMANTICS]; test obligations phrased as
    EXECUTION [R-EXECUTION]; hostile fixtures staged through preserving
    channels — a stringify-built hostile fixture is a WATCHPOINT
-   [R-RAW-FIXTURES, watch status].
+   (a standing authoring discipline — its registry row retired at
+   the ch9 boundary, absorbed by the template's fixture-watchpoint
+   paragraph + this lens's sensitivity duty).
 6. **Final text sweep** (after any fold): every count/quantifier
    (*one, both, all, exactly, zero, any, every, never, only*) verified
    against the CURRENT lists it summarizes — prefer converting counts
@@ -629,10 +631,11 @@ Elsewhere it stays an option:
      directories; a path list alone is blind to an untracked file's
      content change — the gate-1 target itself is untracked).
   2. **Launch FOREGROUND** from the repo root with an explicit tool
-     timeout — 10 minutes for approve-gate/doc-review runs, 20
-     minutes (`timeout: 1200000`) for BUILD-CLOSE runs (the
-     test-running sensitivity pass is slower than a doc review — two
-     ch12-P1b overruns; adopted at the ch12 boundary) — NEVER
+     timeout — 20 minutes (`timeout: 1200000`) for EVERY arm run,
+     uniformly (the 10-minute approve/doc tier RETIRED at the ch9
+     boundary, user-adopted 2026-07-25: its third kill of an
+     actively-working review — ch12-P1b ×2, ch9-P4a gate-2,
+     ch9-P4b gate-1 — each burned a retry on a non-hung run) — NEVER
      `run_in_background` (both P2
      kills were the background-task manager's, not the arm's; at a
      mandatory gate, blocking is correct — nothing may proceed
@@ -642,7 +645,8 @@ Elsewhere it stays an option:
      -c model_reasoning_effort=<pinned effort>
      -c approval_policy=never - < <promptfile>
      > <outfile> 2>&1`
-     (the concrete tool config: Bash `timeout: 600000`,
+     (the concrete tool config: Bash `timeout: 1200000` or
+     background with the runner's own 1200 s cap,
      `run_in_background` omitted/false). `<promptfile>` and
      `<outfile>` live OUTSIDE the repository (the session
      scratchpad) — an in-repo output file would let the arm's own
@@ -722,7 +726,7 @@ Elsewhere it stays an option:
      their ratified form), over/under-claim vs the manifest refs.
      A file deleted/renamed by LATER chapters is a TEMPORAL-DRIFT
      note, never a P0 (annotation fold, not a rewrite). Runs
-     doc-review timeout (10 min); fold policy and convergence per
+     the uniform 20-min timeout; fold policy and convergence per
      DraftContract §5; the machine half is `pnpm v3:realized-map` —
      run it on every arm finding batch BEFORE folding (the arm and
      the scanner each catch what the other misses).
@@ -732,7 +736,7 @@ Elsewhere it stays an option:
   launch with the mode timeout, guard re-take, header-pin
   validation, rc-first failure classification) are mechanized by
   `tools/v3-plan/arm_run.sh <promptfile> <outfile> (--target f |
-  --no-target) [--timeout 600|1200]` — exit codes: 2
+  --no-target) [--timeout <secs>, default 1200]` — exit codes: 2
   usage/preflight, 3 pin-mismatch, 4 guard-trip, 5 codex/timeout,
   6 guard-infra (3–6 are INVALID verdicts on the item-8 ladder).
   The prompt shape (item 7), the retry ladder itself, and verdict

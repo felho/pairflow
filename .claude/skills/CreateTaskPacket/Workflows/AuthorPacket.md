@@ -252,7 +252,9 @@ fields, not a machine block; a `declined` route is
 block, filled at build close. Then Claim + dimensions, operative
 material, canonical matrices, in-context notes, embedding gates,
 acceptance (CT-*/CHK-*/REV-* ids). English only. Fixture **watchpoint**
-(R-RAW-FIXTURES is WATCH status, not yet a rule): prefer staging hostile
+(a standing authoring discipline; its registry row retired at the
+ch9 boundary — absorbed by the template's own paragraph + the
+build-close sensitivity pass): prefer staging hostile
 values (e.g. `-0`) through channels that provably preserve them — raw
 text, not `JSON.stringify`; a stringify-built hostile fixture is flagged
 in the pre-approval summary, not a blocker.

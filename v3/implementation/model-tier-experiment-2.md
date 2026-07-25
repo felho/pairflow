@@ -176,3 +176,43 @@ design and this divergence is informative, not a defect. Spread:
   (extends the ch12-P3 completion-machinery class) — **Σ 5,
   Medium**. Mutation dual-run 82.03% (six semantic production
   files; whole-file scope caveat recorded in the packet).
+- 2026-07-25 — LATE CAPTURE at the ch9 boundary (a §5 process miss,
+  logged): the P2–P4a approve-time difficulty entries were never
+  appended at their approves; scored NOW from the approve-time
+  machine blocks (A–C exact arithmetic over the committed
+  `packet_rows`/provenance/`mutation_boundary`; D/E checklist from
+  the packet texts). The P4b entry is same-day.
+- ch9-P2 worktree-provider: A2 (32 rows) B2 (18 non-projected) C1
+  (16 files) D2 (external substrate — git worktree FS) E2
+  (first-of-a-kind: the first real provider) — **Σ 9, Heavy**.
+- ch9-P3a delivery-core: A2 (40 rows) B2 (22) C1 (17) D2
+  (durable-concurrency seams — claims, crash windows, CAS) E2
+  (first runner-plane durable coordination) — **Σ 9, Heavy**.
+- ch9-P3b actor-adapter: A1 (26 rows) B2 (20) C1 (28) D2
+  (subprocess/spawn substrate) E2 (first real adapter) —
+  **Σ 8, Heavy**.
+- ch9-P4a spawn-machinery: A1 (19 rows) B2 (16) C1 (22) D2
+  (subprocess + tmux substrate) E2 (first real gate spawn + first
+  tmux machinery) — **Σ 8, Heavy**.
+- ch9-P4b operator-surface: A1 (16 rows) B2 (13) C0 (14 files) D2
+  (subprocess + tmux + journeys) E2 (first operator surface +
+  attach) — **Σ 7, Heavy**.
+- 2026-07-25 — ch9 BOUNDARY §7 entry (the Fable-arm chapter closed;
+  the comparison completes when the next Opus-arm chapter closes):
+  7 packets — difficulty profile 1 Light / 1 Medium / 5 Heavy (a
+  heavy chapter: five first-of-a-kind classes). Main thread
+  Fable-class throughout (`main_thread_model` recorded per packet).
+  Arm yields (gate-1 → gate-2, where the fold ladders ran): P4b
+  7→1→0 CLEAN then 10→1→0 CLEAN — gate-2 again out-caught the
+  internal layers (1 product P2: the attach probe-anomaly conflation;
+  6 test-evidence strengthenings, receipt-verified). Detector-miss
+  records this chapter: 2 arm-reclassifications of authored
+  provenance (P4a GR8; P4b RS1 + the DT1 selection rule) — the
+  entailment-attack class remains the arm's edge over the panel.
+  Mutation dual-run: scores where the profile covers (P1 82.03%,
+  P4a 83.04% covered-mutant); the runner-plane packets are
+  subprocess-blind by the declared mechanism — the pilot's ch9 value
+  was the receipt-backed probe discipline it forced (18 probes at
+  P4b alone). CONDITION carried: the mid-chapter tooling batch (the
+  ch9-P0→P1 speedup landing) makes intra-ch9 pacing comparisons
+  noisy; the boundary weighs yields, not wall-clock.

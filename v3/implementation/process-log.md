@@ -4676,3 +4676,39 @@ final CLEAN.
   (cosmetic, non-issue); (f) the post-aftermath `NoErrand`
   distinct-name lane observed live on a real operator mistake — the
   fold earning its keep same-day.
+- 2026-07-25 · ch9 BOUNDARY REVIEW HELD (verdicts, user-adjudicated
+  one-by-one): (1) arm-timeout → RULE ADOPTED: uniform 20-min cap on
+  EVERY arm run (ReviewPacket §6 edited, arm_run.sh default 1200 s —
+  the 10-min tier retired after its third kill of a working review).
+  (2) the `--strict` respawn-flag candidate → NON-ISSUE, candidate
+  RETIRED (the invocation-classified exit + state-as-data is the
+  ratified design; no scripting need surfaced; the scripting rule is
+  now explicit in the runbook). (3) gate-lane env-allowlist (W1) →
+  WATCH (dogfooding priced the actor lane sufficient — `--env-allow
+  HOME` carried a real LLM; a future gate-side need fails loud and
+  designs the widening then). (4) real-substrate suite-load
+  sensitivity (2nd occurrence) → WATCH with a MECHANIZATION
+  promotion: on recurrence the real-substrate test files move to a
+  serial vitest lane (structural cure), not a procedural
+  3×-runs rule; the stabilization (widened TX5 margin + visible
+  retries) already landed. (5) EPIPE crash on a closed pipe →
+  ADOPTED as a named later-chapter product item (the stdout sink
+  handles EPIPE quietly; repro: `pnpm v3:cli detail … | head -1`).
+  (6) mutation pilot → CONTINUE per plan (2nd data chapter next);
+  ch9 read: the pilot's value here was the receipt-backed probe
+  discipline, the runner plane being subprocess-blind to Stryker by
+  the declared mechanism. (7) model-tier records: 5 late-captured
+  difficulty entries + the §7 boundary entry appended (capture gap
+  itself logged). (8) RULE RETIRED: R-RAW-FIXTURES — basis
+  ABSORPTION, not bare zero-catch (exposure EXISTED: numeric-ladder
+  tests kept being written; the discipline lives in the template §1
+  fixture-watchpoint paragraph + the gate-2 sensitivity pass); the
+  sweep itself gains the refinement that zero-catch is only evidence
+  WITH an exposure check (the owner's question — adopted into the
+  boundary procedure's practice). K0-gate reflection disposed: the
+  ch9 draft's K0-NO ruling (errand ledger = runner-plane bookkeeping)
+  held through realization — the admission rule routed correctly.
+  Catch tally highlights: R-LANE-SENSITIVITY (3 product catches via
+  gate-2 across P4a/P4b), R-DERIVED-PROBES (24 receipts),
+  R-DELEGATION-CLOSURE, R-UNTRUNCATED-SWEEP, R-ALIGNED-UP (2
+  repartitions), R-FIRST-STOP (5 firings) all earning keep.

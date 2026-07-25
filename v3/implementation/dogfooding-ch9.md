@@ -144,6 +144,9 @@ The `--actor-cmd` binding is one JSON template:
      --actor-cmd '{"cmd":"'"$(command -v node)"'","args":["'"$TDIR"'/emit.mjs"]}'
    #   → the post-call errand row as data (state "confirmed" on a successful
    #     re-spawn); the respawn attempt is UNBUDGETED (remaining budget unchanged).
+   # SCRIPTING RULE (ratified design, ch9 boundary): the exit code is 0
+   # whenever the respawn RAN (3 only when it could not start) — script on
+   # the doc's `.state` field, never on the exit code alone.
    ```
 
 ## Watchpoints to price (W1 — boundary-review)
