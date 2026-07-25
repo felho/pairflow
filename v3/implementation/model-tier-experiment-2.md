@@ -216,3 +216,26 @@ design and this divergence is informative, not a defect. Spread:
   P4b alone). CONDITION carried: the mid-chapter tooling batch (the
   ch9-P0→P1 speedup landing) makes intra-ch9 pacing comparisons
   noisy; the boundary weighs yields, not wall-clock.
+- 2026-07-25 — ch13 (context blocks) RATIFIED with main-thread arm =
+  **Opus-class** — the FIRST Opus chapter, per the §2 pre-registration
+  ("the next implementation chapter opens the Opus arm"), recorded at
+  chapter ratification per §5. The §2 K3 prerequisite is DISCHARGED:
+  the ch12 boundary's entry-mode rule and the arm-invocation
+  verified-preflight rule both landed (AGENTS.md V3 section), removing
+  the predecessor's "prompts authored under Fable, never tuned for
+  Opus" confound. **No chapter-named Fable-mandatory slice** (owner
+  decision at the scoping round): no ch13 packet is first-of-a-kind or
+  idiom-minting — the render extends the existing dispatch assembly
+  and reuses ch11's authority logic, the definition side extends the
+  ch8/ch11 format and admission machinery. The standing
+  Fable-mandatory categories are unchanged (the plan chapter itself,
+  the contract-draft + ratification support, process revisions, the
+  boundary review) — so this chapter's draft round runs Fable while
+  its packets run Opus, as designed. Chapter shape for the paired
+  read: 3 packets (P0 hygiene/EPIPE, human-approved as an
+  invention-predicted row; P1 definition side; P2 dispatch side),
+  expected to band Light/Medium — the ch9 Fable pool's Light and
+  Medium entries are the natural comparison partners. Per-packet
+  difficulty scores append here at each approve. Mutation pilot: this
+  is its SECOND and final data chapter; the two-chapter window closes
+  at the ch13 boundary with a keep/stop verdict.

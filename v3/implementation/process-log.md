@@ -4750,3 +4750,40 @@ final CLEAN.
   edited: the cut is a ratified model-plane decision, and a finding
   that the cut itself is mis-drawn routes to the model↔code
   divergence stop.
+- 2026-07-25 · ch13 (context blocks) RATIFIED (user GO). The §1.3
+  third named candidate — the L2b context-block surface, excluded at
+  ch11 with the stated condition "naturally after ch 9 when a real
+  actor adapter consumes dispatched packets" — entered as chapter 13,
+  the THIRD live use of the map-extension mechanism; the condition
+  came true at the ch9 close (the shipped adapter materializes the
+  ContextPacket as canonical packet.json, so a rendered block reaches
+  a real actor with no prompt-assembly layer between). Four scoping
+  decisions, taken stepwise: (1) acceptance floor = capability AND
+  shipped wiring — the shipped template gains a REAL catalog entry
+  plus a journey smoke, over the capability-only option, on the
+  R-ACTIVATION-JOURNEY basis; (2) the ch9-carried EPIPE item rides as
+  the chapter's own first packet, not folded (one packet = one
+  logical change; a Light opener is a clean first Opus calibration
+  point); (3) ONE contract-draft for the L2b surface, the EPIPE
+  closed-pipe contract staying a packet-time decision per the
+  decision-home triage (single-packet decision, no cross-packet drift
+  to prevent); (4) no chapter-named Fable-mandatory slice.
+  TWO CARRIER ACTS came out of the owner's "what guarantees the
+  pickup?" questions, both applying the R-PRESENT-TENSE
+  reference-economy rule to this chapter's own residuals: (a) the EC
+  emit-contract surface entered as the FIFTH named §1.3
+  map-extension candidate, with the retirement of ch13's interim
+  emit-envelope catalog entry BOUND INTO the DoD of whichever chapter
+  takes it (the ch9-detached-audit inheritance shape) — the owner
+  rejected the proposed unit-map tripwire test, choosing the plan
+  surface alone; the first proposal (a test guessing a future field
+  name) was correctly refused as unreliable and replaced with a
+  unitMap-anchored form before the choice. (b) The gate-vs-prose
+  parity residual: the model plane already carries it as two named
+  Absents, so the chapter adds only AUTHORING-TIME aim where the risk
+  is CREATED — a required draft C-row on catalog authoring plus a
+  comment beside the catalog in the shipped template. Both recorded
+  as aim, not enforcement; the owner named the limit explicitly and
+  accepted it. Note the chapter ships NO gate-describing body (the
+  round>=2 gate stays out of the shipped template as a product
+  decision), so the drift risk is latent by construction here.
