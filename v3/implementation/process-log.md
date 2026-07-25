@@ -4728,3 +4728,25 @@ final CLEAN.
   obligations/carried items with the conscious-carrier requirement.
   The §1.3 carried-items block (402248a3) is the retroactive
   execution of the route's defined action.
+- 2026-07-25 · V1 PROMPT-PARITY AUDIT captured as a reference surface
+  (`v1-prompt-parity-audit.md`), at the owner's request during the
+  ch13 scoping round. Origin: the owner questioned whether L2b's
+  `context_blocks` really cover an actor's instruction needs, since
+  v1 mixes role-specific guidance with "how to behave inside
+  Pairflow" protocol prose. Measurement: v1's 37 `PromptConcernId`
+  entries split A/B/C = protocol 11 / role-judgment 9 /
+  run-instance-data 17, with only 11 of 37 carrying a body an L2b
+  static catalog can hold. Mapping: class C is already realized as
+  ContextPacket FIELDS; class A is mechanized by the adapter env
+  pair plus EC's `op_contracts` (EC unbuilt, 1/12 units); class B is
+  L2b's actual constituency. Named open gap: no v3 surface tells a
+  real actor the emit envelope shape — the ch9 dogfooding tier-2 leg
+  supplied it by hand in the `--actor-cmd` invocation. TWO CARRIERS
+  chosen per the R-PRESENT-TENSE reference-economy rule (a forward
+  obligation needs a derivation-visible carrier, never prose-only):
+  the audit doc for the MEASUREMENT, and plan §1.3 carried item (3)
+  for the OBLIGATION — the MVP-cut vs v1-parity re-read, due before
+  the plan sequences the post-L2b chapters. The model plane was NOT
+  edited: the cut is a ratified model-plane decision, and a finding
+  that the cut itself is mis-drawn routes to the model↔code
+  divergence stop.

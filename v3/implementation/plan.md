@@ -181,7 +181,22 @@ or hygiene content for the NEXT chapter); (2) the **detached
 realized-map arm audit for ch9** (plan §9.5's DoD clause: the arm's
 per-row map audit of `ch9-runner-contract.md` runs DETACHED,
 deadline = the NEXT chapter's close — the next chapter's DoD
-inherits it as a close obligation).
+inherits it as a close obligation). (3) the **MVP-cut vs
+v1-parity re-read** (raised by the owner, 2026-07-25, off the
+`v1-prompt-parity-audit.md` measurement): the model plane's MVP cut
+is defined as "build until local WF-7 runs" — a DIFFERENT target
+from "v3 can replace the v1 pair-workflow", which the cut never
+claimed to answer. The audit produced one concrete instance: the EC
+layer, which the model's own text calls "the last v1-parity gap",
+sits AFTER the cut, and no v3 surface tells a real actor the emit
+envelope shape until it lands (§5 of the audit). OBLIGATION: before
+this plan sequences the chapters that follow the L2b chapter, walk
+the post-cut and late-Block-A layers against the audit and record,
+per layer, whether v1-workflow replication needs it EARLIER than the
+cut implies. This is an implementation-plane read; a finding that
+the CUT itself is mis-drawn is a model-plane matter and routes to
+the standing model↔code divergence stop (README §6), never a silent
+re-cut here.
 
 **Ordering note (walking-skeleton-first, README §3.4).** Chapter 3 before
 chapter 4 does not contradict the principle: ch 3 is the constraint-sink /
