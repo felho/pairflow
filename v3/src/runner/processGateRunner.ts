@@ -128,12 +128,23 @@ export function createProcessGateRunner(
     });
     const headOk = head.kind === "exit" && head.code === 0 && !head.timedOut;
     const statusOk = status.kind === "exit" && status.code === 0 && !status.timedOut;
-    if (!headOk || !statusOk || head.kind !== "exit" || status.kind !== "exit") {
+    if (
+      !headOk ||
+      !statusOk ||
+      head.kind !== "exit" ||
+      status.kind !== "exit" ||
+      // A bytes-less exit conclusion is unreachable from the real seam; if it
+      // ever appears, the DECLARED sentinel — never a re-encoding fallback.
+      status.stdoutBytes === undefined
+    ) {
       return { headSha: MEASUREMENT_FAILED_SENTINEL, gitStatusHash: MEASUREMENT_FAILED_SENTINEL };
     }
     return {
       headSha: head.stdout.trim(),
-      gitStatusHash: createHash("sha256").update(Buffer.from(status.stdout, "utf8")).digest("hex"),
+      // GR4's letter: sha256 over the RAW captured stdout BYTES — the seam's
+      // Buffer capture, NEVER a re-encoding of the decoded text (a chunk-split
+      // multibyte sequence would otherwise corrupt the hashed bytes).
+      gitStatusHash: createHash("sha256").update(status.stdoutBytes).digest("hex"),
     };
   }
 

@@ -1,13 +1,30 @@
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { TimeSource } from "../ports/time.js";
 import { MEASUREMENT_FAILED_SENTINEL, createProcessGateRunner } from "./processGateRunner.js";
-import { TimerKnobError } from "./spawn.js";
+import type * as SpawnModule from "./spawn.js";
+import { TIMER_MAX_MS, TimerKnobError } from "./spawn.js";
+
+/** GR8's observation point: a TRANSPARENT pass-through spy over the C19 seam —
+ * every `disciplinedSpawn` input is recorded, then the REAL seam runs (every
+ * lane stays integration-real; only the seam INPUT becomes observable). */
+const seamSpy = vi.hoisted(() => ({ inputs: [] as { cmd: string; timeoutMs: number }[] }));
+vi.mock("./spawn.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof SpawnModule>();
+  return {
+    ...actual,
+    disciplinedSpawn: (input: Parameters<typeof actual.disciplinedSpawn>[0]) => {
+      seamSpy.inputs.push({ cmd: input.cmd, timeoutMs: input.timeoutMs });
+      return actual.disciplinedSpawn(input);
+    },
+  };
+});
 
 /**
  * The real ProcessGateRunner (packet ch9-p4a, GR1–GR5/GR8) — driven against
@@ -217,6 +234,49 @@ describe("processGateRunner — GR4 measurement (after the gate child concludes)
     expect(e3?.gitStatusHash).not.toBe(e1?.gitStatusHash);
   });
 
+  it("gitStatusHash is sha256 over the RAW porcelain BYTES — the EXACT digest, computed independently from the byte output (never a re-encoding of decoded text)", async () => {
+    const { dir } = tempRepo();
+    // A multibyte untracked filename: the porcelain -z output carries its raw
+    // UTF-8 bytes unquoted, so any decode/re-encode corruption moves the hash.
+    writeFileSync(join(dir, "é üó.txt"), "multibyte-name\n");
+    // The EXPECTED digest, independently: the raw porcelain BYTES (Buffer —
+    // no encoding), hashed directly, under the measurement's own env shape.
+    const rawPorcelain = execFileSync("git", ["-C", dir, "status", "--porcelain=v1", "-z"], {
+      env: { PATH: process.env.PATH ?? "" },
+    });
+    const expected = createHash("sha256").update(rawPorcelain).digest("hex");
+    const runner = makeRunner({});
+    const r = await runner.run("true", { cwd: dir, stdin: "", timeoutMs: 30_000 });
+    expect(runner.resolve(r.logRef)?.gitStatusHash).toBe(expected);
+  });
+
+  it("measurement runs AFTER the gate child concludes: a workspace-MUTATING gate child's facts reflect the POST-child state (headSha AND gitStatusHash)", async () => {
+    const { dir, head } = tempRepo();
+    writeFileSync(join(dir, "b.txt"), "post\n");
+    const runner = makeRunner({});
+    // The gate child itself MUTATES the workspace: stages and commits b.txt.
+    const r = await runner.run(
+      "git add b.txt && git -c user.email=t@example.com -c user.name=t commit -q -m post",
+      { cwd: dir, stdin: "", timeoutMs: 30_000 },
+    );
+    expect(r).toMatchObject({ kind: "ok", exitCode: 0 });
+    const measureEnv = { env: { PATH: process.env.PATH ?? "" } };
+    const postHead = execFileSync("git", ["-C", dir, "rev-parse", "HEAD"], {
+      encoding: "utf8",
+      ...measureEnv,
+    }).trim();
+    const postStatus = execFileSync(
+      "git",
+      ["-C", dir, "status", "--porcelain=v1", "-z"],
+      measureEnv,
+    );
+    expect(postHead).not.toBe(head); // the child really moved HEAD
+    const evidence = runner.resolve(r.logRef);
+    // POST-child facts — RED if measurement ran before/concurrent with the child.
+    expect(evidence?.headSha).toBe(postHead);
+    expect(evidence?.gitStatusHash).toBe(createHash("sha256").update(postStatus).digest("hex"));
+  });
+
   it("a NON-repo cwd (P8b: git exits 128) → BOTH facts take the ONE sentinel, the gate kind UNCHANGED", async () => {
     const runner = makeRunner({});
     const r = await runner.run("printf ok", { cwd: tempRoot(), stdin: "", timeoutMs: 30_000 });
@@ -276,6 +336,40 @@ describe("processGateRunner — GR5 durable evidence (every kind, before run() r
     expect(runnerErrorEvidence).not.toHaveProperty("exitCode");
   });
 
+  it("the COMPLETE per-kind record for timeout AND runner_error: log/kind/durationMs/headSha/gitStatusHash ALL present (real facts, not sentinels), exitCode ABSENT", async () => {
+    const { dir, head } = tempRepo();
+    const runner = makeRunner({ graceMs: 5_000, deltas: [40, 50] });
+    const timeout = await runner.run("printf t-out; sleep 100", {
+      cwd: dir,
+      stdin: "",
+      timeoutMs: 200,
+    });
+    const runnerError = await runner.run("kill -9 $$", { cwd: dir, stdin: "", timeoutMs: 30_000 });
+    expect(timeout.kind).toBe("timeout");
+    expect(runnerError.kind).toBe("runner_error");
+    for (const [ref, kind] of [
+      [timeout.logRef, "timeout"],
+      [runnerError.logRef, "runner_error"],
+    ] as const) {
+      const evidence = runner.resolve(ref);
+      expect(evidence?.kind).toBe(kind);
+      // The COMPLETE per-kind keyset — every field present, exitCode absent.
+      expect(Object.keys(evidence ?? {}).sort()).toEqual([
+        "durationMs",
+        "gitStatusHash",
+        "headSha",
+        "kind",
+        "log",
+      ]);
+      expect(typeof evidence?.log).toBe("string");
+      expect(evidence?.durationMs).toBeGreaterThanOrEqual(0);
+      expect(evidence?.headSha).toBe(head); // a REAL measured fact, not the sentinel
+      expect(evidence?.gitStatusHash).not.toBe(MEASUREMENT_FAILED_SENTINEL);
+    }
+    // The captured text still rides `log` on the non-ok kinds.
+    expect(runner.resolve(timeout.logRef)?.log).toContain("t-out");
+  });
+
   it("records survive a re-open of the same evidence db path (durable BEYOND the handle — the slot's substrate reused)", async () => {
     const dbPath = join(tempRoot(), "s.sqlite.process-evidence.sqlite");
     const runner = makeRunner({ dbPath });
@@ -311,6 +405,28 @@ describe("processGateRunner — GR8 the per-call timer clamp + construction knob
       timeoutMs: 2 ** 31,
     });
     expect(r).toMatchObject({ kind: "ok", exitCode: 0, stdout: "done" });
+  });
+
+  it("the clamp CEILING is EXACT: a timeoutMs above 2^31−1 reaches the seam as TIMER_MAX_MS − graceMs (observed at the seam input); a below-ceiling value passes through UNCLAMPED", async () => {
+    seamSpy.inputs.length = 0;
+    const runner = makeRunner({}); // the default graceMs (10 000) — GR8's subtrahend
+    const clamped = await runner.run("true", {
+      cwd: tempRoot(),
+      stdin: "",
+      timeoutMs: 2 ** 40,
+    });
+    expect(clamped.kind).toBe("ok");
+    const clampedGateSpawn = seamSpy.inputs.find((i) => i.cmd === "/bin/sh");
+    expect(clampedGateSpawn?.timeoutMs).toBe(TIMER_MAX_MS - 10_000);
+
+    seamSpy.inputs.length = 0;
+    const passthrough = await runner.run("true", {
+      cwd: tempRoot(),
+      stdin: "",
+      timeoutMs: 30_000,
+    });
+    expect(passthrough.kind).toBe("ok");
+    expect(seamSpy.inputs.find((i) => i.cmd === "/bin/sh")?.timeoutMs).toBe(30_000);
   });
 
   it("the runner NEVER rejects a call on timeout magnitude (admission owns config validity)", async () => {

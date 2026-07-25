@@ -1,3 +1,4 @@
+import type { TimeSource } from "../ports/time.js";
 import type { DisciplinedSpawnInput, SpawnConclusion } from "./spawn.js";
 import { disciplinedSpawn, validateTimerKnobs } from "./spawn.js";
 import type { ChannelConclusion, SpawnChannel, SpawnChannelInput } from "./spawnChannel.js";
@@ -25,11 +26,20 @@ import type { ChannelConclusion, SpawnChannel, SpawnChannelInput } from "./spawn
 const ENV_BIN = "/usr/bin/env";
 
 export interface TmuxChannelDeps {
+  /** IC-D at channel grain (TX5, aftermath fix): EVERY window the channel owns
+   * (the timeout firing, the grace escalation, the backstop, the kill-session
+   * retry window) is measured against THIS injected source's `now()` deltas
+   * from its anchor — never `Date.now()`, never poll-count accounting (which
+   * would let slow client invocations stretch the windows unboundedly).
+   * REQUIRED: production binds the caller's wall clock; scripted tests bind
+   * the controlled clock. */
+  readonly time: TimeSource;
   /** The C19 client-invocation seam (default: `disciplinedSpawn`) — injectable
    * so tests can stage per-invocation client faults. */
   readonly clientSpawn?: (input: DisciplinedSpawnInput) => Promise<SpawnConclusion>;
-  /** The poll/backstop wait seam (the TailWait pattern — a real timer in
-   * production, controllable in tests). */
+  /** The poll/backstop wait PACING seam (the TailWait pattern — a real timer
+   * in production, controllable in tests). Pacing only: the deadline
+   * authority is `time`. */
   readonly wait?: (ms: number) => Promise<void>;
   /** The pane-signal seam (default: `process.kill` with the already-dead
    * ESRCH swallowed — death is observed by the next poll). */
@@ -70,7 +80,8 @@ function defaultKill(pid: number, signal: "SIGTERM" | "SIGKILL"): void {
   }
 }
 
-export function createTmuxSpawnChannel(deps: TmuxChannelDeps = {}): SpawnChannel {
+export function createTmuxSpawnChannel(deps: TmuxChannelDeps): SpawnChannel {
+  const time = deps.time;
   const clientSpawn = deps.clientSpawn ?? disciplinedSpawn;
   const wait = deps.wait ?? defaultWait;
   const kill = deps.kill ?? defaultKill;
@@ -139,20 +150,24 @@ export function createTmuxSpawnChannel(deps: TmuxChannelDeps = {}): SpawnChannel
         return undefined;
       }
 
-      /** Poll until death/anomaly or `windowMs` elapsed (poll-interval grain).
-       * Returns "alive" when the window closed with the session still up. */
-      async function pollWindow(windowMs: number): Promise<Liveness> {
-        let elapsed = 0;
+      /** Poll until death/anomaly or the WALL-CLOCK window elapsed: the window
+       * closes when `time.now() − anchor ≥ windowMs`, checked after every
+       * liveness observation — so time spent awaiting the client invocations
+       * CONSUMES the window instead of stretching it (TX5's aftermath fix; the
+       * deadline fires at the FIRST observation point at/after it — poll-grain
+       * firing is inherent). Death always wins an observation over the
+       * deadline check. Returns "alive" when the window closed with the
+       * session still up. */
+      async function pollWindow(windowMs: number, anchor: number): Promise<Liveness> {
         for (;;) {
           const liveness = await pollLiveness();
           if (liveness !== "alive") {
             return liveness;
           }
-          if (elapsed >= windowMs) {
+          if (time.now() - anchor >= windowMs) {
             return "alive";
           }
           await wait(pollIntervalMs);
-          elapsed += pollIntervalMs;
         }
       }
 
@@ -168,8 +183,13 @@ export function createTmuxSpawnChannel(deps: TmuxChannelDeps = {}): SpawnChannel
        */
       async function lastResort(flagged: boolean): Promise<ChannelConclusion> {
         for (let attempt = 0; attempt < 2; attempt += 1) {
+          // The retry window is wall-clock too: a kill-session client that
+          // itself consumed the poll interval proceeds straight to the poll.
+          const retryAnchor = time.now();
           await client(["kill-session", "-t", name]);
-          await wait(pollIntervalMs);
+          if (time.now() - retryAnchor < pollIntervalMs) {
+            await wait(pollIntervalMs);
+          }
           const liveness = await pollLiveness();
           if (liveness === "dead") {
             return { kind: "session-concluded", timedOut: flagged };
@@ -195,20 +215,24 @@ export function createTmuxSpawnChannel(deps: TmuxChannelDeps = {}): SpawnChannel
         flagged: boolean,
         panePid: number | undefined,
       ): Promise<ChannelConclusion> {
+        // The escalation anchor: the grace + backstop window is measured from
+        // HERE against the injected clock (TX5's wall-clock accounting).
+        const graceAnchor = time.now();
         if (panePid !== undefined) {
           kill(panePid, "SIGTERM");
         }
-        const afterGrace = await pollWindow(input.graceMs + input.backstopMarginMs);
+        const afterGrace = await pollWindow(input.graceMs + input.backstopMarginMs, graceAnchor);
         if (afterGrace === "dead") {
           return { kind: "session-concluded", timedOut: flagged };
         }
         if (afterGrace !== "alive") {
           return { kind: "infra", message: afterGrace.anomaly };
         }
+        const killAnchor = time.now();
         if (panePid !== undefined) {
           kill(panePid, "SIGKILL");
         }
-        const afterKill = await pollWindow(pollIntervalMs);
+        const afterKill = await pollWindow(pollIntervalMs, killAnchor);
         if (afterKill === "dead") {
           return { kind: "session-concluded", timedOut: flagged };
         }
@@ -284,9 +308,14 @@ export function createTmuxSpawnChannel(deps: TmuxChannelDeps = {}): SpawnChannel
       }
 
       // ── TX4: observe pane_pid (never a conclusion), then poll liveness
-      //    until death or the channel's own timer fires (TX5).
+      //    until death or the channel's own timer fires (TX5). The timeout
+      //    window is anchored HERE — the observed attempt's start (the create
+      //    and pin invocations are each seam-bounded already); every client
+      //    invocation from this point (list-panes included) consumes the
+      //    window on the injected clock.
+      const observeAnchor = time.now();
       const panePid = await resolvePanePid();
-      const preTimeout = await pollWindow(input.timeoutMs);
+      const preTimeout = await pollWindow(input.timeoutMs, observeAnchor);
       if (preTimeout === "dead") {
         return { kind: "session-concluded", timedOut: false };
       }

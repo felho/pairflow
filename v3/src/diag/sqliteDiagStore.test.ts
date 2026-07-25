@@ -595,6 +595,59 @@ describe("runner rows — the debug-bundle projection EXCLUDES the runner fields
       main.close();
     }
   });
+
+  it("a STORED spawn_outcome/name_collision runner row: the closed projection EXCLUDES the spawn fields — the token never leaks into the bundle surface (packet ch9-p4a DG; the exclusion set unchanged)", async () => {
+    const diagPath = tempDbPath();
+    buildRawDiag(diagPath, {
+      rows: [
+        {
+          instanceId: "inst-1",
+          body: JSON.stringify({
+            source: "runner",
+            kind: "spawn_outcome",
+            instanceId: "inst-1",
+            contextPacketId: "inst-1@v2",
+            attemptId: "att-1",
+            spawnOutcome: "name_collision",
+            spawnDetail: "tmux stderr tail (secret-marker)",
+          }),
+        },
+      ],
+    });
+    const diag = openDiagStore(diagPath, createControlledClock(0));
+    const main = openStore(":memory:", createControlledClock(0));
+    try {
+      await main.store.createInstance(BUNDLE_INSTANCE);
+      const bundle = await createDebugBundleExporter(
+        main.store,
+        redactPayloadsPolicy,
+        diag.reader,
+      ).exportDebugBundle("inst-1");
+      expect(bundle).not.toBeNull();
+      const section = bundle?.rejectedInputs;
+      expect(section?.status).toBe("present");
+      if (section?.status !== "present") return;
+      expect(section.rows).toHaveLength(1);
+      const row = section.rows[0];
+      // The row itself appears under the closed kind/source/at/ordinal
+      // projection — every spawn-specific field structurally absent.
+      expect(row?.kind).toBe("spawn_outcome");
+      expect(row?.source).toBe("runner");
+      const keys = Object.keys(row ?? {});
+      expect(keys).not.toContain("spawnOutcome");
+      expect(keys).not.toContain("spawnDetail");
+      expect(keys).not.toContain("attemptId");
+      expect(keys).not.toContain("contextPacketId");
+      // Neither the collision token nor the untrusted tail leaks anywhere
+      // into the serialized bundle.
+      const serialized = JSON.stringify(bundle);
+      expect(serialized).not.toContain("name_collision");
+      expect(serialized).not.toContain("secret-marker");
+    } finally {
+      diag.close();
+      main.close();
+    }
+  });
 });
 
 // ===========================================================================

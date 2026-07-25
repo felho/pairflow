@@ -125,6 +125,23 @@ describe("disciplinedSpawn — SD1 the shared spawn discipline seam", () => {
     expect(JSON.parse(c.stdout)).toEqual({ FOO: "bar", PATH: null, HOME: null });
   });
 
+  it("chunk-split multibyte decoding: a multibyte char split across two flushed writes decodes ONCE at conclusion (never per chunk), and stdoutBytes carries the EXACT raw bytes", async () => {
+    // "é" is 0xC3 0xA9. The child writes the two bytes in SEPARATE flushes with
+    // a delay, so the seam receives them as separate chunks. Per-chunk decoding
+    // corrupts each half to U+FFFD; the one-shot decode at conclusion is exact,
+    // and the raw-bytes field (GR4's hashing input) is byte-identical.
+    const c = await nodeScript(
+      "const b = Buffer.from([0xc3, 0xa9]);" +
+        "process.stdout.write(b.subarray(0, 1));" +
+        "setTimeout(() => { process.stdout.write(b.subarray(1)); process.exit(0); }, 150);",
+    );
+    expect(c.kind).toBe("exit");
+    if (c.kind !== "exit") return;
+    expect(c.code).toBe(0);
+    expect(c.stdout).toBe("é");
+    expect(c.stdoutBytes).toEqual(Buffer.from([0xc3, 0xa9]));
+  });
+
   it("explicit cwd honored: the child runs in exactly the passed directory", async () => {
     const dir = tempRoot();
     const c = await nodeScript("process.stdout.write(process.cwd())", { cwd: dir });

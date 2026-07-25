@@ -959,18 +959,63 @@ note — the file is outside this boundary and the referenced consumer
 (3) `tmuxChannel.test.ts` paces real-tmux polling with
 `node:timers/promises` delay (a controlled clock cannot advance a
 real tmux server; justified in-file — a gate-2 look item);
-(4) `gitStatusHash` hashes the UTF-8 re-encoding of the captured
-porcelain text (byte-identical for valid-UTF-8 output);
-(5) the channel's timeout/grace/backstop windows advance from
-accumulated injected-wait durations at poll-interval grain
-(IC-D-clean, deterministic — mechanism below the packet's letter);
+(4) RETIRED by the gate-2 aftermath — `gitStatusHash` now hashes the
+RAW porcelain bytes (the seam's `stdoutBytes`), GR4's letter
+realized exactly;
+(5) RETIRED by the gate-2 aftermath — the channel's windows are now
+wall-clock deltas on an injected `TimeSource` (IC-D-clean), TX5's
+"on `timeoutMs` firing" realized at observation grain;
 (6) a live-pin ABORT whose kill signals ARE deliverable concludes
 through the shared TX7 precedence as `foreign_kill`
 (`termForwarded`, unflagged) — a bounded same-cost ambiguity between
 attempt-consuming classes (the CL1 grey-class precedent); the
 declared absence lane lands `spawn_infra` as written.
 
-Aftermath: <filled after the build-close arm gate.>
+Aftermath (the gate-2 folds — arm verdict on commit `e27f33ac`:
+FINDINGS, 2×P1 product + 1×P2 test-evidence + 1×P2 packet-docs; all
+folded; fix AUTHOR: a fresh-context aftermath agent, packaged
+finding-context — the §4 default; orchestrator-verified):
+
+1. **GR4 raw bytes (P1, product):** the seam's per-chunk UTF-8
+   decode corrupted chunk-split multibyte sequences and the runner
+   hashed a re-encoding. Fold: the seam accumulates Buffer chunks,
+   decodes ONCE at conclusion, and the exit conclusion gains
+   `stdoutBytes?: Buffer` (raw bytes — ALWAYS set by the real seam;
+   OPTIONAL at the type so out-of-boundary synthetic-conclusion
+   constructors stay untouched, a bytes-less conclusion landing the
+   GR4 sentinel fail-closed, never a re-encode). `gitStatusHash` =
+   sha256 over the raw bytes. This is a REVIEWED seam-shape
+   extension (the P3b-F1 seam; recorded here per the never-silent
+   seam-change rule, reviewed by the gate-2 re-check). RED-proven:
+   the chunk-split lane fails against the pre-fix seam.
+2. **TX5 wall-clock windows (P1, product):** poll-count accounting
+   excluded client-invocation time, stretching the windows. Fold:
+   `TmuxChannelDeps` gains a REQUIRED `time: TimeSource`; every
+   window (timeout, grace, backstop, kill-session retry) is a
+   `time.now()` delta from its anchor, firing at the first
+   observation at/after the deadline. RED-proven: the
+   slow-client sensitivity lane fails under poll-count accounting.
+3. **Missing sensitivity members (P2, test-evidence):** added — GR4
+   exact-sha + post-conclusion mutation proof; GR5 complete
+   timeout/runner_error evidence keysets; GR8 exact clamp ceiling
+   (seam-input spy); TX3 non-duplicate nonzero create → infra; KC
+   non-ready C36 sibling; TX6 deliverable-signal live-abort
+   (→ `foreign_kill`, the note-6 outcome driven) + the
+   pre-abort-written-result branch (→ the recorded outcome, never
+   `spawn_infra`); DG bundle-exclusion lane. Tests 1703 → 1714.
+4. **Build-record accuracy (P2, packet-docs):** notes (4)/(5)
+   rewritten above (both mechanisms now realize the letters); the
+   arm judged notes (1)/(2)/(3)/(6) honest as written.
+
+Receipt/probe status: the gate-2 receipt audit passed (6/6 valid);
+the mutation-pilot dual-run (boundary-scoped Stryker) recorded:
+covered-mutant score 83.04% overall — kernel 90.7 / testkit 97.4 /
+spawn 88.6 / actorAdapter 87.7 / diag 76.5 covered; the
+subprocess-tested files (processGateRunner / spawnChannel /
+tmuxChannel) report no-coverage under the Stryker profile — the T1
+DECLARED partiality (their proof lives in the subprocess suites +
+the receipt-backed probes). Pilot labels: the six build probes are
+code-mutation-grade catches; no input-domain catch this packet.
 
 ```json
 {
@@ -978,7 +1023,7 @@ Aftermath: <filled after the build-close arm gate.>
     "class": "operability",
     "prediction": { "predicted": "projection", "reasoning": "machinery realization of ratified C21/C23 rows over probed substrate; the P4 row carried no pre-registered class (human-mode row) — projection inferred from the draft's density", "discovered": "projection" },
     "provenance": { "anchored": 3, "derived": 9, "new_decision": 7 },
-    "rounds": { "review": 5, "doc_refinement": 0, "implementation": 1 },
+    "rounds": { "review": 5, "doc_refinement": 0, "implementation": 2 },
     "stops": [{ "type": "4:flagged-approve", "what": "first-of-a-kind + seven new-decision rows riding as approve-ratified flags; approve renewed after the arm gate-1 folds (content changed post-approve)", "resolution": "human approve on 82110c1d, re-approve on 543d5b48" }],
     "detector_misses": [
       {

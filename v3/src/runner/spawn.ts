@@ -27,6 +27,14 @@ export type SpawnConclusion =
        * reclassified even when the timer callback outran the exit event, P6h). */
       readonly timedOut: boolean;
       readonly stdout: string;
+      /** The RAW captured stdout bytes (GR4's hashing input, packet ch9-p4a
+       * aftermath): `stdout` is the ONE-shot utf8 decode of exactly these
+       * bytes at conclusion. ALWAYS present on the seam's own conclusions;
+       * OPTIONAL in the type only so synthetic exit conclusions (the
+       * session-grain classifier's, scripted test fixtures) stay
+       * constructible. Byte consumers treat absence as measurement failure —
+       * NEVER re-encode the decoded text. */
+      readonly stdoutBytes?: Buffer;
       readonly stderr: string;
     }
   | { readonly kind: "infra"; readonly message: string };
@@ -90,15 +98,19 @@ export function disciplinedSpawn(input: DisciplinedSpawnInput): Promise<SpawnCon
 
     let settled = false; // the EXIT/INFRA settle (attribution decided ONCE)
     let timedOut = false;
-    let stdout = "";
-    let stderr = "";
+    // Raw Buffer accumulation, decoded ONCE at conclusion: a multibyte
+    // sequence split across chunks would corrupt (U+FFFD) under per-chunk
+    // decoding, and hash consumers (GR4's gitStatusHash) need the RAW bytes —
+    // never a re-encoding of decoded text.
+    const stdoutChunks: Buffer[] = [];
+    const stderrChunks: Buffer[] = [];
     let graceTimer: ReturnType<typeof setTimeout> | undefined;
 
     child.stdout?.on("data", (chunk: Buffer) => {
-      stdout += chunk.toString("utf8");
+      stdoutChunks.push(chunk);
     });
     child.stderr?.on("data", (chunk: Buffer) => {
-      stderr += chunk.toString("utf8");
+      stderrChunks.push(chunk);
     });
 
     // The seam-owned timer: SIGTERM at the deadline, then the bounded-grace
@@ -147,13 +159,15 @@ export function disciplinedSpawn(input: DisciplinedSpawnInput): Promise<SpawnCon
         }
         resolved = true;
         clearTimeout(drainTimer);
+        const stdoutBytes = Buffer.concat(stdoutChunks);
         resolve({
           kind: "exit",
           code: code ?? null,
           signal: signal ?? null,
           timedOut,
-          stdout,
-          stderr,
+          stdout: stdoutBytes.toString("utf8"),
+          stdoutBytes,
+          stderr: Buffer.concat(stderrChunks).toString("utf8"),
         });
       };
       // The resolution awaits stream close bounded by the drain deadline.

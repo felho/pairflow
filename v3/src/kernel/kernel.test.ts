@@ -1551,6 +1551,33 @@ describe("gate rung — the C36 runtime backstop plane (S5, dimension 3, both di
     expect(runner.records).toEqual([]);
   });
 
+  it("process binding × NON-READY runtime context (state 'requested') → the C36 backstop's non-ready lane: reject, ZERO runner calls, ZERO records, no commit", async () => {
+    // The ready(∅) sibling above pins `ref === null`; THIS lane pins the
+    // `state !== "ready"` half of the backstop (a drifted non-ready state
+    // reaching a process gate) — packet ch9-p4a KC family.
+    const cat = catalogOf({ "g.proc": processRegWith(exitCodeEffective) });
+    const runner = createScriptedProcessGateRunner([okResult(0, "ev-unused")]);
+    const { kernel, store } = await setupGatedReview({
+      pipeline: [{ uses: "g.proc" }],
+      admitCatalog: cat,
+      kernelCatalog: cat,
+      processRunner: runner,
+      runtimeContext: KERNEL_WORKTREE_SPEC,
+      instance: {
+        ...reviewInstance,
+        runtimeContext: { state: "requested", requestId: "req-bs5" },
+      },
+    });
+    await expectNoStateChange(store, "inst-1", async () => {
+      expect(await kernel.handle(reviewEmit("bs5", "CONVERGED", 1))).toEqual({
+        kind: "rejected",
+        reason: "runtime_context_required_for_process_gate",
+      });
+    });
+    expect(runner.calls).toEqual([]);
+    expect(runner.records).toEqual([]);
+  });
+
   it("process-FIRST form: the backstop precedes the FIRST projection read (ZERO reads)", async () => {
     const cat = catalogOf({ "g.proc": processRegWith(exitCodeEffective) });
     const runner = createScriptedProcessGateRunner([]);

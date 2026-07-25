@@ -14,7 +14,15 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import type { ContextPacket, DispatchIntent, Outcome } from "../domain/index.js";
 import type { DiagnosticEventBody } from "../ports/diagnostics.js";
-import { createActorAdapter, PAIRFLOW_EMIT, PAIRFLOW_PACKET } from "./actorAdapter.js";
+import type { TimeSource } from "../ports/time.js";
+import { createControlledClock } from "../testkit/index.js";
+import {
+  classifySessionConclusion,
+  createActorAdapter,
+  PAIRFLOW_EMIT,
+  PAIRFLOW_PACKET,
+  parseResult,
+} from "./actorAdapter.js";
 import type { DisciplinedSpawnInput, SpawnConclusion } from "./spawn.js";
 import { disciplinedSpawn, TimerKnobError } from "./spawn.js";
 import { createTmuxSpawnChannel } from "./tmuxChannel.js";
@@ -126,8 +134,26 @@ const FAKE_FAIL: SpawnConclusion = {
   stderr: "scripted client fault",
 };
 
-function channelWith(deps: TmuxChannelDeps = {}) {
-  return createTmuxSpawnChannel({ pollIntervalMs: 25, ...deps });
+/** A scripted clean/nonzero client conclusion (the seam's exit shape). */
+function exitConclusion(code: number, stdout = "", stderr = ""): SpawnConclusion {
+  return { kind: "exit", code, signal: null, timedOut: false, stdout, stderr };
+}
+
+/** The REAL-substrate binding of the channel's injected TimeSource: this file
+ * drives a real tmux server, so the wall clock IS the substrate's clock (the
+ * CHK-D-TESTCLOCK boundary — same rationale as the real `delay` pacing above).
+ * The scripted wall-clock-window lane binds the controlled clock instead. */
+const wallClock: TimeSource = {
+  // The real-tmux lanes' declared substrate-clock exception (the file-top
+  // CHK-D-TESTCLOCK note): a real session's death cannot be advanced by a
+  // controlled clock; the scripted wall-clock-window lane binds
+  // createControlledClock instead.
+  // eslint-disable-next-line no-restricted-properties
+  now: () => Date.now(),
+};
+
+function channelWith(deps: Partial<TmuxChannelDeps> = {}) {
+  return createTmuxSpawnChannel({ time: wallClock, pollIntervalMs: 25, ...deps });
 }
 
 interface LaunchOpts {
@@ -138,7 +164,7 @@ interface LaunchOpts {
   readonly timeoutMs?: number;
   readonly graceMs?: number;
   readonly backstopMarginMs?: number;
-  readonly deps?: TmuxChannelDeps;
+  readonly deps?: Partial<TmuxChannelDeps>;
   readonly attemptId?: string;
   readonly resultPath?: string;
 }
@@ -205,6 +231,29 @@ describe("tmuxChannel — TX2/TX3 session creation, confinement basis, collision
       deps: { tmuxBin: join(tempRoot(), "no-such-tmux") },
     });
     const c = await conclusion;
+    expect(c.kind).toBe("infra");
+  });
+
+  it("TX3: a NON-duplicate NONZERO create failure (an unreachable server socket) → infra, NEVER a guessed collision", async () => {
+    const name = sessionName();
+    const intercepted = interceptClient({
+      "new-session": () =>
+        Promise.resolve(
+          exitConclusion(
+            1,
+            "",
+            "error connecting to /private/tmp/tmux-0/no-such-socket (No such file or directory)\n",
+          ),
+        ),
+    });
+    const { conclusion } = launch({
+      actorArgv: [NODE, "-e", "process.exit(0)"],
+      name,
+      deps: { clientSpawn: intercepted.clientSpawn },
+    });
+    const c = await conclusion;
+    // Nonzero WITHOUT the duplicate-session stderr prefix: the fail-closed
+    // infra lane (→ spawn_infra at the adapter), never name_collision.
     expect(c.kind).toBe("infra");
   });
 
@@ -304,6 +353,62 @@ describe("tmuxChannel — TX5 session-timeout escalation (pane-grain TERM → in
   }, 20_000);
 });
 
+describe("tmuxChannel — TX5 wall-clock windows (the injected TimeSource is the deadline authority)", () => {
+  it("slow client invocations CONSUME the timeout window instead of stretching it: the escalation fires at the first observation at/after the configured deadline (RED under poll-count accounting)", async () => {
+    // FULLY SCRIPTED (no real tmux): the controlled clock is the only time.
+    const clock = createControlledClock(0);
+    let killSessionIssued = false;
+    const kills: { signal: string; at: number }[] = [];
+    const intercepted = interceptClient({
+      "new-session": () => Promise.resolve(exitConclusion(0)),
+      "set-option": () => Promise.resolve(exitConclusion(0)),
+      "list-panes": () => Promise.resolve(exitConclusion(0, "4242\n")),
+      "has-session": () => {
+        // EACH liveness poll's client invocation consumes a LARGE chunk of
+        // injected time — the slow-tmux-client sensitivity input.
+        clock.advance(7_000);
+        return Promise.resolve(exitConclusion(killSessionIssued ? 1 : 0));
+      },
+      "kill-session": () => {
+        killSessionIssued = true;
+        return Promise.resolve(exitConclusion(0));
+      },
+    });
+    const channel = createTmuxSpawnChannel({
+      time: clock,
+      pollIntervalMs: 1_000,
+      clientSpawn: intercepted.clientSpawn,
+      wait: (ms) => {
+        clock.advance(ms);
+        return Promise.resolve();
+      },
+      kill: (_pid, signal) => {
+        kills.push({ signal, at: clock.now() });
+      },
+    });
+    const conclusion = await channel.launch({
+      wrapperArgv: [NODE, "-e", "process.exit(0)"], // never spawned — all client verbs scripted
+      cwd: tempRoot(),
+      env: { PATH: process.env.PATH ?? "" },
+      sessionName: "p4atest-scripted-clock",
+      timeoutMs: 30_000,
+      graceMs: 1_000,
+      backstopMarginMs: 1_000,
+    });
+    expect(conclusion).toEqual({ kind: "session-concluded", timedOut: true });
+    // The deadline authority is the injected TimeSource: the pane TERM fires
+    // at the FIRST observation at/after 30 000 injected ms. Under the old
+    // poll-count accounting (pollIntervalMs per cycle, client time EXCLUDED)
+    // it would need 30 cycles ≈ 240 000 injected ms — RED here.
+    expect(kills[0]?.signal).toBe("SIGTERM");
+    expect(kills[0]?.at).toBeGreaterThanOrEqual(30_000);
+    expect(kills[0]?.at).toBeLessThanOrEqual(30_000 + 8_000); // one observation grain
+    // The escalation stayed ordered and bounded on the same clock.
+    expect(kills[1]?.signal).toBe("SIGKILL");
+    expect(kills[1]?.at).toBeGreaterThanOrEqual((kills[0]?.at ?? 0) + 2_000);
+  });
+});
+
 describe("tmuxChannel — TX6 the pin-failure branches (dead-benign / live-abort)", () => {
   it("a pin failing on an ALREADY-DEAD session (the fast-exit race) is BENIGN: observation proceeds and the present result is honored", async () => {
     const name = sessionName();
@@ -365,6 +470,88 @@ describe("tmuxChannel — TX6 the pin-failure branches (dead-benign / live-abort
     expect(c).toEqual({ kind: "session-concluded", timedOut: false });
     expect(intercepted.verbs.filter((v) => v === "kill-session")).toHaveLength(2);
     expect(await isReallyAlive(name)).toBe(true); // the declared orphan residual
+  }, 20_000);
+
+  it("the live-abort with DELIVERABLE signals: the escalation TERM reaches the wrapper, its signal record is WRITTEN, and the UNFLAGGED conclusion lands foreign_kill through TX7's shared precedence", async () => {
+    const name = sessionName();
+    const cwd = tempRoot();
+    const ready = join(cwd, "actor-ready");
+    const intercepted = interceptClient({
+      // The pin fault returns only once the ACTOR is running — the wrapper's
+      // TERM handler is installed before it spawns the actor, so the abort
+      // TERM is guaranteed deliverable-and-handled (no boot race).
+      "set-option": async () => {
+        for (let i = 0; i < 400 && !existsSync(ready); i += 1) {
+          await delay(25);
+        }
+        return FAKE_FAIL;
+      },
+    });
+    // REAL kill seam (the default): the abort TERM actually delivers to the pane.
+    const { conclusion, resultPath } = launch({
+      actorArgv: [
+        NODE,
+        "-e",
+        `require('node:fs').writeFileSync(${JSON.stringify(ready)}, '1'); setInterval(() => {}, 1000);`,
+      ],
+      name,
+      cwd,
+      timeoutMs: 30_000,
+      graceMs: 1_000,
+      backstopMarginMs: 500,
+      deps: { clientSpawn: intercepted.clientSpawn },
+    });
+    const c = await conclusion;
+    expect(c).toEqual({ kind: "session-concluded", timedOut: false });
+    expect(await isReallyAlive(name)).toBe(false);
+    // The wrapper RECEIVED the abort TERM, forwarded it, and wrote its record.
+    const record = parseResult(resultPath, "att-1");
+    expect(record).toMatchObject({ signal: "SIGTERM", termForwarded: true });
+    // TX7 unflagged (the channel's timer did not fire): a signal record under
+    // NO fired timer is C21's foreign_kill class — the documented
+    // shared-precedence outcome, never spawn_infra.
+    expect(classifySessionConclusion(false, record)).toEqual({
+      kind: "result",
+      result: { kind: "infra_failure", class: "foreign_kill" },
+    });
+  }, 20_000);
+
+  it("a result ALREADY WRITTEN at the abort is HONORED: the recorded outcome rides TX7's precedence — never spawn_infra", async () => {
+    const name = sessionName();
+    const cwd = tempRoot();
+    const resultPath = join(cwd, "result.json");
+    // The pre-abort-WRITTEN result: a valid record exists before the pin
+    // fault aborts the attempt.
+    writeFileSync(
+      resultPath,
+      JSON.stringify({ attemptId: "att-1", exitCode: 4, signal: null, termForwarded: false }),
+    );
+    const intercepted = interceptClient({
+      "set-option": () => Promise.resolve(FAKE_FAIL),
+    });
+    // Undeliverable pane signals (noop kill): the wrapper never concludes and
+    // never overwrites the record; the kill-session backstop bounds the walk.
+    const { conclusion } = launch({
+      actorArgv: [NODE, "-e", "setInterval(() => {}, 1000)"],
+      name,
+      cwd,
+      resultPath,
+      timeoutMs: 30_000,
+      graceMs: 700,
+      backstopMarginMs: 300,
+      deps: { kill: () => {}, clientSpawn: intercepted.clientSpawn },
+    });
+    const c = await conclusion;
+    expect(c).toEqual({ kind: "session-concluded", timedOut: false });
+    expect(await isReallyAlive(name)).toBe(false);
+    // TX7 over the surviving pre-abort record: the recorded nonzero outcome
+    // is honored (completed work is never reclassified) — never spawn_infra.
+    const record = parseResult(resultPath, "att-1");
+    expect(record).toMatchObject({ attemptId: "att-1", exitCode: 4 });
+    expect(classifySessionConclusion(false, record)).toEqual({
+      kind: "result",
+      result: { kind: "infra_failure", class: "nonzero_exit" },
+    });
   }, 20_000);
 });
 
@@ -445,11 +632,17 @@ describe("tmuxChannel — TX4 liveness authority (list-panes never infra; poll a
 
 describe("tmuxChannel — construction knob validation (the shared validator)", () => {
   it("throws FAIL-CLOSED on invalid channel knobs", () => {
-    expect(() => createTmuxSpawnChannel({ clientTimeoutMs: 500 })).toThrow(TimerKnobError);
-    expect(() => createTmuxSpawnChannel({ clientGraceMs: Number.NaN })).toThrow(TimerKnobError);
-    expect(() => createTmuxSpawnChannel({ pollIntervalMs: 0 })).toThrow(TimerKnobError);
-    expect(() => createTmuxSpawnChannel({})).not.toThrow();
-    expect(() => createTmuxSpawnChannel({ pollIntervalMs: 250 })).not.toThrow();
+    expect(() => createTmuxSpawnChannel({ time: wallClock, clientTimeoutMs: 500 })).toThrow(
+      TimerKnobError,
+    );
+    expect(() => createTmuxSpawnChannel({ time: wallClock, clientGraceMs: Number.NaN })).toThrow(
+      TimerKnobError,
+    );
+    expect(() => createTmuxSpawnChannel({ time: wallClock, pollIntervalMs: 0 })).toThrow(
+      TimerKnobError,
+    );
+    expect(() => createTmuxSpawnChannel({ time: wallClock })).not.toThrow();
+    expect(() => createTmuxSpawnChannel({ time: wallClock, pollIntervalMs: 250 })).not.toThrow();
   });
 });
 
