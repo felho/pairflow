@@ -4596,3 +4596,22 @@ final CLEAN.
   DEFERRED by the user at P4a ("oké, hogy ebbe most nem megyünk
   bele"); candidate home: a later runner-observability slice or the
   teardown/health chapter. Route: boundary-review.
+
+- 2026-07-25 · ch9-P4a BUILD-CLOSE — gate-2 arm yield: 2 product P1s
+  the FOUR internal layers (panel ×5 rounds, fresh-implementer,
+  close ×2, gate-1 arm + re-check) all missed — (a) the seam's
+  per-chunk UTF-8 decode corrupting chunk-split multibyte output
+  (GR4 hashed a re-encoding, not raw bytes); (b) the tmux channel's
+  poll-count time accounting stretching the C19 windows (client-call
+  time uncounted). Both are BUILT-BODY defects invisible at spec
+  grain — the gate-2 sensitivity pass is earning its keep (arm-yield
+  data for the boundary's transitional-arm evaluation). Aftermath
+  folded same-day (b03ad399), re-check CLEAN.
+- 2026-07-25 · ch9-P4a BUILD-CLOSE — arm infra: gate-2's first run
+  timed out at 600s mid-run (the doc-review budget is tight for a
+  build-close leg — the 1200s mode was used on the retry paths);
+  then a genuine codex-backend outage (HTTP 503, status-page
+  confirmed) blocked the gate ~40 min — surfaced as a STOP
+  (wait/waive, the user elected wait), resolved by status-page-gated
+  re-probes. The unavailable-arm STOP discipline held: no silent
+  skip, probes ≠ the formal retry.
