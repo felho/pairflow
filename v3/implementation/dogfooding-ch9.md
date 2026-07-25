@@ -6,8 +6,13 @@ It exercises the SHIPPED operator surface end-to-end against **real tmux**,
 journeys deliberately exclude (an interactive `tmux attach` needs an operator
 tty; the CI lane drives the exec seam at unit grain — packet ch9-p4b, AT2/F6).
 
-Everything below is the shipped CLI (`pnpm v3:cli -- <verb> …`) with production
-bindings. No test seams.
+Everything below is the shipped CLI (`pnpm v3:cli <verb> …`) with production
+bindings. No test seams. Invocation notes (dogfooded 2026-07-25): current
+pnpm forwards a `--` separator AS the verb — use the bare `pnpm v3:cli
+<verb> …` form; when piping the JSON (`| jq`), use `pnpm --silent` so the
+pnpm banner stays off stdout. Run `create`/`start` BEFORE a `runner run
+--once` tick — a tick that polls earlier legitimately sees nothing (the
+next tick converges).
 
 ## Prerequisites
 
@@ -21,10 +26,19 @@ bindings. No test seams.
 ## Fixtures
 
 A single-step worktree template (`local-pair-v0@1.yaml`) whose `config.repo`
-points at your throwaway host repo. For the gate leg (step 5), uncomment the
-`gates:` block — it is a **step-level sibling of `transitions:`** (same
-four-space indent as `transitions:`, NOT nested under it); just remove the
-`# ` prefix from each of its four lines:
+points at your throwaway host repo. For the gate leg (step 5), replace the
+commented `gates:` block with the READY-MADE form below (hand-uncommenting
+invites an indentation slip — live repro at the 2026-07-25 checkpoint; the
+`gates:` key is a step-level sibling of `transitions:` at four spaces):
+
+```yaml
+    gates:
+      CONVERGED:
+        - uses: external.process
+          config: { command: "true", timeoutMs: 5000, output: { mode: exitCode }, onExit: { zero: allow, nonzero: block } }
+```
+
+The base template:
 
 ```yaml
 ref: { id: local-pair-v0, version: 1 }
@@ -65,9 +79,9 @@ The `--actor-cmd` binding is one JSON template:
    live worktree):
 
    ```
-   pnpm v3:cli -- create --db "$DB" --task dogfood --templates-dir "$TDIR"
+   pnpm v3:cli create --db "$DB" --task dogfood --templates-dir "$TDIR"
    #   → { "kind": "created", "instanceId": "<id>", "version": 1 }
-   pnpm v3:cli -- start "<id>" --db "$DB" --templates-dir "$TDIR"
+   pnpm v3:cli start "<id>" --db "$DB" --templates-dir "$TDIR"
    #   → { "kind": "accepted" }   (the required-context START rides the async READY path)
    ```
 
@@ -75,7 +89,7 @@ The `--actor-cmd` binding is one JSON template:
    read projection; every member carries a value or a named discriminant):
 
    ```
-   pnpm v3:cli -- detail "<id>" --db "$DB" --templates-dir "$TDIR"
+   pnpm v3:cli detail "<id>" --db "$DB" --templates-dir "$TDIR"
    #   → …, "runner": { "errand": { "unavailable": "no-runner-ledger" },
    #                    "attach": { "available": false, "reason": "no-live-attempt" },
    #                    "runtimeContextSummary": { "kind": "worktree", "path": …, "branch": … } }
@@ -87,7 +101,7 @@ The `--actor-cmd` binding is one JSON template:
    foreground and observe through `attach` / `detail` / `tail --diag`:
 
    ```
-   pnpm v3:cli -- runner run --db "$DB" --templates-dir "$TDIR" \
+   pnpm v3:cli runner run --db "$DB" --templates-dir "$TDIR" \
      --actor-cmd '{"cmd":"'"$(command -v node)"'","args":["'"$TDIR"'/emit.mjs"]}' --once
    #   → { "errands": [ { "instanceId": "<id>", "state": "confirmed", … } ] }
    ```
@@ -101,8 +115,8 @@ The `--actor-cmd` binding is one JSON template:
    then, while an attempt is live:
 
    ```
-   pnpm v3:cli -- attach "<id>" --db "$DB"            # observe (read-only, tmux -r)
-   pnpm v3:cli -- attach "<id>" --db "$DB" --takeover # writable takeover
+   pnpm v3:cli attach "<id>" --db "$DB"            # observe (read-only, tmux -r)
+   pnpm v3:cli attach "<id>" --db "$DB" --takeover # writable takeover
    ```
 
    A non-attachable state is a clean `not_found` / exit-3 lane
@@ -117,7 +131,7 @@ The `--actor-cmd` binding is one JSON template:
    the derived sibling path:
 
    ```
-   pnpm v3:cli -- detail "<id>" --db "$DB"   # instance.kernelStatus == "TERMINAL", terminalDisposition == "done"
+   pnpm v3:cli detail "<id>" --db "$DB"   # instance.kernelStatus == "TERMINAL", terminalDisposition == "done"
    # the durable evidence: "$DB".process-evidence.sqlite carries a kind:"ok"
    # record whose headSha is the worktree HEAD (never the fail-closed sentinel).
    ```
@@ -126,7 +140,7 @@ The `--actor-cmd` binding is one JSON template:
    attempt exited without an emit, the errand rests `unconfirmed`:
 
    ```
-   pnpm v3:cli -- runner respawn "<id>" --db "$DB" --templates-dir "$TDIR" \
+   pnpm v3:cli runner respawn "<id>" --db "$DB" --templates-dir "$TDIR" \
      --actor-cmd '{"cmd":"'"$(command -v node)"'","args":["'"$TDIR"'/emit.mjs"]}'
    #   → the post-call errand row as data (state "confirmed" on a successful
    #     re-spawn); the respawn attempt is UNBUDGETED (remaining budget unchanged).

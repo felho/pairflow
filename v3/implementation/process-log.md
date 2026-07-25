@@ -4649,3 +4649,30 @@ final CLEAN.
   break still fails 3×, sensitivity kept). Boundary candidate: load
   robustness of real-substrate tests is a SUITE-level property —
   price it at the packet that grows the load.
+- 2026-07-25 · ch9 CLOSE — DOGFOODING CHECKPOINT EXECUTED (hand-driven,
+  user + orchestrator paired): the full DoD sequence live — create →
+  start → worktree provisioned → runner run (tmux delivery, errand
+  confirmed) → attach OBSERVED on a live actor → gate leg (real
+  `external.process` spawn in the worktree, `verdict: allow,
+  reason: sys:exit_zero`, evidence ref recorded, TERMINAL/done) →
+  the tier-2 REAL-LLM leg (codex gpt-5.6-sol as the actor via the
+  shipped `--actor-cmd` + `--env-allow HOME`, watched LIVE through
+  read-only attach writing DOGFOOD.md in the worktree, errand
+  confirmed). W1 PRICED: the actor lane's `--env-allow` sufficed for
+  a real LLM CLI (PATH + HOME + PAIRFLOW_*); the gate lane needed no
+  widening for the exercised command. Findings: (a) the runbook's
+  `pnpm v3:cli -- <verb>` form breaks on current pnpm (the `--` is
+  forwarded as the verb) — runbook fixed to the bare form + a
+  `--silent`-for-piping note; (b) EPIPE on a closed pipe (`| jq`
+  parse-fail, `| head`) CRASHES the CLI with a raw stack — a product
+  robustness item, boundary-routed (capture-don't-fix at close);
+  (c) the runbook's uncomment-the-gates instruction invites an
+  indentation slip (live repro: 5-space `gates:`) — runbook now
+  carries the ready-made uncommented block; the fail-at-create
+  validator's stage/line/col finding was precise and helpful;
+  (d) a `--once` tick polled BEFORE the target's create/start sees
+  nothing — expected durable-convergence behavior, runbook now notes
+  the ordering; (e) tmux status-bar truncates the long session name
+  (cosmetic, non-issue); (f) the post-aftermath `NoErrand`
+  distinct-name lane observed live on a real operator mistake — the
+  fold earning its keep same-day.
