@@ -70,8 +70,8 @@ export interface DeliveryLoop {
   /** The cadence run (D4): tick, then wait(pollMs), repeat until the injected
    * wait signals stop (rejects/throws — the scripted-exhaustion pattern). */
   run(): Promise<void>;
-  /** The L5 re-spawn edge (unconfirmed → attempting, unbudgeted). C25's verb
-   * rides this at ch9-P4. */
+  /** The L5 re-spawn edge (unconfirmed → attempting, unbudgeted). C25's
+   * `runner respawn` verb rides this — packet ch9-p4b. */
   respawn(instanceId: string, contextPacketId: string): Promise<void>;
 }
 

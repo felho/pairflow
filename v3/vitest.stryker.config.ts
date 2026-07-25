@@ -27,6 +27,14 @@ export default defineConfig({
       "src/runner/processGateRunner.test.ts",
       "src/runner/spawnChannel.test.ts",
       "src/runner/tmuxChannel.test.ts",
+      // packet ch9-p4b (T1): the operator-surface test files — the unit suite
+      // drives real child processes where the lane demands them (the
+      // liveness/exec seams), and the journeys exec the repo-root tsx bin +
+      // real tmux + git; the same declared subprocess blind class, so mutation
+      // coverage for this packet's subprocess lanes is PARTIAL by the profile's
+      // own mechanism.
+      "src/cli/runnerCli.test.ts",
+      "src/cli/runnerJourney.test.ts",
     ],
   },
 });

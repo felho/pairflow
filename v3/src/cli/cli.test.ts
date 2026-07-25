@@ -73,6 +73,12 @@ function testDeps(options: TestDepsOptions = {}): CliDeps {
     // exercised by every seeded test). Tests overriding env re-state it
     // (or deliberately omit it — the A1 missing lane).
     env: options.env ?? { PAIRFLOW_V3_TEMPLATES: join(process.cwd(), "templates") },
+    // packet ch9-p4b (T1): the additive CliDeps growth — deterministic in the
+    // suite (the runner plane's attempt/worker ids and the attach exec seam;
+    // the detail/swap lanes here never reach runInteractive).
+    attemptIdSource: () => `attempt-${String((ids += 1))}`,
+    workerIdSource: () => `cli-worker-${String((ids += 1))}`,
+    runInteractive: () => Promise.resolve(0),
   };
 }
 

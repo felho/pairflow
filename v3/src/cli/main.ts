@@ -45,15 +45,20 @@ import {
   withStoreAndDiag,
 } from "./common.js";
 import { CliError, EXIT } from "./contract.js";
-import {
-  createFailClosedProcessGateRunner,
-  deriveProcessEvidenceDbPath,
-} from "./failClosedProcessGateRunner.js";
+import { deriveProcessEvidenceDbPath } from "./failClosedProcessGateRunner.js";
 import type { CliDeps } from "./runtime.js";
 import { productionDeps } from "./runtime.js";
 import { createFileDefinitionStore } from "../definition/index.js";
 import { createGateRegistry } from "../gates/index.js";
 import { createStaticProviderRegistry } from "../ports/index.js";
+import { createProcessGateRunner } from "../runner/index.js";
+import {
+  ATTACH_VERB_OPTIONS,
+  enrichDetailRunner,
+  RUNNER_VERB_OPTIONS,
+  verbAttach,
+  verbRunner,
+} from "./runnerVerbs.js";
 
 /**
  * The operator CLI, normal entrypoint (plan §6.5, packets ch6-P4a ·
@@ -240,7 +245,7 @@ function parseRunOverrides(
  * kernel exists (R2/DG4). The join is legal by ordering — ch9-P1 realized the
  * FAILED channel this provider routes onto.
  */
-function createProductionProviderRegistry(): {
+export function createProductionProviderRegistry(): {
   readonly registry: ProviderRegistry;
   readonly provider: WorktreeProvider;
 } {
@@ -286,7 +291,7 @@ function runnerDiagEvent(
  * outcome (the event records the provider's REPORT, never the kernel's
  * verdict), THEN delivers.
  */
-function bindProductionCompletionSink(
+export function bindProductionCompletionSink(
   provider: WorktreeProvider,
   kernel: Kernel,
   diag: DiagnosticsSink,
@@ -319,8 +324,17 @@ async function withKernel<T>(
   run: (kernel: Kernel) => Promise<T>,
 ): Promise<T> {
   return withStoreAndDiag(ctx, async (handle, diag) => {
-    const processRunner = createFailClosedProcessGateRunner(
+    // CW1 (packet ch9-p4b): the OPERATOR gate-runner swap — the real
+    // `ProcessGateRunner` (C21, GR1–GR8) replaces the fail-closed slot on the
+    // shipped operator path. Options defaulted (env allowlist `{ PATH }`, grace
+    // 10 000 ms — W1 is the gate-lane widening boundary); the evidence home is
+    // the derived sibling path unchanged (GR5's one-home rule — the slot's
+    // `resolve` reads the same rows). A shipped operator verb reaching a
+    // process gate now SPAWNS it for real and the kernel classifies the result.
+    const processRunner = createProcessGateRunner(
       deriveProcessEvidenceDbPath(resolveDbPath(flagString(ctx, "db"), ctx.deps)),
+      { time: ctx.deps.time },
+      {},
     );
     const { registry, provider } = createProductionProviderRegistry();
     try {
@@ -357,12 +371,19 @@ async function verbList(ctx: VerbContext): Promise<number> {
 
 async function verbDetail(ctx: VerbContext): Promise<number> {
   const id = requireInstanceId(ctx);
+  // DT1 (packet ch9-p4b): the detail doc gains ONE sibling `runner` key beside
+  // the byte-preserved kernel detail. The section is CLI-layer composition (the
+  // floor MODULE stays kernel-only). It stays on `withStore` — the enrichment's
+  // reader facade rides the NOOP diag sink, so a committed-only detail read
+  // still NEVER opens the diag file (C3); the CF3 flip's write is to the
+  // errand ledger alone.
   return withStore(ctx, async (handle) => {
     const detail = await createFloor(handle.store).getInstanceDetail(id);
     if (detail === null) {
       throw notFound("UnknownInstance", `no such run: '${id}'`);
     }
-    ctx.sinks.out(JSON.stringify(detail));
+    const runner = await enrichDetailRunner(ctx, handle.store, detail.instance);
+    ctx.sinks.out(JSON.stringify({ ...detail, runner }));
     return EXIT.ok;
   });
 }
@@ -682,10 +703,14 @@ async function verbSubmit(ctx: VerbContext): Promise<number> {
   // passes through unchanged.
   try {
     return await withStoreAndDiag(ctx, async (handle, diag) => {
-      // W2 (ch11-P3b): the fail-closed process-gate runner on the derived-path
-      // evidence sibling — never spawns, never allows.
-      const processRunner = createFailClosedProcessGateRunner(
+      // CW1 (packet ch9-p4b): the OPERATOR gate-runner swap on the submit write
+      // site too — the real `ProcessGateRunner` (C21) on the derived-path
+      // evidence sibling, replacing the fail-closed slot. Options defaulted
+      // (env allowlist `{ PATH }`, grace 10 000 ms — W1's gate-lane boundary).
+      const processRunner = createProcessGateRunner(
         deriveProcessEvidenceDbPath(resolveDbPath(flagString(ctx, "db"), ctx.deps)),
+        { time: ctx.deps.time },
+        {},
       );
       // R1: the SAME shared production registry helper (the empty-map call
       // retired). This site builds a kernel but NEVER provisions (submit
@@ -722,7 +747,11 @@ async function verbSubmit(ctx: VerbContext): Promise<number> {
 
 const VERB_OPTIONS: Record<string, VerbOptions> = {
   list: { db: { type: "string" } },
-  detail: { db: { type: "string" } },
+  // DT2 (packet ch9-p4b): `detail` gains `--templates-dir` — the
+  // `templates-unavailable` summary member resolves the dir flag-first (the
+  // strict shell must admit the flag) BUT degrades in-doc rather than
+  // demanding it (the degrade-vs-demand election).
+  detail: { db: { type: "string" }, "templates-dir": { type: "string" } },
   timeline: { db: { type: "string" }, after: { type: "string" } },
   tail: {
     db: { type: "string" },
@@ -764,6 +793,11 @@ const VERB_OPTIONS: Record<string, VerbOptions> = {
     actor: { type: "string" },
     "templates-dir": { type: "string" },
   },
+  // RR1 (packet ch9-p4b): `VERB_OPTIONS["runner"]` is the UNION of both
+  // subverbs' flag sets — the shared dispatch shell strict-parses ONCE per
+  // top-level verb and each subverb HANDLER enforces its own partition.
+  runner: RUNNER_VERB_OPTIONS,
+  attach: ATTACH_VERB_OPTIONS,
 };
 
 const VERBS: Record<string, VerbHandler> = {
@@ -777,6 +811,11 @@ const VERBS: Record<string, VerbHandler> = {
   kickoff: verbKickoff,
   cancel: verbCancel,
   submit: verbSubmit,
+  // ch9-p4b: the operator runner plane — `runner run` / `runner respawn`
+  // (subverb dispatch) and top-level `attach`. Production seams are bound by
+  // default; the unit suite drives the handlers directly with scripted seams.
+  runner: verbRunner,
+  attach: verbAttach,
 };
 
 export async function runCli(

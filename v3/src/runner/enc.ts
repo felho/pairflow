@@ -37,7 +37,8 @@ export function enc(id: string): string {
  * RS4(b): the C23 SESSION-NAME derivation as an exported pure function —
  * `"pairflow-" + enc(instanceId) + "--" + enc(attemptId)`. Composition-bound
  * as the loop's `sessionNamer` at ch9-P3b (replacing nothing: P3a injected the
- * seam, this packet supplies the real value); its tmux CONSUMER arrives at P4.
+ * seam, this packet supplies the real value); its tmux CONSUMER is the
+ * `runner run` composition's tmux channel (CW3, packet ch9-p4b).
  * NAME COMPONENTS never embed raw ids (C8's encoding rule) — the `enc` escapes
  * make `-`/`/`/`.` unexpressible, so the `--` and `pairflow-` delimiters cannot
  * alias across ids.

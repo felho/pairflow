@@ -60,6 +60,12 @@ function testDeps(options: DevTestDepsOptions = {}): CliDeps {
     // kernel over the FILE store — the default deps ride the env leg
     // on the repo's canonical templates dir.
     env: { PAIRFLOW_V3_TEMPLATES: join(process.cwd(), "templates") },
+    // packet ch9-p4b (T1): the additive CliDeps growth rides the dev suite's
+    // compile ripple ONLY — the dev entrypoint composes none of the runner
+    // plane, so these bindings are never exercised here (assertions unchanged).
+    attemptIdSource: () => `attempt-${String((ids += 1))}`,
+    workerIdSource: () => `cli-worker-${String((ids += 1))}`,
+    runInteractive: () => Promise.resolve(0),
   };
 }
 
