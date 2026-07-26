@@ -4787,3 +4787,29 @@ final CLEAN.
   accepted it. Note the chapter ships NO gate-describing body (the
   round>=2 gate stays out of the shipped template as a product
   decision), so the drift risk is latent by construction here.
+- 2026-07-26 · ch13 CONTRACT-DRAFT RATIFIED (user GO after a stepwise
+  digest round — six decision points EZX-explained, two owner
+  additions landed mid-round: the §1.3 system-vs-workflow
+  sub-question and the §13.5(f) integer-key-ban boundary item; plus
+  FH-3, the parse-don't-validate reform record, born from the
+  owner's C17 design challenge). The act: four commits per the C16
+  choreography — content 16a668b0 (19 rows + 6 plan edits + FH-3) →
+  ch11 reopen 1 f507cda2 (C4/C30/C41 site edits, loud-red window
+  open: 157 anchor errors BY DESIGN) → ch11 reopen 2 e0bc30a1
+  (fourth reopen record, reopenings 3 → 4 as a new dated line, map
+  restored per the itemized duties, window closed: lint 0 errors,
+  realized-map 4/4 green) → this ratifying commit. Panel stats:
+  5 rounds (4 full + 1 targeted, all lenses Opus-class) + 1
+  reconciliation + top-level close CLEAN @ 20a3c3d2; yield curve
+  45 → 30 → 25 → 15 → 7; 6 P1-class findings, all folded and
+  verified landed; 3 substrate probes (CB1/CB2/CB3 — CB2's first
+  consequence claim was CORRECTED by the round-2 panel: the loader's
+  mapAsMap:true prevents the collapse, so the fix was a lane, not a
+  watch). External arm: consciously waived by the owner (optional at
+  drafts; the two mandatory arm gates are packet-side). Model
+  protocol note: the draft loop ran on the Fable main thread per the
+  experiment-2 category rule (the session was switched BEFORE any
+  draft work — the plan-section deviation was recorded separately).
+  NEXT: ch13-P0 (EPIPE hygiene packet, human-approved) on the
+  user's prompt, Opus-class main thread per the chapter arm.
+

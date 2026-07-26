@@ -1,7 +1,7 @@
 # ch13 — context-block contract
 
 ```json
-{"contract_draft": {"chapter": "ch13", "surface": "context-block", "status": "draft"}}
+{"contract_draft": {"chapter": "ch13", "surface": "context-block", "status": "ratified"}}
 ```
 
 ## Context (non-normative by declaration)
@@ -233,5 +233,9 @@ reopenings: 0.
 
 
 ## Ratification history (empty at `draft` — blocks are appended by the lifecycle acts)
+
+```json
+{"ratification": {"date": "2026-07-26", "arms": ["none external — the internal five-lens Opus panel (4 full + 1 targeted round + top-level close CLEAN @ 20a3c3d2); the codex arm consciously waived by the owner at GO (2026-07-26)"], "commit": "16a668b08dfe6e9e36076573c226503113ea8a16"}}
+```
 
 ## Realized map (empty until chapter close)
