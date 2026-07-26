@@ -220,7 +220,16 @@ envelope shape until it lands (§5 of the audit). OBLIGATION: before
 this plan sequences the chapters that follow the L2b chapter, walk
 the post-cut and late-Block-A layers against the audit and record,
 per layer, whether v1-workflow replication needs it EARLIER than the
-cut implies. This is an implementation-plane read; a finding that
+cut implies. The walk's explicit sub-question (raised by the owner at
+the ch13 draft ratification round, 2026-07-26): which actor-facing
+instructions are SYSTEM-level rather than workflow-level, and does
+each have a template-INDEPENDENT carrier — the candidate carriers
+being the EC packet projection (mechanized, from the validator's own
+lookup), a kernel-injected default-block surface (NOT modeled today —
+adopting one is a model-plane act), or adapter-side shaping (a named
+L2b Absent)? The ch13 interim state is honest but seed-dependent: the
+emit-envelope block lives in the SHIPPED template, so a from-scratch
+template author does not inherit it. This is an implementation-plane read; a finding that
 the CUT itself is mis-drawn is a model-plane matter and routes to
 the standing model↔code divergence stop (README §6), never a silent
 re-cut here.
@@ -2858,9 +2867,11 @@ convention.
 |---|---|---|
 | ch13-P0 | the EPIPE hygiene fix: the operator CLI's stdout sink survives a closed pipe (quiet termination instead of a raw stack), its behavior contract decided against the ch6-P4a canonical exit-code matrix, with the claim-derived negative lane; empty ledger slice (a DECLARATION, not an omission — the ch9-P1 precedent) | human approve (the row carries its own new decision — the closed-pipe behavior contract — and §1.3's consistency rule bars an invention-predicted row from flag-free autonomous mode); predicted: invention (memo-born — basis: the ch9 boundary verdict; the enum's closest fit, the basis being a boundary verdict rather than a design memo) |
 | ch13-P1 | the definition side: the three context format keys + the catalog on the parsed template, `validate_context_refs` under `admit_definition`, the `unresolved_context_block_ref` issue lane on the established named-lane carrier, the CLI validate extension | flag-free approve → autonomous build (measurement; the §5.5 fallbacks stand); predicted: projection (basis: the chapter draft — pending ratification) |
-| ch13-P2 | the dispatch side: `assemble_context_blocks` (order, dedup, retained provenance), the packet's context-blocks field, the gate-ref predicate over ch11's authority logic, the `l2b-pseudocode` golden trace, the shipped template's first catalog entry (the emit-envelope block) + the catalog-authoring caveat comment beside it (§13.1 item 4), and the journey smoke through the shipped entrypoint | flag-free approve → autonomous build (measurement); predicted: projection (basis: the chapter draft — pending ratification) |
+| ch13-P2 | the dispatch side: `assemble_context_blocks` (order, dedup, retained provenance), the packet's context-blocks field, the gate-ref predicate over ch11's authority logic, the `l2b-pseudocode` golden trace, the shipped template's first catalog entry (the emit-envelope block) + the catalog-authoring caveat comment beside it (§13.1 item 4), the l0c golden-trace re-pin (the C4 fixture disposition), and the journey smoke through the shipped entrypoint | flag-free approve → autonomous build (measurement); predicted: projection (basis: the chapter draft — pending ratification) |
 
-Order: draft ratification → P0 → P1 → P2 (the README §4 draft-first
+Order: draft ratification (carrying the ch11 reopen act — C4 + C30
++ the C41 comparative clause; the draft's C16 carrier row; aligned
+at the ch13 draft round, 2026-07-26) → P0 → P1 → P2 (the README §4 draft-first
 rule binds without exception — P0 anchors no draft row but still
 follows the ratification, the ch12-P0 precedent). P1 before P2 is the
 definition → dispatch dependency: the render reads the parsed
@@ -2887,7 +2898,10 @@ DoD: the packets' contract tests green with claim-derived negatives
 EXECUTED; the `l2b` golden trace green; the drift suite green (the
 unit-map lock extends with the 4 ids; the 54-name registry
 byte-untouched — zero new behavioral rejections, asserted before AND
-after); invariant dispositions realized per the ch-5 map (no checker
+after; the three l2b entity rows of the domain registry flipped
+realized by their owning packets — the registry test pins key sets,
+not dispositions, so the flip is a named duty, never gate-caught);
+invariant dispositions realized per the ch-5 map (no checker
 added); coverage validation green; all v3 bridges + the FULL
 `pnpm ci:local` gate green; the draft flipped `realized`-in-place
 with its `realized_map` and `pnpm v3:realized-map` GREEN inside the
@@ -2900,6 +2914,23 @@ arm-comparison entry — the FIRST Opus-arm chapter, read against ch9's
 Fable data on same-band packet pairs; (b) the mutation-pilot
 second-chapter yield read and its keep/stop verdict; (c) the
 INHERITED detached realized-map arm audit of `ch9-runner-contract.md`
-(§1.3 carried item 2 — its deadline is this close); and (d) the §1.3
+(§1.3 carried item 2 — its deadline is this close); (d) the §1.3
 carried item (3) MVP-cut vs v1-parity re-read, due before the plan
-sequences the chapters that follow.
+sequences the chapters that follow; and (e) the
+reopen-vs-aggregate-note criterion (first applied at the ch13 draft —
+its Context carries the applied form): decide its promotion to a
+standing README rule or its retirement — until then the ch13 draft's
+Context is its only home, and this line is the carrier that keeps
+that decision from silently lapsing; a DEFERRED decision enters §1.3
+as a carried item (the standing cross-chapter carry form), never a
+silent lapse; and (f) the integer-like key-ban candidate on the
+ch8-C10 namespace (owner-raised at the ch13 draft ratification round,
+2026-07-26): canonical integer-form string keys (`"2"`, `"10"`) are
+legal event-type/step-id spellings today and are the exact class JS
+record enumeration re-orders (the ch13 PROBE-CB3 measurement; the
+draft's C9 handles the corner honestly, so ch13 does not need the
+ban) — the boundary decides ADOPT (a ch8-C10 reopen in its own act,
+with migration text; an untruncated draft-time sweep found ZERO
+affected files, so the ban is free now and only gets more expensive
+with time) or WATCH; a deferred adoption likewise enters §1.3 as a
+carried item.
