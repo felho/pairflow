@@ -4833,3 +4833,24 @@ final CLEAN.
   fold that ADDS a clause to a canonical row must re-derive that row's
   mirror list, not reuse it; (b) the propagation-enumeration prompt
   shape as the standing form for a multi-mirror fold's verification.
+
+- 2026-07-31 (ch13-P0, arm gate-2 + re-check) — A RED-ON-BREAK RECEIPT
+  TAKEN AGAINST A RED BASELINE IS NOT EVIDENCE. All eleven mutation
+  probes of this packet ran `../node_modules/.bin/vitest` (the ROOT
+  Vitest 3.2.4) instead of `pnpm exec vitest` (the v3-local 4.1.10).
+  Measured: under the root runner the UNMUTATED seam suite is already
+  red (2 of 45), so every receipt's `suite_red: true` was consistent
+  with any mutation at all — including a no-op. `probe_runner.py`
+  cannot catch this: it byte-verifies the backup, the mutation and the
+  restore, but the TEST COMMAND is the caller's and it only checks a
+  nonzero exit. The builder inherited the wrong command and the
+  orchestrator repeated it; the external arm found it by running the
+  baseline itself. All eleven were regenerated canonically from a
+  green baseline, mutations reconstructed from the probe table rather
+  than reused. BOUNDARY CANDIDATES: (a) `probe_runner.py` should run
+  the test command ONCE unmutated first and fail loudly if that
+  baseline is not green — the one check that closes this class
+  mechanically; (b) the packet template's probe obligation should name
+  the canonical runner invocation, not just "the probe runner".
+  Second data point in the same session for the gate-2 class: the arm
+  earns its cost exactly where a claim is green-by-construction.

@@ -395,11 +395,19 @@ describe("ch13-p0 family 1 (E2, E6) — closure classification", () => {
     },
   );
 
-  it.each([
+  // The carrier shape is crossed with the DELIVERY PATH: E2 says the
+  // classification depends on neither, so a carrier lane on one path
+  // only leaves a path-scoped shape test alive (observed by executed
+  // mutation at the gate-2 re-check — a classifier narrowed to
+  // `instanceof Error` in the SYNC catch alone survived the whole
+  // suite while the async lane covered the plain object).
+  const epipeCarriers: ReadonlyArray<readonly [string, unknown]> = [
     ["an Error instance", streamError("EPIPE")],
     ["a plain object", { code: "EPIPE" }],
-  ] as ReadonlyArray<readonly [string, unknown]>)(
-    "EPIPE carried by %s marks the stream closed — the carrier's SHAPE is not part of the test",
+  ];
+
+  it.each(epipeCarriers)(
+    "an ASYNC EPIPE report carried by %s marks the stream closed — the carrier's SHAPE is not part of the test",
     (_label, carrier) => {
       const out = new RecordingStream();
       const sinks = createOutputSinks(out, new RecordingStream());
@@ -411,6 +419,23 @@ describe("ch13-p0 family 1 (E2, E6) — closure classification", () => {
 
       expect(() => sinks.out("second")).toThrow(OutputClosedError);
       expect(out.chunks).toEqual(["first\n"]);
+    },
+  );
+
+  it.each(epipeCarriers)(
+    "a SYNC EPIPE throw carried by %s is absorbed and marks the stream closed — shape-independent on this path too",
+    (_label, carrier) => {
+      const throwing = new RecordingStream({
+        throwOnWrite: (n) => (n === 1 ? carrier : undefined),
+      });
+      const sinks = createOutputSinks(throwing, new RecordingStream());
+
+      // The ESTABLISHING failure is absorbed whatever the carrier is.
+      expect(() => sinks.out("first")).not.toThrow();
+      expect(throwing.chunks).toEqual([]);
+
+      expect(() => sinks.out("second")).toThrow(OutputClosedError);
+      expect(throwing.chunks).toEqual([]);
     },
   );
 });

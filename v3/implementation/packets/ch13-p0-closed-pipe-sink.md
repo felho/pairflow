@@ -566,10 +566,13 @@ and no per-consumer-family review loop is expected).
     code and one carrier shape: at least THREE distinct non-EPIPE
     codes, an error carrying NO code, a non-object throw, and a
     non-EPIPE code carried by a plain object — plus EPIPE carried BOTH
-    by an `Error` instance and by a plain object, so a classifier that
-    also tests the carrier's shape reds (owner: E2; added at build
-    close on the gate-2 finding, with both blind classifiers
-    mutation-verified dead).
+    by an `Error` instance and by a plain object, CROSSED WITH THE
+    DELIVERY PATH (each carrier on the async report AND on the sync
+    throw), because a carrier lane on one path only leaves a
+    path-scoped shape test alive. Owner: E2; added at build close on
+    the gate-2 findings, with all three blind classifiers
+    mutation-verified dead (`not-EACCES`, `instanceof Error`, and
+    `instanceof Error` narrowed to the sync catch alone).
   - **2. Quiet-contract family** (E3, E5, E11) — discipline: a closure
     adds NO stderr byte attributable to itself (in particular zero
     raw-stack bytes) and never suppresses a verb's own error document
@@ -928,3 +931,34 @@ receipts `ch13p0-a1-notEACCES` and `ch13p0-a2-instanceofError`, each
 observed RED with a byte-verified restore. Family 1's membership rule
 in this packet was tightened to name the domain, so the inventory and
 the built bodies agree.
+
+**AFTERMATH 2 (2026-07-31, arm gate-2 re-check — orchestrator-authored).**
+The re-check returned two P2s, and BOTH were about evidence rather
+than product; product code stayed untouched through both aftermaths.
+
+(1) *The carrier-shape rule was not crossed with the delivery path.*
+The plain-object EPIPE carrier appeared only on the ASYNC report lane,
+so a classifier narrowed to `instanceof Error` in the SYNC catch ALONE
+survived the entire 1802-test suite — the arm proved it by mutation.
+FIXED: the carrier domain is now parameterized over carrier shape ×
+delivery path (47 tests in the seam file), and the surviving mutant is
+dead — receipt `ch13p0-a3-syncInstanceofError`, observed RED,
+byte-verified restore. Family 1's membership names the crossing.
+
+(2) *Every probe receipt of this packet ran on a NON-CANONICAL
+toolchain, so none of them proved what it claimed.* The probes invoked
+`../node_modules/.bin/vitest` (the ROOT Vitest 3.2.4) instead of
+`pnpm exec vitest` (the v3-local 4.1.10). Measured: under the root
+runner the UNMUTATED seam suite is already RED (2 failures of 45),
+so `suite_red: true` was consistent with any mutation whatsoever —
+including one that changes nothing. The probe runner only checks a
+nonzero exit, so it could not catch this; the defect is in the test
+COMMAND the caller supplies. FIXED: all eleven probes — the builder's
+eight, the aftermath-1 pair, and the new carrier probe — were
+REGENERATED with `pnpm exec vitest run …` from a baseline-green state.
+Every one is now observed RED with a byte-verified restore, and the
+mutations were reconstructed from the probe table rather than reused,
+so the table and the receipts are independently derived. The
+canonical-toolchain requirement is the standing lesson: a red-on-break
+receipt taken against a red baseline is not evidence, and nothing in
+the runner's contract enforces the baseline.
