@@ -2761,14 +2761,18 @@ changes a verdict — deleting a block cannot change what L2 enforces.
    the emit envelope, not a gate), so the risk is latent here by
    construction; the comment and its draft sibling (§13.3) are aim,
    not enforcement.
-5. **The EPIPE fix (the chapter's hygiene packet).** The operator
-   CLI's stdout sink handles a closed pipe quietly instead of
-   crashing with a raw stack (repro: `pnpm v3:cli detail … | head -1`;
-   also reached via a `| jq` that parse-fails mid-stream). Today the
-   sink is a bare `process.stdout.write` with no EPIPE handling —
-   note the contrast with the gate lane, which already treats an
-   EPIPE against a fast-exiting child as best-effort (`runner/spawn.ts`
-   GR2). The closed-pipe behavior contract is decided in the packet,
+5. **The EPIPE fix (the chapter's hygiene packet).** The SHIPPED CLI
+   entrypoints' output sinks — the operator CLI's and the dev CLI's,
+   whose entrypoints carry the byte-identical bare sink and share the
+   `dispatch` shell that recognizes the quiet-termination path (scope
+   aligned at ch13-p0 pre-approval, 2026-07-26) — handle a closed pipe
+   quietly instead of crashing with a raw stack (repro: `pnpm v3:cli
+   detail … | head -1`; also reached via a `| jq` that parse-fails
+   mid-stream). Today those sinks are bare `process.stdout.write` /
+   `process.stderr.write` calls with no EPIPE handling — note the
+   contrast with the gate lane, which already treats an EPIPE against
+   a fast-exiting child as best-effort (`runner/spawn.ts` GR2). The
+   closed-pipe behavior contract is decided in the packet,
    against the ch6-P4a canonical exit-code matrix.
 
 **Out of scope (deliberate):**
@@ -2865,7 +2869,7 @@ convention.
 
 | Packet | Content | Mode |
 |---|---|---|
-| ch13-P0 | the EPIPE hygiene fix: the operator CLI's stdout sink survives a closed pipe (quiet termination instead of a raw stack), its behavior contract decided against the ch6-P4a canonical exit-code matrix, with the claim-derived negative lane; empty ledger slice (a DECLARATION, not an omission — the ch9-P1 precedent) | human approve (the row carries its own new decision — the closed-pipe behavior contract — and §1.3's consistency rule bars an invention-predicted row from flag-free autonomous mode); predicted: invention (memo-born — basis: the ch9 boundary verdict; the enum's closest fit, the basis being a boundary verdict rather than a design memo) |
+| ch13-P0 | the EPIPE hygiene fix: the shipped CLI entrypoints' output sinks survive a closed pipe (quiet termination instead of a raw stack; scope aligned at ch13-p0 pre-approval, 2026-07-26 — both entrypoints and the shared dispatch shell), its behavior contract decided against the ch6-P4a canonical exit-code matrix, with the claim-derived negative lane; empty ledger slice (a DECLARATION, not an omission — the ch9-P1 precedent) | human approve (the row carries its own new decision — the closed-pipe behavior contract — and §1.3's consistency rule bars an invention-predicted row from flag-free autonomous mode); predicted: invention (memo-born — basis: the ch9 boundary verdict; the enum's closest fit, the basis being a boundary verdict rather than a design memo) |
 | ch13-P1 | the definition side: the three context format keys + the catalog on the parsed template, `validate_context_refs` under `admit_definition`, the `unresolved_context_block_ref` issue lane on the established named-lane carrier, the CLI validate extension | flag-free approve → autonomous build (measurement; the §5.5 fallbacks stand); predicted: projection (basis: the chapter draft — pending ratification) |
 | ch13-P2 | the dispatch side: `assemble_context_blocks` (order, dedup, retained provenance), the packet's context-blocks field, the gate-ref predicate over ch11's authority logic, the `l2b-pseudocode` golden trace, the shipped template's first catalog entry (the emit-envelope block) + the catalog-authoring caveat comment beside it (§13.1 item 4), the l0c golden-trace re-pin (the C4 fixture disposition), and the journey smoke through the shipped entrypoint | flag-free approve → autonomous build (measurement); predicted: projection (basis: the chapter draft — pending ratification) |
 

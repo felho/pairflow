@@ -35,6 +35,13 @@ export default defineConfig({
       // own mechanism.
       "src/cli/runnerCli.test.ts",
       "src/cli/runnerJourney.test.ts",
+      // packet ch13-p0: the closed-pipe SUBPROCESS lanes (families 5–6, family
+      // 7's binding members, family 4's process-level member) exec the
+      // repo-root tsx bin — the same declared subprocess blind class. The
+      // packet's in-process SEAM lanes deliberately stay IN the profile
+      // (`src/cli/closedPipeSink.test.ts`), because the new branching logic in
+      // `cli/common.ts` is exactly what the mutation pilot must see.
+      "src/cli/closedPipe.test.ts",
     ],
   },
 });

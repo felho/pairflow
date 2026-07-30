@@ -25,6 +25,7 @@ import {
 } from "../../testkit/index.js";
 import type { VerbContext, VerbHandler, VerbOptions } from "../common.js";
 import {
+  createOutputSinks,
   dispatch,
   flagString,
   notFound,
@@ -737,8 +738,11 @@ export async function runDevCli(
 // Shipped dev entrypoint (root bridge: `pnpm v3:cli:dev -- <verb> ...`).
 const invokedPath = process.argv[1];
 if (invokedPath !== undefined && import.meta.url === pathToFileURL(invokedPath).href) {
-  process.exitCode = await runDevCli(process.argv.slice(2), productionDeps(), {
-    out: (line) => process.stdout.write(`${line}\n`),
-    err: (line) => process.stderr.write(`${line}\n`),
-  });
+  // packet ch13-p0 (E1): the same shared sink factory as the operator
+  // entrypoint — one implementation home, two bindings.
+  process.exitCode = await runDevCli(
+    process.argv.slice(2),
+    productionDeps(),
+    createOutputSinks(process.stdout, process.stderr),
+  );
 }

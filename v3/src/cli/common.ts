@@ -4,7 +4,7 @@ import { parseArgs } from "node:util";
 import type { DiagStoreHandle } from "../diag/index.js";
 import { TemplateLoadError } from "../definition/index.js";
 import type { StoreHandle } from "../store/index.js";
-import { CliError, exitCodeFor, toErrorDoc } from "./contract.js";
+import { CliError, EXIT, exitCodeFor, toErrorDoc } from "./contract.js";
 import type { CliDeps } from "./runtime.js";
 
 /**
@@ -17,6 +17,91 @@ import type { CliDeps } from "./runtime.js";
 export interface CliSinks {
   out(line: string): void;
   err(line: string): void;
+}
+
+/**
+ * The closed-pipe sink (packet ch13-p0, E1–E6). A consumer that walks
+ * away from a CLI output pipe is NOT an error class: the process stops
+ * writing to the closed stream and terminates on E3's exit rule. Every
+ * write failure that is not a closure stays exactly as loud as it was
+ * before — per delivery path and per stream (E6).
+ *
+ * The stream parameter is the MINIMAL structural shape the rule needs,
+ * so `process.stdout` / `process.stderr` are assignable in production
+ * and the seam lanes can pass recording or write-throwing doubles.
+ */
+interface OutputStream {
+  write(chunk: string): boolean;
+  on(event: "error", listener: (error: Error) => void): unknown;
+}
+
+/** E4's fixed sentinel message — deliberately matching NO
+ * message-discriminating catch on the path (the tree's only one is the
+ * `create failed (binding coverage)` prefix test in main.ts). */
+const OUTPUT_CLOSED_MESSAGE = "output stream closed: the consumer left the pipe";
+
+/**
+ * E4's INTERNAL sentinel: raised by a sink when a write is ATTEMPTED on
+ * a stream already marked closed. `dispatch` recognizes it BEFORE its
+ * generic `CliError` wrap, so it never reaches a user-visible surface —
+ * it mints no error document and writes no byte.
+ */
+export class OutputClosedError extends Error {
+  constructor() {
+    super(OUTPUT_CLOSED_MESSAGE);
+    this.name = "OutputClosedError";
+  }
+}
+
+/** E2's classification: by error CODE and by nothing else — not by
+ * delivery path, not by stream state, not by verb. */
+function isClosedPipeError(error: unknown): boolean {
+  return (
+    typeof error === "object" && error !== null && (error as { code?: unknown }).code === "EPIPE"
+  );
+}
+
+function createLineWriter(stream: OutputStream): (line: string) => void {
+  let closed = false;
+  // The ASYNC delivery path (the measured POSIX-pipe path): a piped
+  // stdout reports EPIPE as an `error` event AFTER write() returned, so
+  // a try/catch alone would catch nothing. A report carrying any other
+  // code is RETHROWN — it stays the unhandled error it is today (E6a),
+  // whatever the stream's closed mark (E4's repetition clause).
+  stream.on("error", (error) => {
+    if (isClosedPipeError(error)) {
+      closed = true;
+      return;
+    }
+    throw error;
+  });
+  return (line) => {
+    if (closed) {
+      throw new OutputClosedError();
+    }
+    try {
+      stream.write(`${line}\n`);
+    } catch (error) {
+      // The SYNCHRONOUS delivery path. The ESTABLISHING failure is
+      // ABSORBED on both paths — the stream is marked closed and the
+      // call returns normally; only a write ATTEMPTED afterwards raises
+      // the sentinel. A non-EPIPE throw is rethrown unchanged (E6b/E6c).
+      if (!isClosedPipeError(error)) {
+        throw error;
+      }
+      closed = true;
+    }
+  };
+}
+
+/**
+ * The ONE shared output-sink factory both shipped entrypoints bind
+ * (E1(i)). It owns the line framing and the stream routing (E12) as
+ * well as the closure rule, so neither can fork between the operator
+ * CLI and the dev CLI.
+ */
+export function createOutputSinks(out: OutputStream, err: OutputStream): CliSinks {
+  return { out: createLineWriter(out), err: createLineWriter(err) };
 }
 
 export interface VerbContext {
@@ -212,6 +297,13 @@ export async function dispatch(
     const handler = verbs[verb];
     return await handler({ positionals: parsed.positionals, values: parsed.values, deps, sinks });
   } catch (error) {
+    // E3 branch 2 (packet ch13-p0): a sentinel unwinding from the VERB
+    // BODY means the closure preempted the verb — no document, exit 0.
+    // Recognized BEFORE the generic CliError wrap, so the sentinel never
+    // becomes a user-visible error document.
+    if (error instanceof OutputClosedError) {
+      return EXIT.ok;
+    }
     const cliError =
       error instanceof CliError
         ? error
@@ -220,7 +312,18 @@ export async function dispatch(
             error instanceof Error ? error.name : "UnknownError",
             error instanceof Error ? error.message : String(error),
           );
-    sinks.err(JSON.stringify(toErrorDoc(cliError)));
+    // E5: this write sits INSIDE the catch, so a closed stderr needs its
+    // OWN guard — scoped to the sentinel TYPE alone. Anything else
+    // escapes `dispatch` entirely and stays as loud as a bare sink (E6c).
+    try {
+      sinks.err(JSON.stringify(toErrorDoc(cliError)));
+    } catch (writeError) {
+      if (!(writeError instanceof OutputClosedError)) {
+        throw writeError;
+      }
+    }
+    // E3 branch 3: the class code already computed STANDS — a closed
+    // stderr never converts a failing verb into a successful one.
     return exitCodeFor(cliError.errorClass);
   }
 }

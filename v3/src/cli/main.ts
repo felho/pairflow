@@ -32,6 +32,7 @@ import { createWorktreeProvider } from "../providers/index.js";
 import type { WorktreeProvider } from "../providers/index.js";
 import type { VerbContext, VerbHandler, VerbOptions } from "./common.js";
 import {
+  createOutputSinks,
   dispatch,
   flagString,
   notFound,
@@ -831,8 +832,12 @@ export async function runCli(
 // Shipped entrypoint (root bridge: `pnpm v3:cli -- <verb> ...`).
 const invokedPath = process.argv[1];
 if (invokedPath !== undefined && import.meta.url === pathToFileURL(invokedPath).href) {
-  process.exitCode = await runCli(process.argv.slice(2), productionDeps(), {
-    out: (line) => process.stdout.write(`${line}\n`),
-    err: (line) => process.stderr.write(`${line}\n`),
-  });
+  // packet ch13-p0 (E1): the ONE shared sink factory — the closure rule,
+  // the line framing and the stream routing cannot fork between the two
+  // shipped entrypoints.
+  process.exitCode = await runCli(
+    process.argv.slice(2),
+    productionDeps(),
+    createOutputSinks(process.stdout, process.stderr),
+  );
 }
