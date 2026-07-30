@@ -560,8 +560,16 @@ and no per-consumer-family review loop is expected).
     throw, EACH on stdout and on stderr — the stderr sync member runs
     at the `dispatch` level and asserts that the class exit code
     stands (grid row 11's owner); `write()` → `false` on each stream;
-    and the non-EPIPE shapes, whose outcomes family 4 owns
-    (owner: E2).
+    and the non-EPIPE shapes, whose outcomes family 4 owns. The
+    membership is ALSO parameterized over the CLASSIFIER'S DOMAIN,
+    because "by code and by nothing else" is not falsifiable from one
+    code and one carrier shape: at least THREE distinct non-EPIPE
+    codes, an error carrying NO code, a non-object throw, and a
+    non-EPIPE code carried by a plain object — plus EPIPE carried BOTH
+    by an `Error` instance and by a plain object, so a classifier that
+    also tests the carrier's shape reds (owner: E2; added at build
+    close on the gate-2 finding, with both blind classifiers
+    mutation-verified dead).
   - **2. Quiet-contract family** (E3, E5, E11) — discipline: a closure
     adds NO stderr byte attributable to itself (in particular zero
     raw-stack bytes) and never suppresses a verb's own error document
@@ -889,3 +897,34 @@ CLI stderr bytes) hold under both delivery timings, and the
 deterministic sentinel-firing proof lives in the in-process seam lanes,
 which are platform-independent. The mutation-pilot dual-run and the
 post-build boundary audit follow the commit.
+
+**Mutation-pilot dual-run (recorded at arm gate-2).**
+`stryker run --mutate src/cli/common.ts` from `v3/`: **60.49% total /
+72.59% covered** — 98 killed, 0 timeout, 37 survived, 27 no-coverage,
+0 errors, 3.73 tests per mutant. This is the ACTIVATION number flag 5
+declares, not a delta: the pre-change baseline is the measured ABORT
+(`No tests were found / No tests were executed`), because every test
+file that reached `common.ts` was stryker-profile-excluded. The file
+is the whole shared CLI plumbing module, so the survivors and
+no-coverage mutants are dominated by its pre-existing helpers, not by
+this packet's logic — the boundary's yield read must scope
+accordingly.
+
+**AFTERMATH (2026-07-31, arm gate-2 — orchestrator-authored).** Gate-2
+returned NO product and NO packet-doc findings, and one P2
+test-evidence finding, proven by executed mutation: family 1's built
+lanes used a SINGLE non-EPIPE code (`EACCES`) and a SINGLE EPIPE
+carrier shape (an `Error` instance), so two blind classifiers survived
+the whole suite — one testing `code !== "EACCES"`, one adding an
+`instanceof Error` condition. E2's "by error CODE and by nothing else"
+was therefore stated but not falsifiable. FIXED: the seam suite's
+classifier domain is now parameterized (12 new lanes, 33 → 45 tests in
+that file) over three distinct non-EPIPE codes, a code-less error, a
+non-object throw, a plain-object non-EPIPE carrier, and BOTH EPIPE
+carrier shapes; the double's fault-injection knobs widened from
+`Error` to `unknown` for the same reason. Both previously-surviving
+classifiers were re-run through the probe runner and are now DEAD:
+receipts `ch13p0-a1-notEACCES` and `ch13p0-a2-instanceofError`, each
+observed RED with a byte-verified restore. Family 1's membership rule
+in this packet was tightened to name the domain, so the inventory and
+the built bodies agree.

@@ -40,11 +40,11 @@ type ErrorListener = (error: Error) => void;
 
 interface RecordingStreamOptions {
   /** Sync `write()` throw on the n-th call (E2's sync arm). */
-  readonly throwOnWrite?: (n: number) => Error | undefined;
+  readonly throwOnWrite?: (n: number) => unknown;
   /** `write()`'s return value on the n-th call — `false` is backpressure. */
   readonly writeResult?: (n: number) => boolean;
   /** An `error` REPORT delivered right after the n-th write returns. */
-  readonly reportAfterWrite?: (n: number) => Error | undefined;
+  readonly reportAfterWrite?: (n: number) => unknown;
 }
 
 class RecordingStream {
@@ -58,6 +58,11 @@ class RecordingStream {
     this.writes += 1;
     const thrown = this.options.throwOnWrite?.(this.writes);
     if (thrown !== undefined) {
+      // Fault injection: the double must be able to throw a NON-Error
+      // carrier, because E2's classifier is "by error CODE and by
+      // nothing else" — a double restricted to Error instances cannot
+      // falsify a classifier that also tests the carrier's shape.
+      // eslint-disable-next-line @typescript-eslint/only-throw-error
       throw thrown;
     }
     this.chunks.push(chunk);
@@ -75,9 +80,11 @@ class RecordingStream {
   }
 
   /** The ASYNC delivery path: the stream reports out of band. */
-  emitError(error: Error): void {
+  emitError(error: unknown): void {
     for (const listener of [...this.listeners]) {
-      listener(error);
+      // The double models the STREAM: a report's carrier shape is the
+      // stream's business, and the classifier must not depend on it.
+      listener(error as Error);
     }
   }
 }
@@ -343,6 +350,67 @@ describe("ch13-p0 family 1 (E2, E6) — closure classification", () => {
 
       sinks[which]("still open");
       expect(stream.chunks).toEqual(["still open\n"]);
+    },
+  );
+
+  // The classifier's DOMAIN. E2 says the classification is "by error
+  // CODE and by nothing else", but a single non-EPIPE code and a single
+  // EPIPE carrier shape cannot falsify a classifier that tests the
+  // wrong thing: `code !== "EACCES"` and an added `instanceof Error`
+  // condition both survive a one-code, one-carrier fixture (observed by
+  // executed mutation at the build-close gate, 2026-07-31). These lanes
+  // parameterize the domain on both sides.
+  const nonClosures: ReadonlyArray<readonly [string, unknown]> = [
+    ["a second non-EPIPE code (ENOENT)", streamError("ENOENT")],
+    ["a third non-EPIPE code (EPERM)", streamError("EPERM")],
+    ["an error carrying NO code", new Error("write failed")],
+    ["a non-object throw", "write failed"],
+    ["a plain object carrying a non-EPIPE code", { code: "EACCES" }],
+  ];
+
+  it.each(nonClosures)(
+    "a SYNC throw of %s is NOT a closure — it propagates unchanged and the stream stays open",
+    (_label, failure) => {
+      const flaky = new RecordingStream({ throwOnWrite: (n) => (n === 1 ? failure : undefined) });
+      const sinks = createOutputSinks(flaky, new RecordingStream());
+
+      expect(() => sinks.out("first")).toThrow(failure);
+      sinks.out("second");
+      expect(flaky.chunks).toEqual(["second\n"]);
+    },
+  );
+
+  it.each(nonClosures)(
+    "an ASYNC report of %s is NOT a closure — it is rethrown and the stream stays open",
+    (_label, failure) => {
+      const out = new RecordingStream();
+      const sinks = createOutputSinks(out, new RecordingStream());
+
+      expect(() => {
+        out.emitError(failure);
+      }).toThrow(failure);
+
+      sinks.out("still open");
+      expect(out.chunks).toEqual(["still open\n"]);
+    },
+  );
+
+  it.each([
+    ["an Error instance", streamError("EPIPE")],
+    ["a plain object", { code: "EPIPE" }],
+  ] as ReadonlyArray<readonly [string, unknown]>)(
+    "EPIPE carried by %s marks the stream closed — the carrier's SHAPE is not part of the test",
+    (_label, carrier) => {
+      const out = new RecordingStream();
+      const sinks = createOutputSinks(out, new RecordingStream());
+
+      sinks.out("first");
+      expect(() => {
+        out.emitError(carrier);
+      }).not.toThrow();
+
+      expect(() => sinks.out("second")).toThrow(OutputClosedError);
+      expect(out.chunks).toEqual(["first\n"]);
     },
   );
 });
