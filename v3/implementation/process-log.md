@@ -4813,3 +4813,23 @@ final CLEAN.
   NEXT: ch13-P0 (EPIPE hygiene packet, human-approved) on the
   user's prompt, Opus-class main thread per the chapter arm.
 
+
+- 2026-07-31 (ch13-P0, arm gate-1 rounds 1–4) — ONE RULE RESTATED AT
+  EIGHT SURFACES COSTS THREE FOLD ROUNDS. The cleanup-throw precedence
+  on E3's branch 2 was minted at gate-1 round 1, stated canonically,
+  and then took three further arm rounds (each 7–14 min) to reach all
+  its restating surfaces: grid rows, E11, flags 3/4, families 2/3/6,
+  the sensitivity probe. Each round the author patched the sites the
+  arm named instead of enumerating them; the Mirrored Surface Map did
+  NOT prevent it, because the map listed the mirrors that existed when
+  the row was written, not the ones a LATER clause would acquire.
+  What worked: a prompt that demanded a COMPLETE propagation
+  enumeration (every asserting site, each marked qualified /
+  missing / not-applicable) instead of "find the problems" — round 4
+  returned all 27 sites and closed the class. Owner decision
+  (2026-07-31): keep the restatement form for THIS packet (it freezes
+  at build; self-containment is the packet form's own rule) and carry
+  the structural question to the boundary. BOUNDARY CANDIDATES: (a) a
+  fold that ADDS a clause to a canonical row must re-derive that row's
+  mirror list, not reuse it; (b) the propagation-enumeration prompt
+  shape as the standing form for a multi-mirror fold's verification.

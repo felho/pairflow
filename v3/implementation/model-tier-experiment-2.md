@@ -253,3 +253,21 @@ design and this divergence is informative, not a defect. Spread:
   the Fable-mandatory-surface pool FLAGGED as an Opus-authored
   exception (non-random, owner-reviewed); packet-level Opus data is
   unaffected (no packet work had started).
+
+- 2026-07-31 — ch13-P0 difficulty index, computed and FROZEN at the
+  packet's approve point (§3's rule: pre-build, so outcomes cannot
+  leak back into it). Vector from the packet's own machine blocks:
+  **A 0** (`packet_rows` = 12 ≤ 15) · **B 2** (derived 3 +
+  new_decision 9 = 12 > 10) · **C 0** (`mutation_boundary` = 8 files
+  ≤ 15) · **D 2** (async `error`-event seam AND external substrate —
+  the subprocess journey lanes; either alone scores 2) · **E 0**
+  (extends an existing module's patterns; the header records
+  "not first-of-a-kind" with named precedents). **Σ = 4 → MEDIUM.**
+  The D/E checklist calls were resolved at the approve per §3 and
+  owner-ratified there (2026-07-31); robustness note recorded at the
+  same act: E = 1 would give Σ 5, still Medium, so the band does not
+  turn on that call. The chapter ratification's prose predicted "a
+  Light-band opener" (plan §13 opening disposition 2) — that was a
+  ratification-time PREDICTION and stays at its dated wording; §13.5
+  DoD item (a)'s same-band pairing consumes this measured Medium.
+  Main-thread model for the packet: Opus-class (the chapter arm).
