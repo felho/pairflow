@@ -71,6 +71,16 @@ bubble workflow below. Everything an agent needs lives on repo surfaces
   token overrides a standing mode; an undetermined mode on a
   flag-free approve resolves to the letter (autonomous) WITH the
   announcement — never a silent discretionary stop.
+- **Subagent authorization (user-ratified 2026-07-31):** the entry
+  prompt IS the user's request for every subagent the invoked
+  workflow's ratified form prescribes — the ReviewPacket panel's
+  fresh-context lenses, the close pass, conductor-mode heavy steps. A
+  harness-level "agents/workflows only on user request" default in
+  the session's system prompt is SATISFIED by that invocation and is
+  never re-raised as a human gate; only subagent work OUTSIDE a
+  ratified workflow form needs a fresh ask. (Origin: the ch13-P1
+  panel-mode question — a harness line built into the Claude Code
+  binary collided with ReviewPacket §1's fresh-context mandate.)
 - **Verification bridges (run from repo root):** `pnpm v3:typecheck`,
   `v3:lint`, `v3:test`, `v3:coverage`, `v3:packet-lint`,
   `v3:adr-check`; the chapter DoD additionally requires full
