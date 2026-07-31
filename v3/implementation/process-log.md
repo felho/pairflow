@@ -4892,3 +4892,35 @@ final CLEAN.
   family's membership is the cross-product of those N names — quote
   them, do not paraphrase them — and any cell unreachable by
   construction is NAMED with its reason rather than silently dropped.
+
+- 2026-07-31 (ch13-p1, panel rounds 1–5 + three arm rounds,
+  mid-flight) — THE LOOP'S SERIOUS FINDINGS WERE ITS OWN FOLD
+  BYPRODUCTS. Yield measurement across five internal panel rounds and
+  three external-arm rounds on the authoring review: not one design
+  error surfaced beyond the original draft — the draft's design
+  content held throughout; every serious late-round finding traced to
+  an earlier fold, and the recurring shape was a "one rule, stated
+  once" violation (a fold restating a rule on a second surface, the
+  copies then drifting). NOT a convergence claim: the loop was still
+  mid-flight when the session ended on context budget (STOP
+  `4:flagged-approve` pending the §5.5 arm re-check on 6f6f039c and a
+  lens-4 reconciliation) — the realized value so far is governance
+  (F1/F2 minted as new-decision) and stability verification;
+  design-discovery yield was zero. BOUNDARY CANDIDATES: (a) FOLD
+  HYGIENE — a fold touching a rule stated on more than one surface
+  must edit the canonical row in the packet's mirrored surface map
+  and re-point the mirrors, never restate; the map exists for exactly
+  this, and folds bypassing it were the measured error source. (b) A
+  DELTA-AWARE TIER FOR THE MANDATORY FULL RE-RUN — ReviewPacket §5's
+  manifest-class escalation is right as governance, but the measured
+  FULL re-runs spent most of their budget re-deriving unchanged
+  mechanical surfaces (~40 findings/round, overwhelmingly
+  reproduction); a tier that hands each lens the delta list and
+  directs full effort at changed rows plus their entailment
+  neighborhood, spot-checking the rest, keeps the governance and cuts
+  the premium. (c) PER-ROUND YIELD CLASSIFICATION as a standing
+  report line — each round's findings counted as new-design-error /
+  fold-byproduct / reproduction — so convergence becomes readable
+  from data and a stop signal (e.g. two consecutive rounds with zero
+  non-byproduct findings) can be ratified from more than one packet's
+  evidence rather than this n=1.
