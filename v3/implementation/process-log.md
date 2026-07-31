@@ -4875,3 +4875,20 @@ final CLEAN.
   membership rule, not a judgement call, and it is cheap in-process.
   Product code was untouched by all three aftermaths: every finding
   was in the evidence, never in the behavior.
+
+- 2026-07-31 (ch13-P0, arm gate-2 pass 4) — READ THE AXIS LIST OFF THE
+  RULE, NOT OFF THE FIXTURE. Aftermath 3 called its lanes a "full
+  cross-product" and was wrong by one axis, because the axes were
+  enumerated from what the fixture happened to vary (carrier, path,
+  stream) instead of from the canonical row's own sentence: "by error
+  CODE and by nothing else — not by delivery path, not by stream
+  STATE, not by verb". Stream state was never crossed, so two wrong
+  classifiers survived 1818 tests (a closed stream swallowing every
+  later report; a repeat EPIPE rethrown once closed). This is the
+  same class as the ch13-P0 mirror-propagation friction one level up:
+  a completeness claim derived from the artifact instead of from the
+  rule it implements. BOUNDARY CANDIDATE, sharpened: when a canonical
+  row says a decision is independent of N NAMED things, the acceptance
+  family's membership is the cross-product of those N names — quote
+  them, do not paraphrase them — and any cell unreachable by
+  construction is NAMED with its reason rather than silently dropped.

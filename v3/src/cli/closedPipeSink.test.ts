@@ -644,18 +644,36 @@ describe("ch13-p0 family 3 (E4) — post-closure behavior", () => {
     expect(out.chunks).toEqual(["first\n"]);
   });
 
-  it("the repeat-report lane: a stream may report EPIPE again — absorbed without state change", () => {
-    const out = new RecordingStream();
-    const sinks = createOutputSinks(out, new RecordingStream());
-    out.emitError(epipe());
-    expect(() => {
-      out.emitError(epipe());
-      out.emitError(epipe());
-    }).not.toThrow();
+  // The repeat-report lane, crossed over STREAM STATE — the fourth axis
+  // E2 names ("not by stream state"). A report arriving on an ALREADY
+  // CLOSED stream classifies exactly as it would on an open one, on
+  // either stream and whatever the carrier. The sync path has no
+  // post-closure cell by construction: after closure the sink raises
+  // the sentinel INSTEAD of calling `write()`, so no `write()` throw
+  // can occur there (the grid's phase-applicability rule).
+  for (const which of ["out", "err"] as const) {
+    it.each([
+      ["an Error instance", streamError("EPIPE")],
+      ["a plain object", { code: "EPIPE" }],
+    ] as ReadonlyArray<readonly [string, unknown]>)(
+      `the repeat-report lane on ${which}: a further EPIPE report carried by %s is absorbed without state change`,
+      (_label, carrier) => {
+        const target = new RecordingStream();
+        const other = new RecordingStream();
+        const sinks =
+          which === "out" ? createOutputSinks(target, other) : createOutputSinks(other, target);
 
-    expect(() => sinks.out("after")).toThrow(OutputClosedError);
-    expect(out.chunks).toEqual([]);
-  });
+        target.emitError(epipe());
+        expect(() => {
+          target.emitError(carrier);
+          target.emitError(carrier);
+        }).not.toThrow();
+
+        expect(() => sinks[which]("after")).toThrow(OutputClosedError);
+        expect(target.chunks).toEqual([]);
+      },
+    );
+  }
 
   it("the sentinel-in-dispatch lane: the inner guard absorbs it and the class code already computed stands", async () => {
     const out = new RecordingStream();
@@ -754,14 +772,37 @@ describe("ch13-p0 family 4 (E6) — non-closure preservation", () => {
     expect(out.chunks).toEqual([]);
   });
 
-  it("the post-closure member: a non-EPIPE report on an ALREADY-CLOSED stream still takes this lane", () => {
-    const out = new RecordingStream();
-    createOutputSinks(out, new RecordingStream());
-    out.emitError(epipe());
+  // The post-closure member, crossed over STREAM STATE x STREAM x the
+  // whole non-closure domain: a closed stream must not turn a
+  // non-EPIPE report into a silent closure on EITHER stream.
+  for (const which of ["out", "err"] as const) {
+    it.each([
+      ["a non-EPIPE code (EACCES)", streamError("EACCES")],
+      ["a second non-EPIPE code (EPERM)", streamError("EPERM")],
+      ["an error carrying NO code", new Error("write failed")],
+      ["a non-object throw", "write failed"],
+      ["a plain object carrying a non-EPIPE code", { code: "ENOENT" }],
+    ] as ReadonlyArray<readonly [string, unknown]>)(
+      `the post-closure member on ${which}: %s on an ALREADY-CLOSED stream still takes this lane, by identity`,
+      (_label, failure) => {
+        const target = new RecordingStream();
+        const other = new RecordingStream();
+        if (which === "out") {
+          createOutputSinks(target, other);
+        } else {
+          createOutputSinks(other, target);
+        }
 
-    const failure = otherCode();
-    expect(() => {
-      out.emitError(failure);
-    }).toThrow(failure);
-  });
+        target.emitError(epipe());
+
+        let caught: unknown;
+        try {
+          target.emitError(failure);
+        } catch (error) {
+          caught = error;
+        }
+        expect(caught).toBe(failure);
+      },
+    );
+  }
 });

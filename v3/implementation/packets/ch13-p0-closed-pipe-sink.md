@@ -567,17 +567,26 @@ and no per-consumer-family review loop is expected).
     codes, an error carrying NO code, a non-object throw, and a
     non-EPIPE code carried by a plain object — plus EPIPE carried BOTH
     by an `Error` instance and by a plain object. The membership is a
-    FULL CROSS-PRODUCT over the three axes E2 declares irrelevant:
-    CARRIER SHAPE × DELIVERY PATH × STREAM on the closure side, and
-    CODE DOMAIN × DELIVERY PATH × STREAM on the non-closure side, with
-    the non-closure lanes asserting the thrown value by IDENTITY (a
-    wrapper would satisfy a message match). Fixing ANY one axis leaves
-    a classifier that secretly tests it alive — three successive
-    build-close gates each found the next unfixed axis by executed
-    mutation. Owner: E2; five blind classifiers are mutation-verified
-    dead: `not-EACCES`, `instanceof Error`, `instanceof Error` scoped
-    to the sync catch, `instanceof Error` scoped to stderr, and a
-    self-hunted corner (EPERM as a closure, sync path, stdout only).
+    FULL CROSS-PRODUCT over the FOUR axes E2's own sentence declares
+    irrelevant — delivery path, stream identity, stream STATE, and the
+    carrier's shape — against the one axis it declares decisive, the
+    error code. Concretely: CARRIER SHAPE × DELIVERY PATH × STREAM ×
+    STREAM STATE on the closure side, and CODE DOMAIN × DELIVERY PATH
+    × STREAM × STREAM STATE on the non-closure side, with the
+    non-closure lanes asserting the thrown value by IDENTITY (a
+    wrapper would satisfy a message match). One cell is unreachable BY
+    CONSTRUCTION and is named rather than driven: sync × already-closed
+    cannot occur, because after closure the sink raises the sentinel
+    INSTEAD of calling `write()` (the grid's phase-applicability rule).
+    Fixing ANY one axis leaves a classifier that secretly tests it
+    alive — four successive build-close gates each found the next
+    unfixed axis by executed mutation. Owner: E2; eight blind
+    classifiers are mutation-verified dead: `not-EACCES`,
+    `instanceof Error`, `instanceof Error` scoped to the sync catch,
+    `instanceof Error` scoped to stderr, a closed stream swallowing
+    everything, a repeat EPIPE rethrown once closed, and two
+    self-hunted corners (EPERM as a closure on the sync path for
+    stdout alone; a closed STDERR swallowing everything).
   - **2. Quiet-contract family** (E3, E5, E11) — discipline: a closure
     adds NO stderr byte attributable to itself (in particular zero
     raw-stack bytes) and never suppresses a verb's own error document
@@ -991,8 +1000,32 @@ obscure combination constructible from the three axes — is also dead
 (`ch13p0-a5-eperm-sync-stdout`, RED). Thirteen receipts now stand, all
 canonical, all RED, all restores byte-verified.
 
-The pattern across the three aftermaths is the record's real content:
+**AFTERMATH 4 (2026-07-31, arm gate-2 fourth pass — orchestrator-authored).**
+The gate found the FOURTH axis, and the miss was mine in a specific
+way worth recording: aftermath 3 called its lanes a "full
+cross-product" while enumerating the axes from the FIXTURE's shape
+(carrier, path, stream) rather than from E2's own sentence, which
+names delivery path, stream STATE and verb. Stream state was
+therefore never crossed: the post-closure report lanes ran on
+stdout/async/one-carrier only, so two wrong classifiers survived all
+1818 tests — one swallowing every later report on a closed stream,
+one rethrowing a REPEAT EPIPE instead of absorbing it.
+
+FIXED by crossing the post-closure lanes over stream × carrier
+(closure side) and stream × the whole code domain (non-closure side),
+identity-asserted, with the sync × already-closed cell named
+unreachable by construction rather than driven. The seam file went
+61 → 73 tests, the suite 1818 → 1830. Both gate survivors are dead
+(`ch13p0-a6-closedSwallowsAll`, `ch13p0-a7-repeatEpipeRethrown`) and
+so is a self-hunted corner of the new axis — a CLOSED STDERR
+swallowing everything (`ch13p0-a8-closedStderrSwallows`). Sixteen
+receipts now stand, all canonical, all RED, all restores
+byte-verified. Product code untouched by all four aftermaths.
+
+The pattern across the four aftermaths is the record's real content:
 every gate-2 finding was an axis of ONE cross-product that the fixture
 had fixed, and each partial fix bought exactly one more round. The
-cheap move — enumerate the axes the rule declares irrelevant and cross
-them ALL, once — is what closed it.
+axis list must be read off the RULE's own words — "not by delivery
+path, not by stream state, not by verb" is an enumeration, and any
+axis absent from the fixture is a classifier the suite cannot
+falsify.
