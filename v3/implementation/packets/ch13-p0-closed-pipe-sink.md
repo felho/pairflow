@@ -586,7 +586,12 @@ and no per-consumer-family review loop is expected).
     `instanceof Error` scoped to stderr, a closed stream swallowing
     everything, a repeat EPIPE rethrown once closed, and two
     self-hunted corners (EPERM as a closure on the sync path for
-    stdout alone; a closed STDERR swallowing everything).
+    stdout alone; a closed STDERR swallowing everything). The FIFTH
+    thing E2's sentence names — the VERB — is covered without a
+    dedicated lane: family 2's members drive real verbs through
+    `runCli`, so a verb-scoped classifier reds there; verified rather
+    than assumed (`ch13p0-a9-verbScoped`, a latch that applies the
+    closure rule to `tail` alone — RED).
   - **2. Quiet-contract family** (E3, E5, E11) — discipline: a closure
     adds NO stderr byte attributable to itself (in particular zero
     raw-stack bytes) and never suppresses a verb's own error document
@@ -1029,3 +1034,12 @@ axis list must be read off the RULE's own words — "not by delivery
 path, not by stream state, not by verb" is an enumeration, and any
 axis absent from the fixture is a classifier the suite cannot
 falsify.
+
+Read that way, E2's sentence names FIVE things: the error code is
+decisive, and delivery path, stream identity, stream state and the
+verb are not. The fifth was checked rather than assumed — a
+verb-scoped classifier (the closure rule applied to `tail` alone) is
+RED via family 2's verb-driven members, receipt
+`ch13p0-a9-verbScoped`. Seventeen receipts stand. Every axis the
+canonical row names is now crossed or receipt-proven covered, and the
+one unreachable cell is named with its construction reason.
