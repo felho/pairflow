@@ -353,13 +353,33 @@ describe("ch13-p0 family 1 (E2, E6) — closure classification", () => {
     },
   );
 
-  // The classifier's DOMAIN. E2 says the classification is "by error
-  // CODE and by nothing else", but a single non-EPIPE code and a single
-  // EPIPE carrier shape cannot falsify a classifier that tests the
-  // wrong thing: `code !== "EACCES"` and an added `instanceof Error`
-  // condition both survive a one-code, one-carrier fixture (observed by
-  // executed mutation at the build-close gate, 2026-07-31). These lanes
-  // parameterize the domain on both sides.
+  // The classifier's DOMAIN, as a FULL CROSS-PRODUCT. E2 says the
+  // classification is "by error CODE and by nothing else — not by
+  // delivery path, not by stream state, not by verb". A fixture that
+  // fixes any one of those axes cannot falsify a classifier that
+  // secretly tests it: three successive build-close gates each found
+  // the next unfixed axis alive (a single non-EPIPE code, then a
+  // path-scoped carrier test, then a stream-scoped one — each proven
+  // by an executed mutation that survived the whole suite). So the
+  // lanes below cross CARRIER SHAPE x DELIVERY PATH x STREAM on the
+  // closure side, and CODE DOMAIN x DELIVERY PATH x STREAM on the
+  // non-closure side. Nothing is fixed.
+
+  const streams = ["out", "err"] as const;
+  const paths = ["async", "sync"] as const;
+
+  /** A sink pair whose CHOSEN stream carries the fault on the CHOSEN path. */
+  function faulted(which: (typeof streams)[number], path: (typeof paths)[number], carrier: unknown) {
+    const target =
+      path === "sync"
+        ? new RecordingStream({ throwOnWrite: (n) => (n === 1 ? carrier : undefined) })
+        : new RecordingStream();
+    const other = new RecordingStream();
+    const sinks =
+      which === "out" ? createOutputSinks(target, other) : createOutputSinks(other, target);
+    return { target, sinks };
+  }
+
   const nonClosures: ReadonlyArray<readonly [string, unknown]> = [
     ["a second non-EPIPE code (ENOENT)", streamError("ENOENT")],
     ["a third non-EPIPE code (EPERM)", streamError("EPERM")],
@@ -368,76 +388,67 @@ describe("ch13-p0 family 1 (E2, E6) — closure classification", () => {
     ["a plain object carrying a non-EPIPE code", { code: "EACCES" }],
   ];
 
-  it.each(nonClosures)(
-    "a SYNC throw of %s is NOT a closure — it propagates unchanged and the stream stays open",
-    (_label, failure) => {
-      const flaky = new RecordingStream({ throwOnWrite: (n) => (n === 1 ? failure : undefined) });
-      const sinks = createOutputSinks(flaky, new RecordingStream());
-
-      expect(() => sinks.out("first")).toThrow(failure);
-      sinks.out("second");
-      expect(flaky.chunks).toEqual(["second\n"]);
-    },
-  );
-
-  it.each(nonClosures)(
-    "an ASYNC report of %s is NOT a closure — it is rethrown and the stream stays open",
-    (_label, failure) => {
-      const out = new RecordingStream();
-      const sinks = createOutputSinks(out, new RecordingStream());
-
-      expect(() => {
-        out.emitError(failure);
-      }).toThrow(failure);
-
-      sinks.out("still open");
-      expect(out.chunks).toEqual(["still open\n"]);
-    },
-  );
-
-  // The carrier shape is crossed with the DELIVERY PATH: E2 says the
-  // classification depends on neither, so a carrier lane on one path
-  // only leaves a path-scoped shape test alive (observed by executed
-  // mutation at the gate-2 re-check — a classifier narrowed to
-  // `instanceof Error` in the SYNC catch alone survived the whole
-  // suite while the async lane covered the plain object).
   const epipeCarriers: ReadonlyArray<readonly [string, unknown]> = [
     ["an Error instance", streamError("EPIPE")],
     ["a plain object", { code: "EPIPE" }],
   ];
 
-  it.each(epipeCarriers)(
-    "an ASYNC EPIPE report carried by %s marks the stream closed — the carrier's SHAPE is not part of the test",
-    (_label, carrier) => {
-      const out = new RecordingStream();
-      const sinks = createOutputSinks(out, new RecordingStream());
+  for (const which of streams) {
+    for (const path of paths) {
+      it.each(epipeCarriers)(
+        `EPIPE on ${which} via the ${path} path, carried by %s, marks the stream closed`,
+        (_label, carrier) => {
+          const { target, sinks } = faulted(which, path, carrier);
 
-      sinks.out("first");
-      expect(() => {
-        out.emitError(carrier);
-      }).not.toThrow();
+          if (path === "sync") {
+            // The ESTABLISHING failure is absorbed whatever the carrier is.
+            expect(() => sinks[which]("first")).not.toThrow();
+            expect(target.chunks).toEqual([]);
+          } else {
+            sinks[which]("first");
+            expect(target.chunks).toEqual(["first\n"]);
+            expect(() => {
+              target.emitError(carrier);
+            }).not.toThrow();
+          }
 
-      expect(() => sinks.out("second")).toThrow(OutputClosedError);
-      expect(out.chunks).toEqual(["first\n"]);
-    },
-  );
+          // Marked closed: the NEXT write raises the sentinel, writes nothing.
+          const before = [...target.chunks];
+          expect(() => sinks[which]("second")).toThrow(OutputClosedError);
+          expect(target.chunks).toEqual(before);
+        },
+      );
 
-  it.each(epipeCarriers)(
-    "a SYNC EPIPE throw carried by %s is absorbed and marks the stream closed — shape-independent on this path too",
-    (_label, carrier) => {
-      const throwing = new RecordingStream({
-        throwOnWrite: (n) => (n === 1 ? carrier : undefined),
-      });
-      const sinks = createOutputSinks(throwing, new RecordingStream());
+      it.each(nonClosures)(
+        `a non-EPIPE fault on ${which} via the ${path} path — %s — is NOT a closure and propagates by IDENTITY`,
+        (_label, failure) => {
+          const { target, sinks } = faulted(which, path, failure);
+          let caught: unknown;
 
-      // The ESTABLISHING failure is absorbed whatever the carrier is.
-      expect(() => sinks.out("first")).not.toThrow();
-      expect(throwing.chunks).toEqual([]);
+          if (path === "sync") {
+            try {
+              sinks[which]("first");
+            } catch (error) {
+              caught = error;
+            }
+          } else {
+            sinks[which]("first");
+            try {
+              target.emitError(failure);
+            } catch (error) {
+              caught = error;
+            }
+          }
 
-      expect(() => sinks.out("second")).toThrow(OutputClosedError);
-      expect(throwing.chunks).toEqual([]);
-    },
-  );
+          // Identity, not a message match: a wrapper would pass `toThrow`.
+          expect(caught).toBe(failure);
+          // Not marked closed — the next write still reaches the stream.
+          sinks[which]("second");
+          expect(target.chunks).toContain("second\n");
+        },
+      );
+    }
+  }
 });
 
 // ── family 2 (E3, E5, E11): the quiet contract ───────────────────────

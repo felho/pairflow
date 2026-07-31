@@ -566,13 +566,18 @@ and no per-consumer-family review loop is expected).
     code and one carrier shape: at least THREE distinct non-EPIPE
     codes, an error carrying NO code, a non-object throw, and a
     non-EPIPE code carried by a plain object — plus EPIPE carried BOTH
-    by an `Error` instance and by a plain object, CROSSED WITH THE
-    DELIVERY PATH (each carrier on the async report AND on the sync
-    throw), because a carrier lane on one path only leaves a
-    path-scoped shape test alive. Owner: E2; added at build close on
-    the gate-2 findings, with all three blind classifiers
-    mutation-verified dead (`not-EACCES`, `instanceof Error`, and
-    `instanceof Error` narrowed to the sync catch alone).
+    by an `Error` instance and by a plain object. The membership is a
+    FULL CROSS-PRODUCT over the three axes E2 declares irrelevant:
+    CARRIER SHAPE × DELIVERY PATH × STREAM on the closure side, and
+    CODE DOMAIN × DELIVERY PATH × STREAM on the non-closure side, with
+    the non-closure lanes asserting the thrown value by IDENTITY (a
+    wrapper would satisfy a message match). Fixing ANY one axis leaves
+    a classifier that secretly tests it alive — three successive
+    build-close gates each found the next unfixed axis by executed
+    mutation. Owner: E2; five blind classifiers are mutation-verified
+    dead: `not-EACCES`, `instanceof Error`, `instanceof Error` scoped
+    to the sync catch, `instanceof Error` scoped to stderr, and a
+    self-hunted corner (EPERM as a closure, sync path, stdout only).
   - **2. Quiet-contract family** (E3, E5, E11) — discipline: a closure
     adds NO stderr byte attributable to itself (in particular zero
     raw-stack bytes) and never suppresses a verb's own error document
@@ -962,3 +967,32 @@ so the table and the receipts are independently derived. The
 canonical-toolchain requirement is the standing lesson: a red-on-break
 receipt taken against a red baseline is not evidence, and nothing in
 the runner's contract enforces the baseline.
+
+**AFTERMATH 3 (2026-07-31, arm gate-2 third pass — orchestrator-authored).**
+The receipt fold verified sufficient; the carrier fold did not. The
+gate found the THIRD axis of the same cross-product: the plain-object
+EPIPE carrier was driven on stdout only, so a classifier narrowed to
+`instanceof Error` FOR STDERR — on both delivery paths — survived all
+1804 tests. Product code untouched again.
+
+The response was not another patch. Family 1's domain lanes were
+rewritten as a FULL CROSS-PRODUCT over every axis E2 declares
+irrelevant — carrier shape × delivery path × stream on the closure
+side, code domain × delivery path × stream on the non-closure side —
+with the non-closure lanes asserting the thrown value by IDENTITY
+rather than by message match, so a wrapping classifier reds too. The
+seam file went 47 → 61 tests.
+
+Verification, all through the probe runner with canonical commands and
+byte-verified restores: the gate's surviving mutant is dead
+(`ch13p0-a4-stderrShape`, RED), and a SELF-HUNTED corner — EPERM
+treated as a closure on the sync path for stdout alone, the most
+obscure combination constructible from the three axes — is also dead
+(`ch13p0-a5-eperm-sync-stdout`, RED). Thirteen receipts now stand, all
+canonical, all RED, all restores byte-verified.
+
+The pattern across the three aftermaths is the record's real content:
+every gate-2 finding was an axis of ONE cross-product that the fixture
+had fixed, and each partial fix bought exactly one more round. The
+cheap move — enumerate the axes the rule declares irrelevant and cross
+them ALL, once — is what closed it.

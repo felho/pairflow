@@ -4854,3 +4854,24 @@ final CLEAN.
   the canonical runner invocation, not just "the probe runner".
   Second data point in the same session for the gate-2 class: the arm
   earns its cost exactly where a claim is green-by-construction.
+
+- 2026-07-31 (ch13-P0, arm gate-2 passes 1–3) — PARTIAL FIXES TO A
+  CROSS-PRODUCT BUY EXACTLY ONE ROUND EACH. Three gate-2 passes, three
+  findings, all the same shape: E2's rule is "classify by error CODE
+  and by nothing else — not by delivery path, not by stream state",
+  and the test fixture kept FIXING one of the axes the rule declares
+  irrelevant. Pass 1: one non-EPIPE code and one carrier shape → a
+  `not-EACCES` and an `instanceof Error` classifier both survived.
+  Pass 2 (after crossing carrier × path): the carrier lanes ran on
+  stdout only → an `instanceof Error` classifier scoped to STDERR
+  survived. Each fix was verified by executed mutation and each was
+  still partial. The close came from rewriting the lanes as the FULL
+  cross-product — carrier × path × stream, code-domain × path × stream
+  — plus identity assertions on the propagated value; a self-hunted
+  corner mutant (EPERM as closure, sync path, stdout only) then died
+  too. BOUNDARY CANDIDATE: when a canonical row states that a
+  classification is independent of N named axes, the acceptance family
+  must cross ALL N — "N axes declared irrelevant" is a mechanical
+  membership rule, not a judgement call, and it is cheap in-process.
+  Product code was untouched by all three aftermaths: every finding
+  was in the evidence, never in the behavior.
