@@ -5018,3 +5018,41 @@ final CLEAN.
   decide behavior without leaning on it. ROUTE: boundary-review —
   candidate duty for the draft-panel duty set, to be consolidated
   beside the delegation rule at the chapter boundary.
+
+- 2026-08-02 (ch13-p1, the four-round frame's watchdog diagnosis —
+  recorded NOW, independent of the arm gate's outcome, at the user's
+  instruction) — CHURN COMPOSITION: AUTHOR-FOLD PROPAGATION ON A
+  CONTRACT-DENSE TARGET. Across the re-based frame every round found
+  real defects, but the composition barely moved: overwhelmingly
+  fold-byproducts of the AUTHOR's own edits, a handful of
+  contract-side corrections, and — the class that matters — two
+  pre-existing design defects that only EXECUTION surfaced. The
+  target states its rules on six to eight surfaces each; every fold
+  must walk all of them, and the measured byproduct rate of a single
+  batch reached ~10 new propagation defects per 12 edits. TWO
+  CANDIDATES the boundary review should weigh: (a) SPLIT — the
+  packet is 114 KB and its mirror count is the actual cost driver;
+  (b) MIRROR-COUNT REDUCTION — drive mirrors to pointer-only form so
+  a rule change edits one canonical row and re-points, instead of
+  re-stating. Candidate (b) is the cheaper experiment and is testable
+  on the next contract-dense packet.
+
+- 2026-08-02 (ch13-p1) — EXECUTION-VS-TEXT REACHES n=3, AND THE
+  EXECUTED-PROBE RULE IS CONFIRMED FROM THE PACKET SIDE. The third
+  instance: the packet's suppression matrix asserted that a gate
+  binding's ref lanes still fire under a DEAD-CONFIG event. Eight
+  text-based rounds carried it; one run of the live rung killed it —
+  the dead-config guard `continue`s at the EVENT grain
+  (`admit.ts:186-192`) before the binding loop (`:203`) and the
+  allowlist (`:214-221`), so those lanes cannot run, and the matrix
+  had been declaring a driven obligation no correct implementation
+  could satisfy. Contract check first: no ch13 C-row entailed the
+  matrix's direction, so the fix was a fold, not a reopen.
+  THE PACKET-SIDE COROLLARY, learned the same day: a WRITE-TIME
+  breach of the same rule produced its own P1 — a fold sentence
+  carried the word "measured" on an inference nobody had run
+  ("the Map-arrival residual is direct-channel only"), and one
+  execution refuted it. The rule therefore binds at authoring, not
+  only at review: a sentence may carry "measured" only with a run
+  behind it, dated, and where the thing itself cannot be run — a
+  lane that does not exist yet — the sentence must say DERIVED.
