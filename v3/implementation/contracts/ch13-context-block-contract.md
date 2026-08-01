@@ -1,7 +1,7 @@
 # ch13 — context-block contract
 
 ```json
-{"contract_draft": {"chapter": "ch13", "surface": "context-block", "status": "reopened"}}
+{"contract_draft": {"chapter": "ch13", "surface": "context-block", "status": "ratified"}}
 ```
 
 ## Context (non-normative by declaration)
@@ -207,6 +207,25 @@ four `l2b-pseudocode` units + the six l2b invariants; plan §13.
 content: 10 DECIDED-HERE markers across 9 rows; post-ratification
 reopenings: 0.
 
+**Reopen record (2026-08-01, the ch13-P1 gate-1 arm re-check #3).**
+Reopened C1's closing clause alone: the row called the
+present-but-malformed catalog's result "exactly the
+absent-catalog-with-refs shape", an identity that holds at the
+REF-LANE grain (the same per-site C7 findings, nothing resolving) and
+fails at the whole-result grain (an absent key runs no container lane,
+so it cannot produce the container finding the malformed case does).
+The clause now states both grains. Three consecutive review rounds
+contested the packet's projection of this clause from ALTERNATING
+directions — a packet could satisfy the row's letter or the code,
+never both — which located the defect in the contract bytes rather
+than in the projection. Reopen-delta new-decision rows: 0 (a fact
+correction; no decision moves, and the C-row's normative content —
+one container finding, the named suppressed dependents, C7 still
+firing — is unchanged).
+
+**Dated update (2026-08-01, the C1 grain reopen):** post-ratification
+reopenings 0 → 1 (closed by re-ratification within the same act).
+
 ## Contract rows (every normative statement is a C-row)
 
 | ID | Rule |
@@ -236,6 +255,10 @@ reopenings: 0.
 
 ```json
 {"ratification": {"date": "2026-07-26", "arms": ["none external — the internal five-lens Opus panel (4 full + 1 targeted round + top-level close CLEAN @ 20a3c3d2); the codex arm consciously waived by the owner at GO (2026-07-26)"], "commit": "16a668b08dfe6e9e36076573c226503113ea8a16"}}
+```
+
+```json
+{"ratification": {"date": "2026-08-01", "arms": ["agent-invoked codex arm (pin gpt-5.6-sol/high), ch13-P1 gate-1 re-check #3 finding 4 — the arm read the PACKET's bytes and located the defect in C1; no arm reviewed this reopen's own bytes"], "commit": "616f4aa6299d8ece3dd1c20e169c83960540246b"}}
 ```
 
 ## Realized map (empty until chapter close)
