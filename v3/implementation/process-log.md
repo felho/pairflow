@@ -4992,3 +4992,29 @@ final CLEAN.
   when ratified anchors move under a target, the count may be re-based
   by the human WITH a recorded reason and a frame sized to the
   remaining work — never silently, never by the loop.
+
+- 2026-08-01 (ch13 contract, companion to the delegation rule above —
+  same day, same region, different failure class) — A MEASURABLE CLAIM
+  IN A DRAFT RATIFIES ONLY WITH AN EXECUTED PROBE. Adjacent to the
+  delegation rule, not the same: that rule catches misplaced
+  discipline ("the testkit author will care"); this one catches an
+  unmeasured statement of measurable fact ("the entry shape is
+  foreclosed by type"). The ch13 draft ratified C19 on a
+  type-foreclosure premise nobody had ever executed; lens 1's
+  tsc --strict probes falsified it mid-packet, and the whole
+  direct-construction reopen (C7/C8(c)/C2/C19) followed from that one
+  unmeasured sentence. The counter-example proving the duty is cheap:
+  at the re-ratification gate the reviewer ran the bytes' coded claims
+  (the Object.keys/hasOwn family) in seconds and caught "a primitive
+  enumerates to nothing" as measured-false BEFORE it ratified — the
+  same duty applied at draft time would have cost one tsc probe and
+  spared two reopens plus every human gate they pulled in. LITMUS AT
+  DRAFT TIME: any sentence of the class "by construction / the type
+  forecloses / cannot happen / reachable only by cast / enumerates to
+  nothing" names a measurement; it ratifies only alongside its
+  executed probe (the command and the observed result, dated in the
+  row the way C19's replacement now carries MEASURED 2026-08-01), else
+  the sentence is downgraded to an open question and the row must
+  decide behavior without leaning on it. ROUTE: boundary-review —
+  candidate duty for the draft-panel duty set, to be consolidated
+  beside the delegation rule at the chapter boundary.
