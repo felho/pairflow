@@ -5056,3 +5056,30 @@ final CLEAN.
   only at review: a sentence may carry "measured" only with a run
   behind it, dated, and where the thing itself cannot be run — a
   lane that does not exist yet — the sentence must say DERIVED.
+
+- 2026-08-02 (ch13 contract, the third reopen — the executed-probe
+  rule reaches n+1 and gains a second half) — THE RULE BINDS THE
+  RATIFYING SIDE TOO, AND "DERIVED" NEEDS A NAMED MEASURER. Two
+  extensions, both bought with a live defect.
+  FIRST — PROVENANCE. The false sentence the arm's P1 killed
+  ("a nullish catalog admits, observably identical to the legal
+  absent-catalog state") did not come from the authoring loop's
+  drafting: it entered from the RATIFYING side's own proposal during
+  the second reopen, and was ratified without a probe behind it.
+  Measured afterwards: `admitTemplate` admits `contextBlocks: null`
+  and carries the `null` onto the admitted value, which the same
+  contract's C17 typed surface forbids. The executed-probe rule is
+  therefore not an author-side discipline — it binds every sentence
+  entering ratified bytes, whoever proposes it, and the ratification
+  gate is where that binds hardest because nothing downstream
+  re-measures a row's own prose.
+  SECOND — THE DERIVED FORM. Some true claims cannot be measured when
+  they are written: this one asserts what the admitted value will look
+  like AFTER a rebuild that does not exist yet. The pattern adopted
+  here, and reusable: a claim measurable TODAY carries a probe with
+  its result and date; a claim about future built behavior is marked
+  DERIVED and must NAME the carrier that will measure it (here: the
+  normalization family's empty-direction full-value equality member,
+  audited by the build-close sensitivity pass). A DERIVED claim with
+  no named verifier is a deferred assertion wearing a contract row's
+  clothes — the failure mode this entry exists to foreclose.
