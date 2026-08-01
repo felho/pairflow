@@ -5083,3 +5083,32 @@ final CLEAN.
   audited by the build-close sensitivity pass). A DERIVED claim with
   no named verifier is a deferred assertion wearing a contract row's
   clothes — the failure mode this entry exists to foreclose.
+
+- 2026-08-02 (ch13-p1 aftermath, user-raised at the 3:watchdog STOP) —
+  BOUNDARY CANDIDATE: A DECLARED-SCHEMA SUBSTRATE FOR THE TEMPLATE
+  SURFACE, replacing per-position hand-legislated lanes. The driving
+  observation is the user's: every new format surface (ch8, ch11,
+  ch12, ch13) re-legislates the same failure space in ratified prose —
+  container preconditions, key/value lanes, unknown keys,
+  null/scalar/array forgeries, suppression edges, path grammar,
+  channel symmetry — and the measured churn (mirror density,
+  one-rule-many-surfaces, the ch13 two-channel asymmetry class) is
+  largely THIS class. Candidate shape: one declarative schema per
+  surface ("this key: map of entries; this key: list of grammar-G
+  strings; defaults and normalization declared in place") plus ONE
+  validation engine owning containers, scalars, nullish, unknown keys,
+  finding paths, suppression, and normalization — running identically
+  on the file-walk and direct-construction channels, so channel
+  asymmetry becomes structurally impossible; contract rows then
+  RE-EXPRESS as schema declarations plus the genuinely semantic lanes
+  (reference resolution, unreferenced hygiene, dead-config
+  event-grain, per-occurrence duplicates), which stay bespoke but sit
+  on the shared substrate. Recorded for honesty — what it would NOT
+  have saved in ch13: the entry-belt and exclusion-deletion decisions
+  were real design choices; the schema shrinks their implementation
+  and prose surface, never the deciding. Cost side: a retrofit must
+  reproduce the ratified finding paths/messages or re-ratify them —
+  a cross-chapter, ADR-scale act, NOT a packet-scale fix; hence
+  boundary-routed, on the back burner until ch13 closes. Relation to
+  the committed diagnosis (ceb64427): this is the structural form of
+  "mirror-count reduction" at the system level.
