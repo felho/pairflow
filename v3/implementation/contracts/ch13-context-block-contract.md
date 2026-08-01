@@ -1,7 +1,7 @@
 # ch13 — context-block contract
 
 ```json
-{"contract_draft": {"chapter": "ch13", "surface": "context-block", "status": "reopened"}}
+{"contract_draft": {"chapter": "ch13", "surface": "context-block", "status": "ratified"}}
 ```
 
 ## Context (non-normative by declaration)
@@ -234,6 +234,32 @@ firing — is unchanged).
 **Dated update (2026-08-01, the C1 grain reopen):** post-ratification
 reopenings 0 → 1 (closed by re-ratification within the same act).
 
+**Second reopen record (2026-08-01, the ch13-P1 panel round 7 — the
+direct-construction region).** Reopened C7, C8(c), C2's far-side edge
+and C19's CHANNEL SCOPE sentence. The rows had declined to specify
+what the admission rung does with a catalog on the
+direct-construction channel: C19 handed it to "the testkit author's
+discipline" on a type-foreclosure premise that measurement falsified
+(`tsc --strict` rejects an array, a wrong-valued entry object and a
+class instance alike, while an ungrammatical KEY needs no cast at
+all), and C8(c) conditioned its key exclusion on a C2 finding that
+never exists there. Three consecutive review rounds each found P1
+defects in that one region, every one traceable to a packet having to
+invent policy the rows left open. Decided: C7 resolution is
+ENTRY-BELTED against C3's definition BY REFERENCE; C8(c)'s
+C2-failed-key exclusion is DELETED on both sides and its domain is
+ALL own enumerable keys with no value condition; C19's realization
+split is UNTOUCHED (the key lane stays walk-side) with only its
+CHANNEL SCOPE rationale corrected to the measured facts. Outcome: the
+admit/refuse result is channel-symmetric for every catalog and entry
+shape, the finding SET differing only by the lanes C19 places in the
+walk. Reopen-delta new-decision rows: 2 (C7's grain, C8(c)'s domain —
+the triage roster carries both, ROW-HOME, neither model-shaped).
+
+**Dated update (2026-08-01, the direct-channel region reopen):**
+post-ratification reopenings 1 → 2 (closed by re-ratification within
+the same act).
+
 ## Contract rows (every normative statement is a C-row)
 
 | ID | Rule |
@@ -267,6 +293,10 @@ reopenings 0 → 1 (closed by re-ratification within the same act).
 
 ```json
 {"ratification": {"date": "2026-08-01", "arms": ["agent-invoked codex arm (pin gpt-5.6-sol/high), ch13-P1 gate-1 re-check #3 finding 4 — the arm read the PACKET's bytes and located the defect in C1; no arm reviewed this reopen's own bytes"], "commit": "616f4aa6299d8ece3dd1c20e169c83960540246b"}}
+```
+
+```json
+{"ratification": {"date": "2026-08-01", "arms": ["ch13-P1 panel round 7 — five fresh-context Opus lenses on the packet, whose lens-1/lens-2 executed probes located the region and falsified C19's type-foreclosure premise; agent-invoked codex arm gate-1 re-check #4 (pin gpt-5.6-sol/high) on the same packet bytes; a draft-scoped adversarial pass on the DRAFTED rows returned 3 P1 + 4 lesser findings, all folded before this act. No arm reviewed the FINAL reopen bytes: the last defect in them — a false measured claim, `Object.keys(\"abc\")` is [\"0\",\"1\",\"2\"] and not empty — was caught by the human at a NO-GO and corrected before the GO"], "commit": "3c6ed1815efe4266f71f0a6e6ae4a34028f8fcee"}}
 ```
 
 ## Realized map (empty until chapter close)
