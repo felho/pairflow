@@ -4924,3 +4924,47 @@ final CLEAN.
   from data and a stop signal (e.g. two consecutive rounds with zero
   non-byproduct findings) can be ratified from more than one packet's
   evidence rather than this n=1.
+
+- 2026-08-01 (ch13-p1, panel round 7 + arm round 4 — the measurement
+  the 07-31 entry asked for) — THE ZERO-DESIGN-YIELD FINDING DID NOT
+  HOLD; THE UNDECIDED REGION WAS THE SOURCE. The 07-31 entry recorded
+  that across five panel rounds and three arm rounds "not one design
+  error surfaced beyond the original draft". Round 7 falsified that
+  with executed evidence: a type-conforming, CAST-FREE template
+  (`{ BAD_KEY: {body:"x"} }`, zero refs) ADMITTED while carrying two
+  members of the packet's own declared defect inventory, and the
+  rung's raising-site enumeration entailed two FILE-CHANNEL sites it
+  did not name. Both predate every fold. What made them findable was
+  not more rounds but a lens running its FULL duty set with probes —
+  the delta-scoped rounds that produced the 07-31 measurement could
+  not have found them, because neither defect sat near a delta. Read
+  together with 07-31: boundary candidate (c) — per-round yield
+  classification — is CONFIRMED useful and now has n=2 with opposite
+  results; candidate (b) — a delta-aware tier for the mandatory FULL
+  re-run — is NARROWED: cheap delta-scoping is right for
+  propagation-class churn and WRONG as the only mode, because it is
+  structurally blind to pre-existing holes. A FULL duty-set pass with
+  executed probes must remain reachable, and the escalation rule that
+  reaches it (a skipped lens that cannot be PROVEN unaffected) is what
+  produced this round.
+
+- 2026-08-01 (ch13 contract, two reopens in one day) — A DRAFT MAY NOT
+  DELEGATE A CHANNEL'S DISCIPLINE TO "THE TESTKIT AUTHOR" WITHOUT
+  STATING WHAT THE RUNG DOES THERE. The ch13 memo surface proved
+  under-specified TWICE on the same channel semantics: first C1's
+  shape-identity grain, then the whole direct-construction region
+  (C7/C8(c)/C2/C19). The second was not a wording defect — the rows
+  had genuinely declined to decide, C19 handing catalog shape to "the
+  testkit author's discipline" on a type-foreclosure premise that
+  measurement falsified, and C8(c) conditioning its exclusion on a
+  finding that never exists on that channel. Every packet projecting
+  those rows therefore had to INVENT policy, and each invention grew
+  edges the next round found: three consecutive rounds, three P1s, one
+  region. THE RULE FOR FUTURE DRAFT ROUNDS: when a draft names a
+  channel, an actor, or a caller class as owning some discipline, that
+  is a delegation of AUTHORING care, never of RUNTIME behavior — the
+  row must still state what the kernel does when the delegated care is
+  absent, or the delegation is an undecided region wearing a decision's
+  clothes. Litmus at draft time: "what does the code do when this
+  actor gets it wrong?" — if the rows do not answer, the region is
+  undecided and the packet loop will pay for it, round after round.
