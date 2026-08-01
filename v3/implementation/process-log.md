@@ -5112,3 +5112,37 @@ final CLEAN.
   boundary-routed, on the back burner until ch13 closes. Relation to
   the committed diagnosis (ceb64427): this is the structural form of
   "mirror-count reduction" at the system level.
+
+- 2026-08-02 (ch13-p1) — `3:watchdog` STOP REACHED AND HONOURED; the
+  brake worked. The four-round frame was spent, the arm gate ran
+  twice on approve-ready bytes and returned `refine` both times, so
+  the STOP landed with the TRUE diagnosis the 08-02 entry above had
+  pre-recorded. What the second arm run also established, and worth
+  keeping beside the STOP: the packet's substrate, inventory and
+  code-fidelity HELD — all seven premises reproduced, all four F1
+  widening members refused identically on both channels, all three
+  event guards stopped at the event grain, every ripple sweep count
+  matched with no omitted site, and `v3:test` ran 1830 tests green.
+  The STOP is about two statements, not about the packet's spine.
+  TWO DATA POINTS the human ratified alongside it.
+  (a) SCOPE SHAPE MUST MATCH DEFECT SHAPE. The third reopen was
+  scoped to the NULLISH catalog — an INSTANCE — while the defect was
+  the CLASS "an admitted catalog may be a non-record". The
+  instance-width fix closed one member and left the rest (a scalar,
+  an empty string, an empty array — measured: all five admit and are
+  carried unchanged), so the same seam tore again one round later.
+  The scope was set by the RATIFYING side, which is where this rule
+  bites: a class-shaped defect earns a class-width scope verdict, and
+  narrowing it is a decision with a cost, not a saving.
+  (b) THE SECOND P1 WAS A FOLD BYPRODUCT OF THE DERIVED-MEASURER
+  OBLIGATION ITSELF. Naming a measuring carrier for the derived
+  identity (the right rule, adopted the same day) added an acceptance
+  member requiring present-null ⇒ `{}`, while the family's older
+  mutant sentence still called `template.contextBlocks ?? {}` a
+  violation — so a correct implementation both satisfied and failed
+  the family. A new obligation must sweep the surface it lands on;
+  the obligation being CORRECT does not exempt its fold from the
+  mirror discipline.
+  (The declared-schema substrate candidate recorded at 4c1d481f is
+  the adjacent structural question, already routed past the chapter
+  close; not restated here.)
