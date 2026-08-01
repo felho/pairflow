@@ -1,7 +1,7 @@
 # ch13 — context-block contract
 
 ```json
-{"contract_draft": {"chapter": "ch13", "surface": "context-block", "status": "reopened"}}
+{"contract_draft": {"chapter": "ch13", "surface": "context-block", "status": "ratified"}}
 ```
 
 ## Context (non-normative by declaration)
@@ -260,6 +260,38 @@ the triage roster carries both, ROW-HOME, neither model-shaped).
 post-ratification reopenings 1 → 2 (closed by re-ratification within
 the same act).
 
+**Third reopen record (2026-08-02, the ch13-P1 arm gate-1 on the
+approve-ready bytes).** Reopened C17's catalog normalization clause
+and C8(c)'s nullish residual sentence — two rows, nothing else. The
+arm found C8(c) asserting an identity the rows could not deliver: a
+cast-forged `contextBlocks: null` with zero refs was called
+"observably identical to the legal absent-catalog state", while
+measurement showed `admitTemplate` admitting it and carrying the
+`null` onto the admitted value against C17's own typed surface, so
+the render would meet a non-record it may neither revalidate nor dig
+through. Decided: C17 normalizes absent, present-null and
+present-undefined alike to `{}`, the nullish idiom the sibling
+`activation` rebuild already applies (`admit.ts:444`), which makes
+C8(c)'s identity true BY CONSTRUCTION. Reopen-delta new-decision
+rows: 1 (the nullish grain, marked DECIDED HERE in C17).
+
+TWO FORM PRECEDENTS this act sets, recorded because later drafts
+should copy them. FIRST — the DERIVED marking: C8(c)'s identity
+cannot be measured until the rebuild exists, so the row SAYS it is
+derived instead of wearing a false "measured", and NAMES its
+measuring carrier (the normalization family's empty-direction
+full-value equality member, audited by the build-close sensitivity
+pass). A derived claim without a named verifier is a deferred
+assertion, not a contract row. SECOND — the provenance of the defect:
+the false sentence entered from the RATIFYING side's own drafting
+without a probe behind it, which is why the executed-probe rule is
+recorded in the process log as binding on reviewer-proposed and
+author-proposed sentences alike.
+
+**Dated update (2026-08-02, the nullish-normalization reopen):**
+post-ratification reopenings 2 → 3 (closed by re-ratification within
+the same act).
+
 ## Contract rows (every normative statement is a C-row)
 
 | ID | Rule |
@@ -297,6 +329,10 @@ the same act).
 
 ```json
 {"ratification": {"date": "2026-08-01", "arms": ["ch13-P1 panel round 7 — five fresh-context Opus lenses on the packet, whose lens-1/lens-2 executed probes located the region and falsified C19's type-foreclosure premise; agent-invoked codex arm gate-1 re-check #4 (pin gpt-5.6-sol/high) on the same packet bytes; a draft-scoped adversarial pass on the DRAFTED rows returned 3 P1 + 4 lesser findings, all folded before this act. No arm reviewed the FINAL reopen bytes: the last defect in them — a false measured claim, `Object.keys(\"abc\")` is [\"0\",\"1\",\"2\"] and not empty — was caught by the human at a NO-GO and corrected before the GO"], "commit": "3c6ed1815efe4266f71f0a6e6ae4a34028f8fcee"}}
+```
+
+```json
+{"ratification": {"date": "2026-08-02", "arms": ["agent-invoked codex arm, ch13-P1 gate-1 on the approve-ready bytes (pin gpt-5.6-sol/high, 880s, guards clean) — it re-executed all seven declared premises, the untruncated ripple sweeps, 378 tests and v3:typecheck, and its P1 located THIS defect by probe; no arm reviewed this reopen's own bytes, and the DERIVED identity it introduces is by construction unverifiable until the rebuild exists (its measuring carrier is named in C8(c))"], "commit": "a0cf73b51bee8a65d6c4155d0689ec4f9a68e340"}}
 ```
 
 ## Realized map (empty until chapter close)
