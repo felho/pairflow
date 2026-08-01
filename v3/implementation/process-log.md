@@ -4968,3 +4968,27 @@ final CLEAN.
   clothes. Litmus at draft time: "what does the code do when this
   actor gets it wrong?" — if the rows do not answer, the region is
   undecided and the packet loop will pay for it, round after round.
+
+- 2026-08-01 (ch13-p1, the watchdog reset — a RATIFIED act, recorded
+  so it is auditable rather than self-granted) — WATCHDOG COUNT RESET
+  ON A RE-RATIFIED ANCHOR BASIS, UNDER A NARROWED FRAME. State at the
+  request: 7 of the 8 panel rounds spent. The user reset the count and
+  the loop did NOT grant it to itself — the standing rule stays "the
+  cap is not a tuning lever". RATIFIED REASONING: the watchdog's
+  pathology is churn on a STABLE target; here the anchors themselves
+  moved twice under the packet by human-ratified reopen (C1's grain;
+  then the direct-construction region C7/C8(c)/C2/C19), and the round-7
+  yield reversal logged above shows convergence, not churn — a STOP
+  landing at round 8 would have carried a FALSE diagnosis, which is
+  worse than no STOP. TWO BINDING LIMITS, both the user's: (1) this
+  entry itself — a reset without its recorded reasoning is not a reset;
+  (2) the new frame is FOUR rounds, not eight, sized to the remaining
+  road (re-projection + one verification round + ratification + one
+  spare). If those four are spent on the now-unchanged re-ratified
+  basis, `3:watchdog` stands and its diagnosis is TRUE. No further
+  reset without a reopen, and a reopen does not grant one either — the
+  question returns to the human every time. GENERAL RULE this
+  establishes: a watchdog count is scoped to a target's ANCHOR BASIS;
+  when ratified anchors move under a target, the count may be re-based
+  by the human WITH a recorded reason and a frame sized to the
+  remaining work — never silently, never by the loop.
