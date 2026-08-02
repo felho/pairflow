@@ -314,7 +314,7 @@ POINTER_TOKEN_RE = re.compile(r"→\[([^\[\]\s]+)\]")
 # arrow range.
 POINTER_ARROWISH_RE = re.compile(
     r"([←-⇿➔-➾⟰-⟿⤀-⥿"
-    r"⬀-⭏\U0001f800-\U0001f8ff])\[([^\[\]\s]+)\]"
+    r"⬀-⯿\U0001f800-\U0001f8ff])\[([^\[\]\s]+)\]"
 )
 MIRROR_HEADING_RE = re.compile(r"^(#{2,6})\s+(.*)$")
 
@@ -2197,6 +2197,14 @@ def run_selftest() -> int:
         GREEN_PTR_PACKET + "\nSee ➝[not-declared] for details.\n",
         "non-canonical arrow",
     )
+    # The round-3 escapees: the Misc Symbols and Arrows block runs to
+    # U+2BFF, not U+2B4F — each once-escaping witness is pinned red.
+    for arrow in ("⭢", "⮕", "⯮"):
+        expect_red_packet(
+            f"ptr-map-arrow-2bxx-{ord(arrow):x}",
+            GREEN_PTR_PACKET + f"\nSee {arrow}[not-declared] for details.\n",
+            "non-canonical arrow",
+        )
     expect_red_packet(
         "ptr-map-ambiguous-anchor-slug",
         ptr_packet(
