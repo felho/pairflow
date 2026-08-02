@@ -5277,3 +5277,30 @@ final CLEAN.
   with a PER-CASE executed probe. Generalising over cases is exactly
   where a sentence stops tracking the code, and the generalisation
   reads as economy right up until someone runs it.
+
+- 2026-08-03 (ch13-p1 final arm, the escalation condition fires — and
+  the RE-DERIVATION decision) — THE SEMANTIC DRIFT FLOOR IS MEASURED,
+  AND ITS CAUSE IS THE WORKLIST: 28 registered rules · 6 literal
+  catches by the P11 lint · 9 semantic paraphrases in the first full
+  arm sweep · 8 FRESH ones in the second sweep after the nine were
+  folded — the number did not shrink, it came from NEW places. Cause,
+  measured not conjectured: the conversion's worklist was the old
+  mirror table's rows, and the paraphrases live exactly where that
+  table never looked (five rules had ZERO pointers; four of the
+  table's first nine rows were wrong or incomplete — the table was
+  unverified prose about prose, containing what someone once
+  noticed). The general form: a lint confines LITERALS (complete,
+  mechanical); a mirror list names MEANINGS (human attention,
+  incomplete); an arm finds what the list missed (one pass, while
+  every fold mints new prose). Prose is not indexable by meaning.
+  USER-RATIFIED consequence (2026-08-03): the schema-substrate
+  direction (4c1d481f) is ratified NOW, not at the boundary — and
+  ch13 is RE-DERIVED on it rather than patched: the prose line is
+  preserved on the `ch13-prose-line` oracle branch (tip bb313036,
+  carrying the pointer-form packet and the full arm verdict series),
+  main stays linear with NO history surgery, the old contract will be
+  flipped to a machine-locked `superseded` status, decisions inherit
+  through a DATA ledger (never wording), and the re-derivation runs
+  as a controlled experiment on the improved process with falsifiable
+  success criteria. The full strategy, phases, roles, and binding
+  rules: v3/implementation/ch13-rederivation-plan.md (f7da2bbf).
