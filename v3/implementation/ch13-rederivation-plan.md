@@ -99,8 +99,16 @@ the template for it), then build.
   every claim that is 10-seconds checkable); owns arm charters and
   the paste-ready decision presentations (one decision per message,
   self-contained, recommendation first).
-- EXECUTOR (the Opus session): performs the acts, reports with
+- EXECUTOR (an Opus 5 session): performs the acts, reports with
   basis hashes and executed probes, stops at the standing gates.
+  Start it FRESH — the prose line's executor session carries that
+  line's assumptions and is closed, not reused; the general authors
+  the executor's kickoff (pointing at this plan) as its first act.
+- RELAY MECHANICS: the general and the executor are separate Claude
+  sessions with no direct channel — every instruction and report
+  flows through the USER as paste-ready blocks. Write them
+  self-contained: the receiving session sees only the block, never
+  the sender's context.
 - ARM (fresh-context external verifier, the established pin):
   verifies every guard-machinery build and every phase close.
   Verdicts land in an `-arm/` dir beside the phase's artifacts.
