@@ -99,14 +99,23 @@ Packets (v3/implementation/packets/*.md, README.md excluded):
       empty list of nonempty strings. canonical is a table-defined
       lane id (the P5 scan's set) or a <slug>#<Token> anchor whose
       Token occurs outside fences. Every →[id] pointer outside fences
-      resolves to a declared rule. SIGNATURE CONFINEMENT: a rule's
-      signature string may occur outside fences only on the canonical
-      lane's own table row, inside the anchor token's PARAGRAPH (a
-      canonical statement wraps across lines; the contiguous
-      non-blank block is the widest mechanical form that reads no
-      semantics), or on an allow-listed line — a POINTER-BEARING line
+      resolves to a declared rule, and any LOOKALIKE arrow-bracket
+      token is red (a reader-visible pointer the lint would otherwise
+      ignore). Anchors validate BOTH halves: the slug must name a real
+      heading (kebab-prefix at a hyphen boundary) whose section holds
+      the token. SIGNATURE CONFINEMENT: a rule's signature string may
+      occur outside fences only on the canonical lane's own table
+      row, inside the anchor token's PARAGRAPH (contiguous non-blank
+      block — but a TABLE ROW is its own paragraph, so a token in one
+      row never legalizes the table), or on a line matching an allow
+      entry at a non-alphanumeric boundary — a POINTER-BEARING line
       is deliberately NOT exempt (a restatement beside its own
-      pointer is the loophole that exemption would open). The scan verifies declared literals
+      pointer is the loophole that exemption would open). Each
+      signature must additionally OCCUR at its canonical home — a
+      typo'd, wrapped, or obsolete literal guards nothing and is red,
+      never silently unguarded. The opt-in guard reads MACHINE-BLOCK
+      raws only: a prose mention or markdown-quoted example of the
+      identifier neither opts a packet in nor reds it. The scan verifies declared literals
       against bytes; free text is never interpreted (P9's principle).
       The semantic tail — a PARAPHRASED restatement carrying none of
       the declared literals — is named as the review-side duty, not
@@ -283,11 +292,26 @@ PROSE_TALLY_RE = re.compile(r"(\d+)\s+anchored\s*/\s*(\d+)\s+derived\s*/\s*(\d+)
 # interpreted (the P9 precedent).
 MIRROR_MAP_KEYS = {"form", "rules"}
 MIRROR_RULE_KEYS = {"id", "canonical", "signature", "allow"}
-MIRROR_RULE_ID_RE = re.compile(r"^[a-z][a-z0-9-]*$")
-# canonical is a table-defined lane id (the P5 scan's set) or a
-# section anchor <slug>#<Token> whose Token occurs outside fences.
-MIRROR_ANCHOR_RE = re.compile(r"^[a-z][a-z0-9-]*#([A-Za-z][A-Za-z0-9-]*)$")
+# Strict kebab: no doubled or trailing hyphens (arm finding 8).
+MIRROR_RULE_ID_RE = re.compile(r"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$")
+# canonical is a table-defined lane id (the P5 scan's set, reserved
+# families excluded) or a section anchor <slug>#<Token>: the slug must
+# name a real heading (kebab-prefix match at a hyphen boundary) whose
+# section contains the token (arm finding 2), both halves strict-kebab.
+MIRROR_ANCHOR_RE = re.compile(
+    r"^([a-z][a-z0-9]*(?:-[a-z0-9]+)*)#([A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*)$"
+)
 POINTER_TOKEN_RE = re.compile(r"→\[([^\[\]\s]+)\]")
+# Any visually arrow-like pointer form is scanned; only U+2192 is the
+# canonical arrow — a lookalike would be a reader-visible pointer the
+# dimension silently ignores (arm finding 9).
+POINTER_ARROWISH_RE = re.compile(r"([→⇒⟶⟹↦⇾➔➜])\[([^\[\]\s]+)\]")
+MIRROR_HEADING_RE = re.compile(r"^#{2,6}\s+(.*)$")
+
+
+def _mirror_kebab(s: str) -> str:
+    out = re.sub(r"[^a-z0-9]+", "-", s.lower()).strip("-")
+    return re.sub(r"-{2,}", "-", out)
 C_ROW_RE = re.compile(r"^\|\s*(C\d+)\s*\|")
 DRAFT_NAME_RE = re.compile(r"^(ch\d+)-([a-z0-9-]+)-contract\.md$")
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -897,7 +921,11 @@ def check_mirror_map(
     its own pointer is the loophole that exemption would open)."""
     maps = block_by_key(blocks, "mirror_map")
     if not maps:
-        if "mirror_map" in text:
+        # The anti-demotion guard reads MACHINE-BLOCK raws only (arm
+        # finding 10): a prose mention or a markdown-quoted example of
+        # the identifier must not opt a packet in, while a malformed
+        # declaration fence still must not silently un-gate.
+        if any('"mirror_map"' in raw for raw in _scan_fences(text)[1]):
             checker.error(
                 f"{name}: names mirror_map but no parseable mirror_map "
                 f"block found — a malformed register must not silently "
@@ -926,13 +954,32 @@ def check_mirror_map(
         return
 
     # The P5 scan's table-defined lane ids — canonical targets.
+    # Reserved lane families are excluded exactly as P5 excludes them
+    # (arm finding 4): a packet-title-style P-row is never a canonical.
     doc_ids: set[str] = set()
     for line in prose.splitlines():
         m = LANE_DEF_RE.match(line)
-        if m:
+        if m and m.group(1) not in EXCLUDED_LANE_FAMILIES:
             doc_ids.add(f"{m.group(1)}{m.group(2)}")
 
     prose_lines = prose.splitlines()
+
+    # Headings + their section ranges, for anchor-slug validation
+    # (arm finding 2): a slug must name a real heading whose section
+    # holds the token, or the canonical points readers nowhere.
+    headings: list[tuple[int, str]] = []
+    for i, ln in enumerate(prose_lines):
+        hm = MIRROR_HEADING_RE.match(ln)
+        if hm:
+            headings.append((i, _mirror_kebab(hm.group(1))))
+
+    def slug_sections(slug: str) -> list[tuple[int, int]]:
+        spans: list[tuple[int, int]] = []
+        for idx, (start, kebab) in enumerate(headings):
+            if kebab == slug or kebab.startswith(slug + "-"):
+                end = headings[idx + 1][0] if idx + 1 < len(headings) else len(prose_lines)
+                spans.append((start, end))
+        return spans
     rule_ids: list[str] = []
     checked_rules: list[dict] = []
     for rule in rules:
@@ -987,21 +1034,37 @@ def check_mirror_map(
             if am is None:
                 checker.error(
                     f"{name}: mirror_map rule '{rid}' canonical '{canonical}' "
-                    f"is neither a table-defined lane id nor a "
+                    f"is neither a table-defined lane id nor a strict-kebab "
                     f"<slug>#<Token> section anchor"
                 )
                 continue
-            anchor_token = am.group(1)
-            token_re = re.compile(rf"\b{re.escape(anchor_token)}\b")
-            if not any(token_re.search(line) for line in prose_lines):
+            slug, anchor_token = am.group(1), am.group(2)
+            spans = slug_sections(slug)
+            if not spans:
                 checker.error(
-                    f"{name}: mirror_map rule '{rid}' anchor token "
-                    f"'{anchor_token}' does not occur outside fences — the "
-                    f"canonical home must exist in the packet's bytes"
+                    f"{name}: mirror_map rule '{rid}' anchor slug '{slug}' "
+                    f"names no heading of this packet — the canonical must "
+                    f"point at a real section"
                 )
                 continue
+            token_re = re.compile(rf"\b{re.escape(anchor_token)}\b")
+            in_section = any(
+                token_re.search(prose_lines[i])
+                for lo, hi in spans
+                for i in range(lo, hi)
+            )
+            if not in_section:
+                checker.error(
+                    f"{name}: mirror_map rule '{rid}' anchor token "
+                    f"'{anchor_token}' does not occur inside the "
+                    f"'{slug}' section — the canonical home must exist "
+                    f"where its anchor says it does"
+                )
+                continue
+            anchor_spans = spans
         checked_rules.append(
             {"id": rid, "canonical": canonical, "anchor": anchor_token,
+             "spans": anchor_spans if anchor_token else [],
              "signature": sig, "allow": allow}
         )
 
@@ -1009,12 +1072,22 @@ def check_mirror_map(
     if dupes:
         checker.error(f"{name}: duplicate mirror_map rule ids {dupes}")
 
-    # Pointer resolution: every →[id] outside fences resolves.
+    # Pointer resolution: every arrow-bracket token outside fences is
+    # scanned; only the canonical U+2192 arrow resolves — a lookalike
+    # arrow is a reader-visible pointer the dimension would otherwise
+    # silently ignore (arm finding 9).
     declared = set(rule_ids)
-    for m in POINTER_TOKEN_RE.finditer(prose):
-        if m.group(1) not in declared:
+    for m in POINTER_ARROWISH_RE.finditer(prose):
+        arrow, target = m.group(1), m.group(2)
+        if arrow != "→":
             checker.error(
-                f"{name}: pointer token '→[{m.group(1)}]' resolves to no "
+                f"{name}: pointer-like token '{arrow}[{target}]' uses a "
+                f"non-canonical arrow — pointers are written with U+2192 "
+                f"'→' only, or a reader sees a pointer the lint does not"
+            )
+        elif target not in declared:
+            checker.error(
+                f"{name}: pointer token '→[{target}]' resolves to no "
                 f"mirror_map rule — a dangling pointer is a broken mirror"
             )
 
@@ -1023,36 +1096,55 @@ def check_mirror_map(
     # (a canonical statement wraps across lines; the paragraph — the
     # token line's contiguous non-blank block — is the mechanical
     # widest form that still reads no semantics), or a line matching
-    # an allow substring. NOTHING else — in particular a
-    # pointer-bearing line is not exempt.
+    # an allow substring at a non-alphanumeric boundary. NOTHING else —
+    # in particular a pointer-bearing line is not exempt. TWO arm-fed
+    # tightenings: a TABLE ROW is its own paragraph (a token in one
+    # row must not legalize the whole table — finding 3), and each
+    # signature must actually OCCUR at its canonical home (a typo'd or
+    # obsolete literal guards nothing — finding 1).
     blank = [not ln.strip() for ln in prose_lines]
+    table_row = [bool(re.match(r"^ {0,3}\|", ln)) for ln in prose_lines]
 
     def paragraph_indices(idx: int) -> set[int]:
+        if table_row[idx]:
+            return {idx}
         lo = idx
-        while lo > 0 and not blank[lo - 1]:
+        while lo > 0 and not blank[lo - 1] and not table_row[lo - 1]:
             lo -= 1
         hi = idx
-        while hi + 1 < len(prose_lines) and not blank[hi + 1]:
+        while hi + 1 < len(prose_lines) and not blank[hi + 1] and not table_row[hi + 1]:
             hi += 1
         return set(range(lo, hi + 1))
+
+    def allow_hits(line: str, allow: list[str]) -> bool:
+        for a in allow:
+            if re.search(
+                rf"(?<![A-Za-z0-9]){re.escape(a)}(?![A-Za-z0-9])", line
+            ):
+                return True
+        return False
 
     for rule in checked_rules:
         anchor_legal: set[int] = set()
         if rule["anchor"]:
             anchor_re = re.compile(rf"\b{re.escape(rule['anchor'])}\b")
-            for i, ln in enumerate(prose_lines):
-                if anchor_re.search(ln):
-                    anchor_legal |= paragraph_indices(i)
+            for lo, hi in rule["spans"]:
+                for i in range(lo, hi):
+                    if anchor_re.search(prose_lines[i]):
+                        anchor_legal |= paragraph_indices(i)
         for sig in rule["signature"]:
+            at_home = False
             for i, line in enumerate(prose_lines):
                 if sig not in line:
                     continue
                 lane = LANE_DEF_RE.match(line)
                 if lane and f"{lane.group(1)}{lane.group(2)}" == rule["canonical"]:
+                    at_home = True
                     continue
                 if i in anchor_legal:
+                    at_home = True
                     continue
-                if any(a in line for a in rule["allow"]):
+                if allow_hits(line, rule["allow"]):
                     continue
                 snippet = line.strip()[:60]
                 checker.error(
@@ -1061,6 +1153,13 @@ def check_mirror_map(
                     f"('{snippet}…') — mirrors are pointers, never prose; "
                     f"add an explicit allow entry only for an audited "
                     f"exemption"
+                )
+            if not at_home:
+                checker.error(
+                    f"{name}: mirror_map rule '{rule['id']}' signature "
+                    f"'{sig}' does not occur at its canonical home — a "
+                    f"typo'd or obsolete literal guards nothing, so the "
+                    f"rule would be silently unguarded"
                 )
 
 
@@ -1904,12 +2003,14 @@ def run_selftest() -> int:
         '   "signature": ["ANCHTOKEN beta"], "allow": ["allowed-line-marker"]}'
     )
 
-    def ptr_packet(rules: str) -> str:
+    def ptr_packet(rules: str, extra: str = "") -> str:
         return (
             GREEN_PACKET.replace("| O1 | a |", "| O1 | a — SIGTOKEN alpha |")
             + "\nPointer form: →[demo-rule] · →[anchor-rule]\n"
+            + "\n## Probe record\n"
             + "\nprobe record CBX: ANCHTOKEN beta, measured.\n"
             + "\nallowed-line-marker: ANCHTOKEN beta echoes by exemption.\n"
+            + extra
             + '\n```json\n{"mirror_map": {"form": "pointer-only", "rules": [\n  '
             + rules
             + "\n]}}\n```\n"
@@ -1966,8 +2067,116 @@ def run_selftest() -> int:
     expect_red_packet(
         "ptr-map-anchor-token-missing",
         GREEN_PTR_PACKET.replace("probe-record#CBX", "probe-record#NOPE"),
-        "anchor token 'NOPE' does not occur",
+        "anchor token 'NOPE' does not occur inside the 'probe-record' section",
     )
+    expect_red_packet(
+        "ptr-map-anchor-fake-slug",
+        GREEN_PTR_PACKET.replace("probe-record#CBX", "nonexistent-section#CBX"),
+        "names no heading of this packet",
+    )
+    expect_red_packet(
+        "ptr-map-duplicate-blocks",
+        GREEN_PTR_PACKET
+        + '\n```json\n{"mirror_map": {"form": "pointer-only", "rules": [\n  '
+        + PTR_RULES
+        + "\n]}}\n```\n",
+        "mirror_map blocks; exactly one",
+    )
+    expect_red_packet(
+        "ptr-map-bad-rule-id-grammar",
+        GREEN_PTR_PACKET.replace('"id": "demo-rule"', '"id": "demo--rule-"'),
+        "not kebab-grammar shaped",
+    )
+    expect_red_packet(
+        "ptr-map-empty-rules",
+        ptr_packet(PTR_RULES).replace(
+            '"rules": [\n  ' + PTR_RULES + "\n]", '"rules": []'
+        ),
+        "nonempty list",
+    )
+    expect_red_packet(
+        "ptr-map-rule-extra-key",
+        GREEN_PTR_PACKET.replace(
+            '"signature": ["SIGTOKEN alpha"], "allow": []',
+            '"signature": ["SIGTOKEN alpha"], "allow": [], "extra": 1',
+        ),
+        "exactly keys",
+    )
+    expect_red_packet(
+        "ptr-map-empty-signature-member",
+        GREEN_PTR_PACKET.replace(
+            '"signature": ["SIGTOKEN alpha"]', '"signature": ["SIGTOKEN alpha", ""]'
+        ),
+        "NONEMPTY list of nonempty strings",
+    )
+    expect_red_packet(
+        "ptr-map-allow-not-list",
+        GREEN_PTR_PACKET.replace(
+            '"signature": ["SIGTOKEN alpha"], "allow": []',
+            '"signature": ["SIGTOKEN alpha"], "allow": "x"',
+        ),
+        "allow must be a list",
+    )
+    expect_red_packet(
+        "ptr-map-canonical-not-string",
+        GREEN_PTR_PACKET.replace('"canonical": "O1"', '"canonical": 1'),
+        "canonical must be a string",
+    )
+    expect_red_packet(
+        "ptr-map-reserved-family-canonical",
+        GREEN_PTR_PACKET.replace("| O1 | a — SIGTOKEN alpha |", "| O1 | a |\n| P1 | SIGTOKEN alpha |")
+        .replace('"canonical": "O1"', '"canonical": "P1"'),
+        "not a table-defined lane id",
+    )
+    expect_red_packet(
+        "ptr-map-signature-absent-at-home",
+        GREEN_PTR_PACKET.replace(
+            '"signature": ["SIGTOKEN alpha"]', '"signature": ["SIGTOKEN vanished"]'
+        ),
+        "does not occur at its canonical home",
+    )
+    expect_red_packet(
+        "ptr-map-table-paragraph-leak",
+        ptr_packet(
+            PTR_RULES
+            + ',\n  {"id": "table-rule", "canonical": "probe-record#CBT",\n'
+            '   "signature": ["LEAKSIG body"], "allow": []}',
+            extra="\n| r1 | CBT anchor LEAKSIG body |\n| r2 | LEAKSIG body |\n",
+        ),
+        "mirror_map rule 'table-rule' signature 'LEAKSIG body' restated",
+    )
+    expect_red_packet(
+        "ptr-map-allow-boundary-overmatch",
+        ptr_packet(
+            PTR_RULES.replace(
+                '"signature": ["SIGTOKEN alpha"], "allow": []',
+                '"signature": ["SIGTOKEN alpha"], "allow": ["AUDITED"]',
+            ),
+            extra="\nUNAUDITED mirror: SIGTOKEN alpha here.\n",
+        ),
+        "restated outside its canonical home",
+    )
+    expect_red_packet(
+        "ptr-map-noncanonical-arrow",
+        GREEN_PTR_PACKET + "\nSee ⇒[demo-rule] for details.\n",
+        "non-canonical arrow",
+    )
+    # Finding-10 greens: a prose mention or a markdown-QUOTED example
+    # of the identifier neither opts a packet in nor reds it.
+    shared_packet.write_text(
+        GREEN_PACKET + "\nThe mirror_map convention is described elsewhere.\n",
+        encoding="utf-8",
+    )
+    errors, _ = lint(shared_root / "packets", shared_root / "contracts", ADR_DIR)
+    expect_green("ptr-map-prose-mention-untouched", errors)
+    shared_packet.write_text(
+        GREEN_PACKET
+        + '\n````markdown\n```json\n{"mirror_map": {broken\n```\n````\n',
+        encoding="utf-8",
+    )
+    errors, _ = lint(shared_root / "packets", shared_root / "contracts", ADR_DIR)
+    expect_green("ptr-map-quoted-example-untouched", errors)
+    shared_packet.write_text(GREEN_PACKET, encoding="utf-8")
     expect_red_packet(
         "ptr-map-dangling-pointer",
         GREEN_PTR_PACKET + "\nSee →[nope] for details.\n",
