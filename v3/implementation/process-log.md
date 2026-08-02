@@ -5167,3 +5167,44 @@ final CLEAN.
   receipt INTO THE RECORD, not merely into the conversation where the
   probe ran — the empty-array carry receipt was demanded into the
   reopen record for exactly that reason.
+
+- 2026-08-02 (ch13-p1, the final arm verification and the structural
+  decision it forced — human-ratified) — MIRROR DRIFT IS A STRUCTURAL
+  DEFECT CLASS, NOT A DISCIPLINE FAILURE; THE ANSWER IS POINTER-ONLY
+  FORM PLUS A LINT DIMENSION. The last verification returned four
+  approval blockers, none deep, all real: a compile probe that cannot
+  catch the mutant it names; a mirror still saying "carried as
+  authored" after a class-width fold swept its siblings; an
+  acceptance family listing members the file channel cannot produce;
+  and — the fourth form of the same rule — FLAG F1 CALLING A
+  PROJECTED STATE "MEASURED" (a class-instance binding carrying
+  `contextBlockRefs`, which the live rung refuses today because this
+  very packet is what adds that key). Add it to the family: an unrun
+  "measured"; a DERIVED claim with no named measurer; an unverified
+  citation; and now a PROJECTED state wearing a measured label.
+  THE MEASUREMENT THAT DECIDED IT: across four consecutive
+  verifications every fold batch left 2–4 missed propagations — WITH
+  the mirrored-surface-map discipline observed each time. A discipline
+  followed and still failing at that rate is measurably insufficient;
+  the remedy has to be structural. SPLIT WAS REJECTED on the same
+  evidence: it would spread the mirrors across file boundaries rather
+  than remove them, so it is retained only as a NAMED FALLBACK if the
+  restructuring's own verification fails.
+  DECIDED (human, this date): (b) POINTER-ONLY MIRROR REDUCTION —
+  every rule stated ONCE at a canonical site carrying an identifier,
+  every former mirror site reduced to a fixed-form pointer token with
+  no restatement; plus (c) THE FLAG RULE — a flag's text states its
+  DECISION and cites the probe record, and carries no inline
+  measurement claim, so a flag's ratifiability can never hinge on a
+  stale "measured" left inside it. Guarded by a new `check_packet`
+  dimension (form: only pointer tokens at registered mirror sites,
+  every target resolvable, every canonical id unique; signature
+  tokens: a canonical rule's marker literals confined to its canonical
+  block and registered pointers, with an allowlist), scoped by
+  DECLARATION — the packet declares pointer-only form in its header
+  and only declaring packets are measured, the pre-v2 grandfathering
+  pattern; ch13-p1 is the first declarer. The semantic remainder that
+  tokens cannot catch — a rule REPHRASED rather than repeated — is
+  named as the arm's explicit obligation rather than left unsaid.
+  This is the same arc the executed-probe rule travelled: discipline
+  first, then structure plus a machine to hold it.
