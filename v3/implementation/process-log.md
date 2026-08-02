@@ -5208,3 +5208,30 @@ final CLEAN.
   named as the arm's explicit obligation rather than left unsaid.
   This is the same arc the executed-probe rule travelled: discipline
   first, then structure plus a machine to hold it.
+
+- 2026-08-02 (the P11 pointer-lint build, scoped arm on the BUILDING
+  session's own work) — THE TOOLING-BUILDER SESSION IS ARM-OBLIGED
+  EXACTLY LIKE A CONTENT-BUILDER, and the 07-08 RULE CANDIDATE
+  ("contract-enforcing tooling is itself contract-dense invention and
+  gets packet-grade treatment — 'it is a script, not a packet'
+  exempts nothing") gains its strongest datum yet: the P11 dimension
+  was built in the main session with deterministic checks only
+  (selftest red dims, live-tree lint, an executed tsc probe), and a
+  USER-DIRECTED scoped arm run on that same session's output returned
+  REFINE with TEN blockers — five P1 false-green paths in the
+  dimension itself (signature-at-canonical never required; anchor
+  slug unvalidated; table-paragraph legality leak; reserved lane
+  family accepted as canonical; allow-substring overmatch), a
+  selftest that stayed green when the arm DELETED two of the
+  dimension's own claim branches (claims without their red fixtures —
+  the round-6 selftest-derives-from-claims lesson reproduced on fresh
+  code), and a packet-side proof that the semantic tail is real (a
+  meaning-INVERTED Claim 1 linted green). All ten carry executed
+  mutant evidence. The general form, user-named: a session that
+  builds GUARD MACHINERY needs the fresh-context adversarial pass
+  BEFORE anything builds on the guard — the builder's own
+  deterministic evidence proves the happy path, never the guard's
+  blind spots, and a guard's blind spots are precisely its product
+  surface. Applied: the ten findings become the fix worklist with
+  per-claim red fixtures, and the scoped arm re-runs before the
+  remaining 22-rule conversion proceeds.
