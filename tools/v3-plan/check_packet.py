@@ -101,10 +101,12 @@ Packets (v3/implementation/packets/*.md, README.md excluded):
       Token occurs outside fences. Every →[id] pointer outside fences
       resolves to a declared rule. SIGNATURE CONFINEMENT: a rule's
       signature string may occur outside fences only on the canonical
-      lane's own table row, an anchor-token-bearing line, or an
-      allow-listed line — a POINTER-BEARING line is deliberately NOT
-      exempt (a restatement beside its own pointer is the loophole
-      that exemption would open). The scan verifies declared literals
+      lane's own table row, inside the anchor token's PARAGRAPH (a
+      canonical statement wraps across lines; the contiguous
+      non-blank block is the widest mechanical form that reads no
+      semantics), or on an allow-listed line — a POINTER-BEARING line
+      is deliberately NOT exempt (a restatement beside its own
+      pointer is the loophole that exemption would open). The scan verifies declared literals
       against bytes; free text is never interpreted (P9's principle).
       The semantic tail — a PARAPHRASED restatement carrying none of
       the declared literals — is named as the review-side duty, not
@@ -1017,21 +1019,38 @@ def check_mirror_map(
             )
 
     # Signature confinement. Legal lines for a rule's signature string:
-    # the canonical lane's own table row, a line bearing the anchor
-    # token, or a line matching an allow substring. NOTHING else — in
-    # particular a pointer-bearing line is not exempt.
+    # the canonical lane's own table row, the anchor token's PARAGRAPH
+    # (a canonical statement wraps across lines; the paragraph — the
+    # token line's contiguous non-blank block — is the mechanical
+    # widest form that still reads no semantics), or a line matching
+    # an allow substring. NOTHING else — in particular a
+    # pointer-bearing line is not exempt.
+    blank = [not ln.strip() for ln in prose_lines]
+
+    def paragraph_indices(idx: int) -> set[int]:
+        lo = idx
+        while lo > 0 and not blank[lo - 1]:
+            lo -= 1
+        hi = idx
+        while hi + 1 < len(prose_lines) and not blank[hi + 1]:
+            hi += 1
+        return set(range(lo, hi + 1))
+
     for rule in checked_rules:
-        anchor_re = (
-            re.compile(rf"\b{re.escape(rule['anchor'])}\b") if rule["anchor"] else None
-        )
+        anchor_legal: set[int] = set()
+        if rule["anchor"]:
+            anchor_re = re.compile(rf"\b{re.escape(rule['anchor'])}\b")
+            for i, ln in enumerate(prose_lines):
+                if anchor_re.search(ln):
+                    anchor_legal |= paragraph_indices(i)
         for sig in rule["signature"]:
-            for line in prose_lines:
+            for i, line in enumerate(prose_lines):
                 if sig not in line:
                     continue
                 lane = LANE_DEF_RE.match(line)
                 if lane and f"{lane.group(1)}{lane.group(2)}" == rule["canonical"]:
                     continue
-                if anchor_re is not None and anchor_re.search(line):
+                if i in anchor_legal:
                     continue
                 if any(a in line for a in rule["allow"]):
                     continue
@@ -1964,6 +1983,14 @@ def run_selftest() -> int:
     expect_red_packet(
         "ptr-map-signature-on-pointer-line",
         GREEN_PTR_PACKET + "\nSIGTOKEN alpha →[demo-rule]\n",
+        "restated outside its canonical home",
+    )
+    # Anchor legality is PARAGRAPH-scoped (a canonical statement wraps
+    # across lines) — but a restatement in a DIFFERENT paragraph is
+    # still red.
+    expect_red_packet(
+        "ptr-map-anchor-signature-other-paragraph",
+        GREEN_PTR_PACKET + "\nANCHTOKEN beta restated far away in prose.\n",
         "restated outside its canonical home",
     )
 
