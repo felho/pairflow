@@ -5146,3 +5146,24 @@ final CLEAN.
   (The declared-schema substrate candidate recorded at 4c1d481f is
   the adjacent structural question, already routed past the chapter
   close; not restated here.)
+
+- 2026-08-02 (ch13 contract, the fourth reopen — the executed-probe
+  rule's third form) — AN UNVERIFIED CITATION IS THE CITATION-SHAPED
+  FORM OF AN UNRUN "MEASURED". The rule already bound claims about
+  behaviour (run it, date it) and claims about future built behaviour
+  (mark DERIVED, name the measurer). The fourth reopen supplied the
+  missing third: the draft justified its new record predicate by
+  attributing it to C8(c) — "the predicate C8(c) already defines" —
+  and C8(c) defines no such thing (grep: zero occurrences; the
+  contract's only nearby text is C7's ratified "NO catalog-container
+  predicate is owed", which the attribution would have contradicted).
+  Caught at the ratification gate by the human, before GO. The
+  generalization: a sentence resting on ANOTHER row's authority is
+  making a checkable claim about that row, and checking it costs one
+  grep. Attribute nothing you have not read at the point of writing;
+  a borrowed authority that turns out absent is worse than a stated
+  decision, because it hides a decision inside a citation.
+  Corollary the same act produced: a MEASURED label travels with its
+  receipt INTO THE RECORD, not merely into the conversation where the
+  probe ran — the empty-array carry receipt was demanded into the
+  reopen record for exactly that reason.
