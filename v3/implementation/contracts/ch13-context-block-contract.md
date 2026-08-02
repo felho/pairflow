@@ -1,7 +1,7 @@
 # ch13 — context-block contract
 
 ```json
-{"contract_draft": {"chapter": "ch13", "surface": "context-block", "status": "reopened"}}
+{"contract_draft": {"chapter": "ch13", "surface": "context-block", "status": "ratified"}}
 ```
 
 ## Context (non-normative by declaration)
@@ -292,6 +292,38 @@ author-proposed sentences alike.
 post-ratification reopenings 2 → 3 (closed by re-ratification within
 the same act).
 
+**Fourth reopen record (2026-08-02, the ch13-P1 arm gate-1 re-check —
+the SAME DAY as the third, and that is the point).** Reopened C17's
+normalization clause and C8(c)'s measuring-carrier sentence — two
+rows, nothing else. The third reopen had been scoped to the NULLISH
+catalog; the arm's re-check showed the defect was the CLASS "an
+admitted catalog may be a non-record", so four of five members
+survived the fix. RECEIPTS (live `admitTemplate`, zero refs,
+2026-08-02):
+
+    contextBlocks: null  → ok:true  carried: null  (object)
+    contextBlocks: 42    → ok:true  carried: 42    (number)
+    contextBlocks: true  → ok:true  carried: true  (boolean)
+    contextBlocks: ""    → ok:true  carried: ""    (string)
+    contextBlocks: []    → ok:true  carried: []    (object)
+
+Decided: the authored value is carried in place IFF it is a RECORD
+(a non-null, non-array object — the predicate defined in C17 for the
+rebuild rule) and normalizes to `{}` otherwise, so C17's typed
+surface is true without exception. C8(c)'s carrier grew to match: the
+absent fixture and EVERY non-record fixture must yield byte-identical
+admitted values. Reopen-delta new-decision rows: 1 (the class-width
+grain). TWO CORRECTIONS the ratifying side caught before GO, recorded
+because both are rule-instances: the draft first attributed the
+record predicate to C8(c), which does not state it (an UNVERIFIED
+CITATION — the citation-shaped form of an unrun "measured"); and the
+empty-array receipt was demanded in the record rather than in
+conversation, since a MEASURED label travels with its receipt.
+
+**Dated update (2026-08-02, the class-width normalization reopen):**
+post-ratification reopenings 3 → 4 (closed by re-ratification within
+the same act).
+
 ## Contract rows (every normative statement is a C-row)
 
 | ID | Rule |
@@ -333,6 +365,10 @@ the same act).
 
 ```json
 {"ratification": {"date": "2026-08-02", "arms": ["agent-invoked codex arm, ch13-P1 gate-1 on the approve-ready bytes (pin gpt-5.6-sol/high, 880s, guards clean) — it re-executed all seven declared premises, the untruncated ripple sweeps, 378 tests and v3:typecheck, and its P1 located THIS defect by probe; no arm reviewed this reopen's own bytes, and the DERIVED identity it introduces is by construction unverifiable until the rebuild exists (its measuring carrier is named in C8(c))"], "commit": "a0cf73b51bee8a65d6c4155d0689ec4f9a68e340"}}
+```
+
+```json
+{"ratification": {"date": "2026-08-02", "arms": ["agent-invoked codex arm, ch13-P1 gate-1 re-check on the prior approve-ready bytes (pin gpt-5.6-sol/high, 550s, guards clean) — it re-executed every declared premise, the untruncated ripple sweeps, v3:typecheck, v3:adr-check and the full v3:test (71 files, 1830 tests green), and its P1 measured the surviving class members this act normalizes; no arm reviewed this reopen's own bytes, and the post-normalization identity stays DERIVED with its measuring carrier named in C8(c)"], "commit": "8360510eab21093f13e6cba471c814a9052ba077"}}
 ```
 
 ## Realized map (empty until chapter close)
