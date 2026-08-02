@@ -5235,3 +5235,45 @@ final CLEAN.
   surface. Applied: the ten findings become the fix worklist with
   per-claim red fixtures, and the scoped arm re-runs before the
   remaining 22-rule conversion proceeds.
+
+- 2026-08-02 (ch13-p1, the pointer-only form's first full arm gate) —
+  THE 6/9 SPLIT: THE FIRST INVENTORY OF A DESIGNED DIVISION OF LABOUR,
+  NOT A STRUCTURAL FAILURE. Converting all 28 rules to pointer-only
+  form and then running the arm with an explicit
+  semantic-restatement charter produced the first measurement of who
+  catches what: the P11 lint caught SIX verbatim restatements during
+  conversion; the arm then found NINE implementable PARAPHRASES that
+  P11 is by construction blind to (it confines literals). Read
+  correctly, that is the design working — literal drift is now
+  mechanically impossible, and the semantic remainder was NAMED as
+  the arm's obligation before the run rather than discovered after.
+  The human ratified continuing inside the pointer form on this
+  evidence, rejecting split a SECOND time and with numbers: fixing
+  nine paraphrases is a pointer-form operation, and split would not
+  touch the semantic class at all — it would only distribute it.
+  A SIDE YIELD worth recording: the conversion AUDITED the map it
+  replaced. Four of the first nine rows named mirrors that were wrong
+  or absent (a dimension filed under the wrong rule; an
+  additivity dimension listed as a skip mirror; an unnamed fifth
+  mirror in the sizing section), and one row turned out to be TWO
+  rules — the G8 own-property discipline has a write half at F1 and a
+  read half at A3, which a single `canonical` field cannot hold. The
+  old prose map was itself unverified prose.
+
+- 2026-08-02 (ch13-p1) — FIFTH MEASURED INSTANCE OF THE SAME RULE: A
+  CONSOLIDATING EDIT ASSERTS MORE THAN THE CODE DOES. Collapsing the
+  three event-grain guards (dead config, non-list pipeline, empty
+  pipeline) into one matrix row fixed a real defect and introduced a
+  new one: the row claimed a non-map BINDING can occur "under any of"
+  the three, but a non-list pipeline has no list and an empty one has
+  no members, so two of the three cases have no binding position at
+  all and cannot be driven. Executed by the arm on both channels —
+  `non-list-pipeline` and `empty-pipeline` both report at
+  `steps.s.gates.PASS`, never at a binding path. The family joins the
+  four already recorded (an unrun "measured"; a DERIVED claim with no
+  named measurer; an unverified citation; a PROJECTED state labelled
+  measured). ITS OWN FIX OBLIGATION, ratified with it: a consolidated
+  claim — one sentence covering several cases — earns its scope only
+  with a PER-CASE executed probe. Generalising over cases is exactly
+  where a sentence stops tracking the code, and the generalisation
+  reads as economy right up until someone runs it.
