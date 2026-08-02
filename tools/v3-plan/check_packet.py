@@ -101,9 +101,12 @@ Packets (v3/implementation/packets/*.md, README.md excluded):
       Token occurs outside fences. Every →[id] pointer outside fences
       resolves to a declared rule, and any LOOKALIKE arrow-bracket
       token is red (a reader-visible pointer the lint would otherwise
-      ignore). Anchors validate BOTH halves: the slug must name a real
-      heading (kebab-prefix at a hyphen boundary) whose section holds
-      the token. SIGNATURE CONFINEMENT: a rule's signature string may
+      ignore — the lookalike class is the Unicode arrow BLOCKS, not a
+      hand-picked list). Anchors validate BOTH halves: the slug must
+      name exactly ONE real heading (kebab-prefix at a hyphen
+      boundary; disjoint multiple matches are an ambiguity red, a
+      child heading nested in a matched parent is the same home)
+      whose level-aware section holds the token. SIGNATURE CONFINEMENT: a rule's signature string may
       occur outside fences only on the canonical lane's own table
       row, inside the anchor token's PARAGRAPH (contiguous non-blank
       block — but a TABLE ROW is its own paragraph, so a token in one
@@ -304,9 +307,16 @@ MIRROR_ANCHOR_RE = re.compile(
 POINTER_TOKEN_RE = re.compile(r"→\[([^\[\]\s]+)\]")
 # Any visually arrow-like pointer form is scanned; only U+2192 is the
 # canonical arrow — a lookalike would be a reader-visible pointer the
-# dimension silently ignores (arm finding 9).
-POINTER_ARROWISH_RE = re.compile(r"([→⇒⟶⟹↦⇾➔➜])\[([^\[\]\s]+)\]")
-MIRROR_HEADING_RE = re.compile(r"^#{2,6}\s+(.*)$")
+# dimension silently ignores (arm finding 9). The lookalike class is
+# the Unicode ARROW BLOCKS, not a hand-picked list (arm re-run
+# finding 2: a finite set missed U+279D): Arrows, Supplemental
+# Arrows-A/-B/-C, Miscellaneous Symbols and Arrows, and the dingbat
+# arrow range.
+POINTER_ARROWISH_RE = re.compile(
+    r"([←-⇿➔-➾⟰-⟿⤀-⥿"
+    r"⬀-⭏\U0001f800-\U0001f8ff])\[([^\[\]\s]+)\]"
+)
+MIRROR_HEADING_RE = re.compile(r"^(#{2,6})\s+(.*)$")
 
 
 def _mirror_kebab(s: str) -> str:
@@ -966,20 +976,33 @@ def check_mirror_map(
 
     # Headings + their section ranges, for anchor-slug validation
     # (arm finding 2): a slug must name a real heading whose section
-    # holds the token, or the canonical points readers nowhere.
-    headings: list[tuple[int, str]] = []
+    # holds the token, or the canonical points readers nowhere. A
+    # section runs to the next heading of the SAME OR HIGHER level —
+    # child subsections belong to their parent (arm re-run finding 3).
+    headings: list[tuple[int, int, str]] = []
     for i, ln in enumerate(prose_lines):
         hm = MIRROR_HEADING_RE.match(ln)
         if hm:
-            headings.append((i, _mirror_kebab(hm.group(1))))
+            headings.append((i, len(hm.group(1)), _mirror_kebab(hm.group(2))))
 
     def slug_sections(slug: str) -> list[tuple[int, int]]:
         spans: list[tuple[int, int]] = []
-        for idx, (start, kebab) in enumerate(headings):
+        for idx, (start, level, kebab) in enumerate(headings):
             if kebab == slug or kebab.startswith(slug + "-"):
-                end = headings[idx + 1][0] if idx + 1 < len(headings) else len(prose_lines)
+                end = len(prose_lines)
+                for nstart, nlevel, _nk in headings[idx + 1 :]:
+                    if nlevel <= level:
+                        end = nstart
+                        break
                 spans.append((start, end))
-        return spans
+        # A matched CHILD heading nested inside a matched parent's span
+        # is the same home, not an ambiguity — keep outermost spans
+        # only; the ambiguity error is for DISJOINT matches.
+        return [
+            s
+            for s in spans
+            if not any(o != s and o[0] <= s[0] and s[1] <= o[1] for o in spans)
+        ]
     rule_ids: list[str] = []
     checked_rules: list[dict] = []
     for rule in rules:
@@ -1045,6 +1068,14 @@ def check_mirror_map(
                     f"{name}: mirror_map rule '{rid}' anchor slug '{slug}' "
                     f"names no heading of this packet — the canonical must "
                     f"point at a real section"
+                )
+                continue
+            if len(spans) > 1:
+                checker.error(
+                    f"{name}: mirror_map rule '{rid}' anchor slug '{slug}' "
+                    f"matches {len(spans)} headings — an ambiguous canonical "
+                    f"identifies no home; lengthen the slug until it names "
+                    f"exactly one section (arm re-run finding 1)"
                 )
                 continue
             token_re = re.compile(rf"\b{re.escape(anchor_token)}\b")
@@ -2161,6 +2192,31 @@ def run_selftest() -> int:
         GREEN_PTR_PACKET + "\nSee ⇒[demo-rule] for details.\n",
         "non-canonical arrow",
     )
+    expect_red_packet(
+        "ptr-map-arrow-block-lookalike",
+        GREEN_PTR_PACKET + "\nSee ➝[not-declared] for details.\n",
+        "non-canonical arrow",
+    )
+    expect_red_packet(
+        "ptr-map-ambiguous-anchor-slug",
+        ptr_packet(
+            PTR_RULES.replace("probe-record#CBX", "probe#CBX"),
+            extra="\n## Probe extras\n\nmore prose here.\n",
+        ),
+        "matches 2 headings",
+    )
+    # Level-aware sections: a token in a CHILD subsection satisfies the
+    # PARENT slug (arm re-run finding 3's false red, fixed).
+    shared_packet.write_text(
+        ptr_packet(PTR_RULES).replace(
+            "\nprobe record CBX: ANCHTOKEN beta, measured.\n",
+            "\n### Probe record child\n\nprobe record CBX: ANCHTOKEN beta, measured.\n",
+        ),
+        encoding="utf-8",
+    )
+    errors, _ = lint(shared_root / "packets", shared_root / "contracts", ADR_DIR)
+    expect_green("ptr-map-nested-subsection-token", errors)
+    shared_packet.write_text(GREEN_PACKET, encoding="utf-8")
     # Finding-10 greens: a prose mention or a markdown-QUOTED example
     # of the identifier neither opts a packet in nor reds it.
     shared_packet.write_text(
