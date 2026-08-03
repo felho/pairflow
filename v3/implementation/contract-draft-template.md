@@ -8,7 +8,7 @@ procedure: the `CreateTaskPacket` skill's `DraftContract` workflow.
 
 **This file is the canonical FORM authority for contract-drafts** —
 exactly as `task-packet-template.md` is for packets. The draft-lint's
-form checks (`tools/v3-plan/check_packet.py`, the D1–D7 draft claims)
+form checks (`tools/v3-plan/check_packet.py`, the D1–D8 draft claims)
 are this template's mechanical mirror: on any mismatch **the TEMPLATE
 wins and the lint is the bug** — scoped to the draft-artifact FORM
 checks over declared data. The lint's non-form checks (the
@@ -99,12 +99,29 @@ own rules. The lifecycle acts APPEND:
   {"realized_map": {"C1": "<landing: packet § / code / test>", "C2": "…"}}
   ```
 
+- **At supersede** (the flip commit — which also flips status to
+  `superseded`, in the SAME act; ANY record presence requires
+  `superseded`, and the record requires it back):
+
+  ```json
+  {"superseded": {"date": "YYYY-MM-DD", "oracle_branch": "<branch>", "oracle_tip": "<40-hex sha>", "plan": "<repo-relative path>"}}
+  ```
+
+  The record answers "where did this line's state go, and under what
+  authority" and NOTHING else. It carries NO successor field on
+  purpose: the successor does not exist when the flip runs, and a
+  reference unverifiable at the point of writing is the measured
+  defect family this process already pays for (an unrun "measured",
+  a DERIVED claim with no named measurer, an unverified citation, a
+  PROJECTED state labelled measured). The forward thread is the plan
+  pointer; the successor surface is named where it is decided.
+
 ## 3. The machine form (what the lint enforces — the full registry)
 
 - **Meta block:** exactly ONE `contract_draft` block; exact keyset
   `{chapter, surface, status}`; `status` ∈ `draft | ratified |
-  reopened | realized`; filename `ch<N>-<surface>-contract.md` matches
-  chapter/surface.
+  reopened | realized | superseded`; filename
+  `ch<N>-<surface>-contract.md` matches chapter/surface.
 - **C-rows:** DISCOVERED as table rows whose FIRST cell is `C<n>`,
   fenced code excluded; ids unique, NO leading zeros (`C01` is red —
   ids are exact strings, `C01` is never `C1`); ratified-or-later
@@ -128,13 +145,28 @@ own rules. The lifecycle acts APPEND:
   (the stated threat model, README §5.5).
 - **State consistency (decidable from the current bytes alone):**
   ratification block(s) present ⇔ status ∈ {ratified, reopened,
-  realized}; status `draft` ⇒ no blocks; the equality check binds
-  `ratified`/`realized` and is suspended ONLY at `reopened`.
+  realized, superseded}; status `draft` ⇒ no blocks; the equality
+  check binds `ratified`/`realized`/`superseded` and is suspended
+  ONLY at `reopened`.
 - **`realized_map`:** exactly one block with this exact top-level
   key; keys exactly the C-row id set; every landing site a nonempty
   string; ANY map presence ⇔ status `realized` (the boundary review
   fills the map and flips the status in ONE act — a partial map, on
   any status, is red).
+- **`superseded` record:** exactly one block with this exact
+  top-level key; exact keyset `{date, oracle_branch, oracle_tip,
+  plan}`; ANY record presence ⇔ status `superseded` (both
+  directions), and `superseded` additionally requires ≥1
+  ratification block — a draft that was never ratified has no state
+  to preserve. `date` a `YYYY-MM-DD` string; `oracle_branch` a
+  resolvable branch (the local ref, else its `origin/` tracking
+  form); `oracle_tip` 40-hex LOWERCASE, resolving to a COMMIT object
+  that is CONTAINED in `oracle_branch` (`merge-base --is-ancestor`,
+  so later preservation commits on the oracle never break the
+  record); `plan` an existing repo-relative path. Every one of these
+  is a checkable claim about the world, checked where it is written
+  — the record is the machine lock, so a record whose pointers do
+  not resolve is a broken lock, LOUD, never a skip.
 - **Cross-cutting machine-block rules** (canonical statement:
   `task-packet-template.md` §1a; this template defers): duplicate
   JSON keys are parse errors; fences follow the line-oriented
@@ -150,9 +182,12 @@ violations; the lint guards only the C-row byte surface).
 
 ```
 draft ──(human ratification)──▶ ratified ──(chapter close)──▶ realized
-              ▲                     │                             │
-              └──── reopened ◀──────┴─────────────────────────────┘
+              ▲                    │ │                            │
+              └──── reopened ◀─────┴─┼────────────────────────────┘
         (from ratified; from realized only as a resolved STOP; transient)
+                                     │
+                                     └──(supersede)──▶ superseded
+                                            (terminal — no exits)
 ```
 
 - **First ratification (two commits):** the content commit lands the
@@ -182,6 +217,31 @@ draft ──(human ratification)──▶ ratified ──(chapter close)──�
   surface loud-red for the window (this section's own rule — the
   designed signal, closed at commit 2); the resolution is never
   inferred.
+- **Supersede (ONE commit, from `ratified` only):** when a line is
+  re-derived rather than repaired, the draft is archived IN PLACE —
+  the file never moves (§2) — by a single commit that flips status
+  `ratified` → `superseded` and appends the §2 record. That commit
+  touches the meta block and the record and NOTHING else: the C-rows
+  are frozen and the equality check keeps binding, forever, against
+  the latest ratification's recorded commit. This is deliberately
+  NOT the reopen's two-commit choreography — a reopen suspends
+  equality because the rows are being edited; a supersede edits no
+  row, so nothing needs suspending, and a second commit would only
+  create a window in which the state is half-declared.
+  `superseded` is TERMINAL: no transition leaves it, so the
+  re-derived successor is a NEW surface with its own name, never a
+  return to this file. Reachability from `realized` is NOT
+  legislated (n=1: the first exercise was the ch13 context-block
+  contract, superseded from `ratified` on 2026-08-03) — a
+  post-close supersede is a new act to be decided when one exists.
+  The successor's identity is not recorded here; see §2's record
+  form for why.
+- **`superseded` and the zero-reopened gate:** a superseded draft is
+  a PERMANENT resting state, so it does NOT join
+  `--forbid-reopened`; gating on it would red every future approve.
+  Its enforcement lives entirely at anchor resolution (§6) and in
+  the summary line, which names superseded drafts the way it names
+  reopened ones.
 - **`reopened` is a transient STOP-artifact, never a resting state:**
   packet refs into a reopened draft go loud-red for the window;
   packet approve, chapter close, and process flips require ZERO
@@ -203,8 +263,12 @@ measured.
 
 Packets anchor rows as `contract:ch<N>-<surface>#C<n>` in their
 `packet_rows` manifest (task-packet-template §1). Anchors resolve
-ONLY to a **ratified-or-later** draft (`reopened` does NOT qualify —
-the contract is contested during a reopen). A packet row anchored to
+ONLY to a **ratified-or-later** draft — neither `reopened` nor
+`superseded` qualifies, for opposite reasons: a reopened draft is
+contested (a transient red window that closes at re-ratification),
+a superseded one is retired (a permanent red — the anchor must move
+to the successor surface, and the draft's own `superseded` record
+names the oracle branch and the plan that authorized the move). A packet row anchored to
 a draft row must preserve its MEANING, not just resolve the reference
 — the panel's lens-2 draft→packet semantic-drift check owns that
 surface.

@@ -39,7 +39,8 @@ Packets (v3/implementation/packets/*.md, README.md excluded):
       new-decision carries none.
   P4. Every ref parses EXACTLY as a strict form —
       contract:ch<N>-<surface>#C<n> (resolves to a row of a
-      ratified-or-later draft; reopened does NOT qualify) or ADR-NNN
+      ratified-or-later draft; neither reopened nor superseded
+      qualifies — contested vs retired, see D8) or ADR-NNN
       (file exists under v3/adr/) — or carries the prose: prefix with
       a nonempty remainder (unverified, human-facing provenance).
       Anything else is red: no silent pass-through, a near-miss is
@@ -126,7 +127,7 @@ Packets (v3/implementation/packets/*.md, README.md excluded):
 
 Drafts (v3/implementation/contracts/*.md, README.md excluded):
   D1. contract_draft = {chapter, surface, status}: exact keyset;
-      status in draft|ratified|reopened|realized; filename
+      status in draft|ratified|reopened|realized|superseded; filename
       ch<N>-<surface>-contract.md matches chapter/surface.
   D2. C-row registry: table rows whose first cell is C<n> (fenced code
       excluded); unique ids, no leading zeros (ids are exact strings —
@@ -137,8 +138,9 @@ Drafts (v3/implementation/contracts/*.md, README.md excluded):
       the LAST block in document order.
   D4. State consistency (decidable from the current bytes alone):
       ratification block(s) present <=> status in {ratified, reopened,
-      realized}; status draft => no blocks.
-  D5. Recorded-commit equality (status ratified|realized): the C-row
+      realized, superseded}; status draft => no blocks.
+  D5. Recorded-commit equality (status ratified|realized|superseded):
+      the C-row
       lines in the working tree equal the C-row lines at the latest
       block's recorded commit (git show). The recorded sha must
       resolve to a COMMIT object (git cat-file -t): a tree/blob/tag
@@ -147,7 +149,9 @@ Drafts (v3/implementation/contracts/*.md, README.md excluded):
       is a LOUD error, never a skip.
       Suspended ONLY at reopened — the two-commit reopen choreography
       (content+status commit, then record commit) stays green at every
-      step.
+      step. At superseded it binds FOREVER: the flip edits no C-row,
+      so equality against the latest ratification's commit is the
+      archival lock itself.
   D6. reopened is a transient STOP-artifact: the summary lists
       reopened drafts BY NAME, and --forbid-reopened turns any into
       an error (the zero-reopened gate at packet approve / chapter
@@ -156,6 +160,42 @@ Drafts (v3/implementation/contracts/*.md, README.md excluded):
       AND exactly one map covering exactly the C-row id set, every
       landing site a nonempty string (a partial map, on any status, is
       red).
+  D8. The superseded TERMINAL status (ch13 re-derivation P1) — a line
+      that is RE-DERIVED rather than repaired is archived IN PLACE
+      (the file never moves) by ONE commit flipping ratified ->
+      superseded and appending the record. Nine claims, each with its
+      own red fixture:
+      D8.1 a superseded draft carrying a valid record is GREEN (the
+           status value itself is red without this claim).
+      D8.2 status/record consistency, BOTH directions red: superseded
+           without the record; the record on any other status. Plus:
+           superseded with ZERO ratification blocks is red — a draft
+           that was never ratified has no state to preserve.
+      D8.3 record keyset EXACTLY {date, oracle_branch, oracle_tip,
+           plan} (an extra or missing key is red — notably NO
+           successor field: it cannot exist at flip time, and an
+           unverifiable-at-writing reference is the measured defect
+           family this process pays for); date a YYYY-MM-DD string.
+      D8.4 oracle_branch resolves (local ref, else its origin/
+           tracking form) and oracle_tip is 40-hex lowercase,
+           resolves to a COMMIT object, and is CONTAINED in that
+           branch (merge-base --is-ancestor — so later preservation
+           commits on the oracle never break the record).
+      D8.5 plan is an existing repo-relative path (no absolute, no
+           ..): the forward thread must resolve where it is written.
+      D8.6 equality still binds (D5): a C-row edited after the flip
+           is red — the archival lock.
+      D8.7 a packet ref into a superseded draft is red with a
+           DEDICATED message naming the state and pointing at the
+           record. Opposite reason to reopened: contested (transient)
+           vs retired (permanent).
+      D8.8 realized_map on status superseded is red (D7's map <=>
+           realized rule, pinned against the new status).
+      D8.9 the summary names superseded drafts, the D6 listing analog.
+      superseded does NOT join --forbid-reopened: it is permanent, so
+      gating on it would red every future approve. Terminality is a
+      FORM rule, not a lint claim — no transition out of superseded
+      exists to be checked from a single document's bytes.
 
 History-audit continuity (ADR-015): D5 and P8 audit HISTORY against
 the CURRENT repo-relative path via `git show <commit>:<rel>`. Commits
@@ -232,9 +272,19 @@ STOP_TOKEN_REGISTRY = {
     "4:flagged-approve",
 }
 
-DRAFT_STATUSES = ("draft", "ratified", "reopened", "realized")
-RATIFIED_OR_LATER = ("ratified", "realized")  # reopened deliberately NOT
+DRAFT_STATUSES = ("draft", "ratified", "reopened", "realized", "superseded")
+# The ANCHOR-QUALIFYING set (P4/D8.7): reopened and superseded are both
+# deliberately OUT, for opposite reasons — contested vs retired.
+RATIFIED_OR_LATER = ("ratified", "realized")
+# The FROZEN set (D5/D8.6): statuses whose C-rows are locked against the
+# latest ratification's recorded commit. reopened is the ONLY post-draft
+# status where equality is suspended (its rows are mid-edit by design);
+# superseded freezes forever — the flip edits no row, so the equality
+# check IS the archival lock. Also the "requires >=1 C-row" set: every
+# member has been ratified at least once, and a ratified draft has rows.
+EQUALITY_BOUND = ("ratified", "realized", "superseded")
 CONTRACT_DRAFT_KEYS = {"chapter", "surface", "status"}
+SUPERSEDED_KEYS = {"date", "oracle_branch", "oracle_tip", "plan"}
 MUTATION_BOUNDARY_KEYS = {"files"}
 PACKET_ROWS_KEYS = {"rows"}
 ROW_KEYS = {"id", "class", "refs"}
@@ -326,6 +376,10 @@ C_ROW_RE = re.compile(r"^\|\s*(C\d+)\s*\|")
 DRAFT_NAME_RE = re.compile(r"^(ch\d+)-([a-z0-9-]+)-contract\.md$")
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 COMMIT_RE = re.compile(r"^[0-9a-f]{7,40}$")
+# D8.4: the oracle tip is pinned FULL — an abbreviated sha is a
+# prefix claim that a future object can collide with, and the record
+# is meant to outlive every session that could re-derive it.
+FULL_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 
 # Family "P" collides with packet names (ch7-P2); never a lane family.
 # Mirrored from task-packet-template.md §1.
@@ -599,6 +653,107 @@ def check_recorded_equality(
         )
 
 
+def _resolve_branch(root: Path, branch: str) -> str | None:
+    """D8.4: the oracle branch as a REF — the local head first, else its
+    origin/ tracking form (a fresh clone that fetched the preserved line
+    must lint identically). Deliberately not a bare rev-parse: that
+    would accept a tag or a raw sha as a 'branch'."""
+    for ref in (f"refs/heads/{branch}", f"refs/remotes/origin/{branch}"):
+        out = subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "--verify", "--quiet", ref],
+            capture_output=True,
+            text=True,
+        )
+        if out.returncode == 0 and out.stdout.strip():
+            return out.stdout.strip()
+    return None
+
+
+def check_superseded_record(path: Path, block: object, checker: Checker) -> None:
+    """D8.3–D8.5: the archival record's shape AND its pointers. Every
+    field is a checkable claim about the world, checked here — the
+    record is the machine lock, and a lock whose pointers do not
+    resolve is broken, LOUD, never a skip."""
+    name = path.name
+    if not isinstance(block, dict) or set(block.keys()) != SUPERSEDED_KEYS:
+        checker.error(
+            f"{name}: superseded record must be an object with exactly keys "
+            f"{sorted(SUPERSEDED_KEYS)} — no successor field: the successor "
+            f"does not exist at flip time and an unverifiable reference is "
+            f"the defect family this record exists to avoid"
+        )
+        return
+    if not isinstance(block["date"], str) or not DATE_RE.match(block["date"]):
+        checker.error(f"{name}: superseded.date must be a YYYY-MM-DD string")
+
+    located = git_root_and_rel(path)
+    if located is None:
+        checker.error(
+            f"{name}: not inside a git repository — the superseded record's "
+            f"oracle pointers cannot be verified"
+        )
+        return
+    root, _rel = located
+
+    # D8.5: the forward thread must resolve where it is written — the
+    # citation rule (an unverified citation is the citation-shaped form
+    # of an unrun "measured") applied to the record's own pointer.
+    plan = block["plan"]
+    if not isinstance(plan, str) or not plan.strip() or plan.startswith("/") or ".." in plan:
+        checker.error(
+            f"{name}: superseded.plan must be a nonempty repo-relative path "
+            f"(no absolute paths, no '..')"
+        )
+    elif not (root / plan).is_file():
+        checker.error(
+            f"{name}: superseded.plan path '{plan}' does not exist — the "
+            f"record's forward thread must resolve at the point of writing"
+        )
+
+    branch = block["oracle_branch"]
+    branch_sha = None
+    if not isinstance(branch, str) or not branch.strip():
+        checker.error(f"{name}: superseded.oracle_branch must be a nonempty string")
+    else:
+        branch_sha = _resolve_branch(root, branch)
+        if branch_sha is None:
+            checker.error(
+                f"{name}: superseded.oracle_branch '{branch}' does not resolve to "
+                f"a branch (neither refs/heads nor refs/remotes/origin) — the "
+                f"preserved line is unreachable and the archival record is broken"
+            )
+
+    tip = block["oracle_tip"]
+    if not isinstance(tip, str) or not FULL_SHA_RE.match(tip):
+        checker.error(
+            f"{name}: superseded.oracle_tip must be a 40-hex lowercase commit sha "
+            f"(pinned FULL — an abbreviation is a prefix claim)"
+        )
+        return
+    typ = subprocess.run(
+        ["git", "-C", str(root), "cat-file", "-t", tip],
+        capture_output=True,
+        text=True,
+    )
+    obj_type = typ.stdout.strip() if typ.returncode == 0 else "unresolvable"
+    if obj_type != "commit":
+        checker.error(
+            f"{name}: superseded.oracle_tip '{tip[:12]}' does not resolve to a "
+            f"COMMIT (got '{obj_type}') — the archival record is broken"
+        )
+    elif branch_sha is not None:
+        contained = subprocess.run(
+            ["git", "-C", str(root), "merge-base", "--is-ancestor", tip, branch_sha],
+            capture_output=True,
+        )
+        if contained.returncode != 0:
+            checker.error(
+                f"{name}: superseded.oracle_tip '{tip[:12]}' is NOT contained in "
+                f"branch '{branch}' — the record names a tip the preserved line "
+                f"does not carry"
+            )
+
+
 def check_draft(path: Path, checker: Checker) -> dict | None:
     """Returns {"status": str, "rows": set[str]} for cross-ref use, or None."""
     text = path.read_text(encoding="utf-8")
@@ -670,12 +825,29 @@ def check_draft(path: Path, checker: Checker) -> dict | None:
         )
     if status != "draft" and not ratifications:
         checker.error(f"{path.name}: status {status} requires a ratification block")
-    if status in RATIFIED_OR_LATER and not rows:
+    if status in EQUALITY_BOUND and not rows:
         checker.error(f"{path.name}: status {status} but no C-rows")
 
-    # D5 recorded-commit equality — bound at ratified/realized,
-    # suspended ONLY at reopened.
-    if status in RATIFIED_OR_LATER and ratifications:
+    # D8 the superseded record — ANY record present <=> status
+    # superseded, both directions; the pointers verified where written.
+    supersedes = block_by_key(blocks, "superseded")
+    if supersedes and status != "superseded":
+        checker.error(
+            f"{path.name}: superseded record present on status '{status}' — the "
+            f"record and the status flip land in ONE commit"
+        )
+    if status == "superseded":
+        if len(supersedes) != 1:
+            checker.error(
+                f"{path.name}: status superseded requires exactly one superseded "
+                f"record block, found {len(supersedes)}"
+            )
+        else:
+            check_superseded_record(path, supersedes[0], checker)
+
+    # D5 recorded-commit equality — bound at ratified/realized/
+    # superseded, suspended ONLY at reopened.
+    if status in EQUALITY_BOUND and ratifications:
         latest = ratifications[-1]
         commit = latest.get("commit") if isinstance(latest, dict) else None
         if isinstance(commit, str) and COMMIT_RE.match(commit):
@@ -757,10 +929,23 @@ def check_ref(name: str, row_id: str, ref: object, drafts: dict[str, dict], adr_
         if draft is None:
             checker.error(f"{label} '{ref}' — no such contract-draft")
         elif draft["status"] not in RATIFIED_OR_LATER:
+            # Two out-states, opposite reasons: reopened is CONTESTED
+            # (a transient window, closed at re-ratification), superseded
+            # is RETIRED (permanent — the anchor must move to the
+            # successor surface, and the draft's own superseded record
+            # names the oracle branch and the authorizing plan).
+            why = ""
+            if draft["status"] == "reopened":
+                why = " (the contract is contested during a reopen)"
+            elif draft["status"] == "superseded":
+                why = (
+                    " — the draft is superseded (terminal): this anchor must move "
+                    "to the successor surface; the draft's superseded record names "
+                    "the oracle branch and the plan that authorized the supersede"
+                )
             checker.error(
                 f"{label} '{ref}' — draft status is '{draft['status']}', anchors "
-                f"need ratified-or-later"
-                + (" (the contract is contested during a reopen)" if draft["status"] == "reopened" else "")
+                f"need ratified-or-later" + why
             )
         elif row not in draft["rows"]:
             checker.error(f"{label} '{ref}' — row {row} not in draft")
@@ -1510,11 +1695,16 @@ def check_post_build(
 # ---------------------------------------------------------------- runner
 
 
-def collect_drafts(contracts_dir: Path, checker: Checker) -> tuple[dict[str, dict], list[str]]:
+def collect_drafts(
+    contracts_dir: Path, checker: Checker
+) -> tuple[dict[str, dict], list[str], list[str]]:
+    """(drafts by slug, reopened names, superseded names) — D6 and D8.9
+    both want the NAMES in the summary."""
     drafts: dict[str, dict] = {}
     reopened: list[str] = []
+    superseded: list[str] = []
     if not contracts_dir.is_dir():
-        return drafts, reopened
+        return drafts, reopened, superseded
     for path in sorted(contracts_dir.glob("*.md")):
         if path.name == "README.md":
             continue
@@ -1522,10 +1712,12 @@ def collect_drafts(contracts_dir: Path, checker: Checker) -> tuple[dict[str, dic
         if info is not None:
             if info["status"] == "reopened":
                 reopened.append(path.name)
+            elif info["status"] == "superseded":
+                superseded.append(path.name)
             m = DRAFT_NAME_RE.match(path.name)
             if m:
                 drafts[f"{m.group(1)}-{m.group(2)}"] = info
-    return drafts, reopened
+    return drafts, reopened, superseded
 
 
 def lint(
@@ -1550,7 +1742,10 @@ def lint(
             f"contracts directory missing: {contracts_dir} — an empty lint "
             f"proves nothing; a nonexistent directory is an error, never a pass"
         )
-    drafts, reopened = collect_drafts(contracts_dir, checker)
+    drafts, reopened, superseded = collect_drafts(contracts_dir, checker)
+    # D8: superseded deliberately does NOT join this gate — it is a
+    # PERMANENT resting state, so gating on it would red every future
+    # approve, close and flip. Its enforcement is anchor-side.
     if forbid_reopened and reopened:
         checker.error(
             f"--forbid-reopened: reopened draft(s) present: {reopened} — the "
@@ -1569,6 +1764,7 @@ def lint(
         "grandfathered": grandfathered,
         "drafts": len(drafts),
         "reopened": reopened,  # the NAMES — D6 says the summary lists them
+        "superseded": superseded,  # …and D8.9 says the same for these
     }
     return checker.errors, stats
 
@@ -1584,10 +1780,15 @@ def run_lint(
         print(f"packet-lint FAIL: {msg}", file=sys.stderr)
     reopened = stats["reopened"]
     reopened_note = f"{len(reopened)} reopened" + (f": {', '.join(reopened)}" if reopened else "")
+    superseded = stats["superseded"]
+    superseded_note = f"{len(superseded)} superseded" + (
+        f": {', '.join(superseded)}" if superseded else ""
+    )
     print(
         f"packet-lint: {stats['v2']} v2 packet(s) linted, "
         f"{stats['grandfathered']} pre-v2 grandfathered, "
-        f"{stats['drafts']} draft(s) linted ({reopened_note}), "
+        f"{stats['drafts']} draft(s) linted "
+        f"({reopened_note}, {superseded_note}), "
         f"{len(errors)} error(s)"
     )
     return 1 if errors else 0
@@ -1612,6 +1813,16 @@ RATIFICATION_TMPL = """
 {"ratification": {"date": "%DATE%", "arms": ["a", "b"], "commit": "%COMMIT%"}}
 ```
 """
+
+SUPERSEDED_TMPL = """
+```json
+{"superseded": {"date": "2026-08-03", "oracle_branch": "%BRANCH%", "oracle_tip": "%TIP%", "plan": "%PLAN%"}}
+```
+"""
+
+# The fixture's preserved line and authorizing plan (D8.4/D8.5).
+ORACLE_BRANCH = "oracle-line-fixture"
+ORACLE_PLAN = "plan-fixture.md"
 
 GREEN_PACKET = """# packet fixture
 
@@ -1679,6 +1890,39 @@ def build_green_fixture() -> tuple[tempfile.TemporaryDirectory, Path, Path, Path
     packet = root / "packets" / "ch9-p1-test.md"
     packet.write_text(GREEN_PACKET, encoding="utf-8")
     return tmp, root, draft, packet, ratified
+
+
+def build_superseded_fixture() -> tuple[tempfile.TemporaryDirectory, Path, Path, Path, str, str] | None:
+    """The supersede act enacted on the green fixture: a preserved line
+    (a branch whose tip carries the plan), then ONE commit flipping
+    ratified -> superseded and appending the record — C-rows untouched,
+    so the equality lock holds across the flip. Returns (tmpdir, root,
+    draft_path, packet_path, superseded_text, off_branch_sha); the last
+    is the flip commit itself, which is by construction NOT contained in
+    the oracle branch (D8.4's containment negative)."""
+    fixture = build_green_fixture()
+    if fixture is None:
+        return None
+    tmp, root, draft, packet, green = fixture
+    (root / ORACLE_PLAN).write_text("the authorizing re-derivation plan\n", encoding="utf-8")
+    if not (
+        _git_ok(root, "add", "-A")
+        and _git_ok(root, "commit", "-q", "-m", "plan")
+        and _git_ok(root, "branch", ORACLE_BRANCH)
+    ):
+        tmp.cleanup()
+        return None
+    tip = _git_out(root, "rev-parse", ORACLE_BRANCH)
+    text = green.replace('"status": "ratified"', '"status": "superseded"') + (
+        SUPERSEDED_TMPL.replace("%BRANCH%", ORACLE_BRANCH)
+        .replace("%TIP%", tip)
+        .replace("%PLAN%", ORACLE_PLAN)
+    )
+    draft.write_text(text, encoding="utf-8")
+    if not (_git_ok(root, "add", "-A") and _git_ok(root, "commit", "-q", "-m", "supersede")):
+        tmp.cleanup()
+        return None
+    return tmp, root, draft, packet, text, _git_out(root, "rev-parse", "HEAD")
 
 
 def run_selftest() -> int:
@@ -2536,6 +2780,136 @@ def run_selftest() -> int:
         "realized-without-map",
         lambda g: g.replace('"status": "ratified"', '"status": "realized"'),
         "exactly one realized_map block",
+    )
+
+    # ---- D8 the superseded terminal status (ch13 re-derivation P1)
+    def expect_red_superseded(name: str, mutate, substr: str, commit: bool = False) -> None:
+        """Fresh superseded fixture per dim, PACKET REMOVED — the
+        anchor dim owns that redness, so a draft-side claim proves
+        itself against an otherwise-green tree."""
+        fixture = build_superseded_fixture()
+        if fixture is None:
+            failures.append(f"selftest fixture setup failed: {name}")
+            return
+        tmp, root, draft, packet, text, off_sha = fixture
+        packet.unlink()
+        draft.write_text(mutate(text, off_sha), encoding="utf-8")
+        if commit:
+            _git_ok(root, "add", "-A")
+            _git_ok(root, "commit", "-q", "-m", name)
+        errors, _ = lint(root / "packets", root / "contracts", ADR_DIR)
+        assert_red(name, errors, substr)
+        tmp.cleanup()
+
+    RECORD_HEAD = '\n```json\n{"superseded"'
+
+    # D8.1 green + D8.7 anchor + D8.9 summary + the not-a-gate decision
+    fixture = build_superseded_fixture()
+    if fixture is None:
+        failures.append("selftest fixture setup failed: supersede-choreography")
+    else:
+        tmp, root, draft, packet3, _text, _off = fixture
+        # D8.7: an anchor into a superseded draft is red, with the
+        # DEDICATED message (asserted on its content, not just redness)
+        errors, _ = lint(root / "packets", root / "contracts", ADR_DIR)
+        assert_red(
+            "ref-target-superseded-draft", errors, "the draft is superseded (terminal)"
+        )
+        # D8.1: the draft ITSELF is green in the terminal state
+        packet3.unlink()
+        errors, stats = lint(root / "packets", root / "contracts", ADR_DIR)
+        expect_green("superseded terminal state", errors)
+        # D8.9: the summary carries the superseded drafts BY NAME
+        if stats["superseded"] != ["ch9-test-surface-contract.md"]:
+            failures.append("selftest claim NOT held: superseded drafts not listed by name")
+        # …and the zero-reopened gate is NOT tripped by a permanent
+        # state — a false red here would red every future approve
+        errors, _ = lint(root / "packets", root / "contracts", ADR_DIR, forbid_reopened=True)
+        expect_green("superseded passes the zero-reopened gate", errors)
+        tmp.cleanup()
+
+    # D8.2 status/record consistency, both directions + the block floor
+    expect_red_superseded(
+        "superseded-without-record",
+        lambda t, off: t.split(RECORD_HEAD)[0] + "\n",
+        "requires exactly one superseded record block",
+    )
+    expect_red_superseded(
+        "superseded-record-on-ratified-status",
+        lambda t, off: t.replace('"status": "superseded"', '"status": "ratified"'),
+        "superseded record present on status 'ratified'",
+    )
+    expect_red_superseded(
+        "superseded-without-ratification-block",
+        lambda t, off: DRAFT_V1.replace('"status": "draft"', '"status": "superseded"')
+        + RECORD_HEAD
+        + t.split(RECORD_HEAD, 1)[1],
+        "status superseded requires a ratification block",
+    )
+    # D8.3 record shape
+    expect_red_superseded(
+        "superseded-record-extra-key",
+        lambda t, off: t.replace(
+            '{"superseded": {"date"', '{"superseded": {"successor": "ch13-v2", "date"'
+        ),
+        "must be an object with exactly keys",
+    )
+    expect_red_superseded(
+        "superseded-record-missing-key",
+        lambda t, off: re.sub(r', "plan": "[^"]*"', "", t),
+        "must be an object with exactly keys",
+    )
+    expect_red_superseded(
+        "superseded-record-bad-date",
+        lambda t, off: t.replace('"date": "2026-08-03"', '"date": "2026-8-3"'),
+        "superseded.date must be a YYYY-MM-DD string",
+    )
+    # D8.4 the oracle pointers
+    expect_red_superseded(
+        "superseded-oracle-branch-missing",
+        lambda t, off: t.replace(f'"oracle_branch": "{ORACLE_BRANCH}"', '"oracle_branch": "no-such-line"'),
+        "does not resolve to a branch",
+    )
+    expect_red_superseded(
+        "superseded-oracle-tip-abbreviated",
+        lambda t, off: re.sub(r'"oracle_tip": "([0-9a-f]{12})[0-9a-f]{28}"', r'"oracle_tip": "\1"', t),
+        "must be a 40-hex lowercase commit sha",
+    )
+    expect_red_superseded(
+        "superseded-oracle-tip-unresolvable",
+        lambda t, off: re.sub(
+            r'"oracle_tip": "[0-9a-f]{40}"', '"oracle_tip": "' + "deadbeef" * 5 + '"', t
+        ),
+        "superseded.oracle_tip 'deadbeefdead' does not resolve to a COMMIT",
+    )
+    expect_red_superseded(
+        "superseded-oracle-tip-off-branch",
+        lambda t, off: re.sub(r'"oracle_tip": "[0-9a-f]{40}"', f'"oracle_tip": "{off}"', t),
+        "is NOT contained in branch",
+    )
+    # D8.5 the forward thread
+    expect_red_superseded(
+        "superseded-plan-path-absent",
+        lambda t, off: t.replace(f'"plan": "{ORACLE_PLAN}"', '"plan": "v3/no-such-plan.md"'),
+        "forward thread must resolve at the point of writing",
+    )
+    expect_red_superseded(
+        "superseded-plan-path-escaping",
+        lambda t, off: t.replace(f'"plan": "{ORACLE_PLAN}"', '"plan": "../outside.md"'),
+        "must be a nonempty repo-relative path",
+    )
+    # D8.6 the archival lock: equality still binds after the flip
+    expect_red_superseded(
+        "superseded-row-edited-after-flip",
+        lambda t, off: t.replace("| C1 | the row |", "| C1 | the row, edited after supersede |"),
+        "needs re-ratification",
+        commit=True,
+    )
+    # D8.8 D7's map rule pinned against the new status
+    expect_red_superseded(
+        "map-on-superseded-status",
+        lambda t, off: t + '\n```json\n{"realized_map": {"C1": "landed", "C2": "landed"}}\n```\n',
+        "realized_map present on status 'superseded'",
     )
 
     # ---- P8 post-build (pinned bytes + merge rejection)
