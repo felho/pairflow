@@ -138,15 +138,19 @@ carried-scope, never built against.
   requires ≥1 row. Finer elements (token-list members) travel with
   their host row.
 - **Ratification blocks:** exact keyset `{date, arms, commit}`;
-  `date` a `YYYY-MM-DD` string, non-decreasing in document order;
+  `date` a `YYYY-MM-DD` string naming a REAL CALENDAR DAY (the shape
+  alone admits `2026-13-40` and a non-leap `2026-02-29`; a mistyped
+  month is the ordinary accident, and a day that cannot be reached on
+  a calendar is unusable as the audit stamp it claims to be),
+  non-decreasing in document order;
   `arms` a nonempty list of nonempty strings (naming the transitional
   cross-model arms that reviewed — README §5.5); `commit` 7–40
   LOWERCASE-hex — shape-checked on EVERY block, while the
   COMMIT-object resolution (`git cat-file -t == commit`; a tree/blob/
   tag is not an auditable ratification point) and the equality check
   run on the LATEST block only (= the last block in document order),
-  in `ratified` and `realized`. An unresolvable recorded commit or an
-  out-of-repo draft is a LOUD error, never a skip.
+  in `ratified`, `realized` and `superseded`. An unresolvable recorded
+  commit or an out-of-repo draft is a LOUD error, never a skip.
 - **The equality check:** the working tree's C-row lines equal the
   C-row lines at the latest block's recorded commit
   (`git show <commit>:<path>`). The recorded sha binds CONTENT, not
@@ -159,16 +163,22 @@ carried-scope, never built against.
   check binds `ratified`/`realized`/`superseded` and is suspended
   ONLY at `reopened`.
 - **`realized_map`:** exactly one block with this exact top-level
-  key; keys exactly the C-row id set; every landing site a nonempty
+  key — and that key is the block's ONLY top-level key (a sibling key
+  in the same fence is red: it would ride along unread, the ordinary
+  accident being a copy-paste that merges two blocks); keys exactly
+  the C-row id set; every landing site a nonempty
   string; ANY map presence ⇔ status `realized` (the boundary review
   fills the map and flips the status in ONE act — a partial map, on
   any status, is red).
 - **`superseded` record:** exactly one block with this exact
-  top-level key; exact keyset `{date, oracle_branch, oracle_tip,
+  top-level key — and that key is the block's ONLY top-level key, on
+  the `realized_map` rule above and for the same reason; exact keyset
+  `{date, oracle_branch, oracle_tip,
   plan}`; ANY record presence ⇔ status `superseded` (both
   directions), and `superseded` additionally requires ≥1
   ratification block — a draft that was never ratified has no state
-  to preserve. `date` a `YYYY-MM-DD` string; `oracle_branch` a
+  to preserve. `date` a `YYYY-MM-DD` string naming a real calendar
+  day (the ratification-block rule above); `oracle_branch` a
   resolvable branch (the local ref, else its `origin/` tracking
   form); `oracle_tip` 40-hex LOWERCASE, resolving to a COMMIT object
   that is CONTAINED in `oracle_branch` (`merge-base --is-ancestor`,
@@ -241,8 +251,11 @@ draft ──(human ratification)──▶ ratified ──(chapter close)──�
   `superseded` is TERMINAL: no transition leaves it, so the
   re-derived successor is a NEW surface with its own name, never a
   return to this file. Reachability from `realized` is NOT
-  legislated (n=1: the first exercise was the ch13 context-block
-  contract, superseded from `ratified` on 2026-08-03) — a
+  legislated (n=1: the first exercise is the ch13 context-block
+  contract, superseded from `ratified` under the re-derivation plan
+  — the act's date is read off that file's own record, never
+  restated here: a status this template asserts about a live file is
+  a claim that goes stale the moment the file moves) — a
   post-close supersede is a new act to be decided when one exists.
   The successor's identity is not recorded here; see §2's record
   form for why.

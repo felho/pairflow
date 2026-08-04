@@ -133,7 +133,9 @@ Drafts (v3/implementation/contracts/*.md, README.md excluded):
       excluded); unique ids, no leading zeros (ids are exact strings —
       C01 is never C1); ratified-or-later requires >=1 row.
   D3. ratification = {date, arms, commit}: exact keyset; YYYY-MM-DD
-      string date; nonempty string-list arms; 7-40 lowercase-hex
+      string date naming a REAL CALENDAR DAY (the shape alone admits
+      2026-13-40 and a non-leap 2026-02-29 — a mistyped month is the
+      ordinary accident); nonempty string-list arms; 7-40 lowercase-hex
       commit. Dates non-decreasing in document order; "latest block" =
       the LAST block in document order.
   D4. State consistency (decidable from the current bytes alone):
@@ -159,7 +161,9 @@ Drafts (v3/implementation/contracts/*.md, README.md excluded):
   D7. Realized map: ANY realized_map block present <=> status realized
       AND exactly one map covering exactly the C-row id set, every
       landing site a nonempty string (a partial map, on any status, is
-      red).
+      red). The key is the block's SOLE top-level key — a sibling key
+      in the same fence rides along unread (the merged-block accident);
+      the rule is shared with D8.3's record.
   D8. The superseded TERMINAL status (ch13 re-derivation P1) — a line
       that is RE-DERIVED rather than repaired is archived IN PLACE
       (the file never moves) by ONE commit flipping ratified ->
@@ -175,7 +179,9 @@ Drafts (v3/implementation/contracts/*.md, README.md excluded):
            plan} (an extra or missing key is red — notably NO
            successor field: it cannot exist at flip time, and an
            unverifiable-at-writing reference is the measured defect
-           family this process pays for); date a YYYY-MM-DD string.
+           family this process pays for); date a YYYY-MM-DD string
+           naming a real calendar day (D3's rule); and `superseded` is
+           the block's SOLE top-level key (D7's rule).
       D8.4 oracle_branch resolves (local ref, else its origin/
            tracking form) and oracle_tip is 40-hex lowercase,
            resolves to a COMMIT object, and is CONTAINED in that
@@ -236,6 +242,7 @@ throwaway fixtures and a green fixture pair passes; --packets-dir /
 from __future__ import annotations
 
 import argparse
+import datetime
 import json
 import re
 import subprocess
@@ -375,6 +382,21 @@ def _mirror_kebab(s: str) -> str:
 C_ROW_RE = re.compile(r"^\|\s*(C\d+)\s*\|")
 DRAFT_NAME_RE = re.compile(r"^(ch\d+)-([a-z0-9-]+)-contract\.md$")
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def is_calendar_date(value: object) -> bool:
+    """D3/D8.3: a declared date is a REAL day, not merely a
+    YYYY-MM-DD-SHAPED string. The regex alone admits 2026-13-40 and
+    2026-02-29 — a mistyped month or a copy-pasted leap day is the
+    accident this rule exists for, and a date that cannot be reached
+    on a calendar is unusable as the audit stamp it claims to be."""
+    if not isinstance(value, str) or not DATE_RE.match(value):
+        return False
+    try:
+        datetime.date.fromisoformat(value)
+    except ValueError:
+        return False
+    return True
 COMMIT_RE = re.compile(r"^[0-9a-f]{7,40}$")
 # D8.4: the oracle tip is pinned FULL — an abbreviated sha is a
 # prefix claim that a future object can collide with, and the record
@@ -516,6 +538,27 @@ def block_by_key(blocks: list[dict], key: str) -> list[dict]:
     return [b[key] for b in blocks if key in b]
 
 
+# D7/D8.3: the template legislates these two as "exactly one block with
+# this exact TOP-LEVEL key". Without the rule a sibling key rides along
+# unread — the ordinary accident being a copy-paste that merges two
+# blocks, or an editor collapsing two fences into one. Class-width by
+# construction: the set IS the template's own list, so a third record
+# form joins here rather than growing a parallel check.
+SOLE_TOP_LEVEL_KEY_BLOCKS = ("superseded", "realized_map")
+
+
+def check_sole_top_level_key(path_name: str, blocks: list[dict], checker: Checker) -> None:
+    for key in SOLE_TOP_LEVEL_KEY_BLOCKS:
+        for block in blocks:
+            if key in block and len(block) != 1:
+                siblings = sorted(k for k in block if k != key)
+                checker.error(
+                    f"{path_name}: the '{key}' block carries sibling top-level "
+                    f"key(s) {siblings} — the record must be the block's ONLY "
+                    f"top-level key, or the siblings ride along unread"
+                )
+
+
 def strip_fences(text: str) -> str:
     return _scan_fences(text)[0]
 
@@ -592,8 +635,8 @@ def check_ratification_shape(name: str, index: int, block: object, checker: Chec
     if not isinstance(block, dict) or set(block.keys()) != RATIFICATION_KEYS:
         checker.error(f"{label} must be an object with exactly keys {sorted(RATIFICATION_KEYS)}")
         return
-    if not isinstance(block["date"], str) or not DATE_RE.match(block["date"]):
-        checker.error(f"{label}.date must be a YYYY-MM-DD string")
+    if not is_calendar_date(block["date"]):
+        checker.error(f"{label}.date must be a YYYY-MM-DD string naming a real calendar day")
     arms = block["arms"]
     if not isinstance(arms, list) or not arms or not all(isinstance(a, str) and a.strip() for a in arms):
         checker.error(f"{label}.arms must be a nonempty list of nonempty strings")
@@ -683,8 +726,10 @@ def check_superseded_record(path: Path, block: object, checker: Checker) -> None
             f"the defect family this record exists to avoid"
         )
         return
-    if not isinstance(block["date"], str) or not DATE_RE.match(block["date"]):
-        checker.error(f"{name}: superseded.date must be a YYYY-MM-DD string")
+    if not is_calendar_date(block["date"]):
+        checker.error(
+            f"{name}: superseded.date must be a YYYY-MM-DD string naming a real calendar day"
+        )
 
     located = git_root_and_rel(path)
     if located is None:
@@ -758,6 +803,7 @@ def check_draft(path: Path, checker: Checker) -> dict | None:
     """Returns {"status": str, "rows": set[str]} for cross-ref use, or None."""
     text = path.read_text(encoding="utf-8")
     blocks = json_blocks(text, path.name, checker)
+    check_sole_top_level_key(path.name, blocks, checker)
 
     metas = block_by_key(blocks, "contract_draft")
     if len(metas) != 1:
@@ -1925,6 +1971,11 @@ def build_superseded_fixture() -> tuple[tempfile.TemporaryDirectory, Path, Path,
     return tmp, root, draft, packet, text, _git_out(root, "rev-parse", "HEAD")
 
 
+# The pinned size of the red-fixture register (see the check at the end
+# of run_selftest for why a printed number was not enough).
+EXPECTED_RED_DIMS = 135
+
+
 def run_selftest() -> int:
     failures: list[str] = []
     red_dims: list[str] = []
@@ -2624,6 +2675,11 @@ def run_selftest() -> int:
         "YYYY-MM-DD",
     )
     expect_red_draft(
+        "ratification-impossible-calendar-date",
+        lambda g: g.replace('"date": "2026-07-09"', '"date": "2026-13-40"'),
+        "real calendar day",
+    )
+    expect_red_draft(
         "ratification-bad-commit",
         lambda g: g.replace('"commit": "', '"commit": "ZZZ-not-hex-'),
         "lowercase-hex commit sha",
@@ -2781,6 +2837,12 @@ def run_selftest() -> int:
         lambda g: g.replace('"status": "ratified"', '"status": "realized"'),
         "exactly one realized_map block",
     )
+    expect_red_draft(
+        "realized-map-block-with-sibling-key",
+        lambda g: g.replace('"status": "ratified"', '"status": "realized"')
+        + '\n```json\n{"note": "landed everywhere", "realized_map": {"C1": "landed", "C2": "landed"}}\n```\n',
+        "sibling top-level key(s) ['note']",
+    )
 
     # ---- D8 the superseded terminal status (ch13 re-derivation P1)
     def expect_red_superseded(name: str, mutate, substr: str, commit: bool = False) -> None:
@@ -2863,6 +2925,18 @@ def run_selftest() -> int:
         "superseded-record-bad-date",
         lambda t, off: t.replace('"date": "2026-08-03"', '"date": "2026-8-3"'),
         "superseded.date must be a YYYY-MM-DD string",
+    )
+    expect_red_superseded(
+        "superseded-record-impossible-calendar-date",
+        lambda t, off: t.replace('"date": "2026-08-03"', '"date": "2026-02-29"'),
+        "real calendar day",
+    )
+    expect_red_superseded(
+        "superseded-record-block-with-sibling-key",
+        lambda t, off: t.replace(
+            '{"superseded": {"date"', '{"note": "archived", "superseded": {"date"'
+        ),
+        "sibling top-level key(s) ['note']",
     )
     # D8.4 the oracle pointers
     expect_red_superseded(
@@ -3178,6 +3252,19 @@ def run_selftest() -> int:
     errors, _ = lint(shared_root / "packets", shared_root / "contracts", ADR_DIR)
     expect_green("GREEN fixture pair", errors)
     shared_tmp.cleanup()
+
+    # The count is PINNED, not merely printed: a deleted assert_red call
+    # used to shrink the reported number while the run still exited 0,
+    # so an accidentally dropped fixture read as a pass. Raise this
+    # constant in the SAME commit that adds a dim — never to make a red
+    # selftest green. Deliberately one level: a red fixture per claim, a
+    # name list, and this count. Nothing checks THIS check.
+    if len(red_dims) != EXPECTED_RED_DIMS:
+        failures.append(
+            f"selftest register count {len(red_dims)} != pinned {EXPECTED_RED_DIMS} "
+            f"— a dim was added or lost; if intended, update EXPECTED_RED_DIMS "
+            f"in the same commit"
+        )
 
     for f in failures:
         print(f"selftest FAIL: {f}", file=sys.stderr)
