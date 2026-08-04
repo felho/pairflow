@@ -5304,3 +5304,46 @@ final CLEAN.
   as a controlled experiment on the improved process with falsifiable
   success criteria. The full strategy, phases, roles, and binding
   rules: v3/implementation/ch13-rederivation-plan.md (f7da2bbf).
+
+- 2026-08-04 (ch13 re-derivation P1, the overbuild reset — a
+  USER-ORDERED history correction, recorded with its reasoning) — THE
+  IMPROVED PROCESS'S FIRST MEASURED NATIVE FAILURE MODE IS THE
+  UNBOUNDED-CRITERION GUARD LOOP. The P1 supersede-mechanics build ran
+  SEVEN external-arm rounds (one killed by the provider's content
+  filter, retried; finding counts 11 → 6 → 5 → 2 → 2 → 2 → 3), every
+  round closing its predecessors with executed evidence and finding
+  new, real defects — and the loop could not terminate, because the
+  verification charter never declared a THREAT MODEL. The guard
+  defends against ACCIDENT and SLOPPINESS; the arm was allowed to hunt
+  constructs only a DELIBERATE author would write (comment-hidden
+  rows, blockquote-disguised tables, raw-HTML tables, bold-wrapped row
+  ids), and a malicious committer owns the linter too, so every such
+  fix was real-but-out-of-scope. Cost: 4–5 calendar days on a phase
+  whose product is a one-line status flip; the lint grew 2846 → 5230
+  lines, ~700 of them a four-level selftest register tower. THE
+  CORRECTION, all user-ratified 2026-08-04: main was RESET to the core
+  build (274df3a6, its own selftest 131/0 green) plus the re-applied
+  chapter-close carve-out (c8636170); the six fold commits live ONLY
+  on snapshot branch `ch13-p1-overbuilt-line` (tip a2fb4910, the full
+  seven-round verdict record — never merges); the full postmortem is
+  OUTSIDE the repo at pairflow-notes/2026-08-04-ch13-p1-overbuild-
+  postmortem.md; the arm-round counter is RE-BASED to zero on the new
+  anchor per the cb7ba9fe watchdog rule (anchor = the reset, reason =
+  this entry). What the deleted rounds still bought, kept as lessons:
+  two new generations of the unmeasured-claim defect family (a
+  NON-DISCRIMINATING FIXTURE — passes with and without the guard it
+  claims to test, found only by running the mutant; and a SAMPLED
+  "EQUIVALENCE PROOF" — retracted when a discriminating object was
+  found; an equivalence claim must NAME what would discriminate, else
+  it is "survived, unproven"); fixture-fidelity (a fixture that could
+  not pass the form it tests is testing a different product); delete
+  by SYMBOL, never by byte range; and the TERMINUS pattern (name the
+  human-owned remainder instead of building a lock for it) — which
+  should have been applied at the OBJECT level from round 1, not
+  discovered at the meta level in round 3. FOUR STANDING RULES ratified
+  as the corrective (now in the re-derivation plan §6): threat-model-
+  first; bounded tooling loops (3 rounds, the 4th only via the user
+  and its question is "is the criterion right?"); the proportionality
+  tripwire; and the trajectory line (derived from repo surfaces,
+  never recalled — memory accelerates, never carries — and never
+  tooled: hand-assembled, 10-second ceiling per number).

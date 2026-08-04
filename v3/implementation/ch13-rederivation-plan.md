@@ -141,3 +141,19 @@ consolidation edits assert only what per-case probes show (6dbbd52a);
 watchdog counts are anchor-scoped, re-based only by the user with
 recorded reason (cb7ba9fe); flag texts carry decisions and receipt
 pointers, never inline measurements.
+
+Added by the user's ratification of 2026-08-04 (the P1 overbuild
+reset — process-log entry of that date; postmortem outside the repo
+in pairflow-notes/): THREAT-MODEL-FIRST (no guard is built or
+extended without one sentence naming what it defends against;
+findings outside that sentence are recorded as carried-scope, never
+fixed — from round 1); BOUNDED TOOLING LOOPS (verification loops on
+guard machinery run 3 rounds by default; a 4th opens only through
+the user, and the question put to them is "is the criterion right?",
+never "may we continue?"); the PROPORTIONALITY TRIPWIRE (a fold
+growing guard code twice in a row, or guard size exceeding what it
+guards, converts the next round into a scope review); the TRAJECTORY
+LINE (every human-gate presentation opens with phase day · round
+count · artifact size and delta — every number DERIVED from repo
+surfaces at write time, never recalled from conversation memory, and
+never tooled: hand-assembled, 10-second ceiling per number).
