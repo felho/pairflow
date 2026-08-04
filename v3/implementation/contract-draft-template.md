@@ -118,6 +118,16 @@ own rules. The lifecycle acts APPEND:
 
 ## 3. The machine form (what the lint enforces — the full registry)
 
+**Threat model (user-ratified 2026-08-04):** every check in this
+registry defends against ACCIDENT and SLOPPINESS — a wrong edit, a
+malformed block, a stale reference, a careless anchor. None of it
+defends against a commit-holder's DELIBERATE concealment (rows hidden
+in rendering constructs, hand-crafted evasions): that class is owned
+by human diff review and the fresh-context arm, exactly as older
+ratification blocks already are ("verified by diff review, not
+tier 0"). A finding outside this sentence is recorded as
+carried-scope, never built against.
+
 - **Meta block:** exactly ONE `contract_draft` block; exact keyset
   `{chapter, surface, status}`; `status` ∈ `draft | ratified |
   reopened | realized | superseded`; filename
