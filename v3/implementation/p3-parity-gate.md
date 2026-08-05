@@ -147,16 +147,31 @@ One engine has ONE notion. As declared, `steps`'s nonempty lane is
 including round membership. The alternative (non-gating) would make
 `start` fire on an empty `steps` map, which today it does not.
 
-**This one cannot be had both ways once the split dissolves.** It is a
-real, small loss of a ratified disposition and needs an explicit ruling:
-either the disposition is amended, or `(b′)` is kept by declaring a
-second selector semantics — which is machinery for one row, and D9
-tripwire 1 says the answer to that is no.
+**CORRECTED at the switch, 2026-08-05 — the collision was mine, not the
+direction's.** The ruling received was "amend `(b′)`"; no amendment was
+made, because re-reading F7's own text showed the premise of this class
+was wrong. F7 states `(b′)` with its reason: *`steps` EMPTY is a valid
+map OF ITS KIND — ch8-C21's suppression binds missing/wrong-kind only*,
+so `keys(steps)` = ∅ EXISTS and every rule selecting over it runs.
+
+The engine had declared `steps`'s nonempty lane `gating`, which is
+suppression on an EMPTY container — precisely what ch8-C21 does not do.
+Removing that one attribute restores `(b′)` exactly, with no machinery
+and no second selector semantics. The ratified disposition is preserved.
+
+The consequence, recorded because it is a real (small) widening of Class
+A: with `keys($.steps)` = ∅ a reliable operand, `start` now also reports
+on an empty `steps` map, which ch8-C18 requires and the old walk merely
+never reached. No case in the suite objects.
+
+Class C is therefore EMPTY. The delta list is Classes A and B.
 
 ## 4. Dry run of the switch
 
-`PAIRFLOW_V3_ENGINE=1 vitest run`: **5 failed / 1830** —
-4 of Class A, 1 of Class C. No other case changes.
+`PAIRFLOW_V3_ENGINE=1 vitest run`: **5 failed / 1830** at the time of the
+ruling — 4 of Class A, 1 of Class C. After the Class-C correction above
+and the four fixture repairs, the switch was made and the suite is
+**1830 / 1830 green on the engine-backed path**.
 
 ## 5. Trajectory (derived at write time)
 

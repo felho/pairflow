@@ -313,7 +313,11 @@ const rootNode: NodeDecl = {
       rows: ["ch8-C9", "ch8-C10"],
       presence: { required: true },
       containerMessage: "steps must be a NONEMPTY map of step-id -> step",
-      nonempty: { message: "steps must be a NONEMPTY map", gating: true },
+      // NOT gating: ch8-C21's container precondition binds MISSING or
+      // WRONG-KIND containers only. An empty map is a valid map OF ITS
+      // KIND, so `keys($.steps)` = the empty set EXISTS and every rule
+      // selecting over it runs normally (ch11-P4 F7's `(b′)` entry).
+      nonempty: { message: "steps must be a NONEMPTY map" },
       keyClass: { kind: "valueClass", tag: "d-step-id", rows: ["ch8-C10"], valueClass: "idClass", label: "step id" },
       keyLaneAt: "container",
       entry: stepNode,

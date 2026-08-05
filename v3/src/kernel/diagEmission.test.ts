@@ -24,6 +24,22 @@ function admit(template: WorkflowTemplate): AdmittedTemplate {
   }
   return result.template;
 }
+
+/**
+ * An admitted template that has DRIFTED: admission is structural on both
+ * channels (ADR-019 D1), so a dangling transition target or a `start`
+ * naming no step can no longer be admitted in the first place. The
+ * internal_failure lanes below are about a value that PASSED admission
+ * and then lost a step — integrity drift, not an authoring defect — so
+ * the fixture admits a whole template and removes the step afterwards.
+ * ch11-P2a A6 keeps the brand mint in `definition/admit.ts`; this route
+ * mints nothing.
+ */
+function admitThenDropStep(template: WorkflowTemplate, stepId: string): AdmittedTemplate {
+  const admitted = admit(template);
+  delete (admitted.steps as Record<string, unknown>)[stepId];
+  return admitted;
+}
 import { createKernel } from "./kernel.js";
 
 // Packet ch7-P1: the canonical emission matrix + lane-inventory table,
@@ -425,16 +441,21 @@ describe("handle internal_failure lanes — emit + rethrow unchanged", () => {
   });
 
   it("post-commit derive throw: emit + rethrow AND the transition IS persisted", async () => {
-    const corrupted: WorkflowTemplate = {
-      ...template,
-      steps: {
-        implement: {
-          role: "implementer",
-          instruction: "build it",
-          transitions: { PASS: "vanished" },
+    const corrupted = admitThenDropStep(
+      {
+        ...template,
+        steps: {
+          ...template.steps,
+          implement: {
+            role: "implementer",
+            instruction: "build it",
+            transitions: { PASS: "vanished" },
+          },
+          vanished: { role: "implementer", instruction: "gone", transitions: {} },
         },
       },
-    };
+      "vanished",
+    );
     const rec = createRecordingDiagnosticsSink();
     const handle = openStore(":memory:", createControlledClock(0));
     await handle.store.createInstance(baseInstance);
@@ -442,7 +463,7 @@ describe("handle internal_failure lanes — emit + rethrow unchanged", () => {
       providerRegistry: createStaticProviderRegistry({}),
       processRunner: createScriptedProcessGateRunner([]),
       store: handle.store,
-      definitions: { load: () => Promise.resolve(admit(corrupted)) },
+      definitions: { load: () => Promise.resolve(corrupted) },
       time: createControlledClock(0),
       digest: deriveEmitDigest,
       gates: gateCatalog,
@@ -538,18 +559,24 @@ describe("create/start internal_failure lanes — {instanceId, error} keyset", (
   });
 
   it("post-create derive throw: emit + rethrow AND the instance IS persisted", async () => {
-    const corrupted: WorkflowTemplate = {
-      ...template,
-      start: "phantom",
-      steps: template.steps,
-    };
+    const corrupted = admitThenDropStep(
+      {
+        ...template,
+        start: "phantom",
+        steps: {
+          ...template.steps,
+          phantom: { role: "implementer", instruction: "gone", transitions: {} },
+        },
+      },
+      "phantom",
+    );
     const rec = createRecordingDiagnosticsSink();
     const handle = openStore(":memory:", createControlledClock(0));
     const kernel = createKernel({
       providerRegistry: createStaticProviderRegistry({}),
       processRunner: createScriptedProcessGateRunner([]),
       store: handle.store,
-      definitions: { load: () => Promise.resolve(admit(corrupted)) },
+      definitions: { load: () => Promise.resolve(corrupted) },
       time: createControlledClock(0),
       digest: deriveEmitDigest,
       gates: gateCatalog,

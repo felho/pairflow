@@ -221,9 +221,9 @@ describe("admitTemplate — the gate-free confinement (A8) and own-property writ
   it("a step named __proto__ survives admission as an OWN key (defineOwn write, not bracket assignment)", () => {
     const raw = {
       ref: { id: "t", version: 1 },
-      start: "s",
+      start: "__proto__",
       steps: { ["__proto__"]: { role: "r", instruction: "i", transitions: {} } },
-      terminal: [],
+      terminal: ["done"],
       roles: { r: {} },
     } as unknown as WorkflowTemplate;
     const result = admitTemplate(raw, catalog);

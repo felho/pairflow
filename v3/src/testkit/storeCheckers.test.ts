@@ -217,6 +217,16 @@ function admit(t: WorkflowTemplate): AdmittedTemplate {
   return result.template;
 }
 
+/** An admitted template that has DRIFTED — admitted whole, then missing a
+ * step. Since ADR-019 D1 admission is structural on BOTH channels, a
+ * dangling transition target cannot be admitted; the checker's subject
+ * here is a value that passed admission and later lost a position. */
+function admitThenDropStep(t: WorkflowTemplate, stepId: string): AdmittedTemplate {
+  const admitted = admit(t);
+  delete (admitted.steps as Record<string, unknown>)[stepId];
+  return admitted;
+}
+
 // advance on arrival at the start step (the model's exhibited declaration)
 // — the loop-back review→implement advances the round.
 const admittedDeclared = admit({
@@ -265,18 +275,24 @@ describe("checkRoundReconstruction — replay = stored (dimension 5, packet ch11
 
   it("a replay position with NO step entry → a violation naming the position, never a skip", () => {
     // Arm-gate-2 finding 3: the OTHER non-resolving branch (`step ===
-    // undefined`) — the walk lands on a position absent from `steps`
-    // (a transition targeting a non-step, non-terminal id; admission
-    // does not own structural well-formedness, so this admits).
-    const ghostly = admit({
-      ref: { id: "ghost", version: 1 },
-      start: "implement",
-      steps: {
-        implement: { role: "implementer", instruction: "i", transitions: { PASS: "ghost" } },
+    // undefined`) — the walk lands on a position absent from `steps`.
+    // Since ADR-019 D1 that position cannot be AUTHORED (admission owns
+    // structural well-formedness on both channels), so the fixture drifts
+    // an admitted template instead: `ghost` is admitted as a real step and
+    // then removed.
+    const ghostly = admitThenDropStep(
+      {
+        ref: { id: "ghost", version: 1 },
+        start: "implement",
+        steps: {
+          implement: { role: "implementer", instruction: "i", transitions: { PASS: "ghost" } },
+          ghost: { role: "implementer", instruction: "g", transitions: {} },
+        },
+        terminal: ["done"],
+        roles: { implementer: { defaultActor: "codex" } },
       },
-      terminal: ["done"],
-      roles: { implementer: { defaultActor: "codex" } },
-    });
+      "ghost",
+    );
     // Row 1 walks implement → ghost; row 2 replays FROM 'ghost', which
     // has no step entry — the checker must violate, not skip.
     const stranded = detail([row(1, "a1", "PASS"), row(2, "b2", "PASS")], { round: 1 });

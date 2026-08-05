@@ -2,10 +2,8 @@ import { isAlias, isMap, isPair, isScalar, isSeq, LineCounter, parseDocument } f
 import type { Document, ParsedNode, YAMLError } from "yaml";
 
 import type { GateCatalog } from "../ports/index.js";
-import { admitTemplate, admitViaEngine } from "./admit.js";
+import { admitFromSource } from "./admit.js";
 import type { PipelineFinding, TemplateLoadResult, ValidationFinding } from "./errors.js";
-import { parityProbe } from "./schema/parityProbe.js";
-import { validateTemplate } from "./validate.js";
 
 /**
  * Packet ch8-P1 (G1/draft C36): the staged load pipeline over raw
@@ -44,33 +42,6 @@ function fail(
   findings: readonly PipelineFinding[] | readonly ValidationFinding[],
 ): TemplateLoadResult {
   return { ok: false, error: { stage, findings } };
-}
-
-/** The validate stage's two rungs: the source-form walk, then admission.
- * Their findings ACCUMULATE in ONE result; the result stays XOR (an
- * admitted template escapes only when both rungs are findings-free). */
-function validateStage(
-  value: unknown,
-  doc: Document,
-  text: string,
-  catalog: GateCatalog,
-): TemplateLoadResult {
-  const outcome = validateTemplate(value, doc, text);
-  if (outcome.template === undefined) {
-    // Disposition (a): non-map root — walk finding only, no operand for
-    // the admission rung.
-    return fail("validate", outcome.findings);
-  }
-  const admitted = admitTemplate(outcome.template, catalog);
-  if (!admitted.ok) {
-    return fail("validate", [...outcome.findings, ...admitted.findings]);
-  }
-  if (outcome.findings.length > 0) {
-    // The walk found structural defects but admission was clean (or
-    // vacuous) — the walk findings are the whole result.
-    return fail("validate", outcome.findings);
-  }
-  return { ok: true, template: admitted.template };
 }
 
 function errorMessage(error: unknown): string {
@@ -262,27 +233,20 @@ export function loadTemplate(bytes: Uint8Array, opts: LoadTemplateOptions = {}):
     return fail("resolve", [{ stage: "resolve", message: errorMessage(error) }]);
   }
 
-  // VALIDATE stage (E2 + the V lanes; cycle-safe per V15), then the
-  // ADMISSION rung (ch11-P2a, A1): the SECOND rung behind structure,
-  // on the SAME channel/stage — gate semantics validate + normalize
-  // here, all-or-nothing. Vacuous over a gate-free template (A8).
-  //
-  // F7 (ch11-P4): CROSS-RUNG ACCUMULATION. The walk hands a best-effort
-  // template EVEN with structural findings (undefined only for a non-map
-  // root — disposition a); the admission rung then runs and its findings
-  // ACCUMULATE with the walk's in ONE `validate` result (disposition
-  // b/b′/c/d/e — the walk's own SKIPs realize the local suppression).
-  // The result stays XOR: an admitted template escapes ONLY when BOTH
-  // the walk and admission are findings-free (ch8-C22 preserved).
+  // VALIDATE stage: ONE run of the template surface's declared schema
+  // (ADR-019 D1) over the resolved value graph, on the FILE channel so
+  // the source-bearing lanes have an operand. The two rungs this stage
+  // used to have — the source-form walk and the admission rung — are one
+  // computation over one declaration; their findings were already
+  // required to accumulate in ONE `validate` result (ch11-P4 F7), and
+  // now they cannot fail to. The result stays XOR (ch8-C22): an admitted
+  // template escapes only when the run is findings-free.
   try {
-    const catalog = opts.catalog ?? EMPTY_CATALOG;
-    const result = validateStage(value, doc, text, catalog);
-    // ADR-019 D5: the parity gate replays this corpus against the
-    // engine-backed path. Default-off; removed at the switch.
-    return parityProbe("definition/load", result, () => {
-      const admitted = admitViaEngine(value, { kind: "file", doc, source: text }, catalog);
-      return admitted.ok ? { ok: true, template: admitted.template } : fail("validate", admitted.findings);
-    });
+    const admitted = admitFromSource(value, doc, text, opts.catalog ?? EMPTY_CATALOG);
+    if (!admitted.ok) {
+      return fail("validate", admitted.findings);
+    }
+    return { ok: true, template: admitted.template };
   } catch (error) {
     // The C22 every-stage belt: no known input reaches this (V15's
     // cycle rule is a FINDING, not a throw), but the stage still maps.
