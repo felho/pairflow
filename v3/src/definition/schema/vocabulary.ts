@@ -157,9 +157,12 @@ export interface MapFixedDecl extends NodeBase {
 export interface MapOpenDecl extends NodeBase {
   readonly kind: "map.open";
   readonly containerMessage: MessageTemplate;
-  /** vocabulary #3 on a map. `gating` because the measured lanes
-   * disagree: an EMPTY `steps` map suppresses every rule that selects
-   * over its keys, an empty `terminal` list does not. */
+  /** vocabulary #3 on a map. `gating` is OPT-IN and the template surface
+   * does not use it: ch8-C21's suppression binds MISSING or WRONG-KIND
+   * containers only, so an empty map is a valid map of its kind and every
+   * rule selecting over its (empty) key set still runs. The attribute
+   * exists for a surface that ratifies the opposite; declaring it is what
+   * makes an empty container gating, never the engine's own choice. */
   readonly nonempty?: { readonly message: MessageTemplate; readonly gating?: boolean };
   /** vocabulary #5 — the open-map key class and the finding's path grain. */
   readonly keyClass?: ValueClassRefDecl;
@@ -178,6 +181,8 @@ export interface MapOpenDecl extends NodeBase {
 export interface ListDecl extends NodeBase {
   readonly kind: "list";
   readonly containerMessage: MessageTemplate;
+  /** See `MapOpenDecl.nonempty`: `gating` is opt-in and unused on this
+   * surface. */
   readonly nonempty?: { readonly message: MessageTemplate; readonly gating?: boolean };
   readonly member: NodeDecl;
   /** The member lane's path grain — `container` reports every member at

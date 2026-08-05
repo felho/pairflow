@@ -179,10 +179,19 @@ The instrument was deleted at the switch, so reproducing the measurement
 means going back to a commit that still carries it:
 
 ```
-git checkout 9790b800          # the last commit with both implementations
+git checkout 9790b800          # the last commit carrying BOTH implementations
 PAIRFLOW_V3_PARITY=1 pnpm --dir v3 exec vitest run
-python3 - < the classifier   # /tmp/p3-parity.jsonl
 ```
+
+`9790b800` carries `schema/parityProbe.ts`, which writes one JSON line
+per divergence to `/tmp/p3-parity.jsonl`: `{label, reference, candidate}`,
+each side already rendered key-order-insensitively by the probe itself.
+An EMPTY file is zero-delta; the classification in §3 is that file
+grouped by whether the candidate's finding set is a superset of the
+reference's (Class A), equal as a set but differently ordered (Class B),
+or neither. No separate tool is needed and none is shipped — the probe
+does the normalization, which is why the comparison is a `sort | uniq`
+over the file rather than a program.
 
 This is a real reproducibility cost of removing the probe, and it is the
 reason the classification above is written out rather than left as "run
@@ -203,7 +212,7 @@ its basis is what arm round 1's F1 and F2 caught.
   **1.85× on both measures — the plan §6 proportionality tripwire.**
 - Corpus replayed: 1830 executed cases.
 
-**After arm round 1's fold (2026-08-06, at `HEAD`):**
+**After arm round 1's fold (2026-08-06, measured at `8d651d3f`):**
 
 - Build day 2. Arm rounds 1.
 - Substrate **2389 raw / 1741 code-only** against the same unchanged

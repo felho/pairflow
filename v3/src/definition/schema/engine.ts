@@ -711,7 +711,7 @@ function evalMapOpen(
     run.emit(frame.path, render(decl.nonempty.message, slots));
     if (decl.nonempty.gating === true) ok = false;
   }
-  if (decl.deepKeyStringness !== undefined && run.channel.kind === "file") {
+  if (decl.deepKeyStringness?.channel === run.channel.kind) {
     scanKeyStringness(run, container, frame.path, decl.deepKeyStringness.message, new WeakSet());
   }
   const normalized: Record<string, unknown> = {};
@@ -898,7 +898,7 @@ function evalInteger(
   frame: Frame,
 ): NodeResult {
   const value = frame.value;
-  if (decl.sourceForm !== undefined && run.channel.kind === "file") {
+  if (decl.sourceForm === "plainDecimalInteger" && run.channel.kind === "file") {
     const node: unknown = run.channel.doc.getIn(astPath(frame.path), true);
     const message = sourceLadderFinding(node, run.channel.source, frame.path);
     if (message !== undefined) {
@@ -1098,7 +1098,9 @@ export function runSurface(surface: SurfaceDecl, value: unknown, opts: EngineOpt
 
   const result = evaluateNode(run, rootDecl, rootFrame);
   runDeferred(run);
-  for (const rule of surface.crossRules) evaluateEquals(run, rootFrame, rule);
+  for (const rule of surface.crossRules) {
+    if (rule.relation === "equals") evaluateEquals(run, rootFrame, rule);
+  }
   return {
     findings: run.findings,
     normalized: result.value,

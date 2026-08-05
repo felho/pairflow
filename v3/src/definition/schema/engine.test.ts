@@ -701,7 +701,7 @@ describe("the declaration's own hygiene", () => {
     expect(assigned.filter((code) => !declared.has(code))).toStrictEqual([]);
   });
 
-  it("every declared node cites at least one ratified row", () => {
+  it("every declared node, cross rule and normalizer hook cites at least one ratified row", () => {
     const walk = (decl: NodeDecl): string[] => {
       const own = decl.rows.length === 0 ? [decl.tag] : [];
       switch (decl.kind) {
@@ -717,6 +717,12 @@ describe("the declaration's own hygiene", () => {
           return own;
       }
     };
-    expect(walk(templateFormat.root)).toStrictEqual([]);
+    const rowless = [
+      ...walk(templateFormat.root),
+      ...Object.values(templateFormat.valueClasses).flatMap(walk),
+      ...templateFormat.crossRules.filter((rule) => rule.rows.length === 0).map((rule) => rule.tag),
+      ...templateFormat.normalizers.filter((hook) => hook.rows.length === 0).map((hook) => hook.tag),
+    ];
+    expect(rowless).toStrictEqual([]);
   });
 });
