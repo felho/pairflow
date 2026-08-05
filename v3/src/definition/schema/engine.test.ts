@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import type { GateCatalog, GateRegistration } from "../../ports/index.js";
 import type { ValidationFinding } from "../errors.js";
-import { collectTags, runSurface } from "./engine.js";
+import { collectCodes, collectTags, runSurface } from "./engine.js";
 import type { EngineChannel } from "./engine.js";
 import { normalize } from "./normalizer.js";
 import { templateFormat } from "./templateFormat.js";
@@ -34,7 +34,6 @@ const NO_CATALOG: GateCatalog = { resolve: () => null };
 
 function surface(root: NodeDecl, extra: Partial<SurfaceDecl> = {}): SurfaceDecl {
   return {
-    surface: "synthetic",
     substrate: templateFormat.substrate,
     root,
     valueClasses: {},
@@ -693,6 +692,13 @@ describe("the declaration's own hygiene", () => {
   it("every declaration tag is unique — the tag-closure check's mechanical half (D4)", () => {
     const tags = collectTags(templateFormat);
     expect(new Set(tags).size).toBe(tags.length);
+  });
+
+  it("every issue code the declaration assigns is inside the CLOSED namespace (ch8-C23)", () => {
+    const declared = new Set(templateFormat.substrate.codes);
+    const assigned = collectCodes(templateFormat);
+    expect(assigned.length).toBeGreaterThan(0);
+    expect(assigned.filter((code) => !declared.has(code))).toStrictEqual([]);
   });
 
   it("every declared node cites at least one ratified row", () => {

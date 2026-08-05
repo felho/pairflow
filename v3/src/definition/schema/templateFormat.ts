@@ -258,10 +258,9 @@ const rootNode: NodeDecl = {
   tag: "d-root",
   rows: ["ch8-C7", "ch8-C13", "ch8-C24", "ch8-C25", "ch11-C18", "ch11-C37", "ch12-C1"],
   containerMessage: "the template root must be a map with exactly ref, start, steps, terminal, roles",
+  // ch8-C24's reservation lives in this message and nowhere else: `kind`
+  // is illegal today, and the closed keyset below is what makes it so.
   unknownMessage: 'unknown key {value} (fixed keysets grow only by ratified additive keys — V16 reserves "kind")',
-  // ch8-C24: `kind` is RESERVED for a future additive act. It is illegal
-  // today — the unknown-key lane above names the reservation.
-  reserved: ["kind"],
   // ch8-C25: the removed/renamed key registry, EMPTY at v0. The lane is
   // live; the registry has no members yet.
   removedKeys: {},
@@ -478,34 +477,22 @@ const rootNode: NodeDecl = {
 // ---------------------------------------------------------------------------
 
 export const templateFormat: SurfaceDecl = Object.freeze({
-  surface: "template-format",
+  // The SUBSTRATE block carries only what is consumed or asserted. The
+  // rules it used to state about the yaml library's own behaviour — the
+  // core schema, one document per file, warning promotion, alias
+  // resolution — are real ratified rules (ch8-C1/C2/C3/C5) but they are
+  // the LIBRARY's behaviour, not a knob anything here reads; stating them
+  // as declaration made them read as authority they were not (arm round
+  // 1, F5). Their test carriers are `load.test.ts`'s substrate lanes.
   substrate: {
-    read: {
-      decode: "strict-utf8",
-      message: "invalid UTF-8 byte sequence (templates are strict UTF-8)",
-    },
+    read: { message: "invalid UTF-8 byte sequence (templates are strict UTF-8)" },
     parse: {
-      syntax: "yaml-1.2-core",
-      documents: 1,
-      duplicateKeys: "reject",
+      directive: { only: "1.2", message: "%YAML {key} directive: only YAML 1.2 is supported" },
       duplicateKeyMessage: "Map keys must be unique",
-      promoteWarnings: true,
-      directive: {
-        only: "1.2",
-        message: "%YAML {key} directive: only YAML 1.2 is supported",
-      },
-      findingOrder: ["directive", "errors", "warnings"],
     },
     resolve: {
-      aliases: "substrate",
-      expansionBound: "substrate",
-      graph: {
-        acyclic: true,
-        message: "cyclic value structure: the resolved template graph must be acyclic",
-      },
+      graph: { message: "cyclic value structure: the resolved template graph must be acyclic" },
     },
-    stages: ["read", "parse", "resolve", "validate", "store"],
-    paths: { root: "$", listSegment: "[i]" },
     // ch8-C23: the CLOSED issue-code namespace, disjoint from registry
     // names. `unresolved_context_block_ref` is ratified-but-unbuilt.
     codes: [
@@ -515,7 +502,7 @@ export const templateFormat: SurfaceDecl = Object.freeze({
       "gate_config_not_supported",
       "unresolved_context_block_ref",
     ],
-    internalFailure: { path: "$", message: "internal validator failure: {value}" },
+    internalFailure: { path: "$", message: "internal validator failure: {valueRaw}" },
   },
   root: rootNode,
   valueClasses: { idClass, agentConfigValue },

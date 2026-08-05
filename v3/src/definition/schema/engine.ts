@@ -171,7 +171,7 @@ function describeKey(key: unknown): string {
   return typeof key === "string" ? key : describeValue(key);
 }
 
-interface Slots {
+export interface Slots {
   readonly path?: string | undefined;
   readonly key?: unknown;
   readonly value?: unknown;
@@ -186,6 +186,10 @@ interface Slots {
 /** Interpolate a declared message template. The slot set is CLOSED and
  * supplied by the engine from the node's own evaluation context — no slot
  * carries rule-specific knowledge. */
+export function renderMessage(template: MessageTemplate, slots: Slots): string {
+  return render(template, slots);
+}
+
 function render(template: MessageTemplate, slots: Slots): string {
   return template.replace(/\{(\w+)\}/gu, (whole, name: string): string => {
     switch (name) {
@@ -271,9 +275,14 @@ class Run {
 
   constructor(
     readonly channel: EngineChannel,
-    readonly catalog: GateCatalog | undefined,
+    readonly registries: Readonly<Record<string, GateCatalog | undefined>>,
     readonly valueClasses: Readonly<Record<string, NodeDecl>>,
   ) {}
+
+  /** The injected set a selector root or a delegation names. */
+  registry(name: string): GateCatalog | undefined {
+    return this.registries[name];
+  }
 
   emit(path: string, message: string, code?: string): void {
     this.findings.push(code === undefined ? { path, message } : { path, message, code });
@@ -348,7 +357,7 @@ function evaluateSelector(run: Run, from: Frame, selector: Selector): SelectorRe
     // D8's ADMITTED widening: the selector root is an INJECTED set. A
     // registry resolves rather than enumerates, so membership is asked of
     // it directly (`isMember`); the set itself is never listed.
-    return run.catalog === undefined ? UNRELIABLE : { status: "ok", values: [] };
+    return run.registry(selector.injected) === undefined ? UNRELIABLE : { status: "ok", values: [] };
   }
   if ("union" in selector) {
     const parts = selector.union.map((part) => evaluateSelector(run, from, part));
@@ -381,7 +390,7 @@ function evaluateSelector(run: Run, from: Frame, selector: Selector): SelectorRe
 /** `memberOf` against an INJECTED root asks the registry; against a
  * document root it asks the collected set. */
 function isMember(run: Run, selector: Selector, set: SelectorResult, candidate: string): boolean {
-  if ("injected" in selector) return run.catalog?.resolve(candidate) != null;
+  if ("injected" in selector) return run.registry(selector.injected)?.resolve(candidate) != null;
   return set.status === "ok" && set.values.includes(candidate);
 }
 
@@ -619,7 +628,7 @@ function evalMapFixed(
   const emitMissing = (name: string): void => {
     const field = decl.fields[name];
     const presence = field?.presence;
-    if (field === undefined || presence === undefined) return;
+    if (field === undefined || presence?.required !== true) return;
     if (containerHas(container, name)) return;
     if (presence.foldedIntoTypeLane === true) {
       // Absence is this node's OWN type lane (a binding's `uses`).
@@ -820,7 +829,7 @@ function evalList(
     if (decl.memberOf !== undefined) {
       checkMembership(run, memberFrame, decl.memberOf, member, { ...slots, path: memberPath, value: member });
     }
-    if (decl.unique !== undefined) {
+    if (decl.unique?.grain === "perOccurrence") {
       const at = decl.unique.at === "container" ? frame.path : memberPath;
       if (seen.has(member)) {
         run.emit(at, render(decl.unique.message, { ...slots, path: at, value: member }));
@@ -899,7 +908,7 @@ function evalInteger(
     return { ok: true, value };
   }
   const belt = decl.resolvedForm;
-  if (belt !== undefined) {
+  if (belt?.safeInteger === true) {
     if (typeof value !== "number" || !Number.isSafeInteger(value) || value < belt.min) {
       run.emit(frame.path, render(belt.message, baseSlots(frame)), decl.presence?.code);
       return { ok: false };
@@ -986,7 +995,7 @@ function evalDelegate(
   const owner = frame.parentValue;
   const by = isContainer(owner) ? containerGet(owner, decl.by) : undefined;
   if (typeof by !== "string") return { ok: true };
-  const registration = run.catalog?.resolve(by) ?? null;
+  const registration = run.registry(decl.registry)?.resolve(by) ?? null;
   if (registration === null) return { ok: true };
   if (registration.requiresRuntimeContext) run.runtimeContextBindings.push(parentPath(frame.path));
   const raw = frame.value === undefined ? undefined : materialize(frame.value, run.memo);
@@ -1056,7 +1065,7 @@ function runDeferred(run: Run): void {
  * attributes are inert where no source exists.
  */
 export function runSurface(surface: SurfaceDecl, value: unknown, opts: EngineOptions): EngineRun {
-  const run = new Run(opts.channel, opts.catalog, surface.valueClasses);
+  const run = new Run(opts.channel, { gateCatalog: opts.catalog }, surface.valueClasses);
   run.root = value;
   const rootFrame: Frame = { decl: "$", path: "$", value, parentValue: undefined };
   const rootDecl = surface.root;
@@ -1096,6 +1105,47 @@ export function runSurface(surface: SurfaceDecl, value: unknown, opts: EngineOpt
     effectiveConfigs: run.effectiveConfigs,
     runtimeContextBindings: run.runtimeContextBindings,
   };
+}
+
+/** Every issue code the surface's declaration assigns, from every lane
+ * that carries one. The operand of ch8-C23's closed-namespace check. */
+export function collectCodes(surface: SurfaceDecl): readonly string[] {
+  const codes: string[] = [];
+  const push = (code: string | undefined): void => {
+    if (code !== undefined) codes.push(code);
+  };
+  const visit = (decl: NodeDecl): void => {
+    push(decl.presence?.code);
+    switch (decl.kind) {
+      case "map.fixed":
+        for (const field of Object.values(decl.fields)) visit(field);
+        return;
+      case "map.open":
+        push(decl.keysSubsetOf?.code);
+        if (decl.keyClass !== undefined) visit(decl.keyClass);
+        visit(decl.entry);
+        return;
+      case "list":
+        push(decl.memberOf?.code);
+        push(decl.disjointFrom?.code);
+        visit(decl.member);
+        return;
+      case "string":
+        push(decl.memberOf?.code);
+        return;
+      case "enum":
+        push(decl.code);
+        return;
+      case "union":
+        if (decl.mapCase !== undefined) visit(decl.mapCase);
+        return;
+      default:
+        return;
+    }
+  };
+  visit(surface.root);
+  for (const decl of Object.values(surface.valueClasses)) visit(decl);
+  return codes;
 }
 
 /** The declaration's own tag inventory — the operand of D4's tag-closure

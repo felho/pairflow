@@ -27,6 +27,9 @@
  * - `{key}`       the offending key, raw
  * - `{keyJson}`   the offending key, JSON-quoted
  * - `{value}`     the offending value, DESCRIBED (`a map`/`a list`/literal)
+ * - `{valueRaw}`  the offending value, rendered bare (no quoting) — the
+ *                 form the measured messages that embed a value inside
+ *                 their own quotes need
  * - `{valueJson}` the offending value, JSON-quoted
  * - `{source}`    the offending value's raw source slice, JSON-quoted
  * - `{grammar}`   the grammar's regular-expression source
@@ -140,10 +143,6 @@ interface NodeBase {
 export interface MapFixedDecl extends NodeBase {
   readonly kind: "map.fixed";
   readonly containerMessage: MessageTemplate;
-  /** ch8-C24's reservation: illegal today (the unknown-key lane covers
-   * it), named here so a future additive act finds its home and so the
-   * row has exactly one place to live. */
-  readonly reserved?: readonly string[];
   /** The default missing-key wording for fields whose `presence` states
    * none. */
   readonly missingMessage?: MessageTemplate;
@@ -350,33 +349,28 @@ export type NormalizerHookDecl =
  * engine parity.
  */
 export interface SubstrateDecl {
-  readonly read: { readonly decode: "strict-utf8"; readonly message: MessageTemplate };
+  /** ch8-C6: the read stage's decode wording. */
+  readonly read: { readonly message: MessageTemplate };
   readonly parse: {
-    readonly syntax: "yaml-1.2-core";
-    readonly documents: 1;
-    readonly duplicateKeys: "reject";
+    /** ch8-C34: the only accepted `%YAML` directive version, and the
+     * finding a different one produces (`{key}` is the authored one). */
+    readonly directive: { readonly only: string; readonly message: MessageTemplate };
+    /** ch8-C4: the duplicate-key wording. */
     readonly duplicateKeyMessage: MessageTemplate;
-    readonly promoteWarnings: true;
-    readonly directive: { readonly only: "1.2"; readonly message: MessageTemplate };
-    readonly findingOrder: readonly ["directive", "errors", "warnings"];
   };
-  readonly resolve: {
-    readonly aliases: "substrate";
-    readonly expansionBound: "substrate";
-    readonly graph: { readonly acyclic: true; readonly message: MessageTemplate };
-  };
-  readonly stages: readonly ["read", "parse", "resolve", "validate", "store"];
-  readonly paths: { readonly root: "$"; readonly listSegment: "[i]" };
-  /** ch8-C23: the CLOSED issue-code namespace, disjoint from registry
-   * names. Declared so the engine can never mint one. */
+  /** ch8-C5: the resolved graph must be acyclic, and the finding it
+   * yields at the cycle's path. */
+  readonly resolve: { readonly graph: { readonly message: MessageTemplate } };
+  /** ch8-C23: the CLOSED issue-code namespace. Every `code` any node in
+   * the surface declares must be a member — asserted, not assumed. */
   readonly codes: readonly string[];
+  /** ch8-C22/C36: the every-stage belt's own finding. */
   readonly internalFailure: { readonly path: string; readonly message: MessageTemplate };
 }
 
 /** One declared surface: substrate + node tree + the named residual's
  * declarable halves. */
 export interface SurfaceDecl {
-  readonly surface: string;
   readonly substrate: SubstrateDecl;
   readonly root: NodeDecl;
   readonly valueClasses: Readonly<Record<string, NodeDecl>>;

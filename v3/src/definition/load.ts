@@ -4,6 +4,8 @@ import type { Document, ParsedNode, YAMLError } from "yaml";
 import type { GateCatalog } from "../ports/index.js";
 import { admitFromSource } from "./admit.js";
 import type { PipelineFinding, TemplateLoadResult, ValidationFinding } from "./errors.js";
+import { renderMessage } from "./schema/engine.js";
+import { templateFormat } from "./schema/templateFormat.js";
 
 /**
  * Packet ch8-P1 (G1/draft C36): the staged load pipeline over raw
@@ -34,6 +36,12 @@ export interface LoadTemplateOptions {
 /** The empty catalog: every `uses` is unknown. Vacuous over zero
  * bindings (every gate-free template) — A8's byte-identical default. */
 const EMPTY_CATALOG: GateCatalog = { resolve: () => null };
+
+/** ADR-019 D4: the substrate stage's wording and its one version knob are
+ * DECLARED, so editing the declaration edits this pipeline's behaviour.
+ * What stays here is the yaml library's own behaviour, which no
+ * declaration can move (audit residual R6). */
+const SUBSTRATE = templateFormat.substrate;
 
 function fail(stage: "read" | "parse" | "resolve", findings: readonly PipelineFinding[]): TemplateLoadResult;
 function fail(stage: "validate", findings: readonly ValidationFinding[]): TemplateLoadResult;
@@ -139,7 +147,7 @@ function resolvedDuplicateFindings(doc: Document, lineCounter: LineCounter): rea
           finding: {
             stage: "parse",
             ...(pos && pos.line > 0 ? { line: pos.line, col: pos.col } : {}),
-            message: "Map keys must be unique",
+            message: SUBSTRATE.parse.duplicateKeyMessage,
           },
         });
       }
@@ -176,7 +184,7 @@ export function loadTemplate(bytes: Uint8Array, opts: LoadTemplateOptions = {}):
       {
         stage: "read",
         ...(opts.path !== undefined ? { path: opts.path } : {}),
-        message: "invalid UTF-8 byte sequence (templates are strict UTF-8)",
+        message: SUBSTRATE.read.message,
       },
     ]);
   }
@@ -198,13 +206,13 @@ export function loadTemplate(bytes: Uint8Array, opts: LoadTemplateOptions = {}):
   }
   const parseFindings: PipelineFinding[] = [];
   const yamlDirective = doc.directives?.yaml;
-  if (yamlDirective?.explicit === true && yamlDirective.version !== "1.2") {
+  if (yamlDirective?.explicit === true && yamlDirective.version !== SUBSTRATE.parse.directive.only) {
     // The silently-ADOPTED case (probe P17: %YAML 1.1 — zero errors,
     // zero warnings, the full 1.1 trap restored). Synthesized: the
     // parser emitted nothing, so no position fields exist.
     parseFindings.push({
       stage: "parse",
-      message: `%YAML ${yamlDirective.version} directive: only YAML 1.2 is supported`,
+      message: renderMessage(SUBSTRATE.parse.directive.message, { key: yamlDirective.version }),
     });
   }
   const positionedErrors: PositionedFinding[] = [
@@ -250,6 +258,11 @@ export function loadTemplate(bytes: Uint8Array, opts: LoadTemplateOptions = {}):
   } catch (error) {
     // The C22 every-stage belt: no known input reaches this (V15's
     // cycle rule is a FINDING, not a throw), but the stage still maps.
-    return fail("validate", [{ path: "$", message: `internal validator failure: ${errorMessage(error)}` }]);
+    return fail("validate", [
+      {
+        path: SUBSTRATE.internalFailure.path,
+        message: renderMessage(SUBSTRATE.internalFailure.message, { value: errorMessage(error) }),
+      },
+    ]);
   }
 }

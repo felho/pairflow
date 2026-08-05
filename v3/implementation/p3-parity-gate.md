@@ -173,13 +173,48 @@ ruling — 4 of Class A, 1 of Class C. After the Class-C correction above
 and the four fixture repairs, the switch was made and the suite is
 **1830 / 1830 green on the engine-backed path**.
 
-## 5. Trajectory (derived at write time)
+## 5. Reproducing the replay
 
-- **Build day 1** — the arc's first commit is `3466d241`, 2026-08-05.
-- **Arm rounds: 0** — `ls v3/implementation/ch13-rederivation-arm/p3-build/arm-*-out.txt` (the directory does not exist yet).
-- **Size**, `wc -l`: substrate 2426 (vocabulary 412 · engine 1176 · declaration 554 · normalizer 140 · surface 144) + 71 for the temporary probe; the hand-written code it replaces is 1366 (`validate.ts` 898 · `admit.ts` 468 at `HEAD~1`).
-- Code lines only (non-comment, non-blank): substrate **1790** vs replaced **965**.
+The instrument was deleted at the switch, so reproducing the measurement
+means going back to a commit that still carries it:
 
-**The plan §6 PROPORTIONALITY TRIPWIRE fires: 1.85× on both measures.**
-See the flags below; the tripwire converts the next round into a scope
-review, and this document is where that review starts.
+```
+git checkout 9790b800          # the last commit with both implementations
+PAIRFLOW_V3_PARITY=1 pnpm --dir v3 exec vitest run
+python3 - < the classifier   # /tmp/p3-parity.jsonl
+```
+
+This is a real reproducibility cost of removing the probe, and it is the
+reason the classification above is written out rather than left as "run
+the harness" (arm round 1, F7: the exhaustive old↔new replay could not
+be re-run from the post-switch tree).
+
+## 6. Trajectory
+
+Every number below is DERIVED at the moment it is written, and each one
+is stamped with the commit it was measured at — a measurement without
+its basis is what arm round 1's F1 and F2 caught.
+
+**At the parity gate (2026-08-05, substrate at `3466d241`):**
+
+- Build day 1. Arm rounds 0.
+- Substrate 2426 lines raw / 1790 code-only; replaced implementation
+  1366 raw / 965 code-only (`7b6bfbba`, the commit before the build).
+  **1.85× on both measures — the plan §6 proportionality tripwire.**
+- Corpus replayed: 1830 executed cases.
+
+**After arm round 1's fold (2026-08-06, at `HEAD`):**
+
+- Build day 2. Arm rounds 1.
+- Substrate **2389 raw / 1741 code-only** against the same unchanged
+  baseline of 1366 / 965 — **1.75× / 1.80×**. The direction of travel is
+  down, and it moved because the fold DELETED declared-but-unconsumed
+  data (four vocabulary attributes and most of the substrate block)
+  rather than because anything was optimized.
+- Suite: **1919 executed cases** in 72 files — the 1830 above plus the
+  engine's own 89. The 1830 figure belongs to the parity measurement and
+  is not restated as a current number.
+
+The proportionality ruling stands as given: the ratio is re-measured at
+the P4/P5 boundary, where the engine's fixed cost either amortizes over
+a second surface or does not.
