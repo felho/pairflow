@@ -291,7 +291,26 @@ ONLY to a **ratified-or-later** draft — neither `reopened` nor
 contested (a transient red window that closes at re-ratification),
 a superseded one is retired (a permanent red — the anchor must move
 to the successor surface, and the draft's own `superseded` record
-names the oracle branch and the plan that authorized the move). A packet row anchored to
+names the oracle branch and the plan that authorized the move).
+
+**The channel this binds on (user-ratified 2026-08-04, with the P1
+round-1 arm evidence):** status resolution lives on the **manifest**
+— the `packet_rows` refs are the only surface where an anchor exists
+in the machine's sense, so that is where the lock is checked, for
+every status. A contract token may also APPEAR in a row's
+`(anchored: …)` / `(derived: …)` prose closure, which is bound
+one-way to the manifest by the ref-drift check (a cited token missing
+from the manifest is red) — status therefore rides the manifest entry
+rather than being resolved a second time in prose. The two remaining
+citation surfaces are NAMED carried-scope, not gaps this template
+legislates: pre-v2 packets are skipped wholesale by the grandfathering
+policy (revisiting that is a boundary act, and it owns the question),
+and the header union is a reader-convenience MIRROR of manifest data —
+this template mandates no such line and `task-packet-template.md`
+requires none, so it carries no independent anchor. Full record with
+owners: `ch13-rederivation-arm/p1/carried-scope.md`.
+
+A packet row anchored to
 a draft row must preserve its MEANING, not just resolve the reference
 — the panel's lens-2 draft→packet semantic-drift check owns that
 surface.

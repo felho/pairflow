@@ -194,7 +194,19 @@ Drafts (v3/implementation/contracts/*.md, README.md excluded):
       D8.7 a packet ref into a superseded draft is red with a
            DEDICATED message naming the state and pointing at the
            record. Opposite reason to reopened: contested (transient)
-           vs retired (permanent).
+           vs retired (permanent). CHANNEL, stated because the claim
+           is only as wide as the surface it checks (user-ratified
+           2026-08-04): the lock binds on the MANIFEST — packet_rows
+           refs are the only surface carrying an anchor in the
+           machine's sense, and that holds for every status, not just
+           this one. Prose closures are bound one-way to the manifest
+           by P10's ref-drift check, so status rides the manifest
+           entry; pre-v2 packets are skipped by the grandfathering
+           policy (P1's rule, which owns that question); the header
+           union is a reader-convenience mirror no template mandates.
+           Those three are NAMED carried-scope, recorded with owners
+           in ch13-rederivation-arm/p1/carried-scope.md — not silent
+           holes, and not this claim's territory.
       D8.8 realized_map on status superseded is red (D7's map <=>
            realized rule, pinned against the new status).
       D8.9 the summary names superseded drafts, the D6 listing analog.
