@@ -4,8 +4,10 @@ You are a fresh-context quality reviewer on a CODE build. You have full
 repo access. Read the repo yourself; do not trust any summary in this
 charter over the bytes.
 
-Repo: the working tree you are launched in. HEAD is `89e33abb`.
-Everything below is repo-relative.
+Repo: the working tree you are launched in. The BUILD's code tip is
+`89e33abb`; this charter was committed after it, so the HEAD you see is
+that commit or a later docs-only one. The bytes under review are pinned
+by the hashes below, not by HEAD. Everything is repo-relative.
 
 Review object — the build, at these bytes:
 
@@ -20,7 +22,7 @@ Review object — the build, at these bytes:
 | `v3/src/definition/load.ts` | 255 | `8cba05034b431930` |
 | `v3/src/definition/schema/engine.test.ts` | 716 | `b224076bf2c15ea5` |
 
-Cite HEAD in your verdict.
+Cite your tree's HEAD in your verdict.
 
 ## 0. READ THIS FIRST — the time budget, and why it decides your output shape
 
@@ -205,7 +207,7 @@ FIX SKETCH: (IN-SCOPE only) the smallest correction
 
 Only this, because everything else is already written:
 
-- the HEAD you were given, restated;
+- your tree's HEAD;
 - counts: IN-SCOPE / CARRIED-SCOPE / UNRUN;
 - which lenses you completed, which you partially ran, which you did not
   reach;
