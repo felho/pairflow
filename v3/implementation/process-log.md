@@ -5347,3 +5347,53 @@ final CLEAN.
   tripwire; and the trajectory line (derived from repo surfaces,
   never recalled — memory accelerates, never carries — and never
   tooled: hand-assembled, 10-second ceiling per number).
+
+- 2026-08-05 (ch13 re-derivation P1, the phase CLOSES — and the four
+  corrective rules get their first measurement) — THE PRODUCT: the
+  ch13 context-block contract is `superseded` (4aee2dac), archived IN
+  PLACE by ONE commit that flipped the meta block and appended the
+  {date, oracle_branch, oracle_tip, plan} record; the 19 C-rows were
+  verifiably untouched (zero changed C-row lines), so the D5 equality
+  check keeps binding forever and IS the archival lock. The lock was
+  proven live rather than asserted: restoring the oracle's own p1
+  packet from bb313036 turned the lint red at exit 1 with FOURTEEN
+  errors, all fourteen carrying the dedicated superseded message;
+  deleting it returned exit 0. THE EXPERIMENT LINE (§5), against the
+  seven-round line this phase replaced: ONE arm round (plus one infra
+  timeout, retried under ReviewPacket §6 item 8 and counted as no
+  round), 10 findings split 5 FOLDED / 5 CARRIED, 0 reopens, 1 human
+  gate, 1 STOP resolved by ratification, guard size 3220 → 3319
+  (+99, against the deleted line's 2846 → 5230). THE HONEST QUALIFIER,
+  recorded so the comparison is not read as more than it is: this line
+  did not rebuild the machinery — the core build precedes it and was
+  hardened by the deleted line's early rounds, so what is measured is
+  the cost of CLOSING under the new rules, not a from-scratch
+  re-derivation. WHAT THE RULES DID, individually measured: the THREAT
+  MODEL did the whole of the work — it converted four real,
+  executed-evidence findings from fold material into a named
+  carried-scope list with owners, and without it they were
+  indistinguishable from the five that were folded; the BOUNDED LOOP
+  and the PROPORTIONALITY TRIPWIRE never bound and stay untested; the
+  TRAJECTORY LINE paid off in an unplanned place — opening every gate
+  presentation with a DERIVED date is what caught a midnight rollover
+  before the wrong date entered the supersede record, the same
+  projected-date defect this phase had just corrected in the template
+  (a rule catching its own class one level up). THE SCOPE DECISION
+  (user-ratified, option A): D8.7's claim was only as wide as the
+  surface it checks, and the arm measured that surface — the lock
+  binds on the MANIFEST channel. The finding that mattered was not
+  that the other citation surfaces miss `superseded`, but that NONE of
+  them resolves draft status for ANY status, `reopened` included: they
+  were never the claim's territory, so the correction was to declare
+  where the lock binds and record the rest with owners (closure
+  machinery, the grandfathering policy, the packet FORM) — the
+  terminus pattern applied at the OBJECT level from round 1, which the
+  overbuild postmortem named as the lesson it learned too late. A
+  header union is a reader-convenience MIRROR that no template
+  mandates; it is now a named retirement candidate for the P4/P5
+  schema-first packet form, with no live packet touched. CARRIED OUT
+  UNRESOLVED, deliberately: a relayed count of "17 live packets"
+  reproduced under no measurement (8/12/14/21 depending on the form
+  counted) and is recorded as UNRECONCILED rather than restated — the
+  citation rule (e7b94ed5) applied to an instruction this phase itself
+  received.
