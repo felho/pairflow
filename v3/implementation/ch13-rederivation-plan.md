@@ -55,7 +55,9 @@ guard machinery): a packet anchoring `contract:...` to a superseded
 draft is red. Move the p1 working files under the oracle branch's
 custody only (they are already committed there).
 
-P2 — DECISION LEDGER. Extract from the oracle the ratified DECISIONS
+P2 — DECISION LEDGER. [STRUCK by the user 2026-08-05 — see the
+amendment at the tail of this file; the phase order is P1 → P3 → P4
+→ P5.] Extract from the oracle the ratified DECISIONS
 as data, not prose: one entry per decision (the original 19-row
 ratification + the four reopens + the two dial rounds + flag
 resolutions), each with: id, the decision in one sentence, its probe
@@ -157,3 +159,20 @@ LINE (every human-gate presentation opens with phase day · round
 count · artifact size and delta — every number DERIVED from repo
 surfaces at write time, never recalled from conversation memory, and
 never tooled: hand-assembled, 10-second ceiling per number).
+
+Amendment, user-ratified 2026-08-05: P2 IS STRUCK. The ledger would
+itself have been a restatement mirror — the old rows re-worded in a
+second file, the exact paraphrase pattern this re-derivation exists
+to kill — duplicating an artifact that already exists in stronger
+form: the superseded contract IS the decision record (rows frozen
+byte-for-byte under the equality lock, row ids permanently
+anchorable as `contract:ch13-context-block#C<n>`, the five
+ratification blocks carrying dates, reasons and receipts). Its
+substance moves into P4 with NO new mechanism: (a) authoring rule —
+every v2 row or schema declaration CITES its source (old row id or
+dated process-log entry) and cites row ids, never copies sentences;
+(b) review duty — the P4 panel runs a completeness pass over the old
+19 rows and 4 reopen records (carried where / dropped why /
+schema-covered how). The carried-vs-superseded-by-schema triage
+happens there, per decision, in place. Phase order: P1 → P3 → P4 →
+P5.

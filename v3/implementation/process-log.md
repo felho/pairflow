@@ -5397,3 +5397,22 @@ final CLEAN.
   counted) and is recorded as UNRECONCILED rather than restated — the
   citation rule (e7b94ed5) applied to an instruction this phase itself
   received.
+
+- 2026-08-05 (ch13 re-derivation, P2 struck before it began — a
+  USER-RATIFIED plan amendment) — THE LEDGER WOULD HAVE BEEN A
+  RESTATEMENT MIRROR OF AN ARTIFACT THAT ALREADY EXISTS. The planned
+  decision ledger re-worded the superseded contract's ratified
+  decisions into a second data file — the paraphrase pattern this
+  re-derivation exists to kill, with its own completeness
+  verification, maintenance, and permanent carrying weight. The user
+  caught it BEFORE the phase ran (contrast P1's overbuild, caught at
+  arm round 7): the superseded contract already IS the decision
+  record — byte-frozen rows under the equality lock, permanently
+  anchorable row ids, receipted ratification blocks. P2's substance
+  folds into P4 as an authoring rule (cite source row ids, never
+  copy sentences) plus a panel completeness pass (19 rows + 4
+  reopens: carried where / dropped why / schema-covered how). NOTED
+  for the experiment record: the trajectory-visibility rules born
+  from the P1 reset arguably did their job — the wall was seen from
+  the map this time, not hit at speed. Phase order is now P1 → P3 →
+  P4 → P5.
