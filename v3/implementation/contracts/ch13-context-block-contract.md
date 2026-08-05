@@ -1,7 +1,7 @@
 # ch13 — context-block contract
 
 ```json
-{"contract_draft": {"chapter": "ch13", "surface": "context-block", "status": "ratified"}}
+{"contract_draft": {"chapter": "ch13", "surface": "context-block", "status": "superseded"}}
 ```
 
 ## Context (non-normative by declaration)
@@ -372,3 +372,9 @@ the same act).
 ```
 
 ## Realized map (empty until chapter close)
+
+## Supersede record
+
+```json
+{"superseded": {"date": "2026-08-05", "oracle_branch": "ch13-prose-line", "oracle_tip": "bb313036c7e50ad2625f0669f76a90bf317255e3", "plan": "v3/implementation/ch13-rederivation-plan.md"}}
+```
