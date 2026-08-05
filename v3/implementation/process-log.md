@@ -5416,3 +5416,27 @@ final CLEAN.
   from the P1 reset arguably did their job — the wall was seen from
   the map this time, not hit at speed. Phase order is now P1 → P3 →
   P4 → P5.
+
+- 2026-08-05 (P3 build STOP 1, Flag 1's aftermath — the design sketch
+  recorded as a BOUNDARY CANDIDATE so the idea outlives the moment) —
+  GATE-CONFIG DECLARATIONS SHOULD TRAVEL AS DATA THROUGH THE PORT,
+  NEVER IMPORT THE ENGINE. Flag 1 measured why the three delegated
+  gate-config schemas could not join the ADR-019 substrate: the
+  ch11-P2a G1 boundary (lint-enforced, ADR-013) confines gates/ to
+  domain/ + ports/, and that isolation is the boundary's PURPOSE
+  (plugin units testable against ports alone, the catalog injected,
+  the kernel gate-free in tests), not an accident. The
+  purpose-preserving path exists and is the candidate: the
+  GateRegistration port shape gains a DECLARATION field — pure
+  domain-typed data, the ADR-019 vocabulary's subset — so a gate
+  EXPORTS its config schema as data through the injected catalog, and
+  the HOST runs it on the one engine; hand-written validation remains
+  only for each gate's semantic residual. The gates then stop
+  re-legislating the structural failure space by hand (the exact
+  "barkácsolás" the substrate ended for the template surface), while
+  G1 stays byte-identical. Prerequisites, all deliberate: a ratified
+  port-shape change (its own act — the same change D7's ≥2 test
+  refused for ONE row at Flag 3, now with three schemas and ~34 emit
+  sites as the second-through-fourth users); the audit's [d-gc-*]
+  paper declarations as the source; a per-surface parity gate per
+  ADR-019 D5/D6. Route: boundary review — never a while-we-are-here.
