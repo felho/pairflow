@@ -40,11 +40,14 @@ auditable row by row.
 
 **The vocabulary-admission test (the falsifiability instrument).** A
 construct enters the declaration vocabulary only if **two or more
-INDEPENDENT rules use it**. A construct serving exactly one rule is
-code wearing a declaration's costume — that rule goes to the residual
-instead, and the single-use construct is recorded as a flagged
-borderline (§2.4). This test is what makes the direction falsifiable
-rather than merely plausible.
+INDEPENDENT ratified rows use it** — rows, not declaration tags: three
+tags serving one C-row are ONE user (arm round 1, F6). A construct
+serving exactly one row is code wearing a declaration's costume; its
+row is NOT counted as declarable, it goes to residual **R7** pending
+the ADR's explicit admission decision, and the construct is recorded as
+a flagged borderline (§2.4). Two constructs are in that state today and
+their two rows are classified `H` accordingly — the audit does not get
+to flag a construct and still bank its coverage (arm round 1, F2).
 
 **What this document does NOT establish.** Every parity claim here is
 DERIVED (plan §6: a derived claim names its measurer). The named
@@ -77,9 +80,14 @@ as a decision source and cited by row id; no sentence is copied.
 
 Enumerated by reading every check site (§3.5's table carries the
 inventory with line anchors). The count below is **finding-EMIT SITES**,
-chosen because it is mechanically derivable — `findings.push` plus the
-early `return … findings: [...]` sites, and `return fail(` for the
-pipeline (receipt R7). A named lane may own several emit sites (the
+chosen because it is mechanically derivable. The counting rule, stated
+exactly (arm round 1, F7 — the earlier wording double-counted
+`load.ts`): for the four accumulating files it is `findings.push` plus
+each early `return … findings: [...]` site, EXCLUDING each file's final
+`[first, ...rest]` re-wrap; for `load.ts`, which returns rather than
+accumulates, it is the 8 `return fail(` sites — its single
+`findings.push` (line 138) populates one of those returns and is not a
+separate emit site. A named lane may own several emit sites (the
 process config's `command` lane has two), so this number is an upper
 bound on lanes and a floor on the things a parity gate must reproduce.
 
@@ -170,27 +178,36 @@ channel, with the source-form attributes inert on the latter (§2.5).
 
 ### 2.2 The vocabulary (closed list, each entry with its user count)
 
-| # | Construct | Meaning | Users |
+The **Rows** column counts INDEPENDENT ratified C-rows that use the
+construct, per §0's grain (corrected from a tag count at arm round 1,
+F6). Each count is the enumeration in the adjacent cell — no count
+here is an estimate.
+
+| # | Construct | Meaning | Rows |
 |---|---|---|---|
-| 1 | `kind:` map.fixed \| map.open \| list \| string \| integer \| enum \| union \| raw | the node's container/scalar class | all |
-| 2 | `required` / `optional` | keyset membership obligation | many |
-| 3 | `nonempty` | on string, list, map | 6 |
-| 4 | `grammar: /re/` | scalar value grammar | 9 |
-| 5 | `keyGrammar: /re/` + `keyLaneAt: container\|segment` | open-map key class + the finding's path grain | 5 |
-| 6 | `sourceForm: plainDecimalInteger` | the raw-source ladder (alias-free, anchor-free, tag-free, `^[1-9][0-9]*$`) | 3 |
-| 7 | `resolvedForm: safeInteger, min:` | the value-side integer belt | 4 |
-| 8 | `enum: [...]` (with optional per-member `code:`) | allowlist | 6 |
-| 9 | `default:` | materialized ONCE at admission | 6 |
-| 10 | `removed: {form → migration message}` | fail-loud removal (§8.2 rule 3) | 3 |
-| 11 | `unique: {grain: perOccurrence, at: index\|container}` | duplicate lane + its path grain | 3 |
-| 12 | selectors: `keys($.p)`, `values($.p)`, `collect($.a.*.b)`, `union(..)`, and the relations `memberOf` / `keysSubsetOf` / `disjointFrom` / `equals` | intra-document reference rules | 8 |
-| 13 | `gating: true` + `dependsOn: [lane]` | suppression beyond the implicit container rule | 5 |
-| 14 | `variant: {on: <sibling>, cases: {...}}` | discriminated-union config shape | 3 |
-| 15 | `valueClass: <name>` | reusable named value class | 4 |
-| 16 | `delegate: registry(<field>)` | hand-off to an injected registration's own declaration | 5 |
-| 17 | `code:` | the named-lane issue code (closed namespace) | 5 |
-| 18 | `message:` | the lane's message template (the parity carrier) | all |
-| 19 | `raw` | uninterpreted pass-through (substrate gates only) | 3 |
+| 1 | `kind:` map.fixed \| map.open \| list \| string \| integer \| enum \| union \| raw | the node's container/scalar class | every shape row |
+| 2 | `required` / `optional` | keyset membership obligation | every keyset row |
+| 3 | `nonempty` | on string, list, map | 8 — ch8-C9, C11, C15, C17; ch11-C3, C13, C40; ch13-C3 |
+| 4 | `grammar: /re/` | scalar value grammar | 6 — ch8-C8, C10; ch11-C6, C17; ch12-C3; ch13-C2 |
+| 5 | `keyGrammar: /re/` + `keyLaneAt: container\|segment` | open-map key class + the finding's path grain | 3 — ch8-C10; ch11-C2; ch13-C2 |
+| 6 | `sourceForm: plainDecimalInteger` | the raw-source ladder (alias-free, anchor-free, tag-free, `^[1-9][0-9]*$`) | 2 — ch8-C8; ch11-C12 |
+| 7 | `resolvedForm: safeInteger, min:` | the value-side integer belt | 4 — ch8-C8; ch11-C10, C12, C13 |
+| 8 | `enum: [...]` | allowlist | 6 — ch11-C10, C11, C14, C15, C16; ch12-C1 |
+| 9 | `default:` | materialized ONCE at admission | 8 — ch11-C11, C14, C16, C17, C38; ch12-C1, C4; ch13-C17 |
+| 10 | `removed: {form → migration message}` | fail-loud removal (§8.2 rule 3) | 3 — ch8-C25; ch12-C2, C7 |
+| 11 | `unique: {grain: perOccurrence, at: index\|container}` | duplicate lane + its path grain | 3 — ch8-C17; ch11-C40; ch13-C8(e) |
+| 12 | selectors: `keys($.p)`, `values($.p)`, `collect($.a.*.b)`, `union(..)`, and the relations `memberOf` / `keysSubsetOf` / `disjointFrom` / `equals` | intra-document reference rules | 7 — ch8-C16, C17, C18, C19; ch11-C2, C40; ch13-C8(c) |
+| 13 | `gating: true` + `dependsOn: [row]` | suppression beyond the implicit container rule | 3 — ch8-C16; ch11-C2, C15 |
+| 14 | `variant: {on: <sibling>, cases: {...}}` | discriminated-union config shape | 3 — ch11-C14, C15, C17 |
+| 15 | `valueClass: <name>` | reusable named value class | 3 classes over 5 rows — ch8-C14/ch12-C7; ch13-C4/C6; ch11-C12 |
+| 16 | `delegate: registry(<field>)` | hand-off to an injected registration's own declaration | 5 — ch11-C5, C8, C10, C11, C13 |
+| 17 | `code:` | the named-lane issue code (closed namespace) | 4 live rows — ch11-C8, C13, C19/ch12-C5; + ch13-C7 unbuilt |
+| 18 | `message:` | the lane's message template (the parity carrier) | every finding-bearing row |
+| 19 | `raw` | uninterpreted pass-through (substrate gates only) | 2 — ch8-C14; ch12-C3 |
+
+Two further constructs are used by exactly ONE row each and are
+therefore NOT in this table: they are the §2.4 borderlines, and their
+rows sit in residual R7 until the ADR rules on them.
 
 Engine-level (not per-node) declarations: the finding form
 `{path, message, code?}`, the dotted path grammar with `$` root and
@@ -212,12 +229,23 @@ substrate
   [d-dupkeys]    parse.duplicateKeys: reject                    # ch8-C4
   [d-warnings]   parse.promoteWarnings: true                    # ch8-C2
   [d-directive]  parse.directive: yaml-1.2-only                 # ch8-C34
-  [d-aliases]    resolve.aliases: substrate ; resolve.graph: acyclic   # ch8-C5
+  [d-aliases]    resolve.aliases: substrate ;                   # ch8-C5
+                 resolve.expansionBound: substrate (throws at the resolve
+                   stage, mapped to a resolve finding — the guard is the
+                   library's, the DECLARATION is that a bound exists and
+                   where it surfaces) ;
+                 resolve.graph: acyclic (a validate-stage finding)
   [d-source]     engine.sourceAccess: true    # C5's named exception: the
                  # validate stage may read the source node (C8/C12 need it)
   [d-stages]     stages: read, parse, resolve, validate, store  # ch8-C36
-  [d-findings]   finding: {path, message, code?} ; accumulate: all ;
-                 containerPrecondition: implicit                # ch8-C20/C21
+  [d-order]      parse.findingOrder: [directive, errors, warnings],   # ch8-C2/C20
+                 within each class: the parser's array order
+  [d-findings]   finding, TWO variants:                         # ch8-C20/C21
+                 substrate  {stage, line?, col?, path?, code?, message}
+                   — read/parse/resolve; exempt from path accumulation
+                 structural {path, message, code?}
+                   — validate/store; accumulate: all ;
+                     containerPrecondition: implicit
   [d-paths]      path: dotted, root "$", list segment "[i]"     # ch8-C21 + ch11-C7
   [d-codes]      codes: closed {gate_evaluator_unavailable,
                  runtime_context_required_for_process_gate,
@@ -335,9 +363,12 @@ delegated config schemas (the registry hand-off targets)
 
 ### 2.4 Flagged borderline constructs (the single-use smell)
 
-Two constructs above fail or nearly fail the ≥2-user test. They are
-named here rather than buried, because the ADR's falsifiability
-criterion turns on exactly this kind of item.
+Two constructs fail the ≥2-row test. They are named here rather than
+buried, because the ADR's falsifiability criterion turns on exactly
+this kind of item — and, since the fold of arm round 1, their two rows
+are held in residual **R7** instead of being counted as declarable.
+Neither appears in §2.2's vocabulary table; both appear in §2.3's
+declaration text, marked by the rows that cite R7.
 
 | Construct | Users today | Disposition proposed |
 |---|---|---|
@@ -372,10 +403,10 @@ is the YAML library's; `—` no finding). **Ch** = channel (`both`,
 | Row | Rule | Cls | Declaration / reason | Par | Ch |
 |---|---|---|---|---|---|
 | C1 | YAML 1.2 core-schema semantics | S | `[d-syntax]` | Δlib | file |
-| C2 | document API; errors+warnings promoted, ordered | S | `[d-warnings]` `[d-findings]` | Δlib | file |
+| C2 | document API; errors+warnings promoted, ordered | S | `[d-warnings]` `[d-order]` `[d-findings]` | Δlib | file |
 | C3 | one document per file | S | `[d-docs]` | Δlib | file |
 | C4 | duplicate map keys reject | S | `[d-dupkeys]` | Δlib | file |
-| C5 | aliases resolve; amplification guard; acyclic; source exception | S | `[d-aliases]` `[d-source]` | P | file+both |
+| C5 | aliases resolve; amplification bound; acyclic; source exception | S | `[d-aliases]` (expansionBound added at arm F1) `[d-source]` | P/Δlib | file+both |
 | C6 | strict UTF-8 decode | S | `[d-read]` | Δmsg | file |
 | C7 | root fixed keyset (5 required) + additive growth | S | `[d-root]` (growth clause → ADR format-growth rule) | Δmsg | both |
 | C8 | `ref` map; id grammar; version source ladder | S | `[d-ref]` `[d-ref-id]` `[d-ref-version]` | P | file (source half) |
@@ -386,11 +417,11 @@ is the YAML library's; `—` no finding). **Ch** = channel (`both`,
 | C13 | fixed vs open maps; unknown-key fail-closed | S | `kind:` + `[d-findings]` | Δmsg | both |
 | C14 | `agentConfig` raw at validate; domain delegated to ch12-C7 | S | `[d-agentconfig]` `[vc-agentconfig]` | P | both |
 | C15 | roles entry keyset; `defaultActor` | S | `[d-roles-entry]` `[d-defaultactor]` | P | both |
-| C16 | role set: declared == used, both directions | H | `[d-roleset]` (declarable) + its reliability suppression → `dependsOn` | P | both |
+| C16 | role set: declared == used, both directions | S | `[d-roleset]` + `dependsOn` for the reliability suppression (reclassified from H at arm F5: `dependsOn` covers the whole obligation) | P | both |
 | C17 | `terminal` nonempty, unique, disjoint from steps | S | `[d-terminal]` | Δpath | both |
 | C18 | `start` ∈ keys(steps) | S | `[d-start]` | P | both |
 | C19 | transition target ∈ steps ∪ terminal | S | `[d-target]` | P | both |
-| C20 | positional read/parse/resolve findings + ordering | S | `[d-findings]` `[d-stages]` | Δlib | file |
+| C20 | positional read/parse/resolve findings + ordering | S | `[d-findings]` substrate variant + `[d-order]` `[d-stages]` (both added at arm F9/F10) | Δlib | file |
 | C21 | accumulate `{path,message}`; container preconditions | S | `[d-findings]` `[d-paths]` | P | both |
 | C22 | template XOR error; nothing partial | S | engine core (`[d-stages]`) | — | both |
 | C23 | no registry rejection names on the load side | S | `[d-codes]` (closed, disjoint) | — | both |
@@ -410,7 +441,7 @@ is the YAML library's; `—` no finding). **Ch** = channel (`both`,
 | C37 | dev `replay` stays hermetic | N | CLI surface | — | — |
 | C38 | write lane surfaces the typed load error | N | CLI surface | — | — |
 
-ch8 tally: **S 27 · H 1 · Sem 1 · N 9** = 38.
+ch8 tally: **S 28 · H 0 · Sem 1 · N 9** = 38.
 
 ### 3.2 ch11 — gate-format (41 rows)
 
@@ -423,7 +454,7 @@ ch8 tally: **S 27 · H 1 · Sem 1 · N 9** = 38.
 | C5 | `config` presence is evaluator-specific | S | `[d-gate-config]` → the delegated schema's own `required` | P | both |
 | C6 | `uses` dotted grammar | S | `[d-uses]` | P | both |
 | C7 | path grammar gains `[i]` list segments | S | `[d-paths]` | P | both |
-| C8 | static registry; admission resolves `uses`; coded lane | H | `[d-uses]` memberOf `keys(@gateCatalog)` — **flagged §2.4**; else **R1**. Registry composition half is non-lane | P | both |
+| C8 | static registry; admission resolves `uses`; coded lane | H | **R7** pending §2.4's decision on `memberOf: keys(@gateCatalog)`; if rejected the lane falls to **R1**. Registry composition half is non-lane | P | both |
 | C9 | registry member axes (implementation/execution) | N | registry data | — | — |
 | C10 | `declarative.threshold` config keyset + allowlists | S | `[d-gc-threshold]` (block semantics is runtime) | P | both |
 | C11 | `previous_reviewer_verdict` config; absent ≡ `{required:true}` | S | `[d-gc-verdict]` | P | both |
@@ -431,7 +462,7 @@ ch8 tally: **S 27 · H 1 · Sem 1 · N 9** = 38.
 | C13 | `external.process` config keyset; command semantics | S | `[d-gc-process]` (shell/cwd semantics is runtime) | P | both |
 | C14 | `output.mode` enum + `exitCode` default | S | `[d-gc-process]` output | P | both |
 | C15 | `onExit` required in exitCode mode; both buckets; unconsumed otherwise | S | `[d-gc-process]` `variant` | P | both |
-| C16 | dispositions; `failInstance` distinct code | S | `[d-gc-process]` enum with per-member code — **flagged §2.4** | P | both |
+| C16 | dispositions; `failInstance` distinct code | H | keyset/enum half is `[d-gc-process]`; the per-member `code:` is single-use → **R7** pending §2.4 (reclassified from S at arm F2) | P | both |
 | C17 | `reason` per-bucket keyset, token grammar, defaults | S | `[d-gc-process]` reason | P | both |
 | C18 | root `runtimeContext` key (pointer to ch12) | S | `[d-root]` `[d-rtc]` | P | both |
 | C19 | process gate + requirement `none` → coded cross-rule | Sem | **R3** (existential over resolved registrations) | P | both |
@@ -458,14 +489,14 @@ ch8 tally: **S 27 · H 1 · Sem 1 · N 9** = 38.
 | C40 | the round admission lanes (value + source-form split) | S | `[d-round]` `[d-round-list]`; the SPLIT dissolves (§5 F4) | Δpath | both/file |
 | C41 | per-transition override deferred | N | partial-realization disposition | — | — |
 
-ch11 tally: **S 21 · H 1 · Sem 2 · N 17** = 41.
+ch11 tally: **S 20 · H 2 · Sem 2 · N 17** = 41.
 
 ### 3.3 ch12 — runtime-core (27 rows)
 
 | Row | Rule | Cls | Declaration / reason | Par | Ch |
 |---|---|---|---|---|---|
 | C1 | `activation` map; `mode` required; enum; default | S | `[d-activation]` `[d-act-mode]` | P | both |
-| C2 | `runtimeContext` domain: `none` \| spec map; `required` retired | S | `[d-rtc]` union + removed | Δmsg | both |
+| C2 | `runtimeContext` domain: the string `none` or a spec map; `required` retired | S | `[d-rtc]` union + removed | Δmsg | both |
 | C3 | spec map keyset; `kind`/`provider` grammars; raw `config` | S | `[d-rtc-spec]` | P | both |
 | C4 | absent ≡ `none`, materialized once | S | `[d-rtc]` default | — | both |
 | C5 | process↔workspace admission lane (C19's successor) | Sem | **R3** | P | both |
@@ -501,7 +532,7 @@ ch12 tally: **S 7 · H 0 · Sem 1 · N 19** = 27.
 | C1 | root `contextBlocks` open-key map; container lane; absent legal | S | `[d-ctxblocks]` | P | both |
 | C2 | block-id key lane + kebab grammar + walk hand-off | H | `[d-ctxblocks]` keyGrammar/keyLaneAt (declarable) + the non-string-key FILTER into the built catalog → **R4** | Δpath | both/file |
 | C3 | entry is `{body}`, body nonempty string | S | `[d-ctx-entry]` | P | both |
-| C4 | `promptConcernRefs` in the two agentConfig positions | H | `[d-ctx-refs]` `[vc-blockidlist]` + the template-wide skip of C8(c) → `dependsOn`, see **R2** | P | both |
+| C4 | `promptConcernRefs` in the two agentConfig positions | H | `[d-ctx-refs]` `[vc-blockidlist]`; its template-wide skip of C8(c) is a member of **R2** (listed there since arm F5) | P | both |
 | C5 | `runOverrides` refs are never a render source | N | runtime read-path | — | — |
 | C6 | gate binding gains `contextBlockRefs` | S | `[d-binding]` `[d-ctx-refs]` | P | both |
 | C7 | ref resolution: entry-belted, per-site coded finding | Sem | **R1** — and the belt DISSOLVES under one engine (§5 F2) | P | both |
@@ -536,7 +567,7 @@ row is flagged (the invention direction of the threat model).
 | L5 | `doc.warnings` promoted after errors (218) | ch8-C2/C20 | `[d-warnings]` |
 | L6 | resolve-stage throw mapped (`toJS`, 232) | ch8-C5/C36 | `[d-aliases]` |
 | L7 | cross-rung accumulation + XOR result (249–266) | ch8-C22/C36, ch11-C20 | `[d-stages]` |
-| L8 | every-stage catch → `internal validator failure` (270) | ch8-C22 (defensive belt; no row states the message) | engine core — **flag I1** |
+| L8 | every-stage catch → `internal validator failure` (270) | ch8-C36 ("no load input may produce an uncaught throw (C22 binds every stage)") + ch8-C22 | `[d-stages]` — the lane IS ratified; only its literal message and `$` path are implementation-selected (corrected at arm F3) |
 
 **`definition/validate.ts` (51 emit sites)**
 
@@ -562,7 +593,7 @@ row is flagged (the invention direction of the threat model).
 | V23 | `instruction` nonempty string (461) | ch8-C11 | `[d-instruction]` |
 | V24 | `transitions` non-map (468) | ch8-C12 | `[d-transitions]` |
 | V25 | event-type grammar, reported at `…transitions` (472) | ch8-C10 | `[d-transitions]` keyLaneAt |
-| V26 | gates-subtree key stringness (281, 491) | ch11 walk (GP2); no C-row states it — **flag I2** | `[d-gates]` keyStringness |
+| V26 | gates-subtree key stringness (281, 491) | ch11-C2 → ch8-C10 (gates keys ARE event types, and event types are nonempty strings — corrected at arm F4) | `[d-gates]` keyGrammar |
 | V27 | `threshold.value` source ladder, uses-scoped (524) | ch11-C12 | `[vc-authored-int]` |
 | V28 | `process.timeoutMs` source ladder, uses-scoped (525) | ch11-C12 | `[vc-authored-int]` |
 | V29 | `terminal` non-list (540) | ch8-C17 | `[d-terminal]` |
@@ -647,45 +678,57 @@ key / token grammar (q). All → `[d-gc-process]`. Owning rows:
 ch11-C13–C17/C21.
 
 **Flags raised by the reverse direction (implemented lane without a
-ratified row).** Three, all recorded, none folded here:
+ratified row).** ONE survives arm round 1; the other two were the
+audit's own inventions and are struck:
 
-- **I1** — `load.ts:270`'s `internal validator failure: …` message. The
-  every-stage catch is ch8-C22's, but no row fixes the message or its
-  `$` path. Carried: the ADR's engine-core section owns it.
-- **I2** — `validate.ts`'s gates-subtree key-STRINGNESS scan. It is
-  packet-born (ch11-P4 F3, probe GP2); no ch11 C-row states it. Under
-  the declaration it becomes `keyGrammar` on an open map — which a
-  non-string key fails by construction, so the schema direction gives
-  this orphan lane a ratified home for the first time.
-- **I3** — `admit.ts:265`'s zero-findings failure belt. Guards a forged
-  registration, not an authored template; under `delegate:` it is the
-  delegation contract's own belt. No row states it.
+- **I3** — `admit.ts:265`'s zero-findings failure belt. It guards a
+  forged registration, not an authored template; no C-row states it.
+  Under `delegate:` it belongs to the delegation contract, not to the
+  template's declaration. Carried scope for contract v2.
+- ~~I1~~ — STRUCK (arm F3). ch8-C36 states it verbatim: "no load input
+  may produce an uncaught throw (C22 binds every stage)". Only the
+  message text and `$` path are implementation-selected, which is a
+  parity item, not an orphan.
+- ~~I2~~ — STRUCK (arm F4). ch11-C2 makes every `gates` key an event
+  type under ch8-C10's grammar, and ch8-C10 requires event types to be
+  nonempty STRINGS. The scan is ratified twice over; the audit's
+  earlier claim that the schema direction gave it "a ratified home for
+  the first time" was false.
 
 ### 3.6 Classification totals
 
 | Class | ch8 | ch11 | ch12 | ch13 | Total |
 |---|---|---|---|---|---|
-| S — structural | 27 | 21 | 7 | 4 | **59** |
-| H — hybrid | 1 | 1 | 0 | 3 | **5** |
+| S — structural | 28 | 20 | 7 | 4 | **59** |
+| H — hybrid | 0 | 2 | 0 | 3 | **5** |
 | Sem — semantic | 1 | 2 | 1 | 2 | **6** |
 | N — non-lane | 9 | 17 | 19 | 10 | **55** |
 | **Rows** | 38 | 41 | 27 | 19 | **125** |
 
 Of the 70 rows that carry a definition-validation obligation (S+H+Sem),
-**59 are fully declarable, 5 are mixed, 6 are residual** — and the 5
-mixed rows contribute their inexpressible halves to the same six
-residual families below. Zero rows are unclassified.
+**59 are fully declarable, 5 are mixed, 6 are residual**. Every one of
+the 11 mixed-or-residual rows appears by id in a residual family in §4
+— checked, not asserted (arm round 1, F5, which found two rows missing
+from every family and drove one reclassification). Zero rows are
+unclassified.
+
+The membership changed at the fold even though the totals did not:
+ch8-C16 moved H → S (`dependsOn` covers its suppression), and ch11-C16
+moved S → H (its per-member `code:` is single-use, so §0's own rule
+forbids banking it). Recording the swap because a stable total across a
+fold is exactly where an unchecked reader assumes nothing happened.
 
 ## 4. The residual (named prose/code lanes)
 
 | Id | Residual | Members | Why it cannot be a declaration |
 |---|---|---|---|
-| **R1** | resolution against a value-shaped or injected target | ch13-C7 (entry belt); ch11-C8 (catalog membership — flagged, may become declarable, §2.4) | C7 requires the target VALUE to satisfy another node's declaration, evaluated at reference time. See F2 — under ONE engine this shrinks to a membership test. |
-| **R2** | unreferenced-entry hygiene with a template-wide skip | ch13-C8(c) | The set-difference itself IS declarable (`keysSubsetOf: collect(raw: …)`, the same construct `[d-roleset]` uses). What is not: the RAW-member domain (grammar-failing members still count as references) plus the skip-the-whole-check-if-any-ref-container-failed rule. Both are expressible only as a rule-specific predicate — the single-use smell. |
+| **R1** | resolution against a value-shaped target | ch13-C7 (entry belt) | C7 requires the target VALUE to satisfy another node's declaration, evaluated at reference time. See §5 F2 — under ONE engine this shrinks to a membership test. |
+| **R2** | unreferenced-entry hygiene with a template-wide skip | ch13-C8(c); ch13-C4's skip clause (the ref-container failure that disables the check template-wide) | The set-difference itself IS declarable (`keysSubsetOf: collect(raw: …)`, the same construct `[d-roleset]` uses). What is not: the RAW-member domain (grammar-failing members still count as references) plus the skip-the-whole-check-if-any-ref-container-failed rule. Both are expressible only as a rule-specific predicate — the single-use smell. |
 | **R3** | existential cross-rules over resolved registrations | ch11-C19, ch12-C5 (one lane, one code) | "IF any binding resolves to a registration whose `requiresRuntimeContext` is true THEN `$.runtimeContext` must be a spec map" is a conditional over a DERIVED property of an injected object. A `when:` general enough to express it is an expression language — the thing ch11-C10's own text refuses. |
-| **R4** | admitted-form derivation (normalization beyond `default:`) | ch11-C39 (`advancesRound` expansion); the effective-config materialization; ch13-C17 (rebuild + normalized sibling fields); ch13-C2's non-string-key filter | These are TRANSFORMS, not validations. A declaration says what is legal; it does not compute the admitted shape. The ADR should name the normalizer as a second, declared-hook machine — not force it into the schema. |
+| **R4** | admitted-form derivation (normalization beyond `default:`) | ch11-C39 (`advancesRound` expansion); the effective-config materialization owned by ch11-C20 ("defaults materialized ONCE") with its per-registration defaults ch11-C14/C16/C17 (row ids supplied at arm F8 — the member was prose-only); ch13-C17 (rebuild + normalized sibling fields); ch13-C2's non-string-key filter | These are TRANSFORMS, not validations. A declaration says what is legal; it does not compute the admitted shape. The ADR should name the normalizer as a second, declared-hook machine — not force it into the schema. |
 | **R5** | cross-artifact checks outside the document | ch8-C27 (declared `ref` vs matched filename) | The operand is the filesystem listing, not the document. Stays a store-stage lane. |
-| **R6** | substrate-owned behaviour | ch8-C1/C2/C3/C4/C20's message texts (`Δlib`) | Declared as flags; the FINDINGS are the YAML library's. Parity here is library-version parity, not engine parity. |
+| **R6** | substrate-owned behaviour | ch8-C1/C2/C3/C4/C20's message TEXTS, and ch8-C5's expansion bound (`Δlib`) | Declared as flags with their surfacing stage; the FINDINGS' wording is the YAML library's. Parity here is library-version parity, not engine parity. (The ORDER of those findings is NOT in this family — it was declared at the fold, `[d-order]`, arm F9.) |
+| **R7** | rows whose only declaration uses a single-use construct | ch11-C8 (`memberOf: keys(@gateCatalog)`); ch11-C16 (per-member `code:` in an enum) | §0's admission test forbids counting these as declarable before the ADR rules on the constructs (§2.4). An ACCEPT ruling moves each row to S; a REJECT moves C8's lane to R1 and C16's disposition lane to a code lane. This family exists so the coverage number cannot borrow against an undecided construct. |
 
 ### 4.1 Verdict on the plan's prediction
 
@@ -697,8 +740,8 @@ duplicates*. The table CHECKED it rather than assuming it:
 |---|---|---|
 | reference resolution | **PARTIALLY REFUTED** | Intra-document references are declarable with one selector vocabulary (`[d-start]`, `[d-target]`, `[d-terminal]` disjointness, `[d-gates]` subset, `[d-round-list]` membership, `[d-roleset]` — 6 independent users). Only the value-shaped belt (R1) and the cross-artifact check (R5) remain. |
 | unreferenced hygiene | **PARTIALLY REFUTED** | The set operation is the SAME construct as ch8-C16's role-set equality, which has been shipped and green since ch8. What is residual is C8(c)'s raw-member domain and its template-wide skip, not the hygiene idea. |
-| event-grain suppression | **REFUTED** | `keysSubsetOf: keys(../transitions)` + `gating` expresses ch11-C2's dead-config lane and its dependent suppression. The construct has 5 users (`[d-gates]`, `[d-role-ref]`, `[d-roles]`, `[d-roleset]`, the process `variant` mode gate), so it passes the admission test. |
-| per-occurrence duplicates | **REFUTED** | `unique {grain: perOccurrence, at: index\|container}` covers ch8-C17, ch11-C40 and ch13-C8(e) — 3 independent users. The `at:` attribute exists precisely because the three measured lanes DISAGREE on path grain (§5 F3). |
+| event-grain suppression | **REFUTED** | `keysSubsetOf: keys(../transitions)` + `gating` expresses ch11-C2's dead-config lane and its dependent suppression. Independent ROWS using the construct: 3 — ch8-C16 (whose three tags are one row, corrected at arm F6), ch11-C2, ch11-C15. Three ≥ two, so the verdict stands on the corrected count. |
+| per-occurrence duplicates | **REFUTED** | `unique {grain: perOccurrence, at: index\|container}` covers ch8-C17, ch11-C40 and ch13-C8(e) — 3 independent rows. The `at:` attribute exists precisely because the three measured lanes DISAGREE on path grain (§5 F3). |
 
 **Two residual families the prediction did not name** — the honest
 counterweight: **R3** (the existential cross-rule) and **R4** (the
@@ -710,11 +753,12 @@ read as covering ground it does not cover.
 ## 5. Findings for the ADR
 
 - **F1 — the direction survives the enumeration.** 59 of 70
-  obligation-bearing rows are fully declarable; the residual is six
-  named families, four of which are one or two rows each. Nothing in
-  the 125 required a per-rule special case in the declaration
-  vocabulary — the §0 admission test rejected exactly two candidates,
-  both recorded in §2.4 rather than smuggled in.
+  obligation-bearing rows are fully declarable; the residual is seven
+  named families, five of which are one or two rows each. Nothing in
+  the 125 required a per-rule special case in the vocabulary — the §0
+  admission test caught exactly two single-use candidates, and their
+  two rows are held in R7 rather than counted as covered. The ADR
+  inherits those two as explicit yes/no decisions, not as assumptions.
 - **F2 — the schema direction dissolves ch13-C7's entry belt (DERIVED).**
   C7's belt exists because the direct-construction channel had no walk:
   a cast-forged catalog entry could not be refused structurally, so
@@ -751,10 +795,16 @@ read as covering ground it does not cover.
   maintain and is exactly what the ADR's parity gate exists to
   authorize. Recommend: declare `message:` optional, engine default
   otherwise, and take the delta list at the parity gate.
-- **F6 — three implemented lanes have no ratified row (I1, I2, I3).**
-  The schema direction gives I2 a home for the first time; I1 and I3
-  are engine/delegation-contract concerns. None is folded here (outside
-  the threat model); all three are carried scope for contract v2.
+- **F6 — ONE implemented lane has no ratified row, not three.** The
+  first draft of this audit flagged three orphans; the arm round showed
+  two of them (I1, I2) are ratified verbatim by ch8-C36 and by
+  ch11-C2 → ch8-C10. Only I3 — the delegation belt against a forged
+  registration — survives, and it belongs to the delegation contract
+  rather than to the template surface. Carried scope for contract v2.
+  Recorded as a lesson in its own right: the reverse-direction sweep
+  produced two INVENTIONS at a 2-in-3 rate, in a document whose forward
+  sweep was clean. Reverse claims ("nothing states this") are negative
+  existentials and need a grep each, exactly like a citation.
 - **F7 — the surface count is the ADR's scope lever.** The template
   surface is one of at least five validated document surfaces in the
   repo (also: the `GateDecision` stdout contract ch11-C25, the
@@ -777,3 +827,33 @@ read as covering ground it does not cover.
 | R7 | `grep -c 'findings.push' <file>`, `grep -c 'findings: \[' <file>`, `grep -c 'return fail(' load.ts` | validate 50+1 · admit 19+0 · threshold 7+2 · verdict 3+1 · process 19+2 · load 8 (the `findings: [` counts exclude each file's final `[first, ...rest]` tuple return, which is a re-wrap, not an emit site) |
 
 Every line number in §3.5 is from the file state read at write time.
+
+## 7. Verification record (the bounded loop, plan §6: 3 rounds max)
+
+**Round 1 — 2026-08-05, basis `d506722e…` at HEAD `2044b3bf`.** Charter
+`ch13-rederivation-arm/p3/arm-round1.md`, pin gpt-5.6-sol/high, 450s,
+guards clean. Verdict: **10 IN-SCOPE · 0 CARRIED-SCOPE · 0 UNRUN**, all
+six lenses completed. The two lenses that carry the coverage claim came
+back CLEAN and are the round's most load-bearing result:
+
+- row coverage both directions — every `C<n>` id in the four contracts
+  appears in §3.1–§3.4 and vice versa, 125/125, no orphans either way;
+- declaration-tag closure — 50 tags defined in §2.3, 50 cited in §3,
+  difference lists empty in both directions.
+
+All ten findings were folded into this document (F1–F10 cited inline at
+the fold sites). By class: **4 INVENTIONS** — two false orphan flags
+(I1, I2), one unanchored residual member (R4's effective config), one
+counting-grain error inflating a prediction verdict's basis (5 tags
+reported as 5 rules); **4 OMISSIONS** — the alias expansion bound, the
+parse-diagnostic ORDER, the substrate finding SHAPE, and two hybrid
+rows missing from every residual family; **1 INTERNAL CONTRADICTION** —
+§0's own single-use rule not applied to the two constructs §2.4 flags,
+which is what created residual R7; **1 FORMULA DEFECT** — the emit-site
+counting rule double-counted `load.ts` (the total is unchanged at 112;
+the rule now states the exclusion).
+
+Net effect on the audit's headline: the class TOTALS did not move
+(59/5/6/55) but two rows swapped classes, the orphan count fell 3 → 1,
+and a seventh residual family was born. Nothing in the fold touched the
+enumeration itself.
