@@ -1,0 +1,412 @@
+/**
+ * ADR-019 (accepted 2026-08-05): the declaration VOCABULARY, as types.
+ *
+ * This module is TYPES ONLY — it defines the shape a surface declaration
+ * may take, and nothing else. The declaration itself is data
+ * (`templateFormat.ts`, D4's canonical home); the machines that consume
+ * it are `engine.ts` (the validator) and `normalizer.ts` (D3's second,
+ * separately-named capability).
+ *
+ * Every construct below is one of ADR-019 §2.2's admitted vocabulary
+ * entries, each of which passed the audit's ≥2-independent-ratified-rows
+ * test (`v3/implementation/schema-expressiveness-audit.md` §2.2, standing
+ * sha256 `bfed8210…`). Adding a construct is a D7 amendment of the ADR,
+ * never a silent edit here.
+ */
+
+/**
+ * A message template: literal text with `{placeholder}` slots the engine
+ * interpolates (vocabulary #18 — `message:`, the PARITY carrier; ADR-019
+ * D5 pre-names message wording as a delta class, and a literal template
+ * is the choice that keeps the measured wording byte-identical).
+ *
+ * The closed placeholder set, all supplied by the engine from the node's
+ * own evaluation context — never rule-specific:
+ *
+ * - `{path}`      the finding's own path
+ * - `{key}`       the offending key, raw
+ * - `{keyJson}`   the offending key, JSON-quoted
+ * - `{value}`     the offending value, DESCRIBED (`a map`/`a list`/literal)
+ * - `{valueJson}` the offending value, JSON-quoted
+ * - `{source}`    the offending value's raw source slice, JSON-quoted
+ * - `{grammar}`   the grammar's regular-expression source
+ * - `{members}`   the enum/allowlist members, comma-joined
+ * - `{keys}`      the node's legal keyset, comma-joined
+ * - `{label}`     the referencing site's label for a value class
+ * - `{ownerKey}`  the key of the nearest enclosing OPEN-map entry
+ */
+export type MessageTemplate = string;
+
+/**
+ * A path into the value graph, in the declaration's own address form:
+ * `$` root, dotted segments, `*` for "every entry of an open map", and a
+ * leading `..` for one level up from the citing node.
+ */
+export type DeclPath = string;
+
+/** vocabulary #12 — the selector roots. `injected` is D8's ADMITTED
+ * widening: a selector root that is an injected SET rather than a
+ * document node (a set is a set; the relation and finding form are
+ * unchanged). */
+export type Selector =
+  | { readonly keysOf: DeclPath }
+  | { readonly valuesOf: DeclPath }
+  | { readonly collect: DeclPath }
+  | { readonly union: readonly Selector[] }
+  | { readonly injected: "gateCatalog" };
+
+/**
+ * vocabulary #12 — a membership relation between the citing node's value
+ * (or its keys) and a selector's set.
+ *
+ * `at` is the finding's PATH GRAIN and exists because the measured lanes
+ * DISAGREE (audit §5 F3): the catalog-resolution lane reports at the
+ * BINDING, not at `…uses`. `code` is vocabulary #17.
+ */
+export interface MembershipRule {
+  readonly relation: "memberOf" | "keysSubsetOf" | "disjointFrom";
+  readonly target: Selector;
+  /** `self` = the citing node's own path (the default); `container` = its
+   * parent's path. */
+  readonly at?: "self" | "container";
+  readonly code?: string;
+  readonly message: MessageTemplate;
+  /** vocabulary #13 — suppression beyond the implicit container rule. */
+  readonly dependsOn?: readonly string[];
+}
+
+/** vocabulary #11 — the duplicate lane and its path grain. */
+export interface UniqueRule {
+  readonly grain: "perOccurrence";
+  readonly at: "index" | "container";
+  readonly message: MessageTemplate;
+}
+
+/**
+ * The keyset lane ORDER. It is declared, not hard-coded, for the same
+ * reason `at:` is (audit §5 F3): the measured nodes DISAGREE, and an
+ * engine that picks one silently moves findings. Three measured orders:
+ *
+ * - `missingThenUnknown`             — the root keyset
+ * - `unknownThenPerKey`              — ref, round, activation, the
+ *                                      runtimeContext spec, every gate
+ *                                      config (the DEFAULT)
+ * - `unknownThenMissingThenValues`   — the step keyset
+ */
+export type LaneOrder =
+  | "missingThenUnknown"
+  | "unknownThenPerKey"
+  | "unknownThenMissingThenValues";
+
+/** Every node carries its declaration TAG (the contract's pointer target,
+ * D4) and the ratified rows it realizes (the tag-closure check's other
+ * half). `channel` marks a channel-SCOPED node: `file` for a
+ * SOURCE-BEARING attribute set (the engine runs it where a source exists
+ * and skips it where none does), `direct` for a key that exists only on
+ * the direct-construction channel because it belongs to the ADMITTED form
+ * rather than the authored one. This is D1's structural channel symmetry
+ * — the retired hand-partitioned "realization split". */
+interface NodeBase {
+  readonly tag: string;
+  readonly rows: readonly string[];
+  readonly channel?: "both" | "file" | "direct";
+  /** vocabulary #9 — materialized ONCE at admission. Plain `default:` is
+   * declarable and stays schema-side (ADR-019 D3); DERIVATION is the
+   * normalizer's. */
+  readonly default?: unknown;
+  /** vocabulary #13 — this node's failure suppresses its dependents. */
+  readonly gating?: boolean;
+  /**
+   * vocabulary #2 — the keyset membership obligation, declared on the
+   * FIELD rather than on its container, because the measured lanes
+   * disagree on both grains: the template's fixed maps report a missing
+   * key at the CONTAINER with one shared wording, every delegated config
+   * schema reports it at the KEY with its own wording, and one node (a
+   * gate binding's `uses`) folds absence into its own type lane.
+   */
+  readonly presence?: {
+    readonly required: true;
+    readonly at?: "container" | "self";
+    readonly message?: MessageTemplate;
+    readonly code?: string;
+    /** Absence is reported by this node's OWN type lane, not by a
+     * separate missing lane (a gate binding's `uses`). */
+    readonly foldedIntoTypeLane?: true;
+  };
+}
+
+/** vocabulary #1 `map.fixed` — a closed keyset. The legal keyset IS
+ * `Object.keys(fields)`; each field declares its own `presence`. */
+export interface MapFixedDecl extends NodeBase {
+  readonly kind: "map.fixed";
+  readonly containerMessage: MessageTemplate;
+  /** ch8-C24's reservation: illegal today (the unknown-key lane covers
+   * it), named here so a future additive act finds its home and so the
+   * row has exactly one place to live. */
+  readonly reserved?: readonly string[];
+  /** The default missing-key wording for fields whose `presence` states
+   * none. */
+  readonly missingMessage?: MessageTemplate;
+  readonly unknownMessage: MessageTemplate;
+  readonly laneOrder?: LaneOrder;
+  readonly fields: Readonly<Record<string, NodeDecl>>;
+  /** vocabulary #10 — fail-loud key removal with migration text. */
+  readonly removedKeys?: Readonly<Record<string, MessageTemplate>>;
+  /** vocabulary #14 — the discriminated-union config shape. */
+  readonly variant?: VariantDecl;
+}
+
+/** vocabulary #14 — `variant: {on, cases}`. A case names the keys it
+ * CONSUMES; a key legal in another case but present here is unconsumed
+ * config (ch11-C15's letter). */
+export interface VariantDecl {
+  readonly on: string;
+  readonly cases: Readonly<Record<string, VariantCase>>;
+  readonly rows: readonly string[];
+}
+
+export interface VariantCase {
+  readonly required?: Readonly<
+    Record<string, { readonly message: MessageTemplate; readonly code?: string }>
+  >;
+  readonly forbidden?: Readonly<Record<string, MessageTemplate>>;
+  /** Per-case field overrides (a `reason` map defaults differently by
+   * mode — ch11-C17). */
+  readonly fields?: Readonly<Record<string, NodeDecl>>;
+}
+
+/** vocabulary #1 `map.open` — an open key class. */
+export interface MapOpenDecl extends NodeBase {
+  readonly kind: "map.open";
+  readonly containerMessage: MessageTemplate;
+  /** vocabulary #3 on a map. `gating` because the measured lanes
+   * disagree: an EMPTY `steps` map suppresses every rule that selects
+   * over its keys, an empty `terminal` list does not. */
+  readonly nonempty?: { readonly message: MessageTemplate; readonly gating?: boolean };
+  /** vocabulary #5 — the open-map key class and the finding's path grain. */
+  readonly keyClass?: ValueClassRefDecl;
+  readonly keyLaneAt: "container" | "segment";
+  /** The gates subtree's file-channel key-STRINGNESS scan (ch11 walk /
+   * GP2): a DEEP scan reporting at the nearest addressable path. */
+  readonly deepKeyStringness?: {
+    readonly message: MessageTemplate;
+    readonly channel: "file";
+  };
+  readonly keysSubsetOf?: MembershipRule;
+  readonly entry: NodeDecl;
+}
+
+/** vocabulary #1 `list`. */
+export interface ListDecl extends NodeBase {
+  readonly kind: "list";
+  readonly containerMessage: MessageTemplate;
+  readonly nonempty?: { readonly message: MessageTemplate; readonly gating?: boolean };
+  readonly member: NodeDecl;
+  /** The member lane's path grain — `container` reports every member at
+   * the list's own path (ch8-C17's measured grain). */
+  readonly memberLaneAt: "container" | "index";
+  readonly unique?: UniqueRule;
+  readonly disjointFrom?: MembershipRule;
+  readonly memberOf?: MembershipRule;
+}
+
+/** vocabulary #1 `string` (+ #3 `nonempty`, #4 `grammar`). */
+export interface StringDecl extends NodeBase {
+  readonly kind: "string";
+  /** The non-string lane's message. When a node states only `grammar`,
+   * the grammar message covers both lanes (ch8-C8's measured form). */
+  readonly typeMessage?: MessageTemplate;
+  readonly nonempty?: { readonly message: MessageTemplate };
+  readonly grammar?: { readonly re: string; readonly message: MessageTemplate };
+  readonly memberOf?: MembershipRule;
+}
+
+/** vocabulary #6/#7 — the raw-source ladder and the value-side belt. */
+export interface IntegerDecl extends NodeBase {
+  readonly kind: "integer";
+  /** The alias-free / anchor-free / tag-free / `^[1-9][0-9]*$` ladder over
+   * the SOURCE node. File-scoped by construction: no operand exists on the
+   * direct-construction channel. */
+  readonly sourceForm?: "plainDecimalInteger";
+  readonly resolvedForm?: {
+    readonly safeInteger: true;
+    readonly min: number;
+    readonly message: MessageTemplate;
+  };
+}
+
+/** vocabulary #8 — an allowlist. `store` is the authored↔stored token map
+ * (ch12-C1); `refused` carries per-MEMBER codes (D8's ADMITTED widening:
+ * the existing `code` attribute at member grain). */
+export interface EnumDecl extends NodeBase {
+  readonly kind: "enum";
+  /** A member may be channel-SCOPED: the same `channel` attribute the node
+   * grain carries, applied at MEMBER grain. It is a widening, not a new
+   * construct — the measured token domain genuinely differs by channel
+   * (ch12-C1: the FILE face is authored camelCase, the direct face is the
+   * stored token the domain type declares). */
+  readonly members: readonly {
+    readonly value: unknown;
+    readonly store?: string;
+    readonly channel?: "both" | "file" | "direct";
+  }[];
+  readonly refused?: readonly {
+    readonly value: unknown;
+    readonly code?: string;
+    readonly message: MessageTemplate;
+  }[];
+  readonly message: MessageTemplate;
+  readonly code?: string;
+}
+
+/** vocabulary #1 `union` (+ #10 `removed` at VALUE grain). */
+export interface UnionDecl extends NodeBase {
+  readonly kind: "union";
+  readonly literals?: readonly string[];
+  readonly mapCase?: NodeDecl;
+  readonly removedValues?: Readonly<Record<string, MessageTemplate>>;
+  readonly message: MessageTemplate;
+}
+
+/** vocabulary #19 — uninterpreted pass-through. */
+export interface RawDecl extends NodeBase {
+  readonly kind: "raw";
+  /** A raw node may still assert a container kind (ch12-C3's `config`). */
+  readonly containerMessage?: MessageTemplate;
+}
+
+/** `map.plain + canonicalJsonSafe` — the agent-config value class
+ * (ch12-C7). A PLAIN string-keyed map (never a class instance, never a
+ * JS Map); a non-plain container SUPPRESSES the canonical lane. */
+export interface MapPlainDecl extends NodeBase {
+  readonly kind: "map.plain";
+  readonly containerMessage: MessageTemplate;
+  readonly canonicalJsonSafe: { readonly message: MessageTemplate };
+}
+
+/** vocabulary #15 — a reusable named value class, with the citing site's
+ * `{label}`. */
+export interface ValueClassRefDecl extends NodeBase {
+  readonly kind: "valueClass";
+  readonly valueClass: string;
+  readonly label?: string;
+}
+
+/** vocabulary #16 — hand-off to an injected registration's own
+ * declaration. */
+export interface DelegateDecl extends NodeBase {
+  readonly kind: "delegate";
+  readonly registry: "gateCatalog";
+  /** The sibling field whose value names the registration. */
+  readonly by: string;
+  /** The delegation contract's own belt: a registration that reports
+   * failure with ZERO findings must still block admission, or the binding
+   * would be admitted with no effective config. A property of the
+   * `delegate` construct, not of any one row (audit flag I3). */
+  readonly beltMessage: MessageTemplate;
+  /** vocabulary #13 — the resolution lane this hand-off presupposes. */
+  readonly dependsOn?: readonly string[];
+}
+
+export type NodeDecl =
+  | MapFixedDecl
+  | MapOpenDecl
+  | MapPlainDecl
+  | ListDecl
+  | StringDecl
+  | IntegerDecl
+  | EnumDecl
+  | UnionDecl
+  | RawDecl
+  | ValueClassRefDecl
+  | DelegateDecl;
+
+/**
+ * vocabulary #12's `equals` relation — a two-direction set equality with
+ * its own message per direction and its own path grain per direction
+ * (ch8-C16's measured form: the used-but-undeclared finding reports at
+ * the container, the declared-but-unused finding at the entry).
+ */
+export interface EqualsRuleDecl {
+  readonly tag: string;
+  readonly rows: readonly string[];
+  readonly relation: "equals";
+  readonly left: Selector;
+  readonly right: Selector;
+  readonly missingFromLeft: { readonly at: DeclPath; readonly message: MessageTemplate };
+  readonly missingFromRight: { readonly at: DeclPath; readonly message: MessageTemplate };
+  readonly dependsOn?: readonly string[];
+}
+
+/**
+ * D3 — the NORMALIZER's declared hooks. A declaration says what is legal;
+ * it does not compute a value, so derivation is named here and realized in
+ * `normalizer.ts`, never in the validator. Each hook is a named capability
+ * with its ratified rows; adding one is D7 format growth, not an edit.
+ */
+export type NormalizerHookDecl =
+  | {
+      readonly tag: string;
+      readonly rows: readonly string[];
+      readonly hook: "expandAdvancesRound";
+      /** The open map of entries the flag map is expanded per. */
+      readonly over: DeclPath;
+      /** The entry's edge map, relative to the entry. */
+      readonly edges: string;
+      /** The declared advancing set. */
+      readonly advanceSet: DeclPath;
+      /** The produced sibling field. */
+      readonly into: string;
+    }
+  | {
+      readonly tag: string;
+      readonly rows: readonly string[];
+      readonly hook: "materializeEffectiveConfigs";
+      /** The open map of pipelines whose members carry a delegated config. */
+      readonly over: DeclPath;
+      /** The binding fields carried into the admitted form verbatim. */
+      readonly carry: readonly string[];
+      /** The produced field the effective config lands in. */
+      readonly into: string;
+    };
+
+/**
+ * The SUBSTRATE block (audit §2.3): how bytes become a value graph. Its
+ * obligations are declared here as data; the yaml library realizes them,
+ * which is why their WORDING is residual R6 (library-owned) rather than
+ * engine parity.
+ */
+export interface SubstrateDecl {
+  readonly read: { readonly decode: "strict-utf8"; readonly message: MessageTemplate };
+  readonly parse: {
+    readonly syntax: "yaml-1.2-core";
+    readonly documents: 1;
+    readonly duplicateKeys: "reject";
+    readonly duplicateKeyMessage: MessageTemplate;
+    readonly promoteWarnings: true;
+    readonly directive: { readonly only: "1.2"; readonly message: MessageTemplate };
+    readonly findingOrder: readonly ["directive", "errors", "warnings"];
+  };
+  readonly resolve: {
+    readonly aliases: "substrate";
+    readonly expansionBound: "substrate";
+    readonly graph: { readonly acyclic: true; readonly message: MessageTemplate };
+  };
+  readonly stages: readonly ["read", "parse", "resolve", "validate", "store"];
+  readonly paths: { readonly root: "$"; readonly listSegment: "[i]" };
+  /** ch8-C23: the CLOSED issue-code namespace, disjoint from registry
+   * names. Declared so the engine can never mint one. */
+  readonly codes: readonly string[];
+  readonly internalFailure: { readonly path: string; readonly message: MessageTemplate };
+}
+
+/** One declared surface: substrate + node tree + the named residual's
+ * declarable halves. */
+export interface SurfaceDecl {
+  readonly surface: string;
+  readonly substrate: SubstrateDecl;
+  readonly root: NodeDecl;
+  readonly valueClasses: Readonly<Record<string, NodeDecl>>;
+  readonly crossRules: readonly EqualsRuleDecl[];
+  readonly normalizers: readonly NormalizerHookDecl[];
+}

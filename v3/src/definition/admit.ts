@@ -8,6 +8,9 @@ import type {
 import { isCanonicalizable } from "../emit/opId.js";
 import type { GateCatalog } from "../ports/index.js";
 import type { ValidationFinding } from "./errors.js";
+import type { EngineChannel } from "./schema/engine.js";
+import { parityProbe } from "./schema/parityProbe.js";
+import { runTemplateSurface } from "./schema/templateSurface.js";
 
 /**
  * `admitTemplate` (packet ch11-P2a, A1–A7): THE single semantic
@@ -151,6 +154,27 @@ function expandAdvancesRound(step: Step, advanceSet: ReadonlySet<string>): Recor
 }
 
 export function admitTemplate(template: WorkflowTemplate, catalog: GateCatalog): AdmitResult {
+  const result = admitTemplateImpl(template, catalog);
+  return parityProbe("definition/admit", result, () =>
+    admitViaEngine(template, { kind: "direct" }, catalog));
+}
+
+/**
+ * ADR-019 D1: the engine-backed admission — ONE declaration run on the
+ * caller's channel. A6 holds: this module stays the only place the
+ * `AdmittedTemplate` brand is minted.
+ */
+export function admitViaEngine(
+  value: unknown,
+  channel: EngineChannel,
+  catalog: GateCatalog,
+): AdmitResult {
+  const outcome = runTemplateSurface(value, channel, catalog);
+  if (outcome.admitted === undefined) return { ok: false, findings: outcome.findings };
+  return { ok: true, template: outcome.admitted as AdmittedTemplate };
+}
+
+function admitTemplateImpl(template: WorkflowTemplate, catalog: GateCatalog): AdmitResult {
   const findings: ValidationFinding[] = [];
   // (stepId → eventType → index) → the effective config to materialize.
   const effectiveConfigs = new Map<string, unknown>();

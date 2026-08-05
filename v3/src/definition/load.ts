@@ -2,8 +2,9 @@ import { isAlias, isMap, isPair, isScalar, isSeq, LineCounter, parseDocument } f
 import type { Document, ParsedNode, YAMLError } from "yaml";
 
 import type { GateCatalog } from "../ports/index.js";
-import { admitTemplate } from "./admit.js";
+import { admitTemplate, admitViaEngine } from "./admit.js";
 import type { PipelineFinding, TemplateLoadResult, ValidationFinding } from "./errors.js";
+import { parityProbe } from "./schema/parityProbe.js";
 import { validateTemplate } from "./validate.js";
 
 /**
@@ -43,6 +44,33 @@ function fail(
   findings: readonly PipelineFinding[] | readonly ValidationFinding[],
 ): TemplateLoadResult {
   return { ok: false, error: { stage, findings } };
+}
+
+/** The validate stage's two rungs: the source-form walk, then admission.
+ * Their findings ACCUMULATE in ONE result; the result stays XOR (an
+ * admitted template escapes only when both rungs are findings-free). */
+function validateStage(
+  value: unknown,
+  doc: Document,
+  text: string,
+  catalog: GateCatalog,
+): TemplateLoadResult {
+  const outcome = validateTemplate(value, doc, text);
+  if (outcome.template === undefined) {
+    // Disposition (a): non-map root — walk finding only, no operand for
+    // the admission rung.
+    return fail("validate", outcome.findings);
+  }
+  const admitted = admitTemplate(outcome.template, catalog);
+  if (!admitted.ok) {
+    return fail("validate", [...outcome.findings, ...admitted.findings]);
+  }
+  if (outcome.findings.length > 0) {
+    // The walk found structural defects but admission was clean (or
+    // vacuous) — the walk findings are the whole result.
+    return fail("validate", outcome.findings);
+  }
+  return { ok: true, template: admitted.template };
 }
 
 function errorMessage(error: unknown): string {
@@ -247,23 +275,14 @@ export function loadTemplate(bytes: Uint8Array, opts: LoadTemplateOptions = {}):
   // The result stays XOR: an admitted template escapes ONLY when BOTH
   // the walk and admission are findings-free (ch8-C22 preserved).
   try {
-    const outcome = validateTemplate(value, doc, text);
-    if (outcome.template === undefined) {
-      // Disposition (a): non-map root — walk finding only, no operand
-      // for the admission rung.
-      return fail("validate", outcome.findings);
-    }
-    const admitted = admitTemplate(outcome.template, opts.catalog ?? EMPTY_CATALOG);
-    if (!admitted.ok) {
-      return fail("validate", [...outcome.findings, ...admitted.findings]);
-    }
-    if (outcome.findings.length > 0) {
-      // The walk found structural defects but admission was clean (or
-      // vacuous) — the walk findings are the whole result; nothing
-      // partial escapes.
-      return fail("validate", outcome.findings);
-    }
-    return { ok: true, template: admitted.template };
+    const catalog = opts.catalog ?? EMPTY_CATALOG;
+    const result = validateStage(value, doc, text, catalog);
+    // ADR-019 D5: the parity gate replays this corpus against the
+    // engine-backed path. Default-off; removed at the switch.
+    return parityProbe("definition/load", result, () => {
+      const admitted = admitViaEngine(value, { kind: "file", doc, source: text }, catalog);
+      return admitted.ok ? { ok: true, template: admitted.template } : fail("validate", admitted.findings);
+    });
   } catch (error) {
     // The C22 every-stage belt: no known input reaches this (V15's
     // cycle rule is a FINDING, not a throw), but the stage still maps.
