@@ -1,6 +1,6 @@
 # ADR-019: structural definition rules become declared schema, validated by one engine on both channels
 
-Status: proposed
+Status: accepted
 Date: 2026-08-05
 Links: supersedes — · amends — · depends-on ADR-011 · related ADR-003, ADR-012, ADR-013
 
@@ -27,21 +27,33 @@ channel symmetry. The direction was ratified 2026-08-03 and this ADR is
 its P3 realization.
 
 **The basis is an enumeration, not an impression.**
-`v3/implementation/schema-expressiveness-audit.md` (sha256
-`f779855f0a0823020c71951873a3a21244500ecd6644179cb78ac1f3045d8da7`)
-classifies every ratified rule of the four format surfaces against a
-proposed declaration form, and was verified by two bounded fresh-context
-arm rounds (10 findings then 5, all folded; `ch13-rederivation-arm/p3/`).
-Its measured result:
+`v3/implementation/schema-expressiveness-audit.md` — the bytes this ADR
+was RATIFIED against carried sha256
+`f779855f0a0823020c71951873a3a21244500ecd6644179cb78ac1f3045d8da7`
+(classification 59/5/6); the ratification act's own D8 ruling then
+moved two rows and resolved R7 empty, so the standing document is
+sha256
+`bfed821037786fa151f9a9c0f3b25d1142917056f10d52bb1dda5ddb4da6e57d`
+(classification 61/3/6). Both pins are recorded because the act changed
+its own basis, and only in the direction the act itself ruled — the
+audit could not have moved itself.
+
+The audit classifies every ratified rule of the four format surfaces
+against a proposed declaration form, and was verified by two bounded
+fresh-context arm rounds (10 findings then 5, all folded;
+`ch13-rederivation-arm/p3/`). Its measured result, at the ratified
+basis:
 
 - **125 contract rows** (ch8 38 · ch11 41 · ch12 27 · ch13 19). Of the
   **70** that carry a definition-validation obligation: **59 fully
-  declarable · 5 mixed · 6 residual**. The other 55 legislate runtime,
+  declarable · 5 mixed · 6 residual** (**61 · 3 · 6** after D8's
+  ruling). The other 55 legislate runtime,
   CLI, store, port or process and are marked non-lane with a per-row
   reason. Zero unclassified rows.
 - **112 finding-emit sites** in today's validator and the three
   delegated gate-config schemas — every one mapped to its owning row.
-- The residual is **seven named families**, not a vague remainder.
+- The residual is **seven named families**, not a vague remainder (D8's
+  ruling then resolved one of them empty, leaving six with members).
 - The plan's predicted residual was CHECKED: event-grain suppression
   and per-occurrence duplicates REFUTED (declarable); reference
   resolution and unreferenced hygiene PARTIALLY refuted (the
@@ -168,21 +180,34 @@ flavours that must not be confused:
   audit's **≥2 independent ratified rows** test; a construct serving
   exactly one row is refused and that row keeps a prose lane instead.
 
-### D8 — the two undecided constructs (the audit's R7)
+### D8 — the two open constructs — RULED: BOTH ACCEPTED (user, 2026-08-05)
 
-Both are single-use today and the audit deliberately refused to bank
-their coverage. **RECOMMENDED: ACCEPT both** (final at the ratification
-act; electing either rejection changes only the two rows named):
+Both were single-use, and the audit deliberately refused to bank their
+coverage until this act ruled. **Both are ACCEPTED**, on the ground
+that neither is a NEW construct:
 
 - `memberOf: keys(@catalog)` — a selector root that is an INJECTED set
-  rather than a document node (ch11-C8's `uses` resolution). ACCEPT as
-  a generalization of the selector root: a set is a set. REJECT sends
-  that lane to R1 and keeps a one-line code lane for a pure membership
-  test.
+  rather than a document node (ch11-C8's `uses` resolution): admitted
+  as a GENERALIZATION of the existing selector root. A set is a set;
+  the relation, the finding form and the code carrier are unchanged.
 - per-member `code:` inside an enum (ch11-C16's `failInstance` earning
-  a distinct issue code). ACCEPT as the existing `code` attribute
-  applied at member grain, not a new construct. REJECT sends ch11-C16's
-  disposition lane to a prose lane.
+  a distinct issue code): admitted as the existing `code` attribute
+  applied at MEMBER grain, not as a new attribute.
+
+**The D9 tripwire was examined at this ruling, not skirted** — recorded
+so a later reader can check the reasoning rather than trust it.
+Tripwire 1 fires on admitting a single-use CONSTRUCT to make one row
+fit. Neither ruling adds a construct: both widen the domain of a
+construct that already passes the ≥2-row test (selectors, 7 rows;
+`code:`, 7 rows). Had either required a genuinely new construct for its
+single row, the correct outcome would have been the prose lane.
+
+Consequence, executed in the audit at this act: residual **R7 is
+RESOLVED EMPTY** (kept as a named family with its record, so a future
+single-use candidate has a home and the history stays legible), and
+ch11-C8 and ch11-C16 move from `H` to `S`. The standing classification
+is therefore **61 fully declarable · 3 mixed · 6 residual** of the 70
+obligation-bearing rows.
 
 ### D9 — the falsifiability criterion
 
@@ -196,8 +221,9 @@ work-around:
    row fit (D7's test bypassed);
 2. the engine acquires a per-rule branch — a literal `if (rule === X)`
    — to reproduce a measured verdict, path or message;
-3. the declared residual grows past the seven audited families during
-   contract-v2 authoring without a ratified amendment saying so.
+3. the declared residual grows past the seven audited family ids —
+   six carrying members, R7 resolved empty at D8 — during contract-v2
+   authoring, without a ratified amendment saying so.
 
 ## Alternatives Considered
 

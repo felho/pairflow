@@ -363,17 +363,19 @@ delegated config schemas (the registry hand-off targets)
 
 ### 2.4 Flagged borderline constructs (the single-use smell)
 
-Two constructs fail the ≥2-row test. They are named here rather than
-buried, because the ADR's falsifiability criterion turns on exactly
-this kind of item — and, since the fold of arm round 1, their two rows
-are held in residual **R7** instead of being counted as declarable.
-Neither appears in §2.2's vocabulary table; both appear in §2.3's
-declaration text, marked by the rows that cite R7.
+Two constructs failed the ≥2-row test as separate constructs. They are
+named here rather than buried, because the ADR's falsifiability
+criterion turns on exactly this kind of item. From the arm round-1 fold
+until the ADR-019 ratification their two rows were held in residual
+**R7** instead of being counted as declarable; **both were ADMITTED at
+that act (D8, 2026-08-05)** — not as new constructs, but as widenings
+of the selector root and of the `code` attribute, each of which already
+carried 7 rows. Their rows are now `S`, and R7 is resolved empty.
 
-| Construct | Users today | Disposition proposed |
+| Construct | Rows using it as a distinct construct | Disposition — RULED 2026-08-05 |
 |---|---|---|
-| `memberOf: keys(@gateCatalog)` — a selector root that is an INJECTED set, not a document node | 1 (ch11-C8's `uses` resolution; ch12-C16 explicitly does NOT resolve providers at admission) | ACCEPT as a generalization of the selector root (a set is a set), or send ch11-C8 to residual R1. Recommend ACCEPT — the alternative keeps a one-line code lane for a pure membership test. |
-| per-member `code:` inside `enum` (ch11-C16's `failInstance` gets its own distinct code) | 1 | ACCEPT as the `code` attribute applied at member grain (not a new construct). If rejected, ch11-C16 goes to residual. |
+| `memberOf: keys(@gateCatalog)` — a selector root that is an INJECTED set, not a document node | 1 (ch11-C8's `uses` resolution; ch12-C16 explicitly does NOT resolve providers at admission) | **ACCEPTED** — a generalization of the selector root, which already carries 7 rows. The rejected alternative would have kept a one-line code lane for a pure membership test. |
+| per-member `code:` inside `enum` (ch11-C16's `failInstance` gets its own distinct code) | 1 | **ACCEPTED** — the `code` attribute (7 rows) applied at member grain, not a new attribute. The rejected alternative would have sent ch11-C16's disposition lane to prose. |
 
 ### 2.5 Channel independence
 
@@ -454,7 +456,7 @@ ch8 tally: **S 28 · H 0 · Sem 1 · N 9** = 38.
 | C5 | `config` presence is evaluator-specific | S | `[d-gate-config]` → the delegated schema's own `required` | P | both |
 | C6 | `uses` dotted grammar | S | `[d-uses]` | P | both |
 | C7 | path grammar gains `[i]` list segments | S | `[d-paths]` | P | both |
-| C8 | static registry; admission resolves `uses`; coded lane | H | **R7** pending §2.4's decision on `memberOf: keys(@gateCatalog)`; if rejected the lane falls to **R1**. Registry composition half is non-lane | P | both |
+| C8 | static registry; admission resolves `uses`; coded lane | S | `[d-uses]` `memberOf: keys(@gateCatalog)` — the injected-set selector root ADMITTED by ADR-019 D8 (2026-08-05); registry composition half is non-lane | P | both |
 | C9 | registry member axes (implementation/execution) | N | registry data | — | — |
 | C10 | `declarative.threshold` config keyset + allowlists | S | `[d-gc-threshold]` (block semantics is runtime) | P | both |
 | C11 | `previous_reviewer_verdict` config; absent ≡ `{required:true}` | S | `[d-gc-verdict]` | P | both |
@@ -462,7 +464,7 @@ ch8 tally: **S 28 · H 0 · Sem 1 · N 9** = 38.
 | C13 | `external.process` config keyset; command semantics | S | `[d-gc-process]` (shell/cwd semantics is runtime) | P | both |
 | C14 | `output.mode` enum + `exitCode` default | S | `[d-gc-process]` output | P | both |
 | C15 | `onExit` required in exitCode mode; both buckets; unconsumed otherwise | S | `[d-gc-process]` `variant` | P | both |
-| C16 | dispositions; `failInstance` distinct code | H | keyset/enum half is `[d-gc-process]`; the per-member `code:` is single-use → **R7** pending §2.4 (reclassified from S at arm F2) | P | both |
+| C16 | dispositions; `failInstance` distinct code | S | `[d-gc-process]` enum with per-member `code:` — ADMITTED by ADR-019 D8 (2026-08-05) as the `code` attribute at member grain | P | both |
 | C17 | `reason` per-bucket keyset, token grammar, defaults | S | `[d-gc-process]` reason | P | both |
 | C18 | root `runtimeContext` key (pointer to ch12) | S | `[d-root]` `[d-rtc]` | P | both |
 | C19 | process gate + requirement `none` → coded cross-rule | Sem | **R3** (existential over resolved registrations) | P | both |
@@ -489,7 +491,8 @@ ch8 tally: **S 28 · H 0 · Sem 1 · N 9** = 38.
 | C40 | the round admission lanes (value + source-form split) | S | `[d-round]` `[d-round-list]`; the SPLIT dissolves (§5 F4) | Δpath | both/file |
 | C41 | per-transition override deferred | N | partial-realization disposition | — | — |
 
-ch11 tally: **S 20 · H 2 · Sem 2 · N 17** = 41.
+ch11 tally: **S 22 · H 0 · Sem 2 · N 17** = 41 (C8 and C16 moved H → S
+at the ADR-019 ratification, 2026-08-05 — D8 admitted both constructs).
 
 ### 3.3 ch12 — runtime-core (27 rows)
 
@@ -699,15 +702,19 @@ audit's own inventions and are struck:
 
 | Class | ch8 | ch11 | ch12 | ch13 | Total |
 |---|---|---|---|---|---|
-| S — structural | 28 | 20 | 7 | 4 | **59** |
-| H — hybrid | 0 | 2 | 0 | 3 | **5** |
+| S — structural | 28 | 22 | 7 | 4 | **61** |
+| H — hybrid | 0 | 0 | 0 | 3 | **3** |
 | Sem — semantic | 1 | 2 | 1 | 2 | **6** |
 | N — non-lane | 9 | 17 | 19 | 10 | **55** |
 | **Rows** | 38 | 41 | 27 | 19 | **125** |
 
 Of the 70 rows that carry a definition-validation obligation (S+H+Sem),
-**59 are fully declarable, 5 are mixed, 6 are residual**. Every one of
-the 11 mixed-or-residual rows appears by id as a MEMBER of a residual
+**61 are fully declarable, 3 are mixed, 6 are residual** — the state
+AFTER the ADR-019 ratification (2026-08-05). Before that act it read
+59/5/6: ch11-C8 and ch11-C16 were held in R7 precisely so this number
+could not borrow against an undecided construct, and D8's ruling
+released them. Every one of
+the 9 mixed-or-residual rows appears by id as a MEMBER of a residual
 family in §4, and no `S` row appears as a member (both directions
 checked at rounds 1 and 2 — F5 found two rows missing from every
 family, F2 found nine `S` rows sitting in member lists, which is why §4
@@ -737,7 +744,7 @@ inexpressible.
 | **R4** | admitted-form derivation (a produced VALUE, not a verdict) | **Members:** ch11-C39 (`advancesRound` expanded per transition); ch13-C17 (rebuild, normalize-or-`{}` predicate, normalized sibling fields); ch13-C2 (the non-string-key filter into the built catalog). **Affected:** ch11-C20 (the "materialized ONCE at admission" home) and the per-registration defaults ch11-C11/C14/C16/C17 — these are plain `default:` declarations, so they are NOT members (round 2 corrected both directions here: F8's fold had named the effective config a member with no row id, F5 then showed C11 missing from that list, and the right answer was that the whole default set is declarable and only the DERIVATION is residual) | These are TRANSFORMS, not validations. A declaration says what is legal; it does not compute the admitted shape. The engine therefore owes a second capability — emit a normalized value — and the ADR must name it explicitly rather than let "schema" be read as covering it. |
 | **R5** | cross-artifact checks outside the document | ch8-C27 (declared `ref` vs matched filename) | The operand is the filesystem listing, not the document. Stays a store-stage lane. |
 | **R6** | substrate-owned behaviour — a PARITY residual, carrying no obligation residual | **Members:** none. **Affected:** ch8-C1/C2/C3/C4/C20 (message TEXTS) and ch8-C5 (the expansion bound) — all `Δlib` | Each obligation IS declared, as a flag with its surfacing stage; what the engine cannot own is the WORDING, which the YAML library emits. Parity here is library-version parity, not engine parity. The ORDER of those findings is NOT in this family — it became `[d-order]` at the round-1 fold (F9). |
-| **R7** | rows whose only declaration uses a single-use construct | ch11-C8 (`memberOf: keys(@gateCatalog)`); ch11-C16 (per-member `code:` in an enum) | §0's admission test forbids counting these as declarable before the ADR rules on the constructs (§2.4). An ACCEPT ruling moves each row to S; a REJECT moves C8's lane to R1 and C16's disposition lane to a code lane. This family exists so the coverage number cannot borrow against an undecided construct. |
+| **R7** | rows whose only declaration uses a single-use construct | **RESOLVED EMPTY, 2026-08-05.** Former members: ch11-C8, ch11-C16 — both moved to `S` when ADR-019's D8 admitted their constructs as widenings of the selector root and of the `code` attribute, neither being a new construct. The family id is KEPT so a future single-use candidate has a home and this ruling stays legible | The family's purpose was to stop the coverage number borrowing against an undecided construct. It did its job for exactly one ratification cycle, which is what it was for. |
 
 ### 4.1 Verdict on the plan's prediction
 
@@ -772,13 +779,17 @@ scorecard against the plan.
 
 ## 5. Findings for the ADR
 
-- **F1 — the direction survives the enumeration.** 59 of 70
-  obligation-bearing rows are fully declarable; the residual is seven
-  named families, five of which are one or two rows each. Nothing in
-  the 125 required a per-rule special case in the vocabulary — the §0
-  admission test caught exactly two single-use candidates, and their
-  two rows are held in R7 rather than counted as covered. The ADR
-  inherits those two as explicit yes/no decisions, not as assumptions.
+- **F1 — the direction survives the enumeration.** 61 of 70
+  obligation-bearing rows are fully declarable; the residual is six
+  families carrying members (plus R7, resolved empty), four of them one
+  or two rows each. Nothing in the 125 required a per-rule special case
+  in the vocabulary — the §0 admission test caught exactly two
+  single-use candidates and held their rows OUT of the coverage number
+  until ADR-019's D8 ruled on them (both admitted, 2026-08-05, as
+  widenings of constructs that already passed the test rather than as
+  new constructs). The number the ADR was authored against was 59; the
+  standing number after the ruling is 61. Both are recorded, because
+  the interesting fact is that the audit could not have moved itself.
 - **F2 — the schema direction dissolves ch13-C7's entry belt (DERIVED).**
   C7's belt exists because the direct-construction channel had no walk:
   a cast-forged catalog entry could not be refused structurally, so
