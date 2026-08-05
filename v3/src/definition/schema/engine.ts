@@ -12,7 +12,6 @@ import type {
   NodeDecl,
   Selector,
   SurfaceDecl,
-  VariantCase,
 } from "./vocabulary.js";
 
 /**
@@ -637,32 +636,13 @@ function evalMapFixed(
     local.set(field.tag, false);
   };
 
-  // Resolved on EVERY access, never cached: the discriminant is a sibling
-  // whose own lane runs earlier in the declared order, so a case that is
-  // unresolved at `command` is resolved by the time `onExit` is reached.
-  const activeCase = (): ReturnType<typeof resolveVariant> => resolveVariant(decl, normalized);
-
   const evalOneField = (name: string): void => {
-    const active = activeCase();
-    const override = active?.fields?.[name];
-    const field = override ?? decl.fields[name];
+    const field = decl.fields[name];
     if (field === undefined) return;
-    const present = containerHas(container, name);
-    if (!present) {
-      const caseRequired = active?.required?.[name];
-      if (caseRequired !== undefined) {
-        const at = joinPath(frame.path, name);
-        run.emit(at, render(caseRequired.message, { ...slots, path: at, key: name }), caseRequired.code);
-        local.set(field.tag, false);
-        return;
-      }
+    if (!containerHas(container, name)) {
+      // An ABSENT field is where a declared `default:` materializes — the
+      // schema-side half of ADR-019 D3.
       if (field.default !== undefined) defineOwn(normalized, name, field.default);
-      return;
-    }
-    const forbidden = active?.forbidden?.[name];
-    if (forbidden !== undefined) {
-      const at = joinPath(frame.path, name);
-      run.emit(at, render(forbidden, { ...slots, path: at, key: name }));
       return;
     }
     const child = childFrame(frame, name, containerGet(container, name), container);
@@ -675,8 +655,6 @@ function evalMapFixed(
   if (order === "missingThenUnknown") {
     for (const name of fieldNames) emitMissing(name);
     emitUnknownKeys();
-    // Every field is visited, present or not: an ABSENT field is where a
-    // declared `default:` materializes (ADR-019 D3's schema-side half).
     for (const name of fieldNames) evalOneField(name);
   } else if (order === "unknownThenMissingThenValues") {
     emitUnknownKeys();
@@ -694,21 +672,6 @@ function evalMapFixed(
     }
   }
   return { ok: true, value: normalized };
-}
-
-function resolveVariant(
-  decl: Extract<NodeDecl, { kind: "map.fixed" }>,
-  normalized: Record<string, unknown>,
-): VariantCase | undefined {
-  const variant = decl.variant;
-  if (variant === undefined) return undefined;
-  let cursor: unknown = normalized;
-  for (const segment of variant.on.split(".")) {
-    if (!isContainer(cursor)) return undefined;
-    cursor = containerGet(cursor, segment);
-  }
-  if (typeof cursor !== "string") return undefined;
-  return variant.cases[cursor];
 }
 
 function childFrame(parent: Frame, key: string, value: unknown, parentValue: unknown): Frame {
@@ -960,11 +923,6 @@ function evalEnum(
   };
   const member = legal.find((one) => one.value === value);
   if (member !== undefined) return { ok: true, value: member.store ?? member.value };
-  const refused = decl.refused?.find((one) => one.value === value);
-  if (refused !== undefined) {
-    run.emit(frame.path, render(refused.message, slots), refused.code);
-    return { ok: false };
-  }
   run.emit(frame.path, render(decl.message, slots), decl.code);
   return { ok: false };
 }
@@ -1104,10 +1062,13 @@ export function runSurface(surface: SurfaceDecl, value: unknown, opts: EngineOpt
   const rootDecl = surface.root;
 
   // The root container precondition: with no map operand nothing below has
-  // an address, so the ONE finding is the whole result.
-  if (!isContainer(value)) {
-    const message = "containerMessage" in rootDecl ? (rootDecl.containerMessage ?? "") : "";
-    run.emit("$", render(message, { path: "$", value }));
+  // an address, so the ONE finding is the whole result. It applies where
+  // the ROOT is declared as a map — a surface whose root is any other
+  // kind evaluates through its own node like every other.
+  const rootIsMap =
+    rootDecl.kind === "map.fixed" || rootDecl.kind === "map.open" || rootDecl.kind === "map.plain";
+  if (rootIsMap && !isContainer(value)) {
+    run.emit("$", render(rootDecl.containerMessage, { path: "$", value }));
     return {
       findings: run.findings,
       normalized: undefined,
@@ -1144,15 +1105,9 @@ export function collectTags(surface: SurfaceDecl): readonly string[] {
   const visit = (decl: NodeDecl): void => {
     tags.push(decl.tag);
     switch (decl.kind) {
-      case "map.fixed": {
+      case "map.fixed":
         for (const field of Object.values(decl.fields)) visit(field);
-        if (decl.variant !== undefined) {
-          for (const one of Object.values(decl.variant.cases)) {
-            for (const field of Object.values(one.fields ?? {})) visit(field);
-          }
-        }
         return;
-      }
       case "map.open": {
         if (decl.keyClass !== undefined) visit(decl.keyClass);
         visit(decl.entry);

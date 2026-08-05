@@ -152,27 +152,6 @@ export interface MapFixedDecl extends NodeBase {
   readonly fields: Readonly<Record<string, NodeDecl>>;
   /** vocabulary #10 — fail-loud key removal with migration text. */
   readonly removedKeys?: Readonly<Record<string, MessageTemplate>>;
-  /** vocabulary #14 — the discriminated-union config shape. */
-  readonly variant?: VariantDecl;
-}
-
-/** vocabulary #14 — `variant: {on, cases}`. A case names the keys it
- * CONSUMES; a key legal in another case but present here is unconsumed
- * config (ch11-C15's letter). */
-export interface VariantDecl {
-  readonly on: string;
-  readonly cases: Readonly<Record<string, VariantCase>>;
-  readonly rows: readonly string[];
-}
-
-export interface VariantCase {
-  readonly required?: Readonly<
-    Record<string, { readonly message: MessageTemplate; readonly code?: string }>
-  >;
-  readonly forbidden?: Readonly<Record<string, MessageTemplate>>;
-  /** Per-case field overrides (a `reason` map defaults differently by
-   * mode — ch11-C17). */
-  readonly fields?: Readonly<Record<string, NodeDecl>>;
 }
 
 /** vocabulary #1 `map.open` — an open key class. */
@@ -236,8 +215,7 @@ export interface IntegerDecl extends NodeBase {
 }
 
 /** vocabulary #8 — an allowlist. `store` is the authored↔stored token map
- * (ch12-C1); `refused` carries per-MEMBER codes (D8's ADMITTED widening:
- * the existing `code` attribute at member grain). */
+ * (ch12-C1). */
 export interface EnumDecl extends NodeBase {
   readonly kind: "enum";
   /** A member may be channel-SCOPED: the same `channel` attribute the node
@@ -249,11 +227,6 @@ export interface EnumDecl extends NodeBase {
     readonly value: unknown;
     readonly store?: string;
     readonly channel?: "both" | "file" | "direct";
-  }[];
-  readonly refused?: readonly {
-    readonly value: unknown;
-    readonly code?: string;
-    readonly message: MessageTemplate;
   }[];
   readonly message: MessageTemplate;
   readonly code?: string;
