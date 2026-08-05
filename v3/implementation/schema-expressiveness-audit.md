@@ -201,7 +201,7 @@ here is an estimate.
 | 14 | `variant: {on: <sibling>, cases: {...}}` | discriminated-union config shape | 3 — ch11-C14, C15, C17 |
 | 15 | `valueClass: <name>` | reusable named value class | 3 classes over 5 rows — ch8-C14/ch12-C7; ch13-C4/C6; ch11-C12 |
 | 16 | `delegate: registry(<field>)` | hand-off to an injected registration's own declaration | 5 — ch11-C5, C8, C10, C11, C13 |
-| 17 | `code:` | the named-lane issue code (closed namespace) | 4 live rows — ch11-C8, C13, C19/ch12-C5; + ch13-C7 unbuilt |
+| 17 | `code:` | the named-lane issue code (closed namespace) | 7 rows — ch11-C8, C14, C15, C16, C19, C21; ch12-C5; + ch13-C7 unbuilt (corrected at round 2, F4: the earlier cell counted CODE VALUES, not rows, and omitted the C14/C15/C21 coded lanes) |
 | 18 | `message:` | the lane's message template (the parity carrier) | every finding-bearing row |
 | 19 | `raw` | uninterpreted pass-through (substrate gates only) | 2 — ch8-C14; ch12-C3 |
 
@@ -411,7 +411,7 @@ is the YAML library's; `—` no finding). **Ch** = channel (`both`,
 | C7 | root fixed keyset (5 required) + additive growth | S | `[d-root]` (growth clause → ADR format-growth rule) | Δmsg | both |
 | C8 | `ref` map; id grammar; version source ladder | S | `[d-ref]` `[d-ref-id]` `[d-ref-version]` | P | file (source half) |
 | C9 | `steps` nonempty map; step keyset | S | `[d-steps]` `[d-step]` | P | both |
-| C10 | one id grammar for step/terminal/role/event ids | S | `id-class` on `[d-steps]` `[d-terminal]` `[d-roles]` `[d-transitions]` | Δmsg | both |
+| C10 | one id grammar for step/terminal/role/event ids | S | `id-class` on `[d-steps]` `[d-terminal]` `[d-roles]` `[d-transitions]` `[d-role-ref]` | Δmsg | both |
 | C11 | `instruction` nonempty string, no normalization | S | `[d-instruction]` | P | both |
 | C12 | `transitions` map, may be empty | S | `[d-transitions]` | P | both |
 | C13 | fixed vs open maps; unknown-key fail-closed | S | `kind:` + `[d-findings]` | Δmsg | both |
@@ -707,10 +707,11 @@ audit's own inventions and are struck:
 
 Of the 70 rows that carry a definition-validation obligation (S+H+Sem),
 **59 are fully declarable, 5 are mixed, 6 are residual**. Every one of
-the 11 mixed-or-residual rows appears by id in a residual family in §4
-— checked, not asserted (arm round 1, F5, which found two rows missing
-from every family and drove one reclassification). Zero rows are
-unclassified.
+the 11 mixed-or-residual rows appears by id as a MEMBER of a residual
+family in §4, and no `S` row appears as a member (both directions
+checked at rounds 1 and 2 — F5 found two rows missing from every
+family, F2 found nine `S` rows sitting in member lists, which is why §4
+now separates members from affected rows). Zero rows are unclassified.
 
 The membership changed at the fold even though the totals did not:
 ch8-C16 moved H → S (`dependsOn` covers its suppression), and ch11-C16
@@ -720,14 +721,22 @@ fold is exactly where an unchecked reader assumes nothing happened.
 
 ## 4. The residual (named prose/code lanes)
 
-| Id | Residual | Members | Why it cannot be a declaration |
+**Two column meanings, kept apart since round 2 (F2).** A **member** is
+a row whose OWN obligation is residual — every member is classified `H`
+or `Sem` in §3, and every `H`/`Sem` row is a member of at least one
+family. An **affected row** is a row whose obligation IS declarable but
+whose text authorizes, or whose findings are shaped by, the residual;
+affected rows stay `S`. Mixing the two was making nine `S` rows read as
+inexpressible.
+
+| Id | Residual | Members (`H`/`Sem`) · affected rows (`S`) | Why it cannot be a declaration |
 |---|---|---|---|
 | **R1** | resolution against a value-shaped target | ch13-C7 (entry belt) | C7 requires the target VALUE to satisfy another node's declaration, evaluated at reference time. See §5 F2 — under ONE engine this shrinks to a membership test. |
 | **R2** | unreferenced-entry hygiene with a template-wide skip | ch13-C8(c); ch13-C4's skip clause (the ref-container failure that disables the check template-wide) | The set-difference itself IS declarable (`keysSubsetOf: collect(raw: …)`, the same construct `[d-roleset]` uses). What is not: the RAW-member domain (grammar-failing members still count as references) plus the skip-the-whole-check-if-any-ref-container-failed rule. Both are expressible only as a rule-specific predicate — the single-use smell. |
 | **R3** | existential cross-rules over resolved registrations | ch11-C19, ch12-C5 (one lane, one code) | "IF any binding resolves to a registration whose `requiresRuntimeContext` is true THEN `$.runtimeContext` must be a spec map" is a conditional over a DERIVED property of an injected object. A `when:` general enough to express it is an expression language — the thing ch11-C10's own text refuses. |
-| **R4** | admitted-form derivation (normalization beyond `default:`) | ch11-C39 (`advancesRound` expansion); the effective-config materialization owned by ch11-C20 ("defaults materialized ONCE") with its per-registration defaults ch11-C14/C16/C17 (row ids supplied at arm F8 — the member was prose-only); ch13-C17 (rebuild + normalized sibling fields); ch13-C2's non-string-key filter | These are TRANSFORMS, not validations. A declaration says what is legal; it does not compute the admitted shape. The ADR should name the normalizer as a second, declared-hook machine — not force it into the schema. |
+| **R4** | admitted-form derivation (a produced VALUE, not a verdict) | **Members:** ch11-C39 (`advancesRound` expanded per transition); ch13-C17 (rebuild, normalize-or-`{}` predicate, normalized sibling fields); ch13-C2 (the non-string-key filter into the built catalog). **Affected:** ch11-C20 (the "materialized ONCE at admission" home) and the per-registration defaults ch11-C11/C14/C16/C17 — these are plain `default:` declarations, so they are NOT members (round 2 corrected both directions here: F8's fold had named the effective config a member with no row id, F5 then showed C11 missing from that list, and the right answer was that the whole default set is declarable and only the DERIVATION is residual) | These are TRANSFORMS, not validations. A declaration says what is legal; it does not compute the admitted shape. The engine therefore owes a second capability — emit a normalized value — and the ADR must name it explicitly rather than let "schema" be read as covering it. |
 | **R5** | cross-artifact checks outside the document | ch8-C27 (declared `ref` vs matched filename) | The operand is the filesystem listing, not the document. Stays a store-stage lane. |
-| **R6** | substrate-owned behaviour | ch8-C1/C2/C3/C4/C20's message TEXTS, and ch8-C5's expansion bound (`Δlib`) | Declared as flags with their surfacing stage; the FINDINGS' wording is the YAML library's. Parity here is library-version parity, not engine parity. (The ORDER of those findings is NOT in this family — it was declared at the fold, `[d-order]`, arm F9.) |
+| **R6** | substrate-owned behaviour — a PARITY residual, carrying no obligation residual | **Members:** none. **Affected:** ch8-C1/C2/C3/C4/C20 (message TEXTS) and ch8-C5 (the expansion bound) — all `Δlib` | Each obligation IS declared, as a flag with its surfacing stage; what the engine cannot own is the WORDING, which the YAML library emits. Parity here is library-version parity, not engine parity. The ORDER of those findings is NOT in this family — it became `[d-order]` at the round-1 fold (F9). |
 | **R7** | rows whose only declaration uses a single-use construct | ch11-C8 (`memberOf: keys(@gateCatalog)`); ch11-C16 (per-member `code:` in an enum) | §0's admission test forbids counting these as declarable before the ADR rules on the constructs (§2.4). An ACCEPT ruling moves each row to S; a REJECT moves C8's lane to R1 and C16's disposition lane to a code lane. This family exists so the coverage number cannot borrow against an undecided construct. |
 
 ### 4.1 Verdict on the plan's prediction
@@ -743,12 +752,23 @@ duplicates*. The table CHECKED it rather than assuming it:
 | event-grain suppression | **REFUTED** | `keysSubsetOf: keys(../transitions)` + `gating` expresses ch11-C2's dead-config lane and its dependent suppression. Independent ROWS using the construct: 3 — ch8-C16 (whose three tags are one row, corrected at arm F6), ch11-C2, ch11-C15. Three ≥ two, so the verdict stands on the corrected count. |
 | per-occurrence duplicates | **REFUTED** | `unique {grain: perOccurrence, at: index\|container}` covers ch8-C17, ch11-C40 and ch13-C8(e) — 3 independent rows. The `at:` attribute exists precisely because the three measured lanes DISAGREE on path grain (§5 F3). |
 
-**Two residual families the prediction did not name** — the honest
-counterweight: **R3** (the existential cross-rule) and **R4** (the
-admitted-form derivation). R4 is the larger of the two and the more
-consequential for the ADR: it is not a leftover lane, it is a second
-machine that the ADR must name explicitly, or the direction will be
-read as covering ground it does not cover.
+**FIVE residual families the prediction did not name** — the honest
+counterweight, corrected at round 2 (F3: the sentence still said "two"
+after R7 was born):
+
+| Family | Why the prediction missed it |
+|---|---|
+| **R3** existential cross-rule | The predicted list was drawn from the ch13 surface; this one lives on the ch11/ch12 gate↔workspace seam. |
+| **R4** admitted-form derivation | The largest and the most consequential: not a leftover lane but a SECOND CAPABILITY. If the ADR does not name it, "schema" will be read as covering ground it does not cover. |
+| **R5** cross-artifact check | A boundary class — the operand is the filesystem, so arguably outside any format schema's remit. Named anyway. |
+| **R6** substrate-owned wording | A parity class, not an obligation class (see the table). |
+| **R7** undecided constructs | Did not exist before this audit: it is the by-product of applying §0's own admission test honestly. |
+
+R5 and R6 are boundary/parity classes and could fairly be called out of
+the prediction's scope; R3, R4 and R7 could not. The prediction was
+made about a surface (ch13) and is being checked against four — that
+asymmetry is stated here so the verdicts above are not read as a
+scorecard against the plan.
 
 ## 5. Findings for the ADR
 
@@ -839,7 +859,12 @@ back CLEAN and are the round's most load-bearing result:
 - row coverage both directions — every `C<n>` id in the four contracts
   appears in §3.1–§3.4 and vice versa, 125/125, no orphans either way;
 - declaration-tag closure — 50 tags defined in §2.3, 50 cited in §3,
-  difference lists empty in both directions.
+  difference lists empty in both directions. (Those two numbers are the
+  round-1 BASIS measurement, not the current state: the fold added
+  `[d-order]`. Re-derived after the round-2 fold, the closure is 51/51
+  with both difference lists empty, and it holds whether the citation
+  scan covers §3.1–§3.4 or all of §3 — the scan-range dependence round
+  2's F1 found is closed by citing `[d-role-ref]` on ch8-C10's row.)
 
 All ten findings were folded into this document (F1–F10 cited inline at
 the fold sites). By class: **4 INVENTIONS** — two false orphan flags
@@ -857,3 +882,27 @@ Net effect on the audit's headline: the class TOTALS did not move
 (59/5/6/55) but two rows swapped classes, the orphan count fell 3 → 1,
 and a seventh residual family was born. Nothing in the fold touched the
 enumeration itself.
+
+**Round 2 — 2026-08-05, basis `75a7ec6d…` at HEAD `74ecc781`.** A
+re-check charter on the FOLDED bytes (`p3/arm-round2.md`), same pin,
+440s, guards clean, same threat model. Verdict: **5 IN-SCOPE · 0
+CARRIED-SCOPE · 0 UNRUN**, six lenses completed.
+
+The round's shape is the point: **10 → 5, and the class of defect
+changed**. Round 1 found four inventions and four missing obligations —
+defects in the audit's substance. Round 2 found none of either. All
+five are bookkeeping consequences OF the fold: one declaration tag left
+uncited in the coverage tables (it was cited in §3.5, so the closure
+check's answer depended on its scan range); nine `S` rows sitting in
+residual MEMBER lists, which the members/affected split now separates;
+a stale "two unpredicted families" sentence after R7 was born; the
+`code:` vocabulary cell counting code VALUES where the column promises
+rows; and R4's ownership list still incomplete after round 1's F8 — the
+right correction being to remove the whole default set from the members
+(plain defaults are declarable) rather than to extend it, which also
+answers round 1's F8 more accurately than round 1's own fold did.
+
+Row-id coverage (125/125) and the class tallies were re-verified
+independently before the round and held. Two rounds of the three-round
+budget are spent; the third is unspent and is the user's call at the
+arc stop.
