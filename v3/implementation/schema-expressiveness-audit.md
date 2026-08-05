@@ -785,10 +785,14 @@ scorecard against the plan.
   resolution had to re-check the value's shape. Under ONE engine
   running ONE declaration on BOTH channels, `[d-ctx-entry]` fires on the
   malformed entry directly and C7 reduces to `memberOf:
-  keys($.contextBlocks)`. That belt cost two ratified reopens
-  (2026-08-01 and the 2026-08-02 pair). **This claim is DERIVED, not
-  measured**; its named measurer is the P4 contract-v2 panel's
-  channel-symmetry family plus the build's parity gate.
+  keys($.contextBlocks)`. The belt and its normalization class account
+  for THREE of the ch13 draft's four ratified reopens — the 2026-08-01
+  direct-channel act (which reopened C7 itself) and the 2026-08-02 pair
+  on C17/C8(c); C7's own text was reopened once (verified against the
+  four reopen records in the superseded contract, 2026-08-05). **The
+  dissolution claim is DERIVED, not measured**; its named measurer is
+  the P4 contract-v2 panel's channel-symmetry family plus the build's
+  parity gate.
 - **F3 — path-grain parity is the real parity risk, not message
   wording.** Three measured lanes report at a coarser path than the
   engine's natural grain: duplicate terminal ids at `terminal` (not

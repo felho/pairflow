@@ -1,0 +1,291 @@
+# ADR-019: structural definition rules become declared schema, validated by one engine on both channels
+
+Status: proposed
+Date: 2026-08-05
+Links: supersedes — · amends — · depends-on ADR-011 · related ADR-003, ADR-012, ADR-013
+
+## Context
+
+The ch13 prose line ended at a MEASURED semantic drift floor: 28
+registered rules · 6 literal restatements caught by the pointer-lint ·
+9 semantic paraphrases in the first full arm sweep · 8 FRESH ones in
+the second sweep after the nine were folded. The second number did not
+shrink; it came from new places. The measured cause was the worklist:
+the conversion's index was a hand-built mirror table, and the
+paraphrases lived exactly where that table never looked (five rules had
+zero pointers; four of the table's first nine rows were wrong or
+incomplete). The general form — **a lint confines LITERALS, a mirror
+list names MEANINGS, and prose is not indexable by meaning.** For
+restatement to become structurally impossible, the rules must be DATA.
+
+The user raised the structural form of this at the ch13 boundary
+(process-log 2026-08-02, commit `4c1d481f`): every new format surface
+(ch8, ch11, ch12, ch13) re-legislates the same failure space in
+ratified prose — container preconditions, key/value lanes, unknown
+keys, null/scalar/array forgeries, suppression edges, path grammar,
+channel symmetry. The direction was ratified 2026-08-03 and this ADR is
+its P3 realization.
+
+**The basis is an enumeration, not an impression.**
+`v3/implementation/schema-expressiveness-audit.md` (sha256
+`f779855f0a0823020c71951873a3a21244500ecd6644179cb78ac1f3045d8da7`)
+classifies every ratified rule of the four format surfaces against a
+proposed declaration form, and was verified by two bounded fresh-context
+arm rounds (10 findings then 5, all folded; `ch13-rederivation-arm/p3/`).
+Its measured result:
+
+- **125 contract rows** (ch8 38 · ch11 41 · ch12 27 · ch13 19). Of the
+  **70** that carry a definition-validation obligation: **59 fully
+  declarable · 5 mixed · 6 residual**. The other 55 legislate runtime,
+  CLI, store, port or process and are marked non-lane with a per-row
+  reason. Zero unclassified rows.
+- **112 finding-emit sites** in today's validator and the three
+  delegated gate-config schemas — every one mapped to its owning row.
+- The residual is **seven named families**, not a vague remainder.
+- The plan's predicted residual was CHECKED: event-grain suppression
+  and per-occurrence duplicates REFUTED (declarable); reference
+  resolution and unreferenced hygiene PARTIALLY refuted (the
+  intra-document forms are declarable with the selector vocabulary
+  ch8-C16 already ships). Five families the prediction did not name
+  were found, one of which forces D3 below.
+
+## Decision
+
+### D1 — the direction
+
+**Structural rules become per-surface DECLARED SCHEMA — key classes,
+containers, grammars, defaults and normalization as DATA — consumed by
+ONE engine that validates BOTH the file-walk and direct-construction
+channels. Ratified prose remains ONLY for the audited semantic
+residual.**
+
+Channel symmetry becomes structural rather than argued: attributes that
+read source text (`sourceForm`, key-stringness, the substrate block)
+are declared once and marked file-scoped; the engine runs them where a
+source exists and skips them where none does. This retires the
+hand-partitioned "realization split" that ch11-C40 and ch13-C19 each
+spent ratified prose defending.
+
+The residual — the ONLY territory where prose keeps legislating
+behaviour — is exactly the audit's seven families: **R1** value-shaped
+reference resolution · **R2** unreferenced hygiene with a template-wide
+skip · **R3** existential cross-rules over resolved registrations ·
+**R4** admitted-form derivation · **R5** cross-artifact checks · **R6**
+substrate-owned wording (a parity residual, no obligation) · **R7** rows
+whose only declaration uses a construct this ADR has not admitted (D8).
+
+### D2 — scope
+
+**The TEMPLATE surface, now. Nothing else is built.** The other
+validated surfaces in the repo are NAMED EXTENSION POINTS and each
+needs its own ratified act before any declaration is written for it:
+the `GateDecision` stdout contract (ch11-C25), the `GateInvocation`
+stdin wire (ch11-C23), the CLI `--run-overrides` input (ch12-C9/C20),
+the operator-intent wire (ch12-C13), and the EC emit-contract surface
+(plan §1.3's fifth candidate — deliberately excluded from the audit as
+having no ratified grammar).
+
+### D3 — the engine owes a SECOND capability, named
+
+The audit's R4 is not a leftover lane: admission both VALIDATES and
+PRODUCES the admitted form (`advancesRound` expanded per transition,
+the effective gate config materialized, ch13-C17's rebuild). **A
+declaration says what is legal; it does not compute a value.** The
+build therefore carries a NORMALIZER beside the validator, driven by
+declared hooks, and this ADR names it so that "schema" is never read as
+covering it. Plain `default:` materialization IS declarable and stays
+in the schema; only derivation is the normalizer's.
+
+### D4 — the canonical home: ONE authority, pointers everywhere else
+
+**RECOMMENDED: the declaration lives in the CODE tree as a data-only
+module under the definition module (ADR-011) — `v3/src/definition/
+schema/templateFormat.ts`, a frozen declaration object with no
+executable logic — and the contract carries DECISIONS plus declaration
+POINTERS, restating no attribute.** The ratification act names the
+schema file's bytes exactly as the contract-draft equality lock names
+the C-rows, so the lock is a MECHANISM, not a location.
+
+The weighing, recorded because it is the load-bearing choice here:
+
+- *Ratification-lock pull* — put the declaration in the contract
+  markdown. It inherits the ratified-bytes lock for free. Rejected as
+  the home: the engine would then parse ratified prose to get its
+  rules, which is the exact indexing-prose-by-meaning failure this
+  whole line exists to end.
+- *Code-consumption pull* — put it in the code tree. The engine
+  imports data; a diff is reviewable; the declaration is type-checked.
+  Its weakness is that a code file can be edited without a
+  ratification act — and that weakness is closed by extending the act
+  to the file's bytes, which costs one hash line per act.
+- **Two authorities is the outcome neither pull may produce.** The
+  contract states no structural attribute; it states decisions and
+  cites tags. A rule visible in both places is a defect, and the
+  cheapest tripwire is the tag-closure check the audit already ran
+  twice by hand (every tag defined is cited, every tag cited is
+  defined).
+
+### D5 — the parity gate
+
+**Before the engine replaces any implemented lane, the EXISTING
+fixture corpus is replayed against it and must produce identical
+verdicts, identical finding PATHS and identical MESSAGES — or an
+approved delta list, ratified before the switch, never after.**
+
+The corpus, measured 2026-08-05 by `grep -cE '^\s*(it|test)\('`: **362
+cases** — `validate.test.ts` 124 · `load.test.ts` 76 · `admit.test.ts`
+59 · `process.test.ts` 59 · `fileDefinitionStore.test.ts` 19 ·
+`threshold.test.ts` 13 · `previousReviewerVerdict.test.ts` 12.
+
+This is a DERIVED claim about behaviour that does not exist yet; its
+NAMED MEASURER is the build's parity gate itself. Two delta classes are
+pre-named by the audit so they arrive as decisions rather than
+surprises: **path grain** (duplicate terminal ids report at `terminal`,
+not `terminal[i]`; every key-class lane reports at its containing map —
+an engine written naively silently moves these addresses) and
+**message wording** (nine measured messages embed rule-specific
+rationale; either the declaration carries a literal `message:` or the
+delta list authorizes the engine's own wording).
+
+### D6 — retrofit policy
+
+**Existing surfaces stay as built.** Migrating a surface onto the
+engine is a deliberate per-surface BOUNDARY act with its own parity
+gate and its own ratification — never housekeeping, never folded into a
+packet that is doing something else, never a "while we are here". A
+surface that is never migrated is a legitimate end state.
+
+### D7 — the format-growth rule
+
+New expressiveness is a RATIFIED AMENDMENT, never silent, in two
+flavours that must not be confused:
+
+- **A new NODE declaration** (a key, a grammar, a default) is ordinary
+  additive format growth under plan §8.2 — the realizing chapter's
+  contract row plus the schema edit, in one act.
+- **A new VOCABULARY CONSTRUCT** changes what the engine can express at
+  all, and therefore amends THIS ADR. It is admitted only under the
+  audit's **≥2 independent ratified rows** test; a construct serving
+  exactly one row is refused and that row keeps a prose lane instead.
+
+### D8 — the two undecided constructs (the audit's R7)
+
+Both are single-use today and the audit deliberately refused to bank
+their coverage. **RECOMMENDED: ACCEPT both** (final at the ratification
+act; electing either rejection changes only the two rows named):
+
+- `memberOf: keys(@catalog)` — a selector root that is an INJECTED set
+  rather than a document node (ch11-C8's `uses` resolution). ACCEPT as
+  a generalization of the selector root: a set is a set. REJECT sends
+  that lane to R1 and keeps a one-line code lane for a pure membership
+  test.
+- per-member `code:` inside an enum (ch11-C16's `failInstance` earning
+  a distinct issue code). ACCEPT as the existing `code` attribute
+  applied at member grain, not a new construct. REJECT sends ch11-C16's
+  disposition lane to a prose lane.
+
+### D9 — the falsifiability criterion
+
+**The direction is declared FAILED, and this ADR deprecated, if
+structural rules cannot be expressed without per-rule special cases.**
+The smell is code wearing a declaration's costume. Three concrete
+tripwires, any one of which forces a scope review rather than a
+work-around:
+
+1. a single-use construct is admitted into the vocabulary to make one
+   row fit (D7's test bypassed);
+2. the engine acquires a per-rule branch — a literal `if (rule === X)`
+   — to reproduce a measured verdict, path or message;
+3. the declared residual grows past the seven audited families during
+   contract-v2 authoring without a ratified amendment saying so.
+
+## Alternatives Considered
+
+- **Keep ratified prose plus a hand-written validator (the status
+  quo).** Rejected on measurement, not taste: the drift floor above is
+  what this shape produces, and its second sweep did not shrink.
+- **Adopt an off-the-shelf schema language (JSON Schema, Zod, and
+  friends) as the ratified artifact.** Rejected AS THE ARTIFACT: none
+  of them expresses the things the parity gate is made of — the
+  finding-path GRAIN (`at: index|container`), the container-precondition
+  suppression semantics, the source-form ladder over YAML nodes
+  (anchor/tag/alias-free raw text), the issue-`code` carrier, or the
+  channel-scoped attributes. Zod additionally is code, which forfeits
+  the declaration-as-data property that the whole line rests on. NOT
+  rejected as an implementation detail: generating onto an existing
+  validator core stays open at build time, provided the ratified
+  artifact remains our declaration.
+- **Put the declaration in the contract markdown (D4's rejected pull).**
+  Rejected as the home; kept as the pointer side.
+- **Build the engine first and declare afterwards.** Rejected: that is
+  precisely how today's validator grew, and the audit is the artifact
+  that had to be written to find out what it actually does.
+- **Migrate every surface at once.** Rejected by D6 and by the P1
+  overbuild lesson (process-log 2026-08-04): a guard that grows faster
+  than what it guards is the failure mode this phase already paid for.
+
+## IC-N Screen (mandatory)
+
+No. This decision changes how definition-time structural rules are
+EXPRESSED and validated; it touches no banned kernel shape — no
+deterministic replay of actor/LLM work, no leader-per-shard
+coordination, no event-sourcing as the source of truth, no
+reconciler/outbox for kernel state. This screen does not bypass the
+model↔code divergence stop: the audit's classification changes no
+model meaning, and any row whose MEANING would move travels the
+contract-reopen path in its own act.
+
+## Consequences
+
+- **Positive.** Restatement becomes structurally impossible for the 59
+  declarable rows — there is one place a structural rule can live.
+  Channel asymmetry stops being an argued property (D1). The residual
+  is a NAMED list of seven families instead of an unknown remainder, so
+  a future reader can see exactly where prose still legislates. The
+  ch13-C7 entry belt and its normalization class account for THREE of
+  that draft's four ratified reopens (the 2026-08-01 direct-channel act
+  that reopened C7 itself, and the 2026-08-02 pair on C17/C8(c)) — and
+  the belt is DERIVED to dissolve under one engine on both channels,
+  its measurer being the P4 panel's channel-symmetry family plus the
+  parity gate.
+- **Negative.** A second machine exists (D3's normalizer) and must be
+  kept honest, or "schema" will be read as covering derivation. The
+  contract becomes less self-contained for a human ratifier: decisions
+  live in prose, attributes in the schema file, and the ratification
+  act must name both byte sets. The parity gate is real work whose cost
+  lands on whoever migrates a surface. None of the benefit is realized
+  at this ADR — it is realized at P4/P5.
+- **Neutral.** Today's validator keeps working unchanged under D6; this
+  ADR authorizes a direction and a scope, not a rewrite. The issue-code
+  namespace, the finding forms and the CLI machine shape are unchanged
+  by design — they are inputs to the parity gate, not outputs of it.
+
+## Verification
+
+- **The parity gate (D5)** is the primary proof: 362 existing cases
+  replayed, verdict/path/message identical or an approved delta list.
+- **The tag-closure check (D4)**: every declaration tag cited by a
+  contract row exists in the schema file and vice versa — run twice by
+  hand during the audit, both difference lists empty at 51/51.
+- **The ≥2-row admission test (D7)** is recorded per construct in the
+  audit's §2.2, each cell enumerating its rows; a construct that cannot
+  produce its second row is refused.
+- **The falsifiability tripwires (D9)** are checked at the P4 contract
+  authoring and at every migration act; firing one opens a scope
+  review, not a work-around.
+- The audit itself is the standing basis document, pinned by hash in
+  Context.
+
+## Related
+
+`v3/implementation/schema-expressiveness-audit.md` (the enumeration
+this ADR rests on) · `v3/implementation/ch13-rederivation-plan.md`
+(P3's charter; the phase order P1 → P3 → P4 → P5) · the four format
+contracts `ch8-template-format`, `ch11-gate-format`,
+`ch12-runtime-core`, `ch13-context-block` (superseded — its rows remain
+the ratified decision record) · ADR-011 (the definition module, D4's
+home) · ADR-012 (the yaml dependency behind the substrate block) ·
+ADR-013 (the injected gate registry D8's first construct resolves
+against) · process-log 2026-08-02 (the boundary candidate `4c1d481f`),
+2026-08-03 (the ratified direction), 2026-08-04 (the overbuild reset
+whose four rules bound this phase), 2026-08-05 (P1's close, P2 struck).

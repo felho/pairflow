@@ -33,6 +33,7 @@ Integrity check: [`check.sh`](check.sh) — root bridge `pnpm v3:adr-check`.
 | [ADR-016](ADR-016-delivery-errand-ledger-shape.md) | the delivery-errand ledger — runner-owned, scheduling-only claims, kernel-evidence confirmation | accepted | 2026-07-23 |
 | [ADR-017](ADR-017-spawn-confinement-boundary.md) | one spawn discipline — cwd confinement, env allowlist, timeout kill | accepted | 2026-07-23 |
 | [ADR-018](ADR-018-sys-reason-token-namespace.md) | the `sys:` reason-token namespace convention | accepted | 2026-07-23 |
+| [ADR-019](ADR-019-declared-schema-for-structural-definition-rules.md) | structural definition rules become declared schema — one engine, both channels | proposed | 2026-08-05 |
 
 ## Trigger watch (dormant ADRs)
 
