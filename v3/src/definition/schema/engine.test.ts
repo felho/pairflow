@@ -743,6 +743,103 @@ describe("authored text that collides with a JavaScript object's own members", (
   });
 });
 
+describe("the vocabulary's doc comments, checked against the engine (B2 conformance)", () => {
+  it("a string node whose only scalar lane is a grammar REPORTS a non-string", () => {
+    const decl = fixed("m", {
+      a: { kind: "string", tag: "a", rows: ROWS, grammar: { re: "^[a-z]+$", message: "a must match {grammar}" } },
+    });
+    expect(direct(decl, { a: 9 })).toStrictEqual([{ path: "a", message: "a must match ^[a-z]+$" }]);
+  });
+
+  it("DISCRIMINATES: a node whose MEMBERSHIP lane owns the fault still stays silent on type", () => {
+    // `start` and a transition target report one finding for both faults,
+    // so the grammar lane must NOT take over where a membership lane exists.
+    const decl = fixed("m", {
+      names: { kind: "map.open", tag: "n", rows: ROWS, containerMessage: "c", keyLaneAt: "container",
+        entry: text("ne") },
+      pick: { kind: "string", tag: "p", rows: ROWS,
+        memberOf: { relation: "memberOf", target: { keysOf: "$.names" }, message: "pick must name one; got {value}" } },
+    });
+    expect(direct(decl, { names: { a: "1" }, pick: 9 })).toStrictEqual([
+      { path: "pick", message: "pick must name one; got 9" },
+    ]);
+  });
+
+  it("a declared resolved belt still applies after the source ladder passes", () => {
+    const decl = fixed("m", {
+      n: { kind: "integer", tag: "n", rows: ROWS, sourceForm: "plainDecimalInteger",
+        resolvedForm: { safeInteger: true, min: 5, message: "n must be >= 5" } },
+    });
+    // The ladder proves the SOURCE form and has its own built-in bound of
+    // 1; a declared stricter bound is a separate obligation.
+    expect(fromFile(decl, "n: 3\n")).toStrictEqual([{ path: "n", message: "n must be >= 5" }]);
+    expect(direct(decl, { n: 3 })).toStrictEqual([{ path: "n", message: "n must be >= 5" }]);
+  });
+
+  it("DISCRIMINATES: a value satisfying both the ladder and the belt passes on both channels", () => {
+    const decl = fixed("m", {
+      n: { kind: "integer", tag: "n", rows: ROWS, sourceForm: "plainDecimalInteger",
+        resolvedForm: { safeInteger: true, min: 5, message: "n must be >= 5" } },
+    });
+    expect(fromFile(decl, "n: 7\n")).toStrictEqual([]);
+    expect(direct(decl, { n: 7 })).toStrictEqual([]);
+  });
+
+  it("the duplicate lane's `at` grain is its OWN, not the member lane's", () => {
+    const atIndex = (memberLaneAt: "container" | "index"): NodeDecl =>
+      ({ kind: "list", tag: "l", rows: ROWS, containerMessage: "c", memberLaneAt, member: text("m"),
+        unique: { grain: "perOccurrence", at: "index", message: "dup {valueRaw}" } });
+    // Both member grains must give the duplicate lane the SAME index path.
+    expect(direct(atIndex("container"), ["a", "a"])).toStrictEqual([{ path: "$[1]", message: "dup a" }]);
+    expect(direct(atIndex("index"), ["a", "a"])).toStrictEqual([{ path: "$[1]", message: "dup a" }]);
+  });
+
+  it("DISCRIMINATES: `at: container` still addresses the container under either member grain", () => {
+    const atContainer = (memberLaneAt: "container" | "index"): NodeDecl =>
+      ({ kind: "list", tag: "l", rows: ROWS, containerMessage: "c", memberLaneAt, member: text("m"),
+        unique: { grain: "perOccurrence", at: "container", message: "dup {valueRaw}" } });
+    expect(direct(atContainer("container"), ["a", "a"])).toStrictEqual([{ path: "$", message: "dup a" }]);
+    expect(direct(atContainer("index"), ["a", "a"])).toStrictEqual([{ path: "$", message: "dup a" }]);
+  });
+
+  describe("`dependsOn` suppression is per-INSTANCE, so document order cannot change the answer", () => {
+    const surface = (): SurfaceDecl =>
+      ({
+        substrate: templateFormat.substrate, valueClasses: {}, crossRules: [], normalizers: [],
+        root: fixed("r", {
+          names: { kind: "map.open", tag: "nm", rows: ROWS, containerMessage: "c", keyLaneAt: "container",
+            entry: text("nmv") },
+          steps: { kind: "map.open", tag: "st", rows: ROWS, containerMessage: "c", keyLaneAt: "container",
+            entry: fixed("ste", {
+              role: { kind: "string", tag: "ro", rows: ROWS, typeMessage: "bad role",
+                grammar: { re: "^[a-z]+$", message: "bad role" }, gating: true },
+              pick: { kind: "string", tag: "pk", rows: ROWS,
+                memberOf: { relation: "memberOf", target: { keysOf: "$.names" },
+                  message: "pick {valueRaw} is not a name", dependsOn: ["ro"] } },
+            }) },
+        }),
+      });
+    const good = { role: "r", pick: "ghost" };
+    const bad = { role: "BAD", pick: "x" };
+    const run = (steps: Record<string, unknown>): readonly ValidationFinding[] =>
+      runSurface(surface(), { names: { a: "1" }, steps }, { channel: { kind: "direct" } }).findings;
+
+    it("a VALID entry reports whether it comes before or after a broken sibling entry", () => {
+      const expected = { path: "steps.good.pick", message: "pick ghost is not a name" };
+      expect(run({ good })).toContainEqual(expected);
+      expect(run({ bad, good })).toContainEqual(expected);
+      expect(run({ good, bad })).toContainEqual(expected);
+    });
+
+    it("DISCRIMINATES: the BROKEN entry's own dependent lane is still suppressed", () => {
+      // Without this, "no leakage" could be achieved by never suppressing.
+      expect(run({ bad: { role: "BAD", pick: "ghost" } })).toStrictEqual([
+        { path: "steps.bad.role", message: "bad role" },
+      ]);
+    });
+  });
+});
+
 describe("the declaration GATE: a declaration that is not closed never becomes a surface", () => {
   // F8's correction. Each guard is ONE builder taking `ok`, so the broken
   // and corrected surfaces are structurally identical BY CONSTRUCTION —

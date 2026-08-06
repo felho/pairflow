@@ -426,9 +426,19 @@ function checkMembership(
   slots: Slots,
   local?: ReadonlyMap<string, boolean>,
 ): void {
-  if (rule.dependsOn?.some((tag) => local?.get(tag) === false || !run.reliable(tag)) === true) return;
+  // Suppression is the CITING INSTANCE's business. Where a sibling status
+  // exists it decides; the global tag status is sticky across every
+  // instance of a declaration path, so consulting it first let one
+  // open-map entry's failure suppress a different, valid entry's finding
+  // — and only when the broken one came first in the document.
+  const suppressed = rule.dependsOn?.some((tag) =>
+    local?.has(tag) === true ? local.get(tag) === false : !run.reliable(tag),
+  );
+  if (suppressed === true) return;
   const set = evaluateSelector(run, frame, rule.target);
   if (set.status === "pending") {
+    // The decision is taken NOW, while the siblings are in scope: by the
+    // time the queue drains they are gone.
     run.deferred.push({ frame, rule, candidate, slots });
     return;
   }
@@ -842,7 +852,9 @@ function evalList(
       checkMembership(run, memberFrame, decl.memberOf, member, { ...slots, path: memberPath, value: member });
     }
     if (decl.unique?.grain === "perOccurrence") {
-      const at = decl.unique.at === "container" ? frame.path : memberPath;
+      // `unique.at` is the DUPLICATE lane's own grain; it must not inherit
+      // the member lane's, which `memberLaneAt` sets for a different lane.
+      const at = decl.unique.at === "container" ? frame.path : indexPath(frame.path, index);
       if (seen.has(member)) {
         run.emit(at, render(decl.unique.message, { ...slots, path: at, value: member }));
       }
@@ -883,8 +895,9 @@ function evalString(
     // A node that declares NO type lane leaves the non-string case to its
     // membership lane, which emits ONE finding for both faults (the
     // measured form of `start` and of a transition target).
-    if (decl.typeMessage !== undefined) {
-      run.emit(frame.path, render(decl.typeMessage, slots), decl.presence?.code);
+    const typeLane = decl.typeMessage ?? (decl.memberOf === undefined ? decl.grammar?.message : undefined);
+    if (typeLane !== undefined) {
+      run.emit(frame.path, render(typeLane, slots), decl.presence?.code);
       return { ok: false };
     }
   } else {
@@ -918,7 +931,9 @@ function evalInteger(
       run.emit(frame.path, message);
       return { ok: false };
     }
-    return { ok: true, value };
+    // The ladder proves the SOURCE form; a declared resolved belt is a
+    // separate obligation and still applies (its own bound may be
+    // stricter than the ladder's built-in one).
   }
   const belt = decl.resolvedForm;
   if (belt?.safeInteger === true) {
@@ -1063,7 +1078,10 @@ function runDeferred(run: Run): void {
   // operand has completed by now, so a second pass could only loop.
   const queued = run.deferred.splice(0, run.deferred.length);
   for (const check of queued) {
-    checkMembership(run, check.frame, check.rule, check.candidate, check.slots);
+    // `dependsOn` was already decided when this was queued, with the
+    // citing instance's siblings in scope — an empty local map here keeps
+    // the global status from re-deciding it.
+    checkMembership(run, check.frame, check.rule, check.candidate, check.slots, new Map());
   }
   run.deferred.length = 0;
 }
