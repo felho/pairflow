@@ -147,7 +147,7 @@ function resolvedDuplicateFindings(doc: Document, lineCounter: LineCounter): rea
           finding: {
             stage: "parse",
             ...(pos && pos.line > 0 ? { line: pos.line, col: pos.col } : {}),
-            message: SUBSTRATE.parse.duplicateKeyMessage,
+            message: SUBSTRATE.parse.duplicateKeys.message,
           },
         });
       }

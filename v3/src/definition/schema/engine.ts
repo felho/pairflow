@@ -5,7 +5,6 @@ import { isCanonicalizable } from "../../emit/opId.js";
 import type { GateCatalog } from "../../ports/index.js";
 import type { ValidationFinding } from "../errors.js";
 import type {
-  DeclPath,
   EqualsRuleDecl,
   MembershipRule,
   MessageTemplate,
@@ -35,6 +34,12 @@ import type {
  * does NOT derive values — derivation is the separately-named normalizer
  * (D3, `normalizer.ts`).
  */
+
+/** The engine's INTERNAL address for a declaration position
+ * (`$.steps.*.role`). It is NOT one of the declaration's three path
+ * languages (design review F11) — no declaration ever writes one; the walk
+ * builds them to key its reliability and completion bookkeeping. */
+type DeclPath = string;
 
 /** The channel the declaration is being run on. */
 export type EngineChannel =
@@ -599,12 +604,14 @@ function evalMapFixed(
   // A field declared for ONE channel is legal only there — the same
   // channel scoping D1 applies to source-bearing attributes, applied to
   // keyset membership.
-  const legal = new Set(
-    fieldNames.filter((name) => {
-      const channel = decl.fields[name]?.channel;
-      return channel === undefined || channel === "both" || channel === run.channel.kind;
-    }),
-  );
+  const inChannel = (name: string): boolean => {
+    const channel = decl.fields[name]?.channel;
+    return channel === undefined || channel === "both" || channel === run.channel.kind;
+  };
+  // A channel-scoped field is scoped WHOLE: out of channel it is neither a
+  // legal key, nor a missing one, nor evaluated (design review F7).
+  const scoped = fieldNames.filter(inChannel);
+  const legal = new Set(scoped);
   const normalized: Record<string, unknown> = {};
   const local: LocalOk = new Map();
 
@@ -613,14 +620,14 @@ function evalMapFixed(
       if (typeof key !== "string") {
         run.emit(
           frame.path,
-          render(decl.unknownMessage, { ...slots, key, value: key, keys: fieldNames.join(", ") }),
+          render(decl.unknownMessage, { ...slots, key, value: key, keys: scoped.join(", ") }),
         );
         continue;
       }
       if (legal.has(key)) continue;
       const at = joinPath(frame.path, key);
       const removed = decl.removedKeys?.[key];
-      const keySlots: Slots = { ...slots, path: at, key, value: key, keys: fieldNames.join(", ") };
+      const keySlots: Slots = { ...slots, path: at, key, value: key, keys: scoped.join(", ") };
       run.emit(at, render(removed ?? decl.unknownMessage, keySlots));
     }
   };
@@ -662,16 +669,16 @@ function evalMapFixed(
 
   const order = decl.laneOrder ?? "unknownThenPerKey";
   if (order === "missingThenUnknown") {
-    for (const name of fieldNames) emitMissing(name);
+    for (const name of scoped) emitMissing(name);
     emitUnknownKeys();
-    for (const name of fieldNames) evalOneField(name);
+    for (const name of scoped) evalOneField(name);
   } else if (order === "unknownThenMissingThenValues") {
     emitUnknownKeys();
-    for (const name of fieldNames) emitMissing(name);
-    for (const name of fieldNames) evalOneField(name);
+    for (const name of scoped) emitMissing(name);
+    for (const name of scoped) evalOneField(name);
   } else {
     emitUnknownKeys();
-    for (const name of fieldNames) {
+    for (const name of scoped) {
       if (!containerHas(container, name)) {
         emitMissing(name);
         evalOneField(name);
@@ -1107,77 +1114,4 @@ export function runSurface(surface: SurfaceDecl, value: unknown, opts: EngineOpt
     effectiveConfigs: run.effectiveConfigs,
     runtimeContextBindings: run.runtimeContextBindings,
   };
-}
-
-/** Every issue code the surface's declaration assigns, from every lane
- * that carries one. The operand of ch8-C23's closed-namespace check. */
-export function collectCodes(surface: SurfaceDecl): readonly string[] {
-  const codes: string[] = [];
-  const push = (code: string | undefined): void => {
-    if (code !== undefined) codes.push(code);
-  };
-  const visit = (decl: NodeDecl): void => {
-    push(decl.presence?.code);
-    switch (decl.kind) {
-      case "map.fixed":
-        for (const field of Object.values(decl.fields)) visit(field);
-        return;
-      case "map.open":
-        push(decl.keysSubsetOf?.code);
-        if (decl.keyClass !== undefined) visit(decl.keyClass);
-        visit(decl.entry);
-        return;
-      case "list":
-        push(decl.memberOf?.code);
-        push(decl.disjointFrom?.code);
-        visit(decl.member);
-        return;
-      case "string":
-        push(decl.memberOf?.code);
-        return;
-      case "enum":
-        push(decl.code);
-        return;
-      case "union":
-        if (decl.mapCase !== undefined) visit(decl.mapCase);
-        return;
-      default:
-        return;
-    }
-  };
-  visit(surface.root);
-  for (const decl of Object.values(surface.valueClasses)) visit(decl);
-  return codes;
-}
-
-/** The declaration's own tag inventory — the operand of D4's tag-closure
- * check (every tag defined is citable, every tag cited is defined). */
-export function collectTags(surface: SurfaceDecl): readonly string[] {
-  const tags: string[] = [];
-  const visit = (decl: NodeDecl): void => {
-    tags.push(decl.tag);
-    switch (decl.kind) {
-      case "map.fixed":
-        for (const field of Object.values(decl.fields)) visit(field);
-        return;
-      case "map.open": {
-        if (decl.keyClass !== undefined) visit(decl.keyClass);
-        visit(decl.entry);
-        return;
-      }
-      case "list":
-        visit(decl.member);
-        return;
-      case "union":
-        if (decl.mapCase !== undefined) visit(decl.mapCase);
-        return;
-      default:
-        return;
-    }
-  };
-  visit(surface.root);
-  for (const [, decl] of Object.entries(surface.valueClasses)) visit(decl);
-  for (const rule of surface.crossRules) tags.push(rule.tag);
-  for (const hook of surface.normalizers) tags.push(hook.tag);
-  return tags;
 }

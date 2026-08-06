@@ -41,20 +41,46 @@
 export type MessageTemplate = string;
 
 /**
- * A path into the value graph, in the declaration's own address form:
- * `$` root, dotted segments, `*` for "every entry of an open map", and a
- * leading `..` for one level up from the citing node.
+ * THREE path languages, named apart (design review F11: one type name over
+ * three interpreters promises a compatibility that does not exist). Each is
+ * checked at declaration load by `defineSurface`, so a path written in the
+ * wrong language is a LOUD error rather than a silent no-op.
  */
-export type DeclPath = string;
+
+/**
+ * A SELECTOR path — an address into the value graph, read by the engine's
+ * selector interpreter.
+ *
+ * Grammar: a head of `$` (the document root) or `^` (the citing node's own
+ * container), then dot-separated segments, where the segment `*` means
+ * "every entry of an open map". Nothing else is legal: there is no `..`
+ * form, because `..` is indistinguishable from an empty dotted segment.
+ */
+export type SelectorPath = string;
+
+/**
+ * A FINDING-PATH template — where a cross rule's finding is addressed. It
+ * is NOT walked: it is rendered, so it carries literal path text plus the
+ * same `{placeholder}` slots a `MessageTemplate` carries (`roles`,
+ * `roles.{valueRaw}`). Selector syntax is illegal here.
+ */
+export type FindingPathTemplate = string;
+
+/**
+ * A NORMALIZER operand path — read by the normalizer's own resolver, which
+ * understands a `$` head, dot-separated segments, and the `.*.`
+ * open-map-wildcard separator. It is not the selector language.
+ */
+export type NormalizerPath = string;
 
 /** vocabulary #12 — the selector roots. `injected` is D8's ADMITTED
  * widening: a selector root that is an injected SET rather than a
  * document node (a set is a set; the relation and finding form are
  * unchanged). */
 export type Selector =
-  | { readonly keysOf: DeclPath }
-  | { readonly valuesOf: DeclPath }
-  | { readonly collect: DeclPath }
+  | { readonly keysOf: SelectorPath }
+  | { readonly valuesOf: SelectorPath }
+  | { readonly collect: SelectorPath }
   | { readonly union: readonly Selector[] }
   | { readonly injected: "gateCatalog" };
 
@@ -108,7 +134,15 @@ export type LaneOrder =
  * and skips it where none does), `direct` for a key that exists only on
  * the direct-construction channel because it belongs to the ADMITTED form
  * rather than the authored one. This is D1's structural channel symmetry
- * — the retired hand-partitioned "realization split". */
+ * — the retired hand-partitioned "realization split".
+ *
+ * WHERE IT IS HONOURED, exactly (design review F7): on a FIELD of a
+ * `map.fixed`, where it scopes the whole field — legality, presence and
+ * evaluation. Nowhere else. A `channel` on a root, a list member, an
+ * open-map entry, a union case or a value-class definition is REFUSED at
+ * declaration load rather than accepted and ignored. (`EnumDecl` members
+ * carry their own member-grain `channel`, and `deepKeyStringness` carries
+ * its own; both are separate attributes with their own readers.) */
 interface NodeBase {
   readonly tag: string;
   readonly rows: readonly string[];
@@ -310,8 +344,8 @@ export interface EqualsRuleDecl {
   readonly relation: "equals";
   readonly left: Selector;
   readonly right: Selector;
-  readonly missingFromLeft: { readonly at: DeclPath; readonly message: MessageTemplate };
-  readonly missingFromRight: { readonly at: DeclPath; readonly message: MessageTemplate };
+  readonly missingFromLeft: { readonly at: FindingPathTemplate; readonly message: MessageTemplate };
+  readonly missingFromRight: { readonly at: FindingPathTemplate; readonly message: MessageTemplate };
   readonly dependsOn?: readonly string[];
 }
 
@@ -327,11 +361,11 @@ export type NormalizerHookDecl =
       readonly rows: readonly string[];
       readonly hook: "expandAdvancesRound";
       /** The open map of entries the flag map is expanded per. */
-      readonly over: DeclPath;
+      readonly over: NormalizerPath;
       /** The entry's edge map, relative to the entry. */
       readonly edges: string;
       /** The declared advancing set. */
-      readonly advanceSet: DeclPath;
+      readonly advanceSet: NormalizerPath;
       /** The produced sibling field. */
       readonly into: string;
     }
@@ -340,7 +374,7 @@ export type NormalizerHookDecl =
       readonly rows: readonly string[];
       readonly hook: "materializeEffectiveConfigs";
       /** The open map of pipelines whose members carry a delegated config. */
-      readonly over: DeclPath;
+      readonly over: NormalizerPath;
       /** The binding fields carried into the admitted form verbatim. */
       readonly carry: readonly string[];
       /** The produced field the effective config lands in. */
@@ -355,22 +389,40 @@ export type NormalizerHookDecl =
  */
 export interface SubstrateDecl {
   /** ch8-C6: the read stage's decode wording. */
-  readonly read: { readonly message: MessageTemplate };
+  readonly read: SubstrateBranch & { readonly message: MessageTemplate };
   readonly parse: {
     /** ch8-C34: the only accepted `%YAML` directive version, and the
      * finding a different one produces (`{key}` is the authored one). */
-    readonly directive: { readonly only: string; readonly message: MessageTemplate };
+    readonly directive: SubstrateBranch & {
+      readonly only: string;
+      readonly message: MessageTemplate;
+    };
     /** ch8-C4: the duplicate-key wording. */
-    readonly duplicateKeyMessage: MessageTemplate;
+    readonly duplicateKeys: SubstrateBranch & { readonly message: MessageTemplate };
   };
   /** ch8-C5: the resolved graph must be acyclic, and the finding it
    * yields at the cycle's path. */
-  readonly resolve: { readonly graph: { readonly message: MessageTemplate } };
+  readonly resolve: { readonly graph: SubstrateBranch & { readonly message: MessageTemplate } };
   /** ch8-C23: the CLOSED issue-code namespace. Every `code` any node in
-   * the surface declares must be a member — asserted, not assumed. */
-  readonly codes: readonly string[];
+   * the surface declares must be a member — checked at declaration load. */
+  readonly codes: SubstrateBranch & { readonly values: readonly string[] };
   /** ch8-C22/C36: the every-stage belt's own finding. */
-  readonly internalFailure: { readonly path: string; readonly message: MessageTemplate };
+  readonly internalFailure: SubstrateBranch & {
+    readonly path: string;
+    readonly message: MessageTemplate;
+  };
+}
+
+/**
+ * Every substrate branch is TAG-ADDRESSABLE, for the same reason every
+ * node is (design review F6): D4's contract form is "decisions plus
+ * declaration pointers", and a branch with no tag is an authority a
+ * ratified row can only cite by repeating its text — which is the one
+ * thing D4 forbids.
+ */
+export interface SubstrateBranch {
+  readonly tag: string;
+  readonly rows: readonly string[];
 }
 
 /** One declared surface: substrate + node tree + the named residual's

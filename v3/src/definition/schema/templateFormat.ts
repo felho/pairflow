@@ -1,3 +1,4 @@
+import { defineSurface } from "./defineSurface.js";
 import type { NodeDecl, SurfaceDecl } from "./vocabulary.js";
 
 /**
@@ -476,8 +477,10 @@ const rootNode: NodeDecl = {
 // The surface.
 // ---------------------------------------------------------------------------
 
-export const templateFormat: SurfaceDecl = Object.freeze({
-  // The SUBSTRATE block carries only what is consumed or asserted. The
+export const templateFormat: SurfaceDecl = defineSurface({
+  // The SUBSTRATE block carries only what is consumed or asserted, and
+  // every branch is TAG-ADDRESSABLE so a ratified row can cite it by
+  // pointer instead of repeating its text (design review F6). The
   // rules it used to state about the yaml library's own behaviour — the
   // core schema, one document per file, warning promotion, alias
   // resolution — are real ratified rules (ch8-C1/C2/C3/C5) but they are
@@ -485,24 +488,50 @@ export const templateFormat: SurfaceDecl = Object.freeze({
   // as declaration made them read as authority they were not (arm round
   // 1, F5). Their test carriers are `load.test.ts`'s substrate lanes.
   substrate: {
-    read: { message: "invalid UTF-8 byte sequence (templates are strict UTF-8)" },
+    read: {
+      tag: "d-read",
+      rows: ["ch8-C6"],
+      message: "invalid UTF-8 byte sequence (templates are strict UTF-8)",
+    },
     parse: {
-      directive: { only: "1.2", message: "%YAML {key} directive: only YAML 1.2 is supported" },
-      duplicateKeyMessage: "Map keys must be unique",
+      directive: {
+        tag: "d-directive",
+        rows: ["ch8-C34"],
+        only: "1.2",
+        message: "%YAML {key} directive: only YAML 1.2 is supported",
+      },
+      duplicateKeys: {
+        tag: "d-dupkeys",
+        rows: ["ch8-C4"],
+        message: "Map keys must be unique",
+      },
     },
     resolve: {
-      graph: { message: "cyclic value structure: the resolved template graph must be acyclic" },
+      graph: {
+        tag: "d-graph",
+        rows: ["ch8-C5"],
+        message: "cyclic value structure: the resolved template graph must be acyclic",
+      },
     },
     // ch8-C23: the CLOSED issue-code namespace, disjoint from registry
     // names. `unresolved_context_block_ref` is ratified-but-unbuilt.
-    codes: [
-      "gate_evaluator_unavailable",
-      "runtime_context_required_for_process_gate",
-      "invalid_process_gate_config",
-      "gate_config_not_supported",
-      "unresolved_context_block_ref",
-    ],
-    internalFailure: { path: "$", message: "internal validator failure: {valueRaw}" },
+    codes: {
+      tag: "d-codes",
+      rows: ["ch8-C23"],
+      values: [
+        "gate_evaluator_unavailable",
+        "runtime_context_required_for_process_gate",
+        "invalid_process_gate_config",
+        "gate_config_not_supported",
+        "unresolved_context_block_ref",
+      ],
+    },
+    internalFailure: {
+      tag: "d-internal-failure",
+      rows: ["ch8-C22", "ch8-C36"],
+      path: "$",
+      message: "internal validator failure: {valueRaw}",
+    },
   },
   root: rootNode,
   valueClasses: { idClass, agentConfigValue },

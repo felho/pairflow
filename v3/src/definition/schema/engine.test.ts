@@ -3,8 +3,9 @@ import { describe, expect, it } from "vitest";
 
 import type { GateCatalog, GateRegistration } from "../../ports/index.js";
 import type { ValidationFinding } from "../errors.js";
-import { collectCodes, collectTags, runSurface } from "./engine.js";
+import { runSurface } from "./engine.js";
 import type { EngineChannel } from "./engine.js";
+import { closureProblems, defineSurface, SurfaceDeclarationError } from "./defineSurface.js";
 import { normalize } from "./normalizer.js";
 import { templateFormat } from "./templateFormat.js";
 import type { NodeDecl, SurfaceDecl } from "./vocabulary.js";
@@ -688,41 +689,184 @@ describe("the normalizer (ADR-019 D3) — derivation, never validation", () => {
   });
 });
 
-describe("the declaration's own hygiene", () => {
-  it("every declaration tag is unique — the tag-closure check's mechanical half (D4)", () => {
-    const tags = collectTags(templateFormat);
-    expect(new Set(tags).size).toBe(tags.length);
+describe("the declaration GATE: a declaration that is not closed never becomes a surface", () => {
+  // A minimal CLOSED surface. Every guard fixture below is this surface
+  // with exactly ONE reference broken, and each pair proves discrimination:
+  // the broken form throws with its own problem, the corrected form does
+  // not throw at all.
+  const closed = (over: Partial<SurfaceDecl> = {}, rootOver: Record<string, unknown> = {}): SurfaceDecl =>
+    ({
+      substrate: templateFormat.substrate,
+      valueClasses: {
+        idClass: { kind: "string", tag: "vc", rows: ["x"], grammar: { re: "^[a-z]+$", message: "bad" } },
+      },
+      crossRules: [],
+      normalizers: [],
+      root: {
+        kind: "map.fixed",
+        tag: "root",
+        rows: ["x"],
+        containerMessage: "c",
+        unknownMessage: "u",
+        fields: { id: { kind: "valueClass", tag: "id", rows: ["x"], valueClass: "idClass" } },
+        ...rootOver,
+      },
+      ...over,
+    });
+
+  interface Guard {
+    readonly claim: string;
+    /** The surface with ONE reference broken. */
+    readonly broken: SurfaceDecl;
+    /** The problem the gate must name. */
+    readonly problem: RegExp;
+  }
+
+  const node = (extra: Record<string, unknown>): SurfaceDecl =>
+    closed({}, { fields: { id: { kind: "valueClass", tag: "id", rows: ["x"], valueClass: "idClass", ...extra } } });
+
+  const withSelector = (path: string): SurfaceDecl =>
+    closed({}, {
+      fields: {
+        names: { kind: "map.open", tag: "n", rows: ["x"], containerMessage: "c", keyLaneAt: "container", entry: { kind: "string", tag: "ne", rows: ["x"], typeMessage: "t" } },
+        pick: { kind: "string", tag: "p", rows: ["x"], memberOf: { relation: "memberOf", target: { keysOf: path }, message: "m" } },
+      },
+    });
+
+  const GUARDS: readonly Guard[] = [
+    {
+      claim: "an unknown value-class name — the measured shame case",
+      broken: closed({}, { fields: { id: { kind: "valueClass", tag: "id", rows: ["x"], valueClass: "TYPO" } } }),
+      problem: /value class "TYPO" is not declared/u,
+    },
+    {
+      claim: "a selector path in the documented-but-inert `..` form",
+      broken: withSelector("..names"),
+      problem: /selector path "\.\.names" must start with "\$"/u,
+    },
+    {
+      claim: "a selector path with an empty segment",
+      broken: withSelector("$..names"),
+      problem: /has an empty segment/u,
+    },
+    {
+      claim: "a selector path with `*` inside a segment",
+      broken: withSelector("$.na*mes"),
+      problem: /"\*" is legal only as a whole segment/u,
+    },
+    {
+      claim: "a channel mark where the engine does not read one",
+      broken: closed({}, {
+        fields: {
+          list: { kind: "list", tag: "l", rows: ["x"], containerMessage: "c", memberLaneAt: "index",
+            member: { kind: "string", tag: "lm", rows: ["x"], typeMessage: "t", channel: "file" } },
+        },
+      }),
+      problem: /carries channel "file", which is read only on a field of a map\.fixed/u,
+    },
+    {
+      claim: "a dependsOn naming a tag nothing declares",
+      broken: closed({}, {
+        fields: {
+          uses: { kind: "string", tag: "u", rows: ["x"], typeMessage: "t" },
+          config: { kind: "delegate", tag: "c", rows: ["x"], registry: "gateCatalog", by: "uses",
+            beltMessage: "b", dependsOn: ["no-such-tag"] },
+        },
+      }),
+      problem: /dependsOn names "no-such-tag", which is not a declared tag/u,
+    },
+    {
+      claim: "a tag declared twice",
+      broken: node({ tag: "root" }),
+      problem: /tag "root" is declared more than once/u,
+    },
+    {
+      claim: "a node citing no ratified row",
+      broken: node({ rows: [] }),
+      problem: /cites no ratified row/u,
+    },
+    {
+      claim: "an issue code outside the closed namespace",
+      broken: closed({}, {
+        fields: { id: { kind: "enum", tag: "id", rows: ["x"], members: [{ value: "a" }], message: "m", code: "made_up_code" } },
+      }),
+      problem: /issue code "made_up_code" is outside the declared namespace/u,
+    },
+    {
+      claim: "a message using a placeholder the engine does not supply",
+      broken: closed({}, { unknownMessage: "unknown {notASlot}" }),
+      problem: /unknown placeholder \{notASlot\}/u,
+    },
+    {
+      claim: "a finding-path template written in selector syntax",
+      broken: closed({
+        crossRules: [{
+          tag: "eq", rows: ["x"], relation: "equals",
+          left: { keysOf: "$.id" }, right: { keysOf: "$.id" },
+          missingFromLeft: { at: "$.roles", message: "m" },
+          missingFromRight: { at: "roles", message: "m" },
+        }],
+      }),
+      problem: /uses selector syntax; a finding path is rendered, not walked/u,
+    },
+    {
+      claim: "a normalizer operand path that is not document-rooted",
+      broken: closed({
+        normalizers: [{ tag: "n", rows: ["x"], hook: "expandAdvancesRound", over: "steps", edges: "t", advanceSet: "$.r", into: "f" }],
+      }),
+      problem: /normalizer path "steps" must start with "\$"/u,
+    },
+    {
+      claim: "a grammar that is not a valid regular expression",
+      broken: closed({
+        valueClasses: { idClass: { kind: "string", tag: "vc", rows: ["x"], grammar: { re: "^[a-z", message: "bad" } } },
+      }),
+      problem: /is not a valid regular expression/u,
+    },
+  ];
+
+  for (const guard of GUARDS) {
+    it(`${guard.claim} — the gate REFUSES it`, () => {
+      expect(() => defineSurface(guard.broken)).toThrow(SurfaceDeclarationError);
+      expect(closureProblems(guard.broken).join("\n")).toMatch(guard.problem);
+    });
+  }
+
+  it("DISCRIMINATION: the same surface with every reference resolved passes the gate", () => {
+    // Every fixture above is `closed()` with ONE thing broken. If the gate
+    // fired unconditionally, this would throw too — which is what makes the
+    // refusals above evidence rather than noise.
+    expect(closureProblems(closed())).toStrictEqual([]);
+    expect(() => defineSurface(closed())).not.toThrow();
+    expect(closureProblems(withSelector("$.names"))).toStrictEqual([]);
   });
 
-  it("every issue code the declaration assigns is inside the CLOSED namespace (ch8-C23)", () => {
-    const declared = new Set(templateFormat.substrate.codes);
-    const assigned = collectCodes(templateFormat);
-    expect(assigned.length).toBeGreaterThan(0);
-    expect(assigned.filter((code) => !declared.has(code))).toStrictEqual([]);
+  it("the guard register is complete, unique and PINNED", () => {
+    expect(GUARDS).toHaveLength(13);
+    expect(new Set(GUARDS.map((guard) => guard.claim)).size).toBe(GUARDS.length);
   });
 
-  it("every declared node, cross rule and normalizer hook cites at least one ratified row", () => {
-    const walk = (decl: NodeDecl): string[] => {
-      const own = decl.rows.length === 0 ? [decl.tag] : [];
-      switch (decl.kind) {
-        case "map.fixed":
-          return [...own, ...Object.values(decl.fields).flatMap(walk)];
-        case "map.open":
-          return [...own, ...(decl.keyClass ? walk(decl.keyClass) : []), ...walk(decl.entry)];
-        case "list":
-          return [...own, ...walk(decl.member)];
-        case "union":
-          return [...own, ...(decl.mapCase ? walk(decl.mapCase) : [])];
-        default:
-          return own;
-      }
-    };
-    const rowless = [
-      ...walk(templateFormat.root),
-      ...Object.values(templateFormat.valueClasses).flatMap(walk),
-      ...templateFormat.crossRules.filter((rule) => rule.rows.length === 0).map((rule) => rule.tag),
-      ...templateFormat.normalizers.filter((hook) => hook.rows.length === 0).map((hook) => hook.tag),
-    ];
-    expect(rowless).toStrictEqual([]);
+  it("the LIVE declaration is closed — no unresolved reference reaches a document", () => {
+    expect(closureProblems(templateFormat)).toStrictEqual([]);
+  });
+
+  it("the LIVE declaration is frozen at EVERY level, not only the root (ADR-019 D4)", () => {
+    const root = templateFormat.root as unknown as { readonly fields: Record<string, Record<string, unknown>> };
+    const nested = root.fields["start"]?.["memberOf"] as { message: string };
+    expect(Object.isFrozen(templateFormat)).toBe(true);
+    expect(Object.isFrozen(root)).toBe(true);
+    expect(Object.isFrozen(nested)).toBe(true);
+    expect(() => {
+      nested.message = "MUTATED";
+    }).toThrow(TypeError);
+  });
+
+  it("the `..` form the vocabulary once documented is REFUSED, not silently inert", () => {
+    // The regression this gate exists for: before it, a declaration written
+    // to the documented form compiled, ran, and validated nothing.
+    const problems = closureProblems(withSelector("..names"));
+    expect(problems).toHaveLength(1);
+    expect(runSurface(withSelector("$.names"), { names: { a: "1" }, pick: "zz" }, { channel: { kind: "direct" } }).findings)
+      .toHaveLength(1);
   });
 });
