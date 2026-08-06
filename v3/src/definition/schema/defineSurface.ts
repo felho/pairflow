@@ -156,9 +156,16 @@ interface Context {
    * `dependsOn` (F4: a substrate or cross-rule tag never gets a status, so
    * depending on one suppresses nothing, forever). */
   readonly nodeTags: Set<string>;
-  /** Declaration path → the node at it. The engine addresses positions the
-   * same way, so this is what a selector target must resolve against. */
+  /** Declaration path → the node at it, for operands addressed in the
+   * ENGINE's internal walk language (the normalizer resolves this way). */
   readonly positions: Map<string, NodeDecl>;
+  /** The subset a SELECTOR can actually reach. A list member lives at the
+   * engine-internal `…[]`, a key class at `…<key>`, and a declared field
+   * name containing a dot is walked as two segments — a selector naming
+   * any of them addresses something else or nothing, so none of them is a
+   * legal selector target. Keeping the two maps apart is what stops the
+   * gate calling such a path "resolved" while the rule stays inert. */
+  readonly selectorPositions: Map<string, NodeDecl>;
   readonly pending: PendingRef[];
   /** Hook tags whose operand paths are syntactically clean. A path that
    * failed its grammar is NOT resolved a second time — one broken
@@ -202,10 +209,17 @@ function checkNode(
   channelHonoured: boolean,
   ctx: Context,
   siblings: readonly string[] = [],
+  selectorAddressable = true,
 ): void {
   ctx.tags.push(decl.tag);
   ctx.nodeTags.add(decl.tag);
-  ctx.positions.set(where, decl);
+  // FIRST writer wins: a union and its `mapCase` share one address in the
+  // engine's walk, and the UNION is what a selector meets there. Letting
+  // the case overwrite it hid one of the union's shapes from the check.
+  if (!ctx.positions.has(where)) ctx.positions.set(where, decl);
+  if (selectorAddressable && !ctx.selectorPositions.has(where)) {
+    ctx.selectorPositions.set(where, decl);
+  }
   if (decl.rows.length === 0) ctx.problems.push(`${where}: node "${decl.tag}" cites no ratified row`);
   if (decl.channel !== undefined && !channelHonoured) {
     ctx.problems.push(
@@ -226,7 +240,10 @@ function checkNode(
       if (decl.missingMessage !== undefined) ctx.problems.push(...slotProblems(decl.missingMessage, where));
       const fieldNames = Object.keys(decl.fields);
       for (const [name, field] of Object.entries(decl.fields)) {
-        checkNode(field, `${where}.${name}`, true, ctx, fieldNames);
+        // A field name containing a dot is ONE declared key that the
+        // selector language reads as two segments; its subtree is not
+        // selector-addressable under that text.
+        checkNode(field, `${where}.${name}`, true, ctx, fieldNames, selectorAddressable && !name.includes("."));
       }
       for (const [key, message] of Object.entries(decl.removedKeys ?? {})) {
         ctx.problems.push(...slotProblems(message, `${where}.removedKeys.${key}`));
@@ -240,8 +257,8 @@ function checkNode(
         ctx.problems.push(...slotProblems(decl.deepKeyStringness.message, where));
       }
       if (decl.keysSubsetOf !== undefined) checkMembership(decl.keysSubsetOf, `${where}.keysSubsetOf`, where, ctx);
-      if (decl.keyClass !== undefined) checkNode(decl.keyClass, `${where}<key>`, false, ctx);
-      checkNode(decl.entry, `${where}.*`, false, ctx);
+      if (decl.keyClass !== undefined) checkNode(decl.keyClass, `${where}<key>`, false, ctx, [], false);
+      checkNode(decl.entry, `${where}.*`, false, ctx, [], selectorAddressable);
       return;
     }
     case "list": {
@@ -250,7 +267,7 @@ function checkNode(
       if (decl.unique !== undefined) ctx.problems.push(...slotProblems(decl.unique.message, where));
       if (decl.memberOf !== undefined) checkMembership(decl.memberOf, `${where}.memberOf`, where, ctx);
       if (decl.disjointFrom !== undefined) checkMembership(decl.disjointFrom, `${where}.disjointFrom`, where, ctx);
-      checkNode(decl.member, `${where}[]`, false, ctx);
+      checkNode(decl.member, `${where}[]`, false, ctx, [], false);
       return;
     }
     case "string": {
@@ -282,7 +299,7 @@ function checkNode(
       for (const [value, message] of Object.entries(decl.removedValues ?? {})) {
         ctx.problems.push(...slotProblems(message, `${where}.removedValues.${value}`));
       }
-      if (decl.mapCase !== undefined) checkNode(decl.mapCase, where, false, ctx);
+      if (decl.mapCase !== undefined) checkNode(decl.mapCase, where, false, ctx, [], selectorAddressable);
       return;
     }
     case "raw":
@@ -348,11 +365,54 @@ function checkHook(hook: NormalizerHookDecl, ctx: Context): void {
 }
 
 /** The node a declaration path addresses, following a value-class
- * reference to the class it names — the kind a selector actually meets. */
+ * reference to the class it names — the node a selector actually meets. */
 function nodeAt(path: string, ctx: Context): NodeDecl | undefined {
-  const node = ctx.positions.get(path);
+  const node = ctx.selectorPositions.get(path);
   if (node?.kind !== "valueClass") return node;
   return ctx.valueClasses[node.valueClass];
+}
+
+/**
+ * The RUNTIME shapes a declared node can legally hold. A selector reads
+ * the RAW value, so what decides whether a relation can read a target is
+ * not the node's kind name but the shapes a valid value can take — and a
+ * node that can hold more than one shape is readable only for SOME
+ * inputs, which is the input-dependent silence the gate exists to refuse.
+ */
+type RuntimeShape = "map" | "list" | "string" | "other";
+
+function shapesOf(node: NodeDecl, ctx: Context, seen = new Set<string>()): ReadonlySet<RuntimeShape> {
+  switch (node.kind) {
+    case "map.fixed":
+    case "map.open":
+    case "map.plain":
+      return new Set<RuntimeShape>(["map"]);
+    case "list":
+      return new Set<RuntimeShape>(["list"]);
+    case "string":
+      return new Set<RuntimeShape>(["string"]);
+    case "integer":
+    case "delegate":
+      return new Set<RuntimeShape>(["other"]);
+    case "enum":
+      return new Set<RuntimeShape>(
+        node.members.map((member) => (typeof member.value === "string" ? "string" : "other")),
+      );
+    case "union": {
+      const shapes = new Set<RuntimeShape>((node.literals ?? []).map(() => "string" as const));
+      if (node.mapCase !== undefined) for (const shape of shapesOf(node.mapCase, ctx, seen)) shapes.add(shape);
+      return shapes;
+    }
+    case "valueClass": {
+      if (seen.has(node.valueClass)) return new Set<RuntimeShape>(["other"]);
+      seen.add(node.valueClass);
+      const target = ctx.valueClasses[node.valueClass];
+      return target === undefined ? new Set<RuntimeShape>(["other"]) : shapesOf(target, ctx, seen);
+    }
+    case "raw":
+      // Uninterpreted: the declaration guarantees nothing about the value.
+      return new Set<RuntimeShape>(["map", "list", "string", "other"]);
+  }
 }
 
 /** Pass two for selectors: does the target POSITION exist, and is its kind
@@ -372,16 +432,17 @@ function resolveSelectors(ctx: Context): void {
       );
       continue;
     }
-    const wanted =
-      ref.relation === "keysOf"
-        ? ["map.open", "map.fixed", "map.plain"]
-        : ref.relation === "valuesOf"
-          ? ["list"]
-          : ["string", "integer", "enum", "raw"];
-    if (!wanted.includes(node.kind)) {
+    const needed: RuntimeShape = ref.relation === "keysOf" ? "map" : ref.relation === "valuesOf" ? "list" : "string";
+    const shapes = shapesOf(node, ctx);
+    // EVERY legal value must be readable. One that is readable for some
+    // inputs and silently skipped for others is what "closed" must not
+    // mean.
+    const unreadable = [...shapes].filter((shape) => shape !== needed);
+    if (unreadable.length > 0) {
       ctx.problems.push(
-        `${ref.where}: ${ref.relation}(${JSON.stringify(ref.path)}) addresses a ${node.kind}; ` +
-          `${ref.relation} reads ${wanted.join(" | ")}`,
+        `${ref.where}: ${ref.relation}(${JSON.stringify(ref.path)}) addresses a ${node.kind} whose value can be ` +
+          `${[...shapes].sort().join(" | ")}; ${ref.relation} reads only ${needed}, so the rule would be ` +
+          `skipped for ${unreadable.sort().join(" | ")} values`,
       );
     }
   }
@@ -492,6 +553,7 @@ export function closureProblems(surface: SurfaceDecl): readonly string[] {
     tags: [],
     nodeTags: new Set(),
     positions: new Map(),
+    selectorPositions: new Map(),
     pending: [],
     resolvableHooks: new Set(),
     problems: [],

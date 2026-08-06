@@ -777,7 +777,7 @@ describe("the declaration GATE: a declaration that is not closed never becomes a
       problem: /addresses "\$\.nmaes", which the declaration does not declare/u },
     { claim: "a selector whose target exists but is the WRONG KIND for the relation",
       make: (ok) => selecting(ok ? "keysOf" : "valuesOf", "$.names"),
-      problem: /valuesOf\("\$\.names"\) addresses a map\.open; valuesOf reads list/u },
+      problem: /valuesOf\("\$\.names"\) addresses a map\.open whose value can be map; valuesOf reads only list/u },
     { claim: "a delegate reading a sibling field the enclosing map does not declare",
       make: (ok) => binding(ok ? "uses" : "ues"),
       problem: /delegate reads sibling field "ues"/u },
@@ -863,6 +863,49 @@ describe("the declaration GATE: a declaration that is not closed never becomes a
     { claim: "a normalizer WRITING a field the entry does not declare",
       make: (ok) => hookSurface({ into: ok ? "flags" : "flgas" }),
       problem: /into: "flgas" is not a field of "\$\.steps\.\*"/u },
+    // --- the four SILENT cases: the gate said "closed" over an inert rule.
+    { claim: "collect over a target whose value can be a non-string — readable for no input",
+      make: (ok) => base({}, {
+        fields: {
+          count: { kind: "integer", tag: "cnt", rows: ["x"], resolvedForm: { safeInteger: true, min: 1, message: "m" } },
+          label: { kind: "string", tag: "lbl", rows: ["x"], typeMessage: "t" },
+          pick: { kind: "string", tag: "p", rows: ["x"],
+            memberOf: { relation: "memberOf", target: { collect: ok ? "$.label" : "$.count" }, message: "m" } },
+        } }),
+      problem: /collect\("\$\.count"\) addresses a integer whose value can be other; collect reads only string/u },
+    { claim: "keysOf over a UNION that can also hold a string — readable for only some inputs",
+      make: (ok) => base({}, {
+        fields: {
+          names: { kind: "map.open", tag: "n", rows: ["x"], containerMessage: "c", keyLaneAt: "container",
+            entry: { kind: "string", tag: "ne", rows: ["x"], typeMessage: "t" } },
+          rt: { kind: "union", tag: "rt", rows: ["x"], literals: ["none"], message: "m",
+            mapCase: { kind: "map.fixed", tag: "rtm", rows: ["x"], containerMessage: "c", unknownMessage: "u",
+              fields: { kind: { kind: "string", tag: "rtk", rows: ["x"], typeMessage: "t" } } } },
+          pick: { kind: "string", tag: "p", rows: ["x"],
+            memberOf: { relation: "memberOf", target: { keysOf: ok ? "$.names" : "$.rt" }, message: "m" } },
+        } }),
+      problem: /keysOf\("\$\.rt"\) addresses a union whose value can be map \| string/u },
+    { claim: "a selector naming the engine-INTERNAL list-member address",
+      make: (ok) => base({}, {
+        fields: {
+          items: { kind: "list", tag: "it", rows: ["x"], containerMessage: "c", memberLaneAt: "index",
+            member: { kind: "string", tag: "itm", rows: ["x"], typeMessage: "t" } },
+          pick: { kind: "string", tag: "p", rows: ["x"],
+            memberOf: { relation: "memberOf", target: { valuesOf: ok ? "$.items" : "$.items[]" }, message: "m" } },
+        } }),
+      problem: /addresses "\$\.items\[\]", which the declaration does not declare/u },
+    { claim: "a selector path through a declared field name that CONTAINS a dot",
+      make: (ok) => base({}, {
+        fields: {
+          dotted: { kind: "map.fixed", tag: "d", rows: ["x"], containerMessage: "c", unknownMessage: "u",
+            fields: {
+              "a.b": { kind: "string", tag: "ab", rows: ["x"], typeMessage: "t" },
+              plain: { kind: "string", tag: "pl", rows: ["x"], typeMessage: "t" },
+            } },
+          pick: { kind: "string", tag: "p", rows: ["x"],
+            memberOf: { relation: "memberOf", target: { collect: ok ? "$.dotted.plain" : "$.dotted.a.b" }, message: "m" } },
+        } }),
+      problem: /addresses "\$\.dotted\.a\.b", which the declaration does not declare/u },
     { claim: "a grammar that is not a valid regular expression",
       make: (ok) => base({ valueClasses: { idClass: { kind: "string", tag: "vc", rows: ["x"],
         grammar: { re: ok ? "^[a-z]+$" : "^[a-z", message: "bad" } } } }),
@@ -884,7 +927,7 @@ describe("the declaration GATE: a declaration that is not closed never becomes a
   }
 
   it("the guard register is complete, unique and PINNED", () => {
-    expect(GUARDS).toHaveLength(23);
+    expect(GUARDS).toHaveLength(27);
     expect(new Set(GUARDS.map((guard) => guard.claim)).size).toBe(GUARDS.length);
   });
 
