@@ -92,6 +92,20 @@ function ownGet(record: Record<string, unknown>, key: string): unknown {
   return Object.prototype.hasOwnProperty.call(record, key) ? record[key] : undefined;
 }
 
+/** An OWN-property lookup in a declared registry keyed by AUTHORED text.
+ * A step id, an event type or a scalar value may legally be `constructor`
+ * or `toString`, and a bracket read would return the prototype's member —
+ * which is not a message, and calling it as one crashes the walk. The G8
+ * discipline this codebase already applies to value maps, applied to the
+ * declaration's own maps. */
+function ownMessage(
+  registry: Readonly<Record<string, MessageTemplate>> | undefined,
+  key: string,
+): MessageTemplate | undefined {
+  if (registry === undefined) return undefined;
+  return Object.prototype.hasOwnProperty.call(registry, key) ? registry[key] : undefined;
+}
+
 function containerHas(value: AnyMap, key: string): boolean {
   if (isResolvedMap(value)) return value.has(key);
   return Object.prototype.hasOwnProperty.call(value, key);
@@ -237,6 +251,11 @@ interface Frame {
   readonly decl: DeclPath;
   /** The value path the findings address (`steps.review.role`). */
   readonly path: string;
+  /** The SOURCE-document address, carried segment by segment as the walk
+   * descends. It is not derived from `path`: a rendered path is lossy —
+   * an authored id may itself contain `[0]` or a dot, and re-parsing one
+   * addresses a different node or none (B1 F3). */
+  readonly segments: readonly (string | number)[];
   readonly value: unknown;
   /** The enclosing container's value — the operand of a `..` selector. */
   readonly parentValue: unknown;
@@ -470,25 +489,6 @@ export function sourceLadderFinding(node: unknown, source: string, path: string)
   return undefined;
 }
 
-/** The YAML-AST address of a value path, for the source-bearing lanes. */
-export function astPath(path: string): (string | number)[] {
-  const segments: (string | number)[] = [];
-  for (const part of path.split(".")) {
-    let rest = part;
-    const bracket = rest.indexOf("[");
-    if (bracket >= 0) {
-      const head = rest.slice(0, bracket);
-      if (head !== "") segments.push(head);
-      rest = rest.slice(bracket);
-      for (const match of rest.matchAll(/\[(\d+)\]/gu)) {
-        segments.push(Number(match[1]));
-      }
-      continue;
-    }
-    segments.push(rest);
-  }
-  return segments;
-}
 
 // ---------------------------------------------------------------------------
 // The acyclic-graph lane (the substrate's `resolve.graph`).
@@ -626,7 +626,7 @@ function evalMapFixed(
       }
       if (legal.has(key)) continue;
       const at = joinPath(frame.path, key);
-      const removed = decl.removedKeys?.[key];
+      const removed = ownMessage(decl.removedKeys, key);
       const keySlots: Slots = { ...slots, path: at, key, value: key, keys: scoped.join(", ") };
       run.emit(at, render(removed ?? decl.unknownMessage, keySlots));
     }
@@ -694,6 +694,7 @@ function childFrame(parent: Frame, key: string, value: unknown, parentValue: unk
   return {
     decl: `${parent.decl}.${key}`,
     path: joinPath(parent.path, key),
+    segments: [...parent.segments, key],
     value,
     parentValue,
     ownerKey: parent.ownerKey,
@@ -729,6 +730,7 @@ function evalMapOpen(
       const keyFrame: Frame = {
         decl: `${frame.decl}<key>`,
         path: decl.keyLaneAt === "container" ? frame.path : entryPath,
+        segments: frame.segments,
         value: key,
         parentValue: container,
         ownerKey: frame.ownerKey,
@@ -743,6 +745,7 @@ function evalMapOpen(
       const subsetFrame: Frame = {
         decl: frame.decl,
         path: entryPath,
+        segments: frame.segments,
         value: key,
         parentValue: frame.parentValue,
         ownerKey: frame.ownerKey,
@@ -760,6 +763,7 @@ function evalMapOpen(
     const entryFrame: Frame = {
       decl: `${frame.decl}.*`,
       path: entryPath,
+      segments: keyIsString ? [...frame.segments, key] : frame.segments,
       value: child,
       parentValue: container,
       ownerKey: keyIsString ? key : frame.ownerKey,
@@ -825,6 +829,7 @@ function evalList(
     const memberFrame: Frame = {
       decl: `${frame.decl}[]`,
       path: memberPath,
+      segments: [...frame.segments, index],
       value: member,
       parentValue: value,
       ownerKey: frame.ownerKey,
@@ -850,6 +855,7 @@ function evalList(
       const memberFrame: Frame = {
         decl: `${frame.decl}[]`,
         path: entry.path,
+        segments: frame.segments,
         value: entry.member,
         parentValue: value,
         ownerKey: frame.ownerKey,
@@ -906,7 +912,7 @@ function evalInteger(
 ): NodeResult {
   const value = frame.value;
   if (decl.sourceForm === "plainDecimalInteger" && run.channel.kind === "file") {
-    const node: unknown = run.channel.doc.getIn(astPath(frame.path), true);
+    const node: unknown = run.channel.doc.getIn(frame.segments, true);
     const message = sourceLadderFinding(node, run.channel.source, frame.path);
     if (message !== undefined) {
       run.emit(frame.path, message);
@@ -951,7 +957,7 @@ function evalUnion(
   const value = frame.value;
   const slots = baseSlots(frame);
   if (typeof value === "string") {
-    const removed = decl.removedValues?.[value];
+    const removed = ownMessage(decl.removedValues, value);
     if (removed !== undefined) {
       run.emit(frame.path, render(removed, slots));
       return { ok: false };
@@ -1074,7 +1080,7 @@ function runDeferred(run: Run): void {
 export function runSurface(surface: SurfaceDecl, value: unknown, opts: EngineOptions): EngineRun {
   const run = new Run(opts.channel, { gateCatalog: opts.catalog }, surface.valueClasses);
   run.root = value;
-  const rootFrame: Frame = { decl: "$", path: "$", value, parentValue: undefined };
+  const rootFrame: Frame = { decl: "$", path: "$", segments: [], value, parentValue: undefined };
   const rootDecl = surface.root;
 
   // The root container precondition: with no map operand nothing below has

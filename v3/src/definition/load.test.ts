@@ -1208,3 +1208,34 @@ describe("ch12-P4 A2 — the process-gate cross-rule through the file channel", 
     ).toBe(true);
   });
 });
+
+describe("the source-form address is CARRIED, not parsed back out of a rendered path", () => {
+  // ch8-C10 admits any id without whitespace or a dot, so `s[0]` is a
+  // legal step id. Deriving the AST address by re-parsing the rendered
+  // finding path read `[0]` as a list index, missed the node, and let a
+  // forbidden source form through (B1 F3).
+  const gated = (value: string, stepId: string): string =>
+    `ref:\n  id: t\n  version: 1\nstart: "${stepId}"\nsteps:\n  "${stepId}":\n    role: r\n` +
+    `    instruction: i\n    transitions:\n      GO: done\n    gates:\n      GO:\n` +
+    `        - uses: declarative.threshold\n          config:\n            metric: round\n` +
+    `            op: ">="\n            value: ${value}\nterminal:\n  - done\nroles:\n  r: {}\n`;
+
+  it("a forbidden source form is caught under a step id containing brackets", () => {
+    const err = gatedErr(gated("01", "s[0]"));
+    expect(err.findings).toStrictEqual([
+      {
+        path: "steps.s[0].gates.GO[0].config.value",
+        message: 'steps.s[0].gates.GO[0].config.value must be written as a plain decimal integer >= 1; got source form "01"',
+      },
+    ]);
+  });
+
+  it("DISCRIMINATES: the same bracketed id with a well-formed source value admits", () => {
+    expect(loadGated(gated("1", "s[0]")).ok).toBe(true);
+  });
+
+  it("and the ordinary id keeps behaving exactly as before", () => {
+    expect(gatedErr(gated("01", "s")).findings).toHaveLength(1);
+    expect(loadGated(gated("1", "s")).ok).toBe(true);
+  });
+});

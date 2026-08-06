@@ -1,7 +1,7 @@
 import type { GateCatalog } from "../../ports/index.js";
 import type { ValidationFinding } from "../errors.js";
 import type { EngineChannel } from "./engine.js";
-import { astPath, runSurface, sourceLadderFinding } from "./engine.js";
+import { runSurface, sourceLadderFinding } from "./engine.js";
 import { normalize } from "./normalizer.js";
 import { templateFormat } from "./templateFormat.js";
 
@@ -90,8 +90,13 @@ function sourceScopedFindings(value: unknown, channel: EngineChannel): Validatio
         if (typeof uses !== "string" || !isContainer(config)) return;
         for (const field of SOURCE_SCOPED_CONFIG_FIELDS[uses] ?? []) {
           if (get(config, field) === undefined) continue;
+          // The AST address is built from SEGMENTS, never parsed back out
+          // of the rendered path: an authored step id may itself contain
+          // `[0]` or a dot, and re-parsing one addresses a different node
+          // or none at all (B1 F3 — a forbidden source form got through).
+          const segments = ["steps", stepId, "gates", eventType, index, "config", field];
           const path = `steps.${stepId}.gates.${eventType}[${String(index)}].config.${field}`;
-          const node: unknown = channel.doc.getIn(astPath(path), true);
+          const node: unknown = channel.doc.getIn(segments, true);
           const message = sourceLadderFinding(node, channel.source, path);
           if (message !== undefined) findings.push({ path, message });
         }

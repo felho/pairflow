@@ -689,6 +689,60 @@ describe("the normalizer (ADR-019 D3) — derivation, never validation", () => {
   });
 });
 
+describe("authored text that collides with a JavaScript object's own members", () => {
+  // A workflow author may legitimately name a step `constructor` or write
+  // `toString` as a scalar. Every registry the declaration keys by
+  // AUTHORED text must be read as an OWN property; a bracket read returns
+  // the prototype's member, which is not a message, and using it as one
+  // ends the walk instead of reporting a finding.
+  const withRemovedKeys = (removedKeys: Record<string, string>): NodeDecl =>
+    ({
+      kind: "map.fixed", tag: "m", rows: ["x"],
+      containerMessage: "c", unknownMessage: "unknown key {valueJson}",
+      removedKeys,
+      fields: { a: { kind: "string", tag: "a", rows: ["x"], typeMessage: "t" } },
+    });
+
+  for (const collider of ["constructor", "toString", "hasOwnProperty", "valueOf"]) {
+    it(`an unknown key named ${collider} yields the declared finding, not a crash`, () => {
+      expect(direct(withRemovedKeys({}), { [collider]: 1 })).toStrictEqual([
+        { path: collider, message: `unknown key ${JSON.stringify(collider)}` },
+      ]);
+    });
+  }
+
+  it("DISCRIMINATES: a key the registry really declares still yields its migration text", () => {
+    // If the lookup were simply disabled, this would report "unknown key"
+    // instead — so the fix is an own-property read, not a removed feature.
+    expect(direct(withRemovedKeys({ old: "`old` is retired" }), { old: 1 })).toStrictEqual([
+      { path: "old", message: "`old` is retired" },
+    ]);
+    expect(direct(withRemovedKeys({ constructor: "`constructor` is retired" }), { constructor: 1 })).toStrictEqual([
+      { path: "constructor", message: "`constructor` is retired" },
+    ]);
+  });
+
+  const union = (removedValues: Record<string, string>): NodeDecl =>
+    ({
+      kind: "union", tag: "u", rows: ["x"], literals: ["none"], removedValues,
+      message: "illegal value {valueJson}",
+    });
+
+  for (const collider of ["constructor", "toString"]) {
+    it(`a scalar value of ${collider} yields the declared union finding, not a crash`, () => {
+      expect(direct(union({}), collider)).toStrictEqual([
+        { path: "$", message: `illegal value ${JSON.stringify(collider)}` },
+      ]);
+    });
+  }
+
+  it("DISCRIMINATES: a value the removal registry really declares still yields its migration text", () => {
+    expect(direct(union({ legacy: "`legacy` is retired" }), "legacy")).toStrictEqual([
+      { path: "$", message: "`legacy` is retired" },
+    ]);
+  });
+});
+
 describe("the declaration GATE: a declaration that is not closed never becomes a surface", () => {
   // F8's correction. Each guard is ONE builder taking `ok`, so the broken
   // and corrected surfaces are structurally identical BY CONSTRUCTION —
