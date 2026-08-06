@@ -690,11 +690,19 @@ describe("the normalizer (ADR-019 D3) — derivation, never validation", () => {
 });
 
 describe("the declaration GATE: a declaration that is not closed never becomes a surface", () => {
-  // A minimal CLOSED surface. Every guard fixture below is this surface
-  // with exactly ONE reference broken, and each pair proves discrimination:
-  // the broken form throws with its own problem, the corrected form does
-  // not throw at all.
-  const closed = (over: Partial<SurfaceDecl> = {}, rootOver: Record<string, unknown> = {}): SurfaceDecl =>
+  // F8's correction. Each guard is ONE builder taking `ok`, so the broken
+  // and corrected surfaces are structurally identical BY CONSTRUCTION —
+  // "exactly one reference differs" is guaranteed rather than eyeballed.
+  // Each guard then asserts the broken form yields EXACTLY ONE problem
+  // (so it names what it caught) and the corrected form yields none (so
+  // the guard is not firing on the shape itself).
+  interface Guard {
+    readonly claim: string;
+    readonly make: (ok: boolean) => SurfaceDecl;
+    readonly problem: RegExp;
+  }
+
+  const surfaceOf = (over: Partial<SurfaceDecl>, root: Record<string, unknown>): SurfaceDecl =>
     ({
       substrate: templateFormat.substrate,
       valueClasses: {
@@ -702,147 +710,181 @@ describe("the declaration GATE: a declaration that is not closed never becomes a
       },
       crossRules: [],
       normalizers: [],
-      root: {
-        kind: "map.fixed",
-        tag: "root",
-        rows: ["x"],
-        containerMessage: "c",
-        unknownMessage: "u",
-        fields: { id: { kind: "valueClass", tag: "id", rows: ["x"], valueClass: "idClass" } },
-        ...rootOver,
-      },
+      root: { kind: "map.fixed", tag: "root", rows: ["x"], containerMessage: "c", unknownMessage: "u", ...root },
       ...over,
+    }) as SurfaceDecl;
+
+  const plainRoot = { fields: { id: { kind: "valueClass", tag: "id", rows: ["x"], valueClass: "idClass" } } };
+  const base = (over: Partial<SurfaceDecl> = {}, root: Record<string, unknown> = plainRoot): SurfaceDecl =>
+    surfaceOf(over, root);
+
+  /** A root with an open map `names` plus a scalar that selects over it. */
+  const selecting = (relation: "keysOf" | "valuesOf" | "collect", path: string): SurfaceDecl =>
+    base({}, {
+      fields: {
+        names: { kind: "map.open", tag: "n", rows: ["x"], containerMessage: "c", keyLaneAt: "container",
+          entry: { kind: "string", tag: "ne", rows: ["x"], typeMessage: "t" } },
+        pick: { kind: "string", tag: "p", rows: ["x"],
+          memberOf: { relation: "memberOf", target: { [relation]: path } as never, message: "m" } },
+      },
     });
 
-  interface Guard {
-    readonly claim: string;
-    /** The surface with ONE reference broken. */
-    readonly broken: SurfaceDecl;
-    /** The problem the gate must name. */
-    readonly problem: RegExp;
-  }
-
-  const node = (extra: Record<string, unknown>): SurfaceDecl =>
-    closed({}, { fields: { id: { kind: "valueClass", tag: "id", rows: ["x"], valueClass: "idClass", ...extra } } });
-
-  const withSelector = (path: string): SurfaceDecl =>
-    closed({}, {
+  const hookSurface = (over: Partial<Record<"over" | "edges" | "into" | "advanceSet", string>>): SurfaceDecl =>
+    base({
+      normalizers: [{
+        tag: "n-h", rows: ["x"], hook: "expandAdvancesRound",
+        over: over.over ?? "$.steps", edges: over.edges ?? "transitions",
+        advanceSet: over.advanceSet ?? "$.adv", into: over.into ?? "flags",
+      }],
+    }, {
       fields: {
-        names: { kind: "map.open", tag: "n", rows: ["x"], containerMessage: "c", keyLaneAt: "container", entry: { kind: "string", tag: "ne", rows: ["x"], typeMessage: "t" } },
-        pick: { kind: "string", tag: "p", rows: ["x"], memberOf: { relation: "memberOf", target: { keysOf: path }, message: "m" } },
+        adv: { kind: "list", tag: "adv", rows: ["x"], containerMessage: "c", memberLaneAt: "index",
+          member: { kind: "string", tag: "advm", rows: ["x"], typeMessage: "t" } },
+        steps: { kind: "map.open", tag: "st", rows: ["x"], containerMessage: "c", keyLaneAt: "container",
+          entry: { kind: "map.fixed", tag: "ste", rows: ["x"], containerMessage: "c", unknownMessage: "u",
+            fields: {
+              transitions: { kind: "map.open", tag: "tr", rows: ["x"], containerMessage: "c", keyLaneAt: "container",
+                entry: { kind: "string", tag: "trv", rows: ["x"], typeMessage: "t" } },
+              flags: { kind: "raw", tag: "fl", rows: ["x"], channel: "direct" },
+            } } },
+      },
+    });
+
+  const binding = (by: string): SurfaceDecl =>
+    base({}, {
+      fields: {
+        uses: { kind: "string", tag: "u", rows: ["x"], typeMessage: "t" },
+        config: { kind: "delegate", tag: "cfg", rows: ["x"], registry: "gateCatalog", by,
+          beltMessage: "b", dependsOn: ["u"] },
       },
     });
 
   const GUARDS: readonly Guard[] = [
-    {
-      claim: "an unknown value-class name — the measured shame case",
-      broken: closed({}, { fields: { id: { kind: "valueClass", tag: "id", rows: ["x"], valueClass: "TYPO" } } }),
-      problem: /value class "TYPO" is not declared/u,
-    },
-    {
-      claim: "a selector path in the documented-but-inert `..` form",
-      broken: withSelector("..names"),
-      problem: /selector path "\.\.names" must start with "\$"/u,
-    },
-    {
-      claim: "a selector path with an empty segment",
-      broken: withSelector("$..names"),
-      problem: /has an empty segment/u,
-    },
-    {
-      claim: "a selector path with `*` inside a segment",
-      broken: withSelector("$.na*mes"),
-      problem: /"\*" is legal only as a whole segment/u,
-    },
-    {
-      claim: "a channel mark where the engine does not read one",
-      broken: closed({}, {
-        fields: {
-          list: { kind: "list", tag: "l", rows: ["x"], containerMessage: "c", memberLaneAt: "index",
-            member: { kind: "string", tag: "lm", rows: ["x"], typeMessage: "t", channel: "file" } },
-        },
-      }),
-      problem: /carries channel "file", which is read only on a field of a map\.fixed/u,
-    },
-    {
-      claim: "a dependsOn naming a tag nothing declares",
-      broken: closed({}, {
+    { claim: "an unknown value-class name — the measured shame case",
+      make: (ok) => base({}, { fields: { id: { kind: "valueClass", tag: "id", rows: ["x"], valueClass: ok ? "idClass" : "TYPO" } } }),
+      problem: /value class "TYPO" is not declared/u },
+    { claim: "a selector path in the documented-but-inert `..` form",
+      make: (ok) => selecting("keysOf", ok ? "$.names" : "..names"),
+      problem: /selector path "\.\.names" must start with "\$"/u },
+    { claim: "a selector path with an empty segment",
+      make: (ok) => selecting("keysOf", ok ? "$.names" : "$..names"),
+      problem: /has an empty segment/u },
+    { claim: "a selector path with `*` inside a segment",
+      make: (ok) => selecting("keysOf", ok ? "$.names" : "$.na*mes"),
+      problem: /"\*" is legal only as a whole segment/u },
+    { claim: "a selector path that is well-formed but addresses NO declared position",
+      make: (ok) => selecting("keysOf", ok ? "$.names" : "$.nmaes"),
+      problem: /addresses "\$\.nmaes", which the declaration does not declare/u },
+    { claim: "a selector whose target exists but is the WRONG KIND for the relation",
+      make: (ok) => selecting(ok ? "keysOf" : "valuesOf", "$.names"),
+      problem: /valuesOf\("\$\.names"\) addresses a map\.open; valuesOf reads list/u },
+    { claim: "a delegate reading a sibling field the enclosing map does not declare",
+      make: (ok) => binding(ok ? "uses" : "ues"),
+      problem: /delegate reads sibling field "ues"/u },
+    { claim: "a channel mark where the engine does not read one",
+      make: (ok) => base({}, { fields: { list: { kind: "list", tag: "l", rows: ["x"], containerMessage: "c", memberLaneAt: "index",
+        member: { kind: "string", tag: "lm", rows: ["x"], typeMessage: "t", ...(ok ? {} : { channel: "file" }) } } } }),
+      problem: /carries channel "file", which is read only on a field of a map\.fixed/u },
+    { claim: "a dependsOn naming a tag nothing declares",
+      make: (ok) => base({}, {
         fields: {
           uses: { kind: "string", tag: "u", rows: ["x"], typeMessage: "t" },
           config: { kind: "delegate", tag: "c", rows: ["x"], registry: "gateCatalog", by: "uses",
-            beltMessage: "b", dependsOn: ["no-such-tag"] },
+            beltMessage: "b", dependsOn: [ok ? "u" : "no-such-tag"] },
+        } }),
+      problem: /dependsOn names "no-such-tag", which is not a declared tag/u },
+    { claim: "a dependsOn naming a declared tag the engine never gives a status",
+      make: (ok) => base({}, {
+        fields: {
+          uses: { kind: "string", tag: "u", rows: ["x"], typeMessage: "t" },
+          config: { kind: "delegate", tag: "c", rows: ["x"], registry: "gateCatalog", by: "uses",
+            beltMessage: "b", dependsOn: [ok ? "u" : "d-read"] },
+        } }),
+      problem: /is declared but is not a node the engine records a status for/u },
+    { claim: "a dependsOn INSIDE a value-class definition",
+      make: (ok) => base({
+        valueClasses: {
+          idClass: { kind: "string", tag: "vc", rows: ["x"], grammar: { re: "^[a-z]+$", message: "bad" },
+            memberOf: { relation: "memberOf", target: { keysOf: "$.names" }, message: "m",
+              dependsOn: [ok ? "n" : "ghost-tag"] } },
+        },
+      }, {
+        fields: {
+          names: { kind: "map.open", tag: "n", rows: ["x"], containerMessage: "c", keyLaneAt: "container",
+            entry: { kind: "string", tag: "ne", rows: ["x"], typeMessage: "t" } },
+          id: { kind: "valueClass", tag: "id", rows: ["x"], valueClass: "idClass" },
+        } }),
+      problem: /dependsOn names "ghost-tag", which is not a declared tag/u },
+    { claim: "a tag declared twice",
+      make: (ok) => base({}, { fields: { id: { kind: "valueClass", tag: ok ? "id" : "root", rows: ["x"], valueClass: "idClass" } } }),
+      problem: /tag "root" is declared more than once/u },
+    { claim: "a node citing no ratified row",
+      make: (ok) => base({}, { fields: { id: { kind: "valueClass", tag: "id", rows: ok ? ["x"] : [], valueClass: "idClass" } } }),
+      problem: /cites no ratified row/u },
+    { claim: "an issue code outside the closed namespace",
+      make: (ok) => base({}, { fields: { id: { kind: "enum", tag: "id", rows: ["x"], members: [{ value: "a" }], message: "m",
+        code: ok ? "gate_evaluator_unavailable" : "made_up_code" } } }),
+      problem: /issue code "made_up_code" is outside the declared namespace/u },
+    { claim: "a message using a placeholder the engine does not supply",
+      make: (ok) => base({}, { ...plainRoot, unknownMessage: ok ? "unknown {key}" : "unknown {notASlot}" }),
+      problem: /unknown placeholder \{notASlot\}/u },
+    { claim: "a SUBSTRATE message using a placeholder the engine does not supply",
+      make: (ok) => ({
+        ...base(),
+        substrate: {
+          ...templateFormat.substrate,
+          read: { ...templateFormat.substrate.read, message: ok ? "bad bytes" : "bad bytes {nope}" },
         },
       }),
-      problem: /dependsOn names "no-such-tag", which is not a declared tag/u,
-    },
-    {
-      claim: "a tag declared twice",
-      broken: node({ tag: "root" }),
-      problem: /tag "root" is declared more than once/u,
-    },
-    {
-      claim: "a node citing no ratified row",
-      broken: node({ rows: [] }),
-      problem: /cites no ratified row/u,
-    },
-    {
-      claim: "an issue code outside the closed namespace",
-      broken: closed({}, {
-        fields: { id: { kind: "enum", tag: "id", rows: ["x"], members: [{ value: "a" }], message: "m", code: "made_up_code" } },
+      problem: /substrate\.read: unknown placeholder \{nope\}/u },
+    { claim: "a finding-path template written in selector syntax",
+      make: (ok) => base({
+        crossRules: [{ tag: "eq", rows: ["x"], relation: "equals",
+          left: { keysOf: "$.names" }, right: { keysOf: "$.names" },
+          missingFromLeft: { at: ok ? "names" : "$.names", message: "m" },
+          missingFromRight: { at: "names", message: "m" } }],
+      }, {
+        fields: { names: { kind: "map.open", tag: "n", rows: ["x"], containerMessage: "c", keyLaneAt: "container",
+          entry: { kind: "string", tag: "ne", rows: ["x"], typeMessage: "t" } } },
       }),
-      problem: /issue code "made_up_code" is outside the declared namespace/u,
-    },
-    {
-      claim: "a message using a placeholder the engine does not supply",
-      broken: closed({}, { unknownMessage: "unknown {notASlot}" }),
-      problem: /unknown placeholder \{notASlot\}/u,
-    },
-    {
-      claim: "a finding-path template written in selector syntax",
-      broken: closed({
-        crossRules: [{
-          tag: "eq", rows: ["x"], relation: "equals",
-          left: { keysOf: "$.id" }, right: { keysOf: "$.id" },
-          missingFromLeft: { at: "$.roles", message: "m" },
-          missingFromRight: { at: "roles", message: "m" },
-        }],
-      }),
-      problem: /uses selector syntax; a finding path is rendered, not walked/u,
-    },
-    {
-      claim: "a normalizer operand path that is not document-rooted",
-      broken: closed({
-        normalizers: [{ tag: "n", rows: ["x"], hook: "expandAdvancesRound", over: "steps", edges: "t", advanceSet: "$.r", into: "f" }],
-      }),
-      problem: /normalizer path "steps" must start with "\$"/u,
-    },
-    {
-      claim: "a grammar that is not a valid regular expression",
-      broken: closed({
-        valueClasses: { idClass: { kind: "string", tag: "vc", rows: ["x"], grammar: { re: "^[a-z", message: "bad" } } },
-      }),
-      problem: /is not a valid regular expression/u,
-    },
+      problem: /uses selector syntax; a finding path is rendered, not walked/u },
+    { claim: "a normalizer operand path that is not document-rooted",
+      make: (ok) => hookSurface({ over: ok ? "$.steps" : "steps" }),
+      problem: /normalizer path "steps" must start with "\$"/u },
+    { claim: "a normalizer operand path with `*` inside a segment",
+      make: (ok) => hookSurface({ over: ok ? "$.steps" : "$.ste*ps" }),
+      problem: /normalizer path "\$\.ste\*ps" uses "\*" inside a segment/u },
+    { claim: "a normalizer operand path addressing NO declared position",
+      make: (ok) => hookSurface({ over: ok ? "$.steps" : "$.setps" }),
+      problem: /over: "\$\.setps" is not a declared position/u },
+    { claim: "a normalizer reading an entry field the entry does not declare",
+      make: (ok) => hookSurface({ edges: ok ? "transitions" : "trasitions" }),
+      problem: /edges: "trasitions" is not a field of "\$\.steps\.\*"/u },
+    { claim: "a normalizer WRITING a field the entry does not declare",
+      make: (ok) => hookSurface({ into: ok ? "flags" : "flgas" }),
+      problem: /into: "flgas" is not a field of "\$\.steps\.\*"/u },
+    { claim: "a grammar that is not a valid regular expression",
+      make: (ok) => base({ valueClasses: { idClass: { kind: "string", tag: "vc", rows: ["x"],
+        grammar: { re: ok ? "^[a-z]+$" : "^[a-z", message: "bad" } } } }),
+      problem: /is not a valid regular expression/u },
   ];
 
   for (const guard of GUARDS) {
-    it(`${guard.claim} — the gate REFUSES it`, () => {
-      expect(() => defineSurface(guard.broken)).toThrow(SurfaceDeclarationError);
-      expect(closureProblems(guard.broken).join("\n")).toMatch(guard.problem);
+    it(`${guard.claim} — refused, and ONLY that`, () => {
+      const problems = closureProblems(guard.make(false));
+      expect(problems).toHaveLength(1);
+      expect(problems[0]).toMatch(guard.problem);
+      expect(() => defineSurface(guard.make(false))).toThrow(SurfaceDeclarationError);
+    });
+
+    it(`${guard.claim} — DISCRIMINATES: the same surface with that one reference resolved passes`, () => {
+      expect(closureProblems(guard.make(true))).toStrictEqual([]);
+      expect(() => defineSurface(guard.make(true))).not.toThrow();
     });
   }
 
-  it("DISCRIMINATION: the same surface with every reference resolved passes the gate", () => {
-    // Every fixture above is `closed()` with ONE thing broken. If the gate
-    // fired unconditionally, this would throw too — which is what makes the
-    // refusals above evidence rather than noise.
-    expect(closureProblems(closed())).toStrictEqual([]);
-    expect(() => defineSurface(closed())).not.toThrow();
-    expect(closureProblems(withSelector("$.names"))).toStrictEqual([]);
-  });
-
   it("the guard register is complete, unique and PINNED", () => {
-    expect(GUARDS).toHaveLength(13);
+    expect(GUARDS).toHaveLength(23);
     expect(new Set(GUARDS.map((guard) => guard.claim)).size).toBe(GUARDS.length);
   });
 
@@ -864,9 +906,10 @@ describe("the declaration GATE: a declaration that is not closed never becomes a
   it("the `..` form the vocabulary once documented is REFUSED, not silently inert", () => {
     // The regression this gate exists for: before it, a declaration written
     // to the documented form compiled, ran, and validated nothing.
-    const problems = closureProblems(withSelector("..names"));
-    expect(problems).toHaveLength(1);
-    expect(runSurface(withSelector("$.names"), { names: { a: "1" }, pick: "zz" }, { channel: { kind: "direct" } }).findings)
-      .toHaveLength(1);
+    expect(closureProblems(selecting("keysOf", "..names"))).toHaveLength(1);
+    expect(
+      runSurface(selecting("keysOf", "$.names"), { names: { a: "1" }, pick: "zz" }, { channel: { kind: "direct" } })
+        .findings,
+    ).toHaveLength(1);
   });
 });
