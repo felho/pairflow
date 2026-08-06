@@ -744,7 +744,29 @@ inexpressible.
 | **R4** | admitted-form derivation (a produced VALUE, not a verdict) | **Members:** ch11-C39 (`advancesRound` expanded per transition); ch13-C17 (rebuild, normalize-or-`{}` predicate, normalized sibling fields); ch13-C2 (the non-string-key filter into the built catalog). **Affected:** ch11-C20 (the "materialized ONCE at admission" home) and the per-registration defaults ch11-C11/C14/C16/C17 — these are plain `default:` declarations, so they are NOT members (round 2 corrected both directions here: F8's fold had named the effective config a member with no row id, F5 then showed C11 missing from that list, and the right answer was that the whole default set is declarable and only the DERIVATION is residual) | These are TRANSFORMS, not validations. A declaration says what is legal; it does not compute the admitted shape. The engine therefore owes a second capability — emit a normalized value — and the ADR must name it explicitly rather than let "schema" be read as covering it. |
 | **R5** | cross-artifact checks outside the document | ch8-C27 (declared `ref` vs matched filename) | The operand is the filesystem listing, not the document. Stays a store-stage lane. |
 | **R6** | substrate-owned behaviour — a PARITY residual, carrying no obligation residual | **Members:** none. **Affected:** ch8-C1/C2/C3/C4/C20 (message TEXTS) and ch8-C5 (the expansion bound) — all `Δlib` | Each obligation IS declared, as a flag with its surfacing stage; what the engine cannot own is the WORDING, which the YAML library emits. Parity here is library-version parity, not engine parity. The ORDER of those findings is NOT in this family — it became `[d-order]` at the round-1 fold (F9). |
+| **R8** | **boundary-kept: a rule the vocabulary CAN express, kept in code by an architectural boundary** (added 2026-08-06 — see the amendment note below) | **Boundary-kept rows:** ch11-C12's SOURCE half (the uses-scoped plain-decimal ladder on `declarative.threshold`'s `value` and `external.process`'s `timeoutMs`). Its members stay `S`, which is what distinguishes this family from R1–R6 | NOT an expressiveness failure. `sourceForm: plainDecimalInteger` is an ADMITTED construct with two independent rows (§2.2 #6), and the declaration for these two fields exists on paper as `[vc-authored-int]`. What blocks it is COMPOSITION: the `delegate: registry(uses)` hand-off cannot carry the CHANNEL into a registration, because `GateRegistration.validateAndNormalizeConfig(raw)` takes only the value, and `gates/**` may not value-import the definition engine (ch11-P2a G1, lint-enforced). Removing the block is a port-shape act, not a vocabulary act. |
 | **R7** | rows whose only declaration uses a single-use construct | **RESOLVED EMPTY, 2026-08-05.** Former members: ch11-C8, ch11-C16 — both moved to `S` when ADR-019's D8 admitted their constructs as widenings of the selector root and of the `code` attribute, neither being a new construct. The family id is KEPT so a future single-use candidate has a home and this ruling stays legible | The family's purpose was to stop the coverage number borrowing against an undecided construct. It did its job for exactly one ratification cycle, which is what it was for. |
+
+**AMENDMENT, user-ratified 2026-08-06 — the residual is EIGHT families.**
+The P3 build filed ch11-C12's source half under **R7**, and the
+2026-08-06 design review (`ch13-rederivation-arm/p3-design/`, finding F3)
+showed that was a category error: R7 is "rows whose only declaration uses
+a construct the ADR has NOT admitted", and this construct IS admitted.
+The obstacle is a composition boundary, so the row needs a family that
+says so. **R7 returns to RESOLVED EMPTY** (its purpose — stopping the
+coverage number borrowing against an undecided construct — is intact and
+unused), and **R8 is born** to hold rules that are declarable, declared on
+paper, and kept in code by an architectural limit.
+
+Why this matters more than a relabelling: ADR-019's D9.3 tripwire fires
+when the residual grows past the AUDITED family ids. Filing a new KIND of
+remainder under an old id left that tripwire reading green while the thing
+it watches for had happened. The count is now eight, and a future
+boundary-kept rule has a visible home instead of a borrowed one.
+
+**No classification number moves.** R8's members stay `S` — their
+obligation is expressible — so the 61 · 3 · 6 tally in §3.6 is unchanged
+by this amendment. A reader hunting for a moved number should stop here.
 
 ### 4.1 Verdict on the plan's prediction
 
@@ -759,7 +781,8 @@ duplicates*. The table CHECKED it rather than assuming it:
 | event-grain suppression | **REFUTED** | `keysSubsetOf: keys(../transitions)` + `gating` expresses ch11-C2's dead-config lane and its dependent suppression. Independent ROWS using the construct: 3 — ch8-C16 (whose three tags are one row, corrected at arm F6), ch11-C2, ch11-C15. Three ≥ two, so the verdict stands on the corrected count. |
 | per-occurrence duplicates | **REFUTED** | `unique {grain: perOccurrence, at: index\|container}` covers ch8-C17, ch11-C40 and ch13-C8(e) — 3 independent rows. The `at:` attribute exists precisely because the three measured lanes DISAGREE on path grain (§5 F3). |
 
-**FIVE residual families the prediction did not name** — the honest
+**SIX residual families the prediction did not name** (five at the audit,
+plus R8 at the 2026-08-06 amendment) — the honest
 counterweight, corrected at round 2 (F3: the sentence still said "two"
 after R7 was born):
 
@@ -770,6 +793,7 @@ after R7 was born):
 | **R5** cross-artifact check | A boundary class — the operand is the filesystem, so arguably outside any format schema's remit. Named anyway. |
 | **R6** substrate-owned wording | A parity class, not an obligation class (see the table). |
 | **R7** undecided constructs | Did not exist before this audit: it is the by-product of applying §0's own admission test honestly. |
+| **R8** boundary-kept (added 2026-08-06) | Could not have been predicted from any surface's rules: it is not a property of the FORMAT at all, but of the module and port boundaries the engine has to live inside. It became visible only when a build tried to place a declarable rule and could not reach it. |
 
 R5 and R6 are boundary/parity classes and could fairly be called out of
 the prediction's scope; R3, R4 and R7 could not. The prediction was
@@ -781,7 +805,8 @@ scorecard against the plan.
 
 - **F1 — the direction survives the enumeration.** 61 of 70
   obligation-bearing rows are fully declarable; the residual is six
-  families carrying members (plus R7, resolved empty), four of them one
+  families carrying members (plus R7, resolved empty; plus R8, added
+  2026-08-06 and holding one boundary-kept row), four of them one
   or two rows each. Nothing in the 125 required a per-rule special case
   in the vocabulary — the §0 admission test caught exactly two
   single-use candidates and held their rows OUT of the coverage number

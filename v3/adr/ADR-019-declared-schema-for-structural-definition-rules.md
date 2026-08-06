@@ -1,7 +1,8 @@
 # ADR-019: structural definition rules become declared schema, validated by one engine on both channels
 
 Status: accepted
-Date: 2026-08-05
+Date: 2026-08-05 · amended 2026-08-06 (D1's residual list, D5's corpus
+derivation, D9.3's reading; user-ratified — each carries a dated marker)
 Links: supersedes — · amends — · depends-on ADR-011 · related ADR-003, ADR-012, ADR-013
 
 ## Context
@@ -37,6 +38,17 @@ sha256
 (classification 61/3/6). Both pins are recorded because the act changed
 its own basis, and only in the direction the act itself ruled — the
 audit could not have moved itself.
+
+**A THIRD pin, 2026-08-06.** The user-elected design round (finding F3,
+`ch13-rederivation-arm/p3-design/`) showed that the P3 build had filed a
+boundary-kept rule under R7, whose definition does not cover it. The
+audit gained an EIGHTH residual family and the standing document is now
+sha256
+`a1a7adc5732bc5de6264de7eeac57b5bfd53b64616bfd67acb15af867d8d0fd2`.
+The classification is UNCHANGED at 61/3/6 — R8's members are `S`, because
+their obligation is expressible; what is not available is a way to reach
+them. Every earlier pin stays recorded, for the same reason the second
+one does.
 
 The audit classifies every ratified rule of the four format surfaces
 against a proposed declaration form, and was verified by two bounded
@@ -79,12 +91,22 @@ hand-partitioned "realization split" that ch11-C40 and ch13-C19 each
 spent ratified prose defending.
 
 The residual — the ONLY territory where prose keeps legislating
-behaviour — is exactly the audit's seven families: **R1** value-shaped
-reference resolution · **R2** unreferenced hygiene with a template-wide
-skip · **R3** existential cross-rules over resolved registrations ·
-**R4** admitted-form derivation · **R5** cross-artifact checks · **R6**
-substrate-owned wording (a parity residual, no obligation) · **R7** rows
-whose only declaration uses a construct this ADR has not admitted (D8).
+behaviour — is exactly the audit's families, **EIGHT since 2026-08-06**:
+**R1** value-shaped reference resolution · **R2** unreferenced hygiene
+with a template-wide skip · **R3** existential cross-rules over resolved
+registrations · **R4** admitted-form derivation · **R5** cross-artifact
+checks · **R6** substrate-owned wording (a parity residual, no
+obligation) · **R7** rows whose only declaration uses a construct this
+ADR has not admitted (D8) · **R8** BOUNDARY-KEPT — a rule this vocabulary
+CAN express, declared on paper, kept in code because a module or port
+boundary puts it out of the engine's reach.
+
+R8 is a different KIND of remainder from R1–R7 and is named rather than
+folded into them: R1–R7 record what the vocabulary cannot say, R8 records
+what it can say but cannot deliver. Its members stay `S`. The distinction
+is load-bearing for D9.3 — a boundary is removable by an act, an
+expressiveness limit is not, and a tripwire that cannot tell them apart
+watches nothing.
 
 ### D2 — scope
 
@@ -144,10 +166,27 @@ fixture corpus is replayed against it and must produce identical
 verdicts, identical finding PATHS and identical MESSAGES — or an
 approved delta list, ratified before the switch, never after.**
 
+**AMENDED 2026-08-06 — the corpus is derived from the CALLERS of the
+swapped entry point, never from a file list.** The corpus as originally
+named:
+
 The corpus, measured 2026-08-05 by `grep -cE '^\s*(it|test)\('`: **362
 cases** — `validate.test.ts` 124 · `load.test.ts` 76 · `admit.test.ts`
 59 · `process.test.ts` 59 · `fileDefinitionStore.test.ts` 19 ·
 `threshold.test.ts` 13 · `previousReviewerVerdict.test.ts` 12.
+
+Those seven reproduce exactly, and they were the WRONG SET: measured at
+the build, `admitTemplate` — the direct-construction channel's entry — is
+called from the testkit, kernel, lifecycle and trace suites as well, and
+**two thirds of the cases the switch actually affected lived outside the
+named files**. A file list is a snapshot of who called the entry point on
+the day it was written; the obligation is to replay who calls it NOW.
+
+So the standing rule: enumerate the CALLERS of the entry point being
+replaced, and replay every case that reaches them. Where that is the whole
+suite, it is the whole suite — the P3 build replayed 1830 executed cases
+for a corpus named as 362 source-literal ones, and the difference is
+where its delta list came from.
 
 This is a DERIVED claim about behaviour that does not exist yet; its
 NAMED MEASURER is the build's parity gate itself. Two delta classes are
@@ -221,9 +260,19 @@ work-around:
    row fit (D7's test bypassed);
 2. the engine acquires a per-rule branch — a literal `if (rule === X)`
    — to reproduce a measured verdict, path or message;
-3. the declared residual grows past the seven audited family ids —
-   six carrying members, R7 resolved empty at D8 — during contract-v2
-   authoring, without a ratified amendment saying so.
+3. the declared residual grows past the AUDITED family ids — eight since
+   the 2026-08-06 amendment: six carrying members, R7 resolved empty at
+   D8, R8 holding one boundary-kept row — without a ratified amendment
+   saying so.
+
+   **How this tripwire was defeated once, recorded so it is not defeated
+   the same way twice** (design review F3): the P3 build kept a rule in
+   code and filed it under an EXISTING family id whose definition did not
+   cover it. The family count stayed at seven, the tripwire read green,
+   and a new kind of remainder had appeared unseen. Renaming is not a
+   ratified amendment. The tripwire fires on a new KIND of residual, not
+   only on a new id — and a rule kept in code for a reason no existing
+   family states IS a new kind, whatever it is called.
 
 ## Alternatives Considered
 

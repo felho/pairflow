@@ -5456,3 +5456,118 @@ final CLEAN.
   findings), and criterion CHANGES reset the yield curve while extra
   same-criterion rounds do not. Route: boundary review — enact a
   minimal record-and-reconcile ritual, or consciously defer.
+
+- 2026-08-06 (ch13 re-derivation, P3 CLOSES — the schema substrate is
+  live on the template surface, and its aftermath fold is in) — THE
+  PARITY GATE'S TWO PRE-NAMED DELTA CLASSES CAME BACK EMPTY; THE ARM'S
+  FIRST ROUND CAUGHT THE BUILD COMMITTING THE EXACT DEFECT THE DIRECTION
+  EXISTS TO END; AND A USER-ELECTED FOURTH ROUND ON A CHANGED CRITERION
+  FOUND A WHOLE CLASS THE CLOSED FRAME WAS SHAPED NOT TO SEE. THE
+  PRODUCT: structural definition rules on the authored-template surface
+  are DATA (`v3/src/definition/schema/templateFormat.ts`, ADR-019 D4's
+  canonical home) consumed by ONE engine on BOTH channels;
+  `definition/validate.ts` (898 lines) is deleted and
+  `definition/admit.ts` fell from 468 lines of rules to 68 lines of two
+  entry points and the A6 brand mint. THE MEASURED RESULT (D5, full
+  record in `v3/implementation/p3-parity-gate.md`): 105 divergence
+  records over 1830 executed cases, and for EVERY finding path both
+  implementations emit, `{path, message, code}` is identical — zero path
+  deltas, zero message deltas. The audit's F3 had named path grain "the
+  parity gate's highest-yield target"; the `at:`/`keyLaneAt:`/
+  `laneOrder:` attributes it recommended are why it yielded nothing. The
+  deltas that DID exist were ratified before the switch: channel
+  symmetry (structural rules now run on the direct-construction channel
+  — D1's own text, and the mechanism the audit's F2 predicted would
+  dissolve ch13-C7's belt) and lane order. A third class I reported was
+  WITHDRAWN at the switch: I claimed the `(b′)` disposition could not
+  survive the split's dissolution and the ruling authorized amending it;
+  re-reading ch11-P4's F7 showed the premise was mine — ch8-C21
+  suppresses on MISSING or WRONG-KIND containers only, and an empty map
+  is a valid map of its kind — so deleting one wrongly-declared `gating`
+  attribute restored it exactly and no amendment was made. D5 IS AMENDED
+  (2026-08-06): the parity corpus is derived from the CALLERS of the
+  swapped entry point, never from a file list. The named seven files
+  reproduced exactly at 362 cases and were the wrong set — `admitTemplate`
+  is called from the testkit, kernel, lifecycle and trace suites too, and
+  TWO THIRDS of the cases the switch actually affected lived outside
+  them. A file list is a snapshot of who called the entry point the day
+  it was written. THE ARM (its own three-round frame; the audit arc's
+  rounds did not carry): 6 · 6 · 0, all in scope, all folded, zero
+  carried. Round 1's verdict was that the central claim does NOT survive,
+  and it was right: the declaration carried a whole SUBSTRATE block of
+  which the runtime read exactly ONE field — decoration wearing an
+  authority's costume, committed by the build that exists to end that.
+  Round 2 (6 again, two of them my own defects in prose) did NOT shrink
+  the count, recorded rather than smoothed; round 3 closed 0/0/0 having
+  tested the claim rather than re-read it. THEN THE USER ELECTED A FOURTH
+  ROUND UNDER PLAN §6's CHANGED-CRITERION CLAUSE, and the criterion was
+  the one nothing had used: the three closed rounds examined the CODE for
+  accident and sloppiness; none had examined the DIRECTION. Verdict
+  (`ch13-rederivation-arm/p3-design/`, sha256 a8865fae…): 14 findings —
+  4 design-error · 2 over-promise · 4 future-trap · 4 CONFIRMED-SOUND —
+  and an explicit answer to the question that motivated it: the approach
+  IS sound, conditionally. THE CLASS THE CLOSED FRAME COULD NOT SEE:
+  rounds 1–3 hunted "declared but not consumed" and found plenty; five of
+  the 14 were its MIRROR IMAGE — declared, consumed, and UNRESOLVABLE. A
+  mistyped value-class name returned the value unvalidated; the
+  parent-relative selector syntax the vocabulary DOCUMENTED was one the
+  engine never accepted, so a declaration written to the documentation
+  compiled and validated nothing; `channel` sat on every node and was
+  read at two sites; one type name carried three interpreters; the
+  substrate carried no citable tag. One root cause: the declaration is a
+  LANGUAGE whose shapes the type system checked and whose NAMES AND PATHS
+  nothing checked. THE AFTERMATH FOLD (user-ratified, five buckets):
+  `schema/defineSurface.ts` now CLOSES the declaration at load — thirteen
+  reference classes resolved once, an unresolved one THROWS before any
+  document is validated — and then DEEP FREEZES it, making D4's "frozen
+  declaration object" literally true where `Object.freeze` had frozen
+  only the outermost object. F3 IS RECLASSIFIED, and it is the one that
+  cost something: the build had filed a boundary-kept rule under R7,
+  whose definition is "uses a construct the ADR has NOT admitted" — but
+  the construct IS admitted and the obstacle is a composition boundary.
+  The audit gains an EIGHTH residual family, R8 BOUNDARY-KEPT (a rule the
+  vocabulary CAN express, kept in code by a module or port limit; its
+  members stay `S`), R7 returns to resolved-empty, and the audit's
+  standing hash moves to a1a7adc5… — the THIRD pin, recorded because the
+  ADR set that precedent when its own ratification moved its basis. D9.3
+  IS AMENDED with the reason: filing a NEW KIND of remainder under an OLD
+  id left the tripwire reading green while the thing it watches for had
+  happened, so it now fires on a new KIND, not only a new id. F9 (no byte
+  lock on the schema file today) is ACCEPTED with its settlement point
+  named: the lock arrives with contract v2's ratification act at P4, and
+  no interim machinery is built for a gap that closes by design. THE
+  EXPERIMENT LINE (§5), ALL ARCS: 6 external rounds (audit 2, build 3,
+  design 1), 41 findings (10 · 5 · 6 · 6 · 0 · 14), all folded or ruled,
+  ZERO carried, ZERO contract reopens, ZERO semantic paraphrases — the
+  prose line's comparison numbers were 4 reopens, 4+ panel rounds plus a
+  watchdog reset, and 28·6·9·8. The honest qualifier stands: this phase
+  produced CODE and a declaration, not ratified prose, so the paraphrase
+  count is zero by FORM rather than by discipline — which is the claim
+  the direction makes, and it is P4's contract that will test it on
+  prose. WHAT THE STANDING RULES DID: the THREAT MODEL held three rounds
+  to accident and sloppiness and produced zero carried-scope; the BOUNDED
+  LOOP bound for the first time — the frame closed at its third round
+  rather than running on — AND ITS ESCAPE HATCH EARNED ITS KEEP, because
+  the fourth round opened only on a CHANGED criterion and returned the
+  highest-yield findings of the phase, which is the rule working as
+  designed rather than being bypassed; the PROPORTIONALITY TRIPWIRE
+  FIRED, at 1.85x when first measured and 1.75x/1.81x after two folds
+  deleted data that was doing nothing, with the user's ruling standing
+  that it is re-measured at the P4/P5 boundary; the TRAJECTORY LINE
+  caught a stale size number twice, once by me and once by the arm. THE
+  STOP-2 CRITERION QUESTION IS SETTLED: the candidate rule carried out of
+  build round 2 — that a declared field counts as unconsumed only if a
+  DIFFERENT legal value would change something observable — is CONFIRMED
+  within its stated boundary (design review F12: while the declaration is
+  a typechecked TS literal, a one-member literal has no other legal
+  runtime branch), and is no longer "untested". SCOPE REDUCED AGAINST THE
+  KICKOFF, ruled and independently re-verified: the three delegated
+  gate-config schemas stay as built, because ch11-P2a G1 is lint-enforced
+  and permits `gates/` to value-import `domain/` and `ports/` only — a
+  repo guard decided it, not taste (design review F8 confirmed the reason
+  accurate). CARRIED TO P4/P5: four future-trap findings by name — the
+  substrate's citability at contract-authoring time, the schema byte lock
+  at contract v2, a packet author's inability to read the default finding
+  grain from the declaration alone, and the `carry` list of the
+  effective-config hook silently dropping any binding field a future
+  chapter adds.
