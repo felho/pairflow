@@ -9,8 +9,8 @@ at run time with nothing checking them — so a mistyped reference switched
 a rule off silently. A fold has since added a gate that resolves every
 reference at load and refuses a declaration that is not closed.
 
-**This round asks one primary question: can any name or path still dangle
-silently?** Plus: did the fold break anything.
+**This round asks one primary question: does the gate check every name and
+path a declaration can write?** Plus: did the fold break anything.
 
 ## 0. READ THIS FIRST — the time budget
 
@@ -60,8 +60,9 @@ oversight.
 ## 3. The lenses
 
 **Lens A — CLOSURE COMPLETENESS (the primary lens; spend most of the
-budget here).** The gate claims that a declaration carrying an unresolved
-reference cannot become a surface. Test the claim by trying to defeat it.
+budget here).** The gate states that a declaration carrying an
+unresolved reference cannot become a surface. Check that statement
+exhaustively, by enumeration rather than by sampling.
 
 Enumerate, from `vocabulary.ts`, EVERY place a declaration can name
 something that must resolve — a value-class name, any of the three path
@@ -72,15 +73,16 @@ each, check whether `defineSurface` actually resolves it.
 
 **Report every name or path a declaration can write that the gate does
 NOT check.** For each, say concretely what a declaration author would
-write and what would silently happen. Build the case under `/tmp` and run
-it where you can — the engine and the gate are both importable.
+write by ordinary mistake, and what the engine would then do with it.
+Build the case under `/tmp` and run it — the engine and the gate are both
+importable.
 
 Two specific things to settle:
 - the gate walks a declaration; does its walk reach EVERY node position
-  the engine evaluates? A position the walk misses is a hole, and a
-  reference inside it is unchecked.
-- `defineSurface` is applied to the live declaration. Is there any way to
-  reach the engine with a surface that never passed the gate?
+  the engine evaluates? A position the walk does not visit leaves the
+  references inside it unchecked.
+- which code paths construct a surface value, and does each one pass
+  through the gate before the engine sees it? List the call sites.
 
 **Lens B — DO THE GATE'S RULES SAY WHAT THEY DO?** For a sample of the
 thirteen guards, check the rule against its message and its
@@ -130,6 +132,11 @@ FIX SKETCH: (IN-SCOPE only) the smallest correction
   prose.
 - **Proportionality.** A correction larger than the thing it corrects is
   itself a finding.
+- **Vocabulary.** This is routine software quality review of an internal
+  data-validation module: a gate that checks whether the names in a
+  configuration object resolve. Describe what you find in ordinary
+  engineering terms — an unchecked reference, a position the walk misses,
+  a message that names the wrong problem.
 - **A clean result is a real result.** The gate is narrow and the base is
   three-rounds verified; finding nothing new is a plausible honest
   outcome. Do not manufacture findings, and do not soften a real one.
@@ -141,6 +148,6 @@ Only this:
 - your tree's HEAD;
 - counts: IN-SCOPE / CARRIED-SCOPE / UNRUN;
 - the four regression commands and their real results;
-- and the primary question, answered in one sentence: **after this fold,
-  can any name or path in a declaration still dangle silently — and if so,
-  which one?**
+- and the primary question, answered in one sentence: **does the gate
+  check every name and path a declaration can write — and if not, which
+  one does it miss?**
