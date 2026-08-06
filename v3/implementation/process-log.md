@@ -5440,3 +5440,19 @@ final CLEAN.
   sites as the second-through-fourth users); the audit's [d-gc-*]
   paper declarations as the source; a per-surface parity gate per
   ADR-019 D5/D6. Route: boundary review — never a while-we-are-here.
+
+- 2026-08-06 (after the P3 close and the user-elected design round —
+  a BOUNDARY CANDIDATE, design material) — THE REVIEW PROGRAM AS A
+  BETTING SYSTEM: six dials on one learning loop. The full sketch is
+  v3/implementation/review-program-design-sketch.md — distilled from
+  a user/general design conversation; NOTHING enacted. The organizing
+  idea, user-named: every review spend is a WAGER that prevention
+  costs less than cure; a skipped lens is a bet against a defect
+  class, an unfixed finding a bet it will not bite, and the learning
+  loop is calibration from settled bets. The evidence that forced it:
+  the unbounded fixed-criterion loop paperclips (P1, measured), the
+  bounded fixed-criterion loop is blind (P3 build shipped a whole
+  class the user-elected new-criterion round then caught, 14
+  findings), and criterion CHANGES reset the yield curve while extra
+  same-criterion rounds do not. Route: boundary review — enact a
+  minimal record-and-reconcile ritual, or consciously defer.
