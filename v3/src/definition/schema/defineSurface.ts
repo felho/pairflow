@@ -1,3 +1,12 @@
+import {
+  type DeclCursor,
+  RELATION_READS,
+  derefNode,
+  descend,
+  resolveSelectorPath,
+  selectorRead,
+  shapesOf,
+} from "./engine.js";
 import type {
   EqualsRuleDecl,
   MessageTemplate,
@@ -23,6 +32,16 @@ import type {
  * reference is resolved here, once, at load; an unresolved one throws
  * before any document is ever validated. Fail-closed, loudly, at startup —
  * never a no-op at validation time, which is the failure mode that hides.
+ *
+ * WHERE THE RESOLVING HAPPENS is the second lesson, learnt three rounds
+ * running. This gate used to keep its OWN model of which positions exist
+ * and what a selector reaches — a replica of the engine's walk — and every
+ * round found another place the replica had drifted from the original. It
+ * keeps none now. `descend` and `resolveSelectorPath` are the ENGINE's, the
+ * same calls its runtime selector walk makes, so what this gate certifies
+ * as reachable is reachable by construction. What is left here is the
+ * POLICY: an answer must exist, it must be readable for EVERY legal value,
+ * and it must exist on BOTH channels.
  *
  * The second half is `deepFreeze`: ADR-019 D4 calls the declaration "a
  * frozen declaration object", and `Object.freeze` alone froze only the
@@ -89,18 +108,7 @@ function selectorPathProblems(path: string, where: string): string[] {
         `or "^" (the citing node's container); got ${JSON.stringify(head)}`,
     ];
   }
-  const problems: string[] = [];
-  for (const segment of segments.slice(1)) {
-    if (segment === "") {
-      problems.push(`${where}: selector path ${JSON.stringify(path)} has an empty segment`);
-    } else if (segment.includes("*") && segment !== "*") {
-      problems.push(
-        `${where}: selector path ${JSON.stringify(path)} uses "*" inside a segment; ` +
-          `"*" is legal only as a whole segment`,
-      );
-    }
-  }
-  return problems;
+  return segmentProblems(segments.slice(1), path, "selector", where);
 }
 
 /** A NORMALIZER operand path: `$`-rooted, dot-separated, with `*` legal as
@@ -110,13 +118,19 @@ function normalizerPathProblems(path: string, where: string): string[] {
   if (segments[0] !== "$") {
     return [`${where}: normalizer path ${JSON.stringify(path)} must start with "$"`];
   }
+  return segmentProblems(segments.slice(1), path, "normalizer", where);
+}
+
+/** Both path languages spell a segment the same way, because the engine
+ * reads both with the same descent. */
+function segmentProblems(segments: readonly string[], path: string, language: string, where: string): string[] {
   const problems: string[] = [];
-  for (const segment of segments.slice(1)) {
+  for (const segment of segments) {
     if (segment === "") {
-      problems.push(`${where}: normalizer path ${JSON.stringify(path)} has an empty segment`);
+      problems.push(`${where}: ${language} path ${JSON.stringify(path)} has an empty segment`);
     } else if (segment.includes("*") && segment !== "*") {
       problems.push(
-        `${where}: normalizer path ${JSON.stringify(path)} uses "*" inside a segment; ` +
+        `${where}: ${language} path ${JSON.stringify(path)} uses "*" inside a segment; ` +
           `"*" is legal only as a whole segment`,
       );
     }
@@ -138,35 +152,17 @@ function findingPathProblems(path: string, where: string): string[] {
   return problems;
 }
 
-/** A reference whose target can only be resolved once the whole tree has
- * been walked. Collected in pass one, resolved in pass two. */
-interface PendingRef {
-  readonly path: string;
-  readonly relation: "keysOf" | "valuesOf" | "collect";
-  /** The declaration path of the node that CITED it — the operand of `^`. */
-  readonly from: string;
-  readonly where: string;
-}
-
 interface Context {
-  readonly valueClasses: Readonly<Record<string, NodeDecl>>;
+  readonly surface: SurfaceDecl;
+  /** The document root as a declaration position — the base of every
+   * `$`-rooted path, and the engine's own. */
+  readonly root: DeclCursor;
   readonly codes: ReadonlySet<string>;
   readonly tags: string[];
   /** Tags the ENGINE records reliability for — only these can satisfy a
    * `dependsOn` (F4: a substrate or cross-rule tag never gets a status, so
    * depending on one suppresses nothing, forever). */
   readonly nodeTags: Set<string>;
-  /** Declaration path → the node at it, for operands addressed in the
-   * ENGINE's internal walk language (the normalizer resolves this way). */
-  readonly positions: Map<string, NodeDecl>;
-  /** The subset a SELECTOR can actually reach. A list member lives at the
-   * engine-internal `…[]`, a key class at `…<key>`, and a declared field
-   * name containing a dot is walked as two segments — a selector naming
-   * any of them addresses something else or nothing, so none of them is a
-   * legal selector target. Keeping the two maps apart is what stops the
-   * gate calling such a path "resolved" while the rule stays inert. */
-  readonly selectorPositions: Map<string, NodeDecl>;
-  readonly pending: PendingRef[];
   /** Hook tags whose operand paths are syntactically clean. A path that
    * failed its grammar is NOT resolved a second time — one broken
    * reference must yield one problem, or a maintainer cannot tell how many
@@ -175,51 +171,104 @@ interface Context {
   readonly problems: string[];
 }
 
-/** Syntax now; the TARGET's existence and kind are resolved in pass two. */
-function selectorProblems(selector: Selector, where: string, from: string, ctx: Context): string[] {
-  if ("injected" in selector) return [];
-  if ("union" in selector) return selector.union.flatMap((part) => selectorProblems(part, where, from, ctx));
-  const relation = "keysOf" in selector ? "keysOf" : "valuesOf" in selector ? "valuesOf" : "collect";
-  const path = "keysOf" in selector ? selector.keysOf : "valuesOf" in selector ? selector.valuesOf : selector.collect;
+/**
+ * A position the walk visits on only ONE channel is never evaluated on the
+ * other. A rule reading it there waits forever on an operand that never
+ * completes, and the deferred queue drops it without a word — the same
+ * silence, reached by a different road.
+ */
+function channelProblem(visited: readonly DeclCursor[], path: string, where: string): string | undefined {
+  const scoped = visited.find((cursor) => cursor.node.channel !== undefined && cursor.node.channel !== "both");
+  if (scoped === undefined) return undefined;
+  return (
+    `${where}: selector path ${JSON.stringify(path)} passes through ${JSON.stringify(scoped.decl)}, ` +
+    `which is declared channel ${JSON.stringify(scoped.node.channel)} — on the other channel that operand ` +
+    `is never evaluated, so the rule waits on it and is dropped in silence`
+  );
+}
+
+/** Resolve ONE selector leaf through the engine's own descent, then apply
+ * the gate's policy to the answer. */
+function leafProblems(
+  selector: Extract<Selector, { keysOf: string } | { valuesOf: string } | { collect: string }>,
+  where: string,
+  ctx: Context,
+  base: DeclCursor | undefined,
+): string[] {
+  const { relation, path } = selectorRead(selector);
   const syntax = selectorPathProblems(path, where);
-  if (syntax.length === 0) ctx.pending.push({ path, relation, from, where });
-  return syntax;
+  if (syntax.length > 0) return syntax;
+
+  const resolution = resolveSelectorPath(ctx.surface, ctx.root, base, path);
+  const target = resolution.visited.at(-1);
+  if (resolution.unreached !== undefined || target === undefined) {
+    return [
+      `${where}: selector path ${JSON.stringify(path)} addresses ` +
+        `${JSON.stringify(resolution.unreached ?? path)}, which the declaration does not declare`,
+    ];
+  }
+
+  const channel = channelProblem(resolution.visited, path, where);
+  if (channel !== undefined) return [channel];
+
+  // EVERY legal value must be readable. One that is readable for some
+  // inputs and silently skipped for others is what "closed" must not mean.
+  const needed = RELATION_READS[relation].shape;
+  const shapes = shapesOf(ctx.surface, target.node);
+  const unreadable = [...shapes].filter((shape) => shape !== needed);
+  if (unreadable.length === 0) return [];
+  return [
+    `${where}: ${relation}(${JSON.stringify(path)}) addresses a ${target.node.kind} whose value can be ` +
+      `${[...shapes].sort().join(" | ")}; ${relation} reads only ${needed}, so the rule would be ` +
+      `skipped for ${unreadable.sort().join(" | ")} values`,
+  ];
+}
+
+function selectorProblems(selector: Selector, where: string, ctx: Context, base: DeclCursor | undefined): string[] {
+  if ("injected" in selector) return [];
+  if ("union" in selector) return selector.union.flatMap((part) => selectorProblems(part, where, ctx, base));
+  return leafProblems(selector, where, ctx, base);
 }
 
 function checkMembership(
   rule: { readonly target: Selector; readonly message: MessageTemplate; readonly code?: string },
   where: string,
-  from: string,
   ctx: Context,
+  base: DeclCursor | undefined,
 ): void {
-  ctx.problems.push(...selectorProblems(rule.target, where, from, ctx));
+  ctx.problems.push(...selectorProblems(rule.target, where, ctx, base));
   ctx.problems.push(...slotProblems(rule.message, where));
   if (rule.code !== undefined && !ctx.codes.has(rule.code)) {
     ctx.problems.push(`${where}: issue code ${JSON.stringify(rule.code)} is outside the declared namespace`);
   }
 }
 
+/** The position a child of `at` occupies, or undefined where the enclosing
+ * position is itself unaddressable (inside a value-class DEFINITION, which
+ * the engine only ever evaluates at a reference site). */
+function childAt(ctx: Context, at: DeclCursor | undefined, step: Parameters<typeof descend>[2]): DeclCursor | undefined {
+  return at === undefined ? undefined : descend(ctx.surface, at, step);
+}
+
 /**
  * Walk one node. `channelHonoured` says whether a `channel` mark at THIS
  * position is read by the engine — true only for a field of a `map.fixed`.
+ * `at` is the node's own position and `parentAt` its container's — the
+ * declaration operands of `$`-relative and `^`-relative paths, carried
+ * rather than derived, because a list member's address ends in `[]` and
+ * chopping it lands on the wrong container.
  */
 function checkNode(
   decl: NodeDecl,
   where: string,
   channelHonoured: boolean,
   ctx: Context,
-  siblings: readonly string[] = [],
-  selectorAddressable = true,
+  at: DeclCursor | undefined,
+  parentAt: DeclCursor | undefined,
+  owner?: NodeDecl,
 ): void {
   ctx.tags.push(decl.tag);
   ctx.nodeTags.add(decl.tag);
-  // FIRST writer wins: a union and its `mapCase` share one address in the
-  // engine's walk, and the UNION is what a selector meets there. Letting
-  // the case overwrite it hid one of the union's shapes from the check.
-  if (!ctx.positions.has(where)) ctx.positions.set(where, decl);
-  if (selectorAddressable && !ctx.selectorPositions.has(where)) {
-    ctx.selectorPositions.set(where, decl);
-  }
   if (decl.rows.length === 0) ctx.problems.push(`${where}: node "${decl.tag}" cites no ratified row`);
   if (decl.channel !== undefined && !channelHonoured) {
     ctx.problems.push(
@@ -238,12 +287,8 @@ function checkNode(
     case "map.fixed": {
       ctx.problems.push(...slotProblems(decl.containerMessage, where), ...slotProblems(decl.unknownMessage, where));
       if (decl.missingMessage !== undefined) ctx.problems.push(...slotProblems(decl.missingMessage, where));
-      const fieldNames = Object.keys(decl.fields);
       for (const [name, field] of Object.entries(decl.fields)) {
-        // A field name containing a dot is ONE declared key that the
-        // selector language reads as two segments; its subtree is not
-        // selector-addressable under that text.
-        checkNode(field, `${where}.${name}`, true, ctx, fieldNames, selectorAddressable && !name.includes("."));
+        checkNode(field, `${where}.${name}`, true, ctx, childAt(ctx, at, { kind: "field", name }), at, decl);
       }
       for (const [key, message] of Object.entries(decl.removedKeys ?? {})) {
         ctx.problems.push(...slotProblems(message, `${where}.removedKeys.${key}`));
@@ -256,18 +301,24 @@ function checkNode(
       if (decl.deepKeyStringness !== undefined) {
         ctx.problems.push(...slotProblems(decl.deepKeyStringness.message, where));
       }
-      if (decl.keysSubsetOf !== undefined) checkMembership(decl.keysSubsetOf, `${where}.keysSubsetOf`, where, ctx);
-      if (decl.keyClass !== undefined) checkNode(decl.keyClass, `${where}<key>`, false, ctx, [], false);
-      checkNode(decl.entry, `${where}.*`, false, ctx, [], selectorAddressable);
+      // The rule is the OPEN MAP's own, so a `^` in it resolves from the
+      // map's container — the engine builds its frame that way too.
+      if (decl.keysSubsetOf !== undefined) checkMembership(decl.keysSubsetOf, `${where}.keysSubsetOf`, ctx, parentAt);
+      if (decl.keyClass !== undefined) {
+        checkNode(decl.keyClass, `${where}<key>`, false, ctx, childAt(ctx, at, { kind: "keyClass" }), at);
+      }
+      checkNode(decl.entry, `${where}.*`, false, ctx, childAt(ctx, at, { kind: "entry" }), at);
       return;
     }
     case "list": {
       ctx.problems.push(...slotProblems(decl.containerMessage, where));
       if (decl.nonempty !== undefined) ctx.problems.push(...slotProblems(decl.nonempty.message, where));
       if (decl.unique !== undefined) ctx.problems.push(...slotProblems(decl.unique.message, where));
-      if (decl.memberOf !== undefined) checkMembership(decl.memberOf, `${where}.memberOf`, where, ctx);
-      if (decl.disjointFrom !== undefined) checkMembership(decl.disjointFrom, `${where}.disjointFrom`, where, ctx);
-      checkNode(decl.member, `${where}[]`, false, ctx, [], false);
+      // A member's `^` is the LIST — the engine hands the member frame the
+      // list as its `parentValue`, and a list is not a container to read.
+      if (decl.memberOf !== undefined) checkMembership(decl.memberOf, `${where}.memberOf`, ctx, at);
+      if (decl.disjointFrom !== undefined) checkMembership(decl.disjointFrom, `${where}.disjointFrom`, ctx, at);
+      checkNode(decl.member, `${where}[]`, false, ctx, childAt(ctx, at, { kind: "member" }), at);
       return;
     }
     case "string": {
@@ -281,7 +332,7 @@ function checkNode(
           ctx.problems.push(`${where}: grammar ${JSON.stringify(decl.grammar.re)} is not a valid regular expression`);
         }
       }
-      if (decl.memberOf !== undefined) checkMembership(decl.memberOf, `${where}.memberOf`, where, ctx);
+      if (decl.memberOf !== undefined) checkMembership(decl.memberOf, `${where}.memberOf`, ctx, parentAt);
       return;
     }
     case "integer":
@@ -299,7 +350,8 @@ function checkNode(
       for (const [value, message] of Object.entries(decl.removedValues ?? {})) {
         ctx.problems.push(...slotProblems(message, `${where}.removedValues.${value}`));
       }
-      if (decl.mapCase !== undefined) checkNode(decl.mapCase, where, false, ctx, [], selectorAddressable);
+      // A union's map case is evaluated AT THE UNION'S OWN ADDRESS.
+      if (decl.mapCase !== undefined) checkNode(decl.mapCase, where, false, ctx, at, parentAt);
       return;
     }
     case "raw":
@@ -314,27 +366,58 @@ function checkNode(
     case "valueClass": {
       // The measured shame case: an unknown name made the engine return the
       // value unvalidated, so a mistyped class silently switched a rule off.
-      if (!(decl.valueClass in ctx.valueClasses)) {
+      if (!(decl.valueClass in ctx.surface.valueClasses)) {
         ctx.problems.push(
           `${where}: value class ${JSON.stringify(decl.valueClass)} is not declared ` +
-            `(declared: ${Object.keys(ctx.valueClasses).join(", ")})`,
+            `(declared: ${Object.keys(ctx.surface.valueClasses).join(", ")})`,
         );
       }
       return;
     }
     case "delegate": {
       ctx.problems.push(...slotProblems(decl.beltMessage, where));
-      // The hand-off reads a SIBLING field to name the registration. A
-      // typo there makes the engine read `undefined`, skip the registry
-      // and treat the delegation as satisfied.
-      if (!siblings.includes(decl.by)) {
-        ctx.problems.push(
-          `${where}: delegate reads sibling field ${JSON.stringify(decl.by)}, ` +
-            `which the enclosing map does not declare (siblings: ${siblings.join(", ")})`,
-        );
-      }
+      checkDelegateBy(decl, where, ctx, owner);
       return;
     }
+  }
+}
+
+/** The hand-off reads a SIBLING field to name the registration. The engine
+ * reads it with `typeof by !== "string" → satisfied`, so a name that
+ * resolves to the wrong THING is as silent as one that resolves to
+ * nothing: the delegation is skipped and the config never validated. */
+function checkDelegateBy(
+  decl: Extract<NodeDecl, { kind: "delegate" }>,
+  where: string,
+  ctx: Context,
+  owner: NodeDecl | undefined,
+): void {
+  const fields = owner === undefined ? undefined : derefNode(ctx.surface, owner);
+  const names = fields?.kind === "map.fixed" ? Object.keys(fields.fields) : [];
+  const by = fields?.kind === "map.fixed" ? descend(ctx.surface, { node: fields, decl: where }, { kind: "field", name: decl.by }) : undefined;
+  if (by === undefined) {
+    ctx.problems.push(
+      `${where}: delegate reads sibling field ${JSON.stringify(decl.by)}, ` +
+        `which the enclosing map does not declare (siblings: ${names.join(", ")})`,
+    );
+    return;
+  }
+  if (by.node.channel !== undefined && by.node.channel !== "both") {
+    ctx.problems.push(
+      `${where}: delegate reads sibling field ${JSON.stringify(decl.by)}, which is declared channel ` +
+        `${JSON.stringify(by.node.channel)} — on the other channel it is never present, so the ` +
+        `delegation is skipped and the config never validated`,
+    );
+    return;
+  }
+  const shapes = shapesOf(ctx.surface, by.node);
+  const unreadable = [...shapes].filter((shape) => shape !== "string");
+  if (unreadable.length > 0) {
+    ctx.problems.push(
+      `${where}: delegate reads sibling field ${JSON.stringify(decl.by)}, whose value can be ` +
+        `${[...shapes].sort().join(" | ")}; the registration is looked up by a string, so the delegation ` +
+        `is skipped for ${unreadable.sort().join(" | ")} values`,
+    );
   }
 }
 
@@ -344,8 +427,8 @@ function checkCrossRule(rule: EqualsRuleDecl, ctx: Context): void {
   if (rule.rows.length === 0) ctx.problems.push(`${where}: cites no ratified row`);
   // A cross rule cites from the ROOT: it has no citing node, so `^` has no
   // operand and every path it writes must be document-rooted.
-  ctx.problems.push(...selectorProblems(rule.left, `${where}.left`, "$", ctx));
-  ctx.problems.push(...selectorProblems(rule.right, `${where}.right`, "$", ctx));
+  ctx.problems.push(...selectorProblems(rule.left, `${where}.left`, ctx, undefined));
+  ctx.problems.push(...selectorProblems(rule.right, `${where}.right`, ctx, undefined));
   ctx.problems.push(...findingPathProblems(rule.missingFromLeft.at, `${where}.missingFromLeft.at`));
   ctx.problems.push(...findingPathProblems(rule.missingFromRight.at, `${where}.missingFromRight.at`));
   ctx.problems.push(...slotProblems(rule.missingFromLeft.message, `${where}.missingFromLeft`));
@@ -364,88 +447,17 @@ function checkHook(hook: NormalizerHookDecl, ctx: Context): void {
   if (pathProblems.length === 0) ctx.resolvableHooks.add(hook.tag);
 }
 
-/** The node a declaration path addresses, following a value-class
- * reference to the class it names — the node a selector actually meets. */
-function nodeAt(path: string, ctx: Context): NodeDecl | undefined {
-  const node = ctx.selectorPositions.get(path);
-  if (node?.kind !== "valueClass") return node;
-  return ctx.valueClasses[node.valueClass];
+/** Where a normalizer operand path lands, through the engine's descent. */
+function hookPosition(ctx: Context, path: string): DeclCursor | undefined {
+  const resolution = resolveSelectorPath(ctx.surface, ctx.root, undefined, path);
+  return resolution.unreached === undefined ? resolution.visited.at(-1) : undefined;
 }
 
-/**
- * The RUNTIME shapes a declared node can legally hold. A selector reads
- * the RAW value, so what decides whether a relation can read a target is
- * not the node's kind name but the shapes a valid value can take — and a
- * node that can hold more than one shape is readable only for SOME
- * inputs, which is the input-dependent silence the gate exists to refuse.
- */
-type RuntimeShape = "map" | "list" | "string" | "other";
-
-function shapesOf(node: NodeDecl, ctx: Context, seen = new Set<string>()): ReadonlySet<RuntimeShape> {
-  switch (node.kind) {
-    case "map.fixed":
-    case "map.open":
-    case "map.plain":
-      return new Set<RuntimeShape>(["map"]);
-    case "list":
-      return new Set<RuntimeShape>(["list"]);
-    case "string":
-      return new Set<RuntimeShape>(["string"]);
-    case "integer":
-    case "delegate":
-      return new Set<RuntimeShape>(["other"]);
-    case "enum":
-      return new Set<RuntimeShape>(
-        node.members.map((member) => (typeof member.value === "string" ? "string" : "other")),
-      );
-    case "union": {
-      const shapes = new Set<RuntimeShape>((node.literals ?? []).map(() => "string" as const));
-      if (node.mapCase !== undefined) for (const shape of shapesOf(node.mapCase, ctx, seen)) shapes.add(shape);
-      return shapes;
-    }
-    case "valueClass": {
-      if (seen.has(node.valueClass)) return new Set<RuntimeShape>(["other"]);
-      seen.add(node.valueClass);
-      const target = ctx.valueClasses[node.valueClass];
-      return target === undefined ? new Set<RuntimeShape>(["other"]) : shapesOf(target, ctx, seen);
-    }
-    case "raw":
-      // Uninterpreted: the declaration guarantees nothing about the value.
-      return new Set<RuntimeShape>(["map", "list", "string", "other"]);
-  }
-}
-
-/** Pass two for selectors: does the target POSITION exist, and is its kind
- * one the relation can read? A syntactically perfect path to a node that
- * does not exist made the rule vanish without a word. */
-function resolveSelectors(ctx: Context): void {
-  for (const ref of ctx.pending) {
-    const segments = ref.path.split(".");
-    const head = segments.shift();
-    const base = head === "$" ? "$" : ref.from.split(".").slice(0, -1).join(".");
-    const target = segments.length === 0 ? base : `${base}.${segments.join(".")}`;
-    const node = nodeAt(target, ctx);
-    if (node === undefined) {
-      ctx.problems.push(
-        `${ref.where}: selector path ${JSON.stringify(ref.path)} addresses ${JSON.stringify(target)}, ` +
-          `which the declaration does not declare`,
-      );
-      continue;
-    }
-    const needed: RuntimeShape = ref.relation === "keysOf" ? "map" : ref.relation === "valuesOf" ? "list" : "string";
-    const shapes = shapesOf(node, ctx);
-    // EVERY legal value must be readable. One that is readable for some
-    // inputs and silently skipped for others is what "closed" must not
-    // mean.
-    const unreadable = [...shapes].filter((shape) => shape !== needed);
-    if (unreadable.length > 0) {
-      ctx.problems.push(
-        `${ref.where}: ${ref.relation}(${JSON.stringify(ref.path)}) addresses a ${node.kind} whose value can be ` +
-          `${[...shapes].sort().join(" | ")}; ${ref.relation} reads only ${needed}, so the rule would be ` +
-          `skipped for ${unreadable.sort().join(" | ")} values`,
-      );
-    }
-  }
+function fieldProblem(ctx: Context, at: DeclCursor, name: string, where: string): string | undefined {
+  const node = derefNode(ctx.surface, at.node);
+  const names = node?.kind === "map.fixed" ? Object.keys(node.fields) : [];
+  if (descend(ctx.surface, at, { kind: "field", name }) !== undefined) return undefined;
+  return `${where}: ${JSON.stringify(name)} is not a field of ${JSON.stringify(at.decl)} (fields: ${names.join(", ")})`;
 }
 
 /** Pass two for the normalizer: its operand paths address declared
@@ -455,44 +467,35 @@ function resolveHooks(surface: SurfaceDecl, ctx: Context): void {
   for (const hook of surface.normalizers) {
     if (!ctx.resolvableHooks.has(hook.tag)) continue;
     const where = `normalizer "${hook.tag}"`;
-    const over = ctx.positions.get(hook.over);
+    const over = hookPosition(ctx, hook.over);
     if (over === undefined) {
       ctx.problems.push(`${where}.over: ${JSON.stringify(hook.over)} is not a declared position`);
       continue;
     }
-    if (over.kind !== "map.open") {
-      ctx.problems.push(`${where}.over: ${JSON.stringify(hook.over)} is a ${over.kind}; the hook walks a map.open`);
+    const entry = descend(ctx.surface, over, { kind: "entry" });
+    if (entry === undefined) {
+      const kind = derefNode(ctx.surface, over.node)?.kind ?? over.node.kind;
+      ctx.problems.push(`${where}.over: ${JSON.stringify(hook.over)} is a ${kind}; the hook walks a map.open`);
       continue;
     }
-    const fieldsOf = (path: string): { readonly node: NodeDecl | undefined; readonly names: readonly string[] } => {
-      const node = ctx.positions.get(path);
-      return { node, names: node?.kind === "map.fixed" ? Object.keys(node.fields) : [] };
-    };
     if (hook.hook === "expandAdvancesRound") {
-      if (ctx.positions.get(hook.advanceSet) === undefined) {
-        ctx.problems.push(
-          `${where}.advanceSet: ${JSON.stringify(hook.advanceSet)} is not a declared position`,
-        );
+      if (hookPosition(ctx, hook.advanceSet) === undefined) {
+        ctx.problems.push(`${where}.advanceSet: ${JSON.stringify(hook.advanceSet)} is not a declared position`);
       }
-      const entry = fieldsOf(`${hook.over}.*`);
       for (const [label, name] of [["edges", hook.edges], ["into", hook.into]] as const) {
-        if (!entry.names.includes(name)) {
-          ctx.problems.push(
-            `${where}.${label}: ${JSON.stringify(name)} is not a field of ${JSON.stringify(`${hook.over}.*`)} ` +
-              `(fields: ${entry.names.join(", ")})`,
-          );
-        }
+        const problem = fieldProblem(ctx, entry, name, `${where}.${label}`);
+        if (problem !== undefined) ctx.problems.push(problem);
       }
       continue;
     }
-    const member = fieldsOf(`${hook.over}.*[]`);
+    const member = descend(ctx.surface, entry, { kind: "member" });
+    if (member === undefined) {
+      ctx.problems.push(`${where}.over: ${JSON.stringify(entry.decl)} is not a list; the hook rebuilds its members`);
+      continue;
+    }
     for (const name of [...hook.carry, hook.into]) {
-      if (!member.names.includes(name)) {
-        ctx.problems.push(
-          `${where}: ${JSON.stringify(name)} is not a field of ${JSON.stringify(`${hook.over}.*[]`)} ` +
-            `(fields: ${member.names.join(", ")})`,
-        );
-      }
+      const problem = fieldProblem(ctx, member, name, where);
+      if (problem !== undefined) ctx.problems.push(problem);
     }
   }
 }
@@ -548,13 +551,11 @@ function collectDependsOn(decl: NodeDecl, where: string, into: { tag: string; wh
  */
 export function closureProblems(surface: SurfaceDecl): readonly string[] {
   const ctx: Context = {
-    valueClasses: surface.valueClasses,
+    surface,
+    root: { node: surface.root, decl: "$" },
     codes: new Set(surface.substrate.codes.values),
     tags: [],
     nodeTags: new Set(),
-    positions: new Map(),
-    selectorPositions: new Map(),
-    pending: [],
     resolvableHooks: new Set(),
     problems: [],
   };
@@ -569,9 +570,14 @@ export function closureProblems(surface: SurfaceDecl): readonly string[] {
   checkBranch(substrate.codes, "substrate.codes", ctx);
   checkBranch(substrate.internalFailure, "substrate.internalFailure", ctx, [substrate.internalFailure.message]);
 
-  checkNode(surface.root, "$", false, ctx);
+  checkNode(surface.root, "$", false, ctx, ctx.root, undefined);
   for (const [name, decl] of Object.entries(surface.valueClasses)) {
-    checkNode(decl, `valueClass "${name}"`, false, ctx);
+    // A value-class DEFINITION has no address of its own: the engine only
+    // ever evaluates it at a reference site, and its `^` is that site's
+    // container. So it is walked without a position, and a `^` written
+    // inside one does not resolve — loudly, at load, which is the recorded
+    // disposition rather than a silence.
+    checkNode(decl, `valueClass "${name}"`, false, ctx, undefined, undefined);
     // A value-class definition's tag is never STATUSED by the engine (the
     // reference's tag is), so it must not count as a dependsOn target.
     ctx.nodeTags.delete(decl.tag);
@@ -606,7 +612,6 @@ export function closureProblems(surface: SurfaceDecl): readonly string[] {
     );
   }
 
-  resolveSelectors(ctx);
   resolveHooks(surface, ctx);
   return ctx.problems;
 }

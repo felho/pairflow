@@ -901,6 +901,35 @@ describe("the declaration GATE: a declaration that is not closed never becomes a
       },
     });
 
+  /** Two structurally identical open maps under one fixed map, one of whose
+   * field names CONTAINS a dot. The hook names one or the other, so the
+   * broken and corrected forms differ in exactly that one reference. */
+  const dottedHook = (ok: boolean): SurfaceDecl => {
+    const openMap = (tag: string): Record<string, unknown> => ({
+      kind: "map.open", tag, rows: ["x"], containerMessage: "c", keyLaneAt: "container",
+      entry: { kind: "map.fixed", tag: `${tag}e`, rows: ["x"], containerMessage: "c", unknownMessage: "u",
+        fields: {
+          transitions: { kind: "map.open", tag: `${tag}t`, rows: ["x"], containerMessage: "c",
+            keyLaneAt: "container", entry: { kind: "string", tag: `${tag}v`, rows: ["x"], typeMessage: "t" } },
+          flags: { kind: "raw", tag: `${tag}f`, rows: ["x"] },
+        } },
+    });
+    return base({
+      normalizers: [{
+        tag: "n-h", rows: ["x"], hook: "expandAdvancesRound",
+        over: ok ? "$.dotted.plain" : "$.dotted.a.b",
+        edges: "transitions", advanceSet: "$.adv", into: "flags",
+      }],
+    }, {
+      fields: {
+        adv: { kind: "list", tag: "adv", rows: ["x"], containerMessage: "c", memberLaneAt: "index",
+          member: { kind: "string", tag: "advm", rows: ["x"], typeMessage: "t" } },
+        dotted: { kind: "map.fixed", tag: "d", rows: ["x"], containerMessage: "c", unknownMessage: "u",
+          fields: { "a.b": openMap("ab"), plain: openMap("pl") } },
+      },
+    });
+  };
+
   const binding = (by: string): SurfaceDecl =>
     base({}, {
       fields: {
@@ -1057,6 +1086,52 @@ describe("the declaration GATE: a declaration that is not closed never becomes a
             memberOf: { relation: "memberOf", target: { collect: ok ? "$.dotted.plain" : "$.dotted.a.b" }, message: "m" } },
         } }),
       problem: /addresses "\$\.dotted\.a\.b", which the declaration does not declare/u },
+    // --- the four the ROUND AFTER those four found, and which the single
+    // --- resolver closes by construction rather than one patch each.
+    { claim: "a selector reading a target the engine visits on ONE channel only",
+      make: (ok) => base({}, {
+        fields: {
+          names: { kind: "map.open", tag: "n", rows: ["x"], containerMessage: "c", keyLaneAt: "container",
+            entry: { kind: "string", tag: "ne", rows: ["x"], typeMessage: "t" },
+            ...(ok ? {} : { channel: "direct" }) },
+          pick: { kind: "string", tag: "p", rows: ["x"],
+            memberOf: { relation: "memberOf", target: { keysOf: "$.names" }, message: "m" } },
+        } }),
+      problem: /passes through "\$\.names", which is declared channel "direct"/u },
+    { claim: "a selector reading `*` at a FIXED map, where the walk records no wildcard position",
+      make: (ok) => base({}, {
+        fields: {
+          m: { kind: "map.fixed", tag: "m", rows: ["x"], containerMessage: "c", unknownMessage: "u",
+            fields: {
+              "*": { kind: "string", tag: "star", rows: ["x"], typeMessage: "t" },
+              plain: { kind: "string", tag: "pl", rows: ["x"], typeMessage: "t" },
+            } },
+          pick: { kind: "string", tag: "p", rows: ["x"],
+            memberOf: { relation: "memberOf", target: { collect: ok ? "$.m.plain" : "$.m.*" }, message: "m" } },
+        } }),
+      problem: /addresses "\$\.m\.\*", which the declaration does not declare/u },
+    { claim: "a delegate reading a sibling field whose value is not a string",
+      make: (ok) => base({}, {
+        fields: {
+          uses: { kind: "string", tag: "u", rows: ["x"], typeMessage: "t" },
+          count: { kind: "integer", tag: "cnt", rows: ["x"], resolvedForm: { safeInteger: true, min: 1, message: "m" } },
+          config: { kind: "delegate", tag: "cfg", rows: ["x"], registry: "gateCatalog", by: ok ? "uses" : "count",
+            beltMessage: "b", dependsOn: ["u"] },
+        } }),
+      problem: /delegate reads sibling field "count", whose value can be other; the registration is looked up by a string/u },
+    { claim: "a `^` selector on a LIST MEMBER, whose container is an array the walk cannot read",
+      make: (ok) => base({}, {
+        fields: {
+          names: { kind: "map.open", tag: "n", rows: ["x"], containerMessage: "c", keyLaneAt: "container",
+            entry: { kind: "string", tag: "ne", rows: ["x"], typeMessage: "t" } },
+          items: { kind: "list", tag: "it", rows: ["x"], containerMessage: "c", memberLaneAt: "index",
+            member: { kind: "string", tag: "itm", rows: ["x"], typeMessage: "t",
+              memberOf: { relation: "memberOf", target: { keysOf: ok ? "$.names" : "^.names" }, message: "m" } } },
+        } }),
+      problem: /addresses "\$\.items\.names", which the declaration does not declare/u },
+    { claim: "a normalizer operand path through a declared field name that CONTAINS a dot",
+      make: (ok) => dottedHook(ok),
+      problem: /over: "\$\.dotted\.a\.b" is not a declared position/u },
     { claim: "a grammar that is not a valid regular expression",
       make: (ok) => base({ valueClasses: { idClass: { kind: "string", tag: "vc", rows: ["x"],
         grammar: { re: ok ? "^[a-z]+$" : "^[a-z", message: "bad" } } } }),
@@ -1078,7 +1153,7 @@ describe("the declaration GATE: a declaration that is not closed never becomes a
   }
 
   it("the guard register is complete, unique and PINNED", () => {
-    expect(GUARDS).toHaveLength(27);
+    expect(GUARDS).toHaveLength(32);
     expect(new Set(GUARDS.map((guard) => guard.claim)).size).toBe(GUARDS.length);
   });
 

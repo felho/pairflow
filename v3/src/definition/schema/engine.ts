@@ -161,6 +161,203 @@ function materialize(value: unknown, seen: WeakMap<object, unknown>): unknown {
 }
 
 // ---------------------------------------------------------------------------
+// THE DECLARATION RESOLVER — one model of the engine's own addressing.
+// ---------------------------------------------------------------------------
+
+/**
+ * Three review rounds in a row found the same shape of defect: the load-time
+ * gate kept its OWN model of which declaration positions exist and what a
+ * selector reaches, and that replica drifted from the walk it was modelling.
+ * Every fix closed one divergence and the next round found the next.
+ *
+ * So the model is here, once, and BOTH readers go through it: the runtime
+ * selector walk (`resolvePath`) descends with `descend`, and the gate
+ * resolves every declared reference with the same call. The judge and the
+ * executor are the same code — the drift class has nowhere left to live.
+ */
+
+/** One descent the walk can make. These are the only four; every address
+ * `evaluateNode` records is a sequence of them. */
+export type DeclStep =
+  | { readonly kind: "field"; readonly name: string }
+  | { readonly kind: "entry" }
+  | { readonly kind: "member" }
+  | { readonly kind: "keyClass" };
+
+/** A declaration POSITION: the node the walk evaluates and the address it
+ * records for it. They travel together, so a caller cannot hold an address
+ * that disagrees with its node. */
+export interface DeclCursor {
+  readonly node: NodeDecl;
+  readonly decl: DeclPath;
+}
+
+/** The address language, written in ONE place. */
+export function stepAddress(parent: DeclPath, step: DeclStep): DeclPath {
+  switch (step.kind) {
+    case "field":
+      return `${parent}.${step.name}`;
+    case "entry":
+      return `${parent}.*`;
+    case "member":
+      return `${parent}[]`;
+    case "keyClass":
+      return `${parent}<key>`;
+  }
+}
+
+/** A field of a DECLARED map, read as an own property. A declaration's
+ * field names are authored text like any other key. */
+function ownField(fields: Readonly<Record<string, NodeDecl>>, name: string): NodeDecl | undefined {
+  return Object.prototype.hasOwnProperty.call(fields, name) ? fields[name] : undefined;
+}
+
+/** A value-class reference and a union are evaluated AT THEIR REFERRER'S
+ * address (`evalValueClassRef` and `evalUnion` dispatch on the same frame),
+ * so a step departing from one departs from the node behind it. */
+function deref(surface: SurfaceDecl, node: NodeDecl, seen = new Set<string>()): NodeDecl | undefined {
+  if (node.kind === "valueClass") {
+    if (seen.has(node.valueClass)) return undefined;
+    seen.add(node.valueClass);
+    const target = surface.valueClasses[node.valueClass];
+    return target === undefined ? undefined : deref(surface, target, seen);
+  }
+  if (node.kind === "union") {
+    return node.mapCase === undefined ? undefined : deref(surface, node.mapCase, seen);
+  }
+  return node;
+}
+
+function childDecl(node: NodeDecl, step: DeclStep): NodeDecl | undefined {
+  switch (step.kind) {
+    case "field":
+      return node.kind === "map.fixed" ? ownField(node.fields, step.name) : undefined;
+    case "entry":
+      return node.kind === "map.open" ? node.entry : undefined;
+    case "member":
+      return node.kind === "list" ? node.member : undefined;
+    case "keyClass":
+      return node.kind === "map.open" ? node.keyClass : undefined;
+  }
+}
+
+/** The node behind a position, after the reference and union hops the walk
+ * takes transparently. Undefined where the reference does not resolve. */
+export function derefNode(surface: SurfaceDecl, node: NodeDecl): NodeDecl | undefined {
+  return deref(surface, node);
+}
+
+/** THE DESCENT: from position `at`, where a `step` lands — or undefined
+ * where the walk does not descend there at all. */
+export function descend(surface: SurfaceDecl, at: DeclCursor, step: DeclStep): DeclCursor | undefined {
+  const node = deref(surface, at.node);
+  if (node === undefined) return undefined;
+  const child = childDecl(node, step);
+  return child === undefined ? undefined : { node: child, decl: stepAddress(at.decl, step) };
+}
+
+/** A SELECTOR segment as a descent: `*` is the open-map wildcard the
+ * language reserves, anything else names a declared field. A literal key
+ * at an open map is a DOCUMENT key, not a declared position — the walk
+ * records no address for it, so no rule can be hung there. */
+export function selectorStep(segment: string): DeclStep {
+  return segment === "*" ? { kind: "entry" } : { kind: "field", name: segment };
+}
+
+/** Where a selector path lands, resolved against the DECLARATION alone —
+ * the dry run of `resolvePath`. `visited` runs base-first, target last. */
+export interface DeclResolution {
+  readonly visited: readonly DeclCursor[];
+  /** The address the walk failed to reach, when it did. */
+  readonly unreached?: string;
+}
+
+export function resolveSelectorPath(
+  surface: SurfaceDecl,
+  root: DeclCursor,
+  parent: DeclCursor | undefined,
+  path: string,
+): DeclResolution {
+  const segments = path.split(".");
+  const head = segments.shift();
+  const base = head === "$" ? root : parent;
+  // The address the path INTENDS, for the message: a reader needs the whole
+  // thing, not the segment the walk happened to stop on.
+  const intended = base === undefined ? path : [base.decl, ...segments].join(".");
+  if (base === undefined) return { visited: [], unreached: intended };
+  const visited: DeclCursor[] = [base];
+  let cursor = base;
+  for (const segment of segments) {
+    const next = descend(surface, cursor, selectorStep(segment));
+    if (next === undefined) return { visited, unreached: intended };
+    cursor = next;
+    visited.push(cursor);
+  }
+  return { visited };
+}
+
+/**
+ * The RUNTIME shapes a declared node can legally hold. A selector reads the
+ * RAW value, so what decides whether a relation can read a target is not
+ * the node's kind name but the shapes a valid value can take — and a node
+ * that can hold more than one is readable only for SOME inputs, which is
+ * the input-dependent silence a closed declaration must not contain.
+ */
+export type RuntimeShape = "map" | "list" | "string" | "other";
+
+export function shapesOf(surface: SurfaceDecl, node: NodeDecl, seen = new Set<string>()): ReadonlySet<RuntimeShape> {
+  switch (node.kind) {
+    case "map.fixed":
+    case "map.open":
+    case "map.plain":
+      return new Set<RuntimeShape>(["map"]);
+    case "list":
+      return new Set<RuntimeShape>(["list"]);
+    case "string":
+      return new Set<RuntimeShape>(["string"]);
+    case "integer":
+    case "delegate":
+      return new Set<RuntimeShape>(["other"]);
+    case "enum":
+      return new Set<RuntimeShape>(node.members.map((member) => (typeof member.value === "string" ? "string" : "other")));
+    case "union": {
+      const shapes = new Set<RuntimeShape>((node.literals ?? []).map(() => "string" as const));
+      if (node.mapCase !== undefined) for (const shape of shapesOf(surface, node.mapCase, seen)) shapes.add(shape);
+      return shapes;
+    }
+    case "valueClass": {
+      if (seen.has(node.valueClass)) return new Set<RuntimeShape>(["other"]);
+      seen.add(node.valueClass);
+      const target = surface.valueClasses[node.valueClass];
+      return target === undefined ? new Set<RuntimeShape>(["other"]) : shapesOf(surface, target, seen);
+    }
+    case "raw":
+      // Uninterpreted: the declaration guarantees nothing about the value.
+      return new Set<RuntimeShape>(["map", "list", "string", "other"]);
+  }
+}
+
+/** What each selector relation READS, as one definition: the predicate
+ * `evaluateSelector` applies at run time and the shape the gate demands of
+ * every legal value. Changing what a relation reads changes both. */
+export const RELATION_READS = {
+  keysOf: { shape: "map", test: (value: unknown): boolean => isContainer(value) },
+  valuesOf: { shape: "list", test: (value: unknown): boolean => Array.isArray(value) },
+  collect: { shape: "string", test: (value: unknown): boolean => typeof value === "string" },
+} as const satisfies Readonly<Record<string, { readonly shape: RuntimeShape; readonly test: (value: unknown) => boolean }>>;
+
+export type SelectorRelation = keyof typeof RELATION_READS;
+
+/** Which relation a selector leaf names, and the path it reads. */
+export function selectorRead(
+  selector: Extract<Selector, { keysOf: string } | { valuesOf: string } | { collect: string }>,
+): { readonly relation: SelectorRelation; readonly path: string } {
+  if ("keysOf" in selector) return { relation: "keysOf", path: selector.keysOf };
+  if ("valuesOf" in selector) return { relation: "valuesOf", path: selector.valuesOf };
+  return { relation: "collect", path: selector.collect };
+}
+
+// ---------------------------------------------------------------------------
 // Paths and message interpolation.
 // ---------------------------------------------------------------------------
 
@@ -247,8 +444,15 @@ function render(template: MessageTemplate, slots: Slots): string {
 // ---------------------------------------------------------------------------
 
 interface Frame {
-  /** The declaration path of the node being evaluated (`$.steps.*.role`). */
-  readonly decl: DeclPath;
+  /** The declaration position being evaluated: its node and the address the
+   * walk records for it (`$.steps.*.role`). One value, so the address and
+   * the node it names cannot come apart. */
+  readonly at: DeclCursor;
+  /** The position of the enclosing container — the declaration operand of a
+   * `^` selector, exactly as `parentValue` is its value operand. It is NOT
+   * derived by chopping `at.decl`: a list member's address ends in `[]`,
+   * which chopping resolves to the wrong container. */
+  readonly parentAt?: DeclCursor | undefined;
   /** The value path the findings address (`steps.review.role`). */
   readonly path: string;
   /** The SOURCE-document address, carried segment by segment as the walk
@@ -298,10 +502,20 @@ class Run {
   root: unknown;
 
   constructor(
+    readonly surface: SurfaceDecl,
     readonly channel: EngineChannel,
     readonly registries: Readonly<Record<string, GateCatalog | undefined>>,
-    readonly valueClasses: Readonly<Record<string, NodeDecl>>,
   ) {}
+
+  get valueClasses(): Readonly<Record<string, NodeDecl>> {
+    return this.surface.valueClasses;
+  }
+
+  /** The document root as a declaration position — the operand of every
+   * `$`-rooted selector. */
+  get rootAt(): DeclCursor {
+    return { node: this.surface.root, decl: "$" };
+  }
 
   /** The injected set a selector root or a delegation names. */
   registry(name: string): GateCatalog | undefined {
@@ -333,9 +547,14 @@ type SelectorResult =
 const UNRELIABLE = { status: "unreliable" } as const;
 const PENDING = { status: "pending" } as const;
 
-/** Walk a declaration path over the value graph, expanding `*` over open
- * maps. `..` resolves one level up from the citing frame. A prefix that
- * has not been evaluated yet answers PENDING, not "unreliable". */
+/** Walk a selector path over the value graph, expanding `*` over open maps.
+ * `^` resolves to the citing node's own container. A prefix that has not
+ * been evaluated yet answers PENDING, not "unreliable".
+ *
+ * The DECLARATION side of this walk goes through `descend` — the same call
+ * the load-time gate makes — so a path the gate resolved is a path this
+ * walk reaches, by construction rather than by two implementations
+ * agreeing. */
 function resolvePath(
   run: Run,
   from: Frame,
@@ -343,35 +562,38 @@ function resolvePath(
 ): { readonly status: "ok"; readonly nodes: unknown[] } | { readonly status: "unreliable" | "pending" } {
   const segments = path.split(".");
   let nodes: unknown[];
-  let declPrefix: string;
+  let cursor: DeclCursor | undefined;
   const head = segments.shift();
   if (head === "$") {
     nodes = [run.root];
-    declPrefix = "$";
+    cursor = run.rootAt;
   } else if (head === "^") {
     // Parent-relative: the citing node's own container.
     nodes = [from.parentValue];
-    declPrefix = from.decl.split(".").slice(0, -1).join(".");
+    cursor = from.parentAt;
   } else {
     return UNRELIABLE;
   }
+  if (cursor === undefined) return UNRELIABLE;
   for (const segment of segments) {
-    declPrefix = `${declPrefix}.${segment}`;
-    if (!run.reliable(declPrefix)) return UNRELIABLE;
-    if (!run.completed.has(declPrefix)) return PENDING;
-    const next: unknown[] = [];
+    const next = descend(run.surface, cursor, selectorStep(segment));
+    if (next === undefined) return UNRELIABLE;
+    cursor = next;
+    if (!run.reliable(cursor.decl)) return UNRELIABLE;
+    if (!run.completed.has(cursor.decl)) return PENDING;
+    const values: unknown[] = [];
     for (const node of nodes) {
       if (!isContainer(node)) return UNRELIABLE;
       if (segment === "*") {
         for (const [key, child] of entriesOf(node)) {
-          if (typeof key === "string") next.push(child);
+          if (typeof key === "string") values.push(child);
         }
       } else {
         if (!containerHas(node, segment)) return UNRELIABLE;
-        next.push(containerGet(node, segment));
+        values.push(containerGet(node, segment));
       }
     }
-    nodes = next;
+    nodes = values;
   }
   return { status: "ok", nodes };
 }
@@ -392,20 +614,19 @@ function evaluateSelector(run: Run, from: Frame, selector: Selector): SelectorRe
       values: parts.flatMap((part) => (part.status === "ok" ? part.values : [])),
     };
   }
-  const target = "keysOf" in selector ? selector.keysOf : "valuesOf" in selector ? selector.valuesOf : selector.collect;
-  const resolved = resolvePath(run, from, target);
+  const read = selectorRead(selector);
+  const resolved = resolvePath(run, from, read.path);
   if (resolved.status !== "ok") return resolved;
   const values: string[] = [];
   for (const node of resolved.nodes) {
-    if ("keysOf" in selector) {
-      if (!isContainer(node)) return UNRELIABLE;
-      for (const [key] of entriesOf(node)) if (typeof key === "string") values.push(key);
-    } else if ("valuesOf" in selector) {
-      if (!Array.isArray(node)) return UNRELIABLE;
-      for (const item of node) if (typeof item === "string") values.push(item);
+    // The SAME predicate the gate demands every legal value satisfy.
+    if (!RELATION_READS[read.relation].test(node)) return UNRELIABLE;
+    if (read.relation === "keysOf") {
+      for (const [key] of entriesOf(node as AnyMap)) if (typeof key === "string") values.push(key);
+    } else if (read.relation === "valuesOf") {
+      for (const item of node as readonly unknown[]) if (typeof item === "string") values.push(item);
     } else {
-      if (typeof node !== "string") return UNRELIABLE;
-      values.push(node);
+      values.push(node as string);
     }
   }
   return { status: "ok", values };
@@ -550,8 +771,8 @@ function baseSlots(frame: Frame): Slots {
 
 function evaluateNode(run: Run, decl: NodeDecl, frame: Frame, local?: LocalOk): NodeResult {
   const result = dispatch(run, decl, frame, local);
-  run.completed.add(frame.decl);
-  run.mark(frame.decl, result.ok);
+  run.completed.add(frame.at.decl);
+  run.mark(frame.at.decl, result.ok);
   run.mark(decl.tag, result.ok);
   return result;
 }
@@ -594,7 +815,7 @@ function evalValueClassRef(
   const merged: Frame = { ...frame, label: decl.label ?? frame.label };
   const result = dispatch(run, target, merged, local);
   // The REFERENCING site's gating decides, not the shared class's.
-  if (!result.ok && decl.gating === true) run.mark(frame.decl, false);
+  if (!result.ok && decl.gating === true) run.mark(frame.at.decl, false);
   return result;
 }
 
@@ -610,12 +831,19 @@ function evalMapFixed(
     return { ok: false };
   }
   const container = value;
-  const fieldNames = Object.keys(decl.fields);
+  // Every field position resolved ONCE, through the engine's own descent —
+  // the same call the gate makes to resolve a reference TO one of them.
+  const fields = new Map<string, DeclCursor>();
+  for (const name of Object.keys(decl.fields)) {
+    const at = descend(run.surface, frame.at, { kind: "field", name });
+    if (at !== undefined) fields.set(name, at);
+  }
+  const fieldNames = [...fields.keys()];
   // A field declared for ONE channel is legal only there — the same
   // channel scoping D1 applies to source-bearing attributes, applied to
   // keyset membership.
   const inChannel = (name: string): boolean => {
-    const channel = decl.fields[name]?.channel;
+    const channel = fields.get(name)?.node.channel;
     return channel === undefined || channel === "both" || channel === run.channel.kind;
   };
   // A channel-scoped field is scoped WHOLE: out of channel it is neither a
@@ -643,13 +871,14 @@ function evalMapFixed(
   };
 
   const emitMissing = (name: string): void => {
-    const field = decl.fields[name];
+    const fieldAt = fields.get(name);
+    const field = fieldAt?.node;
     const presence = field?.presence;
-    if (field === undefined || presence?.required !== true) return;
+    if (fieldAt === undefined || field === undefined || presence?.required !== true) return;
     if (containerHas(container, name)) return;
     if (presence.foldedIntoTypeLane === true) {
       // Absence is this node's OWN type lane (a binding's `uses`).
-      evaluateNode(run, field, childFrame(frame, name, undefined, container), local);
+      evaluateNode(run, field, childFrame(frame, fieldAt, name, undefined, container), local);
       local.set(field.tag, false);
       return;
     }
@@ -663,15 +892,16 @@ function evalMapFixed(
   };
 
   const evalOneField = (name: string): void => {
-    const field = decl.fields[name];
-    if (field === undefined) return;
+    const at = fields.get(name);
+    if (at === undefined) return;
+    const field = at.node;
     if (!containerHas(container, name)) {
       // An ABSENT field is where a declared `default:` materializes — the
       // schema-side half of ADR-019 D3.
       if (field.default !== undefined) defineOwn(normalized, name, field.default);
       return;
     }
-    const child = childFrame(frame, name, containerGet(container, name), container);
+    const child = childFrame(frame, at, name, containerGet(container, name), container);
     const result = evaluateNode(run, field, child, local);
     local.set(field.tag, result.ok);
     if (result.ok && result.value !== undefined) defineOwn(normalized, name, result.value);
@@ -700,9 +930,10 @@ function evalMapFixed(
   return { ok: true, value: normalized };
 }
 
-function childFrame(parent: Frame, key: string, value: unknown, parentValue: unknown): Frame {
+function childFrame(parent: Frame, at: DeclCursor, key: string, value: unknown, parentValue: unknown): Frame {
   return {
-    decl: `${parent.decl}.${key}`,
+    at,
+    parentAt: parent.at,
     path: joinPath(parent.path, key),
     segments: [...parent.segments, key],
     value,
@@ -732,13 +963,16 @@ function evalMapOpen(
   if (decl.deepKeyStringness?.channel === run.channel.kind) {
     scanKeyStringness(run, container, frame.path, decl.deepKeyStringness.message, new WeakSet());
   }
+  const keyAt = descend(run.surface, frame.at, { kind: "keyClass" });
+  const entryAt = descend(run.surface, frame.at, { kind: "entry" });
   const normalized: Record<string, unknown> = {};
   for (const [key, child] of entries) {
     const keyIsString = typeof key === "string";
     const entryPath = keyIsString ? joinPath(frame.path, key) : frame.path;
-    if (decl.keyClass !== undefined) {
+    if (decl.keyClass !== undefined && keyAt !== undefined) {
       const keyFrame: Frame = {
-        decl: `${frame.decl}<key>`,
+        at: keyAt,
+        parentAt: frame.at,
         path: decl.keyLaneAt === "container" ? frame.path : entryPath,
         segments: frame.segments,
         value: key,
@@ -753,7 +987,8 @@ function evalMapOpen(
       // The rule is the OPEN MAP's, so a `^`-relative selector resolves
       // from the map's own container — never from the map itself.
       const subsetFrame: Frame = {
-        decl: frame.decl,
+        at: frame.at,
+        parentAt: frame.parentAt,
         path: entryPath,
         segments: frame.segments,
         value: key,
@@ -770,8 +1005,10 @@ function evalMapOpen(
       // operand to be validated against (the measured lane's CONTINUE).
       if (run.findings.length > before) continue;
     }
+    if (entryAt === undefined) continue;
     const entryFrame: Frame = {
-      decl: `${frame.decl}.*`,
+      at: entryAt,
+      parentAt: frame.at,
       path: entryPath,
       segments: keyIsString ? [...frame.segments, key] : frame.segments,
       value: child,
@@ -783,7 +1020,9 @@ function evalMapOpen(
       defineOwn(normalized, key, entryResult.value);
     }
   }
-  run.completed.add(`${frame.decl}.*`);
+  // An open map with NO entries still completes its entry position: a
+  // selector through it must answer "empty", never "not evaluated yet".
+  if (entryAt !== undefined) run.completed.add(entryAt.decl);
   return { ok, value: normalized };
 }
 
@@ -831,13 +1070,17 @@ function evalList(
     run.emit(frame.path, render(decl.nonempty.message, slots));
     if (decl.nonempty.gating === true) ok = false;
   }
+  const memberAt = descend(run.surface, frame.at, { kind: "member" });
+  if (memberAt === undefined) return { ok, value: [] };
   const normalized: unknown[] = [];
   const seen = new Set<unknown>();
   const clean: { readonly member: unknown; readonly path: string }[] = [];
   value.forEach((member, index) => {
     const memberPath = decl.memberLaneAt === "container" ? frame.path : indexPath(frame.path, index);
     const memberFrame: Frame = {
-      decl: `${frame.decl}[]`,
+      at: memberAt,
+      // A list member's `^` operand is the LIST, matching `parentValue`.
+      parentAt: frame.at,
       path: memberPath,
       segments: [...frame.segments, index],
       value: member,
@@ -865,7 +1108,8 @@ function evalList(
   if (decl.disjointFrom !== undefined) {
     for (const entry of clean) {
       const memberFrame: Frame = {
-        decl: `${frame.decl}[]`,
+        at: memberAt,
+        parentAt: frame.at,
         path: entry.path,
         segments: frame.segments,
         value: entry.member,
@@ -879,7 +1123,7 @@ function evalList(
       });
     }
   }
-  run.completed.add(`${frame.decl}[]`);
+  run.completed.add(memberAt.decl);
   return { ok, value: normalized };
 }
 
@@ -1096,9 +1340,9 @@ function runDeferred(run: Run): void {
  * attributes are inert where no source exists.
  */
 export function runSurface(surface: SurfaceDecl, value: unknown, opts: EngineOptions): EngineRun {
-  const run = new Run(opts.channel, { gateCatalog: opts.catalog }, surface.valueClasses);
+  const run = new Run(surface, opts.channel, { gateCatalog: opts.catalog });
   run.root = value;
-  const rootFrame: Frame = { decl: "$", path: "$", segments: [], value, parentValue: undefined };
+  const rootFrame: Frame = { at: run.rootAt, path: "$", segments: [], value, parentValue: undefined };
   const rootDecl = surface.root;
 
   // The root container precondition: with no map operand nothing below has
