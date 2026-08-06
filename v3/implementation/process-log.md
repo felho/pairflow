@@ -5571,3 +5571,38 @@ final CLEAN.
   grain from the declaration alone, and the `carry` list of the
   effective-config hook silently dropping any binding field a future
   chapter adds.
+- 2026-08-07 · ch13-P3 AFTERMATH — the J-RESPAWN flake DIAGNOSED, not
+  fixed: THIRD occurrence of the real-tmux pacing class, and the first
+  one whose mechanism is measured rather than inferred. It is not
+  pacing. The real-substrate suites bind to the DEVELOPER'S DEFAULT tmux
+  socket (`createTmuxSpawnChannel` takes `tmuxBin` and no socket
+  argument, so every client is a bare `tmux`), and when a run is
+  INTERRUPTED mid-suite the TX5 TERM-ignoring lane's `tmux new-session`
+  client is orphaned to init in uninterruptible sleep holding that
+  socket while its server dies. From that moment every tmux client on
+  the machine blocks indefinitely — the test suite's and the
+  developer's alike. Receipts: after a killed run, `tmux ls` hung 3m57s,
+  34 clients queued, load average 2.96 (nothing CPU-bound, everything
+  socket-blocked), ONE orphan at ppid 1 state `Us` for 31m30s, and NO
+  server process at all; killing that single orphan restored tmux, after
+  which THREE consecutive full runs were 2003/2003 with tmux left clean
+  each time. The signature fits the original report too: the three
+  journey tests that touch tmux time out at exactly 60 000 ms while
+  `J-ATTACH-LANE`, which stages no `runner run`, passes — and partial
+  degradation reaches the LAST heavy test first, which is why the
+  original sighting named J-RESPAWN alone. NOT FIXED, deliberately: the
+  correction is a dedicated socket per run (`tmux -L`), which is not a
+  test-side edit — it threads a socket through the channel's seam, so it
+  is product surface and larger than its diagnosis. Routed to the
+  boundary candidate the ch9-P4b note already opened (2026-07-25: "load
+  robustness of real-substrate tests is a SUITE-level property — price
+  it at the packet that grows the load"), now with a measured mechanism
+  and a named remedy. The 2026-07-25 stabilization — `{ retry: 2 }` on
+  four `tmuxChannel.test.ts` describes — does not reach
+  `runnerJourney.test.ts` and would not have helped: a retry against a
+  wedged socket blocks three times instead of once.
+  MEASUREMENT HONESTY, recorded because it cost a round: the run in
+  which I first "reproduced" the flake was poisoned by my own killed
+  loop, and I reported the reproduction before checking the machine —
+  the assume-then-measure trap in its measuring form. The load average
+  was the tell and I had not looked at it.
