@@ -172,3 +172,92 @@ next act is a boundary-review discussion that either enacts a minimal
 form of the record-and-reconcile ritual or consciously defers it.
 The irony guard binds: any enactment that grows faster than the
 judgment quality it buys is itself a paperclip.
+
+## Appendix A — the P3 calibration harvest (recorded 2026-08-07)
+
+The betting frame's first full campaign, recorded HERE because the
+distilled priors otherwise live only in session context and report
+prose — and this file is what the boundary review reads. Receipts:
+the closing reports and charters under
+`ch13-rederivation-arm/p3-aftermath/` and the process-log entries.
+
+### The bet ledger (six stated-scoreable bets, in order)
+
+1. **The silent-four fold** — "1+1; four NAMED cases, proven
+   guard-generation method." LOST: verification found four MORE of
+   the same class. Lesson: the names were samples of an OPEN class —
+   "does every name resolve" was a wide question in narrow clothes.
+2. **The stakes-elevated hunt** (user-elected) — "2; criticality
+   re-rating of the foundation layer." WON: 11 in-scope defects
+   (a crash, two silent validation holes) in code past four prior
+   reviews. Lesson: foundation stakes × un-run lenses buy real
+   findings.
+3. **The resolver unification** — "refactor+1+1; known shape (the P1
+   precedent), touches the engine core." HALF: the refactor exact
+   (zero behavioral delta), the verification found a REMAINING second
+   model (the normalizer). Lesson: derive scope from the PRINCIPLE
+   ("no second model"), never from the named component ("the gate").
+4. **The finishing act** — "fold+1+1; three named changes; item 2
+   changes runtime semantics, which is where surprises live." Items
+   landed; the closing CLAIM (no silent class remains) was falsified
+   four ways in one pointed round. Lesson: size for the claim being
+   established, not for the item list — and the semantics hedge was
+   correct.
+5. **The per-instance act** — "fold+1+1; known family member, keying
+   tool in hand; re-keying core run state is where surprises live."
+   NEAR-EXACT: the predicted surprise arrived (the act's own key-lane
+   regression) and the frame absorbed it.
+6. **The closing sweep** — "fold+1(scoped)+1; three named sites of a
+   SETTLED class from a COMPLETE enumeration." EXACT: 0/0/0, reserve
+   unspent — the sequence's first precisely sized bet.
+
+### The distilled priors (the layer that must not evaporate)
+
+- **The closed-list test:** a bet on named items is narrow ONLY if
+  the names come from a complete enumeration under a settled
+  principle; otherwise the list is a costume on an open class. (Bets
+  1 and 6 carry near-identical wording and opposite outcomes — this
+  is the discriminator between them.)
+- **Surprise homes:** runtime-semantics changes and core-state
+  re-keying warrant a budget hedge (the hedge was written and correct
+  twice: bets 4 and 5).
+- **Claim-establishing acts** are sized for the claim, and their
+  verification round is pointed AT the claim as a falsification —
+  one pass suffices when pointed (bet 4's round).
+- **Complete enumeration converts an open class into a closed list**
+  (round 8's matched/coarser inventory of ALL walk state, the fine
+  items included) — it is the bridge from bet-1-shaped losses to
+  bet-6-shaped wins.
+- **The unification family, three members:** one view of the
+  document (P1) → one resolver for addresses → per-instance state.
+  Each ended a class by DELETING a model, never by adding a guard;
+  each successor was found by one standing question, now a lens:
+  "does a SECOND MODEL of X still exist anywhere?"
+- **Both-orders crosstalk:** suppression symmetric in order is
+  invisible to order-swap tests; the guard shape is the sharpened
+  both-orders fixture PLUS the suppression negative (so "no
+  crosstalk" cannot be bought by never suppressing).
+- **Instrument hygiene:** the measurement is part of the bet —
+  concurrent suite runs poisoned a reviewer's regression lens once,
+  and the arm runner's byte guard tripped on its own output file for
+  a full frame. The meter must also be metered.
+
+### The lens cupboard for THIS substrate, at P3 close
+
+Run, with yield: accident/sloppiness ×3 frames · design/direction ×1
+(14 findings) · closure/dangling ×2 · historical runtime families ×1
+(4, incl. the `constructor` crash) · spec-vs-interpreter ×1 (7) ·
+state-grain full enumeration ×1 (4) · scoped-site verifications
+(final: 0/0/0). Judged EMPTY at close: no un-run lens with a
+plausible prior remained — the next lens is P4's real consumption
+(the outer loop). New lens candidates minted for the taxonomy:
+unresolved reference / closure completeness; state grain
+(coarser-than-described); both-orders crosstalk; the second-model
+existence question.
+
+### Operational note — the provider content filter
+
+Three charter kills across the campaign, all on security-flavored
+wording; neutral QA vocabulary (conformance, counterexample,
+sensitivity check) has since run clean repeatedly. The vocabulary
+note travels in every charter until a charter-template home exists.
