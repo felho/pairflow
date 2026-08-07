@@ -1,4 +1,4 @@
-import { indexPath, reachAll } from "./engine.js";
+import { instanceKey, reachAll } from "./engine.js";
 import type { NormalizerHookDecl, SurfaceDecl } from "./vocabulary.js";
 
 /**
@@ -101,7 +101,9 @@ function materializeConfigs(
       if (isRecord(binding)) {
         for (const field of hook.carry) defineOwn(carried, field, ownGet(binding, field));
       }
-      defineOwn(carried, hook.into, effectiveConfigs.get(indexPath(pipeline.path, index)));
+      // The binding's STRUCTURAL address — the same key the walk wrote
+      // under. A rendered path collapses two distinct addresses onto one.
+      defineOwn(carried, hook.into, effectiveConfigs.get(instanceKey([...pipeline.segments, index])));
       return carried;
     });
     defineOwn(owner, key, rebuilt);

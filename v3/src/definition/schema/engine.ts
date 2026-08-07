@@ -313,10 +313,11 @@ export interface Reached {
   /** The record holding it, for a hook that must write its result back. */
   readonly owner?: Record<string, unknown> | undefined;
   readonly key?: string | undefined;
-  /** The engine's own finding grain (`steps.review.gates.CONVERGED`), so a
-   * hook keying per-binding state cannot disagree with the walk that
-   * recorded it. */
+  /** The engine's own finding grain (`steps.review.gates.CONVERGED`). */
   readonly path: string;
+  /** The STRUCTURAL address, which is what per-binding state is keyed by:
+   * a rendered path collapses `["a.b"]` and `["a","b"]` onto one string. */
+  readonly segments: readonly (string | number)[];
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -339,7 +340,7 @@ export function reachAll(
   const segments = path.split(".");
   if (segments.shift() !== "$") return [];
   let cursor: DeclCursor = { node: surface.root, decl: "$" };
-  let nodes: readonly Reached[] = [{ value: root, path: "$" }];
+  let nodes: readonly Reached[] = [{ value: root, path: "$", segments: [] }];
 
   const take = (step: DeclStep): boolean => {
     const next = descend(surface, cursor, step);
@@ -355,7 +356,13 @@ export function reachAll(
             ? [step.name]
             : [];
       for (const key of keys) {
-        reached.push({ value: ownGet(node.value, key), owner: node.value, key, path: joinPath(node.path, key) });
+        reached.push({
+          value: ownGet(node.value, key),
+          owner: node.value,
+          key,
+          path: joinPath(node.path, key),
+          segments: [...node.segments, key],
+        });
       }
     }
     nodes = reached;
@@ -603,7 +610,7 @@ interface DeferredCheck {
  * every instance of it shares — which is how one open-map entry's broken
  * field came to decide another entry's rule.
  */
-function instanceKey(segments: readonly (string | number)[], lane?: string): string {
+export function instanceKey(segments: readonly (string | number)[], lane?: string): string {
   return JSON.stringify([segments, lane ?? null]);
 }
 
@@ -1161,7 +1168,7 @@ function evalMapOpen(
     if (decl.nonempty.gating === true) ok = false;
   }
   if (decl.deepKeyStringness?.channel === run.channel.kind) {
-    scanKeyStringness(run, container, frame.path, decl.deepKeyStringness.message, new WeakSet());
+    scanKeyStringness(run, container, frame.path, decl.deepKeyStringness.message, new Set());
   }
   const keyAt = descend(run.surface, frame.at, { kind: "keyClass" });
   const entryAt = descend(run.surface, frame.at, { kind: "entry" });
@@ -1236,22 +1243,31 @@ function scanKeyStringness(
   value: unknown,
   path: string,
   message: MessageTemplate,
-  seen: WeakSet<object>,
+  ancestors: Set<object>,
 ): void {
   if (typeof value !== "object" || value === null) return;
-  if (seen.has(value)) return;
-  seen.add(value);
-  if (Array.isArray(value)) {
-    value.forEach((item, index) => scanKeyStringness(run, item, indexPath(path, index), message, seen));
-    return;
-  }
-  if (!isResolvedMap(value)) return;
-  for (const [key, child] of value.entries()) {
-    if (typeof key !== "string") {
-      run.emit(path, render(message, { path, key, value: key }));
-      continue;
+  // A PATH-SCOPED ancestor set, not a visited-once set. The finding
+  // describes a DOCUMENT ADDRESS, and one anchored map legitimately sits
+  // at several — deduping by object identity reported the first address
+  // and stayed silent at the rest. Only a back-edge is a cycle, and it is
+  // the only thing that must stop the walk.
+  if (ancestors.has(value)) return;
+  ancestors.add(value);
+  try {
+    if (Array.isArray(value)) {
+      value.forEach((item, index) => scanKeyStringness(run, item, indexPath(path, index), message, ancestors));
+      return;
     }
-    scanKeyStringness(run, child, joinPath(path, key), message, seen);
+    if (!isResolvedMap(value)) return;
+    for (const [key, child] of value.entries()) {
+      if (typeof key !== "string") {
+        run.emit(path, render(message, { path, key, value: key }));
+        continue;
+      }
+      scanKeyStringness(run, child, joinPath(path, key), message, ancestors);
+    }
+  } finally {
+    ancestors.delete(value);
   }
 }
 
@@ -1275,7 +1291,7 @@ function evalList(
   if (memberAt === undefined) return { ok, value: [] };
   const normalized: unknown[] = [];
   const seen = new Set<unknown>();
-  const clean: { readonly member: unknown; readonly path: string }[] = [];
+  const clean: { readonly member: unknown; readonly path: string; readonly segments: readonly (string | number)[] }[] = [];
   value.forEach((member, index) => {
     const memberPath = decl.memberLaneAt === "container" ? frame.path : indexPath(frame.path, index);
     const memberFrame: Frame = {
@@ -1305,7 +1321,7 @@ function evalList(
       }
       seen.add(member);
     }
-    clean.push({ member, path: memberPath });
+    clean.push({ member, path: memberPath, segments: memberFrame.segments });
   });
   if (decl.disjointFrom !== undefined) {
     for (const entry of clean) {
@@ -1314,7 +1330,9 @@ function evalList(
         parentAt: frame.at,
       parentSegments: frame.segments,
         path: entry.path,
-        segments: frame.segments,
+        // The MEMBER's own address, not the list's. Sharing the list's let
+        // one broken member's tag status decide every sibling's rule.
+        segments: entry.segments,
         value: entry.member,
         parentValue: value,
         ownerKey: frame.ownerKey,
@@ -1479,7 +1497,7 @@ function evalDelegate(
   const raw = frame.value === undefined ? undefined : materialize(frame.value, run.memo);
   const result = registration.validateAndNormalizeConfig(raw);
   if (result.ok) {
-    run.effectiveConfigs.set(parentPath(frame.path), result.effective);
+    run.effectiveConfigs.set(instanceKey(frame.parentSegments ?? []), result.effective);
     return { ok: true, value: result.effective };
   }
   if (result.findings.length === 0) {

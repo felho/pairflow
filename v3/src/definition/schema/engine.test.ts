@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import type { GateCatalog, GateRegistration } from "../../ports/index.js";
 import type { ValidationFinding } from "../errors.js";
-import { runSurface } from "./engine.js";
+import { instanceKey, runSurface } from "./engine.js";
 import type { EngineChannel } from "./engine.js";
 import { closureProblems, defineSurface, SurfaceDeclarationError } from "./defineSurface.js";
 import { normalize } from "./normalizer.js";
@@ -620,6 +620,89 @@ describe("suppression: the implicit container precondition and declared gating",
     ]);
   });
 
+  it("an ALIASED map with a non-string key reports at BOTH its addresses", () => {
+    // The deep key-stringness scan deduped by OBJECT IDENTITY, so one
+    // anchored map sitting at two document addresses was reported at the
+    // first and passed over in silence at the rest — while two separate
+    // maps with the same content reported at both.
+    const scanned = fixed("root", {
+      gates: {
+        kind: "map.open", tag: "g", rows: ROWS, containerMessage: "c", keyLaneAt: "container",
+        deepKeyStringness: { message: "{path}: map keys must be strings", channel: "file" },
+        entry: { kind: "raw", tag: "gv", rows: ROWS } as NodeDecl,
+      },
+    });
+    const aliased = fromFile(scanned, "gates:\n  a: &bad\n    1: x\n  b: *bad\n");
+    expect(aliased).toStrictEqual([
+      { path: "gates.a", message: "gates.a: map keys must be strings" },
+      { path: "gates.b", message: "gates.b: map keys must be strings" },
+    ]);
+    // DISCRIMINATES: a genuine cycle must still TERMINATE, and report its
+    // key once rather than once per lap. The substrate's own acyclic lane
+    // reports the back-edge separately, which is its job, not this scan's.
+    const cyclic = fromFile(scanned, "gates:\n  a: &loop\n    1: x\n    self: *loop\n");
+    expect(cyclic).toStrictEqual([
+      { path: "gates.a.self", message: "cyclic value structure: the resolved template graph must be acyclic" },
+      { path: "gates.a", message: "gates.a: map keys must be strings" },
+    ]);
+  });
+
+  it("one list member's failure cannot decide a SIBLING member's rule", () => {
+    // The disjointFrom pass rebuilt each member's frame with the LIST's
+    // address, so every member shared one tag status and a single broken
+    // member suppressed them all — in either order, which is what made it
+    // invisible to an order-swap test.
+    const list = fixed("root", {
+      names: {
+        kind: "map.open", tag: "names", rows: ROWS, containerMessage: "c", keyLaneAt: "container",
+        entry: text("nv"),
+      },
+      ids: {
+        kind: "list", tag: "ids", rows: ROWS, containerMessage: "c", memberLaneAt: "index",
+        member: text("idm", { grammar: { re: "^[a-z]+$", message: "{path}: bad id" }, gating: true }),
+        disjointFrom: {
+          relation: "disjointFrom", target: { keysOf: "$.names" },
+          message: "{path}: must not be a name", dependsOn: ["idm"],
+        },
+      },
+    });
+    const run = (ids: readonly string[]): readonly ValidationFinding[] =>
+      direct(list, { names: { taken: "1" }, ids });
+
+    expect(run(["taken"])).toStrictEqual([{ path: "ids[0]", message: "ids[0]: must not be a name" }]);
+    // A broken sibling in EITHER order leaves the clean member's lane alone.
+    expect(run(["BAD", "taken"])).toStrictEqual([
+      { path: "ids[0]", message: "ids[0]: bad id" },
+      { path: "ids[1]", message: "ids[1]: must not be a name" },
+    ]);
+    expect(run(["taken", "BAD"])).toStrictEqual([
+      { path: "ids[1]", message: "ids[1]: bad id" },
+      { path: "ids[0]", message: "ids[0]: must not be a name" },
+    ]);
+  });
+
+  it("DISCRIMINATES: the BROKEN member's OWN dependent lane is still suppressed", () => {
+    // Without this, "no crosstalk" could be achieved by never suppressing.
+    const list = fixed("root", {
+      names: {
+        kind: "map.open", tag: "names", rows: ROWS, containerMessage: "c", keyLaneAt: "container",
+        entry: text("nv"),
+      },
+      ids: {
+        kind: "list", tag: "ids", rows: ROWS, containerMessage: "c", memberLaneAt: "index",
+        member: text("idm", { grammar: { re: "^[a-z]+$", message: "{path}: bad id" }, gating: true }),
+        disjointFrom: {
+          relation: "disjointFrom", target: { keysOf: "$.names" },
+          message: "{path}: must not be a name", dependsOn: ["idm"],
+        },
+      },
+    });
+    // "TAKEN" is both malformed AND a name: only its type lane reports.
+    expect(direct(list, { names: { TAKEN: "1" }, ids: ["TAKEN"] })).toStrictEqual([
+      { path: "ids[0]", message: "ids[0]: bad id" },
+    ]);
+  });
+
   it("a malformed KEY does not make the whole map unusable to rules that read it", () => {
     // The key lane occupies no position in the value graph, so it has no
     // segment of its own — and sharing the map's address made one bad key
@@ -900,7 +983,7 @@ describe("the normalizer (ADR-019 D3) — derivation, never validation", () => {
     const value = {
       steps: { a: { transitions: { GO: "b" }, gates: { GO: [{ uses: "x.y", config: { authored: 1 } }] } } },
     };
-    const effective = new Map<string, unknown>([["steps.a.gates.GO[0]", { resolved: 2 }]]);
+    const effective = new Map<string, unknown>([[instanceKey(["steps", "a", "gates", "GO", 0]), { resolved: 2 }]]);
     normalize(templateFormat, value, effective);
     expect((value.steps.a.gates as Record<string, unknown>)["GO"]).toStrictEqual([
       { uses: "x.y", config: { resolved: 2 } },
@@ -960,6 +1043,29 @@ describe("the normalizer (ADR-019 D3) — derivation, never validation", () => {
     expect(value.steps.s).toHaveProperty("flags", { TO_A: true, TO_B: true });
   });
 
+  it("two binding addresses that RENDER alike keep their own effective configs", () => {
+    // `["a.b"]` and `["a","b"]` render to the same string. Keyed by that
+    // string, the second binding's effective config overwrote the first's.
+    const surface = hooked(
+      fixed("r", {
+        pipes: openMap("p", listOf("pl", fixed("bind", {
+          uses: text("bu"),
+          config: { kind: "raw", tag: "bcfg", rows: ROWS },
+        }))),
+      }),
+      { hook: "materializeEffectiveConfigs", over: "$.pipes", carry: ["uses"], into: "config" },
+    );
+    expect(closureProblems(surface)).toStrictEqual([]);
+    const value = { pipes: { "a.b": [{ uses: "x" }], a: { b: [{ uses: "y" }] } } };
+    const effective = new Map<string, unknown>([
+      [instanceKey(["pipes", "a.b", 0]), { which: "dotted" }],
+      [instanceKey(["pipes", "a", "b", 0]), { which: "nested" }],
+    ]);
+    normalize(surface, value, effective);
+    // Each address keeps its own; neither is overwritten by the other.
+    expect(value.pipes["a.b"]).toStrictEqual([{ uses: "x", config: { which: "dotted" } }]);
+  });
+
   it("materializeEffectiveConfigs walks an operand path with a SECOND wildcard", () => {
     const surface = hooked(
       fixed("r", {
@@ -978,7 +1084,9 @@ describe("the normalizer (ADR-019 D3) — derivation, never validation", () => {
     const value = { outer: { A: { mid: { B: { pipes: { C: [{ uses: "x.y", extra: "dropped" }] } } } } } };
     // The per-binding key is the WALK's own grain, two wildcards deep —
     // `extra` disappearing is the proof the hook actually rebuilt.
-    const effective = new Map<string, unknown>([["outer.A.mid.B.pipes.C[0]", { resolved: 2 }]]);
+    const effective = new Map<string, unknown>([
+      [instanceKey(["outer", "A", "mid", "B", "pipes", "C", 0]), { resolved: 2 }],
+    ]);
     normalize(surface, value, effective);
     expect(value.outer.A.mid.B.pipes.C).toStrictEqual([{ uses: "x.y", config: { resolved: 2 } }]);
   });
