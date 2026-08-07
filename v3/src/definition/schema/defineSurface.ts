@@ -364,14 +364,8 @@ function checkNode(
       );
       return;
     case "valueClass": {
-      // The measured shame case: an unknown name made the engine return the
-      // value unvalidated, so a mistyped class silently switched a rule off.
-      if (!(decl.valueClass in ctx.surface.valueClasses)) {
-        ctx.problems.push(
-          `${where}: value class ${JSON.stringify(decl.valueClass)} is not declared ` +
-            `(declared: ${Object.keys(ctx.surface.valueClasses).join(", ")})`,
-        );
-      }
+      const problem = valueClassProblem(decl, where, ctx);
+      if (problem !== undefined) ctx.problems.push(problem);
       return;
     }
     case "delegate": {
@@ -380,6 +374,55 @@ function checkNode(
       return;
     }
   }
+}
+
+/** The measured shame case: an unknown name made the engine return the
+ * value unvalidated, so a mistyped class silently switched a rule off. */
+function valueClassProblem(
+  decl: Extract<NodeDecl, { kind: "valueClass" }>,
+  where: string,
+  ctx: Context,
+): string | undefined {
+  if (decl.valueClass in ctx.surface.valueClasses) return undefined;
+  return (
+    `${where}: value class ${JSON.stringify(decl.valueClass)} is not declared ` +
+    `(declared: ${Object.keys(ctx.surface.valueClasses).join(", ")})`
+  );
+}
+
+/**
+ * A ring of value-class references never terminates, and the gate used to
+ * wave it through. The walk hands a reference straight to its target
+ * WITHOUT consuming any value, so nothing descends and nothing ends: the
+ * declaration passed this gate and then exhausted the stack on the first
+ * document that reached it (round 6 tripped over this without filing it).
+ *
+ * Reported ONCE PER RING, not once per site that names it: a maintainer
+ * fixing a ring fixes one thing, and a problem list that repeats it as
+ * many times as the declaration mentions it reads as many faults.
+ */
+function ringProblems(ctx: Context): string[] {
+  const problems: string[] = [];
+  const reported = new Set<string>();
+  for (const name of Object.keys(ctx.surface.valueClasses)) {
+    const chain: string[] = [];
+    let cursor: string | undefined = name;
+    while (cursor !== undefined && !chain.includes(cursor)) {
+      chain.push(cursor);
+      const target: NodeDecl | undefined = ctx.surface.valueClasses[cursor];
+      cursor = target?.kind === "valueClass" ? target.valueClass : undefined;
+    }
+    if (cursor === undefined) continue;
+    const ring = chain.slice(chain.indexOf(cursor));
+    const key = [...ring].sort().join(",");
+    if (reported.has(key)) continue;
+    reported.add(key);
+    problems.push(
+      `value class ${JSON.stringify(cursor)} resolves to itself ` +
+        `(${[...ring, cursor].join(" -> ")}); the walk would follow it without end`,
+    );
+  }
+  return problems;
 }
 
 /** The hand-off reads a SIBLING field to name the registration. The engine
@@ -612,6 +655,7 @@ export function closureProblems(surface: SurfaceDecl): readonly string[] {
     );
   }
 
+  ctx.problems.push(...ringProblems(ctx));
   resolveHooks(surface, ctx);
   return ctx.problems;
 }

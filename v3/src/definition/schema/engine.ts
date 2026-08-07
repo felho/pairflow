@@ -297,6 +297,81 @@ export function resolveSelectorPath(
 }
 
 /**
+ * A value position the declared walk reached: what is there, the record
+ * that holds it and under which key, and the VALUE path the engine
+ * addresses findings by.
+ *
+ * The normalizer walks with this. It used to read its operand paths with a
+ * reader of its own — one that took `*` for a literal key and assumed a
+ * path held exactly one of them — and that reader was the THIRD model of
+ * an addressing the gate and the walk had already been made to share. A
+ * hook whose declared path the gate certified then wrote nothing at all,
+ * in silence. There is no third model now.
+ */
+export interface Reached {
+  readonly value: unknown;
+  /** The record holding it, for a hook that must write its result back. */
+  readonly owner?: Record<string, unknown> | undefined;
+  readonly key?: string | undefined;
+  /** The engine's own finding grain (`steps.review.gates.CONVERGED`), so a
+   * hook keying per-binding state cannot disagree with the walk that
+   * recorded it. */
+  readonly path: string;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value) && !(value instanceof Map);
+}
+
+/**
+ * Every value position a declared path reaches over a NORMALIZED value
+ * graph, expanding `*` over open maps — the same descent the gate resolved
+ * that path with. `steps` are further descents to take after the path
+ * (only `field` and `entry` address a value; `member` and `keyClass` are
+ * positions a path cannot land on, and yield nothing).
+ */
+export function reachAll(
+  surface: SurfaceDecl,
+  root: unknown,
+  path: string,
+  ...steps: readonly DeclStep[]
+): readonly Reached[] {
+  const segments = path.split(".");
+  if (segments.shift() !== "$") return [];
+  let cursor: DeclCursor = { node: surface.root, decl: "$" };
+  let nodes: readonly Reached[] = [{ value: root, path: "$" }];
+
+  const take = (step: DeclStep): boolean => {
+    const next = descend(surface, cursor, step);
+    if (next === undefined) return false;
+    cursor = next;
+    const reached: Reached[] = [];
+    for (const node of nodes) {
+      if (!isRecord(node.value)) continue;
+      const keys =
+        step.kind === "entry"
+          ? Object.keys(node.value)
+          : step.kind === "field" && Object.prototype.hasOwnProperty.call(node.value, step.name)
+            ? [step.name]
+            : [];
+      for (const key of keys) {
+        reached.push({ value: ownGet(node.value, key), owner: node.value, key, path: joinPath(node.path, key) });
+      }
+    }
+    nodes = reached;
+    return true;
+  };
+
+  for (const segment of segments) {
+    if (!take(selectorStep(segment))) return [];
+  }
+  for (const step of steps) {
+    if (!take(step)) return [];
+  }
+  return nodes;
+}
+
+/**
  * The RUNTIME shapes a declared node can legally hold. A selector reads the
  * RAW value, so what decides whether a relation can read a target is not
  * the node's kind name but the shapes a valid value can take — and a node
@@ -367,7 +442,9 @@ function joinPath(parent: string, key: string): string {
   return parent === "$" || parent === "" ? key : `${parent}.${key}`;
 }
 
-function indexPath(parent: string, index: number): string {
+/** The list-member finding grain. Exported because the normalizer keys
+ * per-binding state by it and must not spell it a second way. */
+export function indexPath(parent: string, index: number): string {
   return `${parent}[${String(index)}]`;
 }
 

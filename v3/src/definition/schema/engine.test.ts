@@ -687,6 +687,64 @@ describe("the normalizer (ADR-019 D3) — derivation, never validation", () => {
       { uses: "x.y", config: { resolved: 2 } },
     ]);
   });
+
+  // The hooks walk their operand paths with the ENGINE's descent. Before
+  // that, this module read them with a reader of its own that took `*` for
+  // a literal key: a declared path the gate had certified reached nothing
+  // and the hook returned having written NOTHING. Both fixtures below are
+  // paths the LIVE declaration does not use but the language permits, and
+  // both are what the next chapter is free to write.
+  const openMap = (tag: string, entry: NodeDecl): NodeDecl =>
+    ({ kind: "map.open", tag, rows: ROWS, containerMessage: "c", keyLaneAt: "container", entry });
+  const listOf = (tag: string, member: NodeDecl): NodeDecl =>
+    ({ kind: "list", tag, rows: ROWS, containerMessage: "c", memberLaneAt: "index", member });
+  const hooked = (root: NodeDecl, hook: Record<string, unknown>): SurfaceDecl =>
+    ({
+      substrate: templateFormat.substrate, valueClasses: {}, crossRules: [], root,
+      normalizers: [{ tag: "n", rows: ROWS, ...hook }],
+    }) as unknown as SurfaceDecl;
+
+  it("expandAdvancesRound walks an operand path that CONTAINS a wildcard", () => {
+    const surface = hooked(
+      fixed("r", {
+        adv: listOf("adv", text("advm")),
+        outer: openMap("o", fixed("oe", {
+          inner: openMap("i", fixed("ie", {
+            transitions: openMap("t", text("tv")),
+            flags: { kind: "raw", tag: "fl", rows: ROWS },
+          })),
+        })),
+      }),
+      { hook: "expandAdvancesRound", over: "$.outer.*.inner", edges: "transitions", advanceSet: "$.adv", into: "flags" },
+    );
+    expect(closureProblems(surface)).toStrictEqual([]);
+    const value = { adv: ["b"], outer: { one: { inner: { s: { transitions: { GO: "b", STAY: "a" } } } } } };
+    normalize(surface, value, new Map());
+    expect(value.outer.one.inner.s).toHaveProperty("flags", { GO: true, STAY: false });
+  });
+
+  it("materializeEffectiveConfigs walks an operand path with a SECOND wildcard", () => {
+    const surface = hooked(
+      fixed("r", {
+        outer: openMap("o", fixed("oe", {
+          mid: openMap("m", fixed("me", {
+            pipes: openMap("p", listOf("pl", fixed("bind", {
+              uses: text("bu"),
+              config: { kind: "raw", tag: "bcfg", rows: ROWS },
+            }))),
+          })),
+        })),
+      }),
+      { hook: "materializeEffectiveConfigs", over: "$.outer.*.mid.*.pipes", carry: ["uses"], into: "config" },
+    );
+    expect(closureProblems(surface)).toStrictEqual([]);
+    const value = { outer: { A: { mid: { B: { pipes: { C: [{ uses: "x.y", extra: "dropped" }] } } } } } };
+    // The per-binding key is the WALK's own grain, two wildcards deep —
+    // `extra` disappearing is the proof the hook actually rebuilt.
+    const effective = new Map<string, unknown>([["outer.A.mid.B.pipes.C[0]", { resolved: 2 }]]);
+    normalize(surface, value, effective);
+    expect(value.outer.A.mid.B.pipes.C).toStrictEqual([{ uses: "x.y", config: { resolved: 2 } }]);
+  });
 });
 
 describe("authored text that collides with a JavaScript object's own members", () => {
@@ -1132,6 +1190,23 @@ describe("the declaration GATE: a declaration that is not closed never becomes a
     { claim: "a normalizer operand path through a declared field name that CONTAINS a dot",
       make: (ok) => dottedHook(ok),
       problem: /over: "\$\.dotted\.a\.b" is not a declared position/u },
+    { claim: "a value class that resolves to ITSELF — the walk would never terminate",
+      make: (ok) => base({
+        valueClasses: {
+          idClass: { kind: "string", tag: "vc", rows: ["x"], grammar: { re: "^[a-z]+$", message: "bad" } },
+          ring: { kind: "valueClass", tag: "vr", rows: ["x"], valueClass: ok ? "idClass" : "ring" },
+        },
+      }, { fields: { id: { kind: "valueClass", tag: "id", rows: ["x"], valueClass: "ring" } } }),
+      problem: /value class "ring" resolves to itself \(ring -> ring\); the walk would follow it without end/u },
+    { claim: "a value class that resolves to itself around a RING of two",
+      make: (ok) => base({
+        valueClasses: {
+          idClass: { kind: "string", tag: "vc", rows: ["x"], grammar: { re: "^[a-z]+$", message: "bad" } },
+          a: { kind: "valueClass", tag: "va", rows: ["x"], valueClass: "b" },
+          b: { kind: "valueClass", tag: "vb", rows: ["x"], valueClass: ok ? "idClass" : "a" },
+        },
+      }, { fields: { id: { kind: "valueClass", tag: "id", rows: ["x"], valueClass: "a" } } }),
+      problem: /value class "a" resolves to itself \(a -> b -> a\)/u },
     { claim: "a grammar that is not a valid regular expression",
       make: (ok) => base({ valueClasses: { idClass: { kind: "string", tag: "vc", rows: ["x"],
         grammar: { re: ok ? "^[a-z]+$" : "^[a-z", message: "bad" } } } }),
@@ -1153,7 +1228,7 @@ describe("the declaration GATE: a declaration that is not closed never becomes a
   }
 
   it("the guard register is complete, unique and PINNED", () => {
-    expect(GUARDS).toHaveLength(32);
+    expect(GUARDS).toHaveLength(34);
     expect(new Set(GUARDS.map((guard) => guard.claim)).size).toBe(GUARDS.length);
   });
 

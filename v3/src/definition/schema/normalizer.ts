@@ -1,3 +1,4 @@
+import { indexPath, reachAll } from "./engine.js";
 import type { NormalizerHookDecl, SurfaceDecl } from "./vocabulary.js";
 
 /**
@@ -18,6 +19,15 @@ import type { NormalizerHookDecl, SurfaceDecl } from "./vocabulary.js";
  * Each hook is a NAMED capability parameterized by declared operand paths,
  * so adding one is D7 format growth (a ratified amendment), never an edit
  * that slips in under "normalization".
+ *
+ * WHERE THOSE OPERAND PATHS ARE RESOLVED is not this module's business and
+ * no longer its code. It used to walk them with a reader of its own, which
+ * read `*` as a literal key and assumed a path carried exactly one of
+ * them; a declared path the gate had certified could therefore reach
+ * nothing and the hook would return having written NOTHING, without a
+ * word. Both hooks now walk with `reachAll` — the engine's own descent,
+ * the same one the gate resolves with — so a path the gate accepts is a
+ * path this module walks.
  */
 
 /** Own-property WRITE: a step id or event type legally admits `__proto__`. */
@@ -33,18 +43,6 @@ function ownGet(record: Record<string, unknown>, key: string): unknown {
   return Object.prototype.hasOwnProperty.call(record, key) ? record[key] : undefined;
 }
 
-/** Resolve a declared operand path (`$.steps`, `$.round.advanceOnArrivalAt`)
- * over the normalized value. */
-function at(root: unknown, path: string): unknown {
-  let cursor: unknown = root;
-  for (const segment of path.split(".")) {
-    if (segment === "$") continue;
-    if (!isRecord(cursor)) return undefined;
-    cursor = ownGet(cursor, segment);
-  }
-  return cursor;
-}
-
 /**
  * R4's first member (ch11-C39): expand each entry's edge map into a
  * COMPLETE per-edge boolean map against the declared advancing set. An
@@ -53,24 +51,22 @@ function at(root: unknown, path: string): unknown {
  * the input carried.
  */
 function expandFlagMaps(
-  root: Record<string, unknown>,
+  surface: SurfaceDecl,
+  root: unknown,
   hook: Extract<NormalizerHookDecl, { hook: "expandAdvancesRound" }>,
 ): void {
-  const entries = at(root, hook.over);
-  if (!isRecord(entries)) return;
-  const declared = at(root, hook.advanceSet);
+  const declared = reachAll(surface, root, hook.advanceSet)[0]?.value;
   const advancing = new Set<string>(Array.isArray(declared) ? (declared as string[]) : []);
-  for (const key of Object.keys(entries)) {
-    const entry = ownGet(entries, key);
-    if (!isRecord(entry)) continue;
-    const edges = ownGet(entry, hook.edges);
+  for (const entry of reachAll(surface, root, hook.over, { kind: "entry" })) {
+    if (!isRecord(entry.value)) continue;
+    const edges = ownGet(entry.value, hook.edges);
     const flags: Record<string, boolean> = {};
     if (isRecord(edges)) {
       for (const edge of Object.keys(edges)) {
         defineOwn(flags, edge, advancing.has(ownGet(edges, edge) as string));
       }
     }
-    defineOwn(entry, hook.into, flags);
+    defineOwn(entry.value, hook.into, flags);
   }
 }
 
@@ -81,40 +77,26 @@ function expandFlagMaps(
  * config form.
  */
 function materializeConfigs(
-  root: Record<string, unknown>,
+  surface: SurfaceDecl,
+  root: unknown,
   hook: Extract<NormalizerHookDecl, { hook: "materializeEffectiveConfigs" }>,
   effectiveConfigs: ReadonlyMap<string, unknown>,
 ): void {
-  // `over` addresses the pipeline map through two open-map levels:
-  // `$.steps.*.gates` — the entry key and the event key are the wildcards.
-  const [ownerPath, ...rest] = hook.over.split(".*.");
-  const owners = at(root, ownerPath ?? "$");
-  if (!isRecord(owners)) return;
-  const inner = rest.join(".*.");
-  for (const ownerKey of Object.keys(owners)) {
-    const owner = ownGet(owners, ownerKey);
-    if (!isRecord(owner)) continue;
-    const pipelines = ownGet(owner, inner);
-    if (!isRecord(pipelines)) continue;
-    const rebuiltPipelines: Record<string, unknown> = {};
-    for (const eventKey of Object.keys(pipelines)) {
-      const pipeline = ownGet(pipelines, eventKey);
-      if (!Array.isArray(pipeline)) continue;
-      const base = `${ownerPath === "$" ? "" : `${(ownerPath ?? "").replace("$.", "")}.`}${ownerKey}.${inner}.${eventKey}`;
-      defineOwn(
-        rebuiltPipelines,
-        eventKey,
-        pipeline.map((binding: unknown, index: number) => {
-          const carried: Record<string, unknown> = {};
-          if (isRecord(binding)) {
-            for (const field of hook.carry) defineOwn(carried, field, ownGet(binding, field));
-          }
-          defineOwn(carried, hook.into, effectiveConfigs.get(`${base}[${String(index)}]`));
-          return carried;
-        }),
-      );
-    }
-    defineOwn(owner, inner, rebuiltPipelines);
+  for (const pipeline of reachAll(surface, root, hook.over, { kind: "entry" })) {
+    const owner = pipeline.owner;
+    const key = pipeline.key;
+    if (!Array.isArray(pipeline.value) || owner === undefined || key === undefined) continue;
+    // The per-binding key is the WALK's own finding grain, carried here
+    // rather than rebuilt from path text.
+    const rebuilt = pipeline.value.map((binding: unknown, index: number) => {
+      const carried: Record<string, unknown> = {};
+      if (isRecord(binding)) {
+        for (const field of hook.carry) defineOwn(carried, field, ownGet(binding, field));
+      }
+      defineOwn(carried, hook.into, effectiveConfigs.get(indexPath(pipeline.path, index)));
+      return carried;
+    });
+    defineOwn(owner, key, rebuilt);
   }
 }
 
@@ -131,10 +113,10 @@ export function normalize(
   if (!isRecord(value)) return value;
   for (const hook of surface.normalizers) {
     if (hook.hook === "expandAdvancesRound") {
-      expandFlagMaps(value, hook);
+      expandFlagMaps(surface, value, hook);
       continue;
     }
-    materializeConfigs(value, hook, effectiveConfigs);
+    materializeConfigs(surface, value, hook, effectiveConfigs);
   }
   return value;
 }
