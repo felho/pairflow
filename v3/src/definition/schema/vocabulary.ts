@@ -102,6 +102,20 @@ export interface MembershipRule {
   readonly message: MessageTemplate;
   /** vocabulary #13 — suppression beyond the implicit container rule. */
   readonly dependsOn?: readonly string[];
+  /** vocabulary #14 — what this lane does when its operand is still
+   * UNDECIDED at the end of the walk.
+   *
+   * A lane whose target position was never evaluated — because a field the
+   * path runs through is legitimately ABSENT — used to be dropped from the
+   * deferred queue in silence, leaving no trace anywhere that a declared
+   * rule had not run. It is now a reported failure by default. Declaring
+   * `skip` says that absence is LEGITIMATE for this lane, and because it
+   * is data on the declaration, a reviewer can see and question every
+   * place the silence was asked for.
+   *
+   * This is NOT the suppression `dependsOn` gives: a suppressed lane has a
+   * sibling finding that explains it, and an undecided one has nothing. */
+  readonly whenOperandAbsent?: "skip";
 }
 
 /** vocabulary #11 — the duplicate lane and its path grain. */
@@ -347,6 +361,10 @@ export interface EqualsRuleDecl {
   readonly missingFromLeft: { readonly at: FindingPathTemplate; readonly message: MessageTemplate };
   readonly missingFromRight: { readonly at: FindingPathTemplate; readonly message: MessageTemplate };
   readonly dependsOn?: readonly string[];
+  /** vocabulary #14, as on `MembershipRule`: an operand that was never
+   * evaluated is a reported failure unless the absence is declared
+   * legitimate here. */
+  readonly whenOperandAbsent?: "skip";
 }
 
 /**

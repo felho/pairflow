@@ -653,6 +653,13 @@ function resolvePath(
   }
   if (cursor === undefined) return UNRELIABLE;
   for (const segment of segments) {
+    // Nothing left to walk: an open map with no entries ends the walk
+    // here, and the honest answer is the EMPTY set, decided now. Asking
+    // whether the positions below it have been evaluated would wait on
+    // instances that do not exist — a rule over an empty map would sit
+    // undecided forever for want of an operand it can already see is
+    // empty.
+    if (nodes.length === 0) return { status: "ok", nodes: [] };
     const next = descend(run.surface, cursor, selectorStep(segment));
     if (next === undefined) return UNRELIABLE;
     cursor = next;
@@ -966,6 +973,11 @@ function evalMapFixed(
       presence.code,
     );
     local.set(field.tag, false);
+    // The position is UNRELIABLE, not merely unvisited: a rule reading it
+    // is suppressed, and the missing-key finding is the trace that
+    // explains why. Without this the lane would instead end the walk
+    // UNDECIDED and report a second time for a fault already named.
+    run.mark(fieldAt.decl, false);
   };
 
   const evalOneField = (name: string): void => {
@@ -1378,6 +1390,21 @@ function evaluateEquals(run: Run, frame: Frame, rule: EqualsRuleDecl): void {
   if (rule.dependsOn?.some((tag) => !run.reliable(tag)) === true) return;
   const left = evaluateSelector(run, frame, rule.left);
   const right = evaluateSelector(run, frame, rule.right);
+  // A cross rule is never queued, so `pending` HERE — after the deferred
+  // queue has drained and every position has been visited — means the same
+  // thing it means there: an operand nothing ever evaluated.
+  if (left.status === "pending" || right.status === "pending") {
+    if (rule.whenOperandAbsent !== "skip") {
+      const undecided = left.status === "pending" ? rule.left : rule.right;
+      reportUndecided(
+        run,
+        run.surface.substrate.internalFailure.path,
+        `the cross rule ${JSON.stringify(rule.tag)} could not be decided — its operand ` +
+          `${describeSelector(undecided)} names a position the walk never evaluated`,
+      );
+    }
+    return;
+  }
   if (left.status !== "ok" || right.status !== "ok") return;
   const declared = unique(left.values);
   const used = unique(right.values);
@@ -1393,6 +1420,31 @@ function evaluateEquals(run: Run, frame: Frame, rule: EqualsRuleDecl): void {
   }
 }
 
+/** How a selector reads, in words a finding can carry. */
+function describeSelector(selector: Selector): string {
+  if ("injected" in selector) return `the injected set ${JSON.stringify(selector.injected)}`;
+  if ("union" in selector) return selector.union.map(describeSelector).join(" + ");
+  const read = selectorRead(selector);
+  return `${read.relation}(${JSON.stringify(read.path)})`;
+}
+
+/**
+ * A lane still UNDECIDED when the walk ends. Its target position was never
+ * evaluated — a field the path runs through is absent — so unlike a
+ * SUPPRESSED lane there is no sibling finding anywhere that explains it.
+ * It used to be dropped here, which is the exact failure this substrate
+ * exists to refuse: a declared rule that quietly does not run.
+ *
+ * Reported through the substrate's own internal-failure branch, because
+ * that is what it is — the validator could not decide something it was
+ * told to decide. A declaration that considers the absence legitimate says
+ * so with `whenOperandAbsent: "skip"`, in data a reviewer can see.
+ */
+function reportUndecided(run: Run, path: string, what: string): void {
+  const branch = run.surface.substrate.internalFailure;
+  run.emit(path, render(branch.message, { path, value: what }));
+}
+
 function runDeferred(run: Run): void {
   // A membership lane deferred for a PENDING operand runs once, in the
   // order the walk queued it. The queue is drained, never re-fed: every
@@ -1404,7 +1456,15 @@ function runDeferred(run: Run): void {
     // the global status from re-deciding it.
     checkMembership(run, check.frame, check.rule, check.candidate, check.slots, new Map());
   }
-  run.deferred.length = 0;
+  for (const check of run.deferred.splice(0, run.deferred.length)) {
+    if (check.rule.whenOperandAbsent === "skip") continue;
+    reportUndecided(
+      run,
+      check.frame.path,
+      `the ${check.rule.relation} lane could not be decided — its operand ` +
+        `${describeSelector(check.rule.target)} names a position the walk never evaluated`,
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------

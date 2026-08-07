@@ -452,14 +452,89 @@ describe("suppression: the implicit container precondition and declared gating",
     expect(findings).toStrictEqual([{ path: "steps", message: "steps must be a map" }]);
   });
 
-  it("a MISSING container suppresses the same rule", () => {
-    expect(direct(root, { start: "nope" })).toStrictEqual([]);
+  // A MISSING container is NOT the same as a wrong-kind one, and the
+  // difference is the whole of vocabulary #14. A wrong-kind container has
+  // its own finding, so a lane reading it is suppressed WITH a trace. A
+  // missing one leaves no finding anywhere — so a lane reading it used to
+  // end the walk undecided and be dropped, which is a declared rule
+  // quietly not running. It is reported now unless the declaration says
+  // the absence is legitimate, and both directions are tested here.
+  it("a MISSING container leaves the rule UNDECIDED — reported, not dropped", () => {
+    expect(direct(root, { start: "nope" })).toStrictEqual([
+      {
+        path: "start",
+        message:
+          "internal validator failure: the memberOf lane could not be decided — " +
+          'its operand keysOf("$.steps") names a position the walk never evaluated',
+      },
+    ]);
+  });
+
+  it("...and is silent when the declaration DECLARES that absence legitimate", () => {
+    const skipping = fixed("root", {
+      steps: {
+        kind: "map.open", tag: "steps", rows: ROWS, containerMessage: "steps must be a map",
+        keyLaneAt: "container", entry: text("step"),
+      },
+      start: {
+        kind: "string", tag: "start", rows: ROWS,
+        memberOf: {
+          relation: "memberOf", target: { keysOf: "$.steps" }, message: "start must name a step",
+          whenOperandAbsent: "skip",
+        },
+      },
+    });
+    expect(direct(skipping, { start: "nope" })).toStrictEqual([]);
+    // The opt-out is scoped to ABSENCE: where the operand exists, the lane
+    // still decides. A marker that switched the rule off entirely would
+    // pass the test above and be worthless.
+    expect(direct(skipping, { steps: {}, start: "nope" })).toStrictEqual([
+      { path: "start", message: "start must name a step" },
+    ]);
+  });
+
+  it("a MISSING REQUIRED container suppresses instead — the missing-key finding IS the trace", () => {
+    const required = fixed("root", {
+      steps: {
+        kind: "map.open", tag: "steps", rows: ROWS, containerMessage: "steps must be a map",
+        keyLaneAt: "container", entry: text("step"), presence: { required: true },
+      },
+      start: {
+        kind: "string", tag: "start", rows: ROWS,
+        memberOf: { relation: "memberOf", target: { keysOf: "$.steps" }, message: "start must name a step" },
+      },
+    }, { missingMessage: 'missing required key "{key}"' });
+    expect(direct(required, { start: "nope" })).toStrictEqual([
+      { path: "$", message: 'missing required key "steps"' },
+    ]);
   });
 
   it("an EMPTY container does NOT suppress it — the set exists and is empty", () => {
     expect(direct(root, { steps: {}, start: "nope" })).toStrictEqual([
       { path: "start", message: "start must name a step" },
     ]);
+  });
+
+  it("a path THROUGH an empty open map decides as the empty set, not as undecided", () => {
+    // The live declaration's own case: `collect("$.steps.*.role")` over
+    // `steps: {}`. No entry is ever evaluated, so no position below `.*`
+    // is either — but there is nothing to wait FOR, and the answer the
+    // walk can already see is the empty set. Waiting on instances that do
+    // not exist would leave the rule undecided forever.
+    const deep = fixed("root", {
+      steps: {
+        kind: "map.open", tag: "steps", rows: ROWS, containerMessage: "c", keyLaneAt: "container",
+        entry: fixed("step", { role: text("role") }),
+      },
+      pick: {
+        kind: "string", tag: "pick", rows: ROWS,
+        memberOf: { relation: "memberOf", target: { collect: "$.steps.*.role" }, message: "no such role" },
+      },
+    });
+    expect(direct(deep, { steps: {}, pick: "ghost" })).toStrictEqual([
+      { path: "pick", message: "no such role" },
+    ]);
+    expect(direct(deep, { steps: { a: { role: "ghost" } }, pick: "ghost" })).toStrictEqual([]);
   });
 
   it("a declared `gating` key class makes the selector's operand unreliable", () => {
