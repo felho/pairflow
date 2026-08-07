@@ -5606,3 +5606,32 @@ final CLEAN.
   loop, and I reported the reproduction before checking the machine —
   the assume-then-measure trap in its measuring form. The load average
   was the tell and I had not looked at it.
+- 2026-08-07 · ch13-P3 FINISHING ACT — two corrections to the entry above
+  and one against my instrument.
+  J-RESPAWN HAS TWO MODES, and yesterday's entry claimed more than it had
+  measured when it said the socket signature "fits the original report
+  too". The socket wedge is real and explains the TIMEOUT mode (three
+  journey tests, exactly 60 000 ms each, tmux client blocked). It does
+  not explain the mode observed today: the respawn with an emitting stub
+  lands `unconfirmed` at ~20-30 s with tmux healthy and no orphan
+  anywhere. That is the ORIGINAL ch9-P4b class — a CPU-starved wrapper
+  losing the race to its own result write — and today it reproduced in
+  roughly one full-suite run in two. Settled by experiment rather than
+  argument: the suite was run twice on the PRE-BLOCK commit dbd3eba7,
+  where the semantic failure appeared on the first run, so it predates
+  this act entirely. The remedy remains the recorded boundary candidate;
+  what changes is that the candidate now covers two mechanisms, and only
+  one of them is cured by a per-run socket.
+  THE BYTE GUARD HAS NEVER GUARDED WHAT I THOUGHT. `arm_run.sh` hashes
+  every untracked file, and the verdict it writes lands inside the repo —
+  so it is untracked, so the after-guard differs from the before-guard,
+  so EVERY arm run whose output goes to a repo path reports BYTE GUARD
+  TRIP and exits before it validates the model pin. Deterministic, not
+  intermittent. I did not see it until round 7 because I piped the script
+  through `tail` and read the pipeline's exit code rather than the
+  script's — round 6 tripped identically and reported "exit code 0" to
+  me. Neither verdict is substantively void: for both I re-established
+  the guarantee by hand (`git status` showing the verdict file and
+  nothing else) and checked the pin header manually, and both matched.
+  The fix for the next act is to write the verdict OUTSIDE the tree and
+  move it in after the guard, and to stop piping the runner.
