@@ -1,6 +1,7 @@
 import {
   type DeclCursor,
   RELATION_READS,
+  defaultFindings,
   derefNode,
   descend,
   resolveSelectorPath,
@@ -288,7 +289,9 @@ function checkNode(
       ctx.problems.push(...slotProblems(decl.containerMessage, where), ...slotProblems(decl.unknownMessage, where));
       if (decl.missingMessage !== undefined) ctx.problems.push(...slotProblems(decl.missingMessage, where));
       for (const [name, field] of Object.entries(decl.fields)) {
-        checkNode(field, `${where}.${name}`, true, ctx, childAt(ctx, at, { kind: "field", name }), at, decl);
+        const site = `${where}.${name}`;
+        ctx.problems.push(...defaultProblems(field, site, ctx));
+        checkNode(field, site, true, ctx, childAt(ctx, at, { kind: "field", name }), at, decl);
       }
       for (const [key, message] of Object.entries(decl.removedKeys ?? {})) {
         ctx.problems.push(...slotProblems(message, `${where}.removedKeys.${key}`));
@@ -374,6 +377,38 @@ function checkNode(
       return;
     }
   }
+}
+
+/**
+ * A declared `default:` must satisfy the field it defaults. The engine
+ * materializes it through that field's own lanes, so a default the field
+ * would refuse produces a finding on every template that omits the key —
+ * blamed on the template, for a fault in the declaration. The author hears
+ * it here instead, once.
+ *
+ * Only CONTEXT-FREE violations reach this list. A default whose legality
+ * depends on the template around it — a role name against this template's
+ * roles — cannot be decided without a template, and is not this gate's to
+ * judge.
+ *
+ * `default: undefined` is refused outright, which settles the recorded
+ * debt that it was indistinguishable from declaring no default: the two
+ * are distinguishable by own-property, and materializing `undefined` is
+ * not a thing a declaration can mean.
+ */
+function defaultProblems(field: NodeDecl, where: string, ctx: Context): string[] {
+  if (!Object.prototype.hasOwnProperty.call(field, "default")) return [];
+  if (field.default === undefined) {
+    return [
+      `${where}: default is written as \`undefined\`, which materializes nothing — ` +
+        `omit the key to declare no default`,
+    ];
+  }
+  return defaultFindings(ctx.surface, field, field.default).map(
+    (finding) =>
+      `${where}: default ${JSON.stringify(field.default) ?? String(field.default)} is not legal for the ` +
+      `field it defaults — ${finding.message}`,
+  );
 }
 
 /** The measured shame case: an unknown name made the engine return the

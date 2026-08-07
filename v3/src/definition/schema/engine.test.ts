@@ -537,6 +537,56 @@ describe("suppression: the implicit container precondition and declared gating",
     expect(direct(deep, { steps: { a: { role: "ghost" } }, pick: "ghost" })).toStrictEqual([]);
   });
 
+  // ITEM 3's built semantics, stated as a test rather than as prose: a
+  // materialized default takes the SAME path an authored value takes. So
+  // it is validated, it COMPLETES its position, and it participates in
+  // every rule that watches that position — including rules whose
+  // legality is template-dependent, which is the interaction the ruling
+  // asked to be pinned down either way.
+  describe("a materialized `default:` is validated like any other value", () => {
+    const withDefault = fixed("root", {
+      roles: {
+        kind: "map.open", tag: "roles", rows: ROWS, containerMessage: "c", keyLaneAt: "container",
+        entry: { kind: "raw", tag: "role", rows: ROWS } as NodeDecl,
+      },
+      steps: {
+        kind: "map.open", tag: "steps", rows: ROWS, containerMessage: "c", keyLaneAt: "container",
+        entry: fixed("step", {
+          role: {
+            kind: "string", tag: "srole", rows: ROWS, default: "implementer",
+            memberOf: { relation: "memberOf", target: { keysOf: "$.roles" }, message: "{path}: no such role" },
+          },
+        }),
+      },
+    });
+
+    it("the default is CHECKED against a rule whose answer depends on the template", () => {
+      expect(direct(withDefault, { roles: { implementer: {} }, steps: { s: {} } })).toStrictEqual([]);
+      expect(direct(withDefault, { roles: { reviewer: {} }, steps: { s: {} } })).toStrictEqual([
+        { path: "steps.s.role", message: "steps.s.role: no such role" },
+      ]);
+    });
+
+    it("the default reaches the admitted form as the VALIDATED value", () => {
+      const run = runSurface(surface(withDefault), { roles: { implementer: {} }, steps: { s: {} } }, {
+        channel: { kind: "direct" },
+      });
+      expect(run.normalized).toStrictEqual({ roles: { implementer: {} }, steps: { s: { role: "implementer" } } });
+    });
+
+    it("an ENUM default is stored under its stored token, not its authored spelling", () => {
+      const enumDefault = fixed("root", {
+        mode: {
+          kind: "enum", tag: "mode", rows: ROWS, message: "bad mode", default: "deferredKickoff",
+          members: [{ value: "deferredKickoff", store: "deferred_kickoff" }, { value: "now" }],
+        },
+      });
+      const run = runSurface(surface(enumDefault), {}, { channel: { kind: "direct" } });
+      expect(run.findings).toStrictEqual([]);
+      expect(run.normalized).toStrictEqual({ mode: "deferred_kickoff" });
+    });
+  });
+
   it("a declared `gating` key class makes the selector's operand unreliable", () => {
     const gated = fixed("root", {
       steps: {
@@ -1265,6 +1315,20 @@ describe("the declaration GATE: a declaration that is not closed never becomes a
     { claim: "a normalizer operand path through a declared field name that CONTAINS a dot",
       make: (ok) => dottedHook(ok),
       problem: /over: "\$\.dotted\.a\.b" is not a declared position/u },
+    { claim: "a declared default the field it defaults would REFUSE",
+      make: (ok) => base({}, {
+        fields: {
+          name: { kind: "string", tag: "nm", rows: ["x"],
+            grammar: { re: "^[a-z]+$", message: "{path} must be lower-case letters" },
+            default: ok ? "abc" : "ABC" },
+        } }),
+      problem: /default "ABC" is not legal for the field it defaults — \$ must be lower-case letters/u },
+    { claim: "a default written as `undefined`, which materializes nothing",
+      make: (ok) => base({}, {
+        fields: {
+          name: { kind: "string", tag: "nm", rows: ["x"], typeMessage: "t", ...(ok ? {} : { default: undefined }) },
+        } }),
+      problem: /default is written as `undefined`, which materializes nothing/u },
     { claim: "a value class that resolves to ITSELF — the walk would never terminate",
       make: (ok) => base({
         valueClasses: {
@@ -1303,7 +1367,7 @@ describe("the declaration GATE: a declaration that is not closed never becomes a
   }
 
   it("the guard register is complete, unique and PINNED", () => {
-    expect(GUARDS).toHaveLength(34);
+    expect(GUARDS).toHaveLength(36);
     expect(new Set(GUARDS.map((guard) => guard.claim)).size).toBe(GUARDS.length);
   });
 

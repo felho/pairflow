@@ -984,13 +984,17 @@ function evalMapFixed(
     const at = fields.get(name);
     if (at === undefined) return;
     const field = at.node;
-    if (!containerHas(container, name)) {
-      // An ABSENT field is where a declared `default:` materializes — the
-      // schema-side half of ADR-019 D3.
-      if (field.default !== undefined) defineOwn(normalized, name, field.default);
-      return;
-    }
-    const child = childFrame(frame, at, name, containerGet(container, name), container);
+    const present = containerHas(container, name);
+    // An ABSENT field is where a declared `default:` materializes — the
+    // schema-side half of ADR-019 D3. It takes the SAME path an authored
+    // value takes, because materializing a value is not an exemption from
+    // validating it: what reaches the admitted form is the validated
+    // result (an enum's STORED token, not its authored spelling), and the
+    // position COMPLETES, so a rule watching it is decided against the
+    // default rather than left undecided by an absence the declaration
+    // itself filled.
+    if (!present && field.default === undefined) return;
+    const child = childFrame(frame, at, name, present ? containerGet(container, name) : field.default, container);
     const result = evaluateNode(run, field, child, local);
     local.set(field.tag, result.ok);
     if (result.ok && result.value !== undefined) defineOwn(normalized, name, result.value);
@@ -1470,6 +1474,36 @@ function runDeferred(run: Run): void {
 // ---------------------------------------------------------------------------
 // Entry points.
 // ---------------------------------------------------------------------------
+
+/**
+ * Evaluate a declared `default:` against the field it defaults, with NO
+ * document around it — the load-time half of "no value reaches the
+ * admitted form unvalidated". A default that its own field would refuse is
+ * a fault in the DECLARATION, and its author should hear about it once, at
+ * load, rather than through every template that omits the key.
+ *
+ * The deferred queue is deliberately left undrained: a lane reading the
+ * DOCUMENT cannot be decided without one, and a default that is legal in
+ * one template and not another is a template's finding, not a
+ * declaration's. What survives here is context-free — a wrong type, a
+ * grammar, a value outside an enum.
+ */
+export function defaultFindings(
+  surface: SurfaceDecl,
+  field: NodeDecl,
+  value: unknown,
+): readonly ValidationFinding[] {
+  const run = new Run(surface, { kind: "direct" }, {});
+  run.root = undefined;
+  evaluateNode(run, field, {
+    at: { node: field, decl: "$" },
+    path: "$",
+    segments: [],
+    value,
+    parentValue: undefined,
+  });
+  return run.findings;
+}
 
 /**
  * Run a surface declaration over a value graph. ONE computation serves
