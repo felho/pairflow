@@ -620,6 +620,29 @@ describe("suppression: the implicit container precondition and declared gating",
     ]);
   });
 
+  it("a malformed KEY does not make the whole map unusable to rules that read it", () => {
+    // The key lane occupies no position in the value graph, so it has no
+    // segment of its own — and sharing the map's address made one bad key
+    // mark the entire map unreliable, silently suppressing every rule
+    // selecting over it. It has its own per-key lane now.
+    const keyed = fixed("root", {
+      steps: {
+        kind: "map.open", tag: "steps", rows: ROWS, containerMessage: "c", keyLaneAt: "container",
+        keyClass: text("skey", { grammar: { re: "^[a-z]+$", message: "{path}: bad key" } }),
+        entry: text("sv"),
+      } as NodeDecl,
+      pick: text("pick", {
+        memberOf: { relation: "memberOf", target: { keysOf: "$.steps" }, message: "{path}: not a step" },
+      }),
+    });
+    const notAStep = { path: "pick", message: "pick: not a step" };
+    expect(direct(keyed, { steps: { good: "1" }, pick: "ghost" })).toStrictEqual([notAStep]);
+    expect(direct(keyed, { steps: { BAD: "1", good: "1" }, pick: "ghost" })).toStrictEqual([
+      { path: "steps", message: "steps: bad key" },
+      notAStep,
+    ]);
+  });
+
   it("a delegation the registry REFUSES is an undischarged obligation, reported", () => {
     const binding = fixed("root", {
       uses: text("u"),

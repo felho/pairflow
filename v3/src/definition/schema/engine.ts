@@ -534,6 +534,12 @@ interface Frame {
    * `parentValue` and `parentAt` so all three describe the same
    * container. */
   readonly parentSegments?: readonly (string | number)[] | undefined;
+  /** A lane that occupies no position in the value graph and therefore
+   * has no segment of its own — an open map's KEY class. Without it the
+   * key lane would share the map's address, and one malformed key would
+   * mark the whole map unusable, silently suppressing every rule that
+   * reads it. */
+  readonly lane?: string | undefined;
   /** The value path the findings address (`steps.review.role`). */
   readonly path: string;
   /** The SOURCE-document address, carried segment by segment as the walk
@@ -597,8 +603,8 @@ interface DeferredCheck {
  * every instance of it shares — which is how one open-map entry's broken
  * field came to decide another entry's rule.
  */
-function instanceKey(segments: readonly (string | number)[]): string {
-  return JSON.stringify(segments);
+function instanceKey(segments: readonly (string | number)[], lane?: string): string {
+  return JSON.stringify([segments, lane ?? null]);
 }
 
 /** `tag@scope`, for a status a sibling asks about by name. */
@@ -952,7 +958,7 @@ function baseSlots(frame: Frame): Slots {
 
 function evaluateNode(run: Run, decl: NodeDecl, frame: Frame): NodeResult {
   const result = dispatch(run, decl, frame);
-  const instance = instanceKey(frame.segments);
+  const instance = instanceKey(frame.segments, frame.lane);
   run.completed.add(instance);
   run.mark(instance, result.ok);
   run.markTag(frame, decl.tag, result.ok);
@@ -1168,6 +1174,8 @@ function evalMapOpen(
         at: keyAt,
         parentAt: frame.at,
         parentSegments: frame.segments,
+        // Its own lane, and its own PER-KEY address inside it.
+        lane: `key:${String(key)}`,
         path: decl.keyLaneAt === "container" ? frame.path : entryPath,
         segments: frame.segments,
         value: key,
