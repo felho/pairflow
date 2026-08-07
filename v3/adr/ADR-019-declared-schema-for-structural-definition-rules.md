@@ -2,7 +2,9 @@
 
 Status: accepted
 Date: 2026-08-05 · amended 2026-08-06 (D1's residual list, D5's corpus
-derivation, D9.3's reading; user-ratified — each carries a dated marker)
+derivation, D9.3's reading) · amended 2026-08-07 (D10 — the entry-belted
+membership construct, admitted under D7; user-ratified — each carries a
+dated marker)
 Links: supersedes — · amends — · depends-on ADR-011 · related ADR-003, ADR-012, ADR-013
 
 ## Context
@@ -219,6 +221,8 @@ flavours that must not be confused:
   audit's **≥2 independent ratified rows** test; a construct serving
   exactly one row is refused and that row keeps a prose lane instead.
 
+**Admitted under this rule so far**: one construct, D10 (2026-08-07).
+
 ### D8 — the two open constructs — RULED: BOTH ACCEPTED (user, 2026-08-05)
 
 Both were single-use, and the audit deliberately refused to bank their
@@ -273,6 +277,76 @@ work-around:
    ratified amendment. The tripwire fires on a new KIND of residual, not
    only on a new id — and a rule kept in code for a reason no existing
    family states IS a new kind, whatever it is called.
+
+### D10 — the ENTRY-BELTED membership construct (amendment, user-ratified 2026-08-07)
+
+**ADMITTED**: a membership construct that measures against the keys of an
+open map whose VALUE IS A VALID ENTRY — "resolve against valid-entry
+keys" — rather than against key existence. Spelled `validKeysOf` as a
+selector root beside `keysOf`.
+
+**Why it was needed, and how it was found.** Not by inspection. The
+2026-08-07 dress-rehearsal round put an outside author in front of this
+substrate for the first time and asked them to declare the ch13
+context-block surface. They reached for the only available form,
+`memberOf` over `keysOf`, and it loaded — then treated a reference to a
+key whose entry was `{}` as RESOLVED. The superseded ch13-C7 says the
+opposite in as many words: *"Key existence alone is not resolution — a
+key whose value is not a C3 entry leaves its refs UNRESOLVED and fires
+this lane per site."* Ten rounds of examining this substrate could not
+have produced that, because nobody had tried to SAY it.
+
+**ITS SEMANTICS ON A BROKEN OPERAND — part of the construct, not a
+separate feature.** When the catalog operand is wrong-kind, absent, or
+otherwise unresolvable, NO membership query against it can succeed. The
+construct therefore answers with the EMPTY SET, never with "unreliable":
+every referencing site gets its own per-site unresolved finding, and the
+container's failure NEVER suppresses them.
+
+This is the one place the ratified corpus already said so — the
+superseded ch13-C1's *"NOT C7, whose per-site findings still fire because
+no entry can resolve"* — turned from an EXCEPTION a contract had to spell
+out into the NATURE of a construct. An exception that must be restated at
+every site is the drift this ADR exists to end; a nature is stated once
+and cannot be forgotten.
+
+**DERIVATION DUTY, executed rather than assumed.** The whole ratified
+corpus was swept for other rows carrying a suppression exemption — every
+C-row in every contract, matched on container-precondition language
+against exemption language. **Exactly one exists: ch13-C1's exemption of
+C7.** ch13-C2 mentions suppression as a lane that IS suppressed, and
+ch13-C6's match is about registry classes, not suppression. No ch8, ch11
+or ch12 row carries one. So this construct absorbs the corpus's only
+suppression exemption, and creates no general exception mechanism.
+
+**THE ADMISSION-TEST READING, recorded because it is the close call.**
+The audit's D7 test admits a construct on ≥2 INDEPENDENT ratified rows.
+This construct is carried by ONE row — the superseded ch13-C7 — which
+governs TWO ref positions, C4's `promptConcernRefs` and C6's
+`contextBlockRefs`. **The user ratified the two-position reading.** The
+recorded alternative: refusing it would not have avoided an amendment,
+because the rule would then have kept a prose lane and grown the
+residual family — a residual-family amendment instead of a vocabulary
+one. Between two amendments, keeping a STRUCTURAL rule DECLARATIVE wins.
+D9's tripwire 1 was examined at this ruling and not skirted: it fires on
+admitting a single-use construct to make one row fit, and the judgement
+here is that two independent ref positions under one row is not the
+single-use case that tripwire names.
+
+**ONE DEFINITION OF "ENTRY", by reference.** The construct does NOT take
+a separately named entry shape. Validity is the catalog's own declared
+`entry:` node, measured by whether that entry's evaluation produced any
+finding. A separately named shape would be a SECOND definition of
+"entry" — precisely what ch13-C7 forbade when it defined the belt "by
+REFERENCE, never restated here, so ONE definition of 'entry' governs both
+channels", and precisely the drift class the P3 aftermath spent five
+rounds eliminating. The load-time protection the amendment asked for
+lands on the only name that exists: a mistyped OPERAND PATH fails the
+load, closure-checked through the one resolver like every other
+reference.
+
+**The live declaration does not adopt it.** Its first user is P4's
+contract; the expected live behavioral delta is zero.
 
 ## Alternatives Considered
 
