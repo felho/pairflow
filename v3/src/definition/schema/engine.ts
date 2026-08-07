@@ -424,6 +424,9 @@ export function shapesOf(surface: SurfaceDecl, node: NodeDecl, seen = new Set<st
  * every legal value. Changing what a relation reads changes both. */
 export const RELATION_READS = {
   keysOf: { shape: "map", test: (value: unknown): boolean => isContainer(value) },
+  // D10: reads the same shape as `keysOf` — a map — and differs in WHICH
+  // of its keys it yields, not in what it can read.
+  validKeysOf: { shape: "map", test: (value: unknown): boolean => isContainer(value) },
   valuesOf: { shape: "list", test: (value: unknown): boolean => Array.isArray(value) },
   collect: { shape: "string", test: (value: unknown): boolean => typeof value === "string" },
 } as const satisfies Readonly<Record<string, { readonly shape: RuntimeShape; readonly test: (value: unknown) => boolean }>>;
@@ -432,9 +435,13 @@ export type SelectorRelation = keyof typeof RELATION_READS;
 
 /** Which relation a selector leaf names, and the path it reads. */
 export function selectorRead(
-  selector: Extract<Selector, { keysOf: string } | { valuesOf: string } | { collect: string }>,
+  selector: Extract<
+    Selector,
+    { keysOf: string } | { validKeysOf: string } | { valuesOf: string } | { collect: string }
+  >,
 ): { readonly relation: SelectorRelation; readonly path: string } {
   if ("keysOf" in selector) return { relation: "keysOf", path: selector.keysOf };
+  if ("validKeysOf" in selector) return { relation: "validKeysOf", path: selector.validKeysOf };
   if ("valuesOf" in selector) return { relation: "valuesOf", path: selector.valuesOf };
   return { relation: "collect", path: selector.collect };
 }
@@ -639,6 +646,14 @@ class Run {
   /** Every tag that failed ANYWHERE. A cross rule is document-scoped, so
    * this is the status it means. */
   readonly tagFailedAnywhere = new Set<string>();
+  /** Instances whose OWN evaluation produced no finding. The entry belt's
+   * definition of a valid entry, recorded where it is measured rather than
+   * restated where it is read. */
+  readonly clean = new Set<string>();
+  /** True once the node walk has finished and the deferred queue is
+   * draining. A belt operand that is still unreached THEN is unreachable,
+   * not merely early. */
+  walkComplete = false;
   /** Instance address → the value a declared `default:` materialized
    * there. The authored graph does not hold it, and a selector must read
    * what the walk validated rather than the absence it replaced. */
@@ -721,6 +736,14 @@ type SelectorResult =
   | { readonly status: "ok"; readonly values: readonly string[] }
   | { readonly status: "unreliable" | "pending" };
 
+/** A value the selector walk reached, with the INSTANCE address it sits
+ * at — the entry belt needs the address to ask whether that instance's
+ * own evaluation was clean. */
+interface ReachedNode {
+  readonly value: unknown;
+  readonly segments: readonly (string | number)[];
+}
+
 const UNRELIABLE = { status: "unreliable" } as const;
 const PENDING = { status: "pending" } as const;
 
@@ -736,7 +759,9 @@ function resolvePath(
   run: Run,
   from: Frame,
   path: DeclPath,
-): { readonly status: "ok"; readonly nodes: unknown[] } | { readonly status: "unreliable" | "pending" } {
+):
+  | { readonly status: "ok"; readonly nodes: readonly ReachedNode[] }
+  | { readonly status: "unreliable" | "pending" } {
   const segments = path.split(".");
   // Each node carries its OWN instance address, because reliability and
   // completion are that instance's, not its declaration's.
@@ -794,7 +819,7 @@ function resolvePath(
     }
     nodes = values;
   }
-  return { status: "ok", nodes: nodes.map((node) => node.value) };
+  return { status: "ok", nodes };
 }
 
 function evaluateSelector(run: Run, from: Frame, selector: Selector): SelectorResult {
@@ -815,17 +840,44 @@ function evaluateSelector(run: Run, from: Frame, selector: Selector): SelectorRe
   }
   const read = selectorRead(selector);
   const resolved = resolvePath(run, from, read.path);
+
+  if (read.relation === "validKeysOf") {
+    // ADR-019 D10, the broken-operand semantics that ARE the construct: an
+    // operand that is wrong-kind, absent, or otherwise unresolvable cannot
+    // let ANY reference resolve, so the answer is the EMPTY SET — never
+    // "unreliable", which would suppress the very per-site findings this
+    // construct exists to guarantee. PENDING is the one exception, and
+    // only while the walk is still running: the catalog may simply not
+    // have been reached yet, so the lane defers and is decided at the
+    // drain, where "not yet" has become "not at all".
+    if (resolved.status === "pending" && !run.walkComplete) return PENDING;
+    if (resolved.status !== "ok") return { status: "ok", values: [] };
+    const belted: string[] = [];
+    for (const node of resolved.nodes) {
+      if (!RELATION_READS.validKeysOf.test(node.value)) continue;
+      for (const [key] of entriesOf(node.value as AnyMap)) {
+        if (typeof key !== "string") continue;
+        // Key existence alone is not resolution: the ENTRY at that key
+        // must itself have evaluated without a finding. "Valid entry" is
+        // the map's own declared `entry:` node, by reference — there is no
+        // second definition of it anywhere.
+        if (run.clean.has(instanceKey([...node.segments, key]))) belted.push(key);
+      }
+    }
+    return { status: "ok", values: belted };
+  }
+
   if (resolved.status !== "ok") return resolved;
   const values: string[] = [];
   for (const node of resolved.nodes) {
     // The SAME predicate the gate demands every legal value satisfy.
-    if (!RELATION_READS[read.relation].test(node)) return UNRELIABLE;
+    if (!RELATION_READS[read.relation].test(node.value)) return UNRELIABLE;
     if (read.relation === "keysOf") {
-      for (const [key] of entriesOf(node as AnyMap)) if (typeof key === "string") values.push(key);
+      for (const [key] of entriesOf(node.value as AnyMap)) if (typeof key === "string") values.push(key);
     } else if (read.relation === "valuesOf") {
-      for (const item of node as readonly unknown[]) if (typeof item === "string") values.push(item);
+      for (const item of node.value as readonly unknown[]) if (typeof item === "string") values.push(item);
     } else {
-      values.push(node as string);
+      values.push(node.value as string);
     }
   }
   return { status: "ok", values };
@@ -964,8 +1016,10 @@ function baseSlots(frame: Frame): Slots {
 }
 
 function evaluateNode(run: Run, decl: NodeDecl, frame: Frame): NodeResult {
+  const emitted = run.findings.length;
   const result = dispatch(run, decl, frame);
   const instance = instanceKey(frame.segments, frame.lane);
+  if (run.findings.length === emitted) run.clean.add(instance);
   run.completed.add(instance);
   run.mark(instance, result.ok);
   run.markTag(frame, decl.tag, result.ok);
@@ -1689,6 +1743,7 @@ export function runSurface(surface: SurfaceDecl, value: unknown, opts: EngineOpt
   }
 
   const result = evaluateNode(run, rootDecl, rootFrame);
+  run.walkComplete = true;
   runDeferred(run);
   for (const rule of surface.crossRules) {
     if (rule.relation === "equals") evaluateEquals(run, rootFrame, rule);

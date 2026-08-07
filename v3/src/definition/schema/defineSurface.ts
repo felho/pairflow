@@ -191,7 +191,10 @@ function channelProblem(visited: readonly DeclCursor[], path: string, where: str
 /** Resolve ONE selector leaf through the engine's own descent, then apply
  * the gate's policy to the answer. */
 function leafProblems(
-  selector: Extract<Selector, { keysOf: string } | { valuesOf: string } | { collect: string }>,
+  selector: Extract<
+    Selector,
+    { keysOf: string } | { validKeysOf: string } | { valuesOf: string } | { collect: string }
+  >,
   where: string,
   ctx: Context,
   base: DeclCursor | undefined,
@@ -211,6 +214,20 @@ function leafProblems(
 
   const channel = channelProblem(resolution.visited, path, where);
   if (channel !== undefined) return [channel];
+
+  // D10's belt measures ENTRIES, so its operand must be a node that HAS
+  // them. A fixed map's fields are declared positions, not a keyed set
+  // whose members can each be valid or not — a belt over one would ask a
+  // question the shape cannot answer.
+  if (relation === "validKeysOf") {
+    const target = derefNode(ctx.surface, resolution.visited.at(-1)?.node ?? ctx.root.node);
+    if (target?.kind !== "map.open") {
+      return [
+        `${where}: validKeysOf(${JSON.stringify(path)}) addresses a ${target?.kind ?? "?"}; the entry belt ` +
+          `measures the keys of a map.open, whose entries are what it belts`,
+      ];
+    }
+  }
 
   // EVERY legal value must be readable. One that is readable for some
   // inputs and silently skipped for others is what "closed" must not mean.

@@ -620,6 +620,87 @@ describe("suppression: the implicit container precondition and declared gating",
     ]);
   });
 
+  // ADR-019 D10 — the ENTRY-BELTED membership construct. The two fixtures
+  // below are the dress-rehearsal round's own probes, kept verbatim: they
+  // are what an outside author hit when they tried to declare the ch13
+  // context-block surface and found `keysOf` treated a reference to a
+  // broken entry as resolved.
+  describe("the entry belt (D10): key existence alone is not resolution", () => {
+    /** ONE builder taking the relation, so belt and non-belt differ in
+     * exactly one reference — the sensitivity proof is structural. */
+    const catalogSurface = (relation: "keysOf" | "validKeysOf"): NodeDecl =>
+      fixed("root", {
+        contextBlocks: {
+          kind: "map.open", tag: "cat", rows: ROWS, keyLaneAt: "segment",
+          containerMessage: "contextBlocks must be a map; got {value}",
+          entry: fixed("entry", {
+            body: text("body", { presence: { required: true }, nonempty: { message: "{path}: body must not be empty" } }),
+          }, { containerMessage: "{path}: entry must be a map", missingMessage: '{path}: entry is missing "{key}"' }),
+        },
+        refs: {
+          kind: "list", tag: "refs", rows: ROWS, containerMessage: "refs must be a list", memberLaneAt: "index",
+          member: text("ref"),
+          memberOf: {
+            relation: "memberOf", target: { [relation]: "$.contextBlocks" } as never,
+            message: "{path}: ref {valueJson} does not resolve",
+          },
+        },
+      });
+    const belt = catalogSurface("validKeysOf");
+    const unbelted = catalogSurface("keysOf");
+    const unresolved = { path: "refs[0]", message: 'refs[0]: ref "alpha" does not resolve' };
+
+    it("(a) a ref to a key whose entry is MALFORMED does not resolve — both channels", () => {
+      const value = { contextBlocks: { alpha: {} }, refs: ["alpha"] };
+      const entryFinding = { path: "contextBlocks.alpha", message: 'contextBlocks.alpha: entry is missing "body"' };
+      expect(direct(belt, value)).toStrictEqual([entryFinding, unresolved]);
+      expect(fromFile(belt, "contextBlocks:\n  alpha: {}\nrefs:\n  - alpha\n")).toStrictEqual([
+        entryFinding, unresolved,
+      ]);
+      // SENSITIVITY: the same surface with `keysOf` calls it resolved.
+      expect(direct(unbelted, value)).toStrictEqual([entryFinding]);
+    });
+
+    it("(a2) a ref to a key whose entry is NOT A MAP does not resolve", () => {
+      const value = { contextBlocks: { alpha: 7 }, refs: ["alpha"] };
+      const entryFinding = { path: "contextBlocks.alpha", message: "contextBlocks.alpha: entry must be a map" };
+      expect(direct(belt, value)).toStrictEqual([entryFinding, unresolved]);
+      expect(direct(unbelted, value)).toStrictEqual([entryFinding]);
+    });
+
+    it("(b) a WRONG-KIND catalog yields its container finding AND the per-site ref finding", () => {
+      // The construct's broken-operand semantics: an operand that cannot
+      // resolve anything answers EMPTY, never "unreliable", so the site's
+      // own finding is never suppressed by the container's failure.
+      const value = { contextBlocks: [], refs: ["alpha"] };
+      const container = { path: "contextBlocks", message: "contextBlocks must be a map; got a list" };
+      expect(direct(belt, value)).toStrictEqual([container, unresolved]);
+      expect(fromFile(belt, "contextBlocks: []\nrefs:\n  - alpha\n")).toStrictEqual([container, unresolved]);
+      // SENSITIVITY: with `keysOf` the container's failure suppresses it.
+      expect(direct(unbelted, value)).toStrictEqual([container]);
+    });
+
+    it("(b2) an ABSENT catalog with a ref issued still reports per site", () => {
+      expect(direct(belt, { refs: ["alpha"] })).toStrictEqual([unresolved]);
+    });
+
+    it("NEGATIVE: a legal ref to a VALID entry still resolves, on both channels", () => {
+      const value = { contextBlocks: { alpha: { body: "x" } }, refs: ["alpha"] };
+      expect(direct(belt, value)).toStrictEqual([]);
+      expect(fromFile(belt, "contextBlocks:\n  alpha:\n    body: x\nrefs:\n  - alpha\n")).toStrictEqual([]);
+      // ...and an empty catalog with no refs is legal.
+      expect(direct(belt, { contextBlocks: {}, refs: [] })).toStrictEqual([]);
+    });
+
+    it("NEGATIVE: suppression elsewhere is UNCHANGED — a broken sibling entry belts only itself", () => {
+      const value = { contextBlocks: { alpha: { body: "x" }, beta: {} }, refs: ["alpha", "beta"] };
+      expect(direct(belt, value)).toStrictEqual([
+        { path: "contextBlocks.beta", message: 'contextBlocks.beta: entry is missing "body"' },
+        { path: "refs[1]", message: 'refs[1]: ref "beta" does not resolve' },
+      ]);
+    });
+  });
+
   it("an ALIASED map with a non-string key reports at BOTH its addresses", () => {
     // The deep key-stringness scan deduped by OBJECT IDENTITY, so one
     // anchored map sitting at two document addresses was reported at the
@@ -1549,6 +1630,17 @@ describe("the declaration GATE: a declaration that is not closed never becomes a
           name: { kind: "string", tag: "nm", rows: ["x"], typeMessage: "t", ...(ok ? {} : { default: undefined }) },
         } }),
       problem: /default is written as `undefined`, which materializes nothing/u },
+    { claim: "an entry BELT over a node that has no entries to belt",
+      make: (ok) => base({}, {
+        fields: {
+          names: { kind: "map.open", tag: "n", rows: ["x"], containerMessage: "c", keyLaneAt: "container",
+            entry: { kind: "string", tag: "ne", rows: ["x"], typeMessage: "t" } },
+          fixedMap: { kind: "map.fixed", tag: "fm", rows: ["x"], containerMessage: "c", unknownMessage: "u",
+            fields: { a: { kind: "string", tag: "fa", rows: ["x"], typeMessage: "t" } } },
+          pick: { kind: "string", tag: "p", rows: ["x"],
+            memberOf: { relation: "memberOf", target: { validKeysOf: ok ? "$.names" : "$.fixedMap" }, message: "m" } },
+        } }),
+      problem: /validKeysOf\("\$\.fixedMap"\) addresses a map\.fixed; the entry belt measures the keys of a map\.open/u },
     { claim: "a default declared where no absence exists to fill",
       make: (ok) => base({
         valueClasses: {
@@ -1595,7 +1687,7 @@ describe("the declaration GATE: a declaration that is not closed never becomes a
   }
 
   it("the guard register is complete, unique and PINNED", () => {
-    expect(GUARDS).toHaveLength(37);
+    expect(GUARDS).toHaveLength(38);
     expect(new Set(GUARDS.map((guard) => guard.claim)).size).toBe(GUARDS.length);
   });
 

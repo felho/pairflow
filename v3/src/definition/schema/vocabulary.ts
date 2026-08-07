@@ -79,6 +79,25 @@ export type NormalizerPath = string;
  * unchanged). */
 export type Selector =
   | { readonly keysOf: SelectorPath }
+  /**
+   * ADR-019 D10 (2026-08-07) — the ENTRY-BELTED root: the keys of an OPEN
+   * MAP whose VALUE IS A VALID ENTRY, where "valid entry" is the map's own
+   * declared `entry:` node, measured by whether that entry's evaluation
+   * produced any finding. Key existence alone is not resolution.
+   *
+   * There is no separately named entry shape ON PURPOSE: a second name
+   * would be a second definition of "entry", and one definition governing
+   * both channels is the whole point of the belt.
+   *
+   * ITS BROKEN-OPERAND SEMANTICS ARE PART OF THE CONSTRUCT. When the
+   * operand is wrong-kind, absent, or otherwise unresolvable, no query
+   * against it can succeed, so it answers with the EMPTY SET — never
+   * "unreliable". Every referencing site therefore gets its own per-site
+   * finding, and the container's failure NEVER suppresses them. That is
+   * the one suppression exemption the ratified corpus contained, turned
+   * from an exception a contract had to restate into a construct's nature.
+   */
+  | { readonly validKeysOf: SelectorPath }
   | { readonly valuesOf: SelectorPath }
   | { readonly collect: SelectorPath }
   | { readonly union: readonly Selector[] }
