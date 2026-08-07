@@ -55,8 +55,16 @@ function expandFlagMaps(
   root: unknown,
   hook: Extract<NormalizerHookDecl, { hook: "expandAdvancesRound" }>,
 ): void {
-  const declared = reachAll(surface, root, hook.advanceSet)[0]?.value;
-  const advancing = new Set<string>(Array.isArray(declared) ? (declared as string[]) : []);
+  // EVERY position the operand path reaches, not the first. A wildcard
+  // path resolves to many, and reading only `[0]` dropped the rest with
+  // nothing recording it.
+  const advancing = new Set<string>();
+  for (const declared of reachAll(surface, root, hook.advanceSet)) {
+    if (!Array.isArray(declared.value)) continue;
+    for (const item of declared.value as readonly unknown[]) {
+      if (typeof item === "string") advancing.add(item);
+    }
+  }
   for (const entry of reachAll(surface, root, hook.over, { kind: "entry" })) {
     if (!isRecord(entry.value)) continue;
     const edges = ownGet(entry.value, hook.edges);

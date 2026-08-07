@@ -587,6 +587,77 @@ describe("suppression: the implicit container precondition and declared gating",
     });
   });
 
+  // PER-INSTANCE BOOKKEEPING. Run state used to be keyed by the
+  // DECLARATION, which every instance of it shares — so one open-map
+  // entry's broken field decided another entry's rule. This is the exact
+  // probe that showed it, kept as the guard: entry A reports its own
+  // undecided lane, and adding a DIFFERENT, broken entry B must not make
+  // A's report disappear.
+  it("one open-map entry's failure cannot decide ANOTHER entry's rule", () => {
+    const crosstalk = fixed("root", {
+      items: {
+        kind: "map.open", tag: "items", rows: ROWS, containerMessage: "c", keyLaneAt: "container",
+        entry: fixed("item", {
+          tag: text("itag", { grammar: { re: "^[a-z]+$", message: "{path}: tag must be lower-case" } }),
+          pick: text("ipick", {
+            memberOf: { relation: "memberOf", target: { collect: "^.tag" }, message: "{path}: not the tag" },
+          }),
+        }),
+      },
+    });
+    const undecidedA = {
+      path: "items.A.pick",
+      message:
+        "internal validator failure: the memberOf lane could not be decided — " +
+        'its operand collect("^.tag") names a position the walk never evaluated',
+    };
+    // A alone: its own operand is absent, so its lane is undecided.
+    expect(direct(crosstalk, { items: { A: { pick: "zzz" } } })).toStrictEqual([undecidedA]);
+    // A with a BROKEN sibling B: B's finding appears and A's SURVIVES.
+    expect(direct(crosstalk, { items: { A: { pick: "zzz" }, B: { tag: "BAD", pick: "zzz" } } })).toStrictEqual([
+      { path: "items.B.tag", message: "items.B.tag: tag must be lower-case" },
+      undecidedA,
+    ]);
+  });
+
+  it("a delegation the registry REFUSES is an undischarged obligation, reported", () => {
+    const binding = fixed("root", {
+      uses: text("u"),
+      config: { kind: "delegate", tag: "cfg", rows: ROWS, registry: "gateCatalog", by: "uses", beltMessage: "b" },
+    });
+    const catalog: GateCatalog = {
+      resolve: (name) =>
+        name === "known"
+          ? ({ requiresRuntimeContext: false, validateAndNormalizeConfig: () => ({ ok: true, effective: { E: 1 } }) } as unknown as GateRegistration)
+          : null,
+    };
+    expect(direct(binding, { uses: "known", config: {} }, undefined, catalog)).toStrictEqual([]);
+    expect(direct(binding, { uses: "ghost", config: {} }, undefined, catalog)).toStrictEqual([
+      {
+        path: "config",
+        message:
+          "internal validator failure: the delegated config could not be validated — the registry has no " +
+          'registration named "ghost", so nothing checked it and it does not reach the admitted value',
+      },
+    ]);
+  });
+
+  it("...and stays quiet where a sibling lane already failed and IS the trace", () => {
+    const guarded = fixed("root", {
+      uses: text("u", {
+        memberOf: { relation: "memberOf", target: { injected: "gateCatalog" }, message: "{path}: no such gate" },
+      }),
+      config: {
+        kind: "delegate", tag: "cfg", rows: ROWS, registry: "gateCatalog", by: "uses",
+        beltMessage: "b", dependsOn: ["u"],
+      },
+    });
+    const catalog: GateCatalog = { resolve: () => null };
+    expect(direct(guarded, { uses: "ghost", config: {} }, undefined, catalog)).toStrictEqual([
+      { path: "uses", message: "uses: no such gate" },
+    ]);
+  });
+
   it("a declared `gating` key class makes the selector's operand unreliable", () => {
     const gated = fixed("root", {
       steps: {
@@ -846,6 +917,24 @@ describe("the normalizer (ADR-019 D3) — derivation, never validation", () => {
     const value = { adv: ["b"], outer: { one: { inner: { s: { transitions: { GO: "b", STAY: "a" } } } } } };
     normalize(surface, value, new Map());
     expect(value.outer.one.inner.s).toHaveProperty("flags", { GO: true, STAY: false });
+  });
+
+  it("expandAdvancesRound reads EVERY position a wildcard operand reaches", () => {
+    const surface = hooked(
+      fixed("r", {
+        sets: openMap("os", listOf("sl", text("sm"))),
+        steps: openMap("st", fixed("ste", {
+          transitions: openMap("t", text("tv")),
+          flags: { kind: "raw", tag: "fl", rows: ROWS },
+        })),
+      }),
+      { hook: "expandAdvancesRound", over: "$.steps", edges: "transitions", advanceSet: "$.sets.*", into: "flags" },
+    );
+    expect(closureProblems(surface)).toStrictEqual([]);
+    const value = { sets: { first: ["a"], second: ["b"] }, steps: { s: { transitions: { TO_A: "a", TO_B: "b" } } } };
+    normalize(surface, value, new Map());
+    // Reading only the first match left TO_B false with nothing saying so.
+    expect(value.steps.s).toHaveProperty("flags", { TO_A: true, TO_B: true });
   });
 
   it("materializeEffectiveConfigs walks an operand path with a SECOND wildcard", () => {
@@ -1329,6 +1418,14 @@ describe("the declaration GATE: a declaration that is not closed never becomes a
           name: { kind: "string", tag: "nm", rows: ["x"], typeMessage: "t", ...(ok ? {} : { default: undefined }) },
         } }),
       problem: /default is written as `undefined`, which materializes nothing/u },
+    { claim: "a default declared where no absence exists to fill",
+      make: (ok) => base({
+        valueClasses: {
+          idClass: { kind: "string", tag: "vc", rows: ["x"], grammar: { re: "^[a-z]+$", message: "bad" },
+            ...(ok ? {} : { default: "abc" }) },
+        },
+      }, { fields: { id: { kind: "valueClass", tag: "id", rows: ["x"], valueClass: "idClass" } } }),
+      problem: /carries a default, which is materialized only on a field of a map\.fixed/u },
     { claim: "a value class that resolves to ITSELF — the walk would never terminate",
       make: (ok) => base({
         valueClasses: {
@@ -1367,7 +1464,7 @@ describe("the declaration GATE: a declaration that is not closed never becomes a
   }
 
   it("the guard register is complete, unique and PINNED", () => {
-    expect(GUARDS).toHaveLength(36);
+    expect(GUARDS).toHaveLength(37);
     expect(new Set(GUARDS.map((guard) => guard.claim)).size).toBe(GUARDS.length);
   });
 

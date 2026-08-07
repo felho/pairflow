@@ -530,6 +530,10 @@ interface Frame {
    * derived by chopping `at.decl`: a list member's address ends in `[]`,
    * which chopping resolves to the wrong container. */
   readonly parentAt?: DeclCursor | undefined;
+  /** The enclosing container's INSTANCE address, travelling beside
+   * `parentValue` and `parentAt` so all three describe the same
+   * container. */
+  readonly parentSegments?: readonly (string | number)[] | undefined;
   /** The value path the findings address (`steps.review.role`). */
   readonly path: string;
   /** The SOURCE-document address, carried segment by segment as the walk
@@ -553,6 +557,25 @@ interface NodeResult {
   readonly value?: unknown;
 }
 
+/**
+ * A delegation the registry REFUSED. The engine cannot validate the config
+ * it was handed, so the obligation the declaration placed on that instance
+ * is UNDISCHARGED — and an undischarged obligation that says nothing is
+ * the same defect as a rule that quietly does not run: the config
+ * disappeared from the admitted value and no finding recorded it.
+ *
+ * It travels to the end of the walk rather than reporting on the spot,
+ * because a sibling lane may yet fail and become the trace (the measured
+ * shape: a binding whose `uses` is itself checked against the same
+ * registry). What is owed is per INSTANCE — one binding's unresolvable
+ * registration says nothing about another's.
+ */
+interface Obligation {
+  readonly frame: Frame;
+  readonly by: string;
+  readonly dependsOn: readonly string[];
+}
+
 /** A membership lane whose operand has NOT been evaluated yet. The engine
  * defers it to the end of the walk rather than reading an operand whose
  * reliability is still unknown — a GENERAL property of the `memberOf`
@@ -564,17 +587,55 @@ interface DeferredCheck {
   readonly slots: Slots;
 }
 
+/**
+ * The INSTANCE address of a position — the walk's own segment list.
+ *
+ * It is not `frame.path`: a finding path can be COARSENED by a declared
+ * grain (`memberLaneAt: "container"` reports every member at the list's
+ * own path), and two positions that report at one path are still two
+ * positions. Nor is it `frame.at.decl`: that names the DECLARATION, which
+ * every instance of it shares — which is how one open-map entry's broken
+ * field came to decide another entry's rule.
+ */
+function instanceKey(segments: readonly (string | number)[]): string {
+  return JSON.stringify(segments);
+}
+
+/** `tag@scope`, for a status a sibling asks about by name. */
+function tagKey(scope: readonly (string | number)[], tag: string): string {
+  return `${tag}\u0000${instanceKey(scope)}`;
+}
+
 class Run {
   readonly findings: ValidationFinding[] = [];
   readonly effectiveConfigs = new Map<string, unknown>();
   readonly runtimeContextBindings: string[] = [];
-  /** Declaration path / tag → whether every instance produced a usable
-   * value. A rule naming an unreliable operand is suppressed. */
+  /** INSTANCE address → whether THAT instance produced a usable value. A
+   * rule naming an unreliable operand is suppressed; keyed per instance,
+   * a sibling's failure cannot suppress a rule that never read it. */
   readonly declOk = new Map<string, boolean>();
-  /** Declaration paths whose evaluation has completed. An operand that is
+  /** Instance addresses whose evaluation has completed. An operand that is
    * neither reliable nor unreliable but PENDING defers its rule. */
-  readonly completed = new Set<DeclPath>();
+  readonly completed = new Set<string>();
+  /** `dependsOn` names a TAG, and what the citing instance means by it is
+   * "that tag AT MY SCOPE" — its own container's, or the nearest enclosing
+   * one. Recorded per scope so the answer is the citing instance's, and
+   * looked up outward so a member can still depend on an ancestor's
+   * sibling. */
+  readonly tagOk = new Map<string, boolean>();
+  /** Every tag that failed ANYWHERE. A cross rule is document-scoped, so
+   * this is the status it means. */
+  readonly tagFailedAnywhere = new Set<string>();
+  /** Instance address → the value a declared `default:` materialized
+   * there. The authored graph does not hold it, and a selector must read
+   * what the walk validated rather than the absence it replaced. */
+  readonly materialized = new Map<string, unknown>();
   readonly deferred: DeferredCheck[] = [];
+  /** Delegations whose registration the registry refused. What is still
+   * OWED travels per instance to the end of the walk: a config may not
+   * vanish from the admitted value with nothing recording that it was
+   * never validated. */
+  readonly obligations: Obligation[] = [];
   readonly memo = new WeakMap<object, unknown>();
   root: unknown;
 
@@ -608,6 +669,32 @@ class Run {
     this.declOk.set(key, ok);
   }
 
+  /**
+   * Record a tag's status twice: at the node's OWN instance, so a rule
+   * nested inside it finds exactly that node's answer, and at its
+   * CONTAINER's, so a sibling finds it. Two entries of one open map write
+   * different own-keys, which is what stops one entry answering for
+   * another.
+   */
+  markTag(frame: Frame, tag: string, ok: boolean): void {
+    for (const scope of [frame.segments, frame.parentSegments ?? []]) {
+      const key = tagKey(scope, tag);
+      if (this.tagOk.get(key) !== false) this.tagOk.set(key, ok);
+    }
+    if (!ok) this.tagFailedAnywhere.add(tag);
+  }
+
+  /** The status of `tag` as the instance at `scope` means it: the nearest
+   * answer walking outward from itself. Silence is not failure — an
+   * unrecorded tag suppresses nothing. */
+  reliableTag(scope: readonly (string | number)[], tag: string): boolean {
+    for (let cut = scope.length; cut >= 0; cut -= 1) {
+      const recorded = this.tagOk.get(tagKey(scope.slice(0, cut), tag));
+      if (recorded !== undefined) return recorded;
+    }
+    return true;
+  }
+
   reliable(key: string): boolean {
     return this.declOk.get(key) !== false;
   }
@@ -638,15 +725,17 @@ function resolvePath(
   path: DeclPath,
 ): { readonly status: "ok"; readonly nodes: unknown[] } | { readonly status: "unreliable" | "pending" } {
   const segments = path.split(".");
-  let nodes: unknown[];
+  // Each node carries its OWN instance address, because reliability and
+  // completion are that instance's, not its declaration's.
+  let nodes: { readonly value: unknown; readonly segments: readonly (string | number)[] }[];
   let cursor: DeclCursor | undefined;
   const head = segments.shift();
   if (head === "$") {
-    nodes = [run.root];
+    nodes = [{ value: run.root, segments: [] }];
     cursor = run.rootAt;
   } else if (head === "^") {
     // Parent-relative: the citing node's own container.
-    nodes = [from.parentValue];
+    nodes = [{ value: from.parentValue, segments: from.parentSegments ?? [] }];
     cursor = from.parentAt;
   } else {
     return UNRELIABLE;
@@ -663,23 +752,36 @@ function resolvePath(
     const next = descend(run.surface, cursor, selectorStep(segment));
     if (next === undefined) return UNRELIABLE;
     cursor = next;
-    if (!run.reliable(cursor.decl)) return UNRELIABLE;
-    if (!run.completed.has(cursor.decl)) return PENDING;
-    const values: unknown[] = [];
+    const values: { readonly value: unknown; readonly segments: readonly (string | number)[] }[] = [];
     for (const node of nodes) {
-      if (!isContainer(node)) return UNRELIABLE;
-      if (segment === "*") {
-        for (const [key, child] of entriesOf(node)) {
-          if (typeof key === "string") values.push(child);
-        }
-      } else {
-        if (!containerHas(node, segment)) return UNRELIABLE;
-        values.push(containerGet(node, segment));
+      if (!isContainer(node.value)) return UNRELIABLE;
+      const container = node.value;
+      const keys =
+        segment === "*"
+          ? entriesOf(container).map(([key]) => key).filter((key): key is string => typeof key === "string")
+          : [segment];
+      for (const key of keys) {
+        const childSegments = [...node.segments, key];
+        const instance = instanceKey(childSegments);
+        // Asked of the REACHED INSTANCE, and asked BEFORE the value is
+        // read: a sibling instance that failed says nothing about this
+        // one, and a key that is simply absent has no instance to be
+        // reliable OR unreliable — it is UNDECIDED, which is the answer
+        // that gets reported rather than dropped.
+        if (!run.reliable(instance)) return UNRELIABLE;
+        if (!run.completed.has(instance)) return PENDING;
+        values.push({
+          // A materialized default lives at its instance, not in the
+          // authored graph — the walk validated it, so a selector reads
+          // the same value the walk did.
+          value: containerHas(container, key) ? containerGet(container, key) : run.materialized.get(instance),
+          segments: childSegments,
+        });
       }
     }
     nodes = values;
   }
-  return { status: "ok", nodes };
+  return { status: "ok", nodes: nodes.map((node) => node.value) };
 }
 
 function evaluateSelector(run: Run, from: Frame, selector: Selector): SelectorResult {
@@ -729,16 +831,13 @@ function checkMembership(
   rule: MembershipRule,
   candidate: unknown,
   slots: Slots,
-  local?: ReadonlyMap<string, boolean>,
 ): void {
-  // Suppression is the CITING INSTANCE's business. Where a sibling status
-  // exists it decides; the global tag status is sticky across every
-  // instance of a declaration path, so consulting it first let one
-  // open-map entry's failure suppress a different, valid entry's finding
-  // — and only when the broken one came first in the document.
-  const suppressed = rule.dependsOn?.some((tag) =>
-    local?.has(tag) === true ? local.get(tag) === false : !run.reliable(tag),
-  );
+  // Suppression is the CITING INSTANCE's business, and it is now nothing
+  // more than that: `reliableTag` answers from the citing instance
+  // outward, so the sibling map this used to need — and the ordering bug
+  // that made one open-map entry's failure suppress a different, valid
+  // entry's finding — are both gone with the coarse key that caused them.
+  const suppressed = rule.dependsOn?.some((tag) => !run.reliableTag(frame.segments, tag));
   if (suppressed === true) return;
   const set = evaluateSelector(run, frame, rule.target);
   if (set.status === "pending") {
@@ -847,21 +946,20 @@ const DEFAULT_MISSING = 'missing required key "{key}"';
 /** Sibling reliability inside ONE fixed-map evaluation. `dependsOn` reads
  * it before the global map so a defect in binding #1 cannot suppress a
  * lane in binding #2. */
-type LocalOk = Map<string, boolean>;
-
 function baseSlots(frame: Frame): Slots {
   return { path: frame.path, value: frame.value, ownerKey: frame.ownerKey, label: frame.label };
 }
 
-function evaluateNode(run: Run, decl: NodeDecl, frame: Frame, local?: LocalOk): NodeResult {
-  const result = dispatch(run, decl, frame, local);
-  run.completed.add(frame.at.decl);
-  run.mark(frame.at.decl, result.ok);
-  run.mark(decl.tag, result.ok);
+function evaluateNode(run: Run, decl: NodeDecl, frame: Frame): NodeResult {
+  const result = dispatch(run, decl, frame);
+  const instance = instanceKey(frame.segments);
+  run.completed.add(instance);
+  run.mark(instance, result.ok);
+  run.markTag(frame, decl.tag, result.ok);
   return result;
 }
 
-function dispatch(run: Run, decl: NodeDecl, frame: Frame, local?: LocalOk): NodeResult {
+function dispatch(run: Run, decl: NodeDecl, frame: Frame): NodeResult {
   switch (decl.kind) {
     case "map.fixed":
       return evalMapFixed(run, decl, frame);
@@ -870,9 +968,9 @@ function dispatch(run: Run, decl: NodeDecl, frame: Frame, local?: LocalOk): Node
     case "map.plain":
       return evalMapPlain(run, decl, frame);
     case "list":
-      return evalList(run, decl, frame, local);
+      return evalList(run, decl, frame);
     case "string":
-      return evalString(run, decl, frame, local);
+      return evalString(run, decl, frame);
     case "integer":
       return evalInteger(run, decl, frame);
     case "enum":
@@ -882,9 +980,9 @@ function dispatch(run: Run, decl: NodeDecl, frame: Frame, local?: LocalOk): Node
     case "raw":
       return evalRaw(run, decl, frame);
     case "valueClass":
-      return evalValueClassRef(run, decl, frame, local);
+      return evalValueClassRef(run, decl, frame);
     case "delegate":
-      return evalDelegate(run, decl, frame, local);
+      return evalDelegate(run, decl, frame);
   }
 }
 
@@ -892,14 +990,13 @@ function evalValueClassRef(
   run: Run,
   decl: Extract<NodeDecl, { kind: "valueClass" }>,
   frame: Frame,
-  local?: LocalOk,
 ): NodeResult {
   const target = run.valueClasses[decl.valueClass];
   if (target === undefined) return { ok: true, value: frame.value };
   const merged: Frame = { ...frame, label: decl.label ?? frame.label };
-  const result = dispatch(run, target, merged, local);
+  const result = dispatch(run, target, merged);
   // The REFERENCING site's gating decides, not the shared class's.
-  if (!result.ok && decl.gating === true) run.mark(frame.at.decl, false);
+  if (!result.ok && decl.gating === true) run.mark(instanceKey(frame.segments), false);
   return result;
 }
 
@@ -935,7 +1032,6 @@ function evalMapFixed(
   const scoped = fieldNames.filter(inChannel);
   const legal = new Set(scoped);
   const normalized: Record<string, unknown> = {};
-  const local: LocalOk = new Map();
 
   const emitUnknownKeys = (): void => {
     for (const [key] of entriesOf(container)) {
@@ -962,8 +1058,9 @@ function evalMapFixed(
     if (containerHas(container, name)) return;
     if (presence.foldedIntoTypeLane === true) {
       // Absence is this node's OWN type lane (a binding's `uses`).
-      evaluateNode(run, field, childFrame(frame, fieldAt, name, undefined, container), local);
-      local.set(field.tag, false);
+      const folded = childFrame(frame, fieldAt, name, undefined, container);
+      evaluateNode(run, field, folded);
+      run.markTag(folded, field.tag, false);
       return;
     }
     const at = presence.at === "self" ? joinPath(frame.path, name) : frame.path;
@@ -972,12 +1069,13 @@ function evalMapFixed(
       render(presence.message ?? decl.missingMessage ?? DEFAULT_MISSING, { ...slots, path: at, key: name }),
       presence.code,
     );
-    local.set(field.tag, false);
     // The position is UNRELIABLE, not merely unvisited: a rule reading it
     // is suppressed, and the missing-key finding is the trace that
     // explains why. Without this the lane would instead end the walk
     // UNDECIDED and report a second time for a fault already named.
-    run.mark(fieldAt.decl, false);
+    const missing = childFrame(frame, fieldAt, name, undefined, container);
+    run.mark(instanceKey(missing.segments), false);
+    run.markTag(missing, field.tag, false);
   };
 
   const evalOneField = (name: string): void => {
@@ -995,8 +1093,10 @@ function evalMapFixed(
     // itself filled.
     if (!present && field.default === undefined) return;
     const child = childFrame(frame, at, name, present ? containerGet(container, name) : field.default, container);
-    const result = evaluateNode(run, field, child, local);
-    local.set(field.tag, result.ok);
+    const result = evaluateNode(run, field, child);
+    // A materialized default is not in the authored graph, so a selector
+    // reading this position must be able to find what the walk validated.
+    if (!present) run.materialized.set(instanceKey(child.segments), result.value ?? field.default);
     if (result.ok && result.value !== undefined) defineOwn(normalized, name, result.value);
   };
 
@@ -1027,6 +1127,7 @@ function childFrame(parent: Frame, at: DeclCursor, key: string, value: unknown, 
   return {
     at,
     parentAt: parent.at,
+    parentSegments: parent.segments,
     path: joinPath(parent.path, key),
     segments: [...parent.segments, key],
     value,
@@ -1066,6 +1167,7 @@ function evalMapOpen(
       const keyFrame: Frame = {
         at: keyAt,
         parentAt: frame.at,
+        parentSegments: frame.segments,
         path: decl.keyLaneAt === "container" ? frame.path : entryPath,
         segments: frame.segments,
         value: key,
@@ -1082,6 +1184,7 @@ function evalMapOpen(
       const subsetFrame: Frame = {
         at: frame.at,
         parentAt: frame.parentAt,
+        parentSegments: frame.parentSegments,
         path: entryPath,
         segments: frame.segments,
         value: key,
@@ -1102,6 +1205,7 @@ function evalMapOpen(
     const entryFrame: Frame = {
       at: entryAt,
       parentAt: frame.at,
+      parentSegments: frame.segments,
       path: entryPath,
       segments: keyIsString ? [...frame.segments, key] : frame.segments,
       value: child,
@@ -1113,9 +1217,6 @@ function evalMapOpen(
       defineOwn(normalized, key, entryResult.value);
     }
   }
-  // An open map with NO entries still completes its entry position: a
-  // selector through it must answer "empty", never "not evaluated yet".
-  if (entryAt !== undefined) run.completed.add(entryAt.decl);
   return { ok, value: normalized };
 }
 
@@ -1150,7 +1251,6 @@ function evalList(
   run: Run,
   decl: Extract<NodeDecl, { kind: "list" }>,
   frame: Frame,
-  local?: LocalOk,
 ): NodeResult {
   const value = frame.value;
   const slots = baseSlots(frame);
@@ -1174,6 +1274,7 @@ function evalList(
       at: memberAt,
       // A list member's `^` operand is the LIST, matching `parentValue`.
       parentAt: frame.at,
+      parentSegments: frame.segments,
       path: memberPath,
       segments: [...frame.segments, index],
       value: member,
@@ -1181,7 +1282,7 @@ function evalList(
       ownerKey: frame.ownerKey,
     };
     const before = run.findings.length;
-    const result = evaluateNode(run, decl.member, memberFrame, local);
+    const result = evaluateNode(run, decl.member, memberFrame);
     if (run.findings.length > before) return;
     if (result.value !== undefined) normalized.push(result.value);
     if (decl.memberOf !== undefined) {
@@ -1203,6 +1304,7 @@ function evalList(
       const memberFrame: Frame = {
         at: memberAt,
         parentAt: frame.at,
+      parentSegments: frame.segments,
         path: entry.path,
         segments: frame.segments,
         value: entry.member,
@@ -1216,7 +1318,6 @@ function evalList(
       });
     }
   }
-  run.completed.add(memberAt.decl);
   return { ok, value: normalized };
 }
 
@@ -1224,7 +1325,6 @@ function evalString(
   run: Run,
   decl: Extract<NodeDecl, { kind: "string" }>,
   frame: Frame,
-  local?: LocalOk,
 ): NodeResult {
   const value = frame.value;
   const slots: Slots = { ...baseSlots(frame), grammar: decl.grammar?.re };
@@ -1249,7 +1349,7 @@ function evalString(
   }
   if (decl.memberOf !== undefined) {
     const before = run.findings.length;
-    checkMembership(run, frame, decl.memberOf, value, slots, local);
+    checkMembership(run, frame, decl.memberOf, value, slots);
     if (run.findings.length > before) return { ok: false, value };
   }
   return typeof value === "string" ? { ok: true, value } : { ok: false };
@@ -1354,14 +1454,19 @@ function evalDelegate(
   run: Run,
   decl: Extract<NodeDecl, { kind: "delegate" }>,
   frame: Frame,
-  local?: LocalOk,
 ): NodeResult {
-  if (decl.dependsOn?.some((tag) => local?.get(tag) === false) === true) return { ok: true };
+  if (decl.dependsOn?.some((tag) => !run.reliableTag(frame.segments, tag)) === true) return { ok: true };
   const owner = frame.parentValue;
   const by = isContainer(owner) ? containerGet(owner, decl.by) : undefined;
   if (typeof by !== "string") return { ok: true };
   const registration = run.registry(decl.registry)?.resolve(by) ?? null;
-  if (registration === null) return { ok: true };
+  if (registration === null) {
+    // Nothing to validate the config AGAINST. The obligation stands and
+    // travels; it is discharged only if a sibling lane fails and becomes
+    // the trace.
+    run.obligations.push({ frame, by, dependsOn: decl.dependsOn ?? [] });
+    return { ok: false };
+  }
   if (registration.requiresRuntimeContext) run.runtimeContextBindings.push(parentPath(frame.path));
   const raw = frame.value === undefined ? undefined : materialize(frame.value, run.memo);
   const result = registration.validateAndNormalizeConfig(raw);
@@ -1391,7 +1496,10 @@ function unique(values: readonly string[]): string[] {
 /** vocabulary #12's `equals` — two-direction set equality, each direction
  * carrying its own path grain and wording (ch8-C16's measured form). */
 function evaluateEquals(run: Run, frame: Frame, rule: EqualsRuleDecl): void {
-  if (rule.dependsOn?.some((tag) => !run.reliable(tag)) === true) return;
+  // A cross rule is DOCUMENT-scoped: it reads the whole document, so the
+  // status it means is "did this tag fail anywhere", not "at my instance"
+  // — a cross rule has no instance.
+  if (rule.dependsOn?.some((tag) => run.tagFailedAnywhere.has(tag)) === true) return;
   const left = evaluateSelector(run, frame, rule.left);
   const right = evaluateSelector(run, frame, rule.right);
   // A cross rule is never queued, so `pending` HERE — after the deferred
@@ -1455,10 +1563,22 @@ function runDeferred(run: Run): void {
   // operand has completed by now, so a second pass could only loop.
   const queued = run.deferred.splice(0, run.deferred.length);
   for (const check of queued) {
-    // `dependsOn` was already decided when this was queued, with the
-    // citing instance's siblings in scope — an empty local map here keeps
-    // the global status from re-deciding it.
-    checkMembership(run, check.frame, check.rule, check.candidate, check.slots, new Map());
+    // `dependsOn` re-reads cleanly now: the answer is keyed by the citing
+    // INSTANCE, so replaying a queued check later in the walk cannot pick
+    // up a different instance's verdict.
+    checkMembership(run, check.frame, check.rule, check.candidate, check.slots);
+  }
+  // What is still OWED, per instance. A sibling that failed is the trace
+  // and discharges it; otherwise the config vanished unvalidated and
+  // nothing else says so.
+  for (const owed of run.obligations.splice(0, run.obligations.length)) {
+    if (owed.dependsOn.some((tag) => !run.reliableTag(owed.frame.segments, tag))) continue;
+    reportUndecided(
+      run,
+      owed.frame.path,
+      `the delegated config could not be validated — the registry has no registration named ` +
+        `${JSON.stringify(owed.by)}, so nothing checked it and it does not reach the admitted value`,
+    );
   }
   for (const check of run.deferred.splice(0, run.deferred.length)) {
     if (check.rule.whenOperandAbsent === "skip") continue;

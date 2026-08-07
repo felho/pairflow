@@ -277,6 +277,17 @@ function checkNode(
         `which is read only on a field of a map.fixed`,
     );
   }
+  // A `default:` fills an ABSENCE, and a field of a fixed map is the only
+  // position where absence is a thing the walk can detect: an entry that
+  // is not in an open map does not exist, and neither does a list member.
+  // Declared anywhere else it was accepted and never materialized —
+  // pass-and-ignore, the shape this substrate refuses.
+  if (!channelHonoured && Object.prototype.hasOwnProperty.call(decl, "default")) {
+    ctx.problems.push(
+      `${where}: node "${decl.tag}" carries a default, which is materialized only on a field of a ` +
+        `map.fixed — the only position where an absence exists to fill`,
+    );
+  }
   if (decl.presence?.code !== undefined && !ctx.codes.has(decl.presence.code)) {
     ctx.problems.push(
       `${where}: issue code ${JSON.stringify(decl.presence.code)} is outside the declared namespace`,
