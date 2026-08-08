@@ -405,3 +405,27 @@ Bet 5 scoring after this round: the pointed round found 3 (one an
 arm-side needle error that still bought a row hardening, one the
 known flag confirmed blocking, one a receipt gap) — the re-check on
 the folded bytes is the bet's priced second half.
+
+## 14. The arm re-check and the phase's approve-ready state (2026-08-08)
+
+Re-check (charter/output beside this file; pin gpt-5.6-sol/high,
+guards clean, 85s): **0 IN-SCOPE · 1 CARRIED-SCOPE (the D4 amendment,
+explicitly behind the human GO) · 0 UNRUN** — all three dispositions
+hold. Bet 5 scores **AS PRICED** (one pointed round + one re-check).
+
+THE TWO-HASH MODEL, applied: the clean top-level close bound the
+CONTENT hash `81f1daa9ac04a393` @ dc821f5b; the arm fold that followed
+was BOOKKEEPING-class (an id enumeration replacing a count — a
+measurement transcription; a receipt pointer), so the close stands and
+the FINAL RECONCILED basis is `6c01e478c406776d` (contract) +
+`9368e5253d1163fa` (declaration) @ 3cb4498c, verified by the arm
+re-check as the reconciliation pass. These are the bytes the flags
+round presents and the ratifying act binds.
+
+Panel/arm totals for the §5 experiment at approve-readiness: 3 panel
+rounds (2 full + 1 targeted, the 3rd opened by the user at the bet
+boundary) + 1 clean close + 2 contract-arm rounds; ~105 findings
+found and dispositioned across them; ZERO contract reopens; ZERO
+STOP-class findings; the never-copy sweep 0 non-skeleton on the final
+bytes; citation closure clean both directions; every DECIDED-HERE
+marker receipted against the live declaration.

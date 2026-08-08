@@ -1,0 +1,659 @@
+OpenAI Codex v0.146.0
+--------
+workdir: /Users/felho/dev/pairflow
+model: gpt-5.6-sol
+provider: openai
+approval: never
+sandbox: danger-full-access
+reasoning effort: high
+reasoning summaries: none
+session id: 019fe249-4022-7b80-b157-7e08e30fa4a2
+--------
+user
+# QA review charter — re-check on the folded bytes (the arm's second half)
+
+You are a fresh-context reviewer at the repo root. This is the
+RE-CHECK after your predecessor's round: it found three in-scope items
+on the ch13 contract-v2 draft; all three were dispositioned at commit
+`3cb4498c` (read `git show 3cb4498c` — the delta is small and is your
+scope fence). NOT a fresh falsification hunt; outside the fence,
+CARRIED-SCOPE in one line.
+
+## 0. Budget
+
+HARD 20-minute wall-clock kill; write findings immediately; stop
+investigating at ~12 minutes.
+
+## 1. The review object (verify hashes FIRST)
+
+| File | sha256 (first 16) |
+|---|---|
+| `v3/implementation/contracts/ch13-context-block-v2-contract.md` | `6c01e478c406776d` |
+| `v3/src/definition/schema/templateFormat.ts` | `9368e5253d1163fa` |
+
+HEAD `3cb4498c`.
+
+## 2. The three dispositions under verification
+
+1. **C2 now NAMES the three model-exhibited ids** (`reviewer-severity-
+   ontology`, `no-converged-before-round-2`, `docs-only-edit-scope`).
+   Verify each exists in `v3/model/` as a block-id exhibit (the third
+   inside the mode-tagged map-shaped ref member) and each matches
+   `^[a-z][a-z0-9-]*$`. Verify the row's claim now needs no count
+   inference.
+2. **C16's "first" claim now cites its measurement** (the review
+   record §13's sweep note). Re-run the sweep yourself
+   (`grep -rn "agentConfig\|defaultAgentConfig" v3/templates/`) and
+   verify the citation resolves to §13's note.
+3. **The predecessor's finding 2 (attribute glosses vs ADR-019 D4)
+   was routed, not folded**: the review record §12/§13 carry the
+   prepared D4 amendment as flag R5 riding the human GO, and record
+   that under the UNAMENDED D4 the draft does not ratify clean.
+   Verify the routing is recorded exactly so (a reader must not be
+   able to mistake the tension for unnoticed), and that NO silent ADR
+   edit happened (`git log --oneline v3/adr/` — the last ADR commit
+   must predate the panel rounds).
+
+## 3. Closing message
+
+Only: HEAD + both hashes as YOU measured; counts IN-SCOPE /
+CARRIED-SCOPE / UNRUN; the lint result (`pnpm v3:packet-lint`); and
+ONE sentence: do the three dispositions hold? No repo edits; /tmp
+only; a guard runs before and after. Routine QA vocabulary.
+
+codex
+A megadott QA-charter szerint, kizárólag a `3cb4498c` delta kerítésén belül végzem az újraellenőrzést; nem módosítok repófájlt. Először a HEAD-et, hash-eket és a kezdő guardot mérem meg.
+exec
+/bin/zsh -lc "date '+START %Y-%m-%d %H:%M:%S %z'
+git status --short --branch
+git rev-parse --short=8 HEAD
+shasum -a 256 v3/implementation/contracts/ch13-context-block-v2-contract.md v3/src/definition/schema/templateFormat.ts
+git diff --quiet && echo 'GUARD_BEFORE worktree-diff-clean' || echo 'GUARD_BEFORE worktree-diff-present'
+git diff --cached --quiet && echo 'GUARD_BEFORE index-clean' || echo 'GUARD_BEFORE index-present'" in /Users/felho/dev/pairflow
+ succeeded in 0ms:
+START 2026-08-08 18:51:30 +0200
+## main...origin/main [ahead 124]
+3cb4498c
+6c01e478c406776d65d507310e850b39c52c39421ee5bd30f612e615a71d364d  v3/implementation/contracts/ch13-context-block-v2-contract.md
+9368e5253d1163fa0f6ffa18290fef5ef4007de4f293862eeee522c1b7ea3c49  v3/src/definition/schema/templateFormat.ts
+GUARD_BEFORE worktree-diff-clean
+GUARD_BEFORE index-clean
+
+codex
+A kezdő guard tiszta; a HEAD és mindkét előírt hash egyezik. Most a kis commit-deltát, a három modell-exhibitet, a §12–§13 routing szöveget és az ADR-előzményt ellenőrzöm.
+exec
+/bin/zsh -lc "git show --stat --oneline --decorate=short 3cb4498c
+git show --format=fuller --find-renames 3cb4498c -- v3/implementation/contracts/ch13-context-block-v2-contract.md
+rg -n --glob '*' 'reviewer-severity-ontology|no-converged-before-round-2|docs-only-edit-scope' v3/model
+git log --oneline --decorate=short -- v3/adr/" in /Users/felho/dev/pairflow
+ succeeded in 0ms:
+3cb4498c (HEAD -> main) docs(v3): the contract arm's fold — named ids, a receipted first, and the D4 flag confirmed blocking
+ .../p4/p4-contract-arm-out.txt                     | 4683 ++++++++++++++++++++
+ .../ch13-rederivation-arm/p4/p4-contract-arm.md    |   79 +
+ .../ch13-rederivation-arm/p4/review-record.md      |   33 +
+ .../contracts/ch13-context-block-v2-contract.md    |    4 +-
+ 4 files changed, 4797 insertions(+), 2 deletions(-)
+commit 3cb4498c626dc6f9842a981e989ccc50e6462094
+Author:     Gergely Hodicska <gergely.hodicska@gmail.com>
+AuthorDate: Sat Aug 8 18:50:55 2026 +0200
+Commit:     Gergely Hodicska <gergely.hodicska@gmail.com>
+CommitDate: Sat Aug 8 18:50:55 2026 +0200
+
+    docs(v3): the contract arm's fold — named ids, a receipted first, and the D4 flag confirmed blocking
+    
+    The external arm on the approve-ready bytes returned three in-scope
+    findings. One was the arm's own needle error that still bought a
+    hardening: it grepped the model for emit-envelope (the shipped id,
+    never a model exhibit) and called C2's count of three invented — the
+    third is docs-only-edit-scope inside the mode-tagged member, and the
+    row now NAMES all three so no future reader greps the wrong needle.
+    One was a real receipt gap: C16's repository-wide "first" claim is
+    true by sweep (zero agentConfig hits under v3/templates) and now
+    cites its measurement. And one is the known ADR-019 D4 tension the
+    flags round already carries — the arm independently confirms that
+    under the unamended D4 the draft cannot ratify clean, which upgrades
+    flag R5 from cosmetic to blocking.
+    
+    Charter and output archived; record §13 carries the round and the
+    bet-5 scoring note. The re-check on the folded bytes is the bet's
+    priced second half.
+    
+    Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+
+diff --git a/v3/implementation/contracts/ch13-context-block-v2-contract.md b/v3/implementation/contracts/ch13-context-block-v2-contract.md
+index 36c988d2..dc369ba9 100644
+--- a/v3/implementation/contracts/ch13-context-block-v2-contract.md
++++ b/v3/implementation/contracts/ch13-context-block-v2-contract.md
+@@ -147,7 +147,7 @@ reopenings: —
+ | ID | Rule |
+ |---|---|
+ | C1 | A template's root MAY carry the catalog under the key `contextBlocks` — structural authority `[d-ctxblocks]` (container, key lane, entries) and `[d-root]` (the root keyset's growth by this optional key), with the declared default: an absent catalog admits (the admitted-form surface is C13's). DECIDED HERE (v2): admission of the catalog shape is FAIL-CLOSED — a present value the declared container lane refuses is a container finding and the template does not admit (the authored-value classes measured live: PROBE-P4-4; the accept boundary is the declared lane's own, and a cast-only degenerate object with nothing to enumerate admits as empty — accepted, named, receipt: PROBE-P4-4's degenerate case); the divergence is receipted and argued in the review record's completeness pass. Refs beside a refused or absent catalog still draw their per-site C7 findings (receipt: PROBE-P4-4, both channels) — the belt's broken-operand nature (ADR-019 D10), a construct property no row needs to restate. The root-keyset aggregate-note chain RETIRES at this surface: the declared `[d-root]` fields are the enumerable authority, and the predecessor notes described pre-arrival states — no successor note is owed. |
+-| C2 | Block ids are ONE namespace with ONE grammar governing the catalog's keys and all ref-list members alike — structural authority `[vc-block-id]` (cited by `[d-block-key]` and `[d-block-ref]`). The namespace is NEW and deliberately distinct from the gate-token and provider-token namespaces; all three ids the model exhibits satisfy it, the digit-bearing one being the grammar's designated positive case (build-driven). A key the grammar refuses draws the key lane's finding at the declared grain — DECIDED HERE (v2): the key lane runs on BOTH channels — strictly fail-louder (receipts: PROBE-P4-4's direct-channel bad-key case, PROBE-P4-3 BAD_KEY_SIBLING; mapping and rationale: the completeness pass). Key-identity on the file channel follows the engine's preserved key types (the boolean-key case: the key lane reports it, and no string ref can address it — each lane reporting its own finding, C9's audit adding its own once realized). |
++| C2 | Block ids are ONE namespace with ONE grammar governing the catalog's keys and all ref-list members alike — structural authority `[vc-block-id]` (cited by `[d-block-key]` and `[d-block-ref]`). The namespace is NEW and deliberately distinct from the gate-token and provider-token namespaces; the ids the model exhibits — `reviewer-severity-ontology`, `no-converged-before-round-2`, and the mode-exhibit's `docs-only-edit-scope` (the map-shaped member's ref, C4's forward scope) — all satisfy it, the digit-bearing one being the grammar's designated positive case (build-driven). A key the grammar refuses draws the key lane's finding at the declared grain — DECIDED HERE (v2): the key lane runs on BOTH channels — strictly fail-louder (receipts: PROBE-P4-4's direct-channel bad-key case, PROBE-P4-3 BAD_KEY_SIBLING; mapping and rationale: the completeness pass). Key-identity on the file channel follows the engine's preserved key types (the boolean-key case: the key lane reports it, and no string ref can address it — each lane reporting its own finding, C9's audit adding its own once realized). |
+ | C3 | A catalog entry is the body carrier — structural authority `[d-ctx-entry]` / `[d-ctx-body]`. The body is authored static text delivered into the packet without transformation, and no runtime-side or run-supplied channel can write the position (C5 closes the only nearby run-scoped one); its outbound exposure class matches the shipped instruction field's, with prompt shaping owned by the `actor-adapter-rendering` Absent, named not implied. SEMANTIC (no declaration expresses an absence of syntax): the surface defines no interpolation syntax and RESERVES none — brace-styled literal text is ordinary legal prose; any future computed-body syntax and its migration belong to the chapter that takes the `computed-templated-bodies` Absent. |
+ | C4 | `promptConcernRefs` is the single typed field inside the agent-config value class, which stays format-open in every other key, at both of the template's config positions — the role-level default and the step-level map — structural authority `[d-prompt-refs]` on `[vc-agentconfig]`, value class `[vc-blockidlist]`; the typing basis is ADR-019 D11 (typed subset: every other agent-config key stays legal open data). ch12-C7's delegation clause pre-authorizes this arrival (the refs' value class arriving with its consuming chapter — the aggregate-note convention, so no ch12 row is affected). Absent map, absent key, and a PRESENT EMPTY list: all legal, zero refs (the admitted-form surface is C13's) — the shared value class deliberately declares no nonempty rule, diverging from every other list of the surface (receipt: PROBE-P4-4's empty-authored-list case). ch12-C7's no-field-typed sentence now describes the state before this arrival, per the standing aggregate-note practice — ch12 needs no edit. FORWARD SCOPE: the model also exhibits a MAP-SHAPED, mode-tagged ref member (the mode layer's); today's member class is deliberately string-only, and that member form arrives as D7 format growth with the chapter that takes the mode layer. |
+ | C5 | Run scope: the `promptConcernRefs` key may appear in a runOverrides entry, but no run-supplied value is checked against the catalog, and rendering never consults it: block emission draws exclusively on the admission-produced surfaces (C13). The packet's block list is therefore the communicated truth, while the merged effective config stays what it always was — recorded run intent in the ch12 cascade. An entry whose only naming mentions arrive at run scope therefore fails C9's audit — dead by design, which C9 and this row jointly guarantee. |
+@@ -161,7 +161,7 @@ reopenings: —
+ | C13 | The admitted-form surfaces — DERIVED, named measurer: the P5 build's acceptance family plus the parity gate. On admission success the admitted template carries: the catalog record (always present — the declared default covers absence; a present catalog arrives validated, C1 having refused every non-map form); and normalized ref-list fields FOR EVERY ref position (empty list where nothing was authored), produced by the normalizer (ADR-019 D3 — derivation is never validation) as SIBLING fields at the fixed-keyset levels (the roles entry, the step, the admitted binding) — beside, never inside, the raw agent-config maps. TYPE GRAIN (carried decision): the shared raw types mark the normalized fields with `?`, while every admitted VALUE carries them — the standing admitted-form optionality pattern; marking them required was weighed and refused, since it would invalidate each hand-built raw fixture in the tree. The domain type's `contextBlocks?` field already has this shape. CHANNEL GRAIN (the producer-monopoly precedent `advancesRound`, carried WHOLE): the TWO admission-produced positions — the roles entry's and the step's — are DECLARED channel-gated to the direct channel at P5, while the binding's `contextBlockRefs` is C6's authored key and stays channel-both; a caller holding an admitted value thereby re-admits it and a FILE author meets the unknown-key refusal, AND the fill RECOMPUTES each produced position from its authored source, overwriting any caller-supplied value — the monopoly half, which is what keeps C7's containment true on the direct channel. FIELD SPELLINGS, decided here for P5 to declare: the normalized fields carry their authored sources' names — `promptConcernRefs` as the sibling at the roles entry and the step, `contextBlockRefs` on the binding. Realization needs a NEW normalizer hook (D7 format growth landing at P5's own act, never silently), the ref fill running BEFORE the binding rebuild so an unauthored list lands as the empty list, not an undefined carry; and the `[n-effective-config]` hook's carry list must grow `contextBlockRefs`, or the rebuild drops the authored refs — the carry list plus the hook's produced field is the admitted binding's whole keyset. Two named build traps: admission rebuilds only `steps` today (the roles side is new work), and the role-side source is NESTED inside the config map (the first nested-source normalization). P5 also flips the three l2b domain-registry rows (the catalog and ContextBlockRef rows with the definition packet, carrying their realized type names — `BlockId`, the catalog record type; the ContextBlock row with the render side, its witness the packet's rendered block member type) — named here exactly BECAUSE omitting the flip trips no gate; a realized row needs its type name AND the registry's two sync surfaces, and if P5 ships as one packet the assignment collapses onto it unchanged. Rendering consumes these admitted surfaces and nothing rawer, never re-validating at dispatch; the catalog's entry type is the ONLY typed place body text can live (this row homes the single-body-source invariant, disposition type/schema). The raw config maps retain the authored key untouched for the ch12 cascade to read (C5). The ROLE-ENTRY and STEP keysets do not widen for FILE authors — the normalized positions are admission-produced, and a file authoring one meets the unknown-key refusal, while the direct channel admits them under the channel grain above; the binding's `contextBlockRefs` is the stated exclusion: there the AUTHORED key (C6) is itself the normalized position's source and is carried, never refused. |
+ | C14 | Communication-only, byte-scope precise — SEMANTIC (disposition review): neither the packet field nor the catalog behind it may influence round arithmetic, gate evaluation, transition verdicts or any other decision the kernel takes; the one stated exception is the definition-static family itself, where catalog content decides admission findings and nothing further. The canonical experiment: delete an entry together with its refs in a single edit — every verdict and transition must come out the same, and the differing bytes must be confined to the packet artifact plus, exactly where refs rode the config positions, the committed provenance rows (a ref was always config data there); deleting a gate-sourced ref must leave committed rows byte-identical (the committed surfaces by row id: ch12-C10's provenance rows, ch11-C27's transcript records; the spawn-side closure is ch9-C18's refs-uninterpreted rule). This row is the communication-only invariant's home (disposition review) — the owning packet binds its REV line against THIS byte-precise scope, never a wholesale phrasing. Spawn-side, both carriers are closed: the packet carries refs as data, and the argv-interpretation path is closed by the adapter's refs-uninterpreted rule (ch9). |
+ | C15 | Determinism — SEMANTIC (disposition test): rendering depends on nothing but its three inputs — instance, admitted template, step; no wall clock, no entropy, no store access outside them — so identical committed state under an identical admitted template must reproduce the block list byte for byte. Carrier: the P5-line golden trace plus a lane that renders twice from one input set and asserts equality. This row is the deterministic-ordered-render invariant's home (disposition test) — C10's construction owns the order half; this row owns reproducibility. |
+-| C16 | The shipped catalog — SEMANTIC, shipped-artifact duty: the canonical template file gains a catalog carrying the emit-envelope entry and BOTH roles gain a default-config ref to it (carried decision: every actor emits, the block is role-symmetric; this is the first agent-config-family authoring in a shipped template file). The entry's text gets written when the owning packet lands, sourced from the interim knowledge carrier `v1-prompt-parity-audit.md` (§2's Class A envelope content, under §5's interim-carrier ruling); retiring that carrier is bound to the EC chapter's definition of done. Ripple: the named fixture families (canonical-file equality pin moving with the file; effective-config and full-packet equality re-pins (the full-packet member doubling as C12's tree-wide presence ripple); committed-provenance re-pins; the golden-trace fixture disposition — its snake-spelled fixture sites migrate onto the typed key together with a resolving catalog entry, which realizes the L0c slot; absence-consumers swept by key AND value). MEMBERSHIP CRITERION for the re-pin families: a suite belongs iff it CONSUMES the canonical file or the shared fixture — directory location decides nothing, and suites constructing their own templates stay outside. The criterion bounds the CATALOG-CONTENT ripple families only — C12's always-present-field ripple is tree-wide and this criterion never narrows it. Member enumeration stays the owning packet's. |
++| C16 | The shipped catalog — SEMANTIC, shipped-artifact duty: the canonical template file gains a catalog carrying the emit-envelope entry and BOTH roles gain a default-config ref to it (carried decision: every actor emits, the block is role-symmetric; this is the first agent-config-family authoring in a shipped template file (MEASURED: the shipped-templates sweep in the review record's arm-fold note — zero hits today)). The entry's text gets written when the owning packet lands, sourced from the interim knowledge carrier `v1-prompt-parity-audit.md` (§2's Class A envelope content, under §5's interim-carrier ruling); retiring that carrier is bound to the EC chapter's definition of done. Ripple: the named fixture families (canonical-file equality pin moving with the file; effective-config and full-packet equality re-pins (the full-packet member doubling as C12's tree-wide presence ripple); committed-provenance re-pins; the golden-trace fixture disposition — its snake-spelled fixture sites migrate onto the typed key together with a resolving catalog entry, which realizes the L0c slot; absence-consumers swept by key AND value). MEMBERSHIP CRITERION for the re-pin families: a suite belongs iff it CONSUMES the canonical file or the shared fixture — directory location decides nothing, and suites constructing their own templates stay outside. The criterion bounds the CATALOG-CONTENT ripple families only — C12's always-present-field ripple is tree-wide and this criterion never narrows it. Member enumeration stays the owning packet's. |
+ | C17 | Catalog-authoring caveat — aim, not enforcement: prose describing a gate's configured value carries no freshness guarantee — the config can move under it and nothing notices, because resolution checking establishes only that an id finds an entry, never that the entry's text still tells the truth. Closing the gap needs the two Absents this surface names and does not build (`computed-templated-bodies`, `semantic-parity-check`); the chapter that takes the plan's EC candidate (§1.3's fifth candidate) or a later one owns both. A comment ships beside the catalog in the canonical file saying exactly this, sited where the next entry gets written. Nothing this chapter ships describes gate configuration, so nothing can go stale yet. |
+ | C18 | The CLI surface — SEMANTIC, machine-shape duty: zero verb growth and zero flag growth; this chapter's lanes ride the standing validate/store/create channels as they are, and C7's code must arrive intact in the CLI document at the far end — build-driven by a lane asserting the actual VALUE of the code field in the CLI JSON (equality, never mere presence) on a ch13-only fixture, and by its negative twin — no other lane of this chapter may carry any code, while the gate schemas' named lanes keep the codes they always had. |
+ | C19 | The lane inventory: this surface's definition-static lanes are the lanes the ch13v2-rowed VALIDATION nodes introduce — enumerated by the declaration itself — plus C9's one semantic lane. Named exclusions, four: `[d-root]` and `[vc-agentconfig]` are SHARED validation nodes whose pre-existing lanes belong to their own surfaces (only the growth is this chapter's); `[n-effective-config]` is a NORMALIZER cited for C13's duty — derivation introduces no lane (ADR-019 D3); and `[d-capability-profile]` is a raw, lane-less node (its file-channel refusal is `[d-root]`'s own unknown-key lane). Channel scope is an ENGINE property of the one declaration: no walk/rung realization split exists or is re-ratified, and for the catalog and the AUTHORED ref positions (C4/C6) admission answers identically on the two channels — accept or refuse — with only source-bearing attributes differentiating the finding sets (receipt: PROBE-P4-4). Declared, deliberate asymmetries are not defects of that rule: `[d-capability-profile]` is channel-GATED today (receipt: PROBE-P4-4), and the two admission-PRODUCED positions C13 channel-gates join it at P5 — arrivals this row forward-scopes. Named P5 build surfaces: the C9 lane; the C13 normalizer hook WITH its declaration growth (the two channel-gated produced-position nodes under their decided spellings), carry-list growth and registry flips; and the C16/C18 fixture duties. |
+v3/model/core-model.html:958:      agent_config: { approach: thorough, prompt_concern_refs: [reviewer-severity-ontology], skill_refs: [test-runner] }
+v3/model/core-model.html:1332:      agent_config: { approach: thorough, prompt_concern_refs: [reviewer-severity-ontology], skill_refs: [test-runner] }
+v3/model/core-model.html:1711:      agent_config: { approach: thorough, prompt_concern_refs: [reviewer-severity-ontology], skill_refs: [test-runner] }
+v3/model/core-model.html:1997:      agent_config: { approach: thorough, prompt_concern_refs: [reviewer-severity-ontology], skill_refs: [test-runner] }
+v3/model/core-model.html:2836:      agent_config: { approach: thorough, prompt_concern_refs: [reviewer-severity-ontology], skill_refs: [test-runner] }
+v3/model/core-model.html:3354:      agent_config: { approach: thorough, prompt_concern_refs: [reviewer-severity-ontology], skill_refs: [test-runner] }
+v3/model/core-model.html:3429:            <div class="meta"><code>assemble_context_blocks</code> renders two blocks into the packet: <code>reviewer-severity-ontology</code> (provenance <code>source: step_config</code>) and <code>no-converged-before-round-2</code> (provenance <code>source: gate_binding(review, CONVERGED)</code>) — the latter because <code>CONVERGED ∈ available_ops ∩ L1 capability</code> for the reviewer here</div>
+v3/model/core-model.html:3437:            <div class="meta"><code>available_ops ∩ L1 capability = { PASS }</code>; the converge gate is bound to <code>review/CONVERGED</code>, not an op this actor may emit, so <code>no-converged-before-round-2</code> is <b>not</b> rendered — the reviewer-only rule does not leak into the implementer’s packet</div>
+v3/model/core-model.html:3443:          <code>no-converged-before-round-2</code> from the catalog changes what the actor is <em>told</em>, never
+v3/model/core-model.html:3827:        <p>The pre-existing <code>reviewer-severity-ontology</code> ref (declared at L0c) now resolves against a
+v3/model/core-model.html:3860:    reviewer-severity-ontology:
+v3/model/core-model.html:3862:    no-converged-before-round-2:
+v3/model/core-model.html:3893:      agent_config: { approach: thorough, prompt_concern_refs: [reviewer-severity-ontology], skill_refs: [test-runner] }
+v3/model/core-model.html:3900:            context_block_refs: [no-converged-before-round-2]   # L2b — communicate the rule this gate enforces
+v3/model/core-model.html:4665:    reviewer-severity-ontology:
+v3/model/core-model.html:4667:    no-converged-before-round-2:
+v3/model/core-model.html:4698:      agent_config: { approach: thorough, prompt_concern_refs: [reviewer-severity-ontology], skill_refs: [test-runner] }
+v3/model/core-model.html:4706:            context_block_refs: [no-converged-before-round-2]   # L2b — communicate the rule this gate enforces
+v3/model/core-model.html:5809:    reviewer-severity-ontology:
+v3/model/core-model.html:5811:    no-converged-before-round-2:
+v3/model/core-model.html:5842:      agent_config: { approach: thorough, prompt_concern_refs: [reviewer-severity-ontology], skill_refs: [test-runner] }
+v3/model/core-model.html:5850:            context_block_refs: [no-converged-before-round-2]   # L2b — communicate the rule this gate enforces
+v3/model/core-model.html:6673:    reviewer-severity-ontology:
+v3/model/core-model.html:6675:    no-converged-before-round-2:
+v3/model/core-model.html:6706:      agent_config: { approach: thorough, prompt_concern_refs: [reviewer-severity-ontology], skill_refs: [test-runner] }
+v3/model/core-model.html:6714:            context_block_refs: [no-converged-before-round-2]   # L2b — communicate the rule this gate enforces
+v3/model/core-model.html:7584:    reviewer-severity-ontology:
+v3/model/core-model.html:7586:    no-converged-before-round-2:
+v3/model/core-model.html:7617:      agent_config: { approach: thorough, prompt_concern_refs: [reviewer-severity-ontology], skill_refs: [test-runner] }
+v3/model/core-model.html:7624:            context_block_refs: [no-converged-before-round-2]   # L2b — communicate the rule this gate enforces
+v3/model/core-model.html:8640:            <div class="meta"><b>surface 1</b> on the <code>implement.PASS</code> pipeline the <code>runtime_validation</code> gate (<code>[code]</code>) is <b>dropped</b> and the <code>docs_only_runtime_evidence</code> gate (<code>[doc]</code>) is <b>kept</b>; <b>surface 2</b> the <code>docs-only-edit-scope</code> context ref (<code>[doc]</code>) is <b>kept</b> while the catalog block stays in place (untouched)</div>
+v3/model/core-model.html:8847:    reviewer-severity-ontology:
+v3/model/core-model.html:8849:    no-converged-before-round-2:
+v3/model/core-model.html:8888:      agent_config: { approach: thorough, prompt_concern_refs: [reviewer-severity-ontology, { ref: docs-only-edit-scope, modes: [doc] }], skill_refs: [test-runner] }   # surface 2 — the modes: tag rides the REF, not the catalog context_blocks entry
+v3/model/core-model.html:8895:            context_block_refs: [no-converged-before-round-2]   # L2b — communicate the rule this gate enforces
+v3/model/core-model.html:10897:    reviewer-severity-ontology:
+v3/model/core-model.html:10899:    no-converged-before-round-2:
+v3/model/core-model.html:10943:      agent_config: { approach: thorough, prompt_concern_refs: [reviewer-severity-ontology, { ref: docs-only-edit-scope, modes: [doc] }], skill_refs: [test-runner] }   # surface 2 — the modes: tag rides the REF, not the catalog context_blocks entry
+v3/model/core-model.html:10950:            context_block_refs: [no-converged-before-round-2]   # L2b — communicate the rule this gate enforces
+v3/model/core-model.html:12066:    reviewer-severity-ontology:
+v3/model/core-model.html:12068:    no-converged-before-round-2:
+v3/model/core-model.html:12116:      agent_config: { approach: thorough, prompt_concern_refs: [reviewer-severity-ontology, { ref: docs-only-edit-scope, modes: [doc] }], skill_refs: [test-runner] }   # surface 2 — the modes: tag rides the REF, not the catalog context_blocks entry
+v3/model/core-model.html:12136:            context_block_refs: [no-converged-before-round-2]   # L2b — communicate the rule this gate enforces
+v3/model/code/l0d-template-config.new.txt:22:      agent_config: { approach: thorough, prompt_concern_refs: [reviewer-severity-ontology], skill_refs: [test-runner] }
+v3/model/code/auto-action-template-config.new.txt:34:    reviewer-severity-ontology:
+v3/model/code/auto-action-template-config.new.txt:36:    no-converged-before-round-2:
+v3/model/code/auto-action-template-config.new.txt:67:      agent_config: { approach: thorough, prompt_concern_refs: [reviewer-severity-ontology], skill_refs: [test-runner] }
+v3/model/code/auto-action-template-config.new.txt:74:            context_block_refs: [no-converged-before-round-2]   # L2b — communicate the rule this gate enforces
+v3/model/code/l0e-template-config.new.txt:31:      agent_config: { approach: thorough, prompt_concern_refs: [reviewer-severity-ontology], skill_refs: [test-runner] }
+v3/model/code/l2b-template-config.new.txt:29:    reviewer-severity-ontology:
+v3/model/code/l2b-template-config.new.txt:31:    no-converged-before-round-2:
+v3/model/code/l2b-template-config.new.txt:62:      agent_config: { approach: thorough, prompt_concern_refs: [reviewer-severity-ontology], skill_refs: [test-runner] }
+v3/model/code/l2b-template-config.new.txt:69:            context_block_refs: [no-converged-before-round-2]   # L2b — communicate the rule this gate enforces
+v3/model/code/l0f-template-config.new.txt:36:      agent_config: { approach: thorough, prompt_concern_refs: [reviewer-severity-ontology], skill_refs: [test-runner] }
+v3/model/code/l0f-mode-template-config.new.txt:36:    reviewer-severity-ontology:
+v3/model/code/l0f-mode-template-config.new.txt:38:    no-converged-before-round-2:
+v3/model/code/l0f-mode-template-config.new.txt:77:      agent_config: { approach: thorough, prompt_concern_refs: [reviewer-severity-ontology, { ref: docs-only-edit-scope, modes: [doc] }], skill_refs: [test-runner] }   # surface 2 — the modes: tag rides the REF, not the catalog context_blocks entry
+v3/model/code/l0f-mode-template-config.new.txt:84:            context_block_refs: [no-converged-before-round-2]   # L2b — communicate the rule this gate enforces
+v3/model/code/l2-template-config.new.txt:37:      agent_config: { approach: thorough, prompt_concern_refs: [reviewer-severity-ontology], skill_refs: [test-runner] }
+v3/model/code/emit-contract-template-config.new.txt:42:    reviewer-severity-ontology:
+v3/model/code/emit-contract-template-config.new.txt:44:    no-converged-before-round-2:
+v3/model/code/emit-contract-template-config.new.txt:92:      agent_config: { approach: thorough, prompt_concern_refs: [reviewer-severity-ontology, { ref: docs-only-edit-scope, modes: [doc] }], skill_refs: [test-runner] }   # surface 2 — the modes: tag rides the REF, not the catalog context_blocks entry
+v3/model/code/emit-contract-template-config.new.txt:112:            context_block_refs: [no-converged-before-round-2]   # L2b — communicate the rule this gate enforces
+v3/model/code/l0c-template-config.new.txt:18:      agent_config: { approach: thorough, prompt_concern_refs: [reviewer-severity-ontology], skill_refs: [test-runner] }
+v3/model/code/l2a-template-config.new.txt:57:      agent_config: { approach: thorough, prompt_concern_refs: [reviewer-severity-ontology], skill_refs: [test-runner] }
+v3/model/code/action-template-config.new.txt:34:    reviewer-severity-ontology:
+v3/model/code/action-template-config.new.txt:36:    no-converged-before-round-2:
+v3/model/code/action-template-config.new.txt:67:      agent_config: { approach: thorough, prompt_concern_refs: [reviewer-severity-ontology], skill_refs: [test-runner] }
+v3/model/code/action-template-config.new.txt:75:            context_block_refs: [no-converged-before-round-2]   # L2b — communicate the rule this gate enforces
+v3/model/code/l3-template-config.new.txt:30:    reviewer-severity-ontology:
+v3/model/code/l3-template-config.new.txt:32:    no-converged-before-round-2:
+v3/model/code/l3-template-config.new.txt:63:      agent_config: { approach: thorough, prompt_concern_refs: [reviewer-severity-ontology], skill_refs: [test-runner] }
+v3/model/code/l3-template-config.new.txt:71:            context_block_refs: [no-converged-before-round-2]   # L2b — communicate the rule this gate enforces
+v3/model/code/l5-template-config.new.txt:36:    reviewer-severity-ontology:
+v3/model/code/l5-template-config.new.txt:38:    no-converged-before-round-2:
+v3/model/code/l5-template-config.new.txt:82:      agent_config: { approach: thorough, prompt_concern_refs: [reviewer-severity-ontology, { ref: docs-only-edit-scope, modes: [doc] }], skill_refs: [test-runner] }   # surface 2 — the modes: tag rides the REF, not the catalog context_blocks entry
+v3/model/code/l5-template-config.new.txt:89:            context_block_refs: [no-converged-before-round-2]   # L2b — communicate the rule this gate enforces
+v3/model/code/release-template-config.new.txt:35:    reviewer-severity-ontology:
+v3/model/code/release-template-config.new.txt:37:    no-converged-before-round-2:
+v3/model/code/release-template-config.new.txt:68:      agent_config: { approach: thorough, prompt_concern_refs: [reviewer-severity-ontology], skill_refs: [test-runner] }
+v3/model/code/release-template-config.new.txt:76:            context_block_refs: [no-converged-before-round-2]   # L2b — communicate the rule this gate enforces
+v3/model/sections/17-l0f-mode.html:50:            <div class="meta"><b>surface 1</b> on the <code>implement.PASS</code> pipeline the <code>runtime_validation</code> gate (<code>[code]</code>) is <b>dropped</b> and the <code>docs_only_runtime_evidence</code> gate (<code>[doc]</code>) is <b>kept</b>; <b>surface 2</b> the <code>docs-only-edit-scope</code> context ref (<code>[doc]</code>) is <b>kept</b> while the catalog block stays in place (untouched)</div>
+v3/model/sections/10-l2b.html:22:            <div class="meta"><code>assemble_context_blocks</code> renders two blocks into the packet: <code>reviewer-severity-ontology</code> (provenance <code>source: step_config</code>) and <code>no-converged-before-round-2</code> (provenance <code>source: gate_binding(review, CONVERGED)</code>) — the latter because <code>CONVERGED ∈ available_ops ∩ L1 capability</code> for the reviewer here</div>
+v3/model/sections/10-l2b.html:30:            <div class="meta"><code>available_ops ∩ L1 capability = { PASS }</code>; the converge gate is bound to <code>review/CONVERGED</code>, not an op this actor may emit, so <code>no-converged-before-round-2</code> is <b>not</b> rendered — the reviewer-only rule does not leak into the implementer’s packet</div>
+v3/model/sections/10-l2b.html:36:          <code>no-converged-before-round-2</code> from the catalog changes what the actor is <em>told</em>, never
+v3/model/sections/10-l2b.html:103:        <p>The pre-existing <code>reviewer-severity-ontology</code> ref (declared at L0c) now resolves against a
+08f99ab9 docs(v3): ADR-019 D11 — the fields attribute widens to map.plain (user-ratified 2026-08-08)
+cae79e89 docs(v3): D10 gains its no-reference-ring rule (user-ratified 2026-08-08)
+c37fe8b0 docs(v3): ADR-019 D10 — the entry-belted membership construct, admitted
+aedd0cd9 docs(v3): the P3 paper act — an eighth residual family, the corpus rule, and P3's entry
+7b6bfbba docs(v3): ADR-019 ratified — both D8 constructs admitted, R7 resolved empty
+65493ddd docs(v3): ADR-019 proposed — declared schema for structural definition rules
+e1dd09e2 docs(v3): ch9-runner contract RATIFIED — the act closes (ADR-016/017/018 accepted)
+68884bc0 docs(v3): ch9-runner draft — attempt-id design (arm re-check folds)
+12e69ab7 docs(v3): ch9-runner draft — arm + round-5 folds, loop re-closed
+76332448 docs(v3): ch9-runner contract draft — loop-clean content commit
+9a949450 docs(v3): ADR-015 commit 3 — the plane consolidation: docs/v3/ merges into v3/
+a850fa0e docs(v3): ADR-015 v3 plane consolidation — RATIFIED (the ratifying commit)
+d4b561e9 docs(v3): ch12 runtime-core contract-draft RATIFIED (the ratifying commit) — the stepwise act complete
+eaca00af docs(v3): ch12 runtime-core contract-draft — the content commit (25 rows, status draft) awaiting the ratification act
+c3e4722f docs(v3): ch11 gate-format draft RATIFIED (2026-07-12) — the user's explicit act
+21c0990e docs(v3): ch11 draft round 2 — the rows rewritten to the ratified single-admission model
+f32d88a1 docs(v3): ch11 gate-format contract-draft — content commit (panel round 1 + close clean)
+7db78e02 docs(v3): ratify the ch8 template-format contract-draft (C1-C38)
+ceb83c01 docs(v3): ch8 draft fold — the details machine shape, missing-container suppression, ADR-012 span
+f8dc1d3d docs(v3): ch8 draft content — the template-format contract (C1-C38)
+30190aa9 docs(v3): ratify plan chapter 8 — template file-format spec (PI-5)
+62020f1a feat(v3): ch7-P2 — the diag store (separate-file SQLite sink + read surface)
+0e4f4d46 feat(v3): ch6-P4a — operator CLI normal entrypoint + ADR-009 (plan §6.5)
+1a661078 feat(v3): packet ch5-P4 — the digest slice: op_id_collision, schema v2, ADR-008
+a82fbba7 feat(v3): packet ch5-P1 — the PI-3 drift suite: three unconditional locks
+0367e857 docs(v3): ratify plan chapter 4 — walking skeleton; born ADR-006 (node:sqlite, Node 24)
+589c3909 docs(v3): ratify plan chapter 3 (test kit + emit-lib + coverage); born ADR-004/005
+d3a715de docs(v3): harden the ADR integrity check to match its declared contract
+0c59dc49 docs(v3): ratify plan chapter 2 — architecture skeleton + ADR machinery
+
+exec
+/bin/zsh -lc "record='v3/implementation/reviews/ch13-rederivation-arm/p4/review-record.md'
+rg -n '"'^#{1,6} (12|13)'"\\b|R5|D4|UNAMENDED|unamended|ratif|GO|sweep|agentConfig|defaultAgentConfig' \""'$record"
+sed -n '"'220,360p' \""'$record"
+grep -rn "agentConfig'"\\|defaultAgentConfig\" v3/templates/ || true
+for id in reviewer-severity-ontology no-converged-before-round-2 docs-only-edit-scope; do
+  if [[ \""'$id" =~ ''^[a-z][a-z0-9-]*$ ]]; then echo "GRAMMAR PASS $id"; else echo "GRAMMAR FAIL $id"; fi
+done
+git log --format='"'%h %cI %s' -12 -- v3/implementation/reviews/ch13-rederivation-arm v3/implementation/contracts/ch13-context-block-v2-contract.md
+git log -1 --format='LAST_ADR %h %cI %s' -- v3/adr/" in /Users/felho/dev/pairflow
+ succeeded in 0ms:
+rg: v3/implementation/reviews/ch13-rederivation-arm/p4/review-record.md: IO error for operation on v3/implementation/reviews/ch13-rederivation-arm/p4/review-record.md: No such file or directory (os error 2)
+sed: v3/implementation/reviews/ch13-rederivation-arm/p4/review-record.md: No such file or directory
+GRAMMAR PASS reviewer-severity-ontology
+GRAMMAR PASS no-converged-before-round-2
+GRAMMAR PASS docs-only-edit-scope
+3cb4498c 2026-08-08T18:50:55+02:00 docs(v3): the contract arm's fold — named ids, a receipted first, and the D4 flag confirmed blocking
+dc821f5b 2026-08-08T18:33:54+02:00 docs(v3): panel round 3's fold — the monopoly carried whole, the rationales land where cited
+b5537ce8 2026-08-08T16:52:39+02:00 docs(v3): panel round 2's fold — the channel grain lands, the receipts close their gaps
+17659831 2026-08-08T16:17:44+02:00 docs(v3): panel round 1's fold — fifty findings, one batch, and the completeness pass lands
+0d58283e 2026-08-08T15:51:09+02:00 docs(v3): tag closure both directions — C1 cites the root's growth, C11 owns the profile channel
+eed9813d 2026-08-08T15:40:50+02:00 feat(v3): the ch13 keys join the declaration, and contract v2 lands as draft
+LAST_ADR 08f99ab9 2026-08-08T15:10:57+02:00 docs(v3): ADR-019 D11 — the fields attribute widens to map.plain (user-ratified 2026-08-08)
+
+codex
+Az id-k nyelvtana és a modellbeli előfordulások rendben vannak; az előírt sweep nulla találatot adott. A review-record útvonalát a commit stat rövidítette, ezért most a commit fájllistájából oldom fel, majd közvetlenül a §12–§13 tartalmát ellenőrzöm.
+exec
+/bin/zsh -lc "git show --name-only --format='' 3cb4498c
+rg --files v3/implementation | rg 'ch13-rederivation-arm/.*/review-record\\.md"'$|ch13.*review-record'"\\.md"'$'"'" in /Users/felho/dev/pairflow
+ succeeded in 0ms:
+v3/implementation/ch13-rederivation-arm/p4/p4-contract-arm-out.txt
+v3/implementation/ch13-rederivation-arm/p4/p4-contract-arm.md
+v3/implementation/ch13-rederivation-arm/p4/review-record.md
+v3/implementation/contracts/ch13-context-block-v2-contract.md
+v3/implementation/ch13-rederivation-arm/p4/review-record.md
+
+exec
+/bin/zsh -lc "record='v3/implementation/ch13-rederivation-arm/p4/review-record.md'
+rg -n '"'^#{1,6} (12|13)'"\\b|R5|D4|UNAMENDED|unamended|ratif|GO|sweep|agentConfig|defaultAgentConfig' \""'$record"
+sed -n '"'200,360p' \""'$record"
+git show --format= --unified=80 3cb4498c -- "$record"' in /Users/felho/dev/pairflow
+ succeeded in 0ms:
+9:## 1. STOP 1 rulings (user-ratified 2026-08-08, relayed by the general)
+15:- (c) BYTE-LOCK: the ratification block gains an OPTIONAL `schema` key
+25:## 2. FLAG #1 ruling (user-ratified 2026-08-08)
+52:| PROBE-P4-4 | `p4-live-declaration-probes.ts.txt` | the LIVE declaration at the ratifying basis, both channels: the fail-closed class at width (incl. present-null and the boolean members), refs beside refused/absent catalogs, the empty catalog and the EMPTY AUTHORED list, all three positions accumulating, the dup/shape receipts, the boolean key, open siblings, bad-key-with-resolving-sibling, the channel-gated capabilityProfile, the CB3 key-order re-execution (`["1","2","10","ZZZ","AAA"]`), and the compound clean zero. NOTE for auditors: the output's `L_empty_catalog_ref` line reports `agree:false` from the probe's own asymmetric inputs and is superseded by the `_FILE` twin on the next line; the only DESIGNED asymmetry in the file is `L_capability_profile`. |
+81:## 5a. The schema-lock guard act (STOP 1 ruling (c), built before the ratifying act)
+113:| Panel r3 (targeted, 4 agents) | ~20 folded | 0 P1 · 5 P2 (clause scope ×2, ADR-D4 propagation, citation target, receipt gap) · rest hygiene | 0 | 0 | 0 |
+119:   losses and the first-generation sweep tokenizer masked copied
+142:## 7a. The never-copy sweep (authoring-side; METHOD CORRECTED at panel round 1)
+145:finding. (1) The authoring-side sweep split on whitespace with
+152:and the corrected sweep now returns: 6 runs total, 5 contract-draft
+155:this file (`never-copy-sweep-out.txt`); the close re-runs it on the
+185:at round 3; the FINAL fold's post-state is what the ratifying act
+231:  the predecessor's own 2026-08-01 reopen ratified for the
+286:sweep was corrected and re-run to clean (§7a).
+290:rename would be its own ratified act) · routed 1 (the ch11/plan
+329:the CB3 re-execution); the sweep script is committed beside its
+337:round after this content fold opens through the user, per the ratified
+340:## 12. Panel round 3 (2026-08-08, targeted — opened by the user at the bet boundary) and its fold
+367:basis marker reworded to "the surface this act ratifies".
+369:CARRIED TO THE FLAGS ROUND, not folded: ADR-019 D4's original absolute
+372:contract and the declaration — a D-section edit is a user-ratified
+373:amendment, so the prepared one-clause D4 clarification rides the
+374:ratification GO, never a silent edit (lens-4 R3 F1).
+376:## 13. The contract arm on the approve-ready bytes (bet 5's pointed round) and its fold
+390:- **A2 (C1/C7/C8 attribute glosses vs ADR-019 D4's standing
+392:  D4-vs-gloss tension already carried to the flags round (§12). The
+394:  cosmetic: under the unamended D4 the draft cannot ratify clean.
+395:  Resolution: flag R5's prepared D4 amendment rides the GO; no
+399:  sweep, receipt owed. MEASURED at this fold: `grep -rn
+400:  "agentConfig|defaultAgentConfig" v3/templates/` returns ZERO hits
+| C10 | carried + schema-covered; EC scope restored at fold | v2 C11 + `[d-capability-profile]`; the pre-EC boundary re-added. |
+| C11 | carried; token grain restored at fold | v2 C12 + the model-verbatim snake token values and literal quoting. |
+| C12 | carried | v2 C14. |
+| C13 | carried | v2 C15. |
+| C14 | carried; membership criterion restored at fold | v2 C16 + consumption-based membership + the named interim carrier. |
+| C15 | carried | v2 C17. |
+| C16 | dropped-why: executed one-time act | The ch11 reopen act ran 2026-07-26; ch11 is realized with the texts. Pointer maintenance = the Context's named carried scope (owner: boundary review). |
+| C17 | compound; two lost legs restored at fold | v2 C13 + default: placement (siblings at fixed-keyset levels), TS-optionality grain, carry-list duty (louder than the original), registry flips + type witnesses, the two build traps; non-record normalization superseded (marked, receipted); single-body-source home restored. |
+| C18 | carried | v2 C18. |
+| C19 | carried (inventory) + dropped-why (split retired), MARKED | v2 C19: tag-set inventory with the shared nodes as named exclusions; channel scope an engine property; capabilityProfile's declared asymmetry named. |
+| Reopen 1 (C1 grain) | carried + partly vacuous | Ref-lane half = D10's nature; whole-result half vacuous (refuse vs admit can no longer be confused). |
+| Reopen 2 (direct-channel region) | carried + schema-covered | The belt IS D10; key-exclusion deletion + unconditional domain in v2 C9; the C19 premise dropped-vacuous. |
+| Reopen 3 (C17 nullish) | dropped-why: superseded, marked + receipted | v2 C1; absent-half survives as the declared default. |
+| Reopen 4 (C17 class width) | dropped-why: superseded, marked + receipted | Same clause; the carrier obligation vacuous when the only non-record outcome is refusal. |
+
+**The divergence RATIONALES (the arguments the rows deliberately do
+not carry — the 2026-08-08 inheritance rule's designed home):**
+- **C1 fail-closed** replaces the predecessor's normalize-any-
+  non-record-to-empty rule. Safe because the defect that rule healed —
+  a cast-forged catalog carried onto the admitted value — cannot arise
+  under an engine that validates the direct-construction channel: the
+  container lane refuses the forgery before any rebuild exists.
+- **C2 channel-independent key lane**: the predecessor placed the key
+  lane walk-side (file-only) because only the walk saw source keys;
+  under one declaration the lane runs wherever a key exists, which is
+  strictly fail-louder — no admit/refuse outcome moves, a direct-
+  channel authoring defect now gets the same diagnosis a file author
+  gets.
+- **C7 per-occurrence resolution** replaces first-occurrence-carries:
+  that rule made the duplicate lane decide the resolution lane's
+  domain — a cross-lane coupling of exactly the class whose deletion
+  the predecessor's own 2026-08-01 reopen ratified for the
+  key-exclusion case — and per-lane independence is the engine's
+  standing shape.
+- **C8 shape-failure invisibility** replaces the unconditional
+  raw-feed co-fire: a member that failed its own lane already carries
+  its trace, and feeding it to sibling lanes multiplied findings for
+  one defect while coupling lanes the engine keeps independent.
+
+**Round-2/3 refresh notes on the table above:** old-C17's verdict also
+covers the CHANNEL GRAIN and FIELD SPELLINGS decisions C13 gained at
+round 2 (the channel narrowing is observably identical to the
+predecessor's behaviour — its engine ran no direct-channel keyset lane
+— so no divergence marker is owed); old-C8's leg (d) is additionally
+homed as C4's authored-empty-list clause; old-C19's verdict reads on
+the round-3 form (VALIDATION-node inventory, four named exclusions).
+
+The pass's findings (1 P1, 2 P2, 7 P3) and their dispositions are in
+the §10 round record — every lost item was FOLDED back in round 1;
+the P1 (registry flip) and both P2s (optionality grain, invariant
+homes) are restored in v2 C13 and the invariant homes on C7/C10/C11/
+C13 — and, at the round-2 fold, on C14 (communication-only, with the
+REV-line byte-scope binding) and C15 (deterministic-ordered-render),
+completing all six. Verdict (the agent's, standing): the v2 line carries the old
+line's decisions substantially without loss and in places carries
+them better; no reopen decision vanished quietly; the divergences are
+marked and receipted.
+
+## 10. Panel round 1 (2026-08-08) — full five-lens + completeness, and the fold
+
+Basis: contract 1b2b78aa7e9f376a, declaration 34af910d5cfbd0ba @
+0ad7e5d9. Six fresh-context Opus agents (five lenses + the
+completeness pass). Yield: ~50 findings — 2 P1 (lens 3's C13
+keyset-claim self-contradiction; the completeness pass's registry
+flip), ~14 P2, the rest P3/watchpoint/considered. ZERO STOP-class
+findings; all three (now four) DECIDED-HERE markers cleared as
+row-home by the model-plane audit (lens 2 duty 4).
+
+The CONTENT fold (one batch, this round): supersession arguments moved
+out of rows (the 2026-08-08 inheritance rule — the rows keep markers
+and receipts); C19's inventory re-parameterized both directions;
+C13 restored the placement + optionality + registry-flip + build-trap
+decisions and scoped its keyset claim (the P1 fix); C9's stand-down
+generalized to reachability and the closed domain-asymmetry stated;
+C2 gained the fourth DECIDED-HERE marker; C8 gained the C9 carve-out
+and the compound clean negative; C12 gained the wire tokens; C16 the
+membership criterion; C7 the admission moment + containment + its
+invariant home; C10/C11/C13 their invariant homes + EC scope + the
+re-sort clause; the Context gained the rename-culture statement, the
+carried-scope pointer note, the lock-consequence sentence, the
+narrowed no-restatement claim and the completed model-note
+enumeration; the declaration's header lost its stale R1/hash/
+collectTags claims and `n-effective-config` gained the C13 row
+citation; the domain type's comment re-attributed to C13; five plan
+sections gained their aligned-at edits; PROBE-P4-4 (the live
+declaration, class-width) landed with script + output; the never-copy
+sweep was corrected and re-run to clean (§7a).
+
+Dispositions: folded ~40 · declined 1 (lens 2 F7 — the code literal
+in both authorities: defensible via C18's CLI hop, D2 scoping; a
+rename would be its own ratified act) · routed 1 (the ch11/plan
+pointer maintenance → boundary review, named in Context) · deferred
+0 · considered_not_finding per lens reports (in their outputs, this
+directory's transcripts are not committed — the reports' substance is
+this section). Round 2 (the post-fold re-run) is FULL by the
+escalation rule (claim-structure changes + a manifest-class change:
+the fourth DECIDED-HERE marker).
+
+## 11. Panel round 2 (2026-08-08) — full six-agent re-run, and its fold
+
+Basis: contract c01db023bcd0240c, declaration a355ada64c35ed7c @
+17659831. Yield: 1 P1 (the C13 channel question — resolved by carrying
+the producer-monopoly precedent's declaration half: normalized
+positions channel-gated to direct at P5, the `advancesRound` pattern's
+own stated reason) · ~13 P2 · ~20 P3/watchpoint. ZERO STOP-class.
+Notable: three lenses independently converged on C19's exclusion
+arithmetic; two on the C13 channel seam; the completeness re-check
+verified every round-1 restoration ON THE BYTES and caught the fold's
+own transit loss (the evacuated rationales — written into the record
+at round 2 and MOVED under §9 at round 3, which is what makes the
+contract's six citations true).
+
+The round-2 fold: C13 gains the CHANNEL GRAIN and FIELD SPELLINGS
+clauses and the carry∪into gloss fix; C4 homes the authored EMPTY
+list, the mode-tagged member's forward scope, and the aggregate-note
+retirement (with C1's chain-retirement clause); C1's class-width gloss
+re-worded to the declared lane's own boundary (the degenerate-object
+accept named); C2/C1/C9 lose their predecessor-rule descriptions; C7's
+grain gloss pointered; C8 scopes its clean receipt gate-free; C9 names
+the gate chain's enclosures; C10's re-execution claim gains its live
+receipt (the CB3 case joined PROBE-P4-4); C12 carries the rename
+relation's whole normative content; C14/C15 gain the last two
+invariant homes (C14 with the REV byte-scope binding and its ch12-C10/
+ch11-C27/ch9-C18 row ids); C16's carrier pointer corrected to §2-under-
+§5 and its criterion scoped against C12's tree-wide ripple; C19
+re-parameterized over VALIDATION nodes with three named exclusions.
+The probe suite grew the round's receipt gaps (refused/absent catalog
+WITH refs both channels, the class members routed through both channels, the
+empty authored list, open siblings, bad-key-with-resolving-sibling,
+the CB3 re-execution); the sweep script is committed beside its
+output; the templateFormat header and the domain comment aligned; the
+plan gained §13.5(g) (the pointer-maintenance carrier), the live P5
+packet's mode+prediction row, and the Shipped line's stamp.
+
+Dispositions: folded ~30 · declined 0 · routed 0 · the rest
+considered/cleared in the lens outputs. The panel bet (2 rounds, the
+3rd through the user) is now at its boundary — the 3rd (targeted)
+round after this content fold opens through the user, per the ratified
+STOP-1 work plan.
+
+## 12. Panel round 3 (2026-08-08, targeted — opened by the user at the bet boundary) and its fold
+
+Basis: contract ddc5820089b58a1b, declaration 9368e5253d1163fa @
+b5537ce8. Four agents: lenses 1/3 (delta-scoped), the mandatory lens-4
+reconciliation, the completeness spot-check. Yield: 0 P1 · 5 P2 · ~20
+P3/watchpoint, zero STOP-class. The completeness spot-check's verdict:
+the inheritance guarantee holds, rationales included; the residue was
+record hygiene, not decision loss.
+
+The fold: C13's CHANNEL GRAIN qualified to the two admission-produced
+positions with the binding named channel-both AT the claim, and the
+producer-monopoly's RECOMPUTE half carried explicitly (two lenses
+converged with executed evidence); C19 gains its fourth named
+exclusion, the authored-position scoping of the symmetry sentence, the
+two forward-scoped asymmetry arrivals, and the declaration growth in
+its P5 list; C12's key enumeration gains its own field name; C16 tags
+the full-packet member as C12's tree-wide ripple; C1's degenerate
+accept gains its receipt; the Context gains the Read-path answer.
+PROBE-P4-4 grew the degenerate cases, the gates-record key-order
+measurement (the operand itself, no longer the transitions analog),
+the unfiltered-retention case and the unfiltered true zeros, and its
+diff --git a/v3/implementation/ch13-rederivation-arm/p4/review-record.md b/v3/implementation/ch13-rederivation-arm/p4/review-record.md
+index 0d935007..726cc835 100644
+--- a/v3/implementation/ch13-rederivation-arm/p4/review-record.md
++++ b/v3/implementation/ch13-rederivation-arm/p4/review-record.md
+@@ -295,80 +295,113 @@ this section). Round 2 (the post-fold re-run) is FULL by the
+ escalation rule (claim-structure changes + a manifest-class change:
+ the fourth DECIDED-HERE marker).
+ 
+ ## 11. Panel round 2 (2026-08-08) — full six-agent re-run, and its fold
+ 
+ Basis: contract c01db023bcd0240c, declaration a355ada64c35ed7c @
+ 17659831. Yield: 1 P1 (the C13 channel question — resolved by carrying
+ the producer-monopoly precedent's declaration half: normalized
+ positions channel-gated to direct at P5, the `advancesRound` pattern's
+ own stated reason) · ~13 P2 · ~20 P3/watchpoint. ZERO STOP-class.
+ Notable: three lenses independently converged on C19's exclusion
+ arithmetic; two on the C13 channel seam; the completeness re-check
+ verified every round-1 restoration ON THE BYTES and caught the fold's
+ own transit loss (the evacuated rationales — written into the record
+ at round 2 and MOVED under §9 at round 3, which is what makes the
+ contract's six citations true).
+ 
+ The round-2 fold: C13 gains the CHANNEL GRAIN and FIELD SPELLINGS
+ clauses and the carry∪into gloss fix; C4 homes the authored EMPTY
+ list, the mode-tagged member's forward scope, and the aggregate-note
+ retirement (with C1's chain-retirement clause); C1's class-width gloss
+ re-worded to the declared lane's own boundary (the degenerate-object
+ accept named); C2/C1/C9 lose their predecessor-rule descriptions; C7's
+ grain gloss pointered; C8 scopes its clean receipt gate-free; C9 names
+ the gate chain's enclosures; C10's re-execution claim gains its live
+ receipt (the CB3 case joined PROBE-P4-4); C12 carries the rename
+ relation's whole normative content; C14/C15 gain the last two
+ invariant homes (C14 with the REV byte-scope binding and its ch12-C10/
+ ch11-C27/ch9-C18 row ids); C16's carrier pointer corrected to §2-under-
+ §5 and its criterion scoped against C12's tree-wide ripple; C19
+ re-parameterized over VALIDATION nodes with three named exclusions.
+ The probe suite grew the round's receipt gaps (refused/absent catalog
+ WITH refs both channels, the class members routed through both channels, the
+ empty authored list, open siblings, bad-key-with-resolving-sibling,
+ the CB3 re-execution); the sweep script is committed beside its
+ output; the templateFormat header and the domain comment aligned; the
+ plan gained §13.5(g) (the pointer-maintenance carrier), the live P5
+ packet's mode+prediction row, and the Shipped line's stamp.
+ 
+ Dispositions: folded ~30 · declined 0 · routed 0 · the rest
+ considered/cleared in the lens outputs. The panel bet (2 rounds, the
+ 3rd through the user) is now at its boundary — the 3rd (targeted)
+ round after this content fold opens through the user, per the ratified
+ STOP-1 work plan.
+ 
+ ## 12. Panel round 3 (2026-08-08, targeted — opened by the user at the bet boundary) and its fold
+ 
+ Basis: contract ddc5820089b58a1b, declaration 9368e5253d1163fa @
+ b5537ce8. Four agents: lenses 1/3 (delta-scoped), the mandatory lens-4
+ reconciliation, the completeness spot-check. Yield: 0 P1 · 5 P2 · ~20
+ P3/watchpoint, zero STOP-class. The completeness spot-check's verdict:
+ the inheritance guarantee holds, rationales included; the residue was
+ record hygiene, not decision loss.
+ 
+ The fold: C13's CHANNEL GRAIN qualified to the two admission-produced
+ positions with the binding named channel-both AT the claim, and the
+ producer-monopoly's RECOMPUTE half carried explicitly (two lenses
+ converged with executed evidence); C19 gains its fourth named
+ exclusion, the authored-position scoping of the symmetry sentence, the
+ two forward-scoped asymmetry arrivals, and the declaration growth in
+ its P5 list; C12's key enumeration gains its own field name; C16 tags
+ the full-packet member as C12's tree-wide ripple; C1's degenerate
+ accept gains its receipt; the Context gains the Read-path answer.
+ PROBE-P4-4 grew the degenerate cases, the gates-record key-order
+ measurement (the operand itself, no longer the transitions analog),
+ the unfiltered-retention case and the unfiltered true zeros, and its
+ instrument note now discloses the finding filter. The record: the
+ rationales moved under §9 (the six contract citations now point true),
+ §9's heading/basis repaired and its table refreshed for the round-2/3
+ rows, §6 gained the panel rounds, bets 1 and 3 scored. The plan:
+ §13.5(g)'s site count corrected to six (two realized_map entries carry
+ the pointer, the third mentions the act without it), and §13.4's row
+ basis marker reworded to "the surface this act ratifies".
+ 
+ CARRIED TO THE FLAGS ROUND, not folded: ADR-019 D4's original absolute
+ ("the contract states no structural attribute; a rule visible in both
+ places is a defect") vs the refined gloss/normative form now on the
+ contract and the declaration — a D-section edit is a user-ratified
+ amendment, so the prepared one-clause D4 clarification rides the
+ ratification GO, never a silent edit (lens-4 R3 F1).
++
++## 13. The contract arm on the approve-ready bytes (bet 5's pointed round) and its fold
++
++Charter + output beside this file (`p4-contract-arm*`). Pin
++gpt-5.6-sol/high, guards clean, 410s, target-locked on the contract
++file. Verdict: **3 IN-SCOPE · 0 CARRIED · 0 UNRUN**; gates re-run by
++the arm all green (packet-lint, typecheck, suite 2063/2063).
++
++- **A1 (C2's id count):** the arm grepped the model for the WRONG
++  third id (`emit-envelope` — C16's shipped id, never a model
++  exhibit) and concluded the count of three was invented. The count
++  is TRUE — the third is `docs-only-edit-scope`
++  (core-model.html:8888, inside the mode-tagged member) — but the
++  arm's misfire is itself evidence: an unnamed count invites the
++  wrong needle. FOLD: the row now NAMES the three ids.
++- **A2 (C1/C7/C8 attribute glosses vs ADR-019 D4's standing
++  absolute):** REAL under the current ADR bytes, and exactly the
++  D4-vs-gloss tension already carried to the flags round (§12). The
++  arm independently confirms the amendment is BLOCKING, not
++  cosmetic: under the unamended D4 the draft cannot ratify clean.
++  Resolution: flag R5's prepared D4 amendment rides the GO; no
++  contract edit (the glosses are the non-binding form both the
++  contract and the declaration already declare).
++- **A3 (C16's repository-wide "first" claim unreceipted):** true by
++  sweep, receipt owed. MEASURED at this fold: `grep -rn
++  "agentConfig|defaultAgentConfig" v3/templates/` returns ZERO hits
++  (2026-08-08, the arm reproduced the same). FOLD: the row cites this
++  note as its receipt.
++
++Bet 5 scoring after this round: the pointed round found 3 (one an
++arm-side needle error that still bought a row hardening, one the
++known flag confirmed blocking, one a receipt gap) — the re-check on
++the folded bytes is the bet's priced second half.
+
+codex
+A §12–§13 routing egyértelmű: a D4-feszültség észlelt, az unamended D4 mellett blokkoló, az R5 módosítás a felhasználói ratifikációs GO-val halad; a commit nem érintett ADR-t, és az utolsó ADR-commit a panelkörök előtt volt. Még lefuttatom a kért lintet, majd megismétlem a guardot és a hash-mérést.
+exec
+/bin/zsh -lc 'pnpm v3:packet-lint' in /Users/felho/dev/pairflow
+ succeeded in 9969ms:
+
+> @pairflow/cli@0.2.0 v3:packet-lint /Users/felho/dev/pairflow
+> python3 ./tools/v3-plan/check_packet.py --selftest && python3 ./tools/v3-plan/check_packet.py
+
+selftest: 140 red dims exercised, green fixture + reopen choreography + fenced-noise greens pass, 0 failure(s)
+packet-lint: 26 v2 packet(s) linted, 16 pre-v2 grandfathered, 6 draft(s) linted (0 reopened, 1 superseded: ch13-context-block-contract.md), 0 error(s)
+
+exec
+/bin/zsh -lc "date '+END %Y-%m-%d %H:%M:%S %z'
+git status --short --branch
+git rev-parse HEAD
+shasum -a 256 v3/implementation/contracts/ch13-context-block-v2-contract.md v3/src/definition/schema/templateFormat.ts
+git diff --quiet && echo 'GUARD_AFTER worktree-diff-clean' || echo 'GUARD_AFTER worktree-diff-present'
+git diff --cached --quiet && echo 'GUARD_AFTER index-clean' || echo 'GUARD_AFTER index-present'" in /Users/felho/dev/pairflow
+ succeeded in 0ms:
+END 2026-08-08 18:52:29 +0200
+## main...origin/main [ahead 124]
+3cb4498c626dc6f9842a981e989ccc50e6462094
+6c01e478c406776d65d507310e850b39c52c39421ee5bd30f612e615a71d364d  v3/implementation/contracts/ch13-context-block-v2-contract.md
+9368e5253d1163fa0f6ffa18290fef5ef4007de4f293862eeee522c1b7ea3c49  v3/src/definition/schema/templateFormat.ts
+GUARD_AFTER worktree-diff-clean
+GUARD_AFTER index-clean
+
+codex
+HEAD `3cb4498c626dc6f9842a981e989ccc50e6462094`
+
+- Contract SHA-256: `6c01e478c406776d65d507310e850b39c52c39421ee5bd30f612e615a71d364d`
+- Schema SHA-256: `9368e5253d1163fa0f6ffa18290fef5ef4007de4f293862eeee522c1b7ea3c49`
+- Counts: `0 IN-SCOPE · 1 CARRIED-SCOPE · 0 UNRUN`
+- `pnpm v3:packet-lint`: PASS — 26 v2 packets, 6 drafts, 0 errors
+
+PASS — all three dispositions hold; the pending D4 amendment remains explicitly CARRIED-SCOPE behind the human GO.
+tokens used
+33 069
+HEAD `3cb4498c626dc6f9842a981e989ccc50e6462094`
+
+- Contract SHA-256: `6c01e478c406776d65d507310e850b39c52c39421ee5bd30f612e615a71d364d`
+- Schema SHA-256: `9368e5253d1163fa0f6ffa18290fef5ef4007de4f293862eeee522c1b7ea3c49`
+- Counts: `0 IN-SCOPE · 1 CARRIED-SCOPE · 0 UNRUN`
+- `pnpm v3:packet-lint`: PASS — 26 v2 packets, 6 drafts, 0 errors
+
+PASS — all three dispositions hold; the pending D4 amendment remains explicitly CARRIED-SCOPE behind the human GO.
