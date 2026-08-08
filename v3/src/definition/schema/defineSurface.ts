@@ -407,12 +407,28 @@ function checkNode(
     case "raw":
       if (decl.containerMessage !== undefined) ctx.problems.push(...slotProblems(decl.containerMessage, where));
       return;
-    case "map.plain":
+    case "map.plain": {
       ctx.problems.push(
         ...slotProblems(decl.containerMessage, where),
         ...slotProblems(decl.canonicalJsonSafe.message, where),
       );
+      // D11: the TYPED SUBSET descends like a fixed map's fields, with
+      // `channelHonoured` false — so `channel` and `default` on a plain
+      // field hit the standing guards above. `presence` is refused HERE:
+      // a plain map has no missing-key lane, and an attribute the engine
+      // does not read must refuse the load, never ride along inert.
+      for (const [name, field] of Object.entries(decl.fields ?? {})) {
+        const site = `${where}.${name}`;
+        if (field.presence !== undefined) {
+          ctx.problems.push(
+            `${site}: node "${field.tag}" carries presence, which is read only on a field of a ` +
+              `map.fixed — a plain map has no missing-key lane`,
+          );
+        }
+        checkNode(field, site, false, ctx, childAt(ctx, at, { kind: "field", name }), at, decl);
+      }
       return;
+    }
     case "valueClass": {
       const problem = valueClassProblem(decl, where, ctx);
       if (problem !== undefined) ctx.problems.push(problem);

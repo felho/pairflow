@@ -360,6 +360,35 @@ const GUARDS: readonly Guard[] = [
     value: "authored",
     expected: { path: "$", message: '$ must be one of stored; got "authored"' },
   },
+  {
+    claim: "map.plain — a TYPED SUBSET field is validated when present (D11)",
+    decl: {
+      kind: "map.plain",
+      tag: "m",
+      rows: ROWS,
+      containerMessage: "{path} must be a plain map",
+      canonicalJsonSafe: { message: "{path} must be canonical-JSON-safe" },
+      fields: {
+        refs: {
+          kind: "list",
+          tag: "refs",
+          rows: ROWS,
+          containerMessage: "{path} must be a list",
+          memberLaneAt: "index",
+          member: idish,
+        },
+      },
+    },
+    mutant: {
+      kind: "map.plain",
+      tag: "m",
+      rows: ROWS,
+      containerMessage: "{path} must be a plain map",
+      canonicalJsonSafe: { message: "{path} must be canonical-JSON-safe" },
+    },
+    value: { refs: ["BAD"] },
+    expected: { path: "refs[0]", message: "refs[0]: bad id" },
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -384,7 +413,7 @@ describe("the engine's vocabulary guards, each with a discriminating fixture", (
   it("the guard register is complete, unique and PINNED", () => {
     // One level: the fixture list above IS the register. The pin makes
     // adding or dropping a guard a visible edit rather than a drift.
-    expect(GUARDS).toHaveLength(31);
+    expect(GUARDS).toHaveLength(32);
     expect(new Set(GUARDS.map((guard) => guard.claim)).size).toBe(GUARDS.length);
     for (const guard of GUARDS) {
       expect(guard.decl).not.toStrictEqual(guard.mutant);
@@ -913,6 +942,121 @@ describe("suppression: the implicit container precondition and declared gating",
     const messages = direct(gated, { steps: { BAD: "x" }, start: "nope" }).map((f) => f.message);
     expect(messages).toContain("steps: bad id");
     expect(messages).not.toContain("start must name a step");
+  });
+});
+
+describe("the typed subset on a plain map (ADR-019 D11)", () => {
+  const refsNode = (over: Partial<NodeDecl> = {}): NodeDecl =>
+    ({
+      kind: "list",
+      tag: "refs",
+      rows: ROWS,
+      containerMessage: "{path} must be a list",
+      memberLaneAt: "index",
+      member: idish,
+      ...over,
+    }) as NodeDecl;
+
+  const plain = (fields?: Record<string, NodeDecl>): NodeDecl =>
+    ({
+      kind: "map.plain",
+      tag: "cfg",
+      rows: ROWS,
+      containerMessage: "{path} must be a plain map",
+      canonicalJsonSafe: { message: "{path} must be canonical-JSON-safe" },
+      ...(fields === undefined ? {} : { fields }),
+    });
+
+  const root = fixed("root", { cfg: plain({ refs: refsNode() }) });
+
+  it("a declared field is validated when present, and SIBLING open keys stay legal — both channels", () => {
+    const bad = { cfg: { refs: ["BAD"], free: { anything: 1 } } };
+    const expected = [{ path: "cfg.refs[0]", message: "cfg.refs[0]: bad id" }];
+    expect(direct(root, bad)).toStrictEqual(expected);
+    expect(fromFile(root, "cfg:\n  refs:\n    - BAD\n  free:\n    anything: 1\n")).toStrictEqual(expected);
+    expect(direct(root, { cfg: { refs: ["ok"], free: { anything: 1 } } })).toStrictEqual([]);
+  });
+
+  it("DISCRIMINATES: without the typed subset the same value passes untouched", () => {
+    expect(direct(fixed("root", { cfg: plain() }), { cfg: { refs: ["BAD"] } })).toStrictEqual([]);
+  });
+
+  it("the ch13-C4 shape end-to-end: the entry belt reaches THROUGH the plain map", () => {
+    const catalog: NodeDecl = {
+      kind: "map.open",
+      tag: "cat",
+      rows: ROWS,
+      containerMessage: "{path} must be a map",
+      keyLaneAt: "container",
+      entry: fixed(
+        "entry",
+        { body: text("body", { presence: { required: true }, nonempty: { message: "{path} must be nonempty" } }) },
+        { missingMessage: 'missing required key "{key}"' },
+      ),
+    };
+    const belted = refsNode({
+      memberOf: {
+        relation: "memberOf",
+        target: { validKeysOf: "$.contextBlocks" },
+        code: "unresolved_context_block_ref",
+        message: "context block ref {valueJson} does not resolve to an entry",
+      },
+    });
+    const c4Root = fixed("root", { contextBlocks: catalog, cfg: plain({ promptConcernRefs: belted }) });
+
+    expect(
+      direct(c4Root, { contextBlocks: { alpha: { body: "text" } }, cfg: { promptConcernRefs: ["ghost"] } }),
+    ).toStrictEqual([
+      {
+        path: "cfg.promptConcernRefs[0]",
+        message: 'context block ref "ghost" does not resolve to an entry',
+        code: "unresolved_context_block_ref",
+      },
+    ]);
+
+    // A ref to a key whose entry is MALFORMED: the entry's own finding AND
+    // the per-site unresolved finding — D10's belt, reached from inside the
+    // plain map.
+    expect(
+      direct(c4Root, { contextBlocks: { alpha: {} }, cfg: { promptConcernRefs: ["alpha"] } }),
+    ).toStrictEqual([
+      { path: "contextBlocks.alpha", message: 'missing required key "body"' },
+      {
+        path: "cfg.promptConcernRefs[0]",
+        message: 'context block ref "alpha" does not resolve to an entry',
+        code: "unresolved_context_block_ref",
+      },
+    ]);
+  });
+
+  it("an ABSENT typed field is legal and produces nothing", () => {
+    expect(direct(root, { cfg: { free: 1 } })).toStrictEqual([]);
+    expect(direct(root, { cfg: {} })).toStrictEqual([]);
+  });
+
+  it("a NON-PLAIN container suppresses the typed-field lanes — the container finding is the trace", () => {
+    class Forged {
+      readonly refs = ["BAD"];
+    }
+    expect(direct(root, { cfg: new Forged() })).toStrictEqual([
+      { path: "cfg", message: "cfg must be a plain map" },
+    ]);
+  });
+
+  it("a CANONICAL violation likewise gates the subset", () => {
+    expect(direct(root, { cfg: { refs: ["BAD"], broken: Number.NaN } })).toStrictEqual([
+      { path: "cfg", message: "cfg must be canonical-JSON-safe" },
+    ]);
+  });
+
+  it("validation transforms NOTHING — the plain map passes through as authored", () => {
+    const value = { cfg: { refs: ["ok"], free: { nested: true } } };
+    const result = runSurface(surface(root), value, { channel: { kind: "direct" }, catalog: NO_CATALOG });
+    expect(result.findings).toStrictEqual([]);
+    expect((result.normalized as Record<string, unknown>)["cfg"]).toStrictEqual({
+      refs: ["ok"],
+      free: { nested: true },
+    });
   });
 });
 
@@ -1730,6 +1874,27 @@ describe("the declaration GATE: a declaration that is not closed never becomes a
       make: (ok) => base({ valueClasses: { idClass: { kind: "string", tag: "vc", rows: ["x"],
         grammar: { re: ok ? "^[a-z]+$" : "^[a-z", message: "bad" } } } }),
       problem: /is not a valid regular expression/u },
+    // --- D11: attribute applicability is LOUD at the widened grain — an
+    // --- attribute the engine does not read on a plain-map field refuses
+    // --- the load instead of riding along inert.
+    { claim: "a `presence` on a TYPED plain-map field, where no missing-key lane exists (D11)",
+      make: (ok) => base({}, { fields: { cfg: { kind: "map.plain", tag: "cfg", rows: ["x"], containerMessage: "c",
+        canonicalJsonSafe: { message: "k" },
+        fields: { refs: { kind: "string", tag: "cfgr", rows: ["x"], typeMessage: "t",
+          ...(ok ? {} : { presence: { required: true } }) } } } } }),
+      problem: /carries presence, which is read only on a field of a map\.fixed — a plain map has no missing-key lane/u },
+    { claim: "a `default` on a TYPED plain-map field (D11)",
+      make: (ok) => base({}, { fields: { cfg: { kind: "map.plain", tag: "cfg", rows: ["x"], containerMessage: "c",
+        canonicalJsonSafe: { message: "k" },
+        fields: { refs: { kind: "string", tag: "cfgr", rows: ["x"], typeMessage: "t",
+          ...(ok ? {} : { default: "abc" }) } } } } }),
+      problem: /carries a default, which is materialized only on a field of a map\.fixed/u },
+    { claim: "a `channel` on a TYPED plain-map field (D11)",
+      make: (ok) => base({}, { fields: { cfg: { kind: "map.plain", tag: "cfg", rows: ["x"], containerMessage: "c",
+        canonicalJsonSafe: { message: "k" },
+        fields: { refs: { kind: "string", tag: "cfgr", rows: ["x"], typeMessage: "t",
+          ...(ok ? {} : { channel: "file" }) } } } } }),
+      problem: /carries channel "file", which is read only on a field of a map\.fixed/u },
   ];
 
   for (const guard of GUARDS) {
@@ -1747,7 +1912,7 @@ describe("the declaration GATE: a declaration that is not closed never becomes a
   }
 
   it("the guard register is complete, unique and PINNED", () => {
-    expect(GUARDS).toHaveLength(39);
+    expect(GUARDS).toHaveLength(42);
     expect(new Set(GUARDS.map((guard) => guard.claim)).size).toBe(GUARDS.length);
   });
 

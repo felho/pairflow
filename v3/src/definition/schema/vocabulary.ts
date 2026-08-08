@@ -326,6 +326,22 @@ export interface MapPlainDecl extends NodeBase {
   readonly kind: "map.plain";
   readonly containerMessage: MessageTemplate;
   readonly canonicalJsonSafe: { readonly message: MessageTemplate };
+  /**
+   * ADR-019 D11 (2026-08-08) — the TYPED SUBSET: the `fields` attribute
+   * at the plain map's grain, with OPEN-KEYSET semantics that are the
+   * point. A listed field is typed and validated WHEN PRESENT; every
+   * other key stays legal, uninterpreted open data; NO unknown-key lane
+   * exists — the widening types a subset, it closes nothing. Validation
+   * transforms nothing: a plain map's value is authored data and passes
+   * through unchanged.
+   *
+   * Attribute applicability is LOUD at this grain: a typed field may
+   * carry no `presence` (a plain map has no missing-key lane), no
+   * `default` (nothing materializes into authored open data) and no
+   * `channel` (read only on a field of a `map.fixed`) — each is refused
+   * at declaration load, never accepted-and-ignored.
+   */
+  readonly fields?: Readonly<Record<string, NodeDecl>>;
 }
 
 /** vocabulary #15 — a reusable named value class, with the citing site's

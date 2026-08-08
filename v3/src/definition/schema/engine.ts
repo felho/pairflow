@@ -231,6 +231,10 @@ function deref(surface: SurfaceDecl, node: NodeDecl, seen = new Set<string>()): 
 function childDecl(node: NodeDecl, step: DeclStep): NodeDecl | undefined {
   switch (step.kind) {
     case "field":
+      // D11: a plain map's TYPED SUBSET fields are declared positions too,
+      // so the one descent serves them — the gate resolves references into
+      // them and the walk evaluates them through the same call.
+      if (node.kind === "map.plain") return ownField(node.fields ?? {}, step.name);
       return node.kind === "map.fixed" ? ownField(node.fields, step.name) : undefined;
     case "entry":
       return node.kind === "map.open" ? node.entry : undefined;
@@ -1526,6 +1530,17 @@ function evalMapPlain(
   if (!isCanonicalizable(realized)) {
     run.emit(frame.path, render(decl.canonicalJsonSafe.message, slots));
     return { ok: false };
+  }
+  // D11: the TYPED SUBSET — a declared field is validated WHEN PRESENT;
+  // an absent one is legal and produces nothing (absence normalization is
+  // the admitted form's business, never this lane's); every undeclared
+  // key is legal open data. Validation transforms nothing — the plain
+  // map's value is authored data, returned unchanged below.
+  for (const name of Object.keys(decl.fields ?? {})) {
+    const at = descend(run.surface, frame.at, { kind: "field", name });
+    if (at === undefined) continue;
+    if (!Object.prototype.hasOwnProperty.call(realized, name)) continue;
+    evaluateNode(run, at.node, childFrame(frame, at, name, ownGet(realized, name), realized));
   }
   return { ok: true, value: realized };
 }
