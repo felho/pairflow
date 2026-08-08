@@ -1,0 +1,12 @@
+# Re-executed 2026-08-08 at HEAD 14f3ab12 (POST-D11 substrate).
+# NOTE for p4-flag1-probe: the ORIGINAL Flag #1 measurement ran PRE-D11
+# (at 7ebbe6b7): P2 and P3 then both yielded ZERO findings (the gap and
+# the silently-inert sneak-in). At this HEAD, P3 yields the declared
+# coded finding instead — the same probe, flipped by the build, which is
+# the widening's acceptance evidence; P2 still yields zero because its
+# declaration states no typed subset (the DISCRIMINATING twin).
+DUP_GHOST [{"path":"refs[1]","message":"duplicate context block ref \"ghost\""},{"path":"refs[0]","message":"context block ref \"ghost\" does not resolve to an entry","code":"unresolved_context_block_ref"},{"path":"refs[1]","message":"context block ref \"ghost\" does not resolve to an entry","code":"unresolved_context_block_ref"}]
+DUP_OK [{"path":"refs[1]","message":"duplicate context block ref \"alpha\""}]
+DUP_BAD_SHAPE [{"path":"refs[0]","message":"invalid context block id \"Bad\""},{"path":"refs[1]","message":"invalid context block id \"Bad\""}]
+NONSTRING_KEY_FILE [{"path":"contextBlocks","message":"invalid context block id true"},{"path":"refs[0]","message":"context block ref \"true\" does not resolve to an entry","code":"unresolved_context_block_ref"}]
+BAD_KEY_SIBLING [{"path":"contextBlocks","message":"invalid context block id \"BAD\""}]

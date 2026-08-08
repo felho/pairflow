@@ -1,0 +1,14 @@
+# Re-executed 2026-08-08 at HEAD 14f3ab12 (POST-D11 substrate).
+# NOTE for p4-flag1-probe: the ORIGINAL Flag #1 measurement ran PRE-D11
+# (at 7ebbe6b7): P2 and P3 then both yielded ZERO findings (the gap and
+# the silently-inert sneak-in). At this HEAD, P3 yields the declared
+# coded finding instead — the same probe, flipped by the build, which is
+# the widening's acceptance evidence; P2 still yields zero because its
+# declaration states no typed subset (the DISCRIMINATING twin).
+P1_resolving {"direct":[],"file":[],"agree":true}
+P1_belted_empty_entry {"direct":[{"path":"contextBlocks.alpha","message":"missing required key \"body\""},{"path":"binding.contextBlockRefs[0]","message":"context block ref \"alpha\" does not resolve to an entry","code":"unresolved_context_block_ref"}],"file":[{"path":"contextBlocks.alpha","message":"missing required key \"body\""},{"path":"binding.contextBlockRefs[0]","message":"context block ref \"alpha\" does not resolve to an entry","code":"unresolved_context_block_ref"}],"agree":true}
+P1_wrong_kind_catalog {"direct":[{"path":"contextBlocks","message":"contextBlocks must be a map of block-id -> entry; got a list"},{"path":"binding.contextBlockRefs[0]","message":"context block ref \"alpha\" does not resolve to an entry","code":"unresolved_context_block_ref"}],"file":[{"path":"contextBlocks","message":"contextBlocks must be a map of block-id -> entry; got a list"},{"path":"binding.contextBlockRefs[0]","message":"context block ref \"alpha\" does not resolve to an entry","code":"unresolved_context_block_ref"}],"agree":true}
+P1_absent_catalog {"direct":[{"path":"binding.contextBlockRefs[0]","message":"context block ref \"alpha\" does not resolve to an entry","code":"unresolved_context_block_ref"}],"file":[{"path":"binding.contextBlockRefs[0]","message":"context block ref \"alpha\" does not resolve to an entry","code":"unresolved_context_block_ref"}],"agree":true}
+P1_duplicates {"direct":[{"path":"binding.contextBlockRefs[1]","message":"duplicate context block ref \"alpha\""},{"path":"binding.contextBlockRefs[2]","message":"duplicate context block ref \"alpha\""}],"file":[{"path":"binding.contextBlockRefs[1]","message":"duplicate context block ref \"alpha\""},{"path":"binding.contextBlockRefs[2]","message":"duplicate context block ref \"alpha\""}],"agree":true}
+P2_ghost_ref_inside_plain {"direct":[],"file":[],"agree":true}
+P3_sneaked_fields {"direct":[{"path":"agentConfig.promptConcernRefs[0]","message":"context block ref \"ghost\" does not resolve to an entry","code":"unresolved_context_block_ref"}],"file":[{"path":"agentConfig.promptConcernRefs[0]","message":"context block ref \"ghost\" does not resolve to an entry","code":"unresolved_context_block_ref"}],"agree":true}
