@@ -372,3 +372,36 @@ places is a defect") vs the refined gloss/normative form now on the
 contract and the declaration — a D-section edit is a user-ratified
 amendment, so the prepared one-clause D4 clarification rides the
 ratification GO, never a silent edit (lens-4 R3 F1).
+
+## 13. The contract arm on the approve-ready bytes (bet 5's pointed round) and its fold
+
+Charter + output beside this file (`p4-contract-arm*`). Pin
+gpt-5.6-sol/high, guards clean, 410s, target-locked on the contract
+file. Verdict: **3 IN-SCOPE · 0 CARRIED · 0 UNRUN**; gates re-run by
+the arm all green (packet-lint, typecheck, suite 2063/2063).
+
+- **A1 (C2's id count):** the arm grepped the model for the WRONG
+  third id (`emit-envelope` — C16's shipped id, never a model
+  exhibit) and concluded the count of three was invented. The count
+  is TRUE — the third is `docs-only-edit-scope`
+  (core-model.html:8888, inside the mode-tagged member) — but the
+  arm's misfire is itself evidence: an unnamed count invites the
+  wrong needle. FOLD: the row now NAMES the three ids.
+- **A2 (C1/C7/C8 attribute glosses vs ADR-019 D4's standing
+  absolute):** REAL under the current ADR bytes, and exactly the
+  D4-vs-gloss tension already carried to the flags round (§12). The
+  arm independently confirms the amendment is BLOCKING, not
+  cosmetic: under the unamended D4 the draft cannot ratify clean.
+  Resolution: flag R5's prepared D4 amendment rides the GO; no
+  contract edit (the glosses are the non-binding form both the
+  contract and the declaration already declare).
+- **A3 (C16's repository-wide "first" claim unreceipted):** true by
+  sweep, receipt owed. MEASURED at this fold: `grep -rn
+  "agentConfig|defaultAgentConfig" v3/templates/` returns ZERO hits
+  (2026-08-08, the arm reproduced the same). FOLD: the row cites this
+  note as its receipt.
+
+Bet 5 scoring after this round: the pointed round found 3 (one an
+arm-side needle error that still bought a row hardening, one the
+known flag confirmed blocking, one a receipt gap) — the re-check on
+the folded bytes is the bet's priced second half.
