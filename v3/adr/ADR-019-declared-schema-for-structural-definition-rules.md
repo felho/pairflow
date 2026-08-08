@@ -3,8 +3,8 @@
 Status: accepted
 Date: 2026-08-05 · amended 2026-08-06 (D1's residual list, D5's corpus
 derivation, D9.3's reading) · amended 2026-08-07 (D10 — the entry-belted
-membership construct, admitted under D7; user-ratified — each carries a
-dated marker)
+membership construct, admitted under D7) · amended 2026-08-08 (D10's
+no-reference-ring rule; user-ratified — each carries a dated marker)
 Links: supersedes — · amends — · depends-on ADR-011 · related ADR-003, ADR-012, ADR-013
 
 ## Context
@@ -347,6 +347,25 @@ reference.
 
 **The live declaration does not adopt it.** Its first user is P4's
 contract; the expected live behavioral delta is zero.
+
+**NO REFERENCE RING (amended 2026-08-08, user-ratified).** A belt's
+operands may not form a cycle — catalog A's entries belting on B while
+B's entries belt on A, directly or transitively. Such a declaration is
+REFUSED AT LOAD, once per ring, naming every belt in it.
+
+The reason is that the question has no answer rather than a hard one:
+neither belt can say whether its own entries are valid until the other
+already has, so what the walk reports depends on which catalog was
+declared first. Round 11 measured exactly that — the same document, the
+same rules, one finding in one order and two in the other. Refusing at
+load is the sibling of the value-class ring guard and the same shape: a
+declaration that cannot be decided is refused before any document meets
+it, with no runtime machinery, and the deferred drain's ordering becomes
+unreachable by construction rather than by care.
+
+A future surface with a GENUINE mutual-belt need amends this section with
+itself as the named user — WATCH-first, never a loosening in advance of
+one.
 
 ## Alternatives Considered
 
