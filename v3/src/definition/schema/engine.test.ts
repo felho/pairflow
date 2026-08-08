@@ -692,6 +692,53 @@ describe("suppression: the implicit container precondition and declared gating",
       expect(direct(belt, { contextBlocks: {}, refs: [] })).toStrictEqual([]);
     });
 
+    // Round 11's own fixture, kept verbatim. Two catalogs whose entries
+    // belt on EACH OTHER answered differently depending on which was
+    // declared first — one finding in one order, two in the other. The
+    // order-dependence IS the disease, so the guard proves NEITHER order
+    // sneaks through.
+    describe("a belt RING is refused at load, in both declaration orders", () => {
+      const catalogOf = (tag: string, target: string): NodeDecl =>
+        ({
+          kind: "map.open", tag, rows: ROWS, containerMessage: `${tag} must be a map`, keyLaneAt: "segment",
+          entry: text(`${tag}-e`, {
+            memberOf: { relation: "memberOf", target: { validKeysOf: target }, message: "{path}: {valueJson} unresolved" },
+          }),
+        });
+      const ringSurface = (fields: Record<string, NodeDecl>): SurfaceDecl => surface(fixed("root", fields));
+
+      it("a declared first", () => {
+        expect(() => defineSurface(ringSurface({ a: catalogOf("a", "$.b"), b: catalogOf("b", "$.a") }))).toThrow(
+          SurfaceDeclarationError,
+        );
+      });
+
+      it("b declared first — the order that used to give a DIFFERENT answer", () => {
+        expect(() => defineSurface(ringSurface({ b: catalogOf("b", "$.a"), a: catalogOf("a", "$.b") }))).toThrow(
+          SurfaceDeclarationError,
+        );
+      });
+
+      it("a belt on ITSELF is a ring of one", () => {
+        expect(closureProblems(ringSurface({ a: catalogOf("a", "$.a") }))).toHaveLength(1);
+      });
+
+      it("NEGATIVE: a ONE-DIRECTIONAL belt between two catalogs still loads, and works", () => {
+        const oneWay = ringSurface({
+          a: catalogOf("a", "$.b"),
+          b: {
+            kind: "map.open", tag: "b", rows: ROWS, containerMessage: "b must be a map", keyLaneAt: "segment",
+            entry: text("b-e"),
+          },
+        });
+        expect(closureProblems(oneWay)).toStrictEqual([]);
+        expect(direct(oneWay.root, { a: { one: "beta" }, b: { beta: "x" } })).toStrictEqual([]);
+        expect(direct(oneWay.root, { a: { one: "ghost" }, b: { beta: "x" } })).toStrictEqual([
+          { path: "a.one", message: 'a.one: "ghost" unresolved' },
+        ]);
+      });
+    });
+
     it("NEGATIVE: suppression elsewhere is UNCHANGED — a broken sibling entry belts only itself", () => {
       const value = { contextBlocks: { alpha: { body: "x" }, beta: {} }, refs: ["alpha", "beta"] };
       expect(direct(belt, value)).toStrictEqual([
@@ -1630,6 +1677,19 @@ describe("the declaration GATE: a declaration that is not closed never becomes a
           name: { kind: "string", tag: "nm", rows: ["x"], typeMessage: "t", ...(ok ? {} : { default: undefined }) },
         } }),
       problem: /default is written as `undefined`, which materializes nothing/u },
+    { claim: "two entry BELTS whose operands form a ring",
+      make: (ok) => base({}, {
+        fields: {
+          a: { kind: "map.open", tag: "ca", rows: ["x"], containerMessage: "c", keyLaneAt: "segment",
+            entry: { kind: "string", tag: "cae", rows: ["x"], typeMessage: "t",
+              memberOf: { relation: "memberOf", target: { validKeysOf: "$.b" }, message: "m" } } },
+          b: { kind: "map.open", tag: "cb", rows: ["x"], containerMessage: "c", keyLaneAt: "segment",
+            entry: { kind: "string", tag: "cbe", rows: ["x"], typeMessage: "t",
+              memberOf: { relation: "memberOf", target: { validKeysOf: ok ? "$.c" : "$.a" }, message: "m" } } },
+          c: { kind: "map.open", tag: "cc", rows: ["x"], containerMessage: "c", keyLaneAt: "segment",
+            entry: { kind: "string", tag: "cce", rows: ["x"], typeMessage: "t" } },
+        } }),
+      problem: /belt ring: the validKeysOf operands form a cycle \(\$\.a -> \$\.b -> \$\.a\)/u },
     { claim: "an entry BELT over a node that has no entries to belt",
       make: (ok) => base({}, {
         fields: {
@@ -1687,7 +1747,7 @@ describe("the declaration GATE: a declaration that is not closed never becomes a
   }
 
   it("the guard register is complete, unique and PINNED", () => {
-    expect(GUARDS).toHaveLength(38);
+    expect(GUARDS).toHaveLength(39);
     expect(new Set(GUARDS.map((guard) => guard.claim)).size).toBe(GUARDS.length);
   });
 

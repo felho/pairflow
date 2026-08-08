@@ -169,6 +169,15 @@ interface Context {
    * reference must yield one problem, or a maintainer cannot tell how many
    * things are actually wrong. */
   readonly resolvableHooks: Set<string>;
+  /** D10's belt DEPENDENCY graph: an edge from a catalog whose entries
+   * contain a belt to the catalog that belt targets. A cycle here is the
+   * disease — see `beltRingProblems`. */
+  readonly beltEdges: { readonly from: string; readonly to: string; readonly where: string }[];
+  /** The catalogs whose ENTRY subtree the walk is currently inside,
+   * outermost first. A belt found here makes every one of them depend on
+   * the belt's target, because an entry is clean only if its whole
+   * subtree is. */
+  readonly entryOwners: DeclCursor[];
   readonly problems: string[];
 }
 
@@ -220,12 +229,18 @@ function leafProblems(
   // whose members can each be valid or not — a belt over one would ask a
   // question the shape cannot answer.
   if (relation === "validKeysOf") {
-    const target = derefNode(ctx.surface, resolution.visited.at(-1)?.node ?? ctx.root.node);
-    if (target?.kind !== "map.open") {
+    const belted = derefNode(ctx.surface, target.node);
+    if (belted?.kind !== "map.open") {
       return [
-        `${where}: validKeysOf(${JSON.stringify(path)}) addresses a ${target?.kind ?? "?"}; the entry belt ` +
+        `${where}: validKeysOf(${JSON.stringify(path)}) addresses a ${belted?.kind ?? "?"}; the entry belt ` +
           `measures the keys of a map.open, whose entries are what it belts`,
       ];
+    }
+    // Every catalog whose entry subtree encloses this belt now DEPENDS on
+    // the catalog it targets — an entry is clean only if its whole subtree
+    // is. A cycle among those edges is refused below.
+    for (const owner of ctx.entryOwners) {
+      ctx.beltEdges.push({ from: owner.decl, to: target.decl, where });
     }
   }
 
@@ -338,7 +353,11 @@ function checkNode(
       if (decl.keyClass !== undefined) {
         checkNode(decl.keyClass, `${where}<key>`, false, ctx, childAt(ctx, at, { kind: "keyClass" }), at);
       }
+      // Only the ENTRY subtree is owned: the key class and the
+       // keysSubsetOf lane sit beside the entries, not inside them.
+      if (at !== undefined) ctx.entryOwners.push(at);
       checkNode(decl.entry, `${where}.*`, false, ctx, childAt(ctx, at, { kind: "entry" }), at);
+      if (at !== undefined) ctx.entryOwners.pop();
       return;
     }
     case "list": {
@@ -485,6 +504,68 @@ function ringProblems(ctx: Context): string[] {
         `(${[...ring, cursor].join(" -> ")}); the walk would follow it without end`,
     );
   }
+  return problems;
+}
+
+/**
+ * A ring of ENTRY BELTS (ADR-019 D10, amended 2026-08-08). Catalog A's
+ * entries belt on catalog B while B's entries belt on A: neither can say
+ * whether its own entries are valid until the other has, so the answer
+ * the walk gives depends on which catalog was declared first. Round 11
+ * measured exactly that — one finding in one order, two in the other.
+ *
+ * Refused at LOAD, the sibling of the value-class ring guard and the same
+ * shape: a declaration that cannot be decided is refused once, loudly,
+ * before any document meets it. No runtime machinery, and the deferred
+ * drain's ordering becomes unreachable by construction.
+ *
+ * Reported ONCE PER RING, naming every belt in it — a maintainer breaking
+ * a ring breaks one thing.
+ */
+function beltRingProblems(ctx: Context): string[] {
+  const problems: string[] = [];
+  const reported = new Set<string>();
+  const outgoing = new Map<string, { readonly to: string; readonly where: string }[]>();
+  for (const edge of ctx.beltEdges) {
+    const list = outgoing.get(edge.from) ?? [];
+    list.push({ to: edge.to, where: edge.where });
+    outgoing.set(edge.from, list);
+  }
+
+  // Colours, so a dense graph costs one pass rather than every path.
+  const state = new Map<string, "open" | "closed">();
+  const chain: string[] = [];
+  const sites: string[] = [];
+
+  const visit = (node: string): void => {
+    const colour = state.get(node);
+    if (colour === "closed") return;
+    if (colour === "open") {
+      const ring = chain.slice(chain.indexOf(node));
+      const key = [...ring].sort().join(",");
+      if (reported.has(key)) return;
+      reported.add(key);
+      const belts = sites.slice(chain.indexOf(node));
+      problems.push(
+        `belt ring: the validKeysOf operands form a cycle (${[...ring, node].join(" -> ")}), ` +
+          `declared at ${belts.join(", ")} — no belt in the ring can decide its entries' validity ` +
+          `until another already has, so the findings would depend on declaration order; ` +
+          `restructure the references to run one way`,
+      );
+      return;
+    }
+    state.set(node, "open");
+    chain.push(node);
+    for (const edge of outgoing.get(node) ?? []) {
+      sites.push(edge.where);
+      visit(edge.to);
+      sites.pop();
+    }
+    chain.pop();
+    state.set(node, "closed");
+  };
+
+  for (const from of [...outgoing.keys()]) visit(from);
   return problems;
 }
 
@@ -663,6 +744,8 @@ export function closureProblems(surface: SurfaceDecl): readonly string[] {
     tags: [],
     nodeTags: new Set(),
     resolvableHooks: new Set(),
+    beltEdges: [],
+    entryOwners: [],
     problems: [],
   };
 
@@ -719,6 +802,7 @@ export function closureProblems(surface: SurfaceDecl): readonly string[] {
   }
 
   ctx.problems.push(...ringProblems(ctx));
+  ctx.problems.push(...beltRingProblems(ctx));
   resolveHooks(surface, ctx);
   return ctx.problems;
 }
