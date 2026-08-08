@@ -791,6 +791,9 @@ round:
       // ch12-p3 R1: admission materializes the runtime-context requirement
       // (absent ⇒ "none").
       runtimeContext: "none",
+      // ch13v2-C1: admission materializes the absent catalog to the empty
+      // record (the declared default).
+      contextBlocks: {},
     };
     const result = load(canonical);
     expect(result.ok).toBe(true);

@@ -46,10 +46,63 @@ const idClass: NodeDecl = {
 const agentConfigValue: NodeDecl = {
   kind: "map.plain",
   tag: "vc-agentconfig",
-  rows: ["ch8-C14", "ch12-C7"],
+  rows: ["ch8-C14", "ch12-C7", "ch13v2-C4"],
   containerMessage: "{label} must be a map; got {value}",
   canonicalJsonSafe: {
     message: "{label} must be canonical-JSON-safe (a map of finite numbers and plain values)",
+  },
+  // ch13v2-C4 (ADR-019 D11): the ONE typed field of the otherwise
+  // format-open agent config. Both template positions (the role-level
+  // default and the step-level map) share this class, so one declaration
+  // covers both; the runOverrides position never meets this declaration
+  // (a CLI input surface — ch13v2-C5's run scope).
+  fields: {
+    promptConcernRefs: {
+      kind: "valueClass",
+      tag: "d-prompt-refs",
+      rows: ["ch13v2-C4"],
+      valueClass: "blockIdList",
+      label: "promptConcernRefs",
+    },
+  },
+};
+
+/** ch13v2-C2: ONE grammar for catalog keys and every ref-list member —
+ * the block-id namespace. The citing site supplies `{label}`. */
+const blockId: NodeDecl = {
+  kind: "string",
+  tag: "vc-block-id",
+  rows: ["ch13v2-C2"],
+  typeMessage: "invalid {label} {valueJson}: block ids are kebab-case strings",
+  nonempty: { message: "invalid {label} {valueJson}: block ids are kebab-case strings" },
+  grammar: {
+    re: "^[a-z][a-z0-9-]*$",
+    message: "invalid {label} {valueJson}: block ids match {grammar}",
+  },
+};
+
+/** ch13v2-C4/C6/C7/C8: the shared ref-list value class — the entry belt
+ * (ADR-019 D10) and the per-occurrence duplicate lane, one definition
+ * for all three ref positions. */
+const blockIdList: NodeDecl = {
+  kind: "list",
+  tag: "vc-blockidlist",
+  rows: ["ch13v2-C4", "ch13v2-C6", "ch13v2-C7", "ch13v2-C8"],
+  containerMessage: "{label} must be a list of context block ids; got {value}",
+  memberLaneAt: "index",
+  member: {
+    kind: "valueClass",
+    tag: "d-block-ref",
+    rows: ["ch13v2-C4", "ch13v2-C6"],
+    valueClass: "blockId",
+    label: "context block ref",
+  },
+  unique: { grain: "perOccurrence", at: "index", message: "duplicate context block ref {valueJson}" },
+  memberOf: {
+    relation: "memberOf",
+    target: { validKeysOf: "$.contextBlocks" },
+    code: "unresolved_context_block_ref",
+    message: "context block ref {valueJson} does not resolve to an entry",
   },
 };
 
@@ -133,6 +186,15 @@ const gateBindingNode: NodeDecl = {
       presence: { required: true, foldedIntoTypeLane: true },
       dependsOn: ["d-uses"],
       beltMessage: "gate evaluator '{valueRaw}' reported a config failure without findings",
+    },
+    // ch13v2-C6: the binding's ref position. The keyset growth itself is
+    // ch11-C4's realized text (the executed 2026-07-26 reopen act).
+    contextBlockRefs: {
+      kind: "valueClass",
+      tag: "d-ctx-gate-refs",
+      rows: ["ch13v2-C6"],
+      valueClass: "blockIdList",
+      label: "contextBlockRefs",
     },
   },
 };
@@ -257,7 +319,7 @@ const runtimeContextSpecNode: NodeDecl = {
 const rootNode: NodeDecl = {
   kind: "map.fixed",
   tag: "d-root",
-  rows: ["ch8-C7", "ch8-C13", "ch8-C24", "ch8-C25", "ch11-C18", "ch11-C37", "ch12-C1"],
+  rows: ["ch8-C7", "ch8-C13", "ch8-C24", "ch8-C25", "ch11-C18", "ch11-C37", "ch12-C1", "ch13v2-C1"],
   containerMessage: "the template root must be a map with exactly ref, start, steps, terminal, roles",
   // ch8-C24's reservation lives in this message and nowhere else: `kind`
   // is illegal today, and the closed keyset below is what makes it so.
@@ -470,6 +532,43 @@ const rootNode: NodeDecl = {
         },
       },
     },
+    contextBlocks: {
+      kind: "map.open",
+      tag: "d-ctxblocks",
+      rows: ["ch13v2-C1"],
+      // ch13v2-C1: absent-catalog normalization — the admitted form always
+      // carries a catalog record. The declared default realizes the absent
+      // half; a PRESENT non-map value fails the container lane, so
+      // fail-closed replaces the superseded normalize-non-record class.
+      default: {},
+      containerMessage: "contextBlocks must be a map of block-id -> { body }; got {value}",
+      keyClass: {
+        kind: "valueClass",
+        tag: "d-block-key",
+        rows: ["ch13v2-C2"],
+        valueClass: "blockId",
+        label: "context block id",
+      },
+      keyLaneAt: "container",
+      entry: {
+        kind: "map.fixed",
+        tag: "d-ctx-entry",
+        rows: ["ch13v2-C3"],
+        containerMessage: "a context block entry must be a map with exactly body; got {value}",
+        unknownMessage: "unknown key {value} (a context block entry's only key is body)",
+        missingMessage: 'missing required key "{key}"',
+        fields: {
+          body: {
+            kind: "string",
+            tag: "d-ctx-body",
+            rows: ["ch13v2-C3"],
+            presence: { required: true },
+            typeMessage: "body must be a nonempty string; got {value}",
+            nonempty: { message: "body must be a nonempty string" },
+          },
+        },
+      },
+    },
   },
 };
 
@@ -534,7 +633,7 @@ export const templateFormat: SurfaceDecl = defineSurface({
     },
   },
   root: rootNode,
-  valueClasses: { idClass, agentConfigValue },
+  valueClasses: { idClass, agentConfigValue, blockId, blockIdList },
   crossRules: [
     {
       tag: "d-roleset",

@@ -46,9 +46,9 @@ so it has a repo home.)
 
 | Probe | Script | What it measured |
 |---|---|---|
-| PROBE-P4-1 | `p4-flag1-probe.ts` (P1_*) | the D10 belt at a fixed position: resolving ref clean; `{}` entry → entry finding + coded per-site finding; wrong-kind catalog → container finding AND per-site findings (no suppression); absent catalog → per-site; duplicates per occurrence at index; channels byte-identical |
-| PROBE-P4-2 | `p4-flag1-probe.ts` (P2, P3) | pre-D11: a ref list inside `map.plain` unreachable (ghost/numeric/grammar-violating members, zero findings); a runtime `fields` attr on map.plain loaded silently inert |
-| PROBE-P4-3 | `p4-dup-resolution-probe.ts` | DUP_GHOST: membership fires per shape-passing occurrence (both indices) beside the dup finding; DUP_BAD_SHAPE: a shape-failing member is invisible to every list-level lane; NONSTRING_KEY_FILE: boolean-keyed entry unaddressable by the string ref of the same spelling (two true findings); BAD_KEY_SIBLING: grammar-failing key draws the key lane, valid sibling ref resolves |
+| PROBE-P4-1 | `p4-flag1-probe.ts.txt` (P1_*) | the D10 belt at a fixed position: resolving ref clean; `{}` entry → entry finding + coded per-site finding; wrong-kind catalog → container finding AND per-site findings (no suppression); absent catalog → per-site; duplicates per occurrence at index; channels byte-identical |
+| PROBE-P4-2 | `p4-flag1-probe.ts.txt` (P2, P3) | pre-D11: a ref list inside `map.plain` unreachable (ghost/numeric/grammar-violating members, zero findings); a runtime `fields` attr on map.plain loaded silently inert |
+| PROBE-P4-3 | `p4-dup-resolution-probe.ts.txt` | DUP_GHOST: membership fires per shape-passing occurrence (both indices) beside the dup finding; DUP_BAD_SHAPE: a shape-failing member is invisible to every list-level lane; NONSTRING_KEY_FILE: boolean-keyed entry unaddressable by the string ref of the same spelling (two true findings); BAD_KEY_SIBLING: grammar-failing key draws the key lane, valid sibling ref resolves |
 
 PROBE-P4-3's first two results are MEASURED DIVERGENCES from the
 superseded line's C8(e)/C7 grain decisions; contract v2 rows C7/C8

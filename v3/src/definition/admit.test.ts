@@ -203,14 +203,16 @@ describe("admitTemplate — the gate-free confinement (A8) and own-property writ
     const result = admitTemplate(raw, catalog);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    // ch11-P2c A1 + ch12-p1b G3 + ch12-p3 R1: the shape deltas are the
-    // expanded per-step advancesRound map (declaration-absent ⇒ all-false,
-    // C38), the MATERIALIZED activation default (absent ⇒ immediate, C1), and
-    // the MATERIALIZED runtime-context requirement (absent ⇒ "none", C4).
+    // ch11-P2c A1 + ch12-p1b G3 + ch12-p3 R1 + ch13v2-C1: the shape deltas
+    // are the expanded per-step advancesRound map (declaration-absent ⇒
+    // all-false, C38), the MATERIALIZED activation default (absent ⇒
+    // immediate, C1), the MATERIALIZED runtime-context requirement (absent
+    // ⇒ "none", C4), and the MATERIALIZED empty catalog record.
     expect(result.template).toEqual({
       ...raw,
       activation: { mode: "immediate" },
       runtimeContext: "none",
+      contextBlocks: {},
       steps: {
         implement: { ...raw.steps["implement"], advancesRound: { PASS: false } },
         review: { ...raw.steps["review"], advancesRound: { PASS: false, CONVERGED: false } },
