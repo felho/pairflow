@@ -75,6 +75,25 @@ carry them as DECIDED-HERE (v2) markers with these receipts.
   unspent reserve.** The construct's verification is green; the P4
   declaration may adopt it (the Flag #1 ruling's condition).
 
+## 5a. The schema-lock guard act (STOP 1 ruling (c), built before the ratifying act)
+
+- `ed86ac24` feat(v3): template §2/§3 + lint D3 extension + D5b + five
+  selftest dims (135 → 139).
+- Arm round 1 (charter/output beside this file; pin gpt-5.6-sol/high,
+  guards clean, 280s): **2 IN-SCOPE · 0 CARRIED · 0 UNRUN**, all four
+  lenses full. F1 the `..`-substring false positive (a legal dotted
+  filename refused), F2 the symlink escape (an outside target's true
+  hash satisfied the lock) — both build omissions in path discipline.
+- `20b73f6a` fix(v3): the fold, dims-first — segment-wise `..`,
+  resolved-root containment; register 139 → 140 + one new green.
+- Arm round 2 (re-check; guards clean, 180s): **0 IN-SCOPE · 0 CARRIED
+  · 0 UNRUN**, neighbourhoods full (head/tail/lone `..`, separators,
+  inside/relative/intermediate-directory symlinks, the macOS
+  `/tmp → /private/tmp` false-escape check), selftest 140 + live lint
+  unchanged. **The frame closes at round 2 of 3.**
+- `0d58283e` docs(v3): tag closure both directions (C1 ↔ d-root;
+  d-capability-profile → ch13v2-C11) — closure re-run CLEAN.
+
 ## 6. Experiment §5 running record (P4, per round — derived numbers)
 
 | Event | Yield | Classes | Reopens | Gates | STOPs |
@@ -83,6 +102,9 @@ carry them as DECIDED-HERE (v2) markers with these receipts.
 | Flag #1 | 1 ruling | vocabulary gap (measured by probe) | 0 | 1 (user) | 1 (flag) |
 | D11 arm r1 | 2 folded | build-omission ×2 | 0 | 0 | 0 |
 | D11 arm r2 | 0 findings — frame closes | — | 0 | 0 | 0 |
+| Schema-lock arm r1 | 2 folded | build-omission ×2 (path discipline) | 0 | 0 | 0 |
+| Schema-lock arm r2 | 0 findings — frame closes | — | 0 | 0 | 0 |
+| Tag-closure (authoring-side) | 1 gap folded | citation omission | 0 | 0 | 0 |
 
 ## 7. Bet ledger scoring (STOP 1's stated bets)
 
@@ -92,7 +114,13 @@ carry them as DECIDED-HERE (v2) markers with these receipts.
 2. **Flag #1** (1 probe + 1 ruling): **EXACT** — the probe measured the
    gap and the sneak-in in one run; one ruling settled it.
 3. **Panel** (2 rounds, 3rd via user): OPEN.
-4. **Byte-lock guard** (1 build + 1 verification, cap 3): OPEN.
+4. **Byte-lock guard** (1 build + 1 verification, cap 3): **HALF** —
+   the build landed in one pass, but round 1 found two path-discipline
+   defects, so the fold forced a second round the bet had not priced
+   (the cap absorbed it: closed at 2 of 3). Lesson for the priors:
+   filesystem/path semantics are a surprise home of the same kind as
+   runtime semantics — a guard build touching them prices 1 build +
+   1 round + 1 re-check, not 1+1.
 5. **Arm** (1 pointed round + 1 re-check): OPEN for the contract; the
    D11 SUBSTRATE act's own frame ran under the Flag-#1 bet's hedge —
    the hedge ("engine descent touches evaluation core → surprise home,
