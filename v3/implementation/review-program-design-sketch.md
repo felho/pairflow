@@ -261,3 +261,33 @@ Three charter kills across the campaign, all on security-flavored
 wording; neutral QA vocabulary (conformance, counterexample,
 sensitivity check) has since run clean repeatedly. The vocabulary
 note travels in every charter until a charter-template home exists.
+
+## Appendix B — the ch13-p1a mid-packet harvest (recorded 2026-08-08)
+
+Recorded mid-packet because both priors change how the SAME packet's
+next round runs; the packet's full bet ledger follows at the
+boundary, scored against outcomes, per the learning loop.
+
+### The distilled priors
+
+- **Necessity precedes truth.** Every claim in a spec is a
+  truth-maintenance liability someone must verify; the deletion test
+  (the delegation litmus: "what does the implementer do wrong
+  without this sentence?") runs BEFORE any measurement duty.
+  Correcting a claim that should have been deleted is double waste —
+  and rounds spent maintaining deletable claims are a spec-authoring
+  cost, not a review yield. Born 2026-08-08: the packet's round-2
+  non-convergence (~46 → ~61 findings) was first accounted as
+  "falsehood removal, therefore not over-detailing"; the user caught
+  the non-sequitur — that defense holds only for claims that pass
+  the necessity test first.
+- **Hand-assembled MEASURED sets are a defect class.** A set or
+  equivalence assembled by hand and stamped MEASURED ages the moment
+  the tree moves, and erred three times in one round (a trigger-tag
+  set missing an entire bypass path, a fixture list 37% short
+  against a run of the simulated growth, an order-equivalence claim
+  with a live counterexample). The durable form is the claim
+  grammar's other pair: a PARAMETERIZED derivation rule with a named
+  owner the build runs, plus today's measured values kept as a floor
+  ("a re-run may extend, never drop"). Ex-ante lens candidate for
+  every future packet's set-shaped claims.
