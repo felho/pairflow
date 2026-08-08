@@ -451,7 +451,7 @@ const rootNode: NodeDecl = {
     capabilityProfile: {
       kind: "raw",
       tag: "d-capability-profile",
-      rows: ["ch13-C10"],
+      rows: ["ch13v2-C11"],
       // The L1 authorization profile: a TYPE-LEVEL channel only. Authored
       // restrictions are a deferred Absent, so the key stays an
       // unknown-key rejection in a template FILE and is legal only on the
