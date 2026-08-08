@@ -4,7 +4,8 @@ Status: accepted
 Date: 2026-08-05 · amended 2026-08-06 (D1's residual list, D5's corpus
 derivation, D9.3's reading) · amended 2026-08-07 (D10 — the entry-belted
 membership construct, admitted under D7) · amended 2026-08-08 (D10's
-no-reference-ring rule; user-ratified — each carries a dated marker)
+no-reference-ring rule; D11 — the typed-subset `fields` widening on
+`map.plain`; user-ratified — each carries a dated marker)
 Links: supersedes — · amends — · depends-on ADR-011 · related ADR-003, ADR-012, ADR-013
 
 ## Context
@@ -221,7 +222,9 @@ flavours that must not be confused:
   audit's **≥2 independent ratified rows** test; a construct serving
   exactly one row is refused and that row keeps a prose lane instead.
 
-**Admitted under this rule so far**: one construct, D10 (2026-08-07).
+**Admitted under this rule so far**: one construct, D10 (2026-08-07);
+one attribute widening at a new grain, D11 (2026-08-08 — not a new
+construct, recorded here so the tally cannot silently drift).
 
 ### D8 — the two open constructs — RULED: BOTH ACCEPTED (user, 2026-08-05)
 
@@ -366,6 +369,59 @@ unreachable by construction rather than by care.
 A future surface with a GENUINE mutual-belt need amends this section with
 itself as the named user — WATCH-first, never a loosening in advance of
 one.
+
+### D11 — the TYPED-SUBSET `fields` widening on `map.plain` (amendment, user-ratified 2026-08-08)
+
+**ADMITTED**: the `fields` attribute — until this act the fixed map's —
+is legal on `map.plain`, with OPEN-KEYSET semantics that are the point:
+the listed fields are typed and validated WHEN PRESENT; every other key
+stays legal, uninterpreted open data; NO unknown-key lane exists. A
+plain map remains format-open — the widening types a SUBSET, it closes
+nothing.
+
+**Why it was needed, and how it was found.** Not by inspection — by the
+P4 authoring probe (executed 2026-08-08, both channels). The superseded
+ch13-C4 puts `promptConcernRefs` INSIDE the two format-open agentConfig
+positions, and the vocabulary had no way to say it: a ghost ref, a
+numeric member and a grammar-violating member inside the plain map all
+passed with ZERO findings. The same probe measured the sneak-in: a
+runtime `fields` attribute forced onto a `map.plain` node loaded and
+was silently inert — the loads-cleanly-validates-nothing class the
+design review named as this substrate's root risk.
+
+**THE ADMISSION-TEST READING, recorded because it is the close call.**
+This is an existing attribute at a NEW GRAIN — the D8 pattern (the
+selector-root and `code` widenings), not a new construct: `fields` on
+`map.fixed` carries the template's whole fixed-keyset row population.
+The widening's carrier is the superseded ch13-C4's TWO positions
+(`roles.*.defaultAgentConfig`, `steps.*.agentConfig`) under one row —
+the two-position reading D10 ratified. D9's tripwire 1 was examined at
+this ruling and not skirted: it fires on a single-use CONSTRUCT
+admitted to make one row fit; this ruling admits no construct, and the
+two-position reading has a standing ratified precedent.
+
+**SEMANTICS, exact.** A typed field is validated when its key is
+PRESENT (own-property); an absent field is legal and produces nothing —
+absence normalization is the ADMITTED form's business (R4, the
+normalizer), never this lane's. Validation transforms NOTHING: a plain
+map's value is authored data and passes through unchanged. The
+container lanes are unchanged and still gate: a non-plain or
+non-canonical map suppresses the typed-field lanes under the implicit
+container rule. There is no `presence`, no `default` and no `channel`
+on a plain-map field — see the applicability rule below.
+
+**ATTRIBUTE APPLICABILITY IS LOUD at the new grain.** An attribute the
+engine does not read on a plain-map field is REFUSED at declaration
+load, never accepted-and-ignored: `presence` (a plain map has no
+missing-key lane), `default` (nothing materializes into authored open
+data) and `channel` (read only on a field of a `map.fixed`) — the
+latter two by the standing load guards, the first by this amendment.
+This kills the measured silently-inert class for the widened grain;
+grains this act does not touch keep their standing guards and nothing
+else, so the rule's scope is exactly the widening's.
+
+**The live declaration does not adopt it in this act.** Its first user
+is P4's contract; the expected live behavioral delta is zero.
 
 ## Alternatives Considered
 
