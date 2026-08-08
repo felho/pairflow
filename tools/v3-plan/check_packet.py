@@ -683,7 +683,9 @@ def check_ratification_shape(name: str, index: int, block: object, checker: Chec
                 not isinstance(lock_path, str)
                 or not lock_path.strip()
                 or lock_path.startswith("/")
-                or ".." in lock_path
+                # a PARENT SEGMENT, not a substring — "schema..fixture.ts"
+                # is a legal filename (round-1 F1's false positive)
+                or ".." in lock_path.split("/")
             ):
                 checker.error(f"{label}.schema.path must be a nonempty repo-relative path")
             if not isinstance(schema["sha256"], str) or not SHA256_RE.match(schema["sha256"]):
@@ -769,6 +771,15 @@ def check_schema_lock(path: Path, schema: object, checker: Checker) -> None:
         return
     root, _rel = located
     target = root / lock_path
+    # round-1 F2: a symlink inside the root pointing OUTSIDE it must never
+    # satisfy the lock — the ratified bytes are the draft's own working
+    # tree's, so the RESOLVED target must stay under the resolved root.
+    if not target.resolve().is_relative_to(root.resolve()):
+        checker.error(
+            f"{name}: schema lock path '{lock_path}' resolves outside the draft's "
+            f"repository — the lock binds the draft's own working tree bytes"
+        )
+        return
     if not target.is_file():
         checker.error(
             f"{name}: schema lock path '{lock_path}' does not exist in the working "
@@ -2067,7 +2078,7 @@ def build_superseded_fixture() -> tuple[tempfile.TemporaryDirectory, Path, Path,
 
 # The pinned size of the red-fixture register (see the check at the end
 # of run_selftest for why a printed number was not enough).
-EXPECTED_RED_DIMS = 139
+EXPECTED_RED_DIMS = 140
 
 
 def run_selftest() -> int:
@@ -2859,6 +2870,52 @@ def run_selftest() -> int:
         True,
         None,
     )
+
+    def _schema_lock_symlink_escape() -> None:
+        # round-1 F2: a symlink inside the root pointing OUTSIDE it must
+        # never satisfy the lock, even with the outside bytes' true hash.
+        fixture = build_green_fixture()
+        if fixture is None:
+            failures.append("selftest fixture setup failed: schema-lock-symlink-escape")
+            return
+        tmp, root, draft, _packet, green = fixture
+        outside = root.parent / (root.name + "-outside.ts")
+        outside.write_text("outside declaration\n", encoding="utf-8")
+        (root / "schema-link.ts").symlink_to(outside)
+        true_sha = hashlib.sha256(outside.read_bytes()).hexdigest()
+        locked = green.replace(
+            '"arms": ["a", "b"], "commit"',
+            f'"arms": ["a", "b"], "schema": {{"path": "schema-link.ts", "sha256": "{true_sha}"}}, "commit"',
+        )
+        draft.write_text(locked, encoding="utf-8")
+        errors, _ = lint(root / "packets", root / "contracts", ADR_DIR)
+        assert_red("schema-lock-symlink-escape", errors, "resolves outside the draft's repository")
+        outside.unlink()
+        tmp.cleanup()
+
+    _schema_lock_symlink_escape()
+
+    def _schema_lock_dotted_filename_green() -> None:
+        # round-1 F1: ".." INSIDE a filename is not a parent segment — a
+        # regular file named schema..fixture.ts with its true hash is green.
+        fixture = build_green_fixture()
+        if fixture is None:
+            failures.append("selftest fixture setup failed: schema-lock-dotted-filename")
+            return
+        tmp, root, draft, _packet, green = fixture
+        decl = root / "schema..fixture.ts"
+        decl.write_text("export const declaration = { frozen: true };\n", encoding="utf-8")
+        true_sha = hashlib.sha256(decl.read_bytes()).hexdigest()
+        locked = green.replace(
+            '"arms": ["a", "b"], "commit"',
+            f'"arms": ["a", "b"], "schema": {{"path": "schema..fixture.ts", "sha256": "{true_sha}"}}, "commit"',
+        )
+        draft.write_text(locked, encoding="utf-8")
+        errors, _ = lint(root / "packets", root / "contracts", ADR_DIR)
+        expect_green("schema-lock-dotted-filename-green", errors)
+        tmp.cleanup()
+
+    _schema_lock_dotted_filename_green()
 
     def _tree_sha_fixture() -> None:
         # a TREE sha satisfies `git show <sha>:<path>` but is not an
