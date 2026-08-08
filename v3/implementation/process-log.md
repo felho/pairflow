@@ -5635,3 +5635,43 @@ final CLEAN.
   nothing else) and checked the pin header manually, and both matched.
   The fix for the next act is to write the verdict OUTSIDE the tree and
   move it in after the guard, and to stop piping the runner.
+
+- 2026-08-08 (ch13 re-derivation, P4 CLOSES — the first schema-first
+  contract RATIFIES, and the experiment's falsifiable claim holds at
+  this act) — THE PRODUCT: `contracts/ch13-context-block-v2-contract.md`
+  is `ratified` (aca7c2b8), the first contract whose ratifying block
+  binds TWO byte-sets — its own C-rows (equality lock, content commit
+  3cb4498c) and the declaration's bytes (the schema lock's first live
+  use: templateFormat.ts sha256 in the block, lint-checked by the new
+  D5b). Structural rules live as declaration nodes (13 ch13v2-rowed
+  nodes incl. the D10 `validKeysOf` belt and D11's typed subset —
+  BOTH vocabulary acts born from THIS authoring's executed probes);
+  the semantic residual is prose rows with named P5 owners. THE
+  MEASUREMENT (plan §5), against the prose line's 4 reopens ·
+  4+ panel frames + watchdog reset · 28·6·9·8: ZERO reopens, ZERO
+  unmeasured claims on the ratified rows (every MEASURED clause
+  carries a live-declaration receipt, every DERIVED a named measurer),
+  ZERO non-skeleton runs in the word-normalized never-copy sweep, no
+  watchdog exhaustion (3 panel rounds of 8; the 3rd opened through
+  the user at the STATED BET's boundary — the bet frame worked as
+  designed). The honest qualifiers, recorded so the comparison is not
+  read as more than it is: ~105 findings were found and dispositioned
+  BEFORE the act (3 panel rounds + close + arm×2) — the gain is where
+  defects die, not their count; and P5 still owes the claim's packet
+  half. THE ROAD'S OWN LESSONS, for the priors: a first-of-form
+  authoring pass prices a loss-hunting round, not zero reserve (bet 1
+  HALF); filesystem/path semantics are a runtime-semantics-grade
+  surprise home (bet 4 HALF — the schema-lock arm's `..`-substring
+  and symlink-escape catches); a guard's tokenizer is part of the
+  guard (the never-copy sweep's first-generation
+  whitespace-split masked 12 copied runs the word-normalized form
+  caught); an unnamed count invites the wrong grep (the arm's
+  needle error on C2's id count); and restoring a lost decision
+  precisely tends to re-import its wording — the never-copy rule and
+  the completeness pass pull in opposite directions and BOTH ran, so
+  the tension resolved into fresh wording carrying old decisions.
+  Aftermath incident, third confirmation of the measured class: a
+  tool-timeout kill mid-real-tmux-test orphaned a TERM-ignoring
+  client on the default socket (the 2026-08-07 mechanism exactly);
+  one orphan killed per that entry's remedy, re-run 2063/2063 —
+  the per-run-socket boundary candidate gains another receipt.

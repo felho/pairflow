@@ -429,3 +429,28 @@ found and dispositioned across them; ZERO contract reopens; ZERO
 STOP-class findings; the never-copy sweep 0 non-skeleton on the final
 bytes; citation closure clean both directions; every DECIDED-HERE
 marker receipted against the live declaration.
+
+## 15. The ratification act (2026-08-08, user GO — commit aca7c2b8)
+
+Flags R1–R4 (the four DECIDED-HERE markers) approved one at a time;
+flag R5 (the ADR-019 D4 gloss and closure-form clarification) approved
+with the GO. One ratifying commit: status draft → ratified; the block
+records the content commit 3cb4498c AND — the schema lock's first live
+use — templateFormat.ts's full sha256; the D4 amendment applied with
+its dated user-ratified marker; the metrics line records 3 panel
+rounds + close + arm×2, 4 markers, 0 reopenings. Post-commit lint: 0
+errors with BOTH locks binding.
+
+**The §5 experiment, settled at this act:** the falsifiable claim held
+— the v2 line reached ratification with ZERO reopens caused by
+unmeasured claims (zero reopens at all), zero watchdog exhaustion, and
+zero semantic paraphrases on the final bytes (the word-normalized
+sweep's 0 non-skeleton runs; the two byte-locked authorities make
+structural restatement impossible BY FORM, and the sweep measured the
+prose remainder). The prose line's comparison series: 4 reopens, 4+
+panel-frame rounds + a watchdog reset, 28·6·9·8. The honest
+qualifiers: (a) the improved line spent its findings BEFORE
+ratification — ~105 panel/arm findings dispositioned across 3+1+2
+rounds — so the gain is in WHERE the defects were caught, not in their
+count; (b) P5 (the packet + build) still owes the claim's second half
+(an approved packet with a zero-paraphrase final arm).
