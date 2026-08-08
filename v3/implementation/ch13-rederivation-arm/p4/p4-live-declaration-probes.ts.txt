@@ -75,6 +75,40 @@ both("L_bool_key", { contextBlocks: new Map<unknown, unknown>([[true, { body: "x
 console.log("L_bad_key_direct", JSON.stringify(run({ ...base, contextBlocks: { BAD: { body: "x" } } })));
 // capabilityProfile: channel-GATED by declaration (file refuses, direct legal):
 both("L_capability_profile", { capabilityProfile: {} }, "capabilityProfile: {}\n");
+// R2 additions — the receipt gaps the round-2 lenses named:
+// (a) refs BESIDE a refused catalog and BESIDE an absent catalog (C1's
+//     non-suppression clause, live), both channels;
+console.log("L_refused_catalog_with_ref", JSON.stringify(run({ ...base, contextBlocks: 42, steps: { s1: { role: "r1", instruction: "do", transitions: {}, agentConfig: { promptConcernRefs: ["ghost"] } } } })));
+{
+  const mk = (cb: string) => "ref: {id: probe, version: 1}\nstart: s1\nsteps:\n  s1:\n    role: r1\n    instruction: do\n    transitions: {}\n    agentConfig:\n      promptConcernRefs: [ghost]\nterminal: [done]\nroles:\n  r1: {}\n" + cb;
+  for (const [label, extra, yaml] of [
+    ["L_refused_catalog_with_ref_FILE", null, mk("contextBlocks: 42\n")],
+    ["L_absent_catalog_with_ref_FILE", null, mk("")],
+  ] as const) {
+    const doc = parseDocument(yaml);
+    console.log(label, JSON.stringify(run(doc.toJS({ mapAsMap: true }), { kind: "file", doc, source: yaml })));
+  }
+  console.log("L_absent_catalog_with_ref", JSON.stringify(run({ ...base, steps: { s1: { role: "r1", instruction: "do", transitions: {}, agentConfig: { promptConcernRefs: ["ghost"] } } } })));
+}
+// (b) the fail-closed class members routed through BOTH channels;
+both("L_42_both", { contextBlocks: 42 }, "contextBlocks: 42\n");
+both("L_emptystring_both", { contextBlocks: "" }, 'contextBlocks: ""\n');
+both("L_list_both", { contextBlocks: ["x"] }, "contextBlocks: [x]\n");
+// (c) an AUTHORED EMPTY ref list is legal and contributes zero refs;
+console.log("L_empty_authored_list", JSON.stringify(run({ ...base, roles: { r1: { defaultAgentConfig: { promptConcernRefs: [] } } } })));
+// (d) an undeclared sibling key beside the typed field stays open data;
+console.log("L_open_sibling", JSON.stringify(run({ ...base, contextBlocks: { alpha: { body: "x" } }, roles: { r1: { defaultAgentConfig: { promptConcernRefs: ["alpha"], skill_refs: ["free"], nested: { any: 1 } } } } })));
+// (e) a grammar-failing key beside a VALID sibling ref, live;
+console.log("L_bad_key_valid_sibling", JSON.stringify(run({ ...base, contextBlocks: { BAD: { body: "x" }, ok: { body: "y" } }, roles: { r1: { defaultAgentConfig: { promptConcernRefs: ["ok"] } } } })));
+// (f) PROBE-CB3 re-executed on the LIVE engine: quoted integer-like keys
+//     hoist to the front AND re-sort ascending among themselves;
+{
+  const yaml = 'ref: {id: probe, version: 1}\nstart: s1\nsteps:\n  s1:\n    role: r1\n    instruction: do\n    transitions: {ZZZ: done, "10": done, "2": done, AAA: done, "1": done}\nterminal: [done]\nroles:\n  r1: {}\n';
+  const doc = parseDocument(yaml);
+  const r = runSurface(templateFormat, doc.toJS({ mapAsMap: true }), { channel: { kind: "file", doc, source: yaml }, catalog: noCatalog });
+  const steps = (r.normalized as Record<string, unknown>)["steps"] as Record<string, { transitions: Record<string, string> }>;
+  console.log("L_cb3_reexec", JSON.stringify({ findings: r.findings.length, keyOrder: Object.keys(steps["s1"].transitions) }));
+}
 // the compound CLEAN success case (old C8(g)): populated catalog, every
 // entry referenced, every ref resolving -> zero findings:
 // (gate-free so the zero is a TRUE zero — a gate binding needs an injected

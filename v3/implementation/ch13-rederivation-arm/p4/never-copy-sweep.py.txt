@@ -1,0 +1,34 @@
+# The never-copy sweep — the corrected (word-normalized) instrument.
+# Usage: python3 never-copy-sweep.py.txt is not runnable as .txt; copy
+# to /tmp and run. Tokenizer: inline code spans stripped (cited tokens,
+# not prose), bare [a-z0-9]+ words, case- and punctuation-insensitive;
+# N=6-word shared runs between the v2 draft and the superseded
+# contract, overlapping runs merged. Verdict rule: only contract-draft
+# TEMPLATE skeleton and the D10-inherited belt sentence may survive.
+import re
+old = open('v3/implementation/contracts/ch13-context-block-contract.md').read().lower()
+new = open('v3/implementation/contracts/ch13-context-block-v2-contract.md').read().lower()
+def words(t):
+    t = re.sub(r'`[^`]*`', ' ', t)
+    return re.findall(r"[a-z0-9]+", t)
+ow, nw = words(old), words(new)
+N = 6
+oldgrams = set(tuple(ow[i:i+N]) for i in range(len(ow)-N+1))
+hits, i = [], 0
+while i < len(nw)-N+1:
+    g = tuple(nw[i:i+N])
+    if g in oldgrams:
+        j = i+N
+        while j < len(nw) and tuple(nw[j-N+1:j+1]) in oldgrams: j += 1
+        hits.append(' '.join(nw[i:j])); i = j
+    else: i += 1
+SKELETON = ["contract draft chapter", "context non normative by declaration",
+            "contract rows every normative statement", "ratification history empty at",
+            "realized map empty until chapter close", "draft metrics template 5 rounds to ratify",
+            "id rule c1"]
+D10 = ["key existence alone is not resolution"]
+nonskel = [h for h in hits if not any(s in h for s in SKELETON) and not any(d in h for d in D10)]
+for h in hits:
+    tag = "SKELETON" if any(s in h for s in SKELETON) else ("D10-INHERITED" if any(d in h for d in D10) else "NON-SKELETON")
+    print(f"--- [{tag}] {h}")
+print(f"TOTAL {len(hits)} runs; NON-SKELETON {len(nonskel)}")

@@ -1,1 +1,7 @@
-TOTAL 6 runs; SKELETON 5; D10-INHERITED 1; NON-SKELETON 0
+--- [SKELETON] contract context non normative by declaration
+--- [SKELETON] draft metrics template 5 rounds to ratify
+--- [SKELETON] contract rows every normative statement is a c row id rule c1
+--- [D10-INHERITED] key existence alone is not resolution
+--- [SKELETON] ratification history empty at blocks are appended by the lifecycle acts
+--- [SKELETON] realized map empty until chapter close
+TOTAL 6 runs; NON-SKELETON 0

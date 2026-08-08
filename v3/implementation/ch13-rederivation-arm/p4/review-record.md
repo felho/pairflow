@@ -50,9 +50,35 @@ so it has a repo home.)
 | PROBE-P4-2 | `p4-flag1-probe.ts.txt` (P2, P3) | pre-D11: a ref list inside `map.plain` unreachable (ghost/numeric/grammar-violating members, zero findings); a runtime `fields` attr on map.plain loaded silently inert |
 | PROBE-P4-3 | `p4-dup-resolution-probe.ts.txt` | DUP_GHOST: membership fires per shape-passing occurrence (both indices) beside the dup finding; DUP_BAD_SHAPE: a shape-failing member is invisible to every list-level lane; NONSTRING_KEY_FILE: boolean-keyed entry unaddressable by the string ref of the same spelling (two true findings); BAD_KEY_SIBLING: grammar-failing key draws the key lane, valid sibling ref resolves |
 
+| PROBE-P4-4 | `p4-live-declaration-probes.ts.txt` | the LIVE declaration at the ratifying basis, both channels: the fail-closed class at width (incl. present-null and the boolean members), refs beside refused/absent catalogs, the empty catalog and the EMPTY AUTHORED list, all three positions accumulating, the dup/shape receipts, the boolean key, open siblings, bad-key-with-resolving-sibling, the channel-gated capabilityProfile, the CB3 key-order re-execution (`["1","2","10","ZZZ","AAA"]`), and the compound clean zero. NOTE for auditors: the output's `L_empty_catalog_ref` line reports `agree:false` from the probe's own asymmetric inputs and is superseded by the `_FILE` twin on the next line; the only DESIGNED asymmetry in the file is `L_capability_profile`. |
+
 PROBE-P4-3's first two results are MEASURED DIVERGENCES from the
 superseded line's C8(e)/C7 grain decisions; contract v2 rows C7/C8
 carry them as DECIDED-HERE (v2) markers with these receipts.
+
+**The divergence RATIONALES (the arguments the rows deliberately do
+not carry — the 2026-08-08 inheritance rule's designed home):**
+- **C1 fail-closed** replaces the predecessor's normalize-any-
+  non-record-to-empty rule. Safe because the defect that rule healed —
+  a cast-forged catalog carried onto the admitted value — cannot arise
+  under an engine that validates the direct-construction channel: the
+  container lane refuses the forgery before any rebuild exists.
+- **C2 channel-independent key lane**: the predecessor placed the key
+  lane walk-side (file-only) because only the walk saw source keys;
+  under one declaration the lane runs wherever a key exists, which is
+  strictly fail-louder — no admit/refuse outcome moves, a direct-
+  channel authoring defect now gets the same diagnosis a file author
+  gets.
+- **C7 per-occurrence resolution** replaces first-occurrence-carries:
+  that rule made the duplicate lane decide the resolution lane's
+  domain — a cross-lane coupling of exactly the class whose deletion
+  the predecessor's own 2026-08-01 reopen ratified for the
+  key-exclusion case — and per-lane independence is the engine's
+  standing shape.
+- **C8 shape-failure invisibility** replaces the unconditional
+  raw-feed co-fire: a member that failed its own lane already carries
+  its trace, and feeding it to sibling lanes multiplied findings for
+  one defect while coupling lanes the engine keeps independent.
 
 ## 5. The D11 substrate act (the Flag #1 package)
 
@@ -169,7 +195,9 @@ USABILITY-2, confirmed by this phase's authoring):
 ## 9. Completeness pass (panel round 1, 2026-08-08 — old→new over 19 rows + 4 reopens)
 
 Run by a dedicated fresh-context Opus agent, direction OLD → NEW, at
-basis old=frozen@superseded, new=1b2b78aa7e9f376a @ 0ad7e5d9. The
+round-1 basis old=frozen@superseded, new=1b2b78aa7e9f376a @ 0ad7e5d9;
+re-checked at round 2 on c01db023bcd0240c @ 17659831, and the round-2
+fold's post-state is the ratifying basis. The
 table's verdicts; the round-1 fold (recorded in §10) restored every
 lost item the pass flagged, so the post-fold state is the one the
 ratifying act binds.
@@ -204,7 +232,9 @@ The pass's findings (1 P1, 2 P2, 7 P3) and their dispositions are in
 the §10 round record — every lost item was FOLDED back in round 1;
 the P1 (registry flip) and both P2s (optionality grain, invariant
 homes) are restored in v2 C13 and the invariant homes on C7/C10/C11/
-C13. Verdict (the agent's, standing): the v2 line carries the old
+C13 — and, at the round-2 fold, on C14 (communication-only, with the
+REV-line byte-scope binding) and C15 (deterministic-ordered-render),
+completing all six. Verdict (the agent's, standing): the v2 line carries the old
 line's decisions substantially without loss and in places carries
 them better; no reopen decision vanished quietly; the divergences are
 marked and receipted.
@@ -248,3 +278,44 @@ directory's transcripts are not committed — the reports' substance is
 this section). Round 2 (the post-fold re-run) is FULL by the
 escalation rule (claim-structure changes + a manifest-class change:
 the fourth DECIDED-HERE marker).
+
+## 11. Panel round 2 (2026-08-08) — full six-agent re-run, and its fold
+
+Basis: contract c01db023bcd0240c, declaration a355ada64c35ed7c @
+17659831. Yield: 1 P1 (the C13 channel question — resolved by carrying
+the producer-monopoly precedent's declaration half: normalized
+positions channel-gated to direct at P5, the `advancesRound` pattern's
+own stated reason) · ~13 P2 · ~20 P3/watchpoint. ZERO STOP-class.
+Notable: three lenses independently converged on C19's exclusion
+arithmetic; two on the C13 channel seam; the completeness re-check
+verified every round-1 restoration ON THE BYTES and caught the fold's
+own transit loss (the evacuated rationales — now written above in §4's
+rationales block, making the Context's claim true).
+
+The round-2 fold: C13 gains the CHANNEL GRAIN and FIELD SPELLINGS
+clauses and the carry∪into gloss fix; C4 homes the authored EMPTY
+list, the mode-tagged member's forward scope, and the aggregate-note
+retirement (with C1's chain-retirement clause); C1's class-width gloss
+re-worded to the declared lane's own boundary (the degenerate-object
+accept named); C2/C1/C9 lose their predecessor-rule descriptions; C7's
+grain gloss pointered; C8 scopes its clean receipt gate-free; C9 names
+the gate chain's enclosures; C10's re-execution claim gains its live
+receipt (the CB3 case joined PROBE-P4-4); C12 carries the rename
+relation's whole normative content; C14/C15 gain the last two
+invariant homes (C14 with the REV byte-scope binding and its ch12-C10/
+ch11-C27/ch9-C18 row ids); C16's carrier pointer corrected to §2-under-
+§5 and its criterion scoped against C12's tree-wide ripple; C19
+re-parameterized over VALIDATION nodes with three named exclusions.
+The probe suite grew the round's receipt gaps (refused/absent catalog
+WITH refs both channels, the class members routed through both channels, the
+empty authored list, open siblings, bad-key-with-resolving-sibling,
+the CB3 re-execution); the sweep script is committed beside its
+output; the templateFormat header and the domain comment aligned; the
+plan gained §13.5(g) (the pointer-maintenance carrier), the live P5
+packet's mode+prediction row, and the Shipped line's stamp.
+
+Dispositions: folded ~30 · declined 0 · routed 0 · the rest
+considered/cleared in the lens outputs. The panel bet (2 rounds, the
+3rd through the user) is now at its boundary — the 3rd (targeted)
+round after this content fold opens through the user, per the ratified
+STOP-1 work plan.

@@ -1,4 +1,7 @@
-# PROBE-P4-4 — executed against the LIVE declaration (post-fold basis; see review record §4)
+# PROBE-P4-4 — executed against the LIVE declaration at the round-2-fold basis.
+# AUDITOR NOTE: L_empty_catalog_ref's agree:false is the probe's own asymmetric
+# inputs, superseded by the _FILE twin on the next line; the only DESIGNED
+# channel asymmetry in this file is L_capability_profile.
 L_null_direct {"findings":[{"path":"contextBlocks","message":"contextBlocks must be a map of block-id -> { body }; got null"}]}
 L_null {"direct":{"findings":[{"path":"contextBlocks","message":"contextBlocks must be a map of block-id -> { body }; got null"}]},"file":{"findings":[{"path":"contextBlocks","message":"contextBlocks must be a map of block-id -> { body }; got null"}]},"agree":true}
 L_42 {"findings":[{"path":"contextBlocks","message":"contextBlocks must be a map of block-id -> { body }; got 42"}]}
@@ -13,4 +16,15 @@ L_dup_badshape {"findings":[{"path":"roles.r1.defaultAgentConfig.promptConcernRe
 L_bool_key {"direct":{"findings":[{"path":"contextBlocks","message":"invalid context block id true: block ids are kebab-case strings"},{"path":"roles.r1.defaultAgentConfig.promptConcernRefs[0]","message":"context block ref \"true\" does not resolve to an entry","code":"unresolved_context_block_ref"}],"ctx":{}},"file":{"findings":[{"path":"contextBlocks","message":"invalid context block id true: block ids are kebab-case strings"},{"path":"roles.r1.defaultAgentConfig.promptConcernRefs[0]","message":"context block ref \"true\" does not resolve to an entry","code":"unresolved_context_block_ref"}],"ctx":{}},"agree":true}
 L_bad_key_direct {"findings":[{"path":"contextBlocks","message":"invalid context block id \"BAD\": block ids match ^[a-z][a-z0-9-]*$"}],"ctx":{"BAD":{"body":"x"}}}
 L_capability_profile {"direct":{"findings":[],"ctx":{}},"file":{"findings":[{"path":"capabilityProfile","message":"unknown key \"capabilityProfile\" (fixed keysets grow only by ratified additive keys — V16 reserves \"kind\")"}],"ctx":{}},"agree":false}
+L_refused_catalog_with_ref {"findings":[{"path":"contextBlocks","message":"contextBlocks must be a map of block-id -> { body }; got 42"},{"path":"steps.s1.agentConfig.promptConcernRefs[0]","message":"context block ref \"ghost\" does not resolve to an entry","code":"unresolved_context_block_ref"}]}
+L_refused_catalog_with_ref_FILE {"findings":[{"path":"contextBlocks","message":"contextBlocks must be a map of block-id -> { body }; got 42"},{"path":"steps.s1.agentConfig.promptConcernRefs[0]","message":"context block ref \"ghost\" does not resolve to an entry","code":"unresolved_context_block_ref"}]}
+L_absent_catalog_with_ref_FILE {"findings":[{"path":"steps.s1.agentConfig.promptConcernRefs[0]","message":"context block ref \"ghost\" does not resolve to an entry","code":"unresolved_context_block_ref"}],"ctx":{}}
+L_absent_catalog_with_ref {"findings":[{"path":"steps.s1.agentConfig.promptConcernRefs[0]","message":"context block ref \"ghost\" does not resolve to an entry","code":"unresolved_context_block_ref"}],"ctx":{}}
+L_42_both {"direct":{"findings":[{"path":"contextBlocks","message":"contextBlocks must be a map of block-id -> { body }; got 42"}]},"file":{"findings":[{"path":"contextBlocks","message":"contextBlocks must be a map of block-id -> { body }; got 42"}]},"agree":true}
+L_emptystring_both {"direct":{"findings":[{"path":"contextBlocks","message":"contextBlocks must be a map of block-id -> { body }; got \"\""}]},"file":{"findings":[{"path":"contextBlocks","message":"contextBlocks must be a map of block-id -> { body }; got \"\""}]},"agree":true}
+L_list_both {"direct":{"findings":[{"path":"contextBlocks","message":"contextBlocks must be a map of block-id -> { body }; got a list"}]},"file":{"findings":[{"path":"contextBlocks","message":"contextBlocks must be a map of block-id -> { body }; got a list"}]},"agree":true}
+L_empty_authored_list {"findings":[],"ctx":{}}
+L_open_sibling {"findings":[],"ctx":{"alpha":{"body":"x"}}}
+L_bad_key_valid_sibling {"findings":[{"path":"contextBlocks","message":"invalid context block id \"BAD\": block ids match ^[a-z][a-z0-9-]*$"}],"ctx":{"BAD":{"body":"x"},"ok":{"body":"y"}}}
+L_cb3_reexec {"findings":0,"keyOrder":["1","2","10","ZZZ","AAA"]}
 L_clean_compound {"findings":[],"ctx":{"emit-envelope":{"body":"text"},"no-converged-before-round-2":{"body":"t2"}}}

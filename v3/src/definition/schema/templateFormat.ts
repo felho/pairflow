@@ -8,10 +8,12 @@ import type { NodeDecl, SurfaceDecl } from "./vocabulary.js";
  * `normalizer.ts` (the derivation capability, D3).
  *
  * The two-authority rule (D4): the CONTRACT states decisions and cites the
- * `tag` values below; it restates no attribute. A structural rule visible
- * in both places is a defect; citation closure (every tag cited exists,
- * every contract-rowed node is cited) is checked mechanically at review —
- * no standing code check exists for it yet.
+ * `tag` values below; a row's passing gloss of an attribute is non-binding
+ * paraphrase and THESE bytes govern (the contract's Context states the
+ * rule). A structural rule carried NORMATIVELY in both places is a defect;
+ * citation closure (every tag cited exists; every node rowed to a contract
+ * is cited by it) is checked mechanically at review — no standing code
+ * check exists for it yet.
  *
  * Every node below realizes the re-expression column of
  * `v3/implementation/schema-expressiveness-audit.md` (the standing pin is

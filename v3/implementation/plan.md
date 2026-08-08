@@ -2907,7 +2907,16 @@ packet (`ch13-rederivation-plan.md` phase P5 — definition side and
 dispatch side; the P1/P2 split of the table above is the prose line's
 and does not bind the re-derivation). The v2 draft carries NO
 cross-contract reopen act: the ch11 binding keyset is already
-ch11-C4's realized text.
+ch11-C4's realized text. The live packet's row values, recorded HERE
+at the v2 ratification (the §1.3 convention's recorded-at-ratification
+rule): **ch13-p1 v2** — content: the definition side and the dispatch
+side in one packet (declaration growth + the C13 normalizer hook and
+carry-list growth, the C9 lane, the render and the packet field, the
+registry flips, the C16/C18 fixture duties); mode: flag-free approve →
+autonomous build (measurement — the §5.5 fallbacks stand, the two
+transitional external-arm gates unchanged); predicted: projection
+(basis: `contracts/ch13-context-block-v2-contract.md` — ratified). A
+split into ch13-p1a/p1b inherits this row's values unchanged.
 
 Mutation-pilot flow note: the pilot DUAL-RUNS beside arm gate-2 on
 every packet of this chapter, catches labeled code-mutation vs
@@ -2919,7 +2928,8 @@ decides keep or stop.
 
 Shipped: this section; the ratified-then-realized
 `ch13-context-block-v2` contract-draft (its superseded predecessor
-stays in the tree, frozen, as the decision record); the EPIPE fix; the
+stays in the tree, frozen, as the decision record — aligned at the
+ch13 contract-v2 ratification, 2026-08-08); the EPIPE fix; the
 definition-load ref check + its issue lane; the three context format
 keys; the dispatch-time render + the packet field; the shipped
 template's first catalog entry; the journey smoke.
@@ -2969,4 +2979,14 @@ not need the ban — aligned at the ch13 contract-v2 ratification,
 with migration text; an untruncated draft-time sweep found ZERO
 affected files, so the ban is free now and only gets more expensive
 with time) or WATCH; a deferred adoption likewise enters §1.3 as a
-carried item.
+carried item; and (g) the ch11 POINTER MAINTENANCE (routed here by
+the ch13 contract-v2 draft's named carried scope, 2026-08-08):
+`ch11-gate-format-contract.md` names `contract:ch13-context-block#C6`
+in C4, C30, C41, the fourth reopen record and three `realized_map`
+entries — the pointed-at SEMANTICS are carried unchanged by
+ch13v2-C6, so this is pointer maintenance, not meaning drift, and no
+lint catches it (the realized-map scanner matches same-contract refs
+only; the packet-anchor rule is manifest-scoped). The boundary
+decides REPOINT (a ch11 annotation act, tense/pointer conversions
+only) or LEAVE-WITH-RECORD; either way the decision is recorded,
+never a silent lapse.
