@@ -723,6 +723,14 @@ function collectDependsOn(decl: NodeDecl, where: string, into: { tag: string; wh
     case "map.fixed":
       for (const [name, field] of Object.entries(decl.fields)) collectDependsOn(field, `${where}.${name}`, into);
       return;
+    case "map.plain":
+      // D11: the typed subset's rules join the closure like any others
+      // (arm D11-R1 F1: a ghost dependsOn inside a plain field slipped
+      // the gate because this traversal predated the widening).
+      for (const [name, field] of Object.entries(decl.fields ?? {})) {
+        collectDependsOn(field, `${where}.${name}`, into);
+      }
+      return;
     case "map.open":
       add(decl.keysSubsetOf?.dependsOn, `${where}.keysSubsetOf`);
       if (decl.keyClass !== undefined) collectDependsOn(decl.keyClass, `${where}<key>`, into);

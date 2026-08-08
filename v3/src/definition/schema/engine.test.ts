@@ -1043,6 +1043,22 @@ describe("the typed subset on a plain map (ADR-019 D11)", () => {
     ]);
   });
 
+  it("a DIRECT-channel JS Map is not a plain map — refused, subset suppressed", () => {
+    // The direct channel's input contract is the domain type: a plain
+    // record. A string-keyed Map would realize to a record and slip the
+    // plain gate, running the subset over a container the vocabulary's
+    // own contract excludes.
+    expect(direct(root, { cfg: new Map([["refs", ["BAD"]]]) })).toStrictEqual([
+      { path: "cfg", message: "cfg must be a plain map" },
+    ]);
+  });
+
+  it("DISCRIMINATES: the FILE channel's resolved maps ARE Maps and still realize", () => {
+    expect(fromFile(root, "cfg:\n  refs:\n    - BAD\n")).toStrictEqual([
+      { path: "cfg.refs[0]", message: "cfg.refs[0]: bad id" },
+    ]);
+  });
+
   it("a CANONICAL violation likewise gates the subset", () => {
     expect(direct(root, { cfg: { refs: ["BAD"], broken: Number.NaN } })).toStrictEqual([
       { path: "cfg", message: "cfg must be canonical-JSON-safe" },
@@ -1670,6 +1686,18 @@ describe("the declaration GATE: a declaration that is not closed never becomes a
           id: { kind: "valueClass", tag: "id", rows: ["x"], valueClass: "idClass" },
         } }),
       problem: /dependsOn names "ghost-tag", which is not a declared tag/u },
+    { claim: "a dependsOn INSIDE a typed plain-map field naming a tag nothing declares (D11)",
+      make: (ok) => base({}, {
+        fields: {
+          names: { kind: "map.open", tag: "n", rows: ["x"], containerMessage: "c", keyLaneAt: "container",
+            entry: { kind: "string", tag: "ne", rows: ["x"], typeMessage: "t" } },
+          cfg: { kind: "map.plain", tag: "cfg", rows: ["x"], containerMessage: "c",
+            canonicalJsonSafe: { message: "k" },
+            fields: { pick: { kind: "string", tag: "pick", rows: ["x"], typeMessage: "t",
+              memberOf: { relation: "memberOf", target: { keysOf: "$.names" }, message: "m",
+                dependsOn: [ok ? "n" : "ghost-tag"] } } } },
+        } }),
+      problem: /dependsOn names "ghost-tag", which is not a declared tag/u },
     { claim: "a tag declared twice",
       make: (ok) => base({}, { fields: { id: { kind: "valueClass", tag: ok ? "id" : "root", rows: ["x"], valueClass: "idClass" } } }),
       problem: /tag "root" is declared more than once/u },
@@ -1912,7 +1940,7 @@ describe("the declaration GATE: a declaration that is not closed never becomes a
   }
 
   it("the guard register is complete, unique and PINNED", () => {
-    expect(GUARDS).toHaveLength(42);
+    expect(GUARDS).toHaveLength(43);
     expect(new Set(GUARDS.map((guard) => guard.claim)).size).toBe(GUARDS.length);
   });
 

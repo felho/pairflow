@@ -1522,6 +1522,15 @@ function evalMapPlain(
 ): NodeResult {
   const value = frame.value;
   const slots = baseSlots(frame);
+  // The DIRECT channel's input contract is the domain type — a plain
+  // record. A string-keyed JS Map realizes to a record and would slip
+  // the plain gate (arm D11-R1 F2), so the raw value is judged there;
+  // the FILE channel's resolved maps ARE Maps (the YAML representation
+  // of an authored plain map) and keep realizing.
+  if (run.channel.kind === "direct" && isResolvedMap(value)) {
+    run.emit(frame.path, render(decl.containerMessage, { ...slots, value }));
+    return { ok: false };
+  }
   const realized = materialize(value, run.memo);
   if (!isPlainMap(realized)) {
     run.emit(frame.path, render(decl.containerMessage, { ...slots, value: realized }));
