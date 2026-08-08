@@ -91,6 +91,21 @@ own rules. The lifecycle acts APPEND:
   {"ratification": {"date": "YYYY-MM-DD", "arms": ["<arm>", "…"], "commit": "<content-commit sha>"}}
   ```
 
+  A SCHEMA-FIRST contract (one whose structural rows are declaration
+  pointers, ADR-019 D4) additionally binds the declaration file's
+  bytes in the same act — "one hash line per act":
+
+  ```json
+  {"ratification": {"date": "…", "arms": ["…"], "commit": "…",
+    "schema": {"path": "<repo-relative declaration file>", "sha256": "<64-hex of its bytes>"}}}
+  ```
+
+  The `schema` key is OPTIONAL (pre-schema contracts carry none) and
+  its lock is checked on the LATEST block only, exactly like the
+  commit-equality lock; the two-commit choreography is unchanged —
+  the content commit lands rows AND schema edits, the ratifying
+  commit records both locks.
+
 - **At chapter close** (the boundary review — which also flips status
   to `realized`, in the SAME act; ANY map presence requires
   `realized`):
@@ -157,6 +172,22 @@ carried-scope, never built against.
   the record — the block lands in a follow-up commit. Older blocks
   are human-readable history verified by diff review, not tier 0
   (the stated threat model, README §5.5).
+- **The schema lock (schema-first contracts, ADR-019 D4):** a
+  ratification block MAY carry `schema` with exact keyset
+  `{path, sha256}` — `path` a repo-relative existing file, `sha256`
+  64 LOWERCASE hex. Shape-checked on EVERY block that carries it; the
+  BYTE check runs on the LATEST block only, in `ratified`, `realized`
+  and `superseded` (suspended ONLY at `reopened`, with the equality
+  check and for the same reason): the working tree file's sha256
+  equals the recorded value, else LOUD red — an edit of the
+  declaration file after ratification is an unratified schema change
+  until a new act records the new bytes. Threat model (user-ratified
+  2026-08-08, the §3 header's sentence applied): ACCIDENT and
+  SLOPPINESS — an unratified schema edit, a stale or mistyped hash, a
+  wrong path; deliberate concealment stays with human diff review and
+  the arm. Multiple contracts locking ONE file each red on any edit
+  of it — designed (a schema edit is an act), revisited as a boundary
+  topic when a second locking contract exists.
 - **State consistency (decidable from the current bytes alone):**
   ratification block(s) present ⇔ status ∈ {ratified, reopened,
   realized, superseded}; status `draft` ⇒ no blocks; the equality

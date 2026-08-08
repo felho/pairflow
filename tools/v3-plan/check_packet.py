@@ -137,7 +137,22 @@ Drafts (v3/implementation/contracts/*.md, README.md excluded):
       2026-13-40 and a non-leap 2026-02-29 — a mistyped month is the
       ordinary accident); nonempty string-list arms; 7-40 lowercase-hex
       commit. Dates non-decreasing in document order; "latest block" =
-      the LAST block in document order.
+      the LAST block in document order. A block MAY additionally carry
+      schema = {path, sha256} (the ADR-019 D4 byte lock for
+      schema-first contracts): exact inner keyset; path a nonempty
+      repo-relative string; sha256 64 lowercase hex — shape-checked on
+      every block that carries it.
+  D5b. The SCHEMA LOCK (template §3; user-ratified 2026-08-08): when
+      the LATEST block carries schema, the working tree file at its
+      path must EXIST and its bytes must hash to the recorded sha256 —
+      bound at ratified|realized|superseded, suspended ONLY at
+      reopened (with D5 and for the same reason). A missing file or a
+      differing hash is a LOUD error, never a skip: an edit of the
+      declaration file after ratification is an unratified schema
+      change until a new act records the new bytes. Threat model:
+      accident and sloppiness (an unratified schema edit, a stale or
+      mistyped hash, a wrong path) — deliberate concealment stays with
+      human diff review and the arm.
   D4. State consistency (decidable from the current bytes alone):
       ratification block(s) present <=> status in {ratified, reopened,
       realized, superseded}; status draft => no blocks.
@@ -255,6 +270,7 @@ from __future__ import annotations
 
 import argparse
 import datetime
+import hashlib
 import json
 import re
 import subprocess
@@ -304,6 +320,7 @@ RATIFIED_OR_LATER = ("ratified", "realized")
 EQUALITY_BOUND = ("ratified", "realized", "superseded")
 CONTRACT_DRAFT_KEYS = {"chapter", "surface", "status"}
 SUPERSEDED_KEYS = {"date", "oracle_branch", "oracle_tip", "plan"}
+SCHEMA_LOCK_KEYS = {"path", "sha256"}
 MUTATION_BOUNDARY_KEYS = {"files"}
 PACKET_ROWS_KEYS = {"rows"}
 ROW_KEYS = {"id", "class", "refs"}
@@ -410,6 +427,7 @@ def is_calendar_date(value: object) -> bool:
         return False
     return True
 COMMIT_RE = re.compile(r"^[0-9a-f]{7,40}$")
+SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 # D8.4: the oracle tip is pinned FULL — an abbreviated sha is a
 # prefix claim that a future object can collide with, and the record
 # is meant to outlive every session that could re-derive it.
@@ -642,11 +660,34 @@ def c_row_lines(text: str) -> list[str]:
 
 
 def check_ratification_shape(name: str, index: int, block: object, checker: Checker) -> None:
-    """D3: strict shape for EVERY ratification block."""
+    """D3: strict shape for EVERY ratification block. The OPTIONAL
+    schema key (the ADR-019 D4 byte lock) is shape-checked here on
+    every block that carries it; its BYTE check (D5b) runs on the
+    latest block only, beside the D5 equality check."""
     label = f"{name}: ratification[{index}]"
-    if not isinstance(block, dict) or set(block.keys()) != RATIFICATION_KEYS:
-        checker.error(f"{label} must be an object with exactly keys {sorted(RATIFICATION_KEYS)}")
+    if not isinstance(block, dict) or set(block.keys()) - {"schema"} != RATIFICATION_KEYS:
+        checker.error(
+            f"{label} must be an object with exactly keys {sorted(RATIFICATION_KEYS)}"
+            f" (plus the optional schema lock)"
+        )
         return
+    if "schema" in block:
+        schema = block["schema"]
+        if not isinstance(schema, dict) or set(schema.keys()) != SCHEMA_LOCK_KEYS:
+            checker.error(
+                f"{label}.schema must be an object with exactly keys {sorted(SCHEMA_LOCK_KEYS)}"
+            )
+        else:
+            lock_path = schema["path"]
+            if (
+                not isinstance(lock_path, str)
+                or not lock_path.strip()
+                or lock_path.startswith("/")
+                or ".." in lock_path
+            ):
+                checker.error(f"{label}.schema.path must be a nonempty repo-relative path")
+            if not isinstance(schema["sha256"], str) or not SHA256_RE.match(schema["sha256"]):
+                checker.error(f"{label}.schema.sha256 must be a 64-character lowercase-hex sha256")
     if not is_calendar_date(block["date"]):
         checker.error(f"{label}.date must be a YYYY-MM-DD string naming a real calendar day")
     arms = block["arms"]
@@ -705,6 +746,43 @@ def check_recorded_equality(
             f"{path.name}: C-rows differ from the latest ratification's recorded "
             f"commit {commit[:12]} — a post-ratification row edit needs "
             f"re-ratification (the reopen choreography)"
+        )
+
+
+def check_schema_lock(path: Path, schema: object, checker: Checker) -> None:
+    """D5b: the working tree's declaration file hashes to the recorded
+    sha256. A broken lock is LOUD, never a skip — a missing file or a
+    differing hash means the declaration's bytes are not the ratified
+    ones. Runs only when the shape (D3) already holds; a malformed
+    schema block was reported there and proves nothing here."""
+    name = path.name
+    if not isinstance(schema, dict) or set(schema.keys()) != SCHEMA_LOCK_KEYS:
+        return  # shape already reported by D3
+    lock_path, recorded = schema["path"], schema["sha256"]
+    if not isinstance(lock_path, str) or not isinstance(recorded, str) or not SHA256_RE.match(recorded):
+        return  # shape already reported by D3
+    located = git_root_and_rel(path)
+    if located is None:
+        checker.error(
+            f"{name}: not inside a git repository — the schema lock cannot be verified"
+        )
+        return
+    root, _rel = located
+    target = root / lock_path
+    if not target.is_file():
+        checker.error(
+            f"{name}: schema lock path '{lock_path}' does not exist in the working "
+            f"tree — the ratified declaration file is missing (a broken lock is "
+            f"LOUD, never a skip)"
+        )
+        return
+    actual = hashlib.sha256(target.read_bytes()).hexdigest()
+    if actual != recorded:
+        checker.error(
+            f"{name}: schema file '{lock_path}' bytes differ from the recorded "
+            f"sha256 ({recorded[:12]}… recorded, {actual[:12]}… in the working "
+            f"tree) — an edit of the declaration after ratification is an "
+            f"unratified schema change until a new act records the new bytes"
         )
 
 
@@ -910,6 +988,10 @@ def check_draft(path: Path, checker: Checker) -> dict | None:
         commit = latest.get("commit") if isinstance(latest, dict) else None
         if isinstance(commit, str) and COMMIT_RE.match(commit):
             check_recorded_equality(path, commit, c_row_lines(text), checker)
+        # D5b the schema lock — the LATEST block only, same statuses,
+        # suspended only at reopened with D5 and for the same reason.
+        if isinstance(latest, dict) and "schema" in latest:
+            check_schema_lock(path, latest["schema"], checker)
 
     # D7 realized map — ANY map block present <=> realized + complete.
     maps = block_by_key(blocks, "realized_map")
@@ -1985,7 +2067,7 @@ def build_superseded_fixture() -> tuple[tempfile.TemporaryDirectory, Path, Path,
 
 # The pinned size of the red-fixture register (see the check at the end
 # of run_selftest for why a printed number was not enough).
-EXPECTED_RED_DIMS = 135
+EXPECTED_RED_DIMS = 139
 
 
 def run_selftest() -> int:
@@ -2720,6 +2802,63 @@ def run_selftest() -> int:
         tmp.cleanup()
 
     _dates_decreasing_fixture()
+
+    # ---- D3/D5b the schema lock (user-ratified 2026-08-08)
+    def _schema_lock_fixture(name: str, schema_json, write_file: bool, substr: str | None) -> None:
+        """A green draft whose latest block carries a schema lock over a
+        fixture declaration file; `schema_json` is a callable taking the
+        file's true sha256 and returning the block's schema object text."""
+        fixture = build_green_fixture()
+        if fixture is None:
+            failures.append(f"selftest fixture setup failed: {name}")
+            return
+        tmp, root, draft, _packet, green = fixture
+        decl = root / "schema-fixture.ts"
+        if write_file:
+            decl.write_text("export const declaration = { frozen: true };\n", encoding="utf-8")
+        true_sha = hashlib.sha256(decl.read_bytes()).hexdigest() if write_file else "0" * 64
+        locked = green.replace(
+            '"arms": ["a", "b"], "commit"',
+            f'"arms": ["a", "b"], "schema": {schema_json(true_sha)}, "commit"',
+        )
+        draft.write_text(locked, encoding="utf-8")
+        errors, _ = lint(root / "packets", root / "contracts", ADR_DIR)
+        if substr is None:
+            expect_green(name, errors)
+        else:
+            assert_red(name, errors, substr)
+        tmp.cleanup()
+
+    _schema_lock_fixture(
+        "schema-lock-bad-keyset",
+        lambda sha: '{"path": "schema-fixture.ts"}',
+        True,
+        "schema must be an object with exactly keys",
+    )
+    _schema_lock_fixture(
+        "schema-lock-bad-sha-shape",
+        lambda sha: '{"path": "schema-fixture.ts", "sha256": "xyz"}',
+        True,
+        "64-character lowercase-hex sha256",
+    )
+    _schema_lock_fixture(
+        "schema-lock-path-missing",
+        lambda sha: f'{{"path": "no-such-file.ts", "sha256": "{sha}"}}',
+        True,
+        "does not exist in the working tree",
+    )
+    _schema_lock_fixture(
+        "schema-lock-hash-mismatch",
+        lambda sha: f'{{"path": "schema-fixture.ts", "sha256": "{"f" * 64}"}}',
+        True,
+        "bytes differ from the recorded sha256",
+    )
+    _schema_lock_fixture(
+        "schema-lock-green",
+        lambda sha: f'{{"path": "schema-fixture.ts", "sha256": "{sha}"}}',
+        True,
+        None,
+    )
 
     def _tree_sha_fixture() -> None:
         # a TREE sha satisfies `git show <sha>:<path>` but is not an
