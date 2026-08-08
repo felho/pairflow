@@ -176,3 +176,21 @@ dated process-log entry) and cites row ids, never copies sentences;
 schema-covered how). The carried-vs-superseded-by-schema triage
 happens there, per decision, in place. Phase order: P1 → P3 → P4 →
 P5.
+
+Amendment, user-ratified 2026-08-08: the P4 inheritance rule's
+CITATION half is revised. The 2026-08-05 amendment required every v2
+row and declaration to cite its source row INLINE; weighed against
+its own costs — every citation is a checkable claim (the e7b94ed5
+rule), the machine-locked prose regains back-door authority through
+in-text references, and the ratified artifact gains noise — the
+inline form loses. The revised form: the v2 contract carries ONE
+header supersession line ("successor of ch13-context-block,
+superseded 2026-08-05; inheritance verified by the P4 completeness
+pass") and NO per-row back-references; the old→new mapping lives in
+the P4 REVIEW RECORD (the completeness pass over the 19 rows + 4
+reopen records, committed as evidence beside the panel/arm
+verdicts); the NEVER-COPY-SENTENCES rule stands unchanged; a
+decision unintelligible without its history may carry a brief
+non-normative Context note, sparingly. The completeness pass remains
+the load-bearing guarantee — it runs old→new, the direction that
+catches loss.
