@@ -9,17 +9,21 @@ import type { NodeDecl, SurfaceDecl } from "./vocabulary.js";
  *
  * The two-authority rule (D4): the CONTRACT states decisions and cites the
  * `tag` values below; it restates no attribute. A structural rule visible
- * in both places is a defect, and the tag-closure check
- * (`collectTags` in `engine.ts`) is its tripwire.
+ * in both places is a defect; citation closure (every tag cited exists,
+ * every contract-rowed node is cited) is checked mechanically at review —
+ * no standing code check exists for it yet.
  *
  * Every node below realizes the re-expression column of
- * `v3/implementation/schema-expressiveness-audit.md` (standing sha256
- * `bfed8210…`) and carries the ratified rows it realizes in `rows`. The
- * audited residual stays PROSE/CODE and is NOT declared here: R1 (the
- * value-shaped reference belt), R2 (unreferenced hygiene), R3 (the
- * existential cross-rule over resolved registrations), R4 (derivation —
- * the normalizer's), R5 (the cross-artifact store check), R6 (substrate
- * wording), R7 (see `d-gate-config`'s note).
+ * `v3/implementation/schema-expressiveness-audit.md` (the standing pin is
+ * recorded in ADR-019's Context — never restated here, so it cannot go
+ * stale twice) and carries the ratified rows it realizes in `rows`. The
+ * audited residual stays PROSE/CODE and is NOT declared here — R2
+ * (unreferenced hygiene), R3 (the existential cross-rule over resolved
+ * registrations), R4 (derivation — the normalizer's), R5 (the
+ * cross-artifact store check), R6 (substrate wording), R7 (see
+ * `d-gate-config`'s note) — with ONE exception since D10: R1's
+ * value-shaped reference belt became the `validKeysOf` construct and IS
+ * declared below (`vc-blockidlist`).
  */
 
 // ---------------------------------------------------------------------------
@@ -613,7 +617,9 @@ export const templateFormat: SurfaceDecl = defineSurface({
       },
     },
     // ch8-C23: the CLOSED issue-code namespace, disjoint from registry
-    // names. `unresolved_context_block_ref` is ratified-but-unbuilt.
+    // names. `unresolved_context_block_ref` rides the declared resolution
+    // lane below since the ch13v2 adoption; its end-to-end CLI travel is
+    // P5's (ch13v2-C18).
     codes: {
       tag: "d-codes",
       rows: ["ch8-C23"],
@@ -663,7 +669,9 @@ export const templateFormat: SurfaceDecl = defineSurface({
     },
     {
       tag: "n-effective-config",
-      rows: ["ch11-C20", "ch11-C5"],
+      // ch13v2-C13 legislates this hook's carry-list growth at P5 — the
+      // row citation keeps the coupling inside the closure check.
+      rows: ["ch11-C20", "ch11-C5", "ch13v2-C13"],
       hook: "materializeEffectiveConfigs",
       over: "$.steps.*.gates",
       carry: ["uses"],

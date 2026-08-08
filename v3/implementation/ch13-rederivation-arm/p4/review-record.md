@@ -128,17 +128,22 @@ carry them as DECIDED-HERE (v2) markers with these receipts.
    descent-composition omissions) and the frame absorbed both within
    its cap: 2 findings → fold → 0/0/0, closed at round 2 of 3.
 
-## 7a. The never-copy sweep (authoring-side, executed 2026-08-08)
+## 7a. The never-copy sweep (authoring-side; METHOD CORRECTED at panel round 1)
 
-The v2 draft was checked MECHANICALLY against the superseded contract
-for shared runs of six or more consecutive words (script output beside
-this file). First pass: 43 overlapping runs — the authoring side had
-reproduced sentence fragments from memory, the exact drift the rule
-exists to catch. All non-boilerplate runs were rewritten fresh; the
-final pass shows 6 remaining runs, every one of them contract-draft
-TEMPLATE skeleton (meta block, section headers, the metrics-line form),
-none of them the superseded contract's own prose. The panel re-runs
-this sweep on the final bytes.
+Three generations, recorded because the instrument itself was a
+finding. (1) The authoring-side sweep split on whitespace with
+punctuation attached — 43 runs found, rewritten to 6 "skeleton" runs.
+(2) Panel round 1 (lens 2, F2) showed that tokenizer lets a comma swap
+mask a copied sentence: WORD-NORMALIZED (case- and
+punctuation-insensitive, inline code spans stripped), 12 non-skeleton
+runs survived. (3) The round-1 fold rewrote all of them — including
+runs the fold itself had re-imported while restoring lost decisions —
+and the corrected sweep now returns: 6 runs total, 5 contract-draft
+TEMPLATE skeleton + 1 legitimately D10-inherited (the belt sentence
+ADR-019 D10 itself quotes), 0 non-skeleton. Script + output beside
+this file (`never-copy-sweep-out.txt`); the close re-runs it on the
+final bytes. Lesson for the priors: a guard's tokenizer is part of
+the guard — the meter must be metered.
 
 ## 8. Ergonomics note — what a minimal authoring form should have offered
 
@@ -161,8 +166,85 @@ USABILITY-2, confirmed by this phase's authoring):
   with `pnpm exec tsx`") is all a first author needs and is nowhere
   written.
 
-## 9. Completeness pass (the panel's duty — old→new over 19 rows + 4 reopens)
+## 9. Completeness pass (panel round 1, 2026-08-08 — old→new over 19 rows + 4 reopens)
 
-Placeholder: filled by the P4 panel, direction old→new, verdict per row
-(carried-where / dropped-why / schema-covered-how), committed here
-beside the panel verdict.
+Run by a dedicated fresh-context Opus agent, direction OLD → NEW, at
+basis old=frozen@superseded, new=1b2b78aa7e9f376a @ 0ad7e5d9. The
+table's verdicts; the round-1 fold (recorded in §10) restored every
+lost item the pass flagged, so the post-fold state is the one the
+ratifying act binds.
+
+| Old item | Verdict | Where / Why / How |
+|---|---|---|
+| C1 | carried + schema-covered, MARKED divergence | v2 C1; `[d-ctxblocks]` (map.open + default) in `[d-root]`.fields. Fail-closed replaces normalize-non-record — marked DECIDED HERE (v2), receipted (PROBE-P4-4 class-width incl. present-null). Non-suppression of C7 = D10's broken-operand nature. |
+| C2 | carried + schema-covered; walk-side hand-off dropped-vacuous | v2 C2; `[vc-block-id]`/`[d-block-key]`/`[d-block-ref]`. The filter/keep hand-off was a walk/rung artifact; its observable survives (PROBE-P4-3/P4-4 boundary-key cases). Channel-independence of the key lane is the FOURTH marked divergence (post-fold). |
+| C3 | carried + schema-covered | v2 C3; `[d-ctx-entry]`/`[d-ctx-body]`; no-reserve stays semantic. |
+| C4 | carried + schema-covered | v2 C4; `[d-prompt-refs]` on `[vc-agentconfig]` — the vocabulary was built for it (D11). Fixture disposition → v2 C16. |
+| C5 | carried | v2 C5, all three legs. |
+| C6 | carried + schema-covered | v2 C6; `[d-ctx-gate-refs]` in `[d-binding]`. |
+| C7 | carried + schema-covered, MARKED divergence | v2 C7; the belt became D10's `validKeysOf` with the code on `[vc-blockidlist]`. Per-occurrence resolution marked + receipted (DUP_GHOST, PROBE-P4-4). |
+| C8 | compound | (a)(b)(d)(f) structural; (c) → v2 C9 in full; (e) → unique rule + v2 C8; (g) → v2 C8's compound clean negative (restored at the fold, receipted PROBE-P4-4); enumeration guard + primitive rule dropped-vacuous under fail-closed; raw-feed co-fire superseded — marked + receipted (DUP_BAD_SHAPE). Domain asymmetry: CLOSED by the substrate (one enumerable-own-key domain), stated in v2 C9 post-fold. |
+| C9 | carried | v2 C10 every leg incl. the hoist+ascending-re-sort basis (restored at the fold) and the DERIVED re-mark with named measurer. |
+| C10 | carried + schema-covered; EC scope restored at fold | v2 C11 + `[d-capability-profile]`; the pre-EC boundary re-added. |
+| C11 | carried; token grain restored at fold | v2 C12 + the model-verbatim snake token values and literal quoting. |
+| C12 | carried | v2 C14. |
+| C13 | carried | v2 C15. |
+| C14 | carried; membership criterion restored at fold | v2 C16 + consumption-based membership + the named interim carrier. |
+| C15 | carried | v2 C17. |
+| C16 | dropped-why: executed one-time act | The ch11 reopen act ran 2026-07-26; ch11 is realized with the texts. Pointer maintenance = the Context's named carried scope (owner: boundary review). |
+| C17 | compound; two lost legs restored at fold | v2 C13 + default: placement (siblings at fixed-keyset levels), TS-optionality grain, carry-list duty (louder than the original), registry flips + type witnesses, the two build traps; non-record normalization superseded (marked, receipted); single-body-source home restored. |
+| C18 | carried | v2 C18. |
+| C19 | carried (inventory) + dropped-why (split retired), MARKED | v2 C19: tag-set inventory with the shared nodes as named exclusions; channel scope an engine property; capabilityProfile's declared asymmetry named. |
+| Reopen 1 (C1 grain) | carried + partly vacuous | Ref-lane half = D10's nature; whole-result half vacuous (refuse vs admit can no longer be confused). |
+| Reopen 2 (direct-channel region) | carried + schema-covered | The belt IS D10; key-exclusion deletion + unconditional domain in v2 C9; the C19 premise dropped-vacuous. |
+| Reopen 3 (C17 nullish) | dropped-why: superseded, marked + receipted | v2 C1; absent-half survives as the declared default. |
+| Reopen 4 (C17 class width) | dropped-why: superseded, marked + receipted | Same clause; the carrier obligation vacuous when the only non-record outcome is refusal. |
+
+The pass's findings (1 P1, 2 P2, 7 P3) and their dispositions are in
+the §10 round record — every lost item was FOLDED back in round 1;
+the P1 (registry flip) and both P2s (optionality grain, invariant
+homes) are restored in v2 C13 and the invariant homes on C7/C10/C11/
+C13. Verdict (the agent's, standing): the v2 line carries the old
+line's decisions substantially without loss and in places carries
+them better; no reopen decision vanished quietly; the divergences are
+marked and receipted.
+
+## 10. Panel round 1 (2026-08-08) — full five-lens + completeness, and the fold
+
+Basis: contract 1b2b78aa7e9f376a, declaration 34af910d5cfbd0ba @
+0ad7e5d9. Six fresh-context Opus agents (five lenses + the
+completeness pass). Yield: ~50 findings — 2 P1 (lens 3's C13
+keyset-claim self-contradiction; the completeness pass's registry
+flip), ~14 P2, the rest P3/watchpoint/considered. ZERO STOP-class
+findings; all three (now four) DECIDED-HERE markers cleared as
+row-home by the model-plane audit (lens 2 duty 4).
+
+The CONTENT fold (one batch, this round): supersession arguments moved
+out of rows (the 2026-08-08 inheritance rule — the rows keep markers
+and receipts); C19's inventory re-parameterized both directions;
+C13 restored the placement + optionality + registry-flip + build-trap
+decisions and scoped its keyset claim (the P1 fix); C9's stand-down
+generalized to reachability and the closed domain-asymmetry stated;
+C2 gained the fourth DECIDED-HERE marker; C8 gained the C9 carve-out
+and the compound clean negative; C12 gained the wire tokens; C16 the
+membership criterion; C7 the admission moment + containment + its
+invariant home; C10/C11/C13 their invariant homes + EC scope + the
+re-sort clause; the Context gained the rename-culture statement, the
+carried-scope pointer note, the lock-consequence sentence, the
+narrowed no-restatement claim and the completed model-note
+enumeration; the declaration's header lost its stale R1/hash/
+collectTags claims and `n-effective-config` gained the C13 row
+citation; the domain type's comment re-attributed to C13; five plan
+sections gained their aligned-at edits; PROBE-P4-4 (the live
+declaration, class-width) landed with script + output; the never-copy
+sweep was corrected and re-run to clean (§7a).
+
+Dispositions: folded ~40 · declined 1 (lens 2 F7 — the code literal
+in both authorities: defensible via C18's CLI hop, D2 scoping; a
+rename would be its own ratified act) · routed 1 (the ch11/plan
+pointer maintenance → boundary review, named in Context) · deferred
+0 · considered_not_finding per lens reports (in their outputs, this
+directory's transcripts are not committed — the reports' substance is
+this section). Round 2 (the post-fold re-run) is FULL by the
+escalation rule (claim-structure changes + a manifest-class change:
+the fourth DECIDED-HERE marker).

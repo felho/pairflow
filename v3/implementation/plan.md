@@ -2859,13 +2859,26 @@ enforcing form is deliberately out of chapter (§13.1). Ratification
 is permanently human;
 packets anchor as `contract:ch13-context-block#Cn`.
 
+**Superseded, and its successor (aligned at the ch13 contract-v2
+ratification, 2026-08-08):** the `context-block` draft named above was
+superseded 2026-08-05 (record in its own file; oracle branch
+`ch13-prose-line`, authorizing plan `ch13-rederivation-plan.md`). The
+live surface is `contracts/ch13-context-block-v2-contract.md`
+(surface: `context-block-v2`), authored on the ADR-019 declared-schema
+substrate; the indicative C-row list above described the prose line
+and is history. Packets anchor as `contract:ch13-context-block-v2#Cn`
+— an anchor into the superseded draft is lint-red. Ratification is
+permanently human, unchanged.
+
 ### 13.4 Packets and flow mode
 
 Draft reference (§1.3 convention):
-`contracts/ch13-context-block-contract.md` — NOT YET RATIFIED at this
-chapter ratification; the draft round runs FIRST, before any packet,
-so the prediction bases below are visibly CONDITIONAL per the §1.3
-convention.
+`contracts/ch13-context-block-v2-contract.md` — the successor of
+`contracts/ch13-context-block-contract.md`, which was NOT YET RATIFIED
+at this chapter ratification, was ratified 2026-07-26 and superseded
+2026-08-05 (aligned at the ch13 contract-v2 ratification, 2026-08-08);
+the draft round runs FIRST, before any packet, so the prediction bases
+below are visibly CONDITIONAL per the §1.3 convention.
 
 | Packet | Content | Mode |
 |---|---|---|
@@ -2884,6 +2897,18 @@ a key never ships without its semantics in the same chapter — so P1's
 keys being consumed only at P2 is inside the stance, not an exception
 to it. One packet = packet file + code + tests in ONE commit.
 
+**Re-derivation alignment (aligned at the ch13 contract-v2
+ratification, 2026-08-08):** the order above is the PROSE line's and
+stands as history — its draft ratification and the ch11 reopen act it
+carried (C4 + C30 + the C41 comparative clause, the SUPERSEDED draft's
+C16 carrier row) both EXECUTED on 2026-07-26, and P0 landed. The live
+order from that point is: contract v2 ratification → the ch13-p1 v2
+packet (`ch13-rederivation-plan.md` phase P5 — definition side and
+dispatch side; the P1/P2 split of the table above is the prose line's
+and does not bind the re-derivation). The v2 draft carries NO
+cross-contract reopen act: the ch11 binding keyset is already
+ch11-C4's realized text.
+
 Mutation-pilot flow note: the pilot DUAL-RUNS beside arm gate-2 on
 every packet of this chapter, catches labeled code-mutation vs
 input-domain. This is the pilot's SECOND data chapter — its
@@ -2893,7 +2918,8 @@ decides keep or stop.
 ### 13.5 Deliverables and DoD
 
 Shipped: this section; the ratified-then-realized
-`ch13-context-block` contract-draft; the EPIPE fix; the
+`ch13-context-block-v2` contract-draft (its superseded predecessor
+stays in the tree, frozen, as the decision record); the EPIPE fix; the
 definition-load ref check + its issue lane; the three context format
 keys; the dispatch-time render + the packet field; the shipped
 template's first catalog entry; the journey smoke.
@@ -2923,17 +2949,23 @@ carried item (3) MVP-cut vs v1-parity re-read, due before the plan
 sequences the chapters that follow; and (e) the
 reopen-vs-aggregate-note criterion (first applied at the ch13 draft —
 its Context carries the applied form): decide its promotion to a
-standing README rule or its retirement — until then the ch13 draft's
-Context is its only home, and this line is the carrier that keeps
+standing README rule or its retirement — until then the SUPERSEDED
+`ch13-context-block` draft's Context is its only home (the v2 draft
+does not carry the criterion — aligned at the ch13 contract-v2
+ratification, 2026-08-08; that file is frozen and never-copy, so a
+promotion decision must lift the criterion OUT of it rather than
+leave it sitting there), and this line is the carrier that keeps
 that decision from silently lapsing; a DEFERRED decision enters §1.3
 as a carried item (the standing cross-chapter carry form), never a
 silent lapse; and (f) the integer-like key-ban candidate on the
 ch8-C10 namespace (owner-raised at the ch13 draft ratification round,
 2026-07-26): canonical integer-form string keys (`"2"`, `"10"`) are
 legal event-type/step-id spellings today and are the exact class JS
-record enumeration re-orders (the ch13 PROBE-CB3 measurement; the
-draft's C9 handles the corner honestly, so ch13 does not need the
-ban) — the boundary decides ADOPT (a ch8-C10 reopen in its own act,
+record enumeration re-orders (the ch13 PROBE-CB3 measurement,
+recorded in the superseded `ch13-context-block` draft's frozen
+Context; the v2 draft's C10 handles the corner honestly, so ch13 does
+not need the ban — aligned at the ch13 contract-v2 ratification,
+2026-08-08) — the boundary decides ADOPT (a ch8-C10 reopen in its own act,
 with migration text; an untruncated draft-time sweep found ZERO
 affected files, so the ban is free now and only gets more expensive
 with time) or WATCH; a deferred adoption likewise enters §1.3 as a

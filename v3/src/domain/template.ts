@@ -184,15 +184,16 @@ export interface WorkflowTemplate {
    */
   readonly activation?: { readonly mode: ActivationMode };
   /**
-   * ch13v2-C1 (the context-block-v2 draft): the template-level context
-   * catalog at the DOMAIN grain — block id → `{ body }`. OPTIONAL on a
-   * raw directly-constructed template (the `advancesRound`/`activation`
-   * optionality precedent: required would break every hand-built raw
-   * fixture); the declared schema default MATERIALIZES an absent key to
-   * `{}` on the admitted value, so an admitted template always carries
-   * the record. A PRESENT non-map value is refused at admission
-   * (fail-closed — the declaration's container lane), so no non-record
-   * form survives to this type.
+   * ch13v2-C1 + ch13v2-C13 (the context-block-v2 draft): the
+   * template-level context catalog at the DOMAIN grain — block id →
+   * `{ body }`. OPTIONAL on the shared raw type per C13's TYPE-GRAIN
+   * decision (the `advancesRound`/`activation` optionality precedent:
+   * required would break every hand-built raw fixture), the
+   * always-present guarantee holding at the VALUE level; the declared
+   * schema default MATERIALIZES an absent key to `{}` on the admitted
+   * value (C1). A PRESENT non-map value is refused at admission
+   * (fail-closed, C1 — the declaration's container lane), so no
+   * non-record form survives to this type.
    */
   readonly contextBlocks?: Readonly<Record<string, { readonly body: string }>>;
 }

@@ -1,0 +1,88 @@
+/**
+ * P4 round-1 fold — probe receipts against the LIVE ratifying-basis
+ * declaration (lens-1 F3: the earlier receipts measured an analog).
+ * Every case runs through templateFormat itself on both channels.
+ * Covers: the fail-closed class incl. PRESENT-NULL (lens-2 F3, the
+ * member that drove two of the old line's reopens), the EMPTY catalog
+ * (lens-3 F5), the belt cases, the dup/shape interplay, the boolean
+ * key, the three ref positions, the channel-gated capabilityProfile
+ * (lens-1 F1's declared asymmetry), and the compound CLEAN case
+ * (lens-3 F3's success negative).
+ */
+import { parseDocument } from "/Users/felho/dev/pairflow/node_modules/yaml/dist/index.js";
+import { runSurface } from "/Users/felho/dev/pairflow/v3/src/definition/schema/engine.ts";
+import type { EngineChannel } from "/Users/felho/dev/pairflow/v3/src/definition/schema/engine.ts";
+import { templateFormat } from "/Users/felho/dev/pairflow/v3/src/definition/schema/templateFormat.ts";
+
+const noCatalog = { resolve: () => null };
+
+const base = {
+  ref: { id: "probe", version: 1 },
+  start: "s1",
+  steps: { s1: { role: "r1", instruction: "do", transitions: {} } },
+  terminal: ["done"],
+  roles: { r1: {} },
+};
+
+function run(value: unknown, channel: EngineChannel = { kind: "direct" }) {
+  const r = runSurface(templateFormat, value, { channel, catalog: noCatalog });
+  return { findings: r.findings.filter((f) => String(f.path).includes("contextBlocks") || String(f.path).includes("ConcernRefs") || String(f.path).includes("capabilityProfile") || f.code !== undefined), ctx: (r.normalized as Record<string, unknown> | undefined)?.["contextBlocks"] };
+}
+
+function both(label: string, extra: Record<string, unknown>, yamlExtra: string) {
+  const direct = run({ ...base, ...extra });
+  const yaml =
+    "ref: {id: probe, version: 1}\nstart: s1\nsteps:\n  s1: {role: r1, instruction: do, transitions: {}}\nterminal: [done]\nroles:\n  r1: {}\n" + yamlExtra;
+  const doc = parseDocument(yaml);
+  const file = run(doc.toJS({ mapAsMap: true }), { kind: "file", doc, source: yaml });
+  console.log(label, JSON.stringify({ direct, file, agree: JSON.stringify(direct.findings) === JSON.stringify(file.findings) }));
+}
+
+// C1 fail-closed, CLASS WIDTH incl. the reopen-driving members:
+console.log("L_null_direct", JSON.stringify(run({ ...base, contextBlocks: null })));
+both("L_null", { contextBlocks: null }, "contextBlocks: null\n");
+console.log("L_42", JSON.stringify(run({ ...base, contextBlocks: 42 })));
+console.log("L_emptystring", JSON.stringify(run({ ...base, contextBlocks: "" })));
+console.log("L_list", JSON.stringify(run({ ...base, contextBlocks: ["x"] })));
+// C1 default: absent admits, admitted form carries {}:
+console.log("L_absent", JSON.stringify(run(base)));
+// EMPTY catalog + a ref (lens-3 F5's missing receipt):
+both("L_empty_catalog_ref", { contextBlocks: {}, steps: { s1: { role: "r1", instruction: "do", transitions: {}, agentConfig: { promptConcernRefs: ["ghost"] } } } },
+  "contextBlocks: {}\n");
+// (the file twin with the SAME logical value — the earlier run's disagreement
+// was the probe's own asymmetric inputs, corrected here)
+{
+  const yaml = "ref: {id: probe, version: 1}\nstart: s1\nsteps:\n  s1:\n    role: r1\n    instruction: do\n    transitions: {}\n    agentConfig:\n      promptConcernRefs: [ghost]\nterminal: [done]\nroles:\n  r1: {}\ncontextBlocks: {}\n";
+  const doc = parseDocument(yaml);
+  console.log("L_empty_catalog_ref_FILE", JSON.stringify(run(doc.toJS({ mapAsMap: true }), { kind: "file", doc, source: yaml })));
+}
+// belt: ref to malformed entry (two findings), all three positions accumulate:
+console.log("L_all_positions", JSON.stringify(run({
+  ...base,
+  contextBlocks: { alpha: {} },
+  steps: { s1: { role: "r1", instruction: "do", transitions: { GO: "done" },
+    agentConfig: { promptConcernRefs: ["alpha"] },
+    gates: { GO: [{ uses: "a.b", config: {}, contextBlockRefs: ["alpha"] }] } } },
+  roles: { r1: { defaultAgentConfig: { promptConcernRefs: ["alpha"] } } },
+})));
+// dup ghost / shape-failing dup (the two DECIDED-HERE receipts, live):
+console.log("L_dup_ghost", JSON.stringify(run({ ...base, roles: { r1: { defaultAgentConfig: { promptConcernRefs: ["ghost", "ghost"] } } } })));
+console.log("L_dup_badshape", JSON.stringify(run({ ...base, roles: { r1: { defaultAgentConfig: { promptConcernRefs: ["Bad", "Bad"] } } } })));
+// boolean key on the file channel + grammar-failing key on DIRECT (C2's
+// channel-independent key lane — the fourth DECIDED-HERE receipt):
+both("L_bool_key", { contextBlocks: new Map<unknown, unknown>([[true, { body: "x" }]]), roles: { r1: { defaultAgentConfig: { promptConcernRefs: ["true"] } } } },
+  'contextBlocks:\n  true:\n    body: x\nroles:\n  r1:\n    defaultAgentConfig:\n      promptConcernRefs: ["true"]\n');
+console.log("L_bad_key_direct", JSON.stringify(run({ ...base, contextBlocks: { BAD: { body: "x" } } })));
+// capabilityProfile: channel-GATED by declaration (file refuses, direct legal):
+both("L_capability_profile", { capabilityProfile: {} }, "capabilityProfile: {}\n");
+// the compound CLEAN success case (old C8(g)): populated catalog, every
+// entry referenced, every ref resolving -> zero findings:
+// (gate-free so the zero is a TRUE zero — a gate binding needs an injected
+// registry, which is the P5 fixture's concern, not this receipt's)
+console.log("L_clean_compound", JSON.stringify(run({
+  ...base,
+  contextBlocks: { "emit-envelope": { body: "text" }, "no-converged-before-round-2": { body: "t2" } },
+  steps: { s1: { role: "r1", instruction: "do", transitions: {},
+    agentConfig: { promptConcernRefs: ["no-converged-before-round-2"] } } },
+  roles: { r1: { defaultAgentConfig: { promptConcernRefs: ["emit-envelope"] } } },
+})));
