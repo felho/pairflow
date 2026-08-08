@@ -2915,7 +2915,8 @@ carry-list growth, the C9 lane, the render and the packet field, the
 registry flips, the C16/C18 fixture duties); mode: flag-free approve →
 autonomous build (measurement — the §5.5 fallbacks stand, the two
 transitional external-arm gates unchanged); predicted: projection
-(basis: `contracts/ch13-context-block-v2-contract.md` — ratified). A
+(basis: `contracts/ch13-context-block-v2-contract.md` — the surface
+this act ratifies). A
 split into ch13-p1a/p1b inherits this row's values unchanged.
 
 Mutation-pilot flow note: the pilot DUAL-RUNS beside arm gate-2 on
@@ -2982,8 +2983,9 @@ with time) or WATCH; a deferred adoption likewise enters §1.3 as a
 carried item; and (g) the ch11 POINTER MAINTENANCE (routed here by
 the ch13 contract-v2 draft's named carried scope, 2026-08-08):
 `ch11-gate-format-contract.md` names `contract:ch13-context-block#C6`
-in C4, C30, C41, the fourth reopen record and three `realized_map`
-entries — the pointed-at SEMANTICS are carried unchanged by
+in C4, C30, C41, the fourth reopen record and two `realized_map`
+entries (a third map entry mentions the reopen act without carrying
+the pointer) — the pointed-at SEMANTICS are carried unchanged by
 ch13v2-C6, so this is pointer maintenance, not meaning drift, and no
 lint catches it (the realized-map scanner matches same-contract refs
 only; the packet-anchor rule is manifest-scoped). The boundary

@@ -1,7 +1,8 @@
-# PROBE-P4-4 — executed against the LIVE declaration at the round-2-fold basis.
-# AUDITOR NOTE: L_empty_catalog_ref's agree:false is the probe's own asymmetric
-# inputs, superseded by the _FILE twin on the next line; the only DESIGNED
-# channel asymmetry in this file is L_capability_profile.
+# PROBE-P4-4 — executed against the LIVE declaration; grown across panel rounds 1-3.
+# AUDITOR NOTES: (1) L_empty_catalog_ref's agree:false is the probe's own asymmetric
+# inputs, superseded by the _FILE twin on the next line; the only DESIGNED channel
+# asymmetry is L_capability_profile. (2) run()'s findings are FILTERED to the ch13
+# surfaces; the *_TOTAL lines carry the UNFILTERED zeros for the absolute-zero rows.
 L_null_direct {"findings":[{"path":"contextBlocks","message":"contextBlocks must be a map of block-id -> { body }; got null"}]}
 L_null {"direct":{"findings":[{"path":"contextBlocks","message":"contextBlocks must be a map of block-id -> { body }; got null"}]},"file":{"findings":[{"path":"contextBlocks","message":"contextBlocks must be a map of block-id -> { body }; got null"}]},"agree":true}
 L_42 {"findings":[{"path":"contextBlocks","message":"contextBlocks must be a map of block-id -> { body }; got 42"}]}
@@ -27,4 +28,10 @@ L_empty_authored_list {"findings":[],"ctx":{}}
 L_open_sibling {"findings":[],"ctx":{"alpha":{"body":"x"}}}
 L_bad_key_valid_sibling {"findings":[{"path":"contextBlocks","message":"invalid context block id \"BAD\": block ids match ^[a-z][a-z0-9-]*$"}],"ctx":{"BAD":{"body":"x"},"ok":{"body":"y"}}}
 L_cb3_reexec {"findings":0,"keyOrder":["1","2","10","ZZZ","AAA"]}
+L_degenerate_date {"findings":[],"ctx":{}}
+L_degenerate_class {"findings":[],"ctx":{}}
+L_degenerate_fn_refused {"findings":[{"path":"contextBlocks","message":"contextBlocks must be a map of block-id -> { body }; got ()=>1"}]}
+L_gates_record_keyorder {"keyOrder":["1","2","10","ZZZ","AAA"]}
+L_open_sibling_retained {"totalFindings":0,"admittedConfig":{"promptConcernRefs":["alpha"],"skill_refs":["free"],"nested":{"any":1}}}
+L_clean_TOTAL 0 L_empty_list_TOTAL 0
 L_clean_compound {"findings":[],"ctx":{"emit-envelope":{"body":"text"},"no-converged-before-round-2":{"body":"t2"}}}

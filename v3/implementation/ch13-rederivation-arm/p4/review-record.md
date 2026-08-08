@@ -49,36 +49,13 @@ so it has a repo home.)
 | PROBE-P4-1 | `p4-flag1-probe.ts.txt` (P1_*) | the D10 belt at a fixed position: resolving ref clean; `{}` entry → entry finding + coded per-site finding; wrong-kind catalog → container finding AND per-site findings (no suppression); absent catalog → per-site; duplicates per occurrence at index; channels byte-identical |
 | PROBE-P4-2 | `p4-flag1-probe.ts.txt` (P2, P3) | pre-D11: a ref list inside `map.plain` unreachable (ghost/numeric/grammar-violating members, zero findings); a runtime `fields` attr on map.plain loaded silently inert |
 | PROBE-P4-3 | `p4-dup-resolution-probe.ts.txt` | DUP_GHOST: membership fires per shape-passing occurrence (both indices) beside the dup finding; DUP_BAD_SHAPE: a shape-failing member is invisible to every list-level lane; NONSTRING_KEY_FILE: boolean-keyed entry unaddressable by the string ref of the same spelling (two true findings); BAD_KEY_SIBLING: grammar-failing key draws the key lane, valid sibling ref resolves |
-
 | PROBE-P4-4 | `p4-live-declaration-probes.ts.txt` | the LIVE declaration at the ratifying basis, both channels: the fail-closed class at width (incl. present-null and the boolean members), refs beside refused/absent catalogs, the empty catalog and the EMPTY AUTHORED list, all three positions accumulating, the dup/shape receipts, the boolean key, open siblings, bad-key-with-resolving-sibling, the channel-gated capabilityProfile, the CB3 key-order re-execution (`["1","2","10","ZZZ","AAA"]`), and the compound clean zero. NOTE for auditors: the output's `L_empty_catalog_ref` line reports `agree:false` from the probe's own asymmetric inputs and is superseded by the `_FILE` twin on the next line; the only DESIGNED asymmetry in the file is `L_capability_profile`. |
 
 PROBE-P4-3's first two results are MEASURED DIVERGENCES from the
 superseded line's C8(e)/C7 grain decisions; contract v2 rows C7/C8
 carry them as DECIDED-HERE (v2) markers with these receipts.
 
-**The divergence RATIONALES (the arguments the rows deliberately do
-not carry — the 2026-08-08 inheritance rule's designed home):**
-- **C1 fail-closed** replaces the predecessor's normalize-any-
-  non-record-to-empty rule. Safe because the defect that rule healed —
-  a cast-forged catalog carried onto the admitted value — cannot arise
-  under an engine that validates the direct-construction channel: the
-  container lane refuses the forgery before any rebuild exists.
-- **C2 channel-independent key lane**: the predecessor placed the key
-  lane walk-side (file-only) because only the walk saw source keys;
-  under one declaration the lane runs wherever a key exists, which is
-  strictly fail-louder — no admit/refuse outcome moves, a direct-
-  channel authoring defect now gets the same diagnosis a file author
-  gets.
-- **C7 per-occurrence resolution** replaces first-occurrence-carries:
-  that rule made the duplicate lane decide the resolution lane's
-  domain — a cross-lane coupling of exactly the class whose deletion
-  the predecessor's own 2026-08-01 reopen ratified for the
-  key-exclusion case — and per-lane independence is the engine's
-  standing shape.
-- **C8 shape-failure invisibility** replaces the unconditional
-  raw-feed co-fire: a member that failed its own lane already carries
-  its trace, and feeding it to sibling lanes multiplied findings for
-  one defect while coupling lanes the engine keeps independent.
+(The divergence RATIONALES live in §9, beside the mapping they belong to.)
 
 ## 5. The D11 substrate act (the Flag #1 package)
 
@@ -131,15 +108,23 @@ not carry — the 2026-08-08 inheritance rule's designed home):**
 | Schema-lock arm r1 | 2 folded | build-omission ×2 (path discipline) | 0 | 0 | 0 |
 | Schema-lock arm r2 | 0 findings — frame closes | — | 0 | 0 | 0 |
 | Tag-closure (authoring-side) | 1 gap folded | citation omission | 0 | 0 | 0 |
+| Panel r1 (full, 6 agents) | ~50 folded | 2 P1 (kept-claim defect; inheritance loss) · inheritance/receipt/plan classes | 0 | 0 | 0 |
+| Panel r2 (full, 6 agents) | ~35 folded | 1 P1 (precedent contradiction) · fold-propagation classes | 0 | 0 | 1 (bet-boundary STOP, user opened r3) |
+| Panel r3 (targeted, 4 agents) | ~20 folded | 0 P1 · 5 P2 (clause scope ×2, ADR-D4 propagation, citation target, receipt gap) · rest hygiene | 0 | 0 | 0 |
 
 ## 7. Bet ledger scoring (STOP 1's stated bets)
 
-1. **Authoring** (1 pass + probes, 0 reserve): OPEN — declaration draft
-   + contract doc drafted under /tmp during the D11 frame; scored at
-   panel entry.
+1. **Authoring** (1 pass + probes, 0 reserve): **HALF** — one pass
+   produced the draft, but the panel's rounds found real inheritance
+   losses and the first-generation sweep tokenizer masked copied
+   sentences; the "0 reserve" half of the bet under-priced the first
+   schema-first authoring. Lesson: a first-of-form authoring pass
+   prices a loss-hunting review round, not zero reserve.
 2. **Flag #1** (1 probe + 1 ruling): **EXACT** — the probe measured the
    gap and the sneak-in in one run; one ruling settled it.
-3. **Panel** (2 rounds, 3rd via user): OPEN.
+3. **Panel** (2 rounds, 3rd via user): **AS PRICED** — two rounds ran
+   autonomously with real yield; the 3rd (targeted) opened through the
+   user exactly as the bet reserved it, and closed 0-P1.
 4. **Byte-lock guard** (1 build + 1 verification, cap 3): **HALF** —
    the build landed in one pass, but round 1 found two path-discipline
    defects, so the fold forced a second round the bet had not priced
@@ -192,15 +177,14 @@ USABILITY-2, confirmed by this phase's authoring):
   with `pnpm exec tsx`") is all a first author needs and is nowhere
   written.
 
-## 9. Completeness pass (panel round 1, 2026-08-08 — old→new over 19 rows + 4 reopens)
+## 9. Completeness pass (panel rounds 1–3, 2026-08-08 — old→new over 19 rows + 4 reopens, WITH the divergence rationales)
 
 Run by a dedicated fresh-context Opus agent, direction OLD → NEW, at
 round-1 basis old=frozen@superseded, new=1b2b78aa7e9f376a @ 0ad7e5d9;
-re-checked at round 2 on c01db023bcd0240c @ 17659831, and the round-2
-fold's post-state is the ratifying basis. The
-table's verdicts; the round-1 fold (recorded in §10) restored every
-lost item the pass flagged, so the post-fold state is the one the
-ratifying act binds.
+re-checked at round 2 on c01db023bcd0240c @ 17659831 and spot-checked
+at round 3; the FINAL fold's post-state is what the ratifying act
+binds. The round folds (§10–§12) restored or closed every item the
+pass flagged.
 
 | Old item | Verdict | Where / Why / How |
 |---|---|---|
@@ -227,6 +211,38 @@ ratifying act binds.
 | Reopen 2 (direct-channel region) | carried + schema-covered | The belt IS D10; key-exclusion deletion + unconditional domain in v2 C9; the C19 premise dropped-vacuous. |
 | Reopen 3 (C17 nullish) | dropped-why: superseded, marked + receipted | v2 C1; absent-half survives as the declared default. |
 | Reopen 4 (C17 class width) | dropped-why: superseded, marked + receipted | Same clause; the carrier obligation vacuous when the only non-record outcome is refusal. |
+
+**The divergence RATIONALES (the arguments the rows deliberately do
+not carry — the 2026-08-08 inheritance rule's designed home):**
+- **C1 fail-closed** replaces the predecessor's normalize-any-
+  non-record-to-empty rule. Safe because the defect that rule healed —
+  a cast-forged catalog carried onto the admitted value — cannot arise
+  under an engine that validates the direct-construction channel: the
+  container lane refuses the forgery before any rebuild exists.
+- **C2 channel-independent key lane**: the predecessor placed the key
+  lane walk-side (file-only) because only the walk saw source keys;
+  under one declaration the lane runs wherever a key exists, which is
+  strictly fail-louder — no admit/refuse outcome moves, a direct-
+  channel authoring defect now gets the same diagnosis a file author
+  gets.
+- **C7 per-occurrence resolution** replaces first-occurrence-carries:
+  that rule made the duplicate lane decide the resolution lane's
+  domain — a cross-lane coupling of exactly the class whose deletion
+  the predecessor's own 2026-08-01 reopen ratified for the
+  key-exclusion case — and per-lane independence is the engine's
+  standing shape.
+- **C8 shape-failure invisibility** replaces the unconditional
+  raw-feed co-fire: a member that failed its own lane already carries
+  its trace, and feeding it to sibling lanes multiplied findings for
+  one defect while coupling lanes the engine keeps independent.
+
+**Round-2/3 refresh notes on the table above:** old-C17's verdict also
+covers the CHANNEL GRAIN and FIELD SPELLINGS decisions C13 gained at
+round 2 (the channel narrowing is observably identical to the
+predecessor's behaviour — its engine ran no direct-channel keyset lane
+— so no divergence marker is owed); old-C8's leg (d) is additionally
+homed as C4's authored-empty-list clause; old-C19's verdict reads on
+the round-3 form (VALIDATION-node inventory, four named exclusions).
 
 The pass's findings (1 P1, 2 P2, 7 P3) and their dispositions are in
 the §10 round record — every lost item was FOLDED back in round 1;
@@ -289,8 +305,9 @@ own stated reason) · ~13 P2 · ~20 P3/watchpoint. ZERO STOP-class.
 Notable: three lenses independently converged on C19's exclusion
 arithmetic; two on the C13 channel seam; the completeness re-check
 verified every round-1 restoration ON THE BYTES and caught the fold's
-own transit loss (the evacuated rationales — now written above in §4's
-rationales block, making the Context's claim true).
+own transit loss (the evacuated rationales — written into the record
+at round 2 and MOVED under §9 at round 3, which is what makes the
+contract's six citations true).
 
 The round-2 fold: C13 gains the CHANNEL GRAIN and FIELD SPELLINGS
 clauses and the carry∪into gloss fix; C4 homes the authored EMPTY
@@ -319,3 +336,39 @@ considered/cleared in the lens outputs. The panel bet (2 rounds, the
 3rd through the user) is now at its boundary — the 3rd (targeted)
 round after this content fold opens through the user, per the ratified
 STOP-1 work plan.
+
+## 12. Panel round 3 (2026-08-08, targeted — opened by the user at the bet boundary) and its fold
+
+Basis: contract ddc5820089b58a1b, declaration 9368e5253d1163fa @
+b5537ce8. Four agents: lenses 1/3 (delta-scoped), the mandatory lens-4
+reconciliation, the completeness spot-check. Yield: 0 P1 · 5 P2 · ~20
+P3/watchpoint, zero STOP-class. The completeness spot-check's verdict:
+the inheritance guarantee holds, rationales included; the residue was
+record hygiene, not decision loss.
+
+The fold: C13's CHANNEL GRAIN qualified to the two admission-produced
+positions with the binding named channel-both AT the claim, and the
+producer-monopoly's RECOMPUTE half carried explicitly (two lenses
+converged with executed evidence); C19 gains its fourth named
+exclusion, the authored-position scoping of the symmetry sentence, the
+two forward-scoped asymmetry arrivals, and the declaration growth in
+its P5 list; C12's key enumeration gains its own field name; C16 tags
+the full-packet member as C12's tree-wide ripple; C1's degenerate
+accept gains its receipt; the Context gains the Read-path answer.
+PROBE-P4-4 grew the degenerate cases, the gates-record key-order
+measurement (the operand itself, no longer the transitions analog),
+the unfiltered-retention case and the unfiltered true zeros, and its
+instrument note now discloses the finding filter. The record: the
+rationales moved under §9 (the six contract citations now point true),
+§9's heading/basis repaired and its table refreshed for the round-2/3
+rows, §6 gained the panel rounds, bets 1 and 3 scored. The plan:
+§13.5(g)'s site count corrected to six (two realized_map entries carry
+the pointer, the third mentions the act without it), and §13.4's row
+basis marker reworded to "the surface this act ratifies".
+
+CARRIED TO THE FLAGS ROUND, not folded: ADR-019 D4's original absolute
+("the contract states no structural attribute; a rule visible in both
+places is a defect") vs the refined gloss/normative form now on the
+contract and the declaration — a D-section edit is a user-ratified
+amendment, so the prepared one-clause D4 clarification rides the
+ratification GO, never a silent edit (lens-4 R3 F1).

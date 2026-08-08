@@ -1,6 +1,6 @@
 # The never-copy sweep — the corrected (word-normalized) instrument.
-# Usage: python3 never-copy-sweep.py.txt is not runnable as .txt; copy
-# to /tmp and run. Tokenizer: inline code spans stripped (cited tokens,
+# Usage: run from the REPO ROOT (the contract paths are repo-relative):
+#   python3 v3/implementation/ch13-rederivation-arm/p4/never-copy-sweep.py.txt Tokenizer: inline code spans stripped (cited tokens,
 # not prose), bare [a-z0-9]+ words, case- and punctuation-insensitive;
 # N=6-word shared runs between the v2 draft and the superseded
 # contract, overlapping runs merged. Verdict rule: only contract-draft

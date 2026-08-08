@@ -1,6 +1,11 @@
 /**
- * P4 round-1 fold — probe receipts against the LIVE ratifying-basis
- * declaration (lens-1 F3: the earlier receipts measured an analog).
+ * PROBE-P4-4 — probe receipts against the LIVE ratifying-basis
+ * declaration; grown across panel rounds 1-3 (round-2 and round-3
+ * additions are labelled inline).
+ * INSTRUMENT NOTE: run() FILTERS findings to the ch13 surfaces (paths
+ * containing contextBlocks/ConcernRefs/capabilityProfile, or any coded
+ * finding); the *_TOTAL cases assert UNFILTERED zeros where a row
+ * claims an absolute zero.
  * Every case runs through templateFormat itself on both channels.
  * Covers: the fail-closed class incl. PRESENT-NULL (lens-2 F3, the
  * member that drove two of the old line's reopens), the EMPTY catalog
@@ -108,6 +113,34 @@ console.log("L_bad_key_valid_sibling", JSON.stringify(run({ ...base, contextBloc
   const r = runSurface(templateFormat, doc.toJS({ mapAsMap: true }), { channel: { kind: "file", doc, source: yaml }, catalog: noCatalog });
   const steps = (r.normalized as Record<string, unknown>)["steps"] as Record<string, { transitions: Record<string, string> }>;
   console.log("L_cb3_reexec", JSON.stringify({ findings: r.findings.length, keyOrder: Object.keys(steps["s1"].transitions) }));
+}
+// R3 additions:
+// (g) C1's degenerate accept boundary: an object-like with nothing to
+//     enumerate admits as the empty record; a function refuses;
+class Degenerate { }
+console.log("L_degenerate_date", JSON.stringify(run({ ...base, contextBlocks: new Date(0) })));
+console.log("L_degenerate_class", JSON.stringify(run({ ...base, contextBlocks: new Degenerate() })));
+console.log("L_degenerate_fn_refused", JSON.stringify(run({ ...base, contextBlocks: () => 1 })));
+// (h) C10's operand measured directly: the admitted GATES record's key
+//     order under quoted integer-like event keys (hoist + ascending);
+{
+  const yaml = 'ref: {id: probe, version: 1}\nstart: s1\nsteps:\n  s1:\n    role: r1\n    instruction: do\n    transitions: {ZZZ: done, "10": done, "2": done, AAA: done, "1": done}\n    gates:\n      ZZZ: [{uses: a.b, config: {}}]\n      "10": [{uses: a.b, config: {}}]\n      "2": [{uses: a.b, config: {}}]\n      AAA: [{uses: a.b, config: {}}]\n      "1": [{uses: a.b, config: {}}]\nterminal: [done]\nroles:\n  r1: {}\n';
+  const doc = parseDocument(yaml);
+  const r = runSurface(templateFormat, doc.toJS({ mapAsMap: true }), { channel: { kind: "file", doc, source: yaml }, catalog: noCatalog });
+  const steps = (r.normalized as Record<string, unknown>)["steps"] as Record<string, { gates?: Record<string, unknown> }>;
+  console.log("L_gates_record_keyorder", JSON.stringify({ keyOrder: Object.keys(steps["s1"].gates ?? {}) }));
+}
+// (i) open siblings RETAINED on the admitted value (unfiltered view);
+{
+  const r = runSurface(templateFormat, { ...base, contextBlocks: { alpha: { body: "x" } }, roles: { r1: { defaultAgentConfig: { promptConcernRefs: ["alpha"], skill_refs: ["free"], nested: { any: 1 } } } } }, { channel: { kind: "direct" }, catalog: noCatalog });
+  const roles = (r.normalized as Record<string, unknown>)["roles"] as Record<string, { defaultAgentConfig?: unknown }>;
+  console.log("L_open_sibling_retained", JSON.stringify({ totalFindings: r.findings.length, admittedConfig: roles["r1"].defaultAgentConfig }));
+}
+// (j) UNFILTERED zeros for the rows claiming absolute zeros;
+{
+  const clean = runSurface(templateFormat, { ...base, contextBlocks: { "emit-envelope": { body: "text" } }, roles: { r1: { defaultAgentConfig: { promptConcernRefs: ["emit-envelope"] } } } }, { channel: { kind: "direct" }, catalog: noCatalog });
+  const empty = runSurface(templateFormat, { ...base, roles: { r1: { defaultAgentConfig: { promptConcernRefs: [] } } } }, { channel: { kind: "direct" }, catalog: noCatalog });
+  console.log("L_clean_TOTAL", clean.findings.length, "L_empty_list_TOTAL", empty.findings.length);
 }
 // the compound CLEAN success case (old C8(g)): populated catalog, every
 // entry referenced, every ref resolving -> zero findings:
