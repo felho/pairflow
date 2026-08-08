@@ -1,7 +1,7 @@
 # ch13 — context-block-v2 contract
 
 ```json
-{"contract_draft": {"chapter": "ch13", "surface": "context-block-v2", "status": "draft"}}
+{"contract_draft": {"chapter": "ch13", "surface": "context-block-v2", "status": "ratified"}}
 ```
 
 ## Context (non-normative by declaration)
@@ -138,9 +138,11 @@ pointer maintenance, not meaning drift; OWNER: the boundary review
 property of the one declaration (source-bearing attributes run where a
 source exists); this contract re-ratifies no walk/rung partition.
 
-**Draft metrics (template §5):** rounds to ratify: — · new-decision
-rows: 4 DECIDED-HERE markers across 4 rows · post-ratification
-reopenings: —
+**Draft metrics (template §5):** rounds to ratify: 3 panel rounds
+(2 full + 1 targeted, the 3rd opened by the user at the bet boundary)
++ the top-level close + the external arm and its re-check ·
+new-decision rows: 4 DECIDED-HERE markers across 4 rows ·
+post-ratification reopenings: 0
 
 ## Contract rows (every normative statement is a C-row)
 
@@ -167,5 +169,9 @@ reopenings: —
 | C19 | The lane inventory: this surface's definition-static lanes are the lanes the ch13v2-rowed VALIDATION nodes introduce — enumerated by the declaration itself — plus C9's one semantic lane. Named exclusions, four: `[d-root]` and `[vc-agentconfig]` are SHARED validation nodes whose pre-existing lanes belong to their own surfaces (only the growth is this chapter's); `[n-effective-config]` is a NORMALIZER cited for C13's duty — derivation introduces no lane (ADR-019 D3); and `[d-capability-profile]` is a raw, lane-less node (its file-channel refusal is `[d-root]`'s own unknown-key lane). Channel scope is an ENGINE property of the one declaration: no walk/rung realization split exists or is re-ratified, and for the catalog and the AUTHORED ref positions (C4/C6) admission answers identically on the two channels — accept or refuse — with only source-bearing attributes differentiating the finding sets (receipt: PROBE-P4-4). Declared, deliberate asymmetries are not defects of that rule: `[d-capability-profile]` is channel-GATED today (receipt: PROBE-P4-4), and the two admission-PRODUCED positions C13 channel-gates join it at P5 — arrivals this row forward-scopes. Named P5 build surfaces: the C9 lane; the C13 normalizer hook WITH its declaration growth (the two channel-gated produced-position nodes under their decided spellings), carry-list growth and registry flips; and the C16/C18 fixture duties. |
 
 ## Ratification history (empty at `draft` — blocks are appended by the lifecycle acts)
+
+```json
+{"ratification": {"date": "2026-08-08", "arms": ["three agent-run fresh-context Opus panel rounds (2 full + 1 targeted; six agents per full round incl. the dedicated completeness pass) + the top-level reconciliation close; agent-invoked codex arm (pin gpt-5.6-sol/high) on the approve-ready bytes + its re-check on the folded bytes — all charters, outputs and the old-to-new completeness table committed under ch13-rederivation-arm/p4/"], "commit": "3cb4498c626dc6f9842a981e989ccc50e6462094", "schema": {"path": "v3/src/definition/schema/templateFormat.ts", "sha256": "9368e5253d1163fa0f6ffa18290fef5ef4007de4f293862eeee522c1b7ea3c49"}}}
+```
 
 ## Realized map (empty until chapter close)

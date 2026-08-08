@@ -5,7 +5,8 @@ Date: 2026-08-05 · amended 2026-08-06 (D1's residual list, D5's corpus
 derivation, D9.3's reading) · amended 2026-08-07 (D10 — the entry-belted
 membership construct, admitted under D7) · amended 2026-08-08 (D10's
 no-reference-ring rule; D11 — the typed-subset `fields` widening on
-`map.plain`; user-ratified — each carries a dated marker)
+`map.plain`; D4's gloss and closure-form clarification; user-ratified —
+each carries a dated marker)
 Links: supersedes — · amends — · depends-on ADR-011 · related ADR-003, ADR-012, ADR-013
 
 ## Context
@@ -161,6 +162,17 @@ The weighing, recorded because it is the load-bearing choice here:
   cheapest tripwire is the tag-closure check the audit already ran
   twice by hand (every tag defined is cited, every tag cited is
   defined).
+
+  **Amended 2026-08-08 (the first schema-first contract's authoring;
+  user-ratified):** "visible in both places" means carried NORMATIVELY
+  in both — a contract row's passing gloss of an attribute is
+  non-binding paraphrase, with the declaration's bytes governing (the
+  contract states the rule in its Context; the declaration's header
+  says the same). And the closure check's standing per-contract form
+  is directional: every tag a contract cites exists in the
+  declaration, and every node ROWED TO that contract is cited by it —
+  the audit-time whole-declaration symmetric form remains the
+  boundary-act form for surface migrations.
 
 ### D5 — the parity gate
 
