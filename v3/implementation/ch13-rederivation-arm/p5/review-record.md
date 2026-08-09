@@ -43,8 +43,12 @@ alternative and a recommendation:
   D7's CONSTRUCT half, admitted on the two-position reading D10
   ratified and D11 applied to this exact pair of parents. The user
   ruled the reversal 2026-08-09. Its cost is a SECOND Fable-mandatory
-  prerequisite `docs(v3)` act — an ADR-019 amendment editing the three
-  surfaces D10's and D11's own commits each edited.
+  prerequisite `docs(v3)` act — an ADR-019 amendment editing FOUR
+  surfaces: the three D10's and D11's own commits each edited, plus D4's
+  closure paragraph, which gains the forward-scoped exemption as a defined
+  form (added at arm gate 1, packet D3/D4/flag 2). The three-surface
+  figure stood here after the packet had moved to four — the miss that
+  lost bet #2.
 - **(b) The C9 stand-down mechanism** — ruled **C**: expose the
   engine's existing failed-tag set on the run result, in the form the
   result already uses for the R3 residual. `engine.ts` joins the
@@ -82,7 +86,8 @@ was itself the error. What survives is smaller and sharper: the panel
 was right that a live precedent existed and right that it went
 unsurfaced, and wrong about what the precedent WAS. D6's act is
 consequently not a scruple but the only conformant route, and the act
-that regularizes ch9's record as a side effect.
+that regularizes ch9's record — explicit scope of the act, not a side
+effect of it.
 
 ## 3. The round-2 fold's scope ruling (user-ratified 2026-08-08)
 
@@ -239,7 +244,65 @@ population — numbers no one had re-run — not the latter. A zero from
 the measurement lens means the number surface is clean and the packet
 goes to arm gate 1.
 
-**Outcome: SPLIT — first half WON, second half LOST.** The measurement
+**Bet: the arm re-check #2 (stated 2026-08-09, before the run).** Budget:
+ONE re-check on basis `eec94ec3…`, §6 item-7 shape, gptsol transport at
+the pin-conform effort. PREDICTION, scoreable: **PASS** — zero not-closed,
+zero new BLOCKER and zero new MAJOR; residual risk MINOR-class only.
+Sizing reason: severity has collapsed monotonically across the two prior
+runs (4 BLOCKER → 0 BLOCKER → residue only), all three residue items were
+sentence-level NEIGHBOURS of text that had moved rather than fresh design
+defects, and the neighbourhood of every moved fact has now been swept
+MECHANICALLY by the orchestrator rather than read — the step that was
+missing from every previous fold. THE LOSS BRANCH IS PRE-COMMITTED: if a
+MAJOR appears, it is recorded as a BOUNDARY QUESTION and not answered
+with another round, because a MAJOR at this point means the fold-prose
+defect rate is not an attention problem and the packet does not converge
+in its present form. (User-ratified before the run.)
+
+**Outcome: LOST**, on the half that mattered. Re-check #2 returned all
+four folds CLOSED and the original six HOLDing — zero not-closed, zero
+new BLOCKER — but ONE new MAJOR, which is exactly what the prediction
+excluded.
+
+**The diagnosis, and it is not the one the bet assumed.** The bet rested
+on having swept the neighbourhood of every moved fact MECHANICALLY. That
+sweep ran — and it ran on the PACKET. The fact it missed, the ADR act's
+surface count, lives in TWO files: the packet moved from three surfaces
+to four, and this record's §2 ruling entry still authorized three. An
+executor consulting the ruling record rather than the packet would have
+omitted the closure mechanism and recreated the original finding-2
+authority violation. So the defect was not carelessness inside a file; it
+was SCOPING THE SWEEP TO THE ARTIFACT BEING EDITED instead of to the
+fact's full set of homes. The MINOR is the same shape: D6 still said "no
+new mechanism is built EITHER WAY", the two-route framing surviving its
+own withdrawal.
+
+**THE LOSS BRANCH EXECUTES AS PRE-COMMITTED.** The two findings are
+folded, because that is correctness. What does NOT happen is re-check #3.
+The question this raises is recorded for the boundary rather than
+answered with another round:
+
+> **BOUNDARY QUESTION — does a packet of this size converge under
+> fold-and-review at all?** Four review runs after the panel closed
+> (close, arm gate 1, two re-checks) each returned a non-empty finding
+> set, and from arm gate 1 onward EVERY finding was fold-written prose
+> rather than original design. Severity fell monotonically — 4 BLOCKER →
+> 0 BLOCKER → 0 BLOCKER, MAJOR → MAJOR — but the rate did not reach
+> zero, and each fold's own repair seeded the next round's finding. The
+> candidate reading is that a 76 KB packet carrying 14 canonical rows and
+> 9 flags has a cross-restatement surface that manual folding cannot
+> close, and that what is needed is not more rounds but either a smaller
+> packet or a mechanical cross-file fact register (the `mirror_map`
+> generalized from quoted signatures to DECIDED VALUES — surface counts,
+> act counts, floor cardinalities — checked by the lint across the packet
+> AND its evidence home). Two of this phase's last three findings would
+> have been caught by that register at zero review cost.
+
+The bet's sizing reason was sound in direction and wrong in extent, which
+is the honest score: mechanical sweeping IS the missing step, and a sweep
+scoped to one file is not mechanical enough to bet on.
+
+**Outcome of the measurement-surface round: SPLIT — first half WON, second half LOST.** The measurement
 lens re-derived 147 numeric claims and returned 3 discrepancies (0 P1,
 1 P2, 2 P3), so the "at least one further false number" half lands. The
 lens-4 pass returned **3 P1**, so the "0 P1" half is lost outright.
