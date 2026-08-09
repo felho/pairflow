@@ -6,7 +6,11 @@ derivation, D9.3's reading) · amended 2026-08-07 (D10 — the entry-belted
 membership construct, admitted under D7) · amended 2026-08-08 (D10's
 no-reference-ring rule; D11 — the typed-subset `fields` widening on
 `map.plain`; D4's gloss and closure-form clarification; user-ratified —
-each carries a dated marker)
+each carries a dated marker) · amended 2026-08-09 (D12 — the
+nested-source normalizer hook construct, admitted under D7; and D4's
+FORWARD-SCOPED EXEMPTION, the form that makes a rowed-but-uncited node
+legal for a bounded interval; user-ratified — each carries a dated
+marker)
 Links: supersedes — · amends — · depends-on ADR-011 · related ADR-003, ADR-012, ADR-013
 
 ## Context
@@ -174,6 +178,30 @@ The weighing, recorded because it is the load-bearing choice here:
   the audit-time whole-declaration symmetric form remains the
   boundary-act form for surface migrations.
 
+  **Amended 2026-08-09 (ch13-p1a's authoring; user-ratified) — the
+  FORWARD-SCOPED EXEMPTION.** The directional form above has no
+  escape, and a schema-first contract can reach a state it cannot
+  satisfy: a contract row is BYTE-LOCKED against a declaration
+  snapshot, the realizing act adds nodes rowed to that row, and the
+  row cannot cite them back because citing them would change the
+  bytes the lock pins. The gap is real, it is not ch13's, and until
+  now no form admitted it — so a packet meeting it had to either
+  assert an exemption no authority defines, or reopen a row that
+  nothing is wrong with. Neither is acceptable, so the exemption
+  becomes a NAMED FORM with four conditions, all required:
+  (i) the node is rowed to a row that is byte-locked or otherwise
+  unable to cite it AT THE MOMENT OF THE ACT — never to a row that
+  simply was not edited; (ii) a LATER RATIFYING ACT that will close
+  the citation is named when the exemption is taken, so the exemption
+  carries its own end and is an interval rather than a state;
+  (iii) it is recorded in TWO places — beside the node in the
+  declaration, and in the act that takes it — because the closure
+  check reads the declaration and the reviewer reads the act;
+  (iv) it is taken by an ACT, never asserted by a packet: a packet may
+  argue that one is owed, and only a ratified act may create it. An
+  exemption with no named closing act is not a forward-scoped
+  exemption but an unclosed defect, and the check treats it as one.
+
 ### D5 — the parity gate
 
 **Before the engine replaces any implemented lane, the EXISTING
@@ -236,7 +264,8 @@ flavours that must not be confused:
 
 **Admitted under this rule so far**: one construct, D10 (2026-08-07);
 one attribute widening at a new grain, D11 (2026-08-08 — not a new
-construct, recorded here so the tally cannot silently drift).
+construct, recorded here so the tally cannot silently drift); a second
+construct, D12 (2026-08-09 — the nested-source normalizer hook).
 
 ### D8 — the two open constructs — RULED: BOTH ACCEPTED (user, 2026-08-05)
 
@@ -434,6 +463,59 @@ else, so the rule's scope is exactly the widening's.
 
 **The live declaration does not adopt it in this act.** Its first user
 is P4's contract; the expected live behavioral delta is zero.
+
+### D12 — the NESTED-SOURCE normalizer hook construct (amendment, user-ratified 2026-08-09)
+
+**What is admitted, and it is admitted BY KIND rather than by
+spelling.** The normalizer's declared hooks are a CLOSED discriminated
+union: each arm is a named capability with its own attributes, and the
+engine can express exactly the arms the union carries. This act admits
+ONE further arm — a hook whose SOURCE is a field nested inside a value
+the landing node already carries, and whose PRODUCT is a sibling field
+on that landing node, filled with the source's value where one was
+authored and with the declared empty form where none was. Its
+discriminator, its operand-attribute names and its entries' tags are
+the realizing act's to spell; what this ADR admits is the KIND, and a
+later spelling that changes the kind is a new amendment rather than a
+rename.
+
+**Why it passes D7's ≥2 independent ratified rows test, on the reading
+D10 established.** The naive count says one row — a single ratified row
+governs the typed ref field at both of the template's config positions,
+and a construct serving exactly one row is refused. That count is the
+wrong one, and D10 already settled why: the test asks whether the
+construct serves more than one INDEPENDENT DECLARATION POSITION, not
+whether more than one row happens to name it. A row is a decision; a
+position is a place the engine must act. D10 was admitted on precisely
+that reading, and D11 applied it to THIS pair of parents — the
+role-level default config and the step-level config map — establishing
+them as independent positions with independent lanes. This construct
+serves both. A single-position version of it would be refused, and
+that refusal is the test still doing its work rather than being
+argued around.
+
+**What it is NOT.** It is not node growth. D7's node flavour is a new
+DECLARATION USE — a key, a grammar, a default — and a union arm is a
+new MEMBER of the vocabulary, which changes what the engine can
+express at all. The distinction is not a matter of labelling: a packet
+that built this as node growth would perform the same vocabulary
+change with no ratifying act behind it, and this tally would drift by
+exactly the amount D11's own note exists to prevent.
+
+**The falsifiability tripwires (D9) are checked, not assumed.** The
+first — a construct admitted to make one row fit — is answered by the
+two-position reading above and by the refusal counterexample: a
+single-position hook is refused and its row keeps hand code. The
+third — an admission whose counterfactual was never stated — is
+answered here: without this construct the two produced positions are
+filled by hand-written normalizer code, which is the derivation
+scattering this ADR's D3 exists to end.
+
+**The live declaration adopts it in the REALIZING act, not in this
+one.** This amendment authorizes the kind; ch13-p1a's build adds the
+arm and its two entries, and the schema re-lock act records the new
+declaration bytes. The expected live behavioural delta of THIS act is
+zero.
 
 ## Alternatives Considered
 
