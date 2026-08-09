@@ -2665,6 +2665,19 @@ side extends the ch8/ch11 format and admission machinery. The
 standing Fable-mandatory categories are unchanged (this section, the
 contract-draft + its ratification support, process revisions, the
 boundary review). Panel lenses and the external arm stay as ratified.
+**The GROUND of that decision moved at ch13-p1a's approve (aligned
+2026-08-09), the decision did not.** The re-derivation made the
+definition side idiom-minting after all: ch13-p1a admits a new
+normalizer-hook CONSTRUCT into the ADR-019 vocabulary and scores E = 2
+on the difficulty index's idiom-minting pole, so the sentence above no
+longer describes p1a. The no-Fable-slice disposition nevertheless
+stands, on the reason it was always for: a SLICE is build work, and
+the chapter's build work remains Opus-class — which is the data the
+model-tier experiment opened this chapter to collect. What the
+re-derivation produces instead are two Fable-mandatory `docs(v3)`
+ACTS, both inside the standing categories above (the contract-draft's
+ratification support; process revisions), both prerequisites of
+ch13-p1a's build and neither a slice of it.
 The mutation-testing pilot DUAL-RUNS beside arm gate-2 on every
 packet — this is the pilot's SECOND and final data chapter, see the
 flow note in §13.4.)
@@ -2918,6 +2931,33 @@ transitional external-arm gates unchanged); predicted: projection
 (basis: `contracts/ch13-context-block-v2-contract.md` — the surface
 this act ratifies). A
 split into ch13-p1a/p1b inherits this row's values unchanged.
+
+**The split, EXECUTED (aligned at ch13-p1a pre-approval, 2026-08-08):**
+the row above's pre-authorization was taken — the combined scope trips
+two risk-gate hard stops (authority movement together with new runtime
+behavior turned on; one concept across 3+ surfaces) and the
+implementation-closure proof fails, the assessment being materialized in
+`packets/ch13-p1a-context-definition.md`'s `## Sizing/risk`. Shape:
+`foundation → activation`, depth 1, coverage union preserved.
+
+**This is ch13's LIVE Packets-and-flow-mode table**, and the mechanical
+next-packet derivation reads it: the prose-line table earlier in this
+section is history, and its `ch13-P1` / `ch13-P2` rows never acquire
+packet files.
+
+| Packet | Content | Mode |
+|---|---|---|
+| ch13-p1a | the definition side: the declared ch13v2 lanes DRIVEN at the admission entries on both channels, the C13 declaration growth (the two admission-produced ref positions) with its normalizer hooks, engine growth and carry-list growth, the C9 hygiene lane, the C13 type grain, the C18 code-travel lanes, the catalog + ContextBlockRef registry flips, and the schema re-lock act its own build triggers | predicted class inherited from the ch13-p1 v2 row (projection); the MODE resolves to **human approve** (STOP `4:flagged-approve`) — the packet carries new-decision rows and `approve-ratified` routes, so the parent row's flag-free⇒autonomous letter does not reach it (the ch13-P0 row is the precedent for recording this in place) |
+| ch13-p1b | the dispatch side — its content is enumerated ONCE, in `packets/ch13-p1a-context-definition.md`'s out-of-scope row, and deliberately not repeated here, so the two cannot drift | inherited from the ch13-p1 v2 row; predicted: projection |
+
+Order: ch13-p1a → ch13-p1b (the render reads the admission-produced ref
+positions, so the producer precedes its consumer). Human acts sit
+INSIDE that order and are not packet boundaries; which acts, and their
+commit choreography, are recorded in the packet's own D4 and D6 and
+ride its approve rather than being settled here. The §8.2
+no-speculative-keys stance binds at CHAPTER grain, so p1a's produced
+positions being consumed only at p1b is inside the stance — the same
+reading the prose line's P1/P2 order already carried.
 
 Mutation-pilot flow note: the pilot DUAL-RUNS beside arm gate-2 on
 every packet of this chapter, catches labeled code-mutation vs

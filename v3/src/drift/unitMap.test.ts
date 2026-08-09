@@ -183,3 +183,28 @@ describe("the unit→code manifest (v3/model/units ↔ drift/unitMap.json)", () 
     }
   });
 });
+
+describe("the ch13-p1a unit-map flips (packet row D10)", () => {
+  const unitMap = loadUnitMap();
+
+  it("pins the TWO packet-owned mappings VERBATIM (the generic resolution lane stays green on a wrong-but-existing target)", () => {
+    // `validate_context_refs` is generated/mapped because its rule is no
+    // longer code: the resolution lane is DECLARED at `[vc-blockidlist]`
+    // and executed by the one engine on both channels, so the declaration
+    // module's own exported surface is what realizes it.
+    expect(unitMap["l2b-pseudocode/validate_context_refs"]).toEqual({
+      codeRef: "v3/src/definition/schema/templateFormat.ts#templateFormat",
+      disposition: "generated/mapped",
+      status: "realized",
+    });
+    // `CREATE_INSTANCE` is review-only at this level — its whole l2b
+    // delta is the comment line placing definition-static validation at
+    // ADMISSION — and its codeRef follows the live `l2-`/`l2a-` reprint
+    // precedent, which points at the kernel's create function.
+    expect(unitMap["l2b-pseudocode/CREATE_INSTANCE"]).toEqual({
+      codeRef: "v3/src/kernel/lifecycle.ts#createInstance",
+      disposition: "review-only",
+      status: "realized",
+    });
+  });
+});

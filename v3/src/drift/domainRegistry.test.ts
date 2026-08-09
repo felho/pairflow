@@ -197,3 +197,27 @@ describe("the ch12-p1b D2 realized rows (l0d entry classes + Template)", () => {
     });
   });
 });
+
+// ── ch13-p1a (ch13v2-C13's registry-flip clause + plan §13.5's DoD line):
+// the TWO l2b rows the definition side realizes. The key-set lane proves
+// the keys exist and the `import type` binding proves the typeName maps to
+// a real type — a wrong-but-existing typeName passes both, which is
+// exactly this packet's exposure, so the packet-owned rows are pinned
+// VERBATIM here. ─────────────────────────────────────────────────────────
+
+describe("the ch13-p1a realized rows (the l2b definition-side slice)", () => {
+  it("pins BOTH rows VERBATIM — a wrong-but-existing typeName is content-red", () => {
+    expect(DOMAIN_REGISTRY["l2b/context_blocks catalog"]).toEqual({
+      kind: "realized",
+      typeName: "ContextBlockCatalog",
+    });
+    expect(DOMAIN_REGISTRY["l2b/ContextBlockRef"]).toEqual({
+      kind: "realized",
+      typeName: "BlockId",
+    });
+  });
+
+  it("the render side's row stays PENDING — its witness ships with the packet's block member type", () => {
+    expect(DOMAIN_REGISTRY["l2b/ContextBlock"]).toEqual({ kind: "pending" });
+  });
+});

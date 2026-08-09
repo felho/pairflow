@@ -3,12 +3,13 @@
 // Chapter-4 content: the l0a + l0b registry slice (packet ch4-P1).
 export { REJECTION_NAMES } from "./rejections.js";
 export type { RejectionName } from "./rejections.js";
-export type { ActorId, EventType, InstanceId, OpId, RoleName, StepId } from "./ids.js";
+export type { ActorId, BlockId, EventType, InstanceId, OpId, RoleName, StepId } from "./ids.js";
 export type { EpochMillis } from "./time.js";
 export type {
   AdmittedTemplate,
   AgentConfig,
   CapabilityProfile,
+  ContextBlockCatalog,
   RuntimeContextRequirement,
   RuntimeContextSpec,
   Step,

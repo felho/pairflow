@@ -247,8 +247,11 @@ describe("ch11-P4 — a gated template loads by ref through the store (file chan
     expect(template).not.toBeNull();
     if (template === null) return;
     // the effective threshold config materialized through admission
+    // (the file authors no contextBlockRefs, so ch13v2-C13's declared
+    // default materializes the empty list and the rebuild carries it)
     expect(template.steps["review"]?.gates?.["CONVERGED"]?.[0]).toEqual({
       uses: "declarative.threshold",
+      contextBlockRefs: [],
       config: { metric: "round", op: ">=", value: 2 },
     });
     // the round declaration carried through, flags expanded (review.PASS →

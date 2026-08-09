@@ -3,7 +3,9 @@ import type {
   ActorId,
   AdmittedTemplate,
   AgentConfig,
+  BlockId,
   CapabilityProfile,
+  ContextBlockCatalog,
   ContextPacket,
   DispatchIntent,
   EventEnvelope,
@@ -136,6 +138,11 @@ interface RealizedTypeTable {
   readonly "l0e/RuntimeContextProjection": RuntimeContextProjection;
   readonly "l0e/RuntimeContextRef": RuntimeContextRef;
   readonly "l0e/RuntimeContextRequirement": RuntimeContextRequirement;
+  // ch13-p1a (ch13v2-C13): the definition side's two l2b rows. The
+  // `ContextBlock` row stays pending — its witness is the packet's
+  // rendered block member type, which ships with the render side.
+  readonly "l2b/context_blocks catalog": ContextBlockCatalog;
+  readonly "l2b/ContextBlockRef": BlockId;
 }
 
 export type RegistryEntry =
@@ -341,8 +348,10 @@ export const DOMAIN_REGISTRY: Readonly<Record<string, RegistryEntry>> = {
   "l2a/GateInvocation": { kind: "realized", typeName: "GateInvocation" },
   "l2a/ProcessResult": { kind: "realized", typeName: "ProcessResult" },
   // ── l2b (3) ────────────────────────────────────────────────────────
-  "l2b/context_blocks catalog": { kind: "pending" },
-  "l2b/ContextBlockRef": { kind: "pending" },
+  // ch13-p1a: the definition side flips both rows with the type names
+  // ch13v2-C13 assigns them.
+  "l2b/context_blocks catalog": { kind: "realized", typeName: "ContextBlockCatalog" },
+  "l2b/ContextBlockRef": { kind: "realized", typeName: "BlockId" },
   "l2b/ContextBlock": { kind: "pending" },
   // ── l3 (5) ─────────────────────────────────────────────────────────
   "l3/wait step + RESUME_WAIT": { kind: "pending" },
@@ -507,6 +516,8 @@ export const REALIZED_TYPE_TABLE_KEYS = [
   "l0e/RuntimeContextProjection",
   "l0e/RuntimeContextRef",
   "l0e/RuntimeContextRequirement",
+  "l2b/context_blocks catalog",
+  "l2b/ContextBlockRef",
 ] as const satisfies readonly (keyof RealizedTypeTable)[];
 
 type TypeTableFullyListed =

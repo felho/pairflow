@@ -4,6 +4,7 @@ import type { WorkflowTemplate } from "../domain/index.js";
 import { createGateRegistry } from "../gates/index.js";
 import { loadTemplate } from "./index.js";
 import type { TemplateLoadErrorInfo } from "./index.js";
+import type { ValidationFinding } from "./errors.js";
 
 // Packet ch8-P1: the validate lane inventory (V1–V17), the E2
 // accumulation + dependent-lane suppression rules, the V3 version
@@ -613,7 +614,9 @@ describe("V10 — roles entries", () => {
     const result = load(template({ roles: "roles:\n  r:\n    defaultActor: codex\n" }));
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.template.roles["r"]).toStrictEqual({ defaultActor: "codex" });
+    // ch13v2-C13: the roles entry carries its ADMISSION-PRODUCED ref list
+    // on every admitted value — the empty list, no config being authored.
+    expect(result.template.roles["r"]).toStrictEqual({ defaultActor: "codex", promptConcernRefs: [] });
   });
 });
 
@@ -771,6 +774,9 @@ round:
           // iff its TARGET ∈ advanceOnArrivalAt. implement.PASS → review
           // (not listed) ⇒ false.
           advancesRound: { PASS: false },
+          // ch13v2-C13: the step's ADMISSION-PRODUCED ref list — empty,
+          // the canonical file authoring no agentConfig.
+          promptConcernRefs: [],
         },
         review: {
           role: "reviewer",
@@ -778,12 +784,14 @@ round:
           transitions: { PASS: "implement", CONVERGED: "done" },
           // review.PASS → implement (LISTED) ⇒ true; CONVERGED → done ⇒ false.
           advancesRound: { PASS: true, CONVERGED: false },
+          promptConcernRefs: [],
         },
       },
       terminal: ["done"],
       roles: {
-        implementer: { defaultActor: "codex" },
-        reviewer: { defaultActor: "claude" },
+        // ch13v2-C13: the same produced position at the roles entries.
+        implementer: { defaultActor: "codex", promptConcernRefs: [] },
+        reviewer: { defaultActor: "claude", promptConcernRefs: [] },
       },
       round: { advanceOnArrivalAt: ["implement"] },
       // ch12-p1b G3: admission materializes the activation default.
@@ -1442,9 +1450,13 @@ describe("ch12-P4 F4 — the defaultAgentConfig roles-entry source form (dimensi
     );
     expect(result.ok).toBe(true);
     if (!result.ok) return;
+    // ch13v2-C13: the authored config survives UNMODIFIED (the ch12
+    // cascade reads it there) and the produced ref list rides beside it —
+    // empty, this config authoring no promptConcernRefs.
     expect(result.template.roles["r"]).toEqual({
       defaultActor: "codex",
       defaultAgentConfig: { approach: "tdd" },
+      promptConcernRefs: [],
     });
   });
 
@@ -1458,5 +1470,281 @@ describe("ch12-P4 F4 — the defaultAgentConfig roles-entry source form (dimensi
       template({ steps: "steps:\n  s:\n    role: r\n    instruction: i\n    transitions: {}\n    defaultAgentConfig: {}\n" }),
     );
     expect(paths(err)).toContain("steps.s.defaultAgentConfig");
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// packet ch13-p1a — the context-block surface on the FILE channel.
+//
+// The same ch13v2 lane inventory (ch13v2-C19), driven through the load
+// pipeline's validate stage. Channel scope is an ENGINE property of the
+// one declaration, so the paths and messages are the direct channel's;
+// what differs is DECLARED, and family 3's rows below are exactly those
+// differences.
+// ═══════════════════════════════════════════════════════════════════════
+
+/** The ch13 file fixture: one step with one transition (so a gates key
+ * has an operand), one role, and whichever ch13 positions a row needs.
+ * `stepExtra` and `roleEntry` are authored at their own indent. */
+function ctxYaml(parts: {
+  readonly contextBlocks?: string;
+  readonly roleEntry?: string;
+  readonly stepExtra?: string;
+} = {}): string {
+  return [
+    "ref:\n  id: t\n  version: 1\n",
+    "start: s\n",
+    `steps:\n  s:\n    role: r\n    instruction: i\n    transitions:\n      GO: done\n${parts.stepExtra ?? ""}`,
+    "terminal:\n  - done\n",
+    parts.roleEntry === undefined ? "roles:\n  r: {}\n" : `roles:\n  r:\n${parts.roleEntry}`,
+    parts.contextBlocks ?? "",
+  ].join("");
+}
+
+/** The whole finding set of one FILE-channel admission, or [] on success. */
+function ctxFileFindings(text: string): readonly ValidationFinding[] {
+  const result = loadGated(text);
+  return result.ok ? [] : (result.error.findings as readonly ValidationFinding[]);
+}
+
+const CTX_BLOCK_GRAMMAR = "^[a-z][a-z0-9-]*$";
+const CATALOG_ALPHA = "contextBlocks:\n  alpha:\n    body: x\n";
+const ROLE_REF_ALPHA = "    defaultAgentConfig:\n      promptConcernRefs:\n        - alpha\n";
+const GATE = (refs?: string): string =>
+  `    gates:\n      GO:\n        - uses: declarative.threshold\n          config: { metric: round, op: ">=", value: 2 }\n${refs ?? ""}`;
+const UNRESOLVED_ROLE_ALPHA: ValidationFinding = {
+  path: "roles.r.defaultAgentConfig.promptConcernRefs[0]",
+  message: 'context block ref "alpha" does not resolve to an entry',
+  code: "unresolved_context_block_ref",
+};
+
+interface FileLaneCase {
+  readonly lane: string;
+  readonly bad: string;
+  readonly findings: readonly ValidationFinding[];
+  readonly good: string;
+}
+
+const CTX_FILE_LANES: readonly FileLaneCase[] = [
+  {
+    lane: "d-ctxblocks (container lane)",
+    bad: ctxYaml({ contextBlocks: "contextBlocks: 7\n" }),
+    findings: [{ path: "contextBlocks", message: "contextBlocks must be a map of block-id -> { body }; got 7" }],
+    good: ctxYaml({ contextBlocks: "contextBlocks: {}\n" }),
+  },
+  {
+    lane: "d-block-key (key lane) + the C9 audit reporting beside it",
+    bad: ctxYaml({ contextBlocks: "contextBlocks:\n  Bad Key:\n    body: x\n" }),
+    findings: [
+      { path: "contextBlocks", message: `invalid context block id "Bad Key": block ids match ${CTX_BLOCK_GRAMMAR}` },
+      { path: "contextBlocks.Bad Key", message: 'context block "Bad Key" is declared but no ref names it' },
+    ],
+    good: ctxYaml({ contextBlocks: CATALOG_ALPHA, roleEntry: ROLE_REF_ALPHA }),
+  },
+  {
+    lane: "d-ctx-entry (container lane) + the C7 per-site finding beside it",
+    bad: ctxYaml({ contextBlocks: "contextBlocks:\n  alpha: 7\n", roleEntry: ROLE_REF_ALPHA }),
+    findings: [
+      { path: "contextBlocks.alpha", message: "a context block entry must be a map with exactly body; got 7" },
+      UNRESOLVED_ROLE_ALPHA,
+    ],
+    good: ctxYaml({ contextBlocks: CATALOG_ALPHA, roleEntry: ROLE_REF_ALPHA }),
+  },
+  {
+    lane: "d-ctx-entry (unknown-key lane)",
+    bad: ctxYaml({ contextBlocks: "contextBlocks:\n  alpha:\n    body: x\n    extra: 1\n", roleEntry: ROLE_REF_ALPHA }),
+    findings: [
+      {
+        path: "contextBlocks.alpha.extra",
+        message: 'unknown key "extra" (a context block entry\'s only key is body)',
+      },
+      UNRESOLVED_ROLE_ALPHA,
+    ],
+    good: ctxYaml({ contextBlocks: CATALOG_ALPHA, roleEntry: ROLE_REF_ALPHA }),
+  },
+  {
+    lane: "d-ctx-entry (missing-key lane)",
+    bad: ctxYaml({ contextBlocks: "contextBlocks:\n  alpha: {}\n", roleEntry: ROLE_REF_ALPHA }),
+    findings: [
+      { path: "contextBlocks.alpha", message: 'missing required key "body"' },
+      UNRESOLVED_ROLE_ALPHA,
+    ],
+    good: ctxYaml({ contextBlocks: CATALOG_ALPHA, roleEntry: ROLE_REF_ALPHA }),
+  },
+  {
+    lane: "d-ctx-body (type lane)",
+    bad: ctxYaml({ contextBlocks: "contextBlocks:\n  alpha:\n    body: 7\n", roleEntry: ROLE_REF_ALPHA }),
+    findings: [
+      { path: "contextBlocks.alpha.body", message: "body must be a nonempty string; got 7" },
+      UNRESOLVED_ROLE_ALPHA,
+    ],
+    good: ctxYaml({ contextBlocks: CATALOG_ALPHA, roleEntry: ROLE_REF_ALPHA }),
+  },
+  {
+    lane: "d-ctx-body (nonempty lane)",
+    bad: ctxYaml({ contextBlocks: 'contextBlocks:\n  alpha:\n    body: ""\n', roleEntry: ROLE_REF_ALPHA }),
+    findings: [
+      { path: "contextBlocks.alpha.body", message: "body must be a nonempty string" },
+      UNRESOLVED_ROLE_ALPHA,
+    ],
+    good: ctxYaml({ contextBlocks: CATALOG_ALPHA, roleEntry: ROLE_REF_ALPHA }),
+  },
+  {
+    lane: "vc-blockidlist (container lane) at the ROLE position",
+    bad: ctxYaml({
+      contextBlocks: CATALOG_ALPHA,
+      roleEntry: "    defaultAgentConfig:\n      promptConcernRefs: nope\n",
+    }),
+    findings: [
+      {
+        path: "roles.r.defaultAgentConfig.promptConcernRefs",
+        message: 'promptConcernRefs must be a list of context block ids; got "nope"',
+      },
+    ],
+    good: ctxYaml({ contextBlocks: CATALOG_ALPHA, roleEntry: ROLE_REF_ALPHA }),
+  },
+  {
+    lane: "vc-blockidlist (container lane) at the STEP position",
+    bad: ctxYaml({
+      contextBlocks: CATALOG_ALPHA,
+      stepExtra: "    agentConfig:\n      promptConcernRefs: nope\n",
+    }),
+    findings: [
+      {
+        path: "steps.s.agentConfig.promptConcernRefs",
+        message: 'promptConcernRefs must be a list of context block ids; got "nope"',
+      },
+    ],
+    good: ctxYaml({
+      contextBlocks: CATALOG_ALPHA,
+      stepExtra: "    agentConfig:\n      promptConcernRefs:\n        - alpha\n",
+    }),
+  },
+  {
+    lane: "vc-blockidlist (container lane) at the GATE position",
+    bad: ctxYaml({ contextBlocks: CATALOG_ALPHA, stepExtra: GATE("          contextBlockRefs: nope\n") }),
+    findings: [
+      {
+        path: "steps.s.gates.GO[0].contextBlockRefs",
+        message: 'contextBlockRefs must be a list of context block ids; got "nope"',
+      },
+    ],
+    good: ctxYaml({
+      contextBlocks: CATALOG_ALPHA,
+      stepExtra: GATE("          contextBlockRefs:\n            - alpha\n"),
+    }),
+  },
+  {
+    lane: "vc-block-id (member type lane)",
+    bad: ctxYaml({ roleEntry: "    defaultAgentConfig:\n      promptConcernRefs:\n        - 7\n" }),
+    findings: [
+      {
+        path: "roles.r.defaultAgentConfig.promptConcernRefs[0]",
+        message: "invalid context block ref 7: block ids are kebab-case strings",
+      },
+    ],
+    good: ctxYaml({ contextBlocks: CATALOG_ALPHA, roleEntry: ROLE_REF_ALPHA }),
+  },
+  {
+    lane: "vc-block-id (grammar lane)",
+    bad: ctxYaml({ roleEntry: "    defaultAgentConfig:\n      promptConcernRefs:\n        - Bad Ref\n" }),
+    findings: [
+      {
+        path: "roles.r.defaultAgentConfig.promptConcernRefs[0]",
+        message: `invalid context block ref "Bad Ref": block ids match ${CTX_BLOCK_GRAMMAR}`,
+      },
+    ],
+    good: ctxYaml({ contextBlocks: CATALOG_ALPHA, roleEntry: ROLE_REF_ALPHA }),
+  },
+  {
+    lane: "vc-blockidlist (duplicate lane, per occurrence)",
+    bad: ctxYaml({
+      contextBlocks: CATALOG_ALPHA,
+      roleEntry: "    defaultAgentConfig:\n      promptConcernRefs:\n        - alpha\n        - alpha\n",
+    }),
+    findings: [
+      {
+        path: "roles.r.defaultAgentConfig.promptConcernRefs[1]",
+        message: 'duplicate context block ref "alpha"',
+      },
+    ],
+    good: ctxYaml({ contextBlocks: CATALOG_ALPHA, roleEntry: ROLE_REF_ALPHA }),
+  },
+  {
+    lane: "vc-blockidlist (the CODED resolution lane)",
+    bad: ctxYaml({ roleEntry: "    defaultAgentConfig:\n      promptConcernRefs:\n        - ghost\n" }),
+    findings: [
+      {
+        path: "roles.r.defaultAgentConfig.promptConcernRefs[0]",
+        message: 'context block ref "ghost" does not resolve to an entry',
+        code: "unresolved_context_block_ref",
+      },
+    ],
+    good: ctxYaml({
+      contextBlocks: "contextBlocks:\n  ghost:\n    body: x\n",
+      roleEntry: "    defaultAgentConfig:\n      promptConcernRefs:\n        - ghost\n",
+    }),
+  },
+  {
+    lane: "the C9 hygiene lane",
+    bad: ctxYaml({ contextBlocks: CATALOG_ALPHA }),
+    findings: [
+      { path: "contextBlocks.alpha", message: 'context block "alpha" is declared but no ref names it' },
+    ],
+    good: ctxYaml({ contextBlocks: CATALOG_ALPHA, roleEntry: ROLE_REF_ALPHA }),
+  },
+];
+
+describe("ch13-p1a family 1 — the ch13v2 lane inventory, DRIVEN (file channel)", () => {
+  for (const lane of CTX_FILE_LANES) {
+    it(`${lane.lane}: the violating input produces exactly its finding set`, () => {
+      expect(ctxFileFindings(lane.bad)).toStrictEqual(lane.findings);
+    });
+
+    it(`${lane.lane}: the conforming input produces none`, () => {
+      expect(ctxFileFindings(lane.good)).toStrictEqual([]);
+    });
+  }
+});
+
+describe("ch13-p1a family 3 — the admitted form on the FILE channel (the declared differences)", () => {
+  const admittedFile = (text: string): WorkflowTemplate => {
+    const result = loadGated(text);
+    if (!result.ok) throw new Error(`expected a template: ${JSON.stringify(result.error.findings)}`);
+    return result.template;
+  };
+
+  it("the STEP's produced key is UNKNOWN in a file — the channel gate, in the refusing direction", () => {
+    expect(ctxFileFindings(ctxYaml({ stepExtra: "    promptConcernRefs: []\n" }))).toStrictEqual([
+      { path: "steps.s.promptConcernRefs", message: 'unknown key "promptConcernRefs"' },
+    ]);
+  });
+
+  it("the ROLES-ENTRY's produced key is UNKNOWN in a file — likewise", () => {
+    expect(ctxFileFindings(ctxYaml({ roleEntry: "    promptConcernRefs: []\n" }))).toStrictEqual([
+      { path: "roles.r.promptConcernRefs", message: 'unknown key "promptConcernRefs"' },
+    ]);
+  });
+
+  it("the BINDING's ref key is AUTHORABLE in a file — the stated exclusion (C6's authored key, channel-both)", () => {
+    const template = admittedFile(
+      ctxYaml({
+        contextBlocks: CATALOG_ALPHA,
+        stepExtra: GATE("          contextBlockRefs:\n            - alpha\n"),
+      }),
+    );
+    expect(template.steps["s"]?.gates?.["GO"]?.[0]?.contextBlockRefs).toStrictEqual(["alpha"]);
+  });
+
+  it("the normalizer writes BOTH produced positions on the file channel too, from the nested authored source", () => {
+    const template = admittedFile(ctxYaml({ contextBlocks: CATALOG_ALPHA, roleEntry: ROLE_REF_ALPHA }));
+    expect(template.roles["r"]?.promptConcernRefs).toStrictEqual(["alpha"]);
+    // …and the step position, whose source this file does not author.
+    expect(template.steps["s"]?.promptConcernRefs).toStrictEqual([]);
+  });
+
+  it("an absent gate ref key materializes the declared empty list on this channel as well", () => {
+    const template = admittedFile(ctxYaml({ stepExtra: GATE() }));
+    expect(template.steps["s"]?.gates?.["GO"]?.[0]?.contextBlockRefs).toStrictEqual([]);
   });
 });

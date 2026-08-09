@@ -1,4 +1,4 @@
-import type { EventType, RoleName, StepId } from "./ids.js";
+import type { BlockId, EventType, RoleName, StepId } from "./ids.js";
 
 /**
  * The gate domain values (packet ch11-P2a, D2–D5; ledger §4 l2). The
@@ -19,6 +19,16 @@ import type { EventType, RoleName, StepId } from "./ids.js";
 export interface GateBinding {
   readonly uses: string;
   readonly config?: unknown;
+  /**
+   * ch13v2-C6/C13 (packet ch13-p1a): the binding's context-block ref
+   * list. Unlike the two config positions this key is AUTHORED (C6) and
+   * channel-both — admission carries it onto the admitted value through
+   * the effective-config rebuild rather than producing it from another
+   * position, and materializes the empty list where nothing was
+   * authored. OPTIONAL on the shared raw type per C13's TYPE GRAIN,
+   * present on every admitted binding.
+   */
+  readonly contextBlockRefs?: readonly BlockId[];
 }
 
 /**

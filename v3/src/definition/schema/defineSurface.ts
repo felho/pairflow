@@ -658,9 +658,19 @@ function hookPosition(ctx: Context, path: string): DeclCursor | undefined {
 
 function fieldProblem(ctx: Context, at: DeclCursor, name: string, where: string): string | undefined {
   const node = derefNode(ctx.surface, at.node);
-  const names = node?.kind === "map.fixed" ? Object.keys(node.fields) : [];
   if (descend(ctx.surface, at, { kind: "field", name }) !== undefined) return undefined;
-  return `${where}: ${JSON.stringify(name)} is not a field of ${JSON.stringify(at.decl)} (fields: ${names.join(", ")})`;
+  // A plain map's TYPED SUBSET (D11) holds declared field positions too,
+  // and a hook reading a NESTED source lands on one. Listing only a fixed
+  // map's fields rendered an empty list there — a refusal that named the
+  // reference and then said nothing about what was available.
+  const declared =
+    node?.kind === "map.fixed"
+      ? { label: "fields", names: Object.keys(node.fields) }
+      : node?.kind === "map.plain"
+        ? { label: "typed fields", names: Object.keys(node.fields ?? {}) }
+        : { label: `a ${node?.kind ?? "?"}, which declares no fields`, names: [] };
+  const listed = declared.names.length === 0 ? declared.label : `${declared.label}: ${declared.names.join(", ")}`;
+  return `${where}: ${JSON.stringify(name)} is not a field of ${JSON.stringify(at.decl)} (${listed})`;
 }
 
 /** Pass two for the normalizer: its operand paths address declared
@@ -687,6 +697,23 @@ function resolveHooks(surface: SurfaceDecl, ctx: Context): void {
       }
       for (const [label, name] of [["edges", hook.edges], ["into", hook.into]] as const) {
         const problem = fieldProblem(ctx, entry, name, `${where}.${label}`);
+        if (problem !== undefined) ctx.problems.push(problem);
+      }
+      continue;
+    }
+    if (hook.hook === "liftNestedList") {
+      for (const [label, name] of [["from", hook.from], ["into", hook.into]] as const) {
+        const problem = fieldProblem(ctx, entry, name, `${where}.${label}`);
+        if (problem !== undefined) ctx.problems.push(problem);
+      }
+      // The source sits one level IN — a field of the entry's own field,
+      // which is what makes this hook a derivation rather than a default.
+      // Resolving it is the whole reason the guard exists: a name that
+      // reaches nothing leaves the hook writing the empty list forever,
+      // and an empty list is a legal answer, so nothing downstream reds.
+      const from = descend(ctx.surface, entry, { kind: "field", name: hook.from });
+      if (from !== undefined) {
+        const problem = fieldProblem(ctx, from, hook.source, `${where}.source`);
         if (problem !== undefined) ctx.problems.push(problem);
       }
       continue;

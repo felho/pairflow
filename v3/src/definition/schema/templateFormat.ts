@@ -198,9 +198,17 @@ const gateBindingNode: NodeDecl = {
     contextBlockRefs: {
       kind: "valueClass",
       tag: "d-ctx-gate-refs",
-      rows: ["ch13v2-C6"],
+      rows: ["ch13v2-C6", "ch13v2-C13"],
       valueClass: "blockIdList",
       label: "contextBlockRefs",
+      // ch13v2-C13: the admitted form carries this position on EVERY
+      // binding. Filling an absent key with a constant is `default:`
+      // materialization, which is schema-side (ADR-019 D3) — no hook is
+      // needed here, unlike the two config positions whose source is
+      // nested. It fills an ABSENT key only: a key authored `undefined`
+      // is PRESENT and meets this field's own lane, which is C1's
+      // fail-closed class working rather than a gap.
+      default: [],
     },
   },
 };
@@ -250,6 +258,22 @@ const stepNode: NodeDecl = {
       rows: ["ch8-C14", "ch12-C7"],
       valueClass: "agentConfigValue",
       label: "agentConfig",
+    },
+    // ch13v2-C13: the step position's ADMISSION-PRODUCED ref list — the
+    // roles-entry node's twin, normalized from the nested `agentConfig`
+    // source by `n-ctx-step-refs`, `raw` and channel-DIRECT on the same
+    // `d-advances-round` precedent and for the same reason.
+    //
+    // FORWARD-SCOPED EXEMPTION (ADR-019 D4, amended 2026-08-09): rowed
+    // to ch13v2-C13, which is BYTE-LOCKED against the declaration
+    // snapshot recorded at its ratifying act and cannot cite it back.
+    // CLOSING ACT: the ch13 chapter-close act that flips the draft to
+    // `realized`, where the citation is added and the exemption ends.
+    promptConcernRefs: {
+      kind: "raw",
+      tag: "d-ctx-step-refs",
+      rows: ["ch13v2-C13"],
+      channel: "direct",
     },
     gates: {
       kind: "map.open",
@@ -450,6 +474,27 @@ const rootNode: NodeDecl = {
             rows: ["ch12-C6", "ch12-C7"],
             valueClass: "agentConfigValue",
             label: "defaultAgentConfig",
+          },
+          // ch13v2-C13: the role position's ADMISSION-PRODUCED ref list,
+          // normalized from the nested `defaultAgentConfig` source by
+          // `n-ctx-role-refs`. `raw` and channel-DIRECT on the
+          // `d-advances-round` precedent, carried whole: a validating
+          // kind would MINT a lane on the direct channel and turn a
+          // caller-supplied produced position into a finding, where
+          // C13's own recompute clause requires a silent recompute.
+          //
+          // FORWARD-SCOPED EXEMPTION (ADR-019 D4, amended 2026-08-09):
+          // this node is rowed to ch13v2-C13, which is BYTE-LOCKED
+          // against the declaration snapshot recorded at the ratifying
+          // act and therefore cannot cite it back. CLOSING ACT: the ch13
+          // chapter-close act that flips the draft to `realized` — the
+          // scheduled act that edits this contract next, where the
+          // citation is added and the exemption ends.
+          promptConcernRefs: {
+            kind: "raw",
+            tag: "d-ctx-role-refs",
+            rows: ["ch13v2-C13"],
+            channel: "direct",
           },
         },
       },
@@ -669,14 +714,47 @@ export const templateFormat: SurfaceDecl = defineSurface({
       advanceSet: "$.round.advanceOnArrivalAt",
       into: "advancesRound",
     },
+    // ch13v2-C13's two nested-source derivations (ADR-019 D12): the
+    // authored ref list lives INSIDE the format-open agent-config map, so
+    // it is lifted onto a sibling of the enclosing entry — a value
+    // computed from another position, which is derivation and not a
+    // `default:`. Declared BEFORE the binding rebuild below, per C13's
+    // ordering clause.
+    //
+    // FORWARD-SCOPED EXEMPTION (ADR-019 D4, amended 2026-08-09), for both
+    // entries: rowed to ch13v2-C13, which is BYTE-LOCKED against the
+    // declaration snapshot its ratifying act recorded and cannot cite
+    // them back. CLOSING ACT: the ch13 chapter-close act that flips the
+    // draft to `realized`, where the citations are added.
+    {
+      tag: "n-ctx-role-refs",
+      rows: ["ch13v2-C13"],
+      hook: "liftNestedList",
+      over: "$.roles",
+      from: "defaultAgentConfig",
+      source: "promptConcernRefs",
+      into: "promptConcernRefs",
+    },
+    {
+      tag: "n-ctx-step-refs",
+      rows: ["ch13v2-C13"],
+      hook: "liftNestedList",
+      over: "$.steps",
+      from: "agentConfig",
+      source: "promptConcernRefs",
+      into: "promptConcernRefs",
+    },
     {
       tag: "n-effective-config",
       // ch13v2-C13 legislates this hook's carry-list growth at P5 — the
-      // row citation keeps the coupling inside the closure check.
+      // row citation keeps the coupling inside the closure check. The
+      // authored gate refs ride the CARRY list: the rebuild would
+      // otherwise drop them, and the carry list plus the produced field
+      // is the admitted binding's whole keyset.
       rows: ["ch11-C20", "ch11-C5", "ch13v2-C13"],
       hook: "materializeEffectiveConfigs",
       over: "$.steps.*.gates",
-      carry: ["uses"],
+      carry: ["uses", "contextBlockRefs"],
       into: "config",
     },
   ],

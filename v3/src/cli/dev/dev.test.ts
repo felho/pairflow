@@ -1134,3 +1134,95 @@ describe("dev cli — replay role schema (X5)", () => {
     expect(result.code).toBe(EXIT.ok);
   });
 });
+
+// ── packet ch13-p1a (ch13v2-C18): the context-block surface's ONE issue
+// code travels intact to the CLI's machine document, and NO other lane of
+// this packet carries a code. Zero verb growth, zero flag growth — the
+// lanes ride the standing validate channel as it is. ─────────────────────
+
+/** A ch13-ONLY fixture: gate-free, so the only coded finding any lane can
+ * produce is the context-block surface's own. `refs` is authored at the
+ * role position (omitted entirely when empty, so no ref-list lane fires);
+ * each catalog entry is `id: body` as authored. */
+const ctxFile = (refs: readonly string[], catalog: readonly (readonly [string, string])[]): string => `ref:
+  id: ctx-pair-v0
+  version: 1
+start: implement
+steps:
+  implement:
+    role: implementer
+    instruction: |-
+      build it
+    transitions:
+      PASS: done
+terminal:
+  - done
+roles:
+  implementer:
+    defaultActor: codex
+${refs.length === 0 ? "" : `    defaultAgentConfig:\n      promptConcernRefs:\n${refs.map((ref) => `        - ${ref}\n`).join("")}`}contextBlocks:
+${catalog.map(([id, body]) => `  ${id}:\n    body: ${body}\n`).join("")}`;
+
+describe("dev cli — the ch13 code travel (packet ch13-p1a, ch13v2-C18)", () => {
+  it("the CODE ARRIVES INTACT: the finding's `code` field equals unresolved_context_block_ref", async () => {
+    const dir = tempDir();
+    const path = join(dir, "ctx-bad.yaml");
+    // one ref naming no entry, beside one entry that IS named — so the
+    // hygiene lane stays silent and this document's only finding is the
+    // coded one.
+    writeFileSync(path, ctxFile(["alpha", "ghost"], [["alpha", "text"]]));
+    const res = await runDev(["validate", path], testDeps());
+    expect(res.stdout).toEqual([]);
+    const err = assertError(res, "internal", EXIT.internal);
+    expect(err.name).toBe("TemplateInvalid");
+    const details = err.details as { stage: string; findings: { path: string; code?: string }[] };
+    expect(details.stage).toBe("validate");
+    // The VALUE of the code field, by equality — never mere presence.
+    expect(details.findings).toEqual([
+      {
+        path: "roles.implementer.defaultAgentConfig.promptConcernRefs[1]",
+        message: 'context block ref "ghost" does not resolve to an entry',
+        code: "unresolved_context_block_ref",
+      },
+    ]);
+    // VERBATIM: the doc's details deep-equal the pipeline's own result.
+    const direct = loadTemplate(new Uint8Array(readFileSync(path)), { path, catalog: createGateRegistry() });
+    expect(direct.ok).toBe(false);
+    if (!direct.ok) {
+      expect(details).toEqual({ stage: direct.error.stage, findings: direct.error.findings });
+    }
+  });
+
+  it("the NEGATIVE TWIN: no OTHER lane of this surface carries a code", async () => {
+    const dir = tempDir();
+    // Every ch13 lane this packet owns except the resolution one: a
+    // grammar-refused key, a body lane, an entry keyset lane, and the C9
+    // hygiene lane. None may carry a `code`.
+    const lanes: readonly [string, string][] = [
+      ["bad-key", ctxFile([], [["Bad Key", "text"]])],
+      ["bad-body", ctxFile([], [["alpha", "7"]])],
+      ["unreferenced", ctxFile([], [["alpha", "text"]])],
+    ];
+    for (const [name, text] of lanes) {
+      const path = join(dir, `${name}.yaml`);
+      writeFileSync(path, text);
+      const res = await runDev(["validate", path], testDeps());
+      const err = assertError(res, "internal", EXIT.internal);
+      const details = err.details as { stage: string; findings: { path: string; code?: string }[] };
+      expect(details.findings.length, name).toBeGreaterThan(0);
+      for (const finding of details.findings) {
+        expect(Object.keys(finding).sort(), `${name} @ ${finding.path}`).toEqual(["message", "path"]);
+      }
+    }
+  });
+
+  it("the GATE schemas' named lanes keep the codes they always had", async () => {
+    const dir = tempDir();
+    const path = join(dir, "gated-bad.yaml");
+    writeFileSync(path, gatedFile(true));
+    const res = await runDev(["validate", path], testDeps());
+    const err = assertError(res, "internal", EXIT.internal);
+    const details = err.details as { stage: string; findings: { path: string; code?: string }[] };
+    expect(details.findings.map((f) => f.code)).toEqual(["gate_evaluator_unavailable"]);
+  });
+});

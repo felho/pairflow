@@ -1273,8 +1273,14 @@ describe("the normalizer (ADR-019 D3) — derivation, never validation", () => {
     };
     const effective = new Map<string, unknown>([[instanceKey(["steps", "a", "gates", "GO", 0]), { resolved: 2 }]]);
     normalize(templateFormat, value, effective);
+    // ch13v2-C13 grew the carry list by `contextBlockRefs`. This lane calls
+    // the normalizer DIRECTLY over a hand-built value, so the declared
+    // default never materialized and the carry copies an absent field —
+    // the one state C13's ordering clause warns of, unreachable through
+    // admission (where the default fills during the walk) and reachable
+    // only here.
     expect((value.steps.a.gates as Record<string, unknown>)["GO"]).toStrictEqual([
-      { uses: "x.y", config: { resolved: 2 } },
+      { uses: "x.y", contextBlockRefs: undefined, config: { resolved: 2 } },
     ]);
   });
 
@@ -1568,6 +1574,30 @@ describe("the declaration GATE: a declaration that is not closed never becomes a
           entry: { kind: "string", tag: "ne", rows: ["x"], typeMessage: "t" } },
         pick: { kind: "string", tag: "p", rows: ["x"],
           memberOf: { relation: "memberOf", target: { [relation]: path } as never, message: "m" } },
+      },
+    });
+
+  /** ch13v2-C13's nested-source hook (ADR-019 D12): the SOURCE is a typed
+   * field of a plain map the landing entry carries, so the guard must
+   * resolve one level IN — and name that typed subset when it cannot. */
+  const liftSurface = (over: Partial<Record<"over" | "from" | "source" | "into", string>>): SurfaceDecl =>
+    base({
+      normalizers: [{
+        tag: "n-l", rows: ["x"], hook: "liftNestedList",
+        over: over.over ?? "$.roles", from: over.from ?? "config",
+        source: over.source ?? "refs", into: over.into ?? "lifted",
+      }],
+    }, {
+      fields: {
+        roles: { kind: "map.open", tag: "ro", rows: ["x"], containerMessage: "c", keyLaneAt: "container",
+          entry: { kind: "map.fixed", tag: "roe", rows: ["x"], containerMessage: "c", unknownMessage: "u",
+            fields: {
+              config: { kind: "map.plain", tag: "cfg", rows: ["x"], containerMessage: "c",
+                canonicalJsonSafe: { message: "k" },
+                fields: { refs: { kind: "list", tag: "rl", rows: ["x"], containerMessage: "c", memberLaneAt: "index",
+                  member: { kind: "string", tag: "rm", rows: ["x"], typeMessage: "t" } } } },
+              lifted: { kind: "raw", tag: "lf", rows: ["x"], channel: "direct" },
+            } } },
       },
     });
 
@@ -1923,6 +1953,26 @@ describe("the declaration GATE: a declaration that is not closed never becomes a
         fields: { refs: { kind: "string", tag: "cfgr", rows: ["x"], typeMessage: "t",
           ...(ok ? {} : { channel: "file" }) } } } } }),
       problem: /carries channel "file", which is read only on a field of a map\.fixed/u },
+    // --- ch13-p1a family 4: the NESTED-SOURCE hook's load guard. Its
+    // operand paths and every dynamic field name it reads or writes, the
+    // nested source included — a name that reaches nothing would leave
+    // the hook writing the empty list forever, and an empty list is a
+    // legal answer, so nothing downstream would ever red.
+    { claim: "a nested-source normalizer operand path addressing NO declared position",
+      make: (ok) => liftSurface({ over: ok ? "$.roles" : "$.rolse" }),
+      problem: /over: "\$\.rolse" is not a declared position/u },
+    { claim: "a nested-source normalizer landing on a node of the WRONG KIND",
+      make: (ok) => liftSurface({ over: ok ? "$.roles" : "$.roles.*" }),
+      problem: /over: "\$\.roles\.\*" is a map\.fixed; the hook walks a map\.open/u },
+    { claim: "a nested-source normalizer reading an entry field the entry does not declare",
+      make: (ok) => liftSurface({ from: ok ? "config" : "cofnig" }),
+      problem: /from: "cofnig" is not a field of "\$\.roles\.\*" \(fields: config, lifted\)/u },
+    { claim: "a nested-source normalizer reading a name the SOURCE map does not type",
+      make: (ok) => liftSurface({ source: ok ? "refs" : "rfes" }),
+      problem: /source: "rfes" is not a field of "\$\.roles\.\*\.config" \(typed fields: refs\)/u },
+    { claim: "a nested-source normalizer WRITING a field the entry does not declare",
+      make: (ok) => liftSurface({ into: ok ? "lifted" : "liftde" }),
+      problem: /into: "liftde" is not a field of "\$\.roles\.\*" \(fields: config, lifted\)/u },
   ];
 
   for (const guard of GUARDS) {
@@ -1940,7 +1990,7 @@ describe("the declaration GATE: a declaration that is not closed never becomes a
   }
 
   it("the guard register is complete, unique and PINNED", () => {
-    expect(GUARDS).toHaveLength(43);
+    expect(GUARDS).toHaveLength(48);
     expect(new Set(GUARDS.map((guard) => guard.claim)).size).toBe(GUARDS.length);
   });
 
@@ -1967,5 +2017,131 @@ describe("the declaration GATE: a declaration that is not closed never becomes a
       runSurface(selecting("keysOf", "$.names"), { names: { a: "1" }, pick: "zz" }, { channel: { kind: "direct" } })
         .findings,
     ).toHaveLength(1);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// packet ch13-p1a — the ENGINE's two new capabilities (row D5), asserted
+// on their own so a regression in either is addressable alone.
+// ═══════════════════════════════════════════════════════════════════════
+
+describe("the failed-tag surface (packet ch13-p1a, D5) — the residual channel", () => {
+  const catalogOfNone: GateCatalog = { resolve: () => null };
+  const template = (steps: Record<string, unknown>): Record<string, unknown> => ({
+    ref: { id: "t", version: 1 },
+    start: "s",
+    steps,
+    terminal: ["done"],
+    roles: { r: {} },
+  });
+  const failedTags = (value: unknown): readonly string[] =>
+    runSurface(templateFormat, value, { channel: { kind: "direct" }, catalog: catalogOfNone }).failedTags;
+
+  it("a CLEAN document marks nothing", () => {
+    expect(failedTags(template({ s: { role: "r", instruction: "i", transitions: {} } }))).toStrictEqual([]);
+  });
+
+  it("a wrong-kind container marks its own declared tag", () => {
+    expect(failedTags(template({ s: { role: "r", instruction: "i", transitions: {}, gates: 7 } }))).toContain(
+      "d-gates",
+    );
+  });
+
+  it("the DEAD-CONFIG skip marks the enclosing container's tag — the second route to d-gates", () => {
+    // The skip removes the entry and everything beneath it from
+    // evaluation. Before this packet the container still returned ok and
+    // NOTHING was marked, so a rule reading the tags to decide whether a
+    // value under it is reachable saw a clean document (measured: the M1
+    // trigger-tag probe's `gates dead-config key` row read `[]`).
+    const withDeadKey = template({
+      s: {
+        role: "r",
+        instruction: "i",
+        transitions: {},
+        gates: { GHOST: [{ uses: "declarative.threshold", config: {} }] },
+      },
+    });
+    expect(failedTags(withDeadKey)).toStrictEqual(["d-gates"]);
+  });
+
+  it("the surface is present on the ROOT-CONTAINER short-circuit too, not only on the walk's return", () => {
+    // The two return sites are different statements; an exposure reaching
+    // only the walk's would leave the field ABSENT on this route, where
+    // `[]` would then be a default rather than a measurement.
+    expect(failedTags(7)).toStrictEqual([]);
+  });
+});
+
+describe("the liftNestedList hook (packet ch13-p1a, D4) — derivation from a NESTED source", () => {
+  const lifted = (root: NodeDecl, hook: Record<string, unknown>): SurfaceDecl =>
+    ({
+      substrate: templateFormat.substrate, valueClasses: {}, crossRules: [], root,
+      normalizers: [{ tag: "n", rows: ROWS, ...hook }],
+    }) as unknown as SurfaceDecl;
+
+  const entryNode: NodeDecl = {
+    kind: "map.fixed", tag: "e", rows: ROWS, containerMessage: "c", unknownMessage: "u",
+    fields: {
+      cfg: {
+        kind: "map.plain", tag: "cfg", rows: ROWS, containerMessage: "c",
+        canonicalJsonSafe: { message: "k" },
+        fields: {
+          refs: {
+            kind: "list", tag: "rl", rows: ROWS, containerMessage: "c", memberLaneAt: "index",
+            member: { kind: "string", tag: "rm", rows: ROWS, typeMessage: "t" },
+          },
+        },
+      },
+      out: { kind: "raw", tag: "o", rows: ROWS },
+    },
+  };
+
+  const surface = lifted(
+    {
+      kind: "map.fixed", tag: "r", rows: ROWS, containerMessage: "c", unknownMessage: "u",
+      fields: {
+        outer: {
+          kind: "map.open", tag: "om", rows: ROWS, containerMessage: "c", keyLaneAt: "container",
+          entry: {
+            kind: "map.open", tag: "inner", rows: ROWS, containerMessage: "c", keyLaneAt: "container",
+            entry: entryNode,
+          },
+        },
+      },
+    },
+    { hook: "liftNestedList", over: "$.outer.*", from: "cfg", source: "refs", into: "out" },
+  );
+
+  it("the declaration is CLOSED — the nested source resolves through the plain map's typed subset", () => {
+    expect(closureProblems(surface)).toStrictEqual([]);
+  });
+
+  it("lifts the nested list onto the entry, through an operand path carrying a WILDCARD", () => {
+    const value = { outer: { a: { one: { cfg: { refs: ["x", "y"], other: 1 } } } } };
+    normalize(surface, value, new Map());
+    expect(value.outer.a.one).toHaveProperty("out", ["x", "y"]);
+  });
+
+  it("an ABSENT source lands as the EMPTY LIST, never an absence", () => {
+    const value = { outer: { a: { one: { cfg: { other: 1 } } } } };
+    normalize(surface, value, new Map());
+    expect(value.outer.a.one).toHaveProperty("out", []);
+    const noConfig = { outer: { a: { one: {} } } };
+    normalize(surface, noConfig, new Map());
+    expect(noConfig.outer.a.one).toHaveProperty("out", []);
+  });
+
+  it("PRODUCER MONOPOLY: a pre-populated produced field is recomputed, never trusted", () => {
+    const value = { outer: { a: { one: { cfg: { refs: ["x"] }, out: ["GHOST"] } } } };
+    normalize(surface, value, new Map());
+    expect(value.outer.a.one).toHaveProperty("out", ["x"]);
+  });
+
+  it("the AUTHORED source survives unmodified — the lifted list is a sibling, not a move", () => {
+    const value = { outer: { a: { one: { cfg: { refs: ["x"] } } } } };
+    normalize(surface, value, new Map());
+    expect(value.outer.a.one.cfg).toStrictEqual({ refs: ["x"] });
+    // …and the two do not share one array.
+    expect(value.outer.a.one.cfg.refs).not.toBe((value.outer.a.one as Record<string, unknown>)["out"]);
   });
 });

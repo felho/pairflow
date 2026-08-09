@@ -425,6 +425,35 @@ export type NormalizerHookDecl =
   | {
       readonly tag: string;
       readonly rows: readonly string[];
+      /**
+       * ADR-019 D7 (amended 2026-08-09 — the CONSTRUCT flavour): LIFT a
+       * list that lives NESTED inside a format-open map onto a sibling
+       * field of the enclosing entry, materializing the EMPTY LIST where
+       * no source was authored. The first nested-source derivation: the
+       * source is not a field of the entry but a typed field (D11's typed
+       * subset) of one of the entry's fields, which is what makes it
+       * derivation rather than a plain `default:`.
+       *
+       * The PRODUCER MONOPOLY holds, as on `expandAdvancesRound`: the
+       * produced field is recomputed from the authored source and
+       * overwrites whatever the input carried. The nested source itself
+       * is left untouched — the lifted list is a SIBLING, never a
+       * replacement.
+       */
+      readonly hook: "liftNestedList";
+      /** The open map whose entries carry the nested source. */
+      readonly over: NormalizerPath;
+      /** The entry's own field whose value holds the source, relative to
+       * the entry. */
+      readonly from: string;
+      /** The source list's key inside that field's value. */
+      readonly source: string;
+      /** The produced sibling field on the entry. */
+      readonly into: string;
+    }
+  | {
+      readonly tag: string;
+      readonly rows: readonly string[];
       readonly hook: "materializeEffectiveConfigs";
       /** The open map of pipelines whose members carry a delegated config. */
       readonly over: NormalizerPath;

@@ -180,9 +180,14 @@ describe("admitTemplate — effective-config materialization (dimension 3, A5)",
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     const pipeline = result.template.steps["review"]?.gates?.["PASS"];
+    // ch13v2-C13: the admitted binding's keyset is the carry list plus the
+    // produced config — neither binding authors `contextBlockRefs`, so the
+    // declared default materializes the empty list and the rebuild carries
+    // it (a missing carry entry would drop an AUTHORED list, which the
+    // admitted-form family drives directly).
     expect(pipeline).toEqual([
-      { uses: "declarative.threshold", config: { metric: "round", op: ">=", value: 2 } },
-      { uses: "pairflow.previous_reviewer_verdict", config: { required: true } },
+      { uses: "declarative.threshold", contextBlockRefs: [], config: { metric: "round", op: ">=", value: 2 } },
+      { uses: "pairflow.previous_reviewer_verdict", contextBlockRefs: [], config: { required: true } },
     ]);
   });
 
@@ -203,19 +208,30 @@ describe("admitTemplate — the gate-free confinement (A8) and own-property writ
     const result = admitTemplate(raw, catalog);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    // ch11-P2c A1 + ch12-p1b G3 + ch12-p3 R1 + ch13v2-C1: the shape deltas
-    // are the expanded per-step advancesRound map (declaration-absent ⇒
-    // all-false, C38), the MATERIALIZED activation default (absent ⇒
-    // immediate, C1), the MATERIALIZED runtime-context requirement (absent
-    // ⇒ "none", C4), and the MATERIALIZED empty catalog record.
+    // ch11-P2c A1 + ch12-p1b G3 + ch12-p3 R1 + ch13v2-C1/C13: the shape
+    // deltas are the expanded per-step advancesRound map
+    // (declaration-absent ⇒ all-false, C38), the MATERIALIZED activation
+    // default (absent ⇒ immediate, C1), the MATERIALIZED runtime-context
+    // requirement (absent ⇒ "none", C4), the MATERIALIZED empty catalog
+    // record, and the two ADMISSION-PRODUCED ref positions — one per roles
+    // entry and one per step, each the EMPTY LIST because no agent config
+    // is authored anywhere in this template (C13).
     expect(result.template).toEqual({
       ...raw,
       activation: { mode: "immediate" },
       runtimeContext: "none",
       contextBlocks: {},
+      roles: {
+        implementer: { defaultActor: "codex", promptConcernRefs: [] },
+        reviewer: { defaultActor: "claude", promptConcernRefs: [] },
+      },
       steps: {
-        implement: { ...raw.steps["implement"], advancesRound: { PASS: false } },
-        review: { ...raw.steps["review"], advancesRound: { PASS: false, CONVERGED: false } },
+        implement: { ...raw.steps["implement"], advancesRound: { PASS: false }, promptConcernRefs: [] },
+        review: {
+          ...raw.steps["review"],
+          advancesRound: { PASS: false, CONVERGED: false },
+          promptConcernRefs: [],
+        },
       },
     });
   });
@@ -473,7 +489,7 @@ describe("admitTemplate — producer monopoly (dimension 4, A1: input flags neve
     expect(result.template.steps["implement"]?.advancesRound).toStrictEqual({ PASS: false });
     // The gated rebuild branch really ran: the effective config landed.
     expect(result.template.steps["review"]?.gates?.["PASS"]).toEqual([
-      { uses: "declarative.threshold", config: { metric: "round", op: ">=", value: 2 } },
+      { uses: "declarative.threshold", contextBlockRefs: [], config: { metric: "round", op: ">=", value: 2 } },
     ]);
   });
 });
@@ -825,3 +841,613 @@ describe("admitTemplate — the C7 agentConfig value-level narrowing (A1/A2)", (
 // representable (validated by v3:typecheck via TS2578). ──
 // @ts-expect-error T1: "optional" is not in the runtimeContext authored domain.
 export const __probeRuntimeContextLiteral: WorkflowTemplate["runtimeContext"] = "optional";
+
+// ═══════════════════════════════════════════════════════════════════════
+// packet ch13-p1a — the context-block surface on the DIRECT channel.
+//
+// Family 1 (the declared-lane family) drives the ch13v2 lane inventory
+// (contract ch13v2-C19) through the real admission entry, each lane at
+// its OWN grain and each fixture asserting the WHOLE finding set —
+// equality, never containment, so a spurious extra finding reds. Both
+// directions per lane: the violating input produces exactly the declared
+// finding at the declared path, the conforming one produces none.
+// ═══════════════════════════════════════════════════════════════════════
+
+/** The ch13 fixture base: one step with one transition (so a gates key
+ * has an operand), one role, and whichever ch13 positions a row needs. */
+function ctxTemplate(parts: {
+  readonly contextBlocks?: unknown;
+  readonly roleConfig?: unknown;
+  readonly stepConfig?: unknown;
+  readonly gates?: unknown;
+} = {}): WorkflowTemplate {
+  const step: Record<string, unknown> = { role: "r", instruction: "i", transitions: { GO: "done" } };
+  if ("stepConfig" in parts) step["agentConfig"] = parts.stepConfig;
+  if ("gates" in parts) step["gates"] = parts.gates;
+  const role: Record<string, unknown> = {};
+  if ("roleConfig" in parts) role["defaultAgentConfig"] = parts.roleConfig;
+  const template: Record<string, unknown> = {
+    ref: { id: "t", version: 1 },
+    start: "s",
+    steps: { s: step },
+    terminal: ["done"],
+    roles: { r: role },
+  };
+  if ("contextBlocks" in parts) template["contextBlocks"] = parts.contextBlocks;
+  return template as unknown as WorkflowTemplate;
+}
+
+/** The whole finding set of one admission, or the empty list on success. */
+function ctxFindings(parts: Parameters<typeof ctxTemplate>[0]): readonly ValidationFinding[] {
+  const result = admitTemplate(ctxTemplate(parts), catalog);
+  return result.ok ? [] : result.findings;
+}
+
+const THRESHOLD = { metric: "round", op: ">=", value: 2 } as const;
+/** A one-binding pipeline, with the ref position authored iff supplied. */
+const gateWith = (refs?: unknown): unknown => [
+  refs === undefined
+    ? { uses: "declarative.threshold", config: THRESHOLD }
+    : { uses: "declarative.threshold", config: THRESHOLD, contextBlockRefs: refs },
+];
+
+const BLOCK_GRAMMAR = "^[a-z][a-z0-9-]*$";
+
+interface LaneCase {
+  /** The declaration tag whose lane this row drives. */
+  readonly lane: string;
+  readonly bad: Parameters<typeof ctxTemplate>[0];
+  readonly findings: readonly ValidationFinding[];
+  /** The same fixture with the one defect corrected: admits, zero findings. */
+  readonly good: Parameters<typeof ctxTemplate>[0];
+}
+
+const CTX_LANES: readonly LaneCase[] = [
+  {
+    lane: "d-ctxblocks (container lane)",
+    bad: { contextBlocks: 7 },
+    findings: [{ path: "contextBlocks", message: "contextBlocks must be a map of block-id -> { body }; got 7" }],
+    good: { contextBlocks: {} },
+  },
+  {
+    // The key lane and C9's audit each report their own: a grammar-refused
+    // key is still a key the catalog enumerates (ch13v2-C2 + C9).
+    lane: "d-block-key (key lane) + the C9 audit reporting beside it",
+    bad: { contextBlocks: { "Bad Key": { body: "x" } } },
+    findings: [
+      { path: "contextBlocks", message: `invalid context block id "Bad Key": block ids match ${BLOCK_GRAMMAR}` },
+      { path: "contextBlocks.Bad Key", message: 'context block "Bad Key" is declared but no ref names it' },
+    ],
+    good: { contextBlocks: { alpha: { body: "x" } }, roleConfig: { promptConcernRefs: ["alpha"] } },
+  },
+  {
+    lane: "d-ctx-entry (container lane) + the C7 per-site finding beside it",
+    bad: { contextBlocks: { alpha: 7 }, roleConfig: { promptConcernRefs: ["alpha"] } },
+    findings: [
+      { path: "contextBlocks.alpha", message: "a context block entry must be a map with exactly body; got 7" },
+      {
+        path: "roles.r.defaultAgentConfig.promptConcernRefs[0]",
+        message: 'context block ref "alpha" does not resolve to an entry',
+        code: "unresolved_context_block_ref",
+      },
+    ],
+    good: { contextBlocks: { alpha: { body: "x" } }, roleConfig: { promptConcernRefs: ["alpha"] } },
+  },
+  {
+    lane: "d-ctx-entry (unknown-key lane)",
+    bad: { contextBlocks: { alpha: { body: "x", extra: 1 } }, roleConfig: { promptConcernRefs: ["alpha"] } },
+    findings: [
+      {
+        path: "contextBlocks.alpha.extra",
+        message: 'unknown key "extra" (a context block entry\'s only key is body)',
+      },
+      {
+        path: "roles.r.defaultAgentConfig.promptConcernRefs[0]",
+        message: 'context block ref "alpha" does not resolve to an entry',
+        code: "unresolved_context_block_ref",
+      },
+    ],
+    good: { contextBlocks: { alpha: { body: "x" } }, roleConfig: { promptConcernRefs: ["alpha"] } },
+  },
+  {
+    lane: "d-ctx-entry (missing-key lane)",
+    bad: { contextBlocks: { alpha: {} }, roleConfig: { promptConcernRefs: ["alpha"] } },
+    findings: [
+      { path: "contextBlocks.alpha", message: 'missing required key "body"' },
+      {
+        path: "roles.r.defaultAgentConfig.promptConcernRefs[0]",
+        message: 'context block ref "alpha" does not resolve to an entry',
+        code: "unresolved_context_block_ref",
+      },
+    ],
+    good: { contextBlocks: { alpha: { body: "x" } }, roleConfig: { promptConcernRefs: ["alpha"] } },
+  },
+  {
+    lane: "d-ctx-body (type lane)",
+    bad: { contextBlocks: { alpha: { body: 7 } }, roleConfig: { promptConcernRefs: ["alpha"] } },
+    findings: [
+      { path: "contextBlocks.alpha.body", message: "body must be a nonempty string; got 7" },
+      {
+        path: "roles.r.defaultAgentConfig.promptConcernRefs[0]",
+        message: 'context block ref "alpha" does not resolve to an entry',
+        code: "unresolved_context_block_ref",
+      },
+    ],
+    good: { contextBlocks: { alpha: { body: "x" } }, roleConfig: { promptConcernRefs: ["alpha"] } },
+  },
+  {
+    lane: "d-ctx-body (nonempty lane)",
+    bad: { contextBlocks: { alpha: { body: "" } }, roleConfig: { promptConcernRefs: ["alpha"] } },
+    findings: [
+      { path: "contextBlocks.alpha.body", message: "body must be a nonempty string" },
+      {
+        path: "roles.r.defaultAgentConfig.promptConcernRefs[0]",
+        message: 'context block ref "alpha" does not resolve to an entry',
+        code: "unresolved_context_block_ref",
+      },
+    ],
+    good: { contextBlocks: { alpha: { body: "x" } }, roleConfig: { promptConcernRefs: ["alpha"] } },
+  },
+  // vc-blockidlist's container lane is ONE declaration over THREE
+  // positions, so the row is driven at each of them: the label and the
+  // path are what differ, and a lane firing at the wrong one reds.
+  {
+    lane: "vc-blockidlist (container lane) at the ROLE position",
+    bad: { contextBlocks: { alpha: { body: "x" } }, roleConfig: { promptConcernRefs: "nope" } },
+    findings: [
+      {
+        path: "roles.r.defaultAgentConfig.promptConcernRefs",
+        message: 'promptConcernRefs must be a list of context block ids; got "nope"',
+      },
+    ],
+    good: { contextBlocks: { alpha: { body: "x" } }, roleConfig: { promptConcernRefs: ["alpha"] } },
+  },
+  {
+    lane: "vc-blockidlist (container lane) at the STEP position",
+    bad: { contextBlocks: { alpha: { body: "x" } }, stepConfig: { promptConcernRefs: "nope" } },
+    findings: [
+      {
+        path: "steps.s.agentConfig.promptConcernRefs",
+        message: 'promptConcernRefs must be a list of context block ids; got "nope"',
+      },
+    ],
+    good: { contextBlocks: { alpha: { body: "x" } }, stepConfig: { promptConcernRefs: ["alpha"] } },
+  },
+  {
+    lane: "vc-blockidlist (container lane) at the GATE position",
+    bad: { contextBlocks: { alpha: { body: "x" } }, gates: { GO: gateWith("nope") } },
+    findings: [
+      {
+        path: "steps.s.gates.GO[0].contextBlockRefs",
+        message: 'contextBlockRefs must be a list of context block ids; got "nope"',
+      },
+    ],
+    good: { contextBlocks: { alpha: { body: "x" } }, gates: { GO: gateWith(["alpha"]) } },
+  },
+  {
+    // No catalog: the member fails its OWN shape lane and is therefore
+    // invisible to every list-level lane (ch13v2-C8), so the shape finding
+    // is the whole set.
+    lane: "vc-block-id (member type lane)",
+    bad: { roleConfig: { promptConcernRefs: [7] } },
+    findings: [
+      {
+        path: "roles.r.defaultAgentConfig.promptConcernRefs[0]",
+        message: "invalid context block ref 7: block ids are kebab-case strings",
+      },
+    ],
+    good: { contextBlocks: { alpha: { body: "x" } }, roleConfig: { promptConcernRefs: ["alpha"] } },
+  },
+  {
+    lane: "vc-block-id (grammar lane)",
+    bad: { roleConfig: { promptConcernRefs: ["Bad Ref"] } },
+    findings: [
+      {
+        path: "roles.r.defaultAgentConfig.promptConcernRefs[0]",
+        message: `invalid context block ref "Bad Ref": block ids match ${BLOCK_GRAMMAR}`,
+      },
+    ],
+    good: { contextBlocks: { alpha: { body: "x" } }, roleConfig: { promptConcernRefs: ["alpha"] } },
+  },
+  {
+    lane: "vc-blockidlist (duplicate lane, per occurrence)",
+    bad: { contextBlocks: { alpha: { body: "x" } }, roleConfig: { promptConcernRefs: ["alpha", "alpha"] } },
+    findings: [
+      {
+        path: "roles.r.defaultAgentConfig.promptConcernRefs[1]",
+        message: 'duplicate context block ref "alpha"',
+      },
+    ],
+    good: { contextBlocks: { alpha: { body: "x" } }, roleConfig: { promptConcernRefs: ["alpha"] } },
+  },
+  {
+    lane: "vc-blockidlist (the CODED resolution lane)",
+    bad: { roleConfig: { promptConcernRefs: ["ghost"] } },
+    findings: [
+      {
+        path: "roles.r.defaultAgentConfig.promptConcernRefs[0]",
+        message: 'context block ref "ghost" does not resolve to an entry',
+        code: "unresolved_context_block_ref",
+      },
+    ],
+    good: { contextBlocks: { ghost: { body: "x" } }, roleConfig: { promptConcernRefs: ["ghost"] } },
+  },
+  {
+    // C9's semantic lane — the one member of the inventory the DECLARATION
+    // does not carry (owner: packet row D7).
+    lane: "the C9 hygiene lane",
+    bad: { contextBlocks: { alpha: { body: "x" } } },
+    findings: [
+      { path: "contextBlocks.alpha", message: 'context block "alpha" is declared but no ref names it' },
+    ],
+    good: { contextBlocks: { alpha: { body: "x" } }, roleConfig: { promptConcernRefs: ["alpha"] } },
+  },
+];
+
+describe("ch13-p1a family 1 — the ch13v2 lane inventory, DRIVEN (direct channel)", () => {
+  for (const lane of CTX_LANES) {
+    it(`${lane.lane}: the violating input produces exactly its finding set`, () => {
+      expect(ctxFindings(lane.bad)).toStrictEqual(lane.findings);
+    });
+
+    it(`${lane.lane}: the conforming input produces none`, () => {
+      expect(ctxFindings(lane.good)).toStrictEqual([]);
+    });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// Family 2 — LANE INDEPENDENCE (packet row D13). Each normative pair is
+// staged as a COMBINATION lane holding both conditions at once: isolated
+// lanes cannot falsify a reordered implementation.
+// ═══════════════════════════════════════════════════════════════════════
+
+const HYGIENE = (id: string): ValidationFinding => ({
+  path: `contextBlocks.${id}`,
+  message: `context block ${JSON.stringify(id)} is declared but no ref names it`,
+});
+
+const UNRESOLVED = (path: string, id: string): ValidationFinding => ({
+  path,
+  message: `context block ref ${JSON.stringify(id)} does not resolve to an entry`,
+  code: "unresolved_context_block_ref",
+});
+
+/** Findings addressed INSIDE the catalog. Where every entry is
+ * well-formed, the hygiene lane is the only lane that can report there —
+ * so the set is read structurally, never by matching message prose. */
+function catalogFindings(findings: readonly ValidationFinding[]): readonly ValidationFinding[] {
+  return findings.filter((f) => f.path === "contextBlocks" || f.path.startsWith("contextBlocks."));
+}
+
+describe("ch13-p1a family 2 — lane independence, the five normative pairs", () => {
+  it("C1 + C7: refs issued BESIDE a refused catalog draw the container finding AND their per-site findings", () => {
+    expect(
+      ctxFindings({ contextBlocks: 7, roleConfig: { promptConcernRefs: ["alpha"] } }),
+    ).toStrictEqual([
+      { path: "contextBlocks", message: "contextBlocks must be a map of block-id -> { body }; got 7" },
+      UNRESOLVED("roles.r.defaultAgentConfig.promptConcernRefs[0]", "alpha"),
+    ]);
+  });
+
+  it("C7 + C8: a DUPLICATED unresolved ref reports per occurrence beside the duplicate finding", () => {
+    // THREE findings, and the ORDER is the engine's own: the catalog is a
+    // later field of the root than `roles`, so the resolution lane's
+    // operand is still PENDING when the list is walked and both
+    // occurrences DEFER to the drain, while the duplicate lane — which
+    // reads nothing outside the list — reports in place.
+    expect(
+      ctxFindings({ contextBlocks: {}, roleConfig: { promptConcernRefs: ["ghost", "ghost"] } }),
+    ).toStrictEqual([
+      { path: "roles.r.defaultAgentConfig.promptConcernRefs[1]", message: 'duplicate context block ref "ghost"' },
+      UNRESOLVED("roles.r.defaultAgentConfig.promptConcernRefs[0]", "ghost"),
+      UNRESOLVED("roles.r.defaultAgentConfig.promptConcernRefs[1]", "ghost"),
+    ]);
+  });
+
+  it("C8: a SHAPE-FAILING member repeated is invisible to every list-level lane — no duplicate, no membership", () => {
+    expect(
+      ctxFindings({ contextBlocks: {}, roleConfig: { promptConcernRefs: ["Bad Ref", "Bad Ref"] } }),
+    ).toStrictEqual([
+      {
+        path: "roles.r.defaultAgentConfig.promptConcernRefs[0]",
+        message: `invalid context block ref "Bad Ref": block ids match ${BLOCK_GRAMMAR}`,
+      },
+      {
+        path: "roles.r.defaultAgentConfig.promptConcernRefs[1]",
+        message: `invalid context block ref "Bad Ref": block ids match ${BLOCK_GRAMMAR}`,
+      },
+    ]);
+  });
+
+  it("C9's carve-out from C8: a GRAMMAR-FAILING mention still names its target, so the entry is not accused", () => {
+    // `alpha` is named only by a member that failed its own shape lane.
+    // C8 keeps that member invisible to the LIST-level lanes; C9's audit
+    // is deliberately outside that rule and still counts the mention —
+    // so the hygiene lane accuses `beta` and NOT `alpha`.
+    const findings = ctxFindings({
+      contextBlocks: { alpha: { body: "x" }, beta: { body: "x" } },
+      roleConfig: { promptConcernRefs: ["alpha", "Bad Ref"] },
+    });
+    expect(catalogFindings(findings)).toStrictEqual([HYGIENE("beta")]);
+  });
+
+  it("C8's compound CLEAN case at the GATE position (an injected registry): zero findings", () => {
+    expect(
+      ctxFindings({
+        contextBlocks: { alpha: { body: "x" }, beta: { body: "y" } },
+        gates: { GO: gateWith(["alpha", "beta"]) },
+      }),
+    ).toStrictEqual([]);
+  });
+});
+
+// ── The C9 stand-down, PARAMETERIZED over the derived trigger set, with
+// the M1 floor as its checkable minimum. For each member: an enclosure
+// broken by a MARKING malformation, the only mention of `alpha` sitting
+// inside it, and `beta` mentioned nowhere at all — a template-wide
+// stand-down leaves BOTH unaccused, and a per-entry one does not. Every
+// row carries its DISCRIMINATING control: the same document without the
+// malformation accuses both. ──────────────────────────────────────────
+
+const TWO_BLOCKS = { alpha: { body: "x" }, beta: { body: "y" } };
+
+interface StandDownCase {
+  readonly tag: string;
+  readonly broken: Parameters<typeof ctxTemplate>[0];
+  readonly intact: Parameters<typeof ctxTemplate>[0];
+}
+
+const STAND_DOWN_FLOOR: readonly StandDownCase[] = [
+  {
+    tag: "d-prompt-refs (the role ref list itself)",
+    broken: { contextBlocks: TWO_BLOCKS, roleConfig: { promptConcernRefs: "alpha" } },
+    intact: { contextBlocks: TWO_BLOCKS, roleConfig: { promptConcernRefs: [] } },
+  },
+  {
+    tag: "d-prompt-refs (the step ref list itself)",
+    broken: { contextBlocks: TWO_BLOCKS, stepConfig: { promptConcernRefs: "alpha" } },
+    intact: { contextBlocks: TWO_BLOCKS, stepConfig: { promptConcernRefs: [] } },
+  },
+  {
+    tag: "d-ctx-gate-refs (the gate ref list itself)",
+    broken: { contextBlocks: TWO_BLOCKS, gates: { GO: gateWith("alpha") } },
+    intact: { contextBlocks: TWO_BLOCKS, gates: { GO: gateWith([]) } },
+  },
+  {
+    tag: "d-agentconfig (the step's config container)",
+    broken: { contextBlocks: TWO_BLOCKS, stepConfig: 7 },
+    intact: { contextBlocks: TWO_BLOCKS, stepConfig: {} },
+  },
+  {
+    tag: "d-defaultagent (the role's config container)",
+    broken: { contextBlocks: TWO_BLOCKS, roleConfig: 7 },
+    intact: { contextBlocks: TWO_BLOCKS, roleConfig: {} },
+  },
+  {
+    tag: "d-binding",
+    broken: { contextBlocks: TWO_BLOCKS, gates: { GO: [7] } },
+    intact: { contextBlocks: TWO_BLOCKS, gates: { GO: gateWith() } },
+  },
+  {
+    tag: "d-pipeline",
+    broken: { contextBlocks: TWO_BLOCKS, gates: { GO: 7 } },
+    intact: { contextBlocks: TWO_BLOCKS, gates: { GO: gateWith() } },
+  },
+  {
+    tag: "d-gates (the container route)",
+    broken: { contextBlocks: TWO_BLOCKS, gates: 7 },
+    intact: { contextBlocks: TWO_BLOCKS, gates: {} },
+  },
+  {
+    // The SECOND route to the same tag — the one the engine did not mark
+    // before this packet (packet row D5's third capability).
+    tag: "d-gates (the DEAD-CONFIG route)",
+    broken: { contextBlocks: TWO_BLOCKS, gates: { GHOST: gateWith(["alpha"]) } },
+    intact: { contextBlocks: TWO_BLOCKS, gates: { GO: gateWith() } },
+  },
+];
+
+describe("ch13-p1a family 2 — the C9 stand-down over the derived trigger set (M1's floor)", () => {
+  for (const member of STAND_DOWN_FLOOR) {
+    it(`${member.tag}: a marking malformation stands the whole audit down`, () => {
+      expect(catalogFindings(ctxFindings(member.broken))).toStrictEqual([]);
+    });
+
+    it(`${member.tag}: the DISCRIMINATING control — the same document intact accuses both entries`, () => {
+      expect(catalogFindings(ctxFindings(member.intact))).toStrictEqual([HYGIENE("alpha"), HYGIENE("beta")]);
+    });
+  }
+
+  // The floor's remaining members break an enclosing MAP or ENTRY node,
+  // which the fixture builder cannot express as a part — they are staged
+  // on the raw value instead.
+  const raw = (mutate: (t: Record<string, unknown>) => void): readonly ValidationFinding[] => {
+    const template = ctxTemplate({ contextBlocks: TWO_BLOCKS }) as unknown as Record<string, unknown>;
+    mutate(template);
+    const result = admitTemplate(template as unknown as WorkflowTemplate, catalog);
+    return result.ok ? [] : result.findings;
+  };
+
+  for (const [tag, mutate] of [
+    ["d-step", (t: Record<string, unknown>) => { (t["steps"] as Record<string, unknown>)["s"] = 7; }],
+    ["d-steps", (t: Record<string, unknown>) => { t["steps"] = 7; }],
+    ["d-roles-entry", (t: Record<string, unknown>) => { (t["roles"] as Record<string, unknown>)["r"] = 7; }],
+    ["d-roles", (t: Record<string, unknown>) => { t["roles"] = 7; }],
+  ] as const) {
+    it(`${tag}: a marking malformation stands the whole audit down`, () => {
+      expect(catalogFindings(raw(mutate))).toStrictEqual([]);
+    });
+  }
+
+  it("the ARM-GATE-1 counterexample: a mention inside a DEAD gate key, and a second entry named nowhere", () => {
+    // Pre-growth this document marked NO tag — the dead-config skip
+    // removed the entry from evaluation while the container still
+    // reported ok — so a stand-down reading the failed tags saw a clean
+    // document and accused `beta`, whose only sin is being unreferenced
+    // on a document C9 requires it to stand down on. The engine now marks
+    // the enclosure on that skip, so the audit stands down whole.
+    const findings = ctxFindings({ contextBlocks: TWO_BLOCKS, gates: { GHOST: gateWith(["alpha"]) } });
+    expect(catalogFindings(findings)).toStrictEqual([]);
+    // …and the dead-config lane still reports, unchanged.
+    expect(findings).toStrictEqual([
+      { path: "steps.s.gates.GHOST", message: "dead gate config: 'GHOST' is not a transition of step 's'" },
+    ]);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// Family 3 — the ADMITTED FORM (packet rows D3/D4). On every admission
+// SUCCESS each ref position is present with the value its authored source
+// implies (absent source ⇒ the empty list); a caller-supplied produced
+// position is RECOMPUTED, never carried; and the authored source key
+// survives unmodified beside it. Membership: position × authored state.
+// ═══════════════════════════════════════════════════════════════════════
+
+/** Author a key the TYPE does not admit, at a nested address — the
+ * hostile-fixture idiom this suite already uses at the top level. */
+function authorRaw(template: WorkflowTemplate, path: readonly string[], value: unknown): void {
+  let cursor = template as unknown as Record<string, unknown>;
+  for (const segment of path.slice(0, -1)) cursor = cursor[segment] as Record<string, unknown>;
+  cursor[path[path.length - 1] ?? ""] = value;
+}
+
+/** The admitted value, or a throw naming the findings that prevented one. */
+function admitted(parts: Parameters<typeof ctxTemplate>[0]): WorkflowTemplate {
+  const result = admitTemplate(ctxTemplate(parts), catalog);
+  if (!result.ok) throw new Error(`expected admission to succeed: ${JSON.stringify(result.findings)}`);
+  return result.template;
+}
+
+const roleRefs = (t: WorkflowTemplate): unknown => t.roles["r"]?.promptConcernRefs;
+const stepRefs = (t: WorkflowTemplate): unknown => t.steps["s"]?.promptConcernRefs;
+const gateRefs = (t: WorkflowTemplate): unknown => t.steps["s"]?.gates?.["GO"]?.[0]?.contextBlockRefs;
+
+describe("ch13-p1a family 3 — the admitted form, position × authored state", () => {
+  const CATALOG = { alpha: { body: "x" } };
+
+  it("ROLE position: absent config ⇒ the empty list", () => {
+    expect(roleRefs(admitted({}))).toStrictEqual([]);
+  });
+
+  it("ROLE position: a config without the key ⇒ the empty list", () => {
+    expect(roleRefs(admitted({ roleConfig: { mode: "builder" } }))).toStrictEqual([]);
+  });
+
+  it("ROLE position: a PRESENT EMPTY authored list ⇒ the empty list", () => {
+    expect(roleRefs(admitted({ contextBlocks: {}, roleConfig: { promptConcernRefs: [] } }))).toStrictEqual([]);
+  });
+
+  it("ROLE position: a populated authored list ⇒ that list, and the authored source survives beside it", () => {
+    const template = admitted({ contextBlocks: CATALOG, roleConfig: { promptConcernRefs: ["alpha"] } });
+    expect(roleRefs(template)).toStrictEqual(["alpha"]);
+    // ch13v2-C13: the raw config map retains the authored key untouched —
+    // the ch12 cascade reads it there, and the produced field is a
+    // SIBLING, never a replacement.
+    expect(template.roles["r"]?.defaultAgentConfig).toStrictEqual({ promptConcernRefs: ["alpha"] });
+  });
+
+  it("STEP position: absent config ⇒ the empty list", () => {
+    expect(stepRefs(admitted({}))).toStrictEqual([]);
+  });
+
+  it("STEP position: a config without the key ⇒ the empty list", () => {
+    expect(stepRefs(admitted({ stepConfig: { mode: "builder" } }))).toStrictEqual([]);
+  });
+
+  it("STEP position: a PRESENT EMPTY authored list ⇒ the empty list", () => {
+    expect(stepRefs(admitted({ contextBlocks: {}, stepConfig: { promptConcernRefs: [] } }))).toStrictEqual([]);
+  });
+
+  it("STEP position: a populated authored list ⇒ that list, the authored source surviving", () => {
+    const template = admitted({ contextBlocks: CATALOG, stepConfig: { promptConcernRefs: ["alpha"] } });
+    expect(stepRefs(template)).toStrictEqual(["alpha"]);
+    expect(template.steps["s"]?.agentConfig).toStrictEqual({ promptConcernRefs: ["alpha"] });
+  });
+
+  it("GATE position: an absent key ⇒ the declared empty-list default", () => {
+    expect(gateRefs(admitted({ gates: { GO: gateWith() } }))).toStrictEqual([]);
+  });
+
+  it("GATE position: a PRESENT EMPTY authored list ⇒ the empty list", () => {
+    expect(gateRefs(admitted({ contextBlocks: {}, gates: { GO: gateWith([]) } }))).toStrictEqual([]);
+  });
+
+  it("GATE position (NAMED TRAP): an AUTHORED NON-EMPTY list admits INTACT — a missing carry entry drops it", () => {
+    const template = admitted({ contextBlocks: CATALOG, gates: { GO: gateWith(["alpha"]) } });
+    expect(gateRefs(template)).toStrictEqual(["alpha"]);
+    // the whole admitted binding: the carry list plus the produced config
+    expect(template.steps["s"]?.gates?.["GO"]?.[0]).toStrictEqual({
+      uses: "declarative.threshold",
+      contextBlockRefs: ["alpha"],
+      config: { metric: "round", op: ">=", value: 2 },
+    });
+  });
+
+  it("GATE position (NAMED TRAP): a key valued `undefined` is REFUSED by its own field lane, never silently filled", () => {
+    // The declared default fills an ABSENT key — the engine's presence
+    // test is KEY PRESENCE — so this key is present, meets the ref-list
+    // lane, and fails it. Widening the presence test to reach `undefined`
+    // would turn this red into a silent fill.
+    expect(
+      ctxFindings({
+        gates: { GO: [{ uses: "declarative.threshold", config: THRESHOLD, contextBlockRefs: undefined }] },
+      }),
+    ).toStrictEqual([
+      {
+        path: "steps.s.gates.GO[0].contextBlockRefs",
+        message: "contextBlockRefs must be a list of context block ids; got undefined",
+      },
+    ]);
+  });
+
+  it("RECOMPUTE: a caller-supplied produced position is overwritten from its authored source, at BOTH landing nodes", () => {
+    // The direct channel admits the produced key (it belongs to the
+    // ADMITTED form, so a caller re-admitting an admitted value must not
+    // meet a refusal) — and the producer monopoly recomputes it, which is
+    // what keeps containment true on this channel.
+    const template = ctxTemplate({ contextBlocks: CATALOG, roleConfig: { promptConcernRefs: ["alpha"] } });
+    authorRaw(template, ["roles", "r", "promptConcernRefs"], ["GHOST"]);
+    authorRaw(template, ["steps", "s", "promptConcernRefs"], ["GHOST"]);
+    const result = admitTemplate(template, catalog);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(roleRefs(result.template)).toStrictEqual(["alpha"]);
+    expect(stepRefs(result.template)).toStrictEqual([]);
+  });
+
+  it("RE-ADMISSION is a fixed point: admitting an admitted value reproduces it exactly", () => {
+    const once = admitted({ contextBlocks: CATALOG, roleConfig: { promptConcernRefs: ["alpha"] } });
+    const twice = admitTemplate(once, catalog);
+    expect(twice.ok).toBe(true);
+    if (!twice.ok) return;
+    expect(twice.template).toStrictEqual(once);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// Family 6 — the PARITY corpus's ONE expected delta class (packet row
+// D11), asserted POSITIVELY: a build failing to produce the delta reds as
+// loudly as one producing another. The standing suites ARE the corpus;
+// this lane pins the class the replay is allowed to differ by.
+// ═══════════════════════════════════════════════════════════════════════
+
+describe("ch13-p1a family 6 — the one expected parity delta, asserted positively", () => {
+  it("the produced key at the STEP node: a previously-refused unknown key is now accepted-and-recomputed", () => {
+    const template = ctxTemplate({});
+    authorRaw(template, ["steps", "s", "promptConcernRefs"], ["GHOST"]);
+    const result = admitTemplate(template, catalog);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(stepRefs(result.template)).toStrictEqual([]);
+  });
+
+  it("the produced key at the ROLES-ENTRY node: likewise accepted-and-recomputed", () => {
+    const template = ctxTemplate({});
+    authorRaw(template, ["roles", "r", "promptConcernRefs"], ["GHOST"]);
+    const result = admitTemplate(template, catalog);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(roleRefs(result.template)).toStrictEqual([]);
+  });
+});

@@ -79,6 +79,32 @@ function expandFlagMaps(
 }
 
 /**
+ * ch13v2-C13's member: LIFT the ref list nested inside a format-open map
+ * onto a sibling field of the enclosing entry. An unauthored source lands
+ * as the EMPTY LIST, never an absence — the admitted form carries the
+ * position on every value. The PRODUCER MONOPOLY holds: the field is
+ * recomputed and overwrites whatever the input carried, which is what
+ * makes a caller-supplied produced position a silent recompute rather
+ * than a finding.
+ *
+ * The lifted list is COPIED: the authored source survives unmodified at
+ * its own position (the ch12 cascade reads it there), and the two must
+ * not share one array.
+ */
+function liftNestedLists(
+  surface: SurfaceDecl,
+  root: unknown,
+  hook: Extract<NormalizerHookDecl, { hook: "liftNestedList" }>,
+): void {
+  for (const entry of reachAll(surface, root, hook.over, { kind: "entry" })) {
+    if (!isRecord(entry.value)) continue;
+    const nested = ownGet(entry.value, hook.from);
+    const authored = isRecord(nested) ? ownGet(nested, hook.source) : undefined;
+    defineOwn(entry.value, hook.into, Array.isArray(authored) ? [...(authored as readonly unknown[])] : []);
+  }
+}
+
+/**
  * R4's second member (ch11-C20/C5): write each registration's EFFECTIVE
  * config into the binding's single config surface. The binding is rebuilt
  * from its CARRIED fields plus the effective config — the one downstream
@@ -124,6 +150,10 @@ export function normalize(
   for (const hook of surface.normalizers) {
     if (hook.hook === "expandAdvancesRound") {
       expandFlagMaps(surface, value, hook);
+      continue;
+    }
+    if (hook.hook === "liftNestedList") {
+      liftNestedLists(surface, value, hook);
       continue;
     }
     materializeConfigs(surface, value, hook, effectiveConfigs);

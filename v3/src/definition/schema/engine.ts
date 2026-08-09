@@ -65,6 +65,21 @@ export interface EngineRun {
    * `requiresRuntimeContext` — the operand of the R3 residual cross-rule,
    * which stays hand code (audit §4). */
   readonly runtimeContextBindings: readonly string[];
+  /**
+   * Every declared tag that failed ANYWHERE in this run — the set the
+   * engine already maintains for its own document-scoped dependent
+   * suppression, exposed read-only (the `runtimeContextBindings`
+   * precedent: a residual lane's operand, given a surface rather than
+   * re-derived by hand).
+   *
+   * ch13v2-C9's hygiene lane is its first live consumer: a TEMPLATE-WIDE
+   * stand-down needs to know whether any lane made a ref list
+   * UNREACHABLE, and inferring that from absences in the normalized value
+   * answers wrong in silence. A declared rule citing a tag through
+   * `dependsOn` already stands down on exactly this condition — this
+   * surface gives a HAND rule the treatment every declared one has.
+   */
+  readonly failedTags: readonly string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -1272,7 +1287,20 @@ function evalMapOpen(
       });
       // A key outside the subset is DEAD config: nothing below it has an
       // operand to be validated against (the measured lane's CONTINUE).
-      if (run.findings.length > before) continue;
+      //
+      // The skip and the MARKING are one branch, deliberately: removing
+      // the entry — and every position beneath it — from evaluation while
+      // the container still reports `ok` left a subtree unevaluated with
+      // NOTHING recording that anything failed. A rule reading this
+      // container's tag to decide whether a value under it is reachable
+      // therefore saw a clean document (measured pre-growth: the M1
+      // trigger-tag probe's `gates dead-config key` row read `[]`), and
+      // would accuse a target whose only mention sat inside the dead key.
+      // No later edit can reinstate the skip without the marking.
+      if (run.findings.length > before) {
+        run.markTag(frame, decl.tag, false);
+        continue;
+      }
     }
     if (entryAt === undefined) continue;
     const entryFrame: Frame = {
@@ -1753,6 +1781,7 @@ export function runSurface(surface: SurfaceDecl, value: unknown, opts: EngineOpt
       normalized: undefined,
       effectiveConfigs: run.effectiveConfigs,
       runtimeContextBindings: run.runtimeContextBindings,
+      failedTags: [...run.tagFailedAnywhere],
     };
   }
 
@@ -1777,5 +1806,6 @@ export function runSurface(surface: SurfaceDecl, value: unknown, opts: EngineOpt
     normalized: result.value,
     effectiveConfigs: run.effectiveConfigs,
     runtimeContextBindings: run.runtimeContextBindings,
+    failedTags: [...run.tagFailedAnywhere],
   };
 }

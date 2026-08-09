@@ -1,5 +1,5 @@
 import type { GateBinding } from "./gate.js";
-import type { ActorId, EventType, RoleName, StepId } from "./ids.js";
+import type { ActorId, BlockId, EventType, RoleName, StepId } from "./ids.js";
 import type { ActivationMode } from "./instance.js";
 
 /**
@@ -38,6 +38,19 @@ export interface Step {
    * map + canonical-JSON-safe at admission (A1). ABSENT contributes `{}`.
    */
   readonly agentConfig?: AgentConfig;
+  /**
+   * ch13v2-C13 (packet ch13-p1a): the step position's ADMISSION-PRODUCED
+   * ref list — the normalized sibling of the authored
+   * `agentConfig.promptConcernRefs`, carrying the authored source's own
+   * name at the step's fixed-keyset level (beside, never inside, the raw
+   * config map, which keeps its authored key for the ch12 cascade).
+   * OPTIONAL on the shared raw type per C13's TYPE-GRAIN decision, while
+   * every ADMITTED value carries it (the empty list where nothing was
+   * authored); admission is its only producer and RECOMPUTES it, so a
+   * caller-supplied value is overwritten and a FILE author meets the
+   * unknown-key refusal (the `advancesRound` channel-grain precedent).
+   */
+  readonly promptConcernRefs?: readonly BlockId[];
   /**
    * D1 (packet ch11-P2a): the per-(event-type) gate pipeline realizing
    * the model's `gates_for(step, event_type)`. ABSENT = ungated (C1).
@@ -140,7 +153,20 @@ export interface WorkflowTemplate {
    * walk. ABSENT contributes `{}`.
    */
   readonly roles: Readonly<
-    Record<RoleName, { readonly defaultActor?: ActorId; readonly defaultAgentConfig?: AgentConfig }>
+    Record<
+      RoleName,
+      {
+        readonly defaultActor?: ActorId;
+        readonly defaultAgentConfig?: AgentConfig;
+        /**
+         * ch13v2-C13 (packet ch13-p1a): the role position's
+         * ADMISSION-PRODUCED ref list — the same shape, grain and
+         * producer monopoly as `Step.promptConcernRefs`, normalized from
+         * the authored `defaultAgentConfig.promptConcernRefs`.
+         */
+        readonly promptConcernRefs?: readonly BlockId[];
+      }
+    >
   >;
   /** L1 explicit restrictions (none in the baseline) — see CapabilityProfile. */
   readonly capabilityProfile?: CapabilityProfile;
@@ -195,8 +221,18 @@ export interface WorkflowTemplate {
    * refuses fails admission (fail-closed, ch13v2-C1), so no such form
    * survives to this type.
    */
-  readonly contextBlocks?: Readonly<Record<string, { readonly body: string }>>;
+  readonly contextBlocks?: ContextBlockCatalog;
 }
+
+/**
+ * ch13v2-C13 (packet ch13-p1a): the catalog record type C13 leaves
+ * DESCRIBED — block id → the body carrier. It is the template surface's
+ * single body source (`[d-ctx-entry]`/`[d-ctx-body]` close the entry's
+ * keyset, so no other typed place can hold body text), and the entry
+ * shape stays inline: the `ContextBlock` name belongs to the render
+ * side's packet member (the l2b registry row that ships with p1b).
+ */
+export type ContextBlockCatalog = Readonly<Record<BlockId, { readonly body: string }>>;
 
 /**
  * D6 (packet ch11-P2a): the branded admitted template — the ledger's
