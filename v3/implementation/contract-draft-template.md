@@ -159,7 +159,14 @@ carried-scope, never built against.
   a calendar is unusable as the audit stamp it claims to be),
   non-decreasing in document order;
   `arms` a nonempty list of nonempty strings (naming the transitional
-  cross-model arms that reviewed — README §5.5); `commit` 7–40
+  cross-model arms that reviewed — README §5.5). **Amended 2026-08-09:
+  the field also admits a value NAMING THE ACT, in the one case where
+  no arm reviewed because none could — a transition that moves no
+  C-row has nothing for a review arm to read, and the schema re-lock
+  (§4) is the first such transition. This decides the field's admitted
+  VALUES and nothing else: it does not make any review optional, does
+  not change which transitions require one, and leaves every C-row-
+  moving transition's arm duty exactly as it stands.** `commit` 7–40
   LOWERCASE-hex — shape-checked on EVERY block, while the
   COMMIT-object resolution (`git cat-file -t == commit`; a tree/blob/
   tag is not an auditable ratification point) and the equality check
@@ -232,6 +239,10 @@ violations; the lint guards only the C-row byte surface).
 ## 4. Lifecycle
 
 ```
+                            ┌──(schema re-lock)──┐
+                            │   two commits      │
+                            └───────▶────────────┘
+                                     │
 draft ──(human ratification)──▶ ratified ──(chapter close)──▶ realized
               ▲                    │ │                            │
               └──── reopened ◀─────┴─┼────────────────────────────┘
@@ -268,6 +279,23 @@ draft ──(human ratification)──▶ ratified ──(chapter close)──�
   surface loud-red for the window (this section's own rule — the
   designed signal, closed at commit 2); the resolution is never
   inferred.
+- **Schema re-lock (TWO commits, `ratified` → `ratified`; added
+  2026-08-09):** a schema-first draft pins a declaration file's
+  `sha256` in its ratification block, so a later edit to that file
+  turns the lock RED until an act records the new bytes. No C-row
+  moves, so nothing is suspended and no reopen occurs. Commit 1 is
+  the realizing act's own commit — it lands the declaration edit and
+  leaves the lock check red, a transient of the same kind as a
+  `reopened` draft and the reason a chapter's green gate is taken
+  after commit 2 and never at commit 1. Commit 2 appends a
+  ratification block recording the NEW `sha256` and naming COMMIT 1
+  as its `commit` value; its `arms` may name the act (§3), since a
+  transition that moves no C-row has nothing for a review arm to
+  read. THE DISCRIMINATOR against supersede, which is the other
+  row-free transition and takes ONE commit: a re-lock's second commit
+  must record bytes that CANNOT EXIST before the first, so the two
+  commits are forced by the ordering and not by convention. This
+  transition does NOT count toward §5's reopening metric.
 - **Supersede (ONE commit, from `ratified` only):** when a line is
   re-derived rather than repaired, the draft is archived IN PLACE —
   the file never moves (§2) — by a single commit that flips status
@@ -309,9 +337,31 @@ draft ──(human ratification)──▶ ratified ──(chapter close)──�
 
 Recorded in the draft's Context section tail (panel-owned, not
 lint-visible): rounds to ratify; new-decision row count;
-post-ratification reopenings (= ratification blocks beyond the
-first). The D2 "expected 2–3 rounds" prediction is testable only if
-measured.
+post-ratification reopenings. The D2 "expected 2–3 rounds" prediction
+is testable only if measured.
+
+**Amended 2026-08-09 — what the reopening number COUNTS.** It read
+"= ratification blocks beyond the first", which counts the wrong
+thing: a block is appended by every transition that ratifies
+anything, and two of those are not reopens — a non-reopening
+AMENDMENT to a ratified draft, and the SCHEMA RE-LOCK (§4). Under the
+old wording a draft that had never reopened could be required to
+record a nonzero reopen count, which is a false number carrying a
+true-sounding name. The metric now counts **the number of times the
+draft entered `reopened` after its first ratification** — the
+transitions, not the blocks. Three consequences, stated because a
+metric redefinition that moves recorded history is worse than the
+defect it fixes: (i) EVERY count already recorded in every draft
+stays exactly where it stands — measured tree-wide at this act, not
+argued; (ii) `ch9-runner-contract.md`'s recorded 0, carried against
+two blocks with a parenthetical explaining the second, becomes
+CONFORMANT rather than tolerated, and its parenthetical becomes
+explanatory rather than load-bearing; (iii) the DATED-INCREMENT form
+stays legal — a draft may record the number as a dated snapshot with
+later `**Dated update (<date>, <act>)**` increments beside it rather
+than as a single live figure, which two drafts do today. The act
+that changes this wording re-runs the tree-wide sweep against the new
+text as its own check.
 
 ## 6. Anchoring (how packets consume a draft)
 

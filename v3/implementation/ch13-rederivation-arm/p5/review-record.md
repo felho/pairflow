@@ -172,6 +172,18 @@ matter, naming what changed since that ruling, with full exposition
 reserved for the flags that had never been before the human. Flags 5, 6,
 7 and 9 took the full form on that test.
 
+**BOUNDARY CANDIDATE, recorded at the second prerequisite act
+(2026-08-09).** The form authority's §5 now names a "non-reopening
+AMENDMENT" as one of the two block-appending transitions that are not
+reopens — but §4 still does not DEFINE that transition. The act is
+deliberate about this: naming it in §5 is HISTORY ADMISSION, not
+legalization. One draft in the tree already carries such a block, and
+the metric had to account for it or keep producing a false number; that
+is a different question from whether a new draft may perform one. If a
+live need ever arises, the transition gets its form at a boundary
+review. Until then the tree has one instance and no rule, which is the
+honest state and is now written down rather than inferred.
+
 THE PACKET FILE IS NOT COMMITTED HERE. Measured against the precedent —
 `ch12-p1a-lifecycle-axis.md` was first added in its BUILD commit
 (`abaef93c`) — the packet file and the plan edit both ride the build
