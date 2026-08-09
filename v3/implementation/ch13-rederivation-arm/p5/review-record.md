@@ -6,6 +6,16 @@ HERE, beside the panel/arm outputs — the packet stays clean. Everything
 below is derived from repo surfaces at write time; nothing is recalled
 from conversation.
 
+**GENRE, binding on every later reader and reviewer: this file is a LOG —
+a dated history of what was decided, measured and paid, entry by entry.
+Work flows exclusively from the packet; NO act may be executed from this
+file, and its live consistency with the packet is deliberately NOT a
+review subject from 2026-08-09 onward (out of scope for future charters).
+An entry describes the moment it was written. Where a later act moved a
+value, a dated correction line points at the authority rather than
+restating it — because a log that chases the packet is a second authority,
+which is the failure this genre exists to prevent.**
+
 The DISTILLED PRIORS this phase produced are NOT restated here: they
 live in `review-program-design-sketch.md` Appendix B (recorded
 2026-08-08, commit `f318e0dc`), which is the boundary review's reading
@@ -43,12 +53,10 @@ alternative and a recommendation:
   D7's CONSTRUCT half, admitted on the two-position reading D10
   ratified and D11 applied to this exact pair of parents. The user
   ruled the reversal 2026-08-09. Its cost is a SECOND Fable-mandatory
-  prerequisite `docs(v3)` act — an ADR-019 amendment editing FOUR
-  surfaces: the three D10's and D11's own commits each edited, plus D4's
-  closure paragraph, which gains the forward-scoped exemption as a defined
-  form (added at arm gate 1, packet D3/D4/flag 2). The three-surface
-  figure stood here after the packet had moved to four — the miss that
-  lost bet #2.
+  prerequisite `docs(v3)` act — an ADR-019 amendment editing the three
+  surfaces D10's and D11's own commits each edited.
+  *Corrected 2026-08-09 (arm gate 1 re-check #2): the act's surface set
+  grew after this entry was written; the packet's D4 and flag 2 carry it.*
 - **(b) The C9 stand-down mechanism** — ruled **C**: expose the
   engine's existing failed-tag set on the run result, in the form the
   result already uses for the R3 residual. `engine.ts` joins the
@@ -136,6 +144,31 @@ equivalence — was DELETED rather than measured, under §3's gate.
 | STOP 4 | 1 ruling | CONSTRUCT re-affirmed on the priced option set | 0 | 1 (user) | — |
 | Arm gate 1 (external, full charter) | 6 findings | **VERDICT FAIL** — 4 BLOCKER, 2 MAJOR, 0 MINOR; all six independently re-verified against source by the orchestrator. Record: `arm-gate1-verdict.md` | 0 | 0 | 1 (`1:open-choice`, three coupled routes) |
 | STOP 5 | 3 rulings | the C9 stand-down route (engine-side marking), the closure-exemption home, and the withdrawal of flag 4's alternative | 0 | 1 (user) | — |
+| Arm re-check #1 | 4 findings | 2 of six not fully closed, 1 new MAJOR, 1 new MINOR — **0 new BLOCKER**; all folded | 0 | 0 | 0 |
+| Arm re-check #2 | 2 findings | four folds CLOSED, original six HOLD, **0 new BLOCKER**; 1 new MAJOR + 1 MINOR, both folded. Bet #2 LOST → pre-committed loss branch | 0 | 0 | 0 |
+| Gate-closure ruling | 1 ruling | arm gate 1 CLOSED on the fold-complete state; no re-verification round | 0 | 1 (user) | — |
+
+**ARM GATE 1 — CLOSED 2026-08-09, and the accounting is stated in its
+honest form rather than a comfortable one.** Last verdict: **FAIL**
+(re-check #2 — 0 not-closed, 0 new BLOCKER, 1 new MAJOR, 1 new MINOR).
+Every finding from every arm run is FOLDED. **No re-verification round ran
+after the final fold, by deliberate decision** — so the approve rests on
+bytes no arm has read. The residual risk is accepted and named:
+MIRROR-CLASS — a value restated in more than one place drifting apart —
+because that is the only class the three arm runs produced after the
+blockers cleared, and every one of them was a restatement, never a design
+defect. The safety net is the BUILD's own executed gates: the acceptance
+families, `pnpm ci:local`, the schema lock's D5b check, and arm gate 2 at
+build close, all of which run on code rather than on prose.
+
+REASON FOR THE DECISION, recorded because it is a process choice and not
+a shortcut: **risk management instead of perfection** (the user's ruling).
+Four review runs after the panel closed each returned a non-empty finding
+set, all of it fold-written prose, with severity falling monotonically and
+the rate not reaching zero. Another round buys another fold and another
+round's findings. The user's ruling declines both the register and the
+sweep that were offered as answers, and takes the residual risk knowingly
+against the build's own gates.
 
 Standing totals at this point: panel rounds **7** (4 full, 3 targeted;
 27 lens runs — 5+5+5+3+2+5+2, summed from the table above rather than
