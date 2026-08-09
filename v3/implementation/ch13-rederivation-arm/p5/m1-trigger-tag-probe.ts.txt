@@ -5,7 +5,21 @@ import { createGateRegistry } from "../gates/index.js";
 
 /** M1 — which tag does the engine record for one malformation per position?
  *  The floor D7 declares is the set of tags that CAN be marked on a
- *  containment path from the root to a ref list. Measured, not read. */
+ *  containment path from the root to a ref list. Measured, not read.
+ *
+ *  RE-RUN 2026-08-09. The first artifact's `root not a map` row passed an
+ *  EMPTY mutator, so it measured the clean base template and not the route
+ *  it named. Two defects were behind that one row and both are closed here:
+ *    (1) the row now supplies a genuine non-map root, through `rawRun`,
+ *        because a root cannot be replaced from inside a mutate callback;
+ *    (2) the engine's non-map-root short-circuit returns from a DIFFERENT
+ *        return statement than the walk does, so an instrumentation that
+ *        reaches only the walk's return leaves `failedTags` ABSENT on that
+ *        route — and `?? []` would then report the right answer for the
+ *        wrong reason. `read` throws on an absent field, so an empty set
+ *        here is measured rather than defaulted.
+ *  A clean-base control row is added so the no-op reading the old row
+ *  actually produced is still on the record, under its true name. */
 const base = (): Record<string, unknown> => ({
   ref: { id: "t", version: 1 },
   start: "implement",
@@ -17,11 +31,23 @@ const base = (): Record<string, unknown> => ({
   roles: { implementer: { defaultActor: "a" }, reviewer: { defaultActor: "b" } },
   contextBlocks: { alpha: { body: "text" } },
 });
+function read(value: unknown): string[] {
+  const r = runSurface(templateFormat, value, {
+    channel: { kind: "direct" },
+    catalog: createGateRegistry(),
+  }) as unknown as { failedTags?: string[] };
+  if (r.failedTags === undefined) {
+    throw new Error("failedTags absent — this return site is not instrumented; an empty result here would be a default, not a measurement");
+  }
+  return [...r.failedTags].sort();
+}
 function tags(mutate: (t: Record<string, unknown>) => void): string[] {
   const t = base(); mutate(t);
-  const r = runSurface(templateFormat, t, { channel: { kind: "direct" }, catalog: createGateRegistry() }) as unknown as { failedTags?: string[] };
-  return [...(r.failedTags ?? [])].sort();
+  return read(t);
 }
+/** The root is the one position a mutate callback cannot reach. */
+const rawTags = (root: unknown): string[] => read(root);
+
 describe("M1 — recorded tag per malformation", () => {
   it("prints the tag recorded for each position", () => {
     const rows: [string, string[]][] = [
@@ -38,11 +64,13 @@ describe("M1 — recorded tag per malformation", () => {
       ["steps container wrong kind", tags((t) => { t.steps = 7; })],
       ["roles entry wrong kind", tags((t) => { (t.roles as any).reviewer = 7; })],
       ["roles container wrong kind", tags((t) => { t.roles = 7; })],
-      ["root not a map", tags(() => {})],
+      ["root not a map (scalar)", rawTags(7)],
+      ["root not a map (array)", rawTags([])],
+      ["clean base (control)", tags(() => {})],
     ];
     for (const [name, got] of rows) console.log(`${name.padEnd(34)} -> ${JSON.stringify(got)}`);
     const union = new Set(rows.flatMap(([, g]) => g));
     console.log(`\nUNION (${union.size}): ${JSON.stringify([...union].sort())}`);
-    expect(rows.length).toBe(14);
+    expect(rows.length).toBe(16);
   });
 });

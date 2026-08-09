@@ -1,8 +1,28 @@
-M1 — the C9 trigger-tag floor, executed 2026-08-09 by the orchestrator.
-Method: rsync copy of v3/src to /tmp, engine.ts patched to expose
-Run.tagFailedAnywhere on the run result, one malformation per position
-driven through runSurface on the direct channel. Throwaway deleted after.
-Script: m1-trigger-tag-probe.ts.txt (beside this file).
+M1 — the C9 trigger-tag floor, executed 2026-08-09 by the orchestrator,
+RE-EXECUTED the same day after a measurement pass found the first run's
+`root not a map` row carried an EMPTY mutator: it measured the clean base
+template, not the route it named. Two defects sat behind that one row.
+(1) A root cannot be replaced from inside a mutate callback, so the row
+needed its own entry point; it now has one and is driven twice, with a
+scalar and with an array. (2) The engine returns from TWO places — the
+non-map-root short-circuit leaves before the walk — so an instrumentation
+reaching only the walk's return leaves `failedTags` ABSENT on exactly the
+route this row exercises, and `?? []` would have reported the right answer
+for the wrong reason. Both return sites are instrumented and the probe now
+THROWS on an absent field, so every `[]` below is measured, not defaulted.
+A clean-base control row carries the reading the old row actually produced.
+
+Method: rsync copy of v3/ to /tmp, engine.ts patched to expose
+Run.tagFailedAnywhere on the run result at BOTH return sites, one
+malformation per position driven through runSurface on the direct channel.
+Throwaway deleted after. Script: m1-trigger-tag-probe.ts.txt (beside this
+file). THE UNION IS UNCHANGED FROM THE FIRST RUN — the eleven-tag floor
+D7 states is unaffected by the correction. What changed is the ROOT
+route only: it was MIS-MEASURED before and is demonstrated now. The
+dead-config route was already driven in the first run and returned from
+the walk's own return site, which the first instrumentation did reach —
+so its `[]` was measured then too. Both zero-marking rows are now
+readable with no `??` default anywhere behind them.
 
 gate ref list wrong kind           -> ["d-ctx-gate-refs"]
 step config ref list wrong kind    -> ["d-prompt-refs"]
@@ -17,7 +37,10 @@ step entry wrong kind              -> ["d-step"]
 steps container wrong kind         -> ["d-steps"]
 roles entry wrong kind             -> ["d-roles-entry"]
 roles container wrong kind         -> ["d-roles"]
-root not a map                     -> []
+root not a map (scalar)            -> []
+root not a map (array)             -> []
+clean base (control)               -> []
+
 UNION (11): ["d-agentconfig","d-binding","d-ctx-gate-refs","d-defaultagent","d-gates","d-pipeline","d-prompt-refs","d-roles","d-roles-entry","d-step","d-steps"]
 
  Test Files  1 passed (1)

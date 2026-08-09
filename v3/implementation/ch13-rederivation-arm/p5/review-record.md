@@ -62,8 +62,14 @@ blocks and records *"post-ratification reopenings: 0 (the two
 ratification blocks are the initial ratification + the same-day C7/C10
 one-value amendment, not reopenings)"* — i.e. the standing practice for
 a second, non-reopening block is a recorded parenthetical on the draft's
-own metrics line, with no form-authority edit, no prerequisite commit
-and no non-green window. The ruling may stand on its merits; it was not
+own metrics line — on the ONE precedent M5's sweep found, not a plural
+standing form — which in ch9's own case cost no form-authority edit,
+no prerequisite commit and no non-green window. **Re-priced 2026-08-09**
+(packet flag 4): only two of those three savings transfer to ch13 — the
+non-green window is the schema lock's, not the form-authority act's, so
+it survives the lighter form; and the prerequisite saving is this act's
+alone, D4's ADR-019 amendment standing either way.
+The ruling may stand on its merits; it was not
 made against the real alternative space, and that is the general's
 defect, not the user's.
 
@@ -108,19 +114,32 @@ equivalence — was DELETED rather than measured, under §3's gate.
 | STOP 2 | 1 ruling | the CONSTRUCT reversal | 0 | 1 (user) | — |
 | Panel r6 (full, 5 lenses) | 45 findings | 3 P1 issues — the reversal's non-propagation, a ratified-plan premise, an amendment-sequencing gap; one further P1 candidate REFUTED by execution | 0 | 0 | 1 (`2:contested-ratified-vs-reality`, plan §13's premise) |
 | STOP 3 | 1 ruling | the plan-premise alignment | 0 | 1 (user) | — |
+| Escalation ruling | 1 ruling | the measurement-surface round's scope, on three consecutive non-clean reconciliation passes | 0 | 1 (user) | — |
+| Panel r7 (targeted, 2 lenses) | 9 findings | 3 P1, ALL in fold-written repair prose (two inside §6's own bet entry, one a re-pricing enumeration); the executing measurement lens returned 0 P1 across 147 re-derived numeric claims | 0 | 0 | 0 |
+| Top-level close (fresh context, final bytes) | 6 findings | 1 STOP-class — flag 2 ratifying a consequence set with no priced alternative; 1 fold-now (the engine growth's acceptance weight named the wrong family); 4 carry | 0 | 0 | 1 (`1:open-choice`, flag 2's flavour price) |
+| STOP 4 | 1 ruling | CONSTRUCT re-affirmed on the priced option set | 0 | 1 (user) | — |
 
-Standing totals at this point: panel rounds **6** (4 full, 2 targeted;
-23 lens runs) · findings dispositioned **~226** · **reopens 0** ·
-human gates **6** · STOPs **3 resolved** + 3 designed ahead in the
+Standing totals at this point: panel rounds **7** (4 full, 3 targeted;
+27 lens runs — 5+5+5+3+2+5+2, summed from the table above rather than
+carried) · findings dispositioned **~241** (235 from the panel rounds,
+6 from the top-level close, which is not a panel round and consumes no
+watchdog) · **reopens 0** ·
+human gates **8** · STOPs **4 resolved** + 3 designed ahead in the
 build (two Fable-mandatory prerequisite acts and the re-ratification) ·
-watchdog **6/8** · plateau **0/2**.
+watchdog **7/8** · plateau **0/2**.
 
 THE YIELD CURVE, which is the phase's most useful datum: ~46 → ~61 →
-38 → 20 → 16 → 45. The rise at round 6 is not a regression of the same
+38 → 20 → 16 → 45 → 9. The rise at round 6 is not a regression of the same
 kind — it follows a user-ruled REVERSAL of a ratified argument, and its
 P1s are that reversal's own propagation debt plus two consequences the
 reversal created. The three middle rounds are the convergence the
-deletion gate bought.
+deletion gate bought. Round 7's 9 is the phase's low, and its shape
+matters more than its size: the executing lens found ZERO defects in
+147 re-derived numeric claims, so the whole yield came from prose
+written during the two preceding folds. The curve's tail is therefore
+not "the packet converging" — it is the ORIGINAL text converging while
+the repair layer keeps re-seeding at a rate no round has yet driven
+to zero.
 
 Packet size: 42,966 (r1) → 53,174 (r2) → 49,997 (r3 fold) → 55,475
 (r4) → 59,257 (r5) → 61,563 B (r6 basis). §3's ruling predicted the
@@ -170,15 +189,79 @@ twice; one ruling settled the act. The surprise home named in advance
 (tooling/lint semantics, Appendix A's byte-lock-guard lesson) was the
 right home.
 
-**Bet: the split — "0 reserve rounds."** **WON so far.** Neither panel
-round reopened the cut; both rounds' lens-5 passes affirmed it on
+**Bet: the split — "0 reserve rounds."** **WON so far.** NO panel
+round reopened the cut; all FOUR full rounds' lens-5 passes affirmed it on
 evidence and one explicitly re-ran the six axes against the narrowed
 scope. Settles finally at the arm.
 
 **Bet: the arm — "1 pointed round + 1 re-check."** OPEN; not yet
 entered.
 
-## 6a. Executed-measurement log (panel rounds 3–4)
+**Bet: the measurement-surface round (stated 2026-08-09, before the
+round ran).** Budget: ONE targeted round, TWO lenses — an executing
+measurement lens that RE-RUNS every number in the packet and this
+record with line-break-tolerant measurers (reading is not an accepted
+method), and a lens-4 reconciliation on the delta. Watchdog cost 1
+(6/8 → 7/8). Sizing reason: three consecutive non-clean reconciliation
+passes triggered §5's escalation, but the profile is what priced the
+scope — pass 3's load-bearing find was a MEASURED tally false in three
+of six cells, produced by a line-oriented grep against a figure that
+wraps in three files. It did NOT survive a panel round — the entry was
+authored at `6f14e99f`, after the last round, and reconciliation pass 3
+is the first review of any kind to see it. That is the sharper reading:
+a number can enter this record with no reviewing pass between its
+authoring and its citation, which is precisely the gap a measurement
+lens closes. The residual risk is therefore located on the
+measured-number surface, not in the argument structure (pass 3 verified
+D4's ADR argument against the ADR's own text and found it exact).
+PREDICTION, scoreable: the measurement lens finds **at least one
+further false number** and the lens-4 pass returns **0 P1**. The base
+rate the prediction draws on, stated with its population: of the three
+numbers re-measured during reconciliation passes 2–3, ALL THREE were
+wrong (the dated-increment draft count, its per-contract cells, and
+§5's lens-run total); of the two floor re-runs executed earlier the
+same day, both reproduced exactly. The prediction bets on the former
+population — numbers no one had re-run — not the latter. A zero from
+the measurement lens means the number surface is clean and the packet
+goes to arm gate 1.
+
+**Outcome: SPLIT — first half WON, second half LOST.** The measurement
+lens re-derived 147 numeric claims and returned 3 discrepancies (0 P1,
+1 P2, 2 P3), so the "at least one further false number" half lands. The
+lens-4 pass returned **3 P1**, so the "0 P1" half is lost outright.
+
+**The diagnosis, and it is not the one the bet expected.** Every
+load-bearing number re-derived exactly — the manifest tally, the
+mutation boundary and all 21 paths on disk, the difficulty index and
+its band, both floors (11 and 8), the schema byte-lock hash, the M5
+sweep, §5's column sums. The measurement surface was already sound.
+What was not sound was the FOLD-TIME PROSE: of the three P1s the
+reconciliation lens raised, ALL THREE sit in sentences written during
+the two preceding folds — the bet entry's own survival claim (false
+against this record's git history), the bet's own base rate (false
+against §6a), and flag 4's re-pricing enumeration (it named TWO
+sibling sites where six carry the value). A fourth, `Both measures
+agree on the membership`, contradicted the sentence two clauses above
+it in the paragraph I had just re-measured.
+
+**The prior this round earns.** The phase's defect source MOVED. Its
+first half was hand-assembled MEASURED sets — Appendix B's recorded
+prior. Its second half is repair prose: each fold's fixing sentences
+enter the document with no measurement behind them and no pass between
+authoring and citation, and they now out-produce the original text as
+a defect source three passes running. A fold is an authoring act and
+carries an authoring act's duties; it does not inherit the reviewed
+status of the text it repairs. The operational form: a claim minted
+INSIDE a fold is unreviewed by construction, so either it is measured
+at fold time or it is not made.
+
+The one receipt-level find is recorded at §6a's M1 entry: the probe's
+`root not a map` row had an empty mutator and a half-instrumented
+engine behind it, and re-execution closed both. The union was unchanged
+at eleven, which is the honest shape of that correction — the floor was
+right, the receipt was not.
+
+## 6a. Executed-measurement log (panel rounds 3–7, plus the orchestrator's re-runs of 2026-08-09)
 
 The packet's two FLOORS cite this section rather than carrying their own
 receipts, on the PROBE-P5-1 pattern: the packet states the rule, the
@@ -189,7 +272,7 @@ byte-identical afterwards (two-entry porcelain, unchanged HEAD,
 
 **M1 — the C9 trigger-tag floor (D7). ARTIFACT COMMITTED:**
 `m1-trigger-tag-probe.ts.txt` + `m1-trigger-tag-probe-out.txt` beside
-this file. Method: an rsync copy of `v3/src` into /tmp with `engine.ts`
+this file. Method: an rsync copy of `v3/` into /tmp with `engine.ts`
 patched to expose `Run.tagFailedAnywhere` on the run result, then one
 malformation per position driven through `runSurface` on the direct
 channel; throwaway deleted, repository untouched. Re-run by the
@@ -205,18 +288,42 @@ tags on the containment paths: the two ref-position field nodes
 (`d-prompt-refs` shared by both config positions), the two agent-config
 field nodes, `d-binding` / `d-pipeline` / `d-gates`, and
 `d-steps` / `d-step` / `d-roles` / `d-roles-entry`. The root node is the
-twelfth and is UNMARKABLE — the fixed-map container evaluation returns
-success for every container, so it cannot be marked false on any route.
+twelfth and is UNMARKABLE, by two different mechanisms: on the
+container routes the fixed-map evaluation returns success for every
+container, so the tag cannot be marked false; and on the non-map-root
+route the run SHORT-CIRCUITS before the walk, so no tag is marked at
+all. The two new probe rows exercise the second mechanism.
 TWO ROUTES to `d-gates` behave differently and the distinction is the
 floor's one trap: the container-kind route marks the tag; the
 dead-config `keysSubsetOf` route does NOT mark it, produces its own
 finding, and is covered by D7's part-(c) raw read rather than by the
 stand-down. The committed run shows both zero-marking routes explicitly
-(`gates dead-config key -> []`, `root not a map -> []`) beside the
-eleven that mark, so the floor and its two exclusions are readable off
-one output.
+(`gates dead-config key -> []`, `root not a map (scalar) -> []`,
+`root not a map (array) -> []`) beside the eleven that mark, so the
+floor and its two exclusions are readable off one output.
 
-**M2 — D7's part (c), the raw-read requirement.** A document whose
+**M1 was RE-EXECUTED 2026-08-09, and the reason is the phase's own
+lesson turned on its evidence.** A measurement pass found that the
+first run's `root not a map` row passed an EMPTY mutator — a root
+cannot be replaced from inside a mutate callback — so the row measured
+the clean base template under another row's name. Re-running it exposed
+a second, worse defect underneath: the engine returns from TWO places,
+and the non-map-root short-circuit leaves BEFORE the walk, so an
+instrumentation that reaches only the walk's return leaves `failedTags`
+absent on exactly that route — `?? []` would then have printed the
+right value for the wrong reason. The corrected probe instruments both
+return sites, THROWS on an absent field so no `[]` can be a default,
+drives the root twice (scalar and array), and carries a clean-base
+control row under its true name. **The union is unchanged: eleven.**
+D7's floor was right; its receipt was not, and the distance between
+those two is the whole point of an executed probe.
+
+**M2 — D7's part (c), the raw-read requirement. NARRATED, NOT
+EXECUTED** — a panel lens's reading, with no committed artifact, which
+is why D7's floor receipt cites M1 alone and part (c)'s own support in
+the packet is an argument from the engine's code rather than from this
+entry. Recorded here at its true weight so a later reader does not
+promote it by proximity to the two executed neighbours. A document whose
 gates key is not one of its step's transitions, carrying a ref whose
 catalog entry is mentioned nowhere else: the dead-config finding fires,
 the failed-tag set comes back EMPTY, a raw-authored read still sees the
@@ -263,11 +370,25 @@ count stays where it stands, which is what makes the constraint
 sufficient rather than merely motivated.
 
 DATED-INCREMENT FORM, measured 2026-08-09 because D6 cites this entry
-for it: counting metrics lines carrying the reopening figure per
-contract gives ch8 2 · ch11 3 · ch13-v1 3 · ch9 1 · ch12 1 · ch13-v2 1
-— so **THREE** drafts record the figure as a dated snapshot with later
-increments beside it, the form ch9-C27 codifies, and the prerequisite
-act's new §5 wording must leave it legal.
+for it, and **RE-MEASURED 2026-08-09 after a reconciliation pass
+refuted the first tally** (the first count was line-oriented and the
+figure wraps in three files, so it undercounted). Line-break-tolerant
+counts of the reopening figure per contract: ch8 2 · ch9 2 · ch11 5 ·
+ch12 1 · ch13-v1 5 · ch13-v2 1. But occurrence count is the WRONG
+discriminator — ch8 and ch9 carry two because §5's duty runs at
+ratification AND at close, which is not an increment. The form
+ch9-C27 codifies is a `**Dated update (<date>, <act>)**` header
+carrying an `N → M` increment, and counting THAT marker gives
+ch11 2 · ch13-v1 4 · every other draft 0 — so **TWO** drafts carry
+the dated-increment form. The two MARKER-side measures agree on that
+membership (counting `**Dated update (` headers and counting `N → M`
+increments select the same pair); occurrence count does NOT, and
+saying it did would re-admit the discriminator this entry refutes —
+occurrence count > 1 selects four drafts, and the first tally's
+line-oriented version of the same rule selected three.
+The prerequisite act's new §5 wording must leave that form legal;
+the constraint is indifferent to the numeral, which is why the first
+tally's error did not reach the constraint.
 
 ## 7. Panel round records
 
@@ -298,7 +419,50 @@ process-side catches: the prerequisite form-authority act falls inside
 a standing Fable-mandatory category the packet did not name, and the
 ch9 precedent recorded in §2.
 
-Panel/arm totals at this point: 2 full rounds, 10 lens runs, ~107
-findings found and dispositioned, ZERO contract reopens, ZERO
-STOP-class findings raised by the lenses themselves (the one STOP was
-raised by the orchestrator at the round-1 decision point).
+Panel/arm totals AT THAT POINT: 2 full rounds, 10 lens runs, ~107
+findings found and dispositioned, ZERO contract reopens.
+
+**Rounds 3–6 are recorded in §5's table rather than here**, deliberately:
+by round 3 the per-round narrative had stopped earning its length —
+the rounds converge on one or two named clusters each, and §5's row
+plus the fold's own delta list carry that without a second telling.
+What §5 does carry and this section would have buried is the yield
+curve and the deletion gate's scoring. The rounds' substance survives
+in three places that are not prose: the fold delta lists handed to each
+round's lenses, the committed probe artifacts, and the packet's own
+bytes. The STOPs of rounds 5 and 6 — the CONSTRUCT reversal raised at
+round 5, the plan-premise alignment at round 6 — are recorded at §2(a)
+and §5, one per round, which is what makes §5's STOPs column sum to the
+three this record states.
+
+**Reconciliation passes (fold-time, do NOT consume the watchdog).**
+They are recorded here rather than in §5's table because §5 counts
+panel rounds and rulings only, and the escalation rule reads this
+history: pass 1 — 2 P1 / 2 P2 / 4 P3 (fold-propagation defects, both
+P1s); pass 2 — 0 P1 / 3 P2 / 2 P3; pass 3 — 2 P1 / 2 P2 / 1 P3, whose
+load-bearing find was the refuted dated-increment tally. THREE
+consecutive non-clean passes is the trigger that escalated to the
+measurement-surface round scored in §6. Pass 4 ran on that round's own
+fold — 1 P1 / 1 P2 / 3 P3 — and its P1 is the one this section exists
+to make catchable: §5's standing totals still carried the pre-round
+state while §6 already carried the post-round one, so a single document
+stated watchdog 6/8 and 7/8 at once. Their counts have no external
+artifact — §5 records panel rounds and rulings only, and every fold
+since `6f14e99f` is uncommitted — so they are carried here as the
+orchestrator's own log, not as measured values, and the escalation
+they trigger is auditable only to that standard.
+
+**The top-level close, and the one thing it caught that eleven prior
+lens runs did not.** The close reads the FINAL BYTES front to back with
+no delta to anchor on, and that is what surfaced STOP 4: flag 2 stated
+its CONSEQUENCES fully and its ALTERNATIVE not at all, while flag 4 —
+deciding the structurally identical "is this act necessary?" question
+one row over — carried a fully priced declined alternative. No delta
+pass could see it, because neither flag had changed; the defect was in
+the RELATION between two flags that were each internally fine. This
+record already classed the flavour ruling's first framing as "the same
+defect class as ruling (c)'s incomplete option set" (§2) — the close
+found that the correction had been applied to the record and never to
+the packet. The resolved ruling re-affirms CONSTRUCT, and the flag now
+carries the NODE reading with its price, so the approve stands on the
+real option set.
