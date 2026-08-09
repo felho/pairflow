@@ -110,5 +110,27 @@ B="$(comm -23 "$BASE/fails.txt" "$GROW/fails.txt" | wc -l | tr -d ' ')"
 [ "$B" = "0" ] || { echo "RECEIPT FAILED: baseline-only failures exist"; exit 1; }
 FILES="$(sed -E 's/ >.*//' "$GROW/only.txt" | sort -u | wc -l | tr -d ' ')"
 [ "$N" -ge 8 ] || { echo "RECEIPT FAILED: floor is $N, expected at least 8"; exit 1; }
+[ "$FILES" -ge 4 ] || { echo "RECEIPT FAILED: floor spans $FILES files, expected at least 4"; exit 1; }
+
+# Cardinality is not membership. D14 makes DROPPING a floor member a finding,
+# so the eight originals are pinned by NAME and each must still be present —
+# without this, one member could vanish while an unrelated failure appeared
+# and the count would still pass. Added 2026-08-09 at the arm re-check, which
+# found the count-only form certifying exactly that.
+MISSING=0
+while IFS= read -r want; do
+  [ -n "$want" ] || continue
+  grep -Fq "$want" "$GROW/only.txt" || { echo "RECEIPT FAILED: floor member dropped -> $want"; MISSING=1; }
+done <<'MEMBERS'
+admit.test.ts > admitTemplate — effective-config materialization (dimension 3, A5) > materializes the absent previous_reviewer_verdict default and preserves the threshold identity ONCE
+admit.test.ts > admitTemplate — producer monopoly (dimension 4, A1: input flags never trusted) > a GATED step with WRONG pre-populated maps → recomputed EXACTLY on the gated rebuild branch too
+admit.test.ts > admitTemplate — the gate-free confinement (A8) and own-property write discipline (G8) > a gate-free template admits with a structurally-equal value plus all-false round flags (C38)
+fileDefinitionStore.test.ts > ch11-P4 — a gated template loads by ref through the store (file channel → admission) > admits with the effective gate config, the round declaration, and the expanded advancesRound flags
+engine.test.ts > the normalizer (ADR-019 D3) — derivation, never validation > writes each registration's EFFECTIVE config into the binding's single config surface
+validate.test.ts > ch12-P4 F4 — the defaultAgentConfig roles-entry source form (dimension 3) > defaultActor + defaultAgentConfig together are both delivered
+validate.test.ts > dimension 12 — the canonical example round-trip > loads the draft's canonical example to the exact WorkflowTemplate value
+validate.test.ts > V10 — roles entries > accepts a present nonempty defaultActor
+MEMBERS
+[ "$MISSING" = "0" ] || exit 1
 echo
 echo "M3 RECEIPT OK — growth-only $N in $FILES files (floor 8 in 4, extendable not droppable), baseline-only 0."
