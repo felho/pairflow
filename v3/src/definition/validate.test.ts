@@ -1693,6 +1693,23 @@ const CTX_FILE_LANES: readonly FileLaneCase[] = [
     ],
     good: ctxYaml({ contextBlocks: CATALOG_ALPHA, roleEntry: ROLE_REF_ALPHA }),
   },
+  {
+    // The C9 audit's AUDITED-SET half, and the ONE document that
+    // discriminates it: a NON-STRING catalog key survives only on this
+    // channel (the file walk preserves resolved key types), and the
+    // engine writes an entry into the NORMALIZED catalog only where the
+    // key is a string. An audit reading the normalized value therefore
+    // drops this entry and accuses nobody — measured, not predicted:
+    // under that one-word change this row's hygiene finding vanishes
+    // while every other test in the tree stays green.
+    lane: "the C9 hygiene lane over a NON-STRING key (the audited set reads the RAW document)",
+    bad: ctxYaml({ contextBlocks: "contextBlocks:\n  true:\n    body: x\n" }),
+    findings: [
+      { path: "contextBlocks", message: "invalid context block id true: block ids are kebab-case strings" },
+      { path: "contextBlocks", message: "context block true is declared but no ref names it" },
+    ],
+    good: ctxYaml({ contextBlocks: CATALOG_ALPHA, roleEntry: ROLE_REF_ALPHA }),
+  },
 ];
 
 describe("ch13-p1a family 1 — the ch13v2 lane inventory, DRIVEN (file channel)", () => {

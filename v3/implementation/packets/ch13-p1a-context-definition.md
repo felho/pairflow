@@ -823,9 +823,31 @@ which D14 makes a finding in its own right. CARRIED SCOPE, routed and
 not repaired here: neither receipt script can be re-run as committed
 after this build, and no check says so. `Route: boundary-review`
 
-**Post-build boundary audit (pre-commit read).** The changed-file set
-equals the declared `mutation_boundary` EXACTLY — 21 declared, 21
-changed, zero outside, zero declared-but-untouched.
+**Post-build boundary audit.** The changed-file set equals the declared
+`mutation_boundary` EXACTLY — 21 declared, 21 changed, zero outside,
+zero declared-but-untouched; re-run against the build commit's own bytes
+(`check_packet.py --post-build`), 0 errors, and `check_coverage.py` in
+its build-close default mode green.
+
+**AFTERMATH — one fold, author: the build agent (this session).** The
+build-close arm's sensitivity pass found D7(c)'s raw-read discipline
+UNDRIVEN: swapping the audit's operand from the raw authored value to
+`run.normalized` — the exact wrong implementation D7(c) warns against —
+left the whole suite green. Reproduced independently before folding, by
+mutate-run-restore with hash verification (`templateSurface.ts`
+`81744e7e…` before and after): under the mutation the audited set loses
+every NON-STRING catalog key, because the engine writes an entry into the
+normalized catalog only where the key is a string, and 762 tests across
+the three ch13 suites stayed green anyway. The fold adds ONE row to
+family 1's file-channel inventory — a boolean-keyed catalog entry, the
+only document that discriminates, and only on the file channel where the
+walk preserves resolved key types — asserting the key lane's finding and
+the hygiene lane's finding as one whole set. It discriminates: under the
+same mutation exactly that row reds. Suite 2197 → 2199 (+2, the row's two
+directions). The gap was DISCLOSED in D7(c)'s own prose ("which no
+acceptance member drives and nothing would red") and is a coverage debt
+rather than a behaviour defect — the implementation was correct before
+the fold and is unchanged by it.
 
 **Gate state at this commit.** `v3:typecheck`, `v3:lint`, `v3:test`
 (72 files / 2197 tests), `v3:coverage` and `v3:adr-check` all green.
@@ -856,7 +878,7 @@ boundary review.
       "discovered": "projection"
     },
     "provenance": { "anchored": 7, "derived": 3, "new_decision": 4 },
-    "rounds": { "review": 7, "doc_refinement": 0, "implementation": 1 },
+    "rounds": { "review": 7, "doc_refinement": 0, "implementation": 2 },
     "stops": [
       {
         "type": "1:open-choice",
