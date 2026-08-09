@@ -1,0 +1,38 @@
+M3 — the admitted-VALUE re-pin floor, executed 2026-08-09.
+
+BASELINE (pristine copy)   Test Files 3 failed | 6 passed (9)   Tests  4 failed | 575 passed (579)
+GROWTH   (declaration+fill) Test Files 7 failed | 2 passed (9)   Tests 12 failed | 567 passed (579)
+
+BASELINE-ONLY failures: 0        ← the growth fixes nothing and hides nothing
+GROWTH-ONLY  failures: 8         ← THE FLOOR, in exactly 4 files
+
+  src/definition/admit.test.ts  (3)
+     - effective-config materialization (dimension 3, A5) > materializes the absent previous_reviewer…
+     - the gate-free confinement (A8) and own-property write discipline (G8) > a gate-free template…
+     - producer monopoly (dimension 4, A1: input flags never trusted) > a GATED step with WRONG pre-…
+
+  src/definition/fileDefinitionStore.test.ts  (1)
+     - ch11-P4 — a gated template loads by ref through the store (file channel → admission) > admits…
+
+  src/definition/schema/engine.test.ts  (1)
+     - the normalizer (ADR-019 D3) — derivation, never validation > writes each registration's EFFEC…
+
+  src/definition/validate.test.ts  (3)
+     - V10 — roles entries > accepts a present nonempty defaultActor
+     - dimension 12 — the canonical example round-trip > loads the draft's canonical example…
+     - ch12-P4 F4 — the defaultAgentConfig roles-entry source form (dimension 3) > defaultActor + de…
+
+THE FOUR GRAINS D14 NAMES, each instantiated:
+  whole admitted template          — admit.test.ts, validate.test.ts (canonical round-trip)
+  whole roles entry                — validate.test.ts ×2 (V10, ch12-P4 F4)
+  whole admitted binding,          — admit.test.ts ×2, fileDefinitionStore.test.ts
+    including the list-wrapped form
+  normalizer output                — engine.test.ts (the grain the word "admitted" would have excluded)
+
+The four baseline failures are environmental: the drift suites resolve
+`v3/model/**` and `v3/src/**` against the repository root, which a /tmp
+copy does not have. They are identical in both runs and are excluded by
+the diff, not by judgement.
+
+ALL FOUR FILES ARE INSIDE THE PACKET'S DECLARED MUTATION BOUNDARY.
+No kernel, store, gates, floor, ingress, emit or CLI assertion moved.

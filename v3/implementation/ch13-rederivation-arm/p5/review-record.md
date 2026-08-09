@@ -33,6 +33,18 @@ alternative and a recommendation:
   one-hook alternative because an attribute at a new grain is the
   D8/D11 amendment pattern and would widen the vocabulary for a single
   user — D9's first tripwire.
+  **CORRECTION, recorded 2026-08-09 (surfaced by panel rounds 5–6).**
+  The option was presented with the FLAVOUR LABEL already inside its
+  framing ("stay inside ADR-019 D7's NODE flavour"), so the ruling
+  settled the SHAPE and did not independently establish the flavour —
+  the same defect class as ruling (c)'s incomplete option set, and the
+  general's again. Argued afterwards on the discriminating test (new
+  USE of the vocabulary versus new MEMBER of it), the realization is
+  D7's CONSTRUCT half, admitted on the two-position reading D10
+  ratified and D11 applied to this exact pair of parents. The user
+  ruled the reversal 2026-08-09. Its cost is a SECOND Fable-mandatory
+  prerequisite `docs(v3)` act — an ADR-019 amendment editing the three
+  surfaces D10's and D11's own commits each edited.
 - **(b) The C9 stand-down mechanism** — ruled **C**: expose the
   engine's existing failed-tag set on the run result, in the form the
   result already uses for the R3 residual. `engine.ts` joins the
@@ -70,11 +82,15 @@ prior behind the gate is Appendix B's *necessity precedes truth*.
 
 | Probe | What it measured |
 |---|---|
+| M1 | the C9 trigger-tag floor (D7) — one malformation per position through an instrumented engine; UNION of eleven markable tags, both zero-marking routes shown. Script + output committed beside this file. |
+| M3 | the admitted-VALUE re-pin floor (D14) — the growth applied in a throwaway copy against a pristine baseline of the same copy; growth-only failures = the floor, eight in four files, all four grains instantiated, zero baseline-only. Script + output committed beside this file. |
 | PROBE-P5-1 | the D6 schema-lock cycle, both halves: one appended comment line in `templateFormat.ts` produces exactly one lint error naming the recorded and working-tree hashes; a further ratification block carrying the new sha256 returns the lint to 0 errors. Executed by the authoring session, then **independently reproduced twice** — panel round 2 lens 1 in a throwaway clone at HEAD, lens 4 against the live lint. Repo restored byte-identically each time (`shasum` back to `9368e525…`, two-entry porcelain). |
 
-The three measurements the packet asserted WITHOUT a probe are the
-subject of §6's diagnosis; they were measured by the panel, not by the
-author, which is the finding.
+§6's diagnosis records that three measurements were first asserted
+WITHOUT a probe and were measured by the panel rather than by the
+author. M1 and M3 are the orchestrator's re-runs closing that gap for
+the two floors the packet still cites; the third — D4's order
+equivalence — was DELETED rather than measured, under §3's gate.
 
 ## 5. Experiment §5 running record (P5, per round — derived numbers)
 
@@ -83,18 +99,36 @@ author, which is the finding.
 | Panel r1 (full, 5 lenses) | ~46 findings | 6 P1-grade in 6 clusters · rest P2/P3 | 0 | 0 | 1 (`1:open-choice`, 3 items) |
 | STOP 1 | 3 rulings | — | 0 | 1 (user) | — |
 | Panel r2 (full, 5 lenses) | ~61 findings | 10 P1-labelled in 4 clusters · rest P2/P3 | 0 | 0 | 0 |
-| Round-4 scope | 1 ruling | — | 0 | 1 (user) | — |
+| Fold-scope ruling | 1 ruling | the deletion gate | 0 | 1 (user) | — |
+| Panel r3 (full, 5 lenses) | 38 findings | 3 P1 on ONE root (a residual clause of the superseded design) | 0 | 0 | 0 |
+| Exit ruling | 1 ruling | targeted, executing lens | 0 | 1 (user) | — |
+| Panel r4 (targeted, 3 lenses) | 20 findings | 1 P1 (a manifest row with no flag) | 0 | 0 | 0 |
+| Exit ruling | 1 ruling | targeted, lenses 2+4 | 0 | 1 (user) | — |
+| Panel r5 (targeted, 2 lenses) | 16 findings | 1 P1 (an ADR-flavour argument built on act-form) | 0 | 0 | 1 (`1:open-choice`) |
+| STOP 2 | 1 ruling | the CONSTRUCT reversal | 0 | 1 (user) | — |
+| Panel r6 (full, 5 lenses) | 45 findings | 3 P1 issues — the reversal's non-propagation, a ratified-plan premise, an amendment-sequencing gap; one further P1 candidate REFUTED by execution | 0 | 0 | 1 (`2:contested-ratified-vs-reality`, plan §13's premise) |
+| STOP 3 | 1 ruling | the plan-premise alignment | 0 | 1 (user) | — |
 
-Standing totals at this point: panel rounds **2** · findings
-dispositioned **~107** · **reopens 0** · human gates **2** · STOPs
-**1 resolved** (3 items) + 2 designed ahead in the build (the
-form-authority act, the re-ratification) · watchdog **2/8** · plateau
-**0/2**.
+Standing totals at this point: panel rounds **6** (4 full, 2 targeted;
+23 lens runs) · findings dispositioned **~226** · **reopens 0** ·
+human gates **6** · STOPs **3 resolved** + 3 designed ahead in the
+build (two Fable-mandatory prerequisite acts and the re-ratification) ·
+watchdog **6/8** · plateau **0/2**.
 
-Packet size: 42,966 B at the round-1 basis → 53,174 B at the round-2
-basis (+23.7%), crossing the 48 KB v0 advisory threshold. The round-4
-deletion pass is expected to reverse it; whether it does is a scoreable
-outcome of §3's ruling.
+THE YIELD CURVE, which is the phase's most useful datum: ~46 → ~61 →
+38 → 20 → 16 → 45. The rise at round 6 is not a regression of the same
+kind — it follows a user-ruled REVERSAL of a ratified argument, and its
+P1s are that reversal's own propagation debt plus two consequences the
+reversal created. The three middle rounds are the convergence the
+deletion gate bought.
+
+Packet size: 42,966 (r1) → 53,174 (r2) → 49,997 (r3 fold) → 55,475
+(r4) → 59,257 (r5) → 61,563 B (r6 basis). §3's ruling predicted the
+deletion pass would reverse the growth; it did so once, by 6%, and the
+curve then resumed. SCORED: the deletion gate is a real instrument —
+it removed eleven claims no lens later missed — but it does not by
+itself bound a packet whose decisions keep deepening. Recorded as an
+outcome, not as a failure of the gate.
 
 ## 6. Bet ledger — scored
 
@@ -143,6 +177,97 @@ scope. Settles finally at the arm.
 
 **Bet: the arm — "1 pointed round + 1 re-check."** OPEN; not yet
 entered.
+
+## 6a. Executed-measurement log (panel rounds 3–4)
+
+The packet's two FLOORS cite this section rather than carrying their own
+receipts, on the PROBE-P5-1 pattern: the packet states the rule, the
+record holds the run. Both were executed by fresh-context panel lenses
+in throwaway copies of `v3/`, with the repository verified
+byte-identical afterwards (two-entry porcelain, unchanged HEAD,
+`templateFormat.ts` still at `9368e525…`).
+
+**M1 — the C9 trigger-tag floor (D7). ARTIFACT COMMITTED:**
+`m1-trigger-tag-probe.ts.txt` + `m1-trigger-tag-probe-out.txt` beside
+this file. Method: an rsync copy of `v3/src` into /tmp with `engine.ts`
+patched to expose `Run.tagFailedAnywhere` on the run result, then one
+malformation per position driven through `runSurface` on the direct
+channel; throwaway deleted, repository untouched. Re-run by the
+orchestrator 2026-08-09 after two independent panel reproductions in
+rounds 3 and 4, because a floor the packet cites is not allowed to rest
+on narrated measurement. The committed output carries the per-position
+table and the UNION line. Result: a broken ref list
+records its REFERENCING FIELD node's tag and never the value class's,
+because the value-class dispatch bypasses the marking call — so
+`d-ctx-gate-refs` / `d-prompt-refs` are recorded where a naive reading
+expects `vc-blockidlist` / `vc-agentconfig`. Eleven distinct markable
+tags on the containment paths: the two ref-position field nodes
+(`d-prompt-refs` shared by both config positions), the two agent-config
+field nodes, `d-binding` / `d-pipeline` / `d-gates`, and
+`d-steps` / `d-step` / `d-roles` / `d-roles-entry`. The root node is the
+twelfth and is UNMARKABLE — the fixed-map container evaluation returns
+success for every container, so it cannot be marked false on any route.
+TWO ROUTES to `d-gates` behave differently and the distinction is the
+floor's one trap: the container-kind route marks the tag; the
+dead-config `keysSubsetOf` route does NOT mark it, produces its own
+finding, and is covered by D7's part-(c) raw read rather than by the
+stand-down. The committed run shows both zero-marking routes explicitly
+(`gates dead-config key -> []`, `root not a map -> []`) beside the
+eleven that mark, so the floor and its two exclusions are readable off
+one output.
+
+**M2 — D7's part (c), the raw-read requirement.** A document whose
+gates key is not one of its step's transitions, carrying a ref whose
+catalog entry is mentioned nowhere else: the dead-config finding fires,
+the failed-tag set comes back EMPTY, a raw-authored read still sees the
+mention, and a normalized read does not. The raw read is therefore
+load-bearing, not a stylistic preference.
+
+**M3 — the admitted-value re-pin floor (D14). ARTIFACT COMMITTED:**
+`m3-value-repin-floor.sh.txt` + `m3-value-repin-floor-out.txt` beside
+this file. Method: two rsync copies of `v3/` under /tmp — one pristine
+baseline, one carrying the declaration growth and the fill — the same
+suites run against both, and the growth-ONLY failure set taken as the
+floor. Re-run by the orchestrator 2026-08-09 after two panel
+reproductions, on the same ground M1 was: a floor the packet cites is
+not allowed to rest on narrated measurement, and the asymmetry between
+the two floors was itself a review finding. What the probe measures is
+the ADMITTED-VALUE delta; the mechanism of the fill is deliberately not
+its subject, because the red set is a function of the value, not of how
+it was produced. Result, and it reproduces the panel's numbers exactly:
+exactly EIGHT assertions red beyond the baseline, in four files, and all
+four of the floor's named grains are instantiated — whole-admitted
+template, whole roles entry, whole admitted binding including the
+list-wrapped form, and normalizer output. BASELINE-ONLY failures: ZERO,
+so the growth neither fixes nor hides an existing assertion; the four
+failures common to both runs are the drift suites resolving repo-root
+paths a /tmp copy does not have, excluded by the diff rather than by
+judgement. No kernel, store, gates, drift
+or CLI assertion moved beyond the environmental baseline, and
+cross-channel comparisons stayed green, as the row predicts.
+
+**M4 — D11's non-movement.** The same run measured ZERO verdict, path
+or message deltas from the declared default; every delta was
+value-level, i.e. D14's territory. The two rows are jointly satisfiable
+under measurement.
+
+**M5 — the draft-metrics sweep behind D6.** Ratification blocks against
+the recorded post-ratification-reopening count, per contract:
+ch8 2/1 vs 1 · ch9 2/1 vs **0** · ch11 5/4 vs 4 · ch12 1/0 vs 0 ·
+ch13-v1 5/4 vs 4 · ch13-v2 1/0 vs 0. The form authority defines the
+metric mechanically as blocks beyond the first, so ch9's recorded 0
+contradicts that definition today and survives on a parenthetical; no
+tool computes the number anywhere in the tree. Under D6's constraint —
+excluding non-reopening amendments and schema re-locks — every recorded
+count stays where it stands, which is what makes the constraint
+sufficient rather than merely motivated.
+
+DATED-INCREMENT FORM, measured 2026-08-09 because D6 cites this entry
+for it: counting metrics lines carrying the reopening figure per
+contract gives ch8 2 · ch11 3 · ch13-v1 3 · ch9 1 · ch12 1 · ch13-v2 1
+— so **THREE** drafts record the figure as a dated snapshot with later
+increments beside it, the form ch9-C27 codifies, and the prerequisite
+act's new §5 wording must leave it legal.
 
 ## 7. Panel round records
 

@@ -1,0 +1,48 @@
+import { describe, expect, it } from "vitest";
+import { templateFormat } from "../definition/schema/templateFormat.js";
+import { runSurface } from "../definition/schema/engine.js";
+import { createGateRegistry } from "../gates/index.js";
+
+/** M1 — which tag does the engine record for one malformation per position?
+ *  The floor D7 declares is the set of tags that CAN be marked on a
+ *  containment path from the root to a ref list. Measured, not read. */
+const base = (): Record<string, unknown> => ({
+  ref: { id: "t", version: 1 },
+  start: "implement",
+  steps: {
+    implement: { role: "implementer", instruction: "x", transitions: { PASS: "review" } },
+    review: { role: "reviewer", instruction: "y", transitions: { PASS: "implement", CONVERGED: "done" } },
+  },
+  terminal: ["done"],
+  roles: { implementer: { defaultActor: "a" }, reviewer: { defaultActor: "b" } },
+  contextBlocks: { alpha: { body: "text" } },
+});
+function tags(mutate: (t: Record<string, unknown>) => void): string[] {
+  const t = base(); mutate(t);
+  const r = runSurface(templateFormat, t, { channel: { kind: "direct" }, catalog: createGateRegistry() }) as unknown as { failedTags?: string[] };
+  return [...(r.failedTags ?? [])].sort();
+}
+describe("M1 — recorded tag per malformation", () => {
+  it("prints the tag recorded for each position", () => {
+    const rows: [string, string[]][] = [
+      ["gate ref list wrong kind", tags((t) => { (t.steps as any).review.gates = { PASS: [{ uses: "declarative.threshold", config: { metric: "round", op: ">=", value: 2 }, contextBlockRefs: "nope" }] }; })],
+      ["step config ref list wrong kind", tags((t) => { (t.steps as any).review.agentConfig = { promptConcernRefs: "nope" }; })],
+      ["role config ref list wrong kind", tags((t) => { (t.roles as any).reviewer.defaultAgentConfig = { promptConcernRefs: "nope" }; })],
+      ["step agentConfig wrong kind", tags((t) => { (t.steps as any).review.agentConfig = 7; })],
+      ["role defaultAgentConfig wrong kind", tags((t) => { (t.roles as any).reviewer.defaultAgentConfig = 7; })],
+      ["binding wrong kind", tags((t) => { (t.steps as any).review.gates = { PASS: [7] }; })],
+      ["pipeline wrong kind", tags((t) => { (t.steps as any).review.gates = { PASS: 7 }; })],
+      ["gates container wrong kind", tags((t) => { (t.steps as any).review.gates = 7; })],
+      ["gates dead-config key", tags((t) => { (t.steps as any).review.gates = { NOPE: [{ uses: "declarative.threshold", config: { metric: "round", op: ">=", value: 2 } }] }; })],
+      ["step entry wrong kind", tags((t) => { (t.steps as any).review = 7; })],
+      ["steps container wrong kind", tags((t) => { t.steps = 7; })],
+      ["roles entry wrong kind", tags((t) => { (t.roles as any).reviewer = 7; })],
+      ["roles container wrong kind", tags((t) => { t.roles = 7; })],
+      ["root not a map", tags(() => {})],
+    ];
+    for (const [name, got] of rows) console.log(`${name.padEnd(34)} -> ${JSON.stringify(got)}`);
+    const union = new Set(rows.flatMap(([, g]) => g));
+    console.log(`\nUNION (${union.size}): ${JSON.stringify([...union].sort())}`);
+    expect(rows.length).toBe(14);
+  });
+});

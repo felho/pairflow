@@ -1,0 +1,30 @@
+# M3 — the admitted-VALUE re-pin floor (packet row D14).
+# Executed 2026-08-09 by the orchestrator. Repository untouched: both
+# trees are rsync copies under /tmp with node_modules symlinked, deleted
+# after the run.
+#
+# WHAT IS MEASURED: which STANDING assertions go red once every admitted
+# value carries the produced ref positions. The MECHANISM of the fill is
+# deliberately not the subject — a declared hook and the direct patch
+# below produce the same admitted value, and the red set is a function of
+# that value, not of how it was produced. The declared-hook realization
+# is D4's and is verified separately.
+#
+# 1. two trees:
+rsync -a --exclude node_modules v3/ /tmp/p5m3/    # growth
+rsync -a --exclude node_modules v3/ /tmp/p5m3base/ # pristine baseline
+ln -s <repo>/v3/node_modules /tmp/p5m3/node_modules
+ln -s <repo>/v3/node_modules /tmp/p5m3base/node_modules
+#
+# 2. the growth, applied to /tmp/p5m3 only:
+#    templateFormat.ts  [d-ctx-gate-refs] gains `default: []`
+#    templateFormat.ts  [n-effective-config] carry: ["uses"] -> ["uses","contextBlockRefs"]
+#    normalizer.ts      normalize() fills `promptConcernRefs` at every
+#                       steps.* and roles.* entry from its nested config
+#                       source, empty list where none was authored
+#
+# 3. both suites, same command, default reporter:
+(cd /tmp/p5m3base && npx vitest run src/definition src/drift > /tmp/m3base.txt 2>&1)
+(cd /tmp/p5m3     && npx vitest run src/definition src/drift > /tmp/m3grow.txt 2>&1)
+#
+# 4. diff the FAIL sets; growth-only is the floor.
