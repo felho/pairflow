@@ -1,38 +1,31 @@
-M3 — the admitted-VALUE re-pin floor, executed 2026-08-09.
+M3 — the admitted-VALUE re-pin floor (packet row D14), executed 2026-08-09
+by the orchestrator and RE-EXECUTED the same day from the rewritten
+EXECUTABLE receipt beside this file (m3-value-repin-floor.sh.txt), after
+arm gate 1 found the first version to be a narrated command outline that
+no third party could re-run.
 
-BASELINE (pristine copy)   Test Files 3 failed | 6 passed (9)   Tests  4 failed | 575 passed (579)
-GROWTH   (declaration+fill) Test Files 7 failed | 2 passed (9)   Tests 12 failed | 567 passed (579)
+The re-execution REPRODUCES the original measurement exactly: 8 growth-only
+failing assertions in 4 files, 0 baseline-only. Two corrections were needed
+to get there, and both are recorded because they are the receipt's value:
+the throwaway tree must be rooted at v3/ (the v3 package is its own vitest
+root), and the produced field is an ENTRY-LEVEL sibling on the steps and
+roles entries — D3's two new field nodes join [d-roles-entry] and [d-step],
+NOT the nested agent-config map. A fill written inside agentConfig instead
+measures 13 failures across 5 files, including load.test.ts round-trips
+that the real growth never touches. That divergence is the proof that the
+first, narrated receipt was not merely inconvenient: its number could not
+have been recovered from what it recorded.
 
-BASELINE-ONLY failures: 0        ← the growth fixes nothing and hides nothing
-GROWTH-ONLY  failures: 8         ← THE FLOOR, in exactly 4 files
+=== GROWTH-ONLY failures (the floor) ===
+ src/definition/admit.test.ts > admitTemplate — effective-config materialization (dimension 3, A5) > materializes the absent previous_reviewer_verdict default and preserves the threshold identity ONCE
+ src/definition/admit.test.ts > admitTemplate — producer monopoly (dimension 4, A1: input flags never trusted) > a GATED step with WRONG pre-populated maps → recomputed EXACTLY on the gated rebuild branch too
+ src/definition/admit.test.ts > admitTemplate — the gate-free confinement (A8) and own-property write discipline (G8) > a gate-free template admits with a structurally-equal value plus all-false round flags (C38)
+ src/definition/fileDefinitionStore.test.ts > ch11-P4 — a gated template loads by ref through the store (file channel → admission) > admits with the effective gate config, the round declaration, and the expanded advancesRound flags
+ src/definition/schema/engine.test.ts > the normalizer (ADR-019 D3) — derivation, never validation > writes each registration's EFFECTIVE config into the binding's single config surface
+ src/definition/validate.test.ts > ch12-P4 F4 — the defaultAgentConfig roles-entry source form (dimension 3) > defaultActor + defaultAgentConfig together are both delivered
+ src/definition/validate.test.ts > dimension 12 — the canonical example round-trip > loads the draft's canonical example to the exact WorkflowTemplate value
+ src/definition/validate.test.ts > V10 — roles entries > accepts a present nonempty defaultActor
 
-  src/definition/admit.test.ts  (3)
-     - effective-config materialization (dimension 3, A5) > materializes the absent previous_reviewer…
-     - the gate-free confinement (A8) and own-property write discipline (G8) > a gate-free template…
-     - producer monopoly (dimension 4, A1: input flags never trusted) > a GATED step with WRONG pre-…
+=== BASELINE-ONLY failures (must be empty) ===
 
-  src/definition/fileDefinitionStore.test.ts  (1)
-     - ch11-P4 — a gated template loads by ref through the store (file channel → admission) > admits…
-
-  src/definition/schema/engine.test.ts  (1)
-     - the normalizer (ADR-019 D3) — derivation, never validation > writes each registration's EFFEC…
-
-  src/definition/validate.test.ts  (3)
-     - V10 — roles entries > accepts a present nonempty defaultActor
-     - dimension 12 — the canonical example round-trip > loads the draft's canonical example…
-     - ch12-P4 F4 — the defaultAgentConfig roles-entry source form (dimension 3) > defaultActor + de…
-
-THE FOUR GRAINS D14 NAMES, each instantiated:
-  whole admitted template          — admit.test.ts, validate.test.ts (canonical round-trip)
-  whole roles entry                — validate.test.ts ×2 (V10, ch12-P4 F4)
-  whole admitted binding,          — admit.test.ts ×2, fileDefinitionStore.test.ts
-    including the list-wrapped form
-  normalizer output                — engine.test.ts (the grain the word "admitted" would have excluded)
-
-The four baseline failures are environmental: the drift suites resolve
-`v3/model/**` and `v3/src/**` against the repository root, which a /tmp
-copy does not have. They are identical in both runs and are excluded by
-the diff, not by judgement.
-
-ALL FOUR FILES ARE INSIDE THE PACKET'S DECLARED MUTATION BOUNDARY.
-No kernel, store, gates, floor, ingress, emit or CLI assertion moved.
+M3 RECEIPT OK — growth-only 8 in 4 files (floor 8 in 4, extendable not droppable), baseline-only 0.

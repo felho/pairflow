@@ -1,30 +1,114 @@
-# M3 — the admitted-VALUE re-pin floor (packet row D14).
-# Executed 2026-08-09 by the orchestrator. Repository untouched: both
-# trees are rsync copies under /tmp with node_modules symlinked, deleted
-# after the run.
+#!/usr/bin/env bash
+# M3 — the admitted-VALUE re-pin floor (packet row D14). EXECUTABLE RECEIPT.
+#
+# Rewritten 2026-08-09 after arm gate 1 found the first version to be a
+# narrated command outline: its three essential mutations were COMMENTS and
+# its symlink target was a `<repo>` placeholder, so no third party could
+# re-run it. This script is the whole measurement — it builds both trees,
+# applies the growth by exact anchored patch, runs both suites, diffs the
+# failure sets, asserts the floor, and deletes its throwaway trees.
 #
 # WHAT IS MEASURED: which STANDING assertions go red once every admitted
 # value carries the produced ref positions. The MECHANISM of the fill is
-# deliberately not the subject — a declared hook and the direct patch
-# below produce the same admitted value, and the red set is a function of
-# that value, not of how it was produced. The declared-hook realization
-# is D4's and is verified separately.
+# deliberately not the subject — a declared hook and the direct patch below
+# produce the same admitted value, and the red set is a function of that
+# value, not of how it was produced. The declared-hook realization is D4's
+# and is verified separately.
 #
-# 1. two trees:
-rsync -a --exclude node_modules v3/ /tmp/p5m3/    # growth
-rsync -a --exclude node_modules v3/ /tmp/p5m3base/ # pristine baseline
-ln -s <repo>/v3/node_modules /tmp/p5m3/node_modules
-ln -s <repo>/v3/node_modules /tmp/p5m3base/node_modules
-#
-# 2. the growth, applied to /tmp/p5m3 only:
-#    templateFormat.ts  [d-ctx-gate-refs] gains `default: []`
-#    templateFormat.ts  [n-effective-config] carry: ["uses"] -> ["uses","contextBlockRefs"]
-#    normalizer.ts      normalize() fills `promptConcernRefs` at every
-#                       steps.* and roles.* entry from its nested config
-#                       source, empty list where none was authored
-#
-# 3. both suites, same command, default reporter:
-(cd /tmp/p5m3base && npx vitest run src/definition src/drift > /tmp/m3base.txt 2>&1)
-(cd /tmp/p5m3     && npx vitest run src/definition src/drift > /tmp/m3grow.txt 2>&1)
-#
-# 4. diff the FAIL sets; growth-only is the floor.
+# Every patch ASSERTS its own anchor hit count, so a future edit that moves
+# an anchor fails the receipt loudly instead of measuring the wrong tree.
+set -euo pipefail
+
+SRC="$(git rev-parse --show-toplevel)"
+BASE="$(mktemp -d)"; GROW="$(mktemp -d)"
+trap 'rm -rf "$BASE" "$GROW"' EXIT
+
+# The v3 package is its own vitest root (`pnpm --dir v3 test`), so each
+# throwaway tree IS a v3 root — not a repo root with v3 inside it.
+for T in "$BASE" "$GROW"; do
+  rsync -a --exclude node_modules "$SRC/v3/" "$T/"
+  ln -s "$SRC/v3/node_modules" "$T/node_modules"
+done
+
+python3 - "$GROW" <<'PY'
+import sys, pathlib
+g = pathlib.Path(sys.argv[1])
+
+# (1) The gate position's declared empty-list default.
+tf = g / "src/definition/schema/templateFormat.ts"
+t = tf.read_text()
+a1 = """    contextBlockRefs: {
+      kind: "valueClass",
+      tag: "d-ctx-gate-refs",
+      rows: ["ch13v2-C6"],
+      valueClass: "blockIdList",
+      label: "contextBlockRefs",
+    },"""
+assert t.count(a1) == 1, f"[d-ctx-gate-refs] anchor hits: {t.count(a1)}"
+t = t.replace(a1, a1.replace('      label: "contextBlockRefs",',
+                             '      label: "contextBlockRefs",\n      default: [],'))
+
+# (2) The effective-config carry gains the gate-position field.
+a2 = '      carry: ["uses"],'
+assert t.count(a2) == 1, f"carry anchor hits: {t.count(a2)}"
+t = t.replace(a2, '      carry: ["uses", "contextBlockRefs"],')
+tf.write_text(t)
+
+# (3) The nested-source fill at both config positions, applied directly.
+#     The produced field is an ENTRY-LEVEL sibling (D3: the two new field\n#     nodes join [d-roles-entry] and [d-step]), sourced from the nested\n#     config. This stands in for the declared hook; see the header.
+nz = g / "src/definition/schema/normalizer.ts"
+n = nz.read_text()
+a3 = """  if (!isRecord(value)) return value;
+  for (const hook of surface.normalizers) {"""
+assert n.count(a3) == 1, f"normalize() anchor hits: {n.count(a3)}"
+fill = """  if (!isRecord(value)) return value;
+  for (const parentKey of ["steps", "roles"]) {
+    const parent = (value as Record<string, unknown>)[parentKey];
+    if (!isRecord(parent)) continue;
+    const configKey = parentKey === "steps" ? "agentConfig" : "defaultAgentConfig";
+    for (const entry of Object.values(parent)) {
+      if (!isRecord(entry)) continue;
+      const cfg = (entry as Record<string, unknown>)[configKey];
+      const authored = isRecord(cfg) ? (cfg as Record<string, unknown>)["promptConcernRefs"] : undefined;
+      (entry as Record<string, unknown>)["promptConcernRefs"] = Array.isArray(authored) ? authored : [];
+    }
+  }
+  for (const hook of surface.normalizers) {"""
+n = n.replace(a3, fill)
+nz.write_text(n)
+print("growth applied: 2 declaration patches + 1 normalizer fill")
+PY
+
+run() { (cd "$1" && npx vitest run src/definition src/drift 2>&1) || true; }
+run "$BASE" > "$BASE/out.txt"
+run "$GROW" > "$GROW/out.txt"
+
+# A clean tree yields no matches, and an empty grep exits 1 — which under
+# `set -euo pipefail` would kill the run at exactly the moment the
+# measurement succeeded. The `|| true` is load-bearing, not defensive noise.
+# Two shapes matter here. A clean tree yields no matches and an empty grep
+# exits 1, which under `set -euo pipefail` would kill the run at exactly the
+# moment the measurement succeeded — hence `|| true`. And vitest prints each
+# failure TWICE, once as `file > suite > name` and once as the bare name in
+# its summary; keeping only the qualified form is what makes the count the
+# number of failing ASSERTIONS rather than twice that.
+fails() { { grep -oE '^ *(×|FAIL|✗) .*' "$1" || true; } | sed -E 's/^ *(×|FAIL|✗) //; s/ [0-9]+ms$//' | grep ' > ' | sort -u; }
+{ fails "$BASE/out.txt" || true; } > "$BASE/fails.txt"
+{ fails "$GROW/out.txt" || true; } > "$GROW/fails.txt"
+
+echo "=== baseline summary ==="; grep -E '^ *Tests +' "$BASE/out.txt" || true
+echo "=== growth summary ===";   grep -E '^ *Tests +' "$GROW/out.txt" || true
+echo
+echo "=== GROWTH-ONLY failures (the floor) ==="
+comm -13 "$BASE/fails.txt" "$GROW/fails.txt" | tee "$GROW/only.txt"
+echo
+echo "=== BASELINE-ONLY failures (must be empty) ==="
+comm -23 "$BASE/fails.txt" "$GROW/fails.txt"
+
+N="$(wc -l < "$GROW/only.txt" | tr -d ' ')"
+B="$(comm -23 "$BASE/fails.txt" "$GROW/fails.txt" | wc -l | tr -d ' ')"
+[ "$B" = "0" ] || { echo "RECEIPT FAILED: baseline-only failures exist"; exit 1; }
+FILES="$(sed -E 's/ >.*//' "$GROW/only.txt" | sort -u | wc -l | tr -d ' ')"
+[ "$N" -ge 8 ] || { echo "RECEIPT FAILED: floor is $N, expected at least 8"; exit 1; }
+echo
+echo "M3 RECEIPT OK — growth-only $N in $FILES files (floor 8 in 4, extendable not droppable), baseline-only 0."

@@ -69,9 +69,20 @@ no prerequisite commit and no non-green window. **Re-priced 2026-08-09**
 non-green window is the schema lock's, not the form-authority act's, so
 it survives the lighter form; and the prerequisite saving is this act's
 alone, D4's ADR-019 amendment standing either way.
-The ruling may stand on its merits; it was not
-made against the real alternative space, and that is the general's
-defect, not the user's.
+**WITHDRAWN 2026-08-09 at arm gate 1, and the withdrawal reverses this
+whole entry's direction.** The form authority states that on any
+mismatch THE TEMPLATE WINS, and its §5 defines the metric mechanically
+as ratification blocks beyond the first — under which ch9's second
+block is 1 and its record says 0. The ch9 parenthetical is therefore
+not the standing practice this entry took it for: it is a
+NONCONFORMITY already standing in the tree. So ruling (c) was NOT
+presented on an incomplete option set after all — the "missing"
+alternative was never a legal option, and the correction recorded here
+was itself the error. What survives is smaller and sharper: the panel
+was right that a live precedent existed and right that it went
+unsurfaced, and wrong about what the precedent WAS. D6's act is
+consequently not a scruple but the only conformant route, and the act
+that regularizes ch9's record as a side effect.
 
 ## 3. The round-2 fold's scope ruling (user-ratified 2026-08-08)
 
@@ -118,13 +129,16 @@ equivalence — was DELETED rather than measured, under §3's gate.
 | Panel r7 (targeted, 2 lenses) | 9 findings | 3 P1, ALL in fold-written repair prose (two inside §6's own bet entry, one a re-pricing enumeration); the executing measurement lens returned 0 P1 across 147 re-derived numeric claims | 0 | 0 | 0 |
 | Top-level close (fresh context, final bytes) | 6 findings | 1 STOP-class — flag 2 ratifying a consequence set with no priced alternative; 1 fold-now (the engine growth's acceptance weight named the wrong family); 4 carry | 0 | 0 | 1 (`1:open-choice`, flag 2's flavour price) |
 | STOP 4 | 1 ruling | CONSTRUCT re-affirmed on the priced option set | 0 | 1 (user) | — |
+| Arm gate 1 (external, full charter) | 6 findings | **VERDICT FAIL** — 4 BLOCKER, 2 MAJOR, 0 MINOR; all six independently re-verified against source by the orchestrator. Record: `arm-gate1-verdict.md` | 0 | 0 | 1 (`1:open-choice`, three coupled routes) |
+| STOP 5 | 3 rulings | the C9 stand-down route (engine-side marking), the closure-exemption home, and the withdrawal of flag 4's alternative | 0 | 1 (user) | — |
 
 Standing totals at this point: panel rounds **7** (4 full, 3 targeted;
 27 lens runs — 5+5+5+3+2+5+2, summed from the table above rather than
-carried) · findings dispositioned **~241** (235 from the panel rounds,
-6 from the top-level close, which is not a panel round and consumes no
-watchdog) · **reopens 0** ·
-human gates **8** · STOPs **4 resolved** + 3 designed ahead in the
+carried) · findings dispositioned **~253** (235 from the panel rounds,
+6 from the top-level close, 6 from arm gate 1 — neither the close nor
+the arm gate is a panel round and neither consumes watchdog) ·
+**reopens 0** ·
+human gates **9** · STOPs **5 resolved** + 3 designed ahead in the
 build (two Fable-mandatory prerequisite acts and the re-ratification) ·
 watchdog **7/8** · plateau **0/2**.
 
@@ -296,8 +310,19 @@ all. The two new probe rows exercise the second mechanism.
 TWO ROUTES to `d-gates` behave differently and the distinction is the
 floor's one trap: the container-kind route marks the tag; the
 dead-config `keysSubsetOf` route does NOT mark it, produces its own
-finding, and is covered by D7's part-(c) raw read rather than by the
-stand-down. The committed run shows both zero-marking routes explicitly
+finding, and was read as covered by D7's part-(c) raw read rather than
+by the stand-down. **THAT READING WAS WRONG, and arm gate 1 built the
+counterexample that shows it:** the raw read saves the mention sitting
+inside the dead key and does nothing for an entry mentioned NOWHERE,
+which is exactly what C9's template-wide stand-down protects. Two
+catalog entries, the first referenced only from inside a dead gate key,
+the second mentioned nowhere: C9 requires zero findings, the design
+accused the second. The user's ruling closes it at the source — the
+engine marks the enclosure on that skip (D5's third capability) — so
+after the build BOTH routes mark `d-gates` and this row's measured
+`[]` becomes `["d-gates"]`. The measurement above is therefore the
+PRE-GROWTH baseline, correct for the engine it ran against and
+deliberately superseded by the build it informs. The committed run shows both zero-marking routes explicitly
 (`gates dead-config key -> []`, `root not a map (scalar) -> []`,
 `root not a map (array) -> []`) beside the eleven that mark, so the
 floor and its two exclusions are readable off one output.
@@ -317,6 +342,18 @@ drives the root twice (scalar and array), and carries a clean-base
 control row under its true name. **The union is unchanged: eleven.**
 D7's floor was right; its receipt was not, and the distance between
 those two is the whole point of an executed probe.
+
+**RECEIPTS ARE NOW EXECUTABLE (2026-08-09, arm gate 1's MAJOR finding
+6).** Both floors carry a runnable script that applies its own patches by
+exact anchor, asserts each anchor's hit count, runs the measurement,
+checks the expected result, and deletes its throwaway tree:
+`m1-trigger-tag-probe.sh.txt` and `m3-value-repin-floor.sh.txt`. The M3
+re-execution reproduces the original 8-in-4 exactly; getting there
+required discovering that the produced field is an ENTRY-LEVEL sibling
+and not a key inside the agent-config map, a distinction the narrated
+version did not record and whose wrong reading measures 13 failures in 5
+files. The number was therefore not recoverable from the old receipt —
+which is the finding's real weight, sharper than "inconvenient to re-run".
 
 **M2 — D7's part (c), the raw-read requirement. NARRATED, NOT
 EXECUTED** — a panel lens's reading, with no committed artifact, which

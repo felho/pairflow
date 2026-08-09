@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# M1 — the C9 trigger-tag floor (packet row D7). EXECUTABLE RECEIPT.
+#
+# Added 2026-08-09 after arm gate 1 found the floor's receipt not
+# independently rerunnable: the probe test was committed, the engine
+# instrumentation it depends on was described in prose only. This script
+# is the whole measurement — it applies the exact patches, runs the probe,
+# asserts the expected union, and deletes its throwaway tree. Run it from
+# anywhere inside the repository; it touches nothing tracked.
+#
+# The patch is anchored on exact strings and ASSERTS its own hit counts,
+# so a future engine edit that moves either return site fails the receipt
+# loudly instead of silently measuring the wrong thing. Both return sites
+# are instrumented deliberately: the non-map-root short-circuit leaves
+# from the earlier one, and an instrumentation reaching only the walk's
+# return would leave `failedTags` ABSENT on exactly that route — the probe
+# throws on an absent field so that no `[]` below can be a default.
+set -euo pipefail
+
+SRC="$(git rev-parse --show-toplevel)"
+HERE="$SRC/v3/implementation/ch13-rederivation-arm/p5"
+WORK="$(mktemp -d)"
+trap 'rm -rf "$WORK"' EXIT
+
+rsync -a --exclude node_modules "$SRC/v3/" "$WORK/v3/"
+cp "$SRC/package.json" "$SRC/tsconfig.json" "$WORK/"
+ln -s "$SRC/node_modules" "$WORK/node_modules"
+
+python3 - "$WORK" <<'PY'
+import sys, pathlib
+w = pathlib.Path(sys.argv[1])
+p = w / "v3/src/definition/schema/engine.ts"
+t = p.read_text()
+# The non-map-root short-circuit's return (6-space fields, inside the if).
+early = "      runtimeContextBindings: run.runtimeContextBindings,\n"
+# The walk's own return (4-space fields, closing runSurface).
+walk = "    runtimeContextBindings: run.runtimeContextBindings,\n  };\n}"
+assert t.count(early) == 1, f"early-return anchor hits: {t.count(early)}"
+assert t.count(walk) == 1, f"walk-return anchor hits: {t.count(walk)}"
+t = t.replace(early, early + "      failedTags: [...run.tagFailedAnywhere],\n")
+t = t.replace(walk, "    runtimeContextBindings: run.runtimeContextBindings,\n"
+                    "    failedTags: [...run.tagFailedAnywhere],\n  };\n}")
+p.write_text(t)
+print("engine instrumented at both return sites")
+PY
+
+mkdir -p "$WORK/v3/src/m1"
+cp "$HERE/m1-trigger-tag-probe.ts.txt" "$WORK/v3/src/m1/trigger-tag.probe.test.ts"
+
+cat > "$WORK/vitest.probe.config.ts" <<'EOF'
+import { defineConfig } from "vitest/config";
+export default defineConfig({ test: { include: ["v3/src/**/*.probe.test.ts"] } });
+EOF
+
+cd "$WORK"
+OUT="$(npx vitest run --config vitest.probe.config.ts 2>&1)"
+echo "$OUT" | sed -n '/^gate ref list/,/^UNION/p'
+
+# The receipt asserts its own headline rather than leaving it to a reader.
+echo "$OUT" | grep -q 'UNION (11)' || { echo "RECEIPT FAILED: union is not 11"; exit 1; }
+echo "$OUT" | grep -qE '^gates dead-config key +-> \[\]' || { echo "RECEIPT FAILED: dead-config route not empty"; exit 1; }
+echo "$OUT" | grep -qE '^root not a map \(scalar\) +-> \[\]' || { echo "RECEIPT FAILED: scalar-root route not empty"; exit 1; }
+echo
+echo "M1 RECEIPT OK — union 11, both zero-marking routes measured, control clean."
+echo "NOTE: this measures the PRE-GROWTH engine. D5's third capability makes the"
+echo "dead-config row read [\"d-gates\"]; re-running this after that build is"
+echo "EXPECTED to fail the dead-config assertion, and that failure is the proof."
