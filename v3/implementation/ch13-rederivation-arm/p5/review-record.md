@@ -147,6 +147,36 @@ equivalence — was DELETED rather than measured, under §3's gate.
 | Arm re-check #1 | 4 findings | 2 of six not fully closed, 1 new MAJOR, 1 new MINOR — **0 new BLOCKER**; all folded | 0 | 0 | 0 |
 | Arm re-check #2 | 2 findings | four folds CLOSED, original six HOLD, **0 new BLOCKER**; 1 new MAJOR + 1 MINOR, both folded. Bet #2 LOST → pre-committed loss branch | 0 | 0 | 0 |
 | Gate-closure ruling | 1 ruling | arm gate 1 CLOSED on the fold-complete state; no re-verification round | 0 | 1 (user) | — |
+| **APPROVE — STOP `4:flagged-approve`** | 9 flags | all NINE approved, one per message, 2026-08-09 | 0 | 1 (user) | — |
+
+**THE APPROVE, 2026-08-09.** Approved basis `bb1f38b65f386de4c84395864108dd56f1001ea023d5ef35e9526401cd0265fc`
+(76738 B). Nine pre-approval flags carried to the human one at a time and
+approved in order: (1) the in-chapter split and its five-part plan edit ·
+(2) the hook realization as a vocabulary CONSTRUCT, with its second
+prerequisite act now editing four ADR surfaces · (3) the engine growth,
+including the third capability the arm's counterexample forced · (4) the
+schema re-lock act, whose declined alternative was withdrawn as never
+legal, and which now also regularizes ch9's record · (5) the
+form-authority gap, taken as noted, routed to the boundary · (6) the
+names no ratified source pins, (a)–(c) as verbatim-pinned build choices
+and (d) as precedent-following · (7) the mutation pilot's declared scope,
+routed to the boundary · (8) the difficulty index's E axis at 2 · (9) the
+admitted-value re-pin discipline with its four prohibitions.
+
+The DIFFICULTY INDEX IS FROZEN AT THIS APPROVE: A 0 · B 1 · C 1 · D 1 ·
+E 2 · **Σ = 5, Medium**. It does not move again for this packet.
+
+Flags 4 and 8 were presented in the two-level form the user ruled
+mid-gate: one paragraph where a prior STOP had already decided the
+matter, naming what changed since that ruling, with full exposition
+reserved for the flags that had never been before the human. Flags 5, 6,
+7 and 9 took the full form on that test.
+
+THE PACKET FILE IS NOT COMMITTED HERE. Measured against the precedent —
+`ch12-p1a-lifecycle-axis.md` was first added in its BUILD commit
+(`abaef93c`) — the packet file and the plan edit both ride the build
+commit, per §13.4's one-packet-one-commit rule. What lands now is this
+log entry.
 
 **ARM GATE 1 — CLOSED 2026-08-09, and the accounting is stated in its
 honest form rather than a comfortable one.** Last verdict: **FAIL**
