@@ -1226,3 +1226,90 @@ describe("dev cli — the ch13 code travel (packet ch13-p1a, ch13v2-C18)", () =>
     expect(details.findings.map((f) => f.code)).toEqual(["gate_evaluator_unavailable"]);
   });
 });
+
+// ── The NEGATIVE twin, PARAMETERIZED over family 1's inventory (packet
+// row D9 / ch13v2-C18: "no other lane of this chapter may carry any
+// code"). One document per lane of the context-block surface, driven
+// through the same standing validate channel; a finding carries `code`
+// IFF it is the resolution lane's. Sampling three lanes left a code
+// added to the duplicate lane undetected — this drives them all. ────────
+
+/** A ch13 document with the catalog, the role refs and the step's own
+ * block authored verbatim, so a lane fixture reads as its own YAML. */
+const ctxDoc = (parts: { catalog?: string; roleRefs?: string; stepExtra?: string }): string => `ref:
+  id: ctx-lane-v0
+  version: 1
+start: s
+steps:
+  s:
+    role: r
+    instruction: |-
+      build it
+    transitions:
+      GO: done
+${parts.stepExtra ?? ""}terminal:
+  - done
+roles:
+  r:
+${parts.roleRefs === undefined ? "    defaultActor: codex\n" : `    defaultAgentConfig:\n      promptConcernRefs:\n${parts.roleRefs}`}${parts.catalog ?? ""}`;
+
+const REFS = (...ids: readonly string[]): string => ids.map((id) => `        - ${id}\n`).join("");
+const CAT = (body: string): string => `contextBlocks:\n${body}`;
+const GATE_REFS = (refs: string): string =>
+  `    gates:\n      GO:\n        - uses: declarative.threshold\n          config: { metric: round, op: ">=", value: 2 }\n          contextBlockRefs: ${refs}\n`;
+
+/** `coded` is the number of findings that must carry the ch13 issue code;
+ * every other finding of the document must carry none. */
+const CTX_CLI_LANES: readonly { lane: string; doc: string; coded: number }[] = [
+  { lane: "d-ctxblocks container", doc: ctxDoc({ catalog: "contextBlocks: 7\n" }), coded: 0 },
+  { lane: "d-block-key grammar", doc: ctxDoc({ catalog: CAT("  Bad Key:\n    body: x\n") }), coded: 0 },
+  { lane: "d-block-key nonempty", doc: ctxDoc({ catalog: CAT('  "":\n    body: x\n') }), coded: 0 },
+  { lane: "d-block-key type (non-string)", doc: ctxDoc({ catalog: CAT("  true:\n    body: x\n") }), coded: 0 },
+  { lane: "d-ctx-entry container", doc: ctxDoc({ catalog: CAT("  alpha: 7\n"), roleRefs: REFS("alpha") }), coded: 1 },
+  {
+    lane: "d-ctx-entry unknown key",
+    doc: ctxDoc({ catalog: CAT("  alpha:\n    body: x\n    extra: 1\n"), roleRefs: REFS("alpha") }),
+    coded: 1,
+  },
+  { lane: "d-ctx-entry missing key", doc: ctxDoc({ catalog: CAT("  alpha: {}\n"), roleRefs: REFS("alpha") }), coded: 1 },
+  { lane: "d-ctx-body type", doc: ctxDoc({ catalog: CAT("  alpha:\n    body: 7\n"), roleRefs: REFS("alpha") }), coded: 1 },
+  {
+    lane: "d-ctx-body nonempty",
+    doc: ctxDoc({ catalog: CAT('  alpha:\n    body: ""\n'), roleRefs: REFS("alpha") }),
+    coded: 1,
+  },
+  { lane: "vc-blockidlist container (role)", doc: ctxDoc({ roleRefs: "" }), coded: 0 },
+  {
+    lane: "vc-blockidlist container (step)",
+    doc: ctxDoc({ stepExtra: "    agentConfig:\n      promptConcernRefs: nope\n" }),
+    coded: 0,
+  },
+  { lane: "vc-blockidlist container (gate)", doc: ctxDoc({ stepExtra: GATE_REFS("nope") }), coded: 0 },
+  { lane: "vc-block-id member type", doc: ctxDoc({ roleRefs: REFS("7") }), coded: 0 },
+  { lane: "vc-block-id member grammar", doc: ctxDoc({ roleRefs: REFS("Bad Ref") }), coded: 0 },
+  { lane: "vc-block-id member nonempty", doc: ctxDoc({ roleRefs: REFS('""') }), coded: 0 },
+  {
+    lane: "vc-blockidlist duplicate",
+    doc: ctxDoc({ catalog: CAT("  alpha:\n    body: x\n"), roleRefs: REFS("alpha", "alpha") }),
+    coded: 0,
+  },
+  { lane: "vc-blockidlist resolution (THE coded lane)", doc: ctxDoc({ roleRefs: REFS("ghost") }), coded: 1 },
+  { lane: "the C9 hygiene lane", doc: ctxDoc({ catalog: CAT("  alpha:\n    body: x\n") }), coded: 0 },
+];
+
+describe("dev cli — the ch13 code EXCLUSIVITY over family 1's whole inventory", () => {
+  for (const { lane, doc, coded } of CTX_CLI_LANES) {
+    it(`${lane}: exactly ${String(coded)} finding(s) carry a code, and only the ch13 one`, async () => {
+      const dir = tempDir();
+      const path = join(dir, "lane.yaml");
+      writeFileSync(path, doc);
+      const res = await runDev(["validate", path], testDeps());
+      const err = assertError(res, "internal", EXIT.internal);
+      expect(err.name).toBe("TemplateInvalid");
+      const details = err.details as { stage: string; findings: { path: string; code?: string }[] };
+      expect(details.findings.length, lane).toBeGreaterThan(0);
+      const codes = details.findings.flatMap((f) => (f.code === undefined ? [] : [f.code]));
+      expect(codes, lane).toStrictEqual(Array.from({ length: coded }, () => "unresolved_context_block_ref"));
+    });
+  }
+});

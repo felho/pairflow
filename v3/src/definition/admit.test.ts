@@ -892,6 +892,8 @@ const gateWith = (refs?: unknown): unknown => [
 ];
 
 const BLOCK_GRAMMAR = "^[a-z][a-z0-9-]*$";
+const NONEMPTY_REF = 'invalid context block ref "": block ids are kebab-case strings';
+const EMPTY_KEY = 'invalid context block id "": block ids are kebab-case strings';
 
 interface LaneCase {
   /** The declaration tag whose lane this row drives. */
@@ -1035,6 +1037,28 @@ const CTX_LANES: readonly LaneCase[] = [
         path: "roles.r.defaultAgentConfig.promptConcernRefs[0]",
         message: "invalid context block ref 7: block ids are kebab-case strings",
       },
+    ],
+    good: { contextBlocks: { alpha: { body: "x" } }, roleConfig: { promptConcernRefs: ["alpha"] } },
+  },
+  {
+    // The value class declares THREE lanes — type, nonempty, grammar —
+    // and a node carrying several expands to all of them. The empty
+    // string is the nonempty lane's own member: with the declaration
+    // removed it falls through to the grammar lane and reports a
+    // DIFFERENT message, which is what makes this row discriminating.
+    lane: "vc-block-id (nonempty lane) at the MEMBER position",
+    bad: { roleConfig: { promptConcernRefs: [""] } },
+    findings: [
+      { path: "roles.r.defaultAgentConfig.promptConcernRefs[0]", message: NONEMPTY_REF },
+    ],
+    good: { contextBlocks: { alpha: { body: "x" } }, roleConfig: { promptConcernRefs: ["alpha"] } },
+  },
+  {
+    lane: "vc-block-id (nonempty lane) at the KEY position",
+    bad: { contextBlocks: { "": { body: "x" } } },
+    findings: [
+      { path: "contextBlocks", message: EMPTY_KEY },
+      { path: "contextBlocks.", message: 'context block "" is declared but no ref names it' },
     ],
     good: { contextBlocks: { alpha: { body: "x" } }, roleConfig: { promptConcernRefs: ["alpha"] } },
   },

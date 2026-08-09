@@ -849,13 +849,41 @@ acceptance member drives and nothing would red") and is a coverage debt
 rather than a behaviour defect — the implementation was correct before
 the fold and is unchanged by it.
 
-**Gate state at this commit.** `v3:typecheck`, `v3:lint`, `v3:test`
-(72 files / 2197 tests), `v3:coverage` and `v3:adr-check` all green.
+**Gate state.** `v3:typecheck`, `v3:lint`, `v3:test`, `v3:coverage` and
+`v3:adr-check` green at the build commit (72 files / 2197 tests) and at
+every aftermath commit since (2199, then 2233 — the per-round counts are
+in the aftermath paragraphs below).
 `v3:packet-lint` is **RED, by design and on exactly one error** — the
 D5b schema lock, in the wording PROBE-P5-1 predicted:
 `9368e5253d11…` recorded, `a8d4c61ffee0…` in the working tree. It turns
 green at the follow-up re-ratification commit (→[relock-act]), which is
 the standing human checkpoint this build stops at.
+
+**AFTERMATH round 2 — four folds, author: the build agent (this
+session), all from the PIN-CONFORMANT arm gate-2 run's sensitivity pass
+(verdict FAIL, 0 BLOCKER / 4 MAJOR / 1 MINOR, every one test-evidence or
+packet-docs; ZERO product findings).** Each was reproduced by
+mutate-run-restore before folding and each fold was re-verified to
+discriminate, with hashes taken before and after every mutation.
+(i) The declared-lane inventories drove `[vc-block-id]`'s type and
+grammar lanes but not its NONEMPTY lane — a node carrying several lanes
+expands to all of them (D2), and the empty string is that lane's own
+member; removing the `nonempty` declaration left 351 tests green. Folded
+at the MEMBER and KEY positions on both channels. (ii) D13's five
+normative pairs were driven on the direct channel only, so a file-channel
+break of C7's per-occurrence resolution passed unnoticed; folded as a
+file-channel family 2, and the same mutation now reds exactly there.
+(iii) The admitted-form matrix had no `step × present-populated × file`
+cell — the file fixture authored the ROLE source and asserted the step's
+empty list — so an implementation lifting only the role position stayed
+green; folded, with a both-sources-populated member beside it.
+(iv) Family 5's negative twin sampled three lanes where the packet
+prescribes it PARAMETERIZED over family 1's inventory: a code added to
+the duplicate lane left all 46 CLI tests green. Folded as an 18-lane
+inventory over the CLI's own document, and the same mutation now reds on
+the duplicate row. The MINOR was this record's own gate-state line, which
+quoted the build commit's test count beside the aftermath's — corrected
+above. Suite 2199 → 2233.
 
 **Arm gate 2 — the TRANSPORT RULING (user, 2026-08-10), recorded here as
 the act that carries it.** The build-close external arm runs primarily on
@@ -868,6 +896,23 @@ before and after the run, neutral QA vocabulary in the charter, and the
 verdict committed. The pin table's transport column is formalized at the
 boundary review.
 
+**Gate-2 run log, both runs recorded because the first is a
+pin-nonconformance and the class is worth keeping.** RUN 1 (basis
+`09a0bda2`) was launched with an explicit `model` override on the Agent
+call, which takes precedence over the agent definition's own pin — so it
+did NOT run on `gpt-5.6-sol`. Under §6 item 4's pin-mismatch rule that
+verdict is INVALID and the run counts as an INFRA failure, and it was
+discarded as a gate result; its one executed finding was folded on its
+own evidence, independently reproduced first (aftermath round 1). RUN 2
+(basis `02be5f4e`, packet sha256 `c09b1fd3c1a78541…`) carried no
+override, and its report opens `MODEL: gpt-5.6-sol; REASONING EFFORT:
+high` — pin-conformant, the first such run on this transport. Byte guard
+clean on both sides of it (HEAD, porcelain, `git diff --binary HEAD`,
+zero untracked, packet sha256 — every measurement identical, and the
+clean-tree gate green). Verdict FAIL on four MAJOR + one MINOR, all
+folded above; the arm's own mutation-restoration ledger records eight
+mutate-run-restore probes, each returned to its original sha256.
+
 ```json
 {
   "packet_metrics": {
@@ -878,7 +923,7 @@ boundary review.
       "discovered": "projection"
     },
     "provenance": { "anchored": 7, "derived": 3, "new_decision": 4 },
-    "rounds": { "review": 7, "doc_refinement": 0, "implementation": 2 },
+    "rounds": { "review": 7, "doc_refinement": 0, "implementation": 3 },
     "stops": [
       {
         "type": "1:open-choice",
@@ -912,7 +957,7 @@ boundary review.
       }
     ],
     "detector_misses": [],
-    "learned": "a receipt that PATCHES the pre-growth tree cannot be re-run after the growth lands — the measurement survives, the script does not, and nothing checks that",
+    "learned": "an inventory the packet says is PARAMETERIZED is not driven by sampling it — three of four arm findings were a declared family instantiated on one channel, one position or three lanes of many",
     "main_thread_model": "claude-opus-5[1m]",
     "baseline_note": "test counts are v3-suite totals (pnpm v3:test); the 2063 baseline was taken at S0 on the approved basis with the packet file present"
   }

@@ -1508,6 +1508,8 @@ function ctxFileFindings(text: string): readonly ValidationFinding[] {
 }
 
 const CTX_BLOCK_GRAMMAR = "^[a-z][a-z0-9-]*$";
+const CTX_NONEMPTY_REF = 'invalid context block ref "": block ids are kebab-case strings';
+const CTX_EMPTY_KEY = 'invalid context block id "": block ids are kebab-case strings';
 const CATALOG_ALPHA = "contextBlocks:\n  alpha:\n    body: x\n";
 const ROLE_REF_ALPHA = "    defaultAgentConfig:\n      promptConcernRefs:\n        - alpha\n";
 const GATE = (refs?: string): string =>
@@ -1646,6 +1648,23 @@ const CTX_FILE_LANES: readonly FileLaneCase[] = [
     good: ctxYaml({ contextBlocks: CATALOG_ALPHA, roleEntry: ROLE_REF_ALPHA }),
   },
   {
+    lane: "vc-block-id (nonempty lane) at the MEMBER position",
+    bad: ctxYaml({ roleEntry: '    defaultAgentConfig:\n      promptConcernRefs:\n        - ""\n' }),
+    findings: [
+      { path: "roles.r.defaultAgentConfig.promptConcernRefs[0]", message: CTX_NONEMPTY_REF },
+    ],
+    good: ctxYaml({ contextBlocks: CATALOG_ALPHA, roleEntry: ROLE_REF_ALPHA }),
+  },
+  {
+    lane: "vc-block-id (nonempty lane) at the KEY position",
+    bad: ctxYaml({ contextBlocks: 'contextBlocks:\n  "":\n    body: x\n' }),
+    findings: [
+      { path: "contextBlocks", message: CTX_EMPTY_KEY },
+      { path: "contextBlocks.", message: 'context block "" is declared but no ref names it' },
+    ],
+    good: ctxYaml({ contextBlocks: CATALOG_ALPHA, roleEntry: ROLE_REF_ALPHA }),
+  },
+  {
     lane: "vc-block-id (grammar lane)",
     bad: ctxYaml({ roleEntry: "    defaultAgentConfig:\n      promptConcernRefs:\n        - Bad Ref\n" }),
     findings: [
@@ -1760,8 +1779,133 @@ describe("ch13-p1a family 3 — the admitted form on the FILE channel (the decla
     expect(template.steps["s"]?.promptConcernRefs).toStrictEqual([]);
   });
 
+  it("the STEP position × PRESENT-POPULATED on this channel: the authored nested list is lifted, not defaulted", () => {
+    // The matrix cell the role-authored fixture above cannot cover: with
+    // the step's own source populated, an implementation that lifts only
+    // the role position — or defaults this one to the empty list — reds
+    // here and nowhere else.
+    const template = admittedFile(
+      ctxYaml({
+        contextBlocks: CATALOG_ALPHA,
+        stepExtra: "    agentConfig:\n      promptConcernRefs:\n        - alpha\n",
+      }),
+    );
+    expect(template.steps["s"]?.promptConcernRefs).toStrictEqual(["alpha"]);
+    // the authored source survives unmodified beside it (the ch12 cascade)
+    expect(template.steps["s"]?.agentConfig).toStrictEqual({ promptConcernRefs: ["alpha"] });
+    // …and the role position, whose source this file does not author.
+    expect(template.roles["r"]?.promptConcernRefs).toStrictEqual([]);
+  });
+
+  it("BOTH sources populated at once: each position lifts its OWN, neither borrows the other's", () => {
+    const template = admittedFile(
+      ctxYaml({
+        contextBlocks: "contextBlocks:\n  alpha:\n    body: x\n  beta:\n    body: y\n",
+        roleEntry: "    defaultAgentConfig:\n      promptConcernRefs:\n        - alpha\n",
+        stepExtra: "    agentConfig:\n      promptConcernRefs:\n        - beta\n",
+      }),
+    );
+    expect(template.roles["r"]?.promptConcernRefs).toStrictEqual(["alpha"]);
+    expect(template.steps["s"]?.promptConcernRefs).toStrictEqual(["beta"]);
+  });
+
   it("an absent gate ref key materializes the declared empty list on this channel as well", () => {
     const template = admittedFile(ctxYaml({ stepExtra: GATE() }));
     expect(template.steps["s"]?.gates?.["GO"]?.[0]?.contextBlockRefs).toStrictEqual([]);
+  });
+});
+
+// ── ch13-p1a family 2 on the FILE channel: the same five normative pairs
+// D13 names, staged as combination lanes through the load pipeline. The
+// dimension the packet governs every guarantee by is CHANNEL, and a pair
+// driven on one channel only leaves the other free to reorder. ──────────
+
+const ROLE_REFS = (...refs: readonly string[]): string =>
+  `    defaultAgentConfig:\n      promptConcernRefs:\n${refs.map((r) => `        - ${r}\n`).join("")}`;
+const CATALOG_TWO = "contextBlocks:\n  alpha:\n    body: x\n  beta:\n    body: y\n";
+
+/** Findings addressed INSIDE the catalog. Every entry in these fixtures
+ * is well-formed, so the hygiene lane is the only lane that can report
+ * there — the set is read structurally, never by matching prose. */
+function ctxCatalogFindings(findings: readonly ValidationFinding[]): readonly ValidationFinding[] {
+  return findings.filter((f) => f.path === "contextBlocks" || f.path.startsWith("contextBlocks."));
+}
+
+describe("ch13-p1a family 2 — lane independence on the FILE channel", () => {
+  it("C1 + C7: refs issued BESIDE a refused catalog draw the container finding AND their per-site findings", () => {
+    expect(
+      ctxFileFindings(ctxYaml({ contextBlocks: "contextBlocks: 7\n", roleEntry: ROLE_REFS("alpha") })),
+    ).toStrictEqual([
+      { path: "contextBlocks", message: "contextBlocks must be a map of block-id -> { body }; got 7" },
+      UNRESOLVED_ROLE_ALPHA,
+    ]);
+  });
+
+  it("C7 + C8: a DUPLICATED unresolved ref reports per occurrence beside the duplicate finding", () => {
+    expect(
+      ctxFileFindings(ctxYaml({ contextBlocks: "contextBlocks: {}\n", roleEntry: ROLE_REFS("ghost", "ghost") })),
+    ).toStrictEqual([
+      { path: "roles.r.defaultAgentConfig.promptConcernRefs[1]", message: 'duplicate context block ref "ghost"' },
+      {
+        path: "roles.r.defaultAgentConfig.promptConcernRefs[0]",
+        message: 'context block ref "ghost" does not resolve to an entry',
+        code: "unresolved_context_block_ref",
+      },
+      {
+        path: "roles.r.defaultAgentConfig.promptConcernRefs[1]",
+        message: 'context block ref "ghost" does not resolve to an entry',
+        code: "unresolved_context_block_ref",
+      },
+    ]);
+  });
+
+  it("C8: a SHAPE-FAILING member repeated is invisible to every list-level lane", () => {
+    expect(
+      ctxFileFindings(ctxYaml({ contextBlocks: "contextBlocks: {}\n", roleEntry: ROLE_REFS("Bad Ref", "Bad Ref") })),
+    ).toStrictEqual([
+      {
+        path: "roles.r.defaultAgentConfig.promptConcernRefs[0]",
+        message: `invalid context block ref "Bad Ref": block ids match ${CTX_BLOCK_GRAMMAR}`,
+      },
+      {
+        path: "roles.r.defaultAgentConfig.promptConcernRefs[1]",
+        message: `invalid context block ref "Bad Ref": block ids match ${CTX_BLOCK_GRAMMAR}`,
+      },
+    ]);
+  });
+
+  it("C9's carve-out from C8: a GRAMMAR-FAILING mention still names its target", () => {
+    const findings = ctxFileFindings(
+      ctxYaml({ contextBlocks: CATALOG_TWO, roleEntry: ROLE_REFS("alpha", "Bad Ref") }),
+    );
+    expect(ctxCatalogFindings(findings)).toStrictEqual([
+      { path: "contextBlocks.beta", message: 'context block "beta" is declared but no ref names it' },
+    ]);
+  });
+
+  it("C8's compound CLEAN case at the GATE position (an injected registry): zero findings", () => {
+    expect(
+      ctxFileFindings(
+        ctxYaml({
+          contextBlocks: CATALOG_TWO,
+          stepExtra: GATE("          contextBlockRefs:\n            - alpha\n            - beta\n"),
+        }),
+      ),
+    ).toStrictEqual([]);
+  });
+
+  it("the C9 stand-down is template-wide on this channel too: a marking malformation silences the whole audit", () => {
+    // The mention of `alpha` sits inside a DEAD gate key and `beta` is
+    // named nowhere at all; the dead-config skip marks the enclosure, so
+    // neither is accused. The intact twin accuses both.
+    const broken = ctxYaml({
+      contextBlocks: CATALOG_TWO,
+      stepExtra: `    gates:\n      GHOST:\n        - uses: declarative.threshold\n          config: { metric: round, op: ">=", value: 2 }\n          contextBlockRefs:\n            - alpha\n`,
+    });
+    expect(ctxCatalogFindings(ctxFileFindings(broken))).toStrictEqual([]);
+    expect(ctxCatalogFindings(ctxFileFindings(ctxYaml({ contextBlocks: CATALOG_TWO })))).toStrictEqual([
+      { path: "contextBlocks.alpha", message: 'context block "alpha" is declared but no ref names it' },
+      { path: "contextBlocks.beta", message: 'context block "beta" is declared but no ref names it' },
+    ]);
   });
 });
