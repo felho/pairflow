@@ -1909,3 +1909,101 @@ describe("ch13-p1a family 2 — lane independence on the FILE channel", () => {
     ]);
   });
 });
+
+// ── The C9 stand-down on the FILE channel, PARAMETERIZED over the same
+// derived trigger set the direct suite drives (packet row D7's floor).
+// One route was driven above — the dead-config one, because it is the
+// route the engine did not mark before this packet. The remaining twelve
+// are the floor's other members: eleven markable tags, the gates node
+// carrying two routes. Each document gives `alpha` its only mention
+// INSIDE the broken enclosure and leaves `beta` named nowhere, so a
+// template-wide stand-down leaves both unaccused and a per-entry one does
+// not; each carries the intact control that accuses both. ───────────────
+
+const SD_STEPS = (extra = ""): string =>
+  `steps:\n  s:\n    role: r\n    instruction: i\n    transitions:\n      GO: done\n${extra}`;
+const SD_GATE = (refs = ""): string =>
+  `    gates:\n      GO:\n        - uses: declarative.threshold\n          config: { metric: round, op: ">=", value: 2 }\n${refs}`;
+
+const sdDoc = (parts: { steps?: string; roles?: string }): string =>
+  `ref:\n  id: t\n  version: 1\nstart: s\n${parts.steps ?? SD_STEPS()}terminal:\n  - done\n${
+    parts.roles ?? "roles:\n  r: {}\n"
+  }${CATALOG_TWO}`;
+
+const SD_ROUTES: readonly { tag: string; broken: string; intact: string }[] = [
+  {
+    tag: "d-prompt-refs (the role ref list itself)",
+    broken: sdDoc({ roles: "roles:\n  r:\n    defaultAgentConfig:\n      promptConcernRefs: alpha\n" }),
+    intact: sdDoc({ roles: "roles:\n  r:\n    defaultAgentConfig:\n      promptConcernRefs: []\n" }),
+  },
+  {
+    tag: "d-prompt-refs (the step ref list itself)",
+    broken: sdDoc({ steps: SD_STEPS("    agentConfig:\n      promptConcernRefs: alpha\n") }),
+    intact: sdDoc({ steps: SD_STEPS("    agentConfig:\n      promptConcernRefs: []\n") }),
+  },
+  {
+    tag: "d-ctx-gate-refs (the gate ref list itself)",
+    broken: sdDoc({ steps: SD_STEPS(SD_GATE("          contextBlockRefs: alpha\n")) }),
+    intact: sdDoc({ steps: SD_STEPS(SD_GATE("          contextBlockRefs: []\n")) }),
+  },
+  {
+    tag: "d-agentconfig (the step's config container)",
+    broken: sdDoc({ steps: SD_STEPS("    agentConfig: 7\n") }),
+    intact: sdDoc({ steps: SD_STEPS("    agentConfig: {}\n") }),
+  },
+  {
+    tag: "d-defaultagent (the role's config container)",
+    broken: sdDoc({ roles: "roles:\n  r:\n    defaultAgentConfig: 7\n" }),
+    intact: sdDoc({ roles: "roles:\n  r:\n    defaultAgentConfig: {}\n" }),
+  },
+  {
+    tag: "d-binding",
+    broken: sdDoc({ steps: SD_STEPS("    gates:\n      GO:\n        - 7\n") }),
+    intact: sdDoc({ steps: SD_STEPS(SD_GATE()) }),
+  },
+  {
+    tag: "d-pipeline",
+    broken: sdDoc({ steps: SD_STEPS("    gates:\n      GO: 7\n") }),
+    intact: sdDoc({ steps: SD_STEPS(SD_GATE()) }),
+  },
+  {
+    tag: "d-gates (the container route)",
+    broken: sdDoc({ steps: SD_STEPS("    gates: 7\n") }),
+    intact: sdDoc({ steps: SD_STEPS("    gates: {}\n") }),
+  },
+  {
+    tag: "d-step",
+    broken: sdDoc({ steps: "steps:\n  s: 7\n" }),
+    intact: sdDoc({}),
+  },
+  {
+    tag: "d-steps",
+    broken: sdDoc({ steps: "steps: 7\n" }),
+    intact: sdDoc({}),
+  },
+  {
+    tag: "d-roles-entry",
+    broken: sdDoc({ roles: "roles:\n  r: 7\n" }),
+    intact: sdDoc({}),
+  },
+  {
+    tag: "d-roles",
+    broken: sdDoc({ roles: "roles: 7\n" }),
+    intact: sdDoc({}),
+  },
+];
+
+describe("ch13-p1a family 2 — the C9 stand-down over the derived trigger set (FILE channel)", () => {
+  for (const route of SD_ROUTES) {
+    it(`${route.tag}: a marking malformation stands the whole audit down`, () => {
+      expect(ctxCatalogFindings(ctxFileFindings(route.broken))).toStrictEqual([]);
+    });
+
+    it(`${route.tag}: the DISCRIMINATING control — the same document intact accuses both entries`, () => {
+      expect(ctxCatalogFindings(ctxFileFindings(route.intact))).toStrictEqual([
+        { path: "contextBlocks.alpha", message: 'context block "alpha" is declared but no ref names it' },
+        { path: "contextBlocks.beta", message: 'context block "beta" is declared but no ref names it' },
+      ]);
+    });
+  }
+});

@@ -851,8 +851,8 @@ the fold and is unchanged by it.
 
 **Gate state.** `v3:typecheck`, `v3:lint`, `v3:test`, `v3:coverage` and
 `v3:adr-check` green at the build commit (72 files / 2197 tests) and at
-every aftermath commit since (2199, 2233, then 2235 — the per-round
-counts are in the aftermath paragraphs below).
+every aftermath commit since (2199, 2233, 2235, then 2259 — the
+per-round counts are in the aftermath paragraphs below).
 `v3:packet-lint` is **RED, by design and on exactly one error** — the
 D5b schema lock, in the wording PROBE-P5-1 predicted:
 `9368e5253d11…` recorded, `a8d4c61ffee0…` in the working tree. It turns
@@ -905,6 +905,18 @@ following a wedged tmux server on the shared default socket (an orphaned
 tmux call; cleared, and the per-run-socket fix stays the boundary
 candidate arm-pin.md already names).
 
+**AFTERMATH round 4 — one BOUNDED fold, author: the build agent (this
+session), from the arm's second hash-citing re-check.** That re-check
+confirmed the round-3 fold closed and, asked for a cutoff judgement,
+gave one: the catalog-key inventory is COMPLETE, and what remained was
+not an open-ended trickle but an enumerable set of TWELVE file-channel
+stand-down routes — the direct suite parameterizes family 2's stand-down
+over the whole derived floor, the file suite drove only the dead-config
+route. Executed evidence, the arm's: removing `d-agentconfig` alone from
+the trigger set left the file definition suite GREEN at 223/223. All
+twelve are folded in ONE pass, each with its intact control, and the same
+mutation now reds on BOTH channels. Suite 2235 → 2259.
+
 **Arm gate 2 — the TRANSPORT RULING (user, 2026-08-10), recorded here as
 the act that carries it.** The build-close external arm runs primarily on
 the **gptsol agent** (Agent tool; model `gpt-5.6-sol`, effort `high`,
@@ -943,7 +955,7 @@ mutate-run-restore probes, each returned to its original sha256.
       "discovered": "projection"
     },
     "provenance": { "anchored": 7, "derived": 3, "new_decision": 4 },
-    "rounds": { "review": 7, "doc_refinement": 0, "implementation": 4 },
+    "rounds": { "review": 7, "doc_refinement": 0, "implementation": 5 },
     "stops": [
       {
         "type": "1:open-choice",
