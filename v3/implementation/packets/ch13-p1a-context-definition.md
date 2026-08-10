@@ -917,6 +917,32 @@ the trigger set left the file definition suite GREEN at 223/223. All
 twelve are folded in ONE pass, each with its intact control, and the same
 mutation now reds on BOTH channels. Suite 2235 → 2259.
 
+**The MUTATION-PILOT DUAL-RUN (flag 7), beside gate 2.** Scope as
+declared: the files this build changes under `src/definition/**`, run
+through `pnpm v3:mutation` with the scope passed on the CLI so the
+committed Stryker config is not edited for a measurement. 3 238 mutants,
+12 min 48 s, **65.01 % total / 67.02 % covered** — 1 627 killed, 478
+timeout, 1 036 survived, 97 no-coverage, 0 errors. Per file:
+`normalizer.ts` 96.30, `templateSurface.ts` 85.54, `engine.ts` 73.65,
+`templateFormat.ts` 59.84, `defineSurface.ts` 42.14.
+
+READ IT AT THE RIGHT GRAIN, which is the honest caveat: the scope is
+whole FILES, so the number is a MODULE score carrying years of
+pre-existing code, not a delta of this packet's own growth. The two files
+this packet grew most are the two that score highest — the derivation
+hook's home at 96.30 and the C9 lane's home at 85.54. DECLARED BLIND
+SPOT, the profile's own: `cli/dev/dev.test.ts` sits on
+`vitest.stryker.config.ts`'s exclude list, so family 5's CLI lanes are
+outside this run by the pilot's declared partial-coverage mechanism.
+SURVIVOR CLASS in this packet's own new code, examined rather than
+counted: they cluster in `refListPositions`' branches that the LIVE
+declaration cannot exercise — no ref list on this surface sits inside a
+list or under a second open map, so the `list` and `map.open` descents
+are equivalent-for-this-declaration mutants that exist for generality —
+plus one on a success return whose `findings: []` no caller reads. None
+is a missing assertion this packet could add without inventing a
+declaration to test against. `Route: boundary-review`
+
 **Arm gate 2 — the TRANSPORT RULING (user, 2026-08-10), recorded here as
 the act that carries it.** The build-close external arm runs primarily on
 the **gptsol agent** (Agent tool; model `gpt-5.6-sol`, effort `high`,
