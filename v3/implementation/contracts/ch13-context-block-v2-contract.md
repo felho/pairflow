@@ -174,4 +174,8 @@ post-ratification reopenings: 0
 {"ratification": {"date": "2026-08-08", "arms": ["three agent-run fresh-context Opus panel rounds (2 full + 1 targeted; six agents per full round incl. the dedicated completeness pass) + the top-level reconciliation close; agent-invoked codex arm (pin gpt-5.6-sol/high) on the approve-ready bytes + its re-check on the folded bytes — all charters, outputs and the old-to-new completeness table committed under ch13-rederivation-arm/p4/"], "commit": "3cb4498c626dc6f9842a981e989ccc50e6462094", "schema": {"path": "v3/src/definition/schema/templateFormat.ts", "sha256": "9368e5253d1163fa0f6ffa18290fef5ef4007de4f293862eeee522c1b7ea3c49"}}}
 ```
 
+```json
+{"ratification": {"date": "2026-08-10", "arms": ["schema re-lock (§4) — the act itself: a transition that moves no C-row has nothing for a review arm to read; the declaration bytes it binds were produced by ch13-p1a's build commit and reviewed at that build's own arm gate 2 (PASS, record: ch13-rederivation-arm/p5/arm-gate2-verdict.md)"], "commit": "09a0bda25eb6b06a931dfbf19ff0e8c44728e435", "schema": {"path": "v3/src/definition/schema/templateFormat.ts", "sha256": "a8d4c61ffee0563034e036d901b62a2e1a6400f5e3cc23e86bd2c9400b4b02ae"}}}
+```
+
 ## Realized map (empty until chapter close)
