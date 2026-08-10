@@ -859,6 +859,19 @@ D5b schema lock, in the wording PROBE-P5-1 predicted:
 green at the follow-up re-ratification commit (→[relock-act]), which is
 the standing human checkpoint this build stops at.
 
+**THE TRANSIENT CLOSED (user-ratified 2026-08-10).** The re-ratification
+act landed the block recording the new `sha256` and naming the BUILD
+commit `09a0bda2` as the bytes it binds; the four forward-scoped
+exemptions were TAKEN by that act, per ADR-019 D4's condition (iv), and
+recorded in its message beside the declaration's own notes. `packet-lint`
+went to **0 errors**, the draft's post-ratification reopening count
+stayed 0 — true rather than tolerated, on the §5 redefinition this
+packet's own prerequisite act landed — and `pnpm ci:local` passed whole:
+dependency lock, shared codegen, the quality suite (lint/typecheck/test/
+v3, 55 s) and the final validation suite (fitness gate + almost-e2e
+smoke, 12 s). That green is the chapter DoD's, taken after commit 2 and
+never at commit 1, exactly as D6 sequences it.
+
 **AFTERMATH round 2 — four folds, author: the build agent (this
 session), all from the PIN-CONFORMANT arm gate-2 run's sensitivity pass
 (verdict FAIL, 0 BLOCKER / 4 MAJOR / 1 MINOR, every one test-evidence or
