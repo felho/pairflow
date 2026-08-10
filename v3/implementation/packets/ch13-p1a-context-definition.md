@@ -851,8 +851,8 @@ the fold and is unchanged by it.
 
 **Gate state.** `v3:typecheck`, `v3:lint`, `v3:test`, `v3:coverage` and
 `v3:adr-check` green at the build commit (72 files / 2197 tests) and at
-every aftermath commit since (2199, then 2233 — the per-round counts are
-in the aftermath paragraphs below).
+every aftermath commit since (2199, 2233, then 2235 — the per-round
+counts are in the aftermath paragraphs below).
 `v3:packet-lint` is **RED, by design and on exactly one error** — the
 D5b schema lock, in the wording PROBE-P5-1 predicted:
 `9368e5253d11…` recorded, `a8d4c61ffee0…` in the working tree. It turns
@@ -884,6 +884,26 @@ inventory over the CLI's own document, and the same mutation now reds on
 the duplicate row. The MINOR was this record's own gate-state line, which
 quoted the build commit's test count beside the aftermath's — corrected
 above. Suite 2199 → 2233.
+
+**AFTERMATH round 3 — one fold, author: the build agent (this session),
+from the arm's hash-citing RE-CHECK on the round-2 bytes.** That re-check
+confirmed all five round-2 folds CLOSED and each one DISCRIMINATING (it
+re-ran its own four mutations and every one now reds on the fold that
+closed it), and surfaced one further member of the same class: the
+catalog KEY node's TYPE lane was driven on the file channel (the
+boolean-keyed YAML document) but not on the direct one, where a
+direct-channel-only skip of the key class for non-string keys left
+367 tests green. Folded as one row: a `Map`-valued catalog with a boolean
+key — the hostile-cast idiom this suite already uses, and a reachable
+input because the engine accepts a map container on both channels. The
+arm's exact mutation now reds on exactly that row. Suite 2233 → 2235.
+Also recorded: the first suite run after this fold reported ONE failing
+assertion that two subsequent clean runs did not reproduce — the
+runner-journey flake class the arm's own first invocation hit, here
+following a wedged tmux server on the shared default socket (an orphaned
+`p4atest-*` session from an interrupted suite run, blocking every later
+tmux call; cleared, and the per-run-socket fix stays the boundary
+candidate arm-pin.md already names).
 
 **Arm gate 2 — the TRANSPORT RULING (user, 2026-08-10), recorded here as
 the act that carries it.** The build-close external arm runs primarily on
@@ -923,7 +943,7 @@ mutate-run-restore probes, each returned to its original sha256.
       "discovered": "projection"
     },
     "provenance": { "anchored": 7, "derived": 3, "new_decision": 4 },
-    "rounds": { "review": 7, "doc_refinement": 0, "implementation": 3 },
+    "rounds": { "review": 7, "doc_refinement": 0, "implementation": 4 },
     "stops": [
       {
         "type": "1:open-choice",

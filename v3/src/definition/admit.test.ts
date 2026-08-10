@@ -1054,6 +1054,20 @@ const CTX_LANES: readonly LaneCase[] = [
     good: { contextBlocks: { alpha: { body: "x" } }, roleConfig: { promptConcernRefs: ["alpha"] } },
   },
   {
+    // The key node's THIRD lane, on this channel. A plain record cannot
+    // hold a non-string key, so the fixture is a Map — the hostile-cast
+    // idiom this suite already uses — and the engine accepts a map
+    // container on both channels, which is why the lane is reachable
+    // here and not merely a file-channel property.
+    lane: "vc-block-id (type lane) at the KEY position",
+    bad: { contextBlocks: new Map<unknown, unknown>([[true, { body: "x" }]]) },
+    findings: [
+      { path: "contextBlocks", message: "invalid context block id true: block ids are kebab-case strings" },
+      { path: "contextBlocks", message: 'context block true is declared but no ref names it' },
+    ],
+    good: { contextBlocks: { alpha: { body: "x" } }, roleConfig: { promptConcernRefs: ["alpha"] } },
+  },
+  {
     lane: "vc-block-id (nonempty lane) at the KEY position",
     bad: { contextBlocks: { "": { body: "x" } } },
     findings: [
