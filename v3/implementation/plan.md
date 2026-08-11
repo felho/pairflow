@@ -3037,3 +3037,53 @@ only; the packet-anchor rule is manifest-scoped). The boundary
 decides REPOINT (a ch11 annotation act, tense/pointer conversions
 only) or LEAVE-WITH-RECORD; either way the decision is recorded,
 never a silent lapse.
+
+And (h) THE CAPABILITY-PROFILE DISPOSITION (routed here 2026-08-11
+from the ch13-p1b approve, where the shipped `availableOps` wording
+put the question in front of the user). The L1 `CapabilityProfile`
+is TYPE-LEVEL ONLY — the authoring format rejects the key
+(`domain/template.ts`) — and its `not_authorized` branch has been
+dormant since L1 by declaration. Four findings, each checkable
+against tree bytes, say the dormancy is not merely "not yet used":
+(i) EVERY live call passes `step.role` — `capability(template,
+step.role, …)` at l1/l2/l2a/l2b/l3/l5/emit-contract and at
+`kernel/kernel.ts`'s single call site — and the role-authority
+rejection precedes it, so a profile entry for any OTHER role is
+unreachable; (ii) the natural wake-up ARRIVED and went around: L3's
+operator path is a separate input class with its own
+`operator_not_authorized`, stated in `l3-pseudocode/SUBMIT_DECISION`
+as "NOT the L1 actor-envelope gate"; (iii) at L5 the derived set
+outgrew the step graph — `event_types_of(step.transitions) ∪
+({HELP_REQUEST} IF step.help is declared)` — while an authored
+profile REPLACES that set wholesale, so a profile written to narrow
+one op silently disables the ask unless it re-lists `HELP_REQUEST`,
+and NOTHING guards that (a template-validation invariant of exactly
+this shape — explicit entries may only narrow, never invent — was
+asked for in the L1 design round and never built); (iv) the offer
+side is already repaired in the model but not in the tree:
+`emit-contract-pseudocode/offerable_ops` calls capability AS THE
+FUNCTION so an authored filter reaches the offered ops, whereas the
+shipped `deriveDispatchIntent` still sets `availableOps` from
+`Object.keys(step.transitions)` alone. The boundary decides GUARD
+(build the never-built invariant, extended to op-family ops, and
+land the offer-side intersection), RETIRE (narrowing lives in the
+step graph; an ADR/model act removes the construct), or
+KEEP-WITH-RECORD (carry the hazard with the reason stated). Two
+model-ledger `→ later` items are the same question and move with it:
+`l1 · authored-capability-restrictions-in-the-baseline` and `l1 ·
+capability-filtered-packet-ops` — authored restrictions are only
+safe once the offer side filters, which is what (iv) is about. The
+model's own L1 illustration (`capability_profile: - { role:
+reviewer, step: review, allow: [converged] }`, unchanged since
+2026-06-14) narrows a SINGLE-ROLE step and so instantiates neither
+motivating case the design round argued from (an operator-only
+button; `human_question` from either role) — both of which are
+cross-role, hence unreachable per (i); it is replaced or removed
+with whichever disposition wins. PROVENANCE, recorded because the
+history is not in this repo: the L1 design round ran on 2026-06-14
+across two sessions relaying through the user by copy-paste — Claude
+`e5616c72-61ee-4b7b-8894-b50eba6d1e98` and Codex rollout
+`019ec0f4-ec0f-7b02-bef5-456797d3d0ca` — and a rendered
+reconstruction of that hour exists outside the tree; the user brings
+it into the boundary session if the history is wanted. No finding
+above depends on it.
