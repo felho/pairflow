@@ -10,7 +10,7 @@ import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, describe, expect, it } from "vitest";
 
 import type { ContextPacket, DispatchIntent, Outcome } from "../domain/index.js";
 import type { DiagnosticEventBody } from "../ports/diagnostics.js";
@@ -32,8 +32,10 @@ import type { TmuxChannelDeps } from "./tmuxChannel.js";
  * The tmux spawn channel (packet ch9-p4a, TX2–TX7) — driven against REAL tmux
  * sessions (tmux is a declared test-environment requirement beside git; this
  * file joins the Stryker subprocess exclude). Session names are prefixed
- * `p4atest-` and killed in afterEach. The scripted `clientSpawn` interceptor
- * stages the client-fault lanes the real substrate cannot produce on demand.
+ * `p4atest-` and killed in afterEach; every tmux client (the channel's AND the
+ * raw helpers') rides a PRIVATE per-run server socket (`-L`), never the user's
+ * default server. The scripted `clientSpawn` interceptor stages the
+ * client-fault lanes the real substrate cannot produce on demand.
  */
 
 const NODE = process.execPath;
@@ -41,14 +43,45 @@ const WRAPPER_PATH = fileURLToPath(new URL("./attemptWrapper.mjs", import.meta.u
 const roots: string[] = [];
 const sessions: string[] = [];
 
+// ── The private per-run tmux server (wedge containment) ────────────────────
+// All tmux clients here address a DEDICATED socket (`-L`), unique per test
+// process. Three properties this buys, each observed missing in a real
+// incident (2026-08-11, full-suite runs intermittently hung):
+//   • the user's default tmux server is never touched — no shared fate, and
+//     teardown may be as brutal as it likes;
+//   • a wedged server (a new-session client observed spinning >10 min while
+//     every later client queued behind the single-threaded server) wedges only
+//     THIS run's private server, not every tmux user on the host;
+//   • afterAll can `kill-server` unconditionally — on a private socket that is
+//     hygiene, on the default socket it would be sabotage.
+const SOCKET = `p4a-${String(process.pid)}`;
+
+/** Raw tmux client for setup/teardown/assertions — same private socket as the
+ * channel's clients, and HARD-BOUNDED: an execFile timeout with SIGKILL, so a
+ * wedged server turns teardown into a loud bounded failure, never an unbounded
+ * hang (the channel's own clients are already seam-bounded; this closes the
+ * one unbounded path this file had). */
 function tmuxRaw(...args: string[]): Promise<{ code: number; stdout: string; stderr: string }> {
   return new Promise((resolve) => {
-    execFile("tmux", args, (error, stdout, stderr) => {
-      const code =
-        error === null ? 0 : typeof error.code === "number" ? error.code : 1;
-      resolve({ code, stdout, stderr });
-    });
+    execFile(
+      "tmux",
+      ["-L", SOCKET, ...args],
+      { timeout: 10_000, killSignal: "SIGKILL" },
+      (error, stdout, stderr) => {
+        const code =
+          error === null ? 0 : typeof error.code === "number" ? error.code : 1;
+        resolve({ code, stdout, stderr });
+      },
+    );
   });
+}
+
+/** The channel-side client seam bound to the SAME private socket: the `-L`
+ * flag is injected at SPAWN time (below any interception), so the channel's
+ * argv-grain construction — and the interceptors' verb detection on
+ * `args[0]` — see the exact production argv shape, unprefixed. */
+function socketSpawn(input: DisciplinedSpawnInput): Promise<SpawnConclusion> {
+  return disciplinedSpawn({ ...input, args: ["-L", SOCKET, ...input.args] });
 }
 
 afterEach(async () => {
@@ -57,6 +90,19 @@ afterEach(async () => {
   }
   for (const dir of roots.splice(0)) {
     rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+afterAll(async () => {
+  // The private server dies with the run — sessions, panes, whatever a wedge
+  // left behind. Nonzero (server already gone) is the normal case.
+  await tmuxRaw("kill-server");
+  // tmux leaves the socket FILE behind after kill-server; unlink it so
+  // per-run sockets don't accumulate in the socket dir (the tmux man page's
+  // socket path: $TMUX_TMPDIR || /tmp, subdir tmux-<uid>, our named socket).
+  const uid = process.getuid?.();
+  if (uid !== undefined) {
+    rmSync(join(process.env.TMUX_TMPDIR ?? "/tmp", `tmux-${String(uid)}`, SOCKET), { force: true });
   }
 });
 
@@ -119,7 +165,9 @@ function interceptClient(
       const verb = input.args[0] ?? "";
       verbs.push(verb);
       const override = overrides[verb];
-      const real = (): Promise<SpawnConclusion> => disciplinedSpawn(input);
+      // The REAL path rides the private-socket spawn — interception sees the
+      // production argv (verb-first), the socket flag lands below it.
+      const real = (): Promise<SpawnConclusion> => socketSpawn(input);
       return override !== undefined ? override(input, real) : real();
     },
   };
@@ -153,7 +201,9 @@ const wallClock: TimeSource = {
 };
 
 function channelWith(deps: Partial<TmuxChannelDeps> = {}) {
-  return createTmuxSpawnChannel({ time: wallClock, pollIntervalMs: 25, ...deps });
+  // clientSpawn defaults to the private-socket spawn; scripted lanes override
+  // it (and route their real() legs through the same socket, above).
+  return createTmuxSpawnChannel({ time: wallClock, pollIntervalMs: 25, clientSpawn: socketSpawn, ...deps });
 }
 
 interface LaunchOpts {
