@@ -2948,13 +2948,14 @@ packet files.
 | Packet | Content | Mode |
 |---|---|---|
 | ch13-p1a | the definition side: the declared ch13v2 lanes DRIVEN at the admission entries on both channels, the C13 declaration growth (the two admission-produced ref positions) with its normalizer hooks, engine growth and carry-list growth, the C9 hygiene lane, the C13 type grain, the C18 code-travel lanes, the catalog + ContextBlockRef registry flips, and the schema re-lock act its own build triggers | predicted class inherited from the ch13-p1 v2 row (projection); the MODE resolves to **human approve** (STOP `4:flagged-approve`) — the packet carries new-decision rows and `approve-ratified` routes, so the parent row's flag-free⇒autonomous letter does not reach it (the ch13-P0 row is the precedent for recording this in place) |
-| ch13-p1b | the dispatch side — its content is enumerated ONCE, in `packets/ch13-p1a-context-definition.md`'s out-of-scope row, and deliberately not repeated here, so the two cannot drift | inherited from the ch13-p1 v2 row; predicted: projection |
+| ch13-p1b | the dispatch side — its content is enumerated ONCE, in `packets/ch13-p1a-context-definition.md`'s out-of-scope row, and deliberately not repeated here, so the two cannot drift | inherited from the ch13-p1 v2 row; predicted: projection. The inherited flag-free-⇒-autonomous letter REACHES this packet and its §5.5 condition then fails at authoring: the packet carries five `approve-ratified` routes (the shipped catalog entry's authored body, this mode record, the build-choice names, the de-discriminated compile-negative, and the render's signature deviation from the unit's spelling) and one new-decision row, so the MODE resolves to **human approve** (STOP `4:flagged-approve`) — recorded in place at ch13-p1b pre-approval, on the ch13-P0 / ch13-p1a precedent |
 
 Order: ch13-p1a → ch13-p1b (the render reads the admission-produced ref
 positions, so the producer precedes its consumer). Human acts sit
 INSIDE that order and are not packet boundaries; which acts, and their
-commit choreography, are recorded in the packet's own D4 and D6 and
-ride its approve rather than being settled here. The §8.2
+commit choreography, are recorded in ch13-p1a's own D4 and D6 and
+ride its approve rather than being settled here (disambiguated at
+ch13-p1b pre-approval — p1b carries unrelated rows of those ids). The §8.2
 no-speculative-keys stance binds at CHAPTER grain, so p1a's produced
 positions being consumed only at p1b is inside the stance — the same
 reading the prose line's P1/P2 order already carried.
@@ -3016,7 +3017,11 @@ record enumeration re-orders (the ch13 PROBE-CB3 measurement,
 recorded in the superseded `ch13-context-block` draft's frozen
 Context; the v2 draft's C10 handles the corner honestly, so ch13 does
 not need the ban — aligned at the ch13 contract-v2 ratification,
-2026-08-08) — the boundary decides ADOPT (a ch8-C10 reopen in its own act,
+2026-08-08) — that class name REFINED at ch13-p1b pre-approval, whose
+own probe measures the re-ordering class as the canonical decimal
+spellings of 0 … 2³²−2 only, so `"4294967295"` is such a key and does
+NOT re-order (re-confirmed at that packet's build; a disagreeing
+re-execution corrects this line in the same commit) — the boundary decides ADOPT (a ch8-C10 reopen in its own act,
 with migration text; an untruncated draft-time sweep found ZERO
 affected files, so the ban is free now and only gets more expensive
 with time) or WATCH; a deferred adoption likewise enters §1.3 as a

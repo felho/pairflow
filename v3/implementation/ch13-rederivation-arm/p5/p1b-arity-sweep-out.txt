@@ -1,0 +1,78 @@
+# Receipt — model↔code arity sweep, executed 2026-08-11 at the ch13-p1b approve
+# Method: every implement/realized unitMap row with a codeRef; the unit's spelled
+# parameter list vs the codeRef symbol's actual parameter list. Untruncated output.
+
+realized `implement` rows with a codeRef: 32
+comparable (both signatures parsed):      25
+skipped (parser could not match):         7
+ARITY DIVERGENCES among the comparable:   15
+
+* emit-contract-pseudocode/payload_digest
+    model(2): envelope, contract
+    code (1): envelope
+    ref: v3/src/emit/opId.ts#deriveEmitDigest
+* l0b-pseudocode/START_INSTANCE
+    model(3): template_ref, task, start_overrides
+    code (2): deps, input
+    ref: v3/src/kernel/lifecycle.ts#createInstance
+* l0b-pseudocode/dispatch_intent
+    model(3): instance, template, step_id
+    code (5): instance, template, stepId, providerRegistry, handoff
+    ref: v3/src/kernel/dispatchIntent.ts#deriveDispatchIntent
+* l0d-pseudocode/COMPLETE
+    model(1): instance
+    code (0): 
+    ref: v3/src/kernel/kernel.ts#complete
+* l0d-pseudocode/CREATE_INSTANCE
+    model(5): template_ref, activation_mode, task, binding, run_overrides
+    code (2): deps, input
+    ref: v3/src/kernel/lifecycle.ts#createInstance
+* l0d-pseudocode/FAIL
+    model(2): instance, reason
+    code (3): deps, instanceId, reason
+    ref: v3/src/kernel/lifecycle.ts#fail
+* l0d-pseudocode/activate
+    model(1): instance
+    code (3): committed, template, providerRegistry
+    ref: v3/src/kernel/lifecycle.ts#activate
+* l0d-pseudocode/admit_loaded
+    model(3): instance, expect, input?
+    code (2): instance, expect
+    ref: v3/src/kernel/admission.ts#admitLoaded
+* l0d-pseudocode/dispatch_intent
+    model(3): instance, template, step_id
+    code (5): instance, template, stepId, providerRegistry, handoff
+    ref: v3/src/kernel/dispatchIntent.ts#deriveDispatchIntent
+* l0e-pseudocode/RUNTIME_CONTEXT_READY
+    model(3): instance, request_id, runtime_context_ref
+    code (4): deps, instanceId, requestId, ref
+    ref: v3/src/kernel/lifecycle.ts#runtimeContextReady
+* l0e-pseudocode/activate_or_hold
+    model(1): instance
+    code (2): deps, args
+    ref: v3/src/kernel/lifecycle.ts#activateOrHold
+* l1-pseudocode/admit_loaded
+    model(3): instance, expect, input?
+    code (2): instance, expect
+    ref: v3/src/kernel/admission.ts#admitLoaded
+* l1-pseudocode/dispatch_intent
+    model(3): instance, template, step_id
+    code (5): instance, template, stepId, providerRegistry, handoff
+    ref: v3/src/kernel/dispatchIntent.ts#deriveDispatchIntent
+* l2-pseudocode/gate_projection
+    model(3): instance, template, envelope
+    code (4): instance, template, committed, eventType
+    ref: v3/src/kernel/gateProjection.ts#deriveGateProjection
+* l2a-pseudocode/run_process_gate
+    model(4): gate, instance, template, envelope
+    code (6): effective, instance, cwd, projection, envelope, processRunner
+    ref: v3/src/kernel/processGate.ts#runProcessGate
+
+SKIPPED (not measured, not claimed either way):
+  - l0b-pseudocode/HANDLE  [unit-line unmatched]  v3/src/kernel/kernel.ts#createKernel
+  - l0d-pseudocode/HANDLE  [unit-line unmatched]  v3/src/kernel/kernel.ts#createKernel
+  - l0e-pseudocode/RuntimeContextProvider  [unit-line unmatched]  v3/src/ports/runtimeContextProvider.ts#createStaticProviderRegistry
+  - l1-pseudocode/HANDLE  [unit-line unmatched]  v3/src/kernel/kernel.ts#createKernel
+  - l2-pseudocode/GateRegistration  [unit-line unmatched]  v3/src/gates/registry.ts#createGateRegistry
+  - l2-pseudocode/HANDLE  [unit-line unmatched]  v3/src/kernel/kernel.ts#createKernel
+  - l2a-pseudocode/HANDLE  [unit-line unmatched]  v3/src/kernel/kernel.ts#createKernel
