@@ -1,8 +1,14 @@
+import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+// Real elapsed time, deliberately — the CHK-D-TESTCLOCK boundary. Signal
+// delivery and the init reap of a real process happen on the OS clock, which no
+// controlled clock can advance; same rationale (and same idiom) as the `delay`
+// pacing in the sibling process-grain suite tmuxChannel.test.ts.
+import { setTimeout as delay } from "node:timers/promises";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, describe, expect, it } from "vitest";
 
 import type { ContextPacket, DispatchIntent, Outcome } from "../domain/index.js";
 import { canonicalize, deriveActorEmitOpId } from "../emit/index.js";
@@ -22,16 +28,151 @@ import type { ChannelConclusion, SpawnChannel, SpawnChannelInput } from "./spawn
  */
 
 const roots: string[] = [];
-afterEach(() => {
+
+// ── Stub-process accounting (the P6e orphan is a REAL process) ─────────────
+// The kill-wrapper lane drives a RATIFIED production position (packet ch9-p3b,
+// SD3 / probe P6e): a SIGKILLed wrapper cannot forward what it never receives,
+// so the actor child is ORPHANED ALIVE and reparents to init. That orphan is
+// not a fiction of the fixture — it is a live node process that outlives the
+// run, and the test that deliberately creates it OWNS reaping it. Left unreaped
+// it accumulates one process per run, forever.
+//
+// Two registries, because the two lanes carry DIFFERENT obligations and only
+// one of them may ever be signalled:
+//   • orphanPidFiles — the P6e lane. The stub provably cannot have exited (it
+//     holds an unbounded interval), so its PID cannot have been recycled and
+//     signalling it is safe. Teardown SIGKILLs and VERIFIES the reap.
+//   • reapedPidFiles — the escalation lanes (sleep / ignore-term). The wrapper's
+//     own grace SIGKILL must ALREADY have landed by the time execute() returns
+//     (SD3's two-tier deadline). Teardown asserts that positively and NEVER
+//     signals: a dead PID may have been recycled, and killing a stranger to
+//     tidy up would be worse than the leak.
+const orphanPidFiles: string[] = [];
+const reapedPidFiles: string[] = [];
+
+function orphanPid(root: string): string {
+  const path = join(root, "stub.pid");
+  orphanPidFiles.push(path);
+  return path;
+}
+function reapedPid(root: string): string {
+  const path = join(root, "stub.pid");
+  reapedPidFiles.push(path);
+  return path;
+}
+
+function readPid(file: string): number | null {
+  if (!existsSync(file)) return null;
+  const pid = Number(readFileSync(file, "utf8").trim());
+  // Guard the substrate's footguns: `process.kill(0, …)` signals the entire
+  // process GROUP (the runner itself), and 1 is init. Never either.
+  return Number.isInteger(pid) && pid > 1 ? pid : null;
+}
+function alive(pid: number): boolean {
+  try {
+    process.kill(pid, 0); // signal 0 — an existence probe, delivers nothing
+    return true;
+  } catch {
+    return false; // ESRCH
+  }
+}
+/** Poll for the process to disappear, bounded — signal delivery and the init
+ * reap of the resulting zombie are both asynchronous. */
+async function awaitGone(pid: number, budgetMs = 2000): Promise<boolean> {
+  const step = 20;
+  for (let waited = 0; waited < budgetMs && alive(pid); waited += step) {
+    await delay(step);
+  }
+  return !alive(pid);
+}
+
+/** Returns the PIDs that VIOLATED their lane's obligation — orphans we failed
+ * to reap, and escalation-lane stubs the wrapper left running. */
+async function settleStubs(): Promise<{ unreaped: number[]; survived: number[] }> {
+  const unreaped: number[] = [];
+  for (const file of orphanPidFiles.splice(0)) {
+    const pid = readPid(file);
+    if (pid === null) continue;
+    try {
+      process.kill(pid, "SIGKILL");
+    } catch {
+      // ESRCH — already gone, which is fine: the obligation is "not alive
+      // after teardown", not "killed by us".
+    }
+    if (!(await awaitGone(pid))) unreaped.push(pid);
+  }
+  const survived: number[] = [];
+  for (const file of reapedPidFiles.splice(0)) {
+    const pid = readPid(file);
+    if (pid === null) continue;
+    if (!(await awaitGone(pid))) survived.push(pid);
+  }
+  return { unreaped, survived };
+}
+
+afterEach(async () => {
+  const { unreaped, survived } = await settleStubs();
   for (const dir of roots.splice(0)) {
     rmSync(dir, { recursive: true, force: true });
   }
+  // The GUARD: a stub outliving its test is the process leak returning. These
+  // run AFTER the adapter has already concluded and been asserted — reaping
+  // can never be the thing that makes a conclusion assertion pass.
+  expect({ unreaped, survived }).toEqual({ unreaped: [], survived: [] });
 });
+
+/** Every root this file ever minted — retained past the per-test cleanup so the
+ * closing sweep can still recognize a straggler by its (unique) mkdtemp path. */
+const allRoots: string[] = [];
+
 function tempRoot(): string {
   const root = mkdtempSync(join(tmpdir(), "v3-adapter-"));
   roots.push(root);
+  allRoots.push(root);
   return root;
 }
+
+// ── The closing sweep (the catch-all net) ──────────────────────────────────
+// The per-test reaping above is OPT-IN: it only covers lanes wired to a PID
+// registry, so a future test introducing a new long-lived stub mode would leak
+// again, silently — precisely the class of bug this net exists to stop. This
+// asks the OS directly instead: ANY surviving process whose argv still names one
+// of this file's mkdtemp roots is a straggler, whatever spawned it. One `ps`
+// invocation for the whole file, at the end. Matching on the root path (not a
+// bare PID) also makes the kill reuse-safe — the process is identified by what
+// it IS, not by a number that may since have been recycled.
+function processesUnderRoots(): { pid: number; args: string }[] {
+  let table: string;
+  try {
+    table = execFileSync("ps", ["-eo", "pid=,args="], { encoding: "utf8", maxBuffer: 16 * 1024 * 1024 });
+  } catch {
+    return []; // no `ps` — the net simply does not apply on this host
+  }
+  const found: { pid: number; args: string }[] = [];
+  for (const line of table.split("\n")) {
+    if (!allRoots.some((root) => line.includes(root))) continue;
+    const match = /^\s*(\d+)\s+(.*)$/.exec(line);
+    if (match?.[1] === undefined || match[2] === undefined) continue;
+    const pid = Number(match[1]);
+    if (pid > 1 && pid !== process.pid) found.push({ pid, args: match[2] });
+  }
+  return found;
+}
+
+afterAll(async () => {
+  const stragglers = processesUnderRoots();
+  for (const { pid } of stragglers) {
+    try {
+      process.kill(pid, "SIGKILL");
+    } catch {
+      // ESRCH — it exited between the scan and the signal
+    }
+  }
+  if (stragglers.length > 0) await delay(200);
+  // Fail LOUD with the argv: a straggler here means some lane spawns a process
+  // that outlives its test and is not accounted for above.
+  expect(stragglers.map((s) => s.args)).toEqual([]);
+});
 
 // The deterministic stub actor — CONFIGURATION bound through the argv mapping
 // (never an injected seam): a node script reading PAIRFLOW_PACKET/PAIRFLOW_EMIT.
@@ -43,6 +184,11 @@ const STUB = [
   // AV2 (finding 7): reference the EXPORTED env-name constants — never a raw
   // string literal — so an in-repo rename stays a one-line change.
   `const emitPath = process.env.${PAIRFLOW_EMIT};`,
+  // Publish this process's PID so the suite can hold the long-lived modes to
+  // account (see the stub-process accounting above). argv is the ONLY channel
+  // available: the child env is asserted COMPLETE key-and-value by AV, so an
+  // extra env var would break that pin.
+  "const publishPid = (p) => { if (p !== undefined) fs.writeFileSync(p, String(process.pid)); };",
   'if (mode === "raw") {',
   '  if (a3 !== "__none__") fs.writeFileSync(emitPath, a3);',
   "  process.exit(a4 === undefined ? 0 : Number(a4));",
@@ -52,13 +198,19 @@ const STUB = [
   '} else if (mode === "nonzero") {',
   "  process.exit(4);",
   '} else if (mode === "sleep") {',
+  "  publishPid(a3);",
   "  setInterval(() => {}, 1000);",
   '} else if (mode === "ignore-term") {',
+  "  publishPid(a3);",
   '  process.on("SIGTERM", () => {});',
   "  setInterval(() => {}, 1000);",
   '} else if (mode === "self-term") {',
   '  process.kill(process.pid, "SIGTERM");',
   '} else if (mode === "kill-wrapper") {',
+  // The PID is published BEFORE the kill — the write completes first, so the
+  // orphan this lane deliberately strands is reapable on every path the
+  // assertion can take. The foreign kill below is untouched and still genuine.
+  "  publishPid(a3);",
   '  process.kill(process.ppid, "SIGKILL");',
   "  setInterval(() => {}, 1000);",
   '} else if (mode === "mkdir-emit") {',
@@ -408,7 +560,7 @@ describe("actorAdapter — CL (conclusion classification, real processes)", () =
   it("a foreign KILL of the WRAPPER (no result written) → foreign_kill via CL1 row 2", async () => {
     const root = tempRoot();
     const stub = writeStub(root);
-    const result = await run({ mapper: mapTo(stub, "kill-wrapper"), ingress: neverIngress, defaultCwd: root });
+    const result = await run({ mapper: mapTo(stub, "kill-wrapper", orphanPid(root)), ingress: neverIngress, defaultCwd: root });
     expect(result).toEqual({ kind: "infra_failure", class: "foreign_kill" });
   });
 
@@ -416,7 +568,7 @@ describe("actorAdapter — CL (conclusion classification, real processes)", () =
     const root = tempRoot();
     const stub = writeStub(root);
     const result = await run({
-      mapper: mapTo(stub, "sleep"),
+      mapper: mapTo(stub, "sleep", reapedPid(root)),
       ingress: neverIngress,
       defaultCwd: root,
       timeoutMs: 1000,
@@ -430,7 +582,7 @@ describe("actorAdapter — CL (conclusion classification, real processes)", () =
     const root = tempRoot();
     const stub = writeStub(root);
     const result = await run({
-      mapper: mapTo(stub, "ignore-term"),
+      mapper: mapTo(stub, "ignore-term", reapedPid(root)),
       ingress: neverIngress,
       defaultCwd: root,
       timeoutMs: 1000,
