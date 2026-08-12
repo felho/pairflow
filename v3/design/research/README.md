@@ -15,14 +15,18 @@ V3 design memos (open questions, design syntheses) live in
   the kernel spectrum, the resolved central bets, the per-level decision
   matrix, and the settled-vs-open ledger. **Start here**; it also contains the
   canonical study table with each study's one-line role.
-- **`*-study.md`** — 16 reverse-engineering studies (in writing order:
+- **`*-study.md`** — 17 reverse-engineering studies (in writing order:
   omnigent, symphony, paperclip, dbos, hermes-agent, vibe-kanban, honcho,
   temporal, superpowers, langgraph, gastown, gstack, agent-harness-survey,
-  onecli, mnemon, nanoclaw). Each maps one external system's mechanisms onto v3
-  levels (L0a..L14) with `file:line` citations and LEARN/AVOID/ORTHOGONAL
-  verdicts, plus a second-pass delta section. `nanoclaw` is the runtime
-  component behind the `bitsafe-ai-os-capture.md` fleet — the
-  transport/supervision/isolation reference, explicitly *not* a kernel.
+  onecli, mnemon, nanoclaw, ai-maestro). Each maps one external system's
+  mechanisms onto v3 levels (L0a..L14) with `file:line` citations and
+  LEARN/AVOID/ORTHOGONAL verdicts, plus a second-pass delta section.
+  `nanoclaw` is the runtime component behind the `bitsafe-ai-os-capture.md`
+  fleet — the transport/supervision/isolation reference, explicitly *not* a
+  kernel. `ai-maestro` is the outer-levels reference (L8 channels / L10
+  federation / L13 cryptographic identity / agent mobility) and the corpus's
+  clearest specimen of *half-primitives*: kernel-primitive shapes present
+  without their enforcement.
 - **`sakana-fugu-study.md`** — a web/paper research capture (not a codebase
   study): Sakana AI's Fugu product and its TRINITY/Conductor papers — a
   *trained* dynamic orchestrator in production. Serves as an external checksum
