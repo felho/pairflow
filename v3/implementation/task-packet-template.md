@@ -246,6 +246,23 @@ contract-draft template defers to it:
   the EMPTY TREE, an empty change list red regardless of cause.
   Invocation: README §4 step 8 (build-close; no CI surface runs this
   mode).
+- **The `mirror_map` block (OPT-IN; defined here at the ch13
+  boundary — the P11 lint predates this definition, which is the
+  form-authority gap the boundary closed):** a packet whose target's
+  rules are DECLARED DATA elsewhere (the ADR-019 schema substrate)
+  may carry a `mirror_map` machine block plus a `## Mirrored Surface
+  Map` section pairing each canonical row with the surfaces that
+  restate it; the P11 lint then enforces prose↔manifest ref-closure
+  and CONFINEMENT over the declared literals — a canonical-row
+  literal restated outside its declared mirror set is red. Opt-in by
+  presence: a packet without the block is not scanned; a prose
+  mention of the identifier neither opts in nor reds. TWO MEASURED
+  LIMITS travel with the definition (recorded so no reader
+  over-trusts the guard): the confinement scan is LINE-ORIENTED — a
+  restatement wrapped across a line break is invisible to it (the
+  review-side semantic tail stays a lens duty); and a signature
+  quoted from an EXTERNAL authority is confined but not owned — the
+  quote's freshness against its source is nobody's check.
 - **Contract-drafts** (`v3/implementation/contracts/`) are linted
   by the same tool per the D2 artifact contract on the Amendment-1
   carrier: meta block, C-row registry, `{date, arms, commit}`

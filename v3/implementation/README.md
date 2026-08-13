@@ -355,7 +355,12 @@ records them):**
 3. **Loop economics** — `3:watchdog`: 8 rounds without approve →
    STOP with a diagnosis (churn composition → split vs draft
    proposal); auto-split-remedy is delegable LATER — a deferred,
-   evidence-based step, not a live delegation. · `3:plateau`
+   evidence-based step, not a live delegation. **Re-base rule
+   (homed at the ch13 boundary; twice-used, previously log-only):**
+   a watchdog count is scoped to its target's ANCHOR BASIS — when
+   ratified anchors move under the loop (a reopen, a re-derivation),
+   the HUMAN may re-base the count with a recorded reason and a
+   frame sized to the remaining work; the loop itself never re-bases. · `3:plateau`
    (adopted 2026-07-17 — the ch11-P3a process reset): two
    consecutive review rounds — panel, external-arm, and user rounds
    all count — each with ≤2 accepted CONTENT findings

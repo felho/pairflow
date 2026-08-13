@@ -542,7 +542,11 @@ mirror). The scoping governs COST, never the review definition.
   ALWAYS lens 4 as the final reconciliation, fed the delta list (the
   fresh-eyes function — it also owns catching the author's own
   fold-propagation misses; this IS AuthorPacket step 9.3's pass, one
-  mechanism). **Mandatory escalation to FULL** (the burden of proof
+  mechanism; ch13-boundary duty extension: when the fold ADDED a
+  clause to a canonical row, lens 4 demands a COMPLETE propagation
+  enumeration over that row's mirror surfaces, each marked
+  qualified / missing / n-a — the fold that lists only the mirrors
+  it edited is the recurring miss class). **Mandatory escalation to FULL** (the burden of proof
   is on skipping): a manifest-class change (a new-decision row
   minted or reclassified), a scope/split change, a claim- or
   matrix-STRUCTURE change (a new lane family or dimension), a
@@ -578,6 +582,17 @@ mirror). The scoping governs COST, never the review definition.
   targeted | reconciliation-only, the lenses run, the skipped
   lenses WITH their proven-unaffected reasons, and any escalation
   trigger fired.
+- **Per-round YIELD CLASSIFICATION (adopted at the ch13 boundary —
+  the round-7 reversal receipt: a "zero design yield" verdict was
+  falsified one round later by executed evidence):** every finding
+  in the round report carries one label — `new-design-error` (the
+  defect predates every fold) / `fold-byproduct` (a fold introduced
+  it) / `reproduction` (a re-found known item). The label makes the
+  "is the loop still finding anything?" question DATA — the
+  plateau/close decisions read the classified curve, never a felt
+  impression. This is also the minimal record-and-reconcile ritual
+  the review-program sketch asked for (the rest of that sketch
+  stays deferred).
 
 ### 6) The external arm — OPTIONAL invocation leg (recorded 2026-07-10)
 
@@ -750,6 +765,27 @@ Elsewhere it stays an option:
 - **Observed behavior (first proven run, ch8 draft):** the fresh
   session discovers the repo's own review machinery and uses it;
   ~5–10 min, ~70–130k tokens per run.
+
+
+**Standing arm-round rules (promoted at the ch13 boundary from the
+re-derivation phase's §6, both measured twice; the phase doc stays the
+historical record):**
+
+- **Threat-model-first charter:** every arm/guard-building charter
+  STATES its threat model before any round runs — the overbuild
+  incident's 7 non-terminating rounds happened because the charter
+  never declared one, so no finding could be out of scope.
+- **Bounded tooling loops:** an arm loop on TOOLING runs at most 3
+  rounds; a 4th exists only by the user's explicit extension.
+- **Proportionality tripwire:** a fold that grows the guarded
+  surface (new validator/freeze/probe class) beyond its charter's
+  threat model trips a STOP-and-ask, never a silent build.
+  (P4/P5 re-measure, recorded at promotion: neither the bounded
+  loop nor the tripwire ever BOUND in those phases — kept on the
+  overbuild incident's severity, re-read at a future boundary.)
+- **Trajectory line:** every arm round's report carries one line of
+  where the loop is on its yield curve — the unplanned payoff
+  already measured (it caught a midnight rollover).
 
 ### 7) The fresh-implementer lens — EXPERIMENT (adopted 2026-07-17)
 
