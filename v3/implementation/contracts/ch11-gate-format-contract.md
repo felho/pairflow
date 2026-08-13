@@ -175,6 +175,19 @@ re-ratification within the same act).
 reopenings 3 → 4 (the ch13 draft-ratification act's C4/C30/C41 reopen —
 closed by re-ratification within the same act).
 
+**Dated annotation (2026-08-13, the ch13 boundary — pointer
+maintenance, LEAVE-WITH-RECORD; rows byte-frozen).** The
+`contract:ch13-context-block#C6` pointers in C4, C30, C41, the fourth
+reopen record above and two `realized_map` entries PREDATE that
+draft's supersede (2026-08-05): the pointed-at semantics — the
+`contextBlockRefs` value class and resolution — are carried UNCHANGED
+by the successor surface's row `contract:ch13-context-block-v2#C6`
+(realized at the ch13 close). This is pointer maintenance, not
+meaning drift; the ch13 boundary weighed REPOINT (a realized-reopen
+ceremony for zero semantic content) and recorded this annotation
+instead, at the spot where a reader meets the stale pointers. The
+frozen predecessor file remains readable beside its successor.
+
 ## Contract rows (every normative statement is a C-row)
 
 | ID | Rule |
@@ -251,7 +264,7 @@ closed by re-ratification within the same act).
 "C1": "ch11-P2a D1 (domain Step.gates value) + ch11-P4 F2 (format-walk step keyset) + ch11-P3b W3 (reachability honesty: no shipped channel authors gates until P4) — domain/template.ts Step.gates field (the GateBinding/GatePipeline types are domain/gate.ts); definition/validate.ts F2 walk; admit.test.ts / validate.test.ts",
 "C2": "ch11-P2a A4 + D1 (the Step gate lookup realizing the gates_for(step, event_type) grain) — definition/admit.ts event-type membership (gates bound to keys(transitions)); domain/template.ts; admit.test.ts A4 lane (+ ch11-P4 F3 gates-subtree walk, validate.ts)",
 "C3": "ch11-P2a A4/D3 — definition/admit.ts nonempty-list admission + authored pipeline order; admit.test.ts (+ ch11-P2b K1 ordered first-block-wins eval, kernel/kernel.ts)",
-"C4": "ch11-P4 A1 — definition/admit.ts gate-binding fixed-keyset (uses + optional config; + contextBlockRefs at ch13 — delegation: ch13#C6), unknown-key fail-closed; admit.test.ts A1 lane ; reopened at the ch13 ratification (2026-07-26) — successor contract:ch13-context-block#C6; realized vacuously (delegation — the successor realizes at ch13's close)",
+"C4": "ch11-P4 A1 — definition/admit.ts gate-binding fixed-keyset (uses + optional config; + contextBlockRefs at ch13 — delegation: ch13#C6), unknown-key fail-closed; admit.test.ts A1 lane ; reopened at the ch13 ratification (2026-07-26) — successor contract:ch13-context-block#C6 (that draft superseded 2026-08-05; the semantics live unchanged in contract:ch13-context-block-v2#C6, realized at the ch13 close); realized vacuously (delegation — the successor realizes at ch13's close)",
 "C5": "ch11-P2a G3/A4 (threshold required) + ch11-P3a V2 (process required) — definition/admit.ts config-presence; gates/threshold.ts / gates/process.ts validate (the verdict gate's OPTIONAL config is G5's lane — derived, refs C11/C21/C30 — gates/previousReviewerVerdict.ts)",
 "C6": "ch11-P4 A2 — definition/admit.ts `uses` grammar lane (^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$), distinct from resolution; admit.test.ts A2 lane",
 "C7": "ch11-P2a R4/A5 (+ ch11-P4 path forms) — definition/admit.ts list-index error paths steps.<id>.gates.<evt>[<i>]; admit.test.ts [<i>]-segment path asserts",
@@ -277,7 +290,7 @@ closed by re-ratification within the same act).
 "C27": "ch11-P2b K5 + S1-S4/O2/O3/O4 (read pass-through on detail/timeline/tail + the bundle-keyset-unchanged stance) + ch11-P3b E1 (process-decision evidence retention) — kernel/kernel.ts retained ordered gateDecisions on the committed transition + store/sqliteStore.ts schema bump (ADR-003); kernel.test.ts / sqliteStore.test.ts",
 "C28": "ch11-P4 Y7 (+ ch11-P2b K7/O3, ch11-P2a A9/T4) — cli/dev/main.ts validate + write-lane surface the same {stage,findings} docs, no new verbs/flags; dev/journey tests",
 "C29": "ch11-P2a G1/R5/T2 (+ ch11-P3a G1) + ch11-P2b T1 (KernelDeps.gates — the one-catalog wiring at the composition roots) + ch11-P3a T1 (the scripted six-outcome runner kit) — src/gates/ module + gates/registry.ts injected catalog + ports/gate.ts ledger-shape reconciliation; ADR-013 accepted; registry.test.ts",
-"C30": "growth STANCE — no code realizes it; the ratified stance stands, WITNESSED by the additive keyset pattern (ch11-P2a G5's pairflow.previous_reviewer_verdict config allowlist, gates/previousReviewerVerdict.ts; the ch11-P2c/P4 round keyset, domain/template.ts + definition/validate.ts) + the §8.2 additive-evolution culture; the former non-key witness RETIRED at the ch13 ratification (2026-07-26 — the key joined C4's keyset; the witness was mis-sited anyway: the binding unknown-key lane lives in admit.ts) — successor contract:ch13-context-block#C6, realized vacuously (delegation); prior reopen at the ch12 ratification (human-approved 2026-07-18, ratified 2026-07-19) — successor contract:ch12-runtime-core#C23",
+"C30": "growth STANCE — no code realizes it; the ratified stance stands, WITNESSED by the additive keyset pattern (ch11-P2a G5's pairflow.previous_reviewer_verdict config allowlist, gates/previousReviewerVerdict.ts; the ch11-P2c/P4 round keyset, domain/template.ts + definition/validate.ts) + the §8.2 additive-evolution culture; the former non-key witness RETIRED at the ch13 ratification (2026-07-26 — the key joined C4's keyset; the witness was mis-sited anyway: the binding unknown-key lane lives in admit.ts) — successor contract:ch13-context-block#C6 (that draft superseded 2026-08-05; the semantics live unchanged in contract:ch13-context-block-v2#C6, realized at the ch13 close), realized vacuously (delegation); prior reopen at the ch12 ratification (human-approved 2026-07-18, ratified 2026-07-19) — successor contract:ch12-runtime-core#C23",
 "C31": "ch11-P3b M4/X1 (+ ch11-P2b O1/O5) — kernel/kernel.ts builds the gate_blocked(reason=<fixed token>) rejection (processGate.ts returns the GateDecision it consumes); the 2026-07-23 re-ratification NARROWS disjointness to the POSITIONAL rule (by-construction via the sys: forms, ADR-018) — the earlier authored-token REALIZATION GAP is RESOLVED by the narrowed rule (no runtime check owed); the sys: spellings' code realization is DELEGATED to ch9-P0 (until it lands, code carries the pre-rename spellings — a declared, packet-owned catch-up, the ch12-P0 precedent); processGate.test.ts / kernel.test.ts",
 "C32": "ch11-P3b E2 + ch11-P2b O5 (the untrusted-confined verbatim-retention culture at the Block-A grain) — kernel/processGate.ts + kernel/kernel.ts process-returned reason/message/evidence_refs retained verbatim, never re-parsed/interpolated; kernel.test.ts E2-confinement suite",
 "C33": "ch11-P3b E1 (+ ch11-P2b K4/O1) — kernel/processGate.ts evidence_refs propagation (exit-bucket [log_ref], gateDecisionJson append-dedup, runner outcome) + kernel/kernel.ts Rejected(...,evidence_refs) pass-through; processGate.test.ts E1 lanes",
