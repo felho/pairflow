@@ -7,10 +7,10 @@
 # Arm-fold provenance: ARM-01 (guard strictness), ARM-02 (preflight +
 # timeout + rc-first classification).
 # Usage: arm_run.sh <promptfile> <outfile> (--target <file> | --no-target)
-#                   [--timeout <secs>, default 1200 — the uniform 20-min cap (ch9 boundary)]
+#                   [--timeout <secs>, default 2700 — the 45-min fallback cap (ch13 boundary; the 20-min cap killed four working runs)]
 # Exit: 0 ok · 2 usage/preflight · 3 pin-mismatch · 4 guard-trip · 5 codex-error · 6 guard-infra
 set -uo pipefail
-PROMPT=""; OUT=""; TARGET=""; NO_TARGET=0; TIMEOUT=1200; REQUIRE_CLEAN=0
+PROMPT=""; OUT=""; TARGET=""; NO_TARGET=0; TIMEOUT=2700; REQUIRE_CLEAN=0
 while [ $# -gt 0 ]; do case "$1" in
   --target) [ -n "${2:-}" ] || { echo "arm_run: --target needs a value"; exit 2; }; TARGET="$2"; shift 2;;
   --no-target) NO_TARGET=1; shift;;

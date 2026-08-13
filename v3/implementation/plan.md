@@ -284,6 +284,19 @@ gate runner's spawn outcomes join the existing best-effort diag
 channel, with tests, owned by the next runner-touching chapter; the
 ch9-C26 map entry's UNDER-REALIZATION note retires with it.
 
+**Sixth named candidate (added at the ch13 boundary, 2026-08-14 —
+the user-routed 2026-08-05 finding's §7-mandated plan-map row):**
+**gate-config declarations as data through the port** — the three
+delegated gate schemas (threshold / previous-reviewer-verdict /
+process config) cannot join the ADR-019 declared-schema substrate
+because the ch11-P2a lint boundary confines `gates/`; the
+purpose-preserving path is a DECLARATION field on `GateRegistration`
+travelling through the port. Scope: the next gate-surface-touching
+chapter's ordinary work, prerequisites carried with it — a ratified
+port-shape change, the `[d-gc-*]` paper declarations, a per-surface
+parity gate. Never a while-we-are-here act (the routing entry's own
+rule).
+
 **Critical-path note (recorded at the ch13 boundary walk, 2026-08-13
 — sequencing input for the next-chapter derivation; chapter entry
 stays the owner's explicit act):** the MVP cut's own remaining

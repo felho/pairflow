@@ -178,7 +178,11 @@ machine block. The prose NAMES the BUILD EXECUTION CONTEXT used
 any build-guidance notes handed over) and the Aftermath names the
 AUTHOR of each fix (build agent vs orchestrator) — data for the
 boundary's authorship read (ch12 boundary; no authorship rule exists
-yet by design). `stops[].type` comes from the canonical STOP member-token
+yet by design) — and each Aftermath finding carries a one-word RULE
+ATTRIBUTION where a standing rule owns its class (`[R-…]` /
+`[REV-…]` / `[none]` — adopted at the ch13 boundary: the per-rule
+catch tally §7 demands was full manual archaeology without it; a
+capture convention, not a lint). `stops[].type` comes from the canonical STOP member-token
 registry (README §5.5). `baseline_note` (optional) is the ONLY home for
 unit/regime qualifiers — never ad hoc keys. `main_thread_model`
 (adopted at the ch12 boundary — the model-tier experiment's capture
