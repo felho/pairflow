@@ -265,6 +265,25 @@ draft ──(human ratification)──▶ ratified ──(chapter close)──�
   Re-ratification is permanently human, exactly like ratification.
   The `realized` path follows the post-close bullet's mechanics
   EXCLUSIVELY — its commit 2 returns to `realized`, never `ratified`.
+- **Reopen-vs-aggregate-note criterion (promoted at the ch13
+  boundary, 2026-08-13; first applied and derived at the ch13 draft —
+  the superseded `ch13-context-block` draft's Context is the
+  historical first-application record):** when a NEW chapter's
+  surface touches an EARLIER ratified row, the row is **REOPENED**
+  when its operative text is a HARD PROMISE about this surface (a
+  closed keyset; "explicitly not a key"; a present-tense comparative
+  that the arrival falsifies) — and merely **AGGREGATE-NOTED** (a
+  dated note that the row described the pre-arrival state; no row
+  edit, no ceremony) when the row's OWN text pre-authorizes or
+  forward-scopes the arrival (a delegation clause naming the arriving
+  chapter; an aggregate-note chain; a "later surface" clause that
+  resolves to it). Tie-break: a row carrying BOTH follows the
+  DELEGATION — the promise is self-scoped to the pre-arrival state by
+  the row's own delegating clause. A SELF-SCOPING text (parametric on
+  another row's set — "the containers this surface introduces") stays
+  true through the arrival and needs neither. The call is the new
+  draft's authoring duty, recorded in its Context; the panel checks
+  it.
 - **Post-close (realized) reopen:** a post-close change remains a
   STOP; when the human resolves it by ordering a reopen (first
   exercise: the ch12 ratification's mandated reopen set — ch11
