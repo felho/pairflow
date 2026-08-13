@@ -263,12 +263,6 @@ const stepNode: NodeDecl = {
     // roles-entry node's twin, normalized from the nested `agentConfig`
     // source by `n-ctx-step-refs`, `raw` and channel-DIRECT on the same
     // `d-advances-round` precedent and for the same reason.
-    //
-    // FORWARD-SCOPED EXEMPTION (ADR-019 D4, amended 2026-08-09): rowed
-    // to ch13v2-C13, which is BYTE-LOCKED against the declaration
-    // snapshot recorded at its ratifying act and cannot cite it back.
-    // CLOSING ACT: the ch13 chapter-close act that flips the draft to
-    // `realized`, where the citation is added and the exemption ends.
     promptConcernRefs: {
       kind: "raw",
       tag: "d-ctx-step-refs",
@@ -482,14 +476,6 @@ const rootNode: NodeDecl = {
           // kind would MINT a lane on the direct channel and turn a
           // caller-supplied produced position into a finding, where
           // C13's own recompute clause requires a silent recompute.
-          //
-          // FORWARD-SCOPED EXEMPTION (ADR-019 D4, amended 2026-08-09):
-          // this node is rowed to ch13v2-C13, which is BYTE-LOCKED
-          // against the declaration snapshot recorded at the ratifying
-          // act and therefore cannot cite it back. CLOSING ACT: the ch13
-          // chapter-close act that flips the draft to `realized` — the
-          // scheduled act that edits this contract next, where the
-          // citation is added and the exemption ends.
           promptConcernRefs: {
             kind: "raw",
             tag: "d-ctx-role-refs",
@@ -720,12 +706,6 @@ export const templateFormat: SurfaceDecl = defineSurface({
     // computed from another position, which is derivation and not a
     // `default:`. Declared BEFORE the binding rebuild below, per C13's
     // ordering clause.
-    //
-    // FORWARD-SCOPED EXEMPTION (ADR-019 D4, amended 2026-08-09), for both
-    // entries: rowed to ch13v2-C13, which is BYTE-LOCKED against the
-    // declaration snapshot its ratifying act recorded and cannot cite
-    // them back. CLOSING ACT: the ch13 chapter-close act that flips the
-    // draft to `realized`, where the citations are added.
     {
       tag: "n-ctx-role-refs",
       rows: ["ch13v2-C13"],

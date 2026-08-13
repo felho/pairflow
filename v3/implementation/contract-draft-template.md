@@ -332,6 +332,29 @@ draft ──(human ratification)──▶ ratified ──(chapter close)──�
   flips status to `realized` in ONE act. Nothing lives only in the
   draft afterwards — decisions persist in ADRs, shapes persist in
   packets/code/tests; the draft is never a third permanent authority.
+- **Citation closure AT the chapter close (added 2026-08-13; NARROW —
+  this act and nothing else):** where a schema-first draft carries
+  FORWARD-SCOPED EXEMPTIONS (ADR-019 D4) whose named closing act IS
+  this chapter close, the close act ALSO closes them, in the same two
+  commits. What it may touch is exhaustively: (i) CITATION-ONLY C-row
+  growth — declaration tags added, no normative sentence moved, added,
+  or removed; (ii) the exemption notes deleted from the declaration
+  beside their nodes; (iii) the `realized_map` and the `realized`
+  flip, as above. Commit 1 carries all three and is transiently RED on
+  BOTH the recorded-commit equality (a C-row line moved) and the
+  schema lock (the declaration's bytes moved) — the same designed
+  transient as the re-lock's commit 1, and the same consequence: the
+  chapter's green gate is taken after commit 2, never at commit 1.
+  Commit 2 appends ONE ratification block in the ordinary form,
+  recording commit 1 and the NEW declaration `sha256`, which closes
+  both — the re-lock RIDES this act rather than being a separate
+  transition. A semantic edit is NOT admitted here: anything beyond a
+  citation is a reopen, unchanged. This transition does NOT count
+  toward §5's reopening metric — no row moved in meaning and the draft
+  never entered `reopened`. The rule is admitted BY the act that first
+  exercises it (the amendment-rides-the-act carrier — the ch11-C38 /
+  ch12-C27 pattern), and it is scoped to the close: no other act may
+  edit a ratified C-row without a reopen.
 
 ## 5. Draft metrics (one line each, at ratification and at close)
 
@@ -343,8 +366,11 @@ is testable only if measured.
 **Amended 2026-08-09 — what the reopening number COUNTS.** It read
 "= ratification blocks beyond the first", which counts the wrong
 thing: a block is appended by every transition that ratifies
-anything, and two of those are not reopens — a non-reopening
-AMENDMENT to a ratified draft, and the SCHEMA RE-LOCK (§4). Under the
+anything, and three of those are not reopens — a non-reopening
+AMENDMENT to a ratified draft, the SCHEMA RE-LOCK (§4), and the
+CITATION CLOSURE at the chapter close (§4, added 2026-08-13; its
+block records a moved C-row line, and it still is not a reopen: the
+move is a citation, and the draft never entered `reopened`). Under the
 old wording a draft that had never reopened could be required to
 record a nonzero reopen count, which is a false number carrying a
 true-sounding name. The metric now counts **the number of times the
