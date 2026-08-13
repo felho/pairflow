@@ -5675,3 +5675,46 @@ final CLEAN.
   client on the default socket (the 2026-08-07 mechanism exactly);
   one orphan killed per that entry's remedy, re-run 2063/2063 —
   the per-run-socket boundary candidate gains another receipt.
+
+- 2026-08-13 (ch13-p1b build close, arm gate 2 — BOUNDARY CANDIDATE, two
+  executed receipts) · **THE LANE DRIVES ITS NAME, NOT ITS CLAIM.** A
+  packet declares a discipline whose claim is over a WHOLE surface; the
+  built lane asserts a NAMED PROJECTION of that surface instead, so a
+  violation landing outside the projection passes green. Both instances
+  below were authored by the builder, passed the builder's own review,
+  and were invisible to EVERY instrument the packet names — the suite
+  and the typecheck were green throughout. Only the build-close arm's
+  mandatory sensitivity pass found them, each by an EXECUTED
+  counterexample rather than by reading. RECEIPT 1 (byte-scope, packet
+  D10 / family 8): the claim is that deleting a catalog entry leaves the
+  differing bytes CONFINED to the packet artifact plus one permitted
+  committed column; the lane watched the TWO columns the row names by
+  id. The arm made the committed `payloadDigest` depend on catalog
+  content — plainly outside the permitted scope — and all three lanes
+  stayed green. Folded by comparing the whole committed row with the one
+  permitted column PROJECTED OUT (not asserted wholesale, which would
+  red by construction and invite the weakening the re-pin discipline
+  forbids); the same counterexample then reds 2 of the 3 lanes.
+  RECEIPT 2 (code exclusivity, packet D11 / family 11): the claim is
+  that the gate schemas' named lanes still carry their codes; the
+  discriminating positive was
+  `JSON.stringify(findings).toContain("gate_evaluator_unavailable")`.
+  The arm removed the `code` ATTRIBUTE from the declaration and left the
+  token in the human-readable message — both lanes stayed green. Folded
+  by asserting the findings' `code` FIELD list; the same counterexample
+  then reds. WHY THIS IS A CLASS AND NOT TWO SLIPS: both are the strong
+  form narrowed to a projection AT AUTHORING TIME, which no ratified
+  rule reaches — →[value-repin]-style disciplines forbid narrowing an
+  assertion at REPAIR time and say nothing about a lane born narrow. And
+  this is the same family as the log's oldest recurring entry, "a gate
+  proves less than its claim" (ch2 check.sh, ch3 kernel lint +
+  canonicalization), now recurring in packet-DECLARED ACCEPTANCE LANES
+  rather than in tooling — which is the argument that the class needs a
+  home the packet template can reach, not another one-off fix. TWO
+  CANDIDATE SHAPES for the boundary to weigh, stated so they are not
+  re-derived: a CONFINEMENT or EXCLUSIVITY claim is asserted over the
+  whole surface MINUS the named permitted delta, never as an enumeration
+  of watched sub-parts; and a claim about a MACHINE-READABLE field is
+  asserted on the field, never by finding its token in a serialization.
+  Not decided here — the disposition, and whether either shape earns a
+  template line or a lint, is the boundary's. `Route: boundary-review`
