@@ -208,7 +208,11 @@ or hygiene content for the NEXT chapter); (2) the **detached
 realized-map arm audit for ch9** (plan §9.5's DoD clause: the arm's
 per-row map audit of `ch9-runner-contract.md` runs DETACHED,
 deadline = the NEXT chapter's close — the next chapter's DoD
-inherits it as a close obligation). (3) the **MVP-cut vs
+inherits it as a close obligation) — **DISCHARGED at the ch13 close
+(2026-08-13):** the audit ran (byte guard clean, hash identical
+before and after), 11 map-block folds landed in the audit's minimal
+form, `pnpm v3:realized-map` green after; its one substantive find
+became carried item (4) below. (3) the **MVP-cut vs
 v1-parity re-read** (raised by the owner, 2026-07-25, off the
 `v1-prompt-parity-audit.md` measurement): the model plane's MVP cut
 is defined as "build until local WF-7 runs" — a DIFFERENT target
@@ -232,7 +236,18 @@ emit-envelope block lives in the SHIPPED template, so a from-scratch
 template author does not inherit it. This is an implementation-plane read; a finding that
 the CUT itself is mis-drawn is a model-plane matter and routes to
 the standing model↔code divergence stop (README §6), never a silent
-re-cut here.
+re-cut here. (4) the **process-gate spawn-outcome
+diagnostics gap** (found by the ch9 detached realized-map arm audit,
+recorded at the ch13 close, 2026-08-13; SOURCE OF THE OBLIGATION:
+`ch9-runner-contract.md` C26, which promises a structured diagnostic
+event for EVERY spawn outcome on the best-effort ch7 channel): the
+actor-attempt half emits (`runner/actorAdapter.ts` `spawn_outcome`);
+the process-gate runner half does NOT — `runner/processGateRunner.ts`
+performs spawns and carries zero diagnostic calls (the executed
+receipt lives in the ch9-C26 map entry's open note). WORK ITEM: the
+gate runner's spawn outcomes join the existing best-effort diag
+channel, with tests, owned by the next runner-touching chapter; the
+ch9-C26 map entry's UNDER-REALIZATION note retires with it.
 
 **Ordering note (walking-skeleton-first, README §3.4).** Chapter 3 before
 chapter 4 does not contradict the principle: ch 3 is the constraint-sink /
