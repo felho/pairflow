@@ -182,7 +182,28 @@ adapter-side shaping (implementation-plane Absent-narrowing) or a
 kernel-injected default block (a MODEL-PLANE act, not modeled today) —
 because EC's `op_contracts` projection carries per-op SHAPE, not the
 file-transport mechanics; the STAKE MEASUREMENT lives in the audit §7
-addendum and is not re-derived at that ratification.
+addendum and is not re-derived at that ratification. SECOND
+RATIFICATION DUTY bound here (the §13.5(h) capability-profile
+disposition, owner-ratified KEEP-WITH-RECORD at the ch13 boundary,
+2026-08-14): the L1 `CapabilityProfile` construct STAYS, with its four
+findings recorded at §13.5(h), and the GUARD-or-RETIRE decision is an
+INTERVAL bound to THIS chapter's ratification as its NAMED CLOSING ACT
+— the ratified forward-scoped-exemption pattern (ADR-019 D4's form:
+an interval with a named end, never an open state). The record's
+explicit grounds: GUARD ALONE WOULD BE INSUFFICIENT — finding (i)
+stands guarded or not (every live call passes `step.role`, so the
+construct cannot reach its two cross-role motivating cases); and
+RETIRE IS A MODEL-PLANE ACT which the two model-ledger `→ later`
+items' intent-preservation argues against
+(`l1 · authored-capability-restrictions-in-the-baseline`,
+`l1 · capability-filtered-packet-ops`) — the boundary smuggles no
+model decision. Two bindings ride the interval: (a) the never-built
+guard invariant (explicit entries may only NARROW, never invent —
+`HELP_REQUEST` and op-family ops included) is a PRECONDITION of the
+file format ever accepting the key; (b) the model's L1 illustration
+(a single-role-step narrowing that instantiates neither motivating
+case) is replaced or removed WITH the winning disposition, as a
+model-plane act.
 **Retirement obligation bound here (the carrier choice, user-ratified
 2026-07-25): the chapter that enters this candidate carries in its
 DoD the retirement of ch 13's interim emit-envelope catalog entry**
