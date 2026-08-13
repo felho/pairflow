@@ -5773,3 +5773,88 @@ final CLEAN.
   whose record names a tier, or the narrower rule that a record may name
   a tier only when the tier is machine-confirmed. Not decided here.
   `Route: boundary-review`
+
+- 2026-08-14 · **ch13 BOUNDARY REVIEW HELD** (stepwise with the owner,
+  2026-08-13→14; every verdict below owner-ratified one decision per
+  message; the execution commits are in git history around this
+  entry). THE CHAPTER CLOSED FIRST: realized_map (19 rows, fresh-
+  context-built, machine-checked), the CITATION-CLOSURE act (the four
+  ADR-019 D4 forward-scoped exemptions ended at their named closing
+  act; template §4 gained the narrow rule, riding the act), the
+  ratification block with the Fable→Opus tier deviation named IN the
+  record, full ci:local + the whole chapter-close gate column green,
+  and the dogfooding checkpoint RUN (the entry above). **The DoD's
+  eight named verdicts:** (a) model-tier: the experiment CONTINUES —
+  Medium-band-only data (n=1 Fable vs 3 Opus), ZERO Opus Heavy
+  points, no S1/S3; §7 entry + two late-captured §8 rows + the p1b
+  metrics block late-written from repo records. (b) mutation pilot:
+  **STOP** — nine recorded runs, ZERO defects the arm did not find,
+  cost to 12m48s + a maintenance surface + structural subprocess
+  blindness; the wiring stays; usage lessons recorded (whole-file
+  scope not delta; detector role not trend role; the sandbox-path
+  abort is a config-fixable harness bug); a revival is
+  incremental+delta+boundary-trend, never a per-packet gate. (c) the
+  ch9 detached map audit: 11 map folds landed + ONE under-realization
+  (ch9-C26's process-gate diagnostics half) → plan carried item (4)
+  with the executed receipt in the map note. (d) the MVP-cut walk:
+  the cut STANDS; the hole is INSIDE it (L3+L4 chapterless — the
+  critical-path note); EC = first post-cut chapter with TWO bound
+  ratification duties (transport carrier + the capability-profile
+  interval); the stake measurement lives in audit §7. (e)
+  reopen-vs-aggregate-note: PROMOTED to template §4. (f) integer-key
+  ban: WATCH with the named carrier (next format-touching chapter
+  bundles ban + ch8-C10 reopen + re-lock + the ch13v2-C10 narrowing;
+  immediate reopen if such a key appears). (g) ch11 pointers:
+  LEAVE-WITH-RECORD executed (Context annotation + two map notes; the
+  defense hole → the tooling batch's 4th member). (h)
+  capability-profile: KEEP-WITH-RECORD as a bound interval closing at
+  the EC ratification (GUARD alone insufficient — finding (i); RETIRE
+  is model-plane against the two ledger items' intent), two bindings
+  riding. **Registry sweep:** 7 rules retired (R-MATRIX-LANES,
+  R-FIRST-STOP = README duplicates; R-STRUCTURE-SEMANTICS zero-catch
+  on home turf; R-WIDE-CLAIM superseded by the lane-level class;
+  R-FLAGS-IN-PACKET structurally absorbed; R-NUMERIC-LADDER →
+  R-DIMENSIONS and R-FIELD-LISTS → R-DELEGATION-CLOSURE by merge);
+  the five REV-* rows kept (zero-catch because unexercised surfaces,
+  explicitly declared — the registry working). **Catch tally
+  (reconstructive — no instrumentation existed; the new attribution
+  convention fixes that forward):** top catcher R-LANE-SENSITIVITY ≥9
+  (every one via the build-close sensitivity pass, none visible to
+  suite or typecheck); R-ALIGNED-UP ≥5; R-CLAIM-GRAMMAR ≥4;
+  R-DERIVED-PROBES ≥3; R-EXECUTION 2; R-PRESENT-TENSE 2;
+  R-UNTRUNCATED-SWEEP 1+1; R-CLAIM-FORM-PROBES 1 major (P11's 10
+  arm blockers); R-ACTIVATION-JOURNEY 1+2; drift-lock 1 (unit-map
+  disposition); R-INSTRUMENT-PROBE 0 catches / 3 violations — the
+  mechanize signal the batch answers. **Extensions:** 8 landed (two
+  blind classes; quoted-names cross-product; the ratification-side
+  claim grammar; the draft-delegation layer; the tokenizer clause;
+  per-round yield classification; lens-4 propagation enumeration;
+  watchdog re-base + the four arm-round rules homed — P4/P5
+  re-measure: neither guard bound, kept on severity). **Tooling batch
+  ADOPTED (4 members, one shared arm review, built this session):**
+  exactly-one-metrics-block at post-build + main_thread_model
+  required ch13+; the probe-runner green-baseline gate; the
+  arm_run.sh byte-guard fix (the guard that never guarded); the
+  superseded-target token scan (report-only). **Remainder:** fallback
+  arm timeout 20→45 min; the transport column landed; the TIER-RECORD
+  rule (a record names a tier only machine-confirmed — the
+  Fable/Opus incident's closure); the gate-config-through-port plan
+  candidate row (§7's same-act rule); the Aftermath rule-attribution
+  convention. **Records (WATCH / acknowledged, no rule):** the
+  schema-substrate's three open future-traps (citability at
+  authoring; default finding grain unreadable from the declaration;
+  the carry-list silent-drop — now live, the list grew this chapter);
+  p1a's two non-rerunnable receipt scripts + the one-commit-stale
+  expressiveness-audit pin (no check reads it); the header-union
+  retirement candidate for the schema-first packet form; the live-
+  packet count canonicalized as the lint's machine numbers (28 v2 +
+  16 grandfathered; the relayed "17" stays irreproducible); the
+  derived-value by-parts assertion sweep (unrun, wider than p1b's two
+  sites); the model genre-sentence proposal (model-plane candidate,
+  the 15-of-25 arity census as evidence — next model wave decides);
+  J-RESPAWN recorded SPLIT (socket wedge FIXED in tree; the
+  CPU-starved wrapper race UNCURED, ~1-in-2, the ch9-inherited
+  candidate carries it); the single-occurrence scope-shape
+  observation (WATCH). The REV-registry gap (p1b's id-less review
+  binding) stays acknowledged — a REV row is minted on second need,
+  per the admission bias.
