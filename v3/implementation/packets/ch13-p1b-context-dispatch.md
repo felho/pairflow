@@ -1070,4 +1070,165 @@ consequence — this chapter now contributes two Medium data points.
 
 ## Build record
 
-<Filled at build close.>
+**Build execution context: MAIN-CONTEXT; guidance notes: NONE.** The user
+handed the packet to a standalone fresh session as the build executor
+with the packet as sole spec, and confirmed at the section-plan gate that
+this session carries the whole loop — verification chain, both arm gates,
+commit, plan edits and this record. §4's delegated DEFAULT was therefore
+a CHOICE, not an omission, and it was declined for two reasons stated
+here rather than left silent: the decorrelation ground is already
+satisfied by the session boundary (this context did not author these
+bytes — the approve closed in a different session at `db57d42e`), and
+§4's own delegation-prompt rule exists because a delegated agent
+faithfully preserves existing assert strength exactly where this packet's
+point is STRONGER proof — a risk this packet carries at thirteen declared
+disciplines. The approved basis was byte-verified before the first read
+(sha256 `4fa3436c23c83ff2…`) against a clean tree.
+
+**Rounds: ONE.** No fix round. Four corrections were caught inside the
+build by the packet's own declared gates, and each is recorded because
+each was a mis-derivation rather than a typo. (a) A family-5 file-channel
+fixture carried the PRODUCED `promptConcernRefs` key in its YAML: the
+unknown-key refusal fired, which is the producer monopoly working — the
+fixture was wrong, not the belt. (b) The family-8 experiment was written
+without a vacuity guard and passed; adding the guard turned it red for a
+missing import, and the guard now asserts the deleted block really
+rendered in the carrying variant, without which the whole experiment
+proves nothing. (c) The blanket re-pin of the journey's activation
+literals over-applied to the GATED journey, which authors its own
+catalog-free template — reverted to `{}` / `[]` there. (d) Two
+suite-side templates dropped the shipped role refs while overriding
+`roles`, orphaning the catalog entry into p1a's hygiene lane; both were
+repaired so that only the property under test (an absent `defaultActor`)
+is removed.
+
+**The substrate probe (→[render-order]) was RE-EXECUTED at this build and
+AGREES with the basis reading**: `0`, `1`, `2`, `10`, `4294967294` hoist
+to the front and re-sort ascending, while `01`, `1e2`, `-1`,
+`4294967295`, `+1`, `00` keep their authored position (node v24.18.0,
+both the defining-call and object-literal shapes). Flag 4 does NOT fire;
+plan §13.5's DoD item (f) needed no correction and its "re-confirmed at
+that packet's build" clause is now true. The order fixture pins the class
+BOUNDARY (`10` against `01`) rather than sampling one side.
+
+**The floor held EXACTLY, on both instruments, with no extension and no
+drop.** Baseline 72 files / 2259 tests green, `tsc --noEmit` green. The
+packet-field growth alone reproduced M1 (3 files / 31: kernel handle 1,
+operator CLI 27, journey 3); both growths together reproduced M3 (4 files
+/ 33 — the union at file grain, lifecycle joining); the typecheck
+reproduced M4's four TEST construction sites (the fifth, the production
+one, is this packet's own work), including `actorAdapter.test.ts`'s
+measured `TS2322` shape against the other three's `TS2741`. Every floor
+member RED before repair; none stayed green. D16's site is the one
+recorded exception and was repaired, not routed — and the repair was
+sensitivity-checked: supplying `runtimeContext` makes the directive go
+UNUSED (`TS2578`), proving it still witnesses that one absence rather
+than absorbing the new field's.
+
+**Test-count delta: 72 files / 2259 → 74 files / 2313 (+54), +2 homes.**
+The two new homes are the ones the packet names: `kernel/contextBlocks.ts`'s
+suite (36) beside the new module, and the l2b section trace's own file
+(3), minted here as every section trace in this tree is. The families
+that joined declared homes: `kernel/dispatchIntent.test.ts` 7 → 15,
+`kernel/kernel.test.ts` 84 → 87 (family 8's byte-scope experiment),
+plus single members at the operator CLI suite (family 11), the adapter
+suite's canonical-serialization lane (family 7's byte half), the delivery
+loop (the third dispatch site) and both drift files.
+
+**Realization shape.** The render is a pure module beside the run-profile
+resolver whose shape it follows, exported from its own file and NOT from
+the kernel barrel. It performs the three indexed record lookups D4's
+census names — catalog and steps OWN-PROPERTY-GUARDED through a locally
+re-implemented `ownEntry`, roles exempt on the roles cross-rule's equality
+— and reaches the gates record by `Object.entries` ONLY, never indexing
+it. `deriveDispatchIntent` gained the same guard on its own steps read
+(D4's call-site repair, which is what keeps the render's guard from being
+dead in production) and one call line. No other production file moved.
+
+**Flag 3's build choices, each pinned VERBATIM by D12's drift lanes:**
+the exported render is `assembleContextBlocks` in `kernel/contextBlocks.ts`
+(the file name the mutation boundary already ratified); the packet member
+type is `ContextBlock`, the name p1a deliberately left for this packet;
+its provenance carrier is `ContextBlockProvenance` over
+`ContextBlockSource`, written as a DISCRIMINATED UNION so that "only a
+gate source carries a location" is a type-level fact — the gate arm's two
+flattened fields are `stepId` and `eventType`, camelCase per the tree's
+convention, while the three `source` token VALUES keep C12's snake_case
+verbatim. The two unit-map `codeRef`s are the render's own export and,
+for the reprint row, the dispatch function the sibling l0d/l0e rows
+already target.
+
+**Sensitivity: the lanes were proven to DISCRIMINATE, not merely to pass.**
+Six mutations of the render, each applied and reverted byte-identically:
+dropping the authority filter (1 red), indexing the gates record by the
+authorized op — the UNIT's own shape (3 red, exactly the divergence D3
+and D4 predict), unguarding the catalog lookup (1), unguarding the steps
+lookup (2), collapsing provenance (3), swapping role/step source order
+(5). The l2b trace was separately shown to red on LEG 3 under the
+authority mutation, and the l0c half-migration trap was shown to fail
+that trace's own admission when the key is renamed without the entry.
+
+**D7's co-edit held with ZERO edits to the pin test**, which is the
+measured evidence that the canonical file's block scalar and the
+fixture's TS literal are byte-identical. The shipped body is the flag-1
+ratified bytes including the corrected `availableOps` sentence; C17's
+comment rides the file edit under review, no lane seeing it, as the row
+says. The role refs land at BOTH positions as D7 warns — every re-pinned
+`effectiveAgentConfig` on a canonical-template dispatch moved too, and
+every such literal was written from the AUTHORED source, never pasted.
+
+**`plan.md` is UNCHANGED in this commit**: flag 2's three aligned edits
+(the Mode cell's five routes, the D4/D6 disambiguation, the DoD item (f)
+refinement) all landed with the approve at `db57d42e`, and the build's
+re-execution confirmed the (f) premise rather than correcting it.
+
+**Verification at close:** `pnpm v3:typecheck`, `v3:lint`, `v3:test`
+(74 files / 2313 green), `v3:coverage` (validation OK; the l2b section's
+units, invariants and trace owned at this commit), `v3:adr-check` (20
+ADRs consistent), `v3:packet-lint` (28 v2 packets, 0 errors — the schema
+lock untouched, as →[relock-answer] predicted), and the full `ci:local`
+gate. Every changed path is inside the declared `mutation_boundary`; the
+two untouched members are `plan.md` and this packet file's pre-approval
+body.
+
+**Arm gate 2 (external arm, ReviewPacket §6).** Transport `gptsol`
+(the 2026-08-10 user ruling; no `model:` override passed), pin
+`gpt-5.6-sol` / effort `high` per `arm-pin.md`'s current row. Byte guard
+CLEAN on both sides — HEAD `07f393ae`, porcelain
+`b75408b1…`, tracked diff `45af9dba…`, and all three untracked hashes
+identical before and after; the arm independently reproduced the
+tracked-diff hash and every one of the six mutation-probe counts, and
+restored each probe byte-identically. Verdict: **FINDINGS** — two
+blockers and one should-fix, all three CONFIRMED by executed
+counterexamples rather than reasoning, and all three FOLDED here in ONE
+round.
+
+**The fold, with the fix's own counterexample re-run for each.**
+(1) *Family 8 was blind beyond the two columns D10 names.* The arm made
+the committed `payloadDigest` depend on catalog content — a leak plainly
+outside C14's scope — and all three lanes stayed green, because the
+experiment projected only the two named columns. The claim D10 actually
+makes is CONFINEMENT over every byte of the row, so the lane now compares
+the WHOLE committed row with the one permitted column projected out
+(projected, not asserted wholesale — asserting the row entire would red
+by construction in the config-sourced variant and invite exactly the
+weakening →[value-repin] forbids). Re-run of the arm's counterexample
+after the fix: 2 of the 3 lanes RED, restored byte-identically.
+(2) *Family 11's discriminating positive matched serialized TEXT.* The
+inherited gate-lane assertion used `JSON.stringify(findings)` containment,
+so a lane that lost its `code` attribute while keeping the token in its
+message would pass — the code famine the second half exists to exclude.
+The family now owns that half at the MACHINE shape, asserting the
+findings' `code` field list. Re-run of the arm's counterexample after
+the fix: RED, restored byte-identically.
+(3) *The Build record's test count was stale by one*, taken before the
+drift-pin edits landed. Corrected above, and the fold's own two lanes
+carry it to 2313.
+
+All three folds were authored by the orchestrator (this session), which
+is what the Aftermath is asked to record. No finding touched the
+render or the packet field: both blockers were TEST-STRENGTH defects in
+lanes this packet declares, which is precisely the class the build-close
+sensitivity pass exists to catch, and neither was visible to any
+instrument the packet names — the suite and the typecheck were green
+throughout. Post-fold verification re-ran the full chain and `ci:local`.

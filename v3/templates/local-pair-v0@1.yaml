@@ -21,8 +21,40 @@ terminal:
 roles:
   implementer:
     defaultActor: codex
+    defaultAgentConfig:
+      promptConcernRefs:
+        - emit-envelope
   reviewer:
     defaultActor: claude
+    defaultAgentConfig:
+      promptConcernRefs:
+        - emit-envelope
 round:
   advanceOnArrivalAt:
     - implement
+contextBlocks:
+  emit-envelope:
+    body: |-
+      How to emit an operation.
+
+      Your dispatch packet is a JSON file; its path is in the
+      PAIRFLOW_PACKET environment variable. It carries your task,
+      your instruction, and availableOps — the operation types
+      this step can move on.
+
+      To emit, write ONE JSON object to the path in the
+      PAIRFLOW_EMIT environment variable, with EXACTLY two keys:
+
+        { "type": "<one of availableOps>", "payload": <your result> }
+
+      Nothing else is read. Extra keys, a missing payload, or an
+      unparseable file are taken as producing NO OUTPUT AT ALL —
+      silently, with nothing to correct. A well-formed emit can
+      still be rejected — the type may not be in availableOps, or
+      your role may not be authorized to emit it here — and the
+      rejection says which.
+  # Prose here that describes a gate's CONFIGURED value carries no
+  # freshness guarantee: nothing re-checks a block body against the
+  # configuration it talks about. An aim for whoever writes the next
+  # entry, never enforcement. Nothing shipped today describes gate
+  # configuration, so nothing can go stale yet.

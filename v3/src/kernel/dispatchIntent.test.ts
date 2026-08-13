@@ -30,6 +30,11 @@ export const __packetMissingRuntimeContext: ContextPacket = {
   instruction: "build it",
   availableOps: [],
   effectiveAgentConfig: {},
+  // Packet ch13-p1b D16: `contextBlocks` is REQUIRED too since this
+  // packet's growth, so it is supplied here on purpose — the directive
+  // above witnesses ONE named absence, and a two-property miss would be
+  // satisfied by either omission, silently de-discriminating the probe.
+  contextBlocks: [],
 };
 
 // Packet ch12-p2 (E family): the dispatch projection — the resolved run
@@ -162,5 +167,206 @@ describe("deriveDispatchIntent — the runtime-context projection (E family, ch1
         createStaticProviderRegistry({}),
       ),
     ).toThrow(/registry must stay stable/);
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────
+// Packet ch13-p1b — the rendered context blocks on the packet.
+// ───────────────────────────────────────────────────────────────────────
+
+/**
+ * A directly-constructed ADMITTED-SHAPED template: the produced ref
+ * positions are set the way admission produces them (the render reads
+ * those and never an authored nested key), so the dispatch suite keeps
+ * its direct-construction style without importing `definition/`.
+ */
+function blockBearingTemplate(
+  options: {
+    readonly roleRefs?: readonly string[];
+    readonly stepRefs?: readonly string[];
+    readonly gateRefs?: readonly string[];
+    readonly narrowed?: boolean;
+    readonly catalogExtras?: Readonly<Record<string, { readonly body: string }>>;
+  } = {},
+): WorkflowTemplate {
+  const roleRefs = options.roleRefs ?? [];
+  const stepRefs = options.stepRefs ?? [];
+  const gateRefs = options.gateRefs ?? [];
+  const issued = [...roleRefs, ...stepRefs, ...gateRefs];
+  return {
+    ref: { id: "t", version: 1 },
+    start: "implement",
+    steps: {
+      implement: {
+        role: "implementer",
+        instruction: "build it",
+        transitions: { PASS: "review", HOLD: "review" },
+        promptConcernRefs: stepRefs,
+        advancesRound: { PASS: false, HOLD: false },
+        ...(gateRefs.length > 0
+          ? {
+              gates: {
+                HOLD: [{ uses: "declarative.threshold", config: {}, contextBlockRefs: gateRefs }],
+              },
+            }
+          : {}),
+      },
+      review: {
+        role: "reviewer",
+        instruction: "r",
+        transitions: { CONVERGED: "done" },
+        promptConcernRefs: [],
+        advancesRound: { CONVERGED: false },
+      },
+    },
+    terminal: ["done"],
+    roles: {
+      implementer: { defaultActor: "codex", promptConcernRefs: roleRefs },
+      reviewer: { defaultActor: "claude", promptConcernRefs: [] },
+    },
+    contextBlocks: {
+      ...Object.fromEntries([...new Set(issued)].map((id) => [id, { body: `body of ${id}` }])),
+      ...(options.catalogExtras ?? {}),
+    },
+    // Narrows the implementer at `implement` to PASS — the HOLD gate's
+    // blocks must fall silent while HOLD stays in availableOps.
+    ...(options.narrowed === true
+      ? { capabilityProfile: { implementer: { implement: ["PASS"] } } }
+      : {}),
+  };
+}
+
+describe("deriveDispatchIntent — the rendered context blocks (packet ch13-p1b)", () => {
+  it("the field is ALWAYS present — an empty list when nothing is issued", () => {
+    const intent = deriveDispatchIntent(instance(), template(), "implement", providerRegistry);
+    expect(intent.packet.contextBlocks).toEqual([]);
+    // The KEY must be present, never omitted for the empty case.
+    expect(Object.prototype.hasOwnProperty.call(intent.packet, "contextBlocks")).toBe(true);
+  });
+
+  it("the members carry the three declared parts — id, body, and every emitting position", () => {
+    const intent = deriveDispatchIntent(
+      instance(),
+      blockBearingTemplate({ roleRefs: ["role-block"], gateRefs: ["gate-block"] }),
+      "implement",
+      providerRegistry,
+    );
+    expect(intent.packet.contextBlocks).toEqual([
+      {
+        id: "role-block",
+        body: "body of role-block",
+        provenance: { sources: [{ source: "role_config" }] },
+      },
+      {
+        id: "gate-block",
+        body: "body of gate-block",
+        provenance: { sources: [{ source: "gate_binding", stepId: "implement", eventType: "HOLD" }] },
+      },
+    ]);
+  });
+
+  it("the WHOLE packet, asserted as one value (the growth-blind assert-by-parts site, re-pinned)", () => {
+    // Written from the AUTHORED source above, never pasted from a run:
+    // the subject here is ORDER, and a pasted expectation would bake the
+    // implementation's own sequence into the assertion.
+    const intent = deriveDispatchIntent(
+      instance(),
+      blockBearingTemplate({ stepRefs: ["step-block"] }),
+      "implement",
+      providerRegistry,
+    );
+    expect(intent.packet).toEqual({
+      instanceId: "inst-1",
+      expectedVersion: 2,
+      task: "do it",
+      role: "implementer",
+      instruction: "build it",
+      availableOps: ["PASS", "HOLD"],
+      effectiveAgentConfig: {},
+      runtimeContext: "none",
+      contextBlocks: [
+        {
+          id: "step-block",
+          body: "body of step-block",
+          provenance: { sources: [{ source: "step_config" }] },
+        },
+      ],
+    });
+  });
+
+  it("AUTHORITY: a narrowing profile silences the gate's blocks while the event STAYS in availableOps", () => {
+    // The two fields disagreeing on purpose is the assertion: the packet
+    // still advertises HOLD as a navigation affordance (L1 enforces
+    // capability in HANDLE), and the render carries none of its blocks.
+    const intent = deriveDispatchIntent(
+      instance(),
+      blockBearingTemplate({ gateRefs: ["hold-block"], narrowed: true }),
+      "implement",
+      providerRegistry,
+    );
+    expect(intent.packet.availableOps).toEqual(["PASS", "HOLD"]);
+    expect(intent.packet.contextBlocks).toEqual([]);
+  });
+
+  it("its DISCRIMINATING positive: without the profile the same gate's blocks travel", () => {
+    const intent = deriveDispatchIntent(
+      instance(),
+      blockBearingTemplate({ gateRefs: ["hold-block"] }),
+      "implement",
+      providerRegistry,
+    );
+    expect(intent.packet.contextBlocks.map((block) => block.id)).toEqual(["hold-block"]);
+  });
+
+  it("a ghost step id ABORTS at the ENTRY's own read, naming the STEP — not the start invariant", () => {
+    // Unguarded, the entry's `template.steps[stepId]` answers a
+    // prototype-named id with an INHERITED member: the `undefined` check
+    // an inherited value DEFEATS does not fire, and what throws is the
+    // later actor guard, on a message blaming the start invariant.
+    expect(() =>
+      deriveDispatchIntent(instance(), template(), "constructor", providerRegistry),
+    ).toThrow(/dispatch target step 'constructor' has no definition/);
+  });
+});
+
+describe("deriveDispatchIntent — the run-scope channel never feeds the blocks (family 12)", () => {
+  it("a run override naming a CATALOG-DECLARED id changes nothing", () => {
+    const overriding = instance({ implement: { promptConcernRefs: ["run-scope-only"] } });
+    const withRunScope = deriveDispatchIntent(
+      overriding,
+      blockBearingTemplate({
+        stepRefs: ["authored"],
+        catalogExtras: { "run-scope-only": { body: "forbidden" } },
+      }),
+      "implement",
+      providerRegistry,
+    );
+    const withoutRunScope = deriveDispatchIntent(
+      instance(),
+      blockBearingTemplate({
+        stepRefs: ["authored"],
+        catalogExtras: { "run-scope-only": { body: "forbidden" } },
+      }),
+      "implement",
+      providerRegistry,
+    );
+    // The override's list DIFFERS from the authored one, or the member
+    // discriminates nothing.
+    expect(overriding.runOverrides.implement).toEqual({ promptConcernRefs: ["run-scope-only"] });
+    expect(withRunScope.packet.contextBlocks).toEqual(withoutRunScope.packet.contextBlocks);
+    expect(withRunScope.packet.contextBlocks.map((block) => block.id)).toEqual(["authored"]);
+  });
+
+  it("a run override naming an UNDECLARED id renders identically and does NOT abort", () => {
+    // This is what separates a purity violation from a live outage: run-scope
+    // values are belted by nothing, so a ghost id read here would kill a
+    // dispatch AFTER its transition committed.
+    const intent = deriveDispatchIntent(
+      instance({ implement: { promptConcernRefs: ["never-declared"] } }),
+      blockBearingTemplate({ stepRefs: ["authored"] }),
+      "implement",
+      providerRegistry,
+    );
+    expect(intent.packet.contextBlocks.map((block) => block.id)).toEqual(["authored"]);
   });
 });

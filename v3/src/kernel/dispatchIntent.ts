@@ -9,6 +9,7 @@ import type {
 import { resolveRuntimeContextRequirement } from "../domain/index.js";
 import type { ProviderRegistry } from "../ports/runtimeContextProvider.js";
 import { resolveAgentConfig } from "./agentConfig.js";
+import { assembleContextBlocks } from "./contextBlocks.js";
 
 /**
  * l0e-pseudocode/dispatch_intent (packet ch12-p3, E1/E2; completing
@@ -32,7 +33,14 @@ export function deriveDispatchIntent(
   providerRegistry: ProviderRegistry,
   handoff?: unknown,
 ): DispatchIntent {
-  const step = template.steps[stepId];
+  // OWN-PROPERTY guarded (packet ch13-p1b, D4): the id class legally
+  // admits prototype member names, and an unguarded index answers such a
+  // spelling with an INHERITED member — exactly the value this
+  // `undefined` check DEFEATS. What would throw then is the actor guard
+  // below, on a message blaming the start invariant; and the render's own
+  // guard would be dead in production, since the entry resolves the same
+  // record first.
+  const step = ownEntry(template.steps, stepId);
   if (step === undefined) {
     throw new Error(`kernel integrity: dispatch target step '${stepId}' has no definition`);
   }
@@ -63,6 +71,13 @@ export function deriveDispatchIntent(
     // map, possibly `{}`) — replaces the L0b conditional raw agentConfig
     // pass-through spread.
     effectiveAgentConfig: resolveAgentConfig(template, stepId, instance),
+    // ch13v2-C12 (packet ch13-p1b): the L2b render — ordered, deduped,
+    // with provenance; communication only. The render depends on the
+    // template and the step id ALONE: the run-scope channel sitting in
+    // `instance` beside this call may never feed the block set (C5), and
+    // the render's signature makes that unrepresentable rather than
+    // merely forbidden.
+    contextBlocks: assembleContextBlocks(template, stepId),
     // E1/E2 (packet ch12-p3): the runtime-context projection — `none` for a
     // context-free run, the provider's opaque projection for a provisioned one.
     runtimeContext: projectRuntimeContext(instance, template, providerRegistry),
@@ -110,4 +125,15 @@ function projectRuntimeContext(
     );
   }
   return provider.projectForActor(rc.ref);
+}
+
+/**
+ * The authority module's own-entry idiom (packet ch13-p1b, D4). Private
+ * there, so the two ch13 consumers each carry their own copy rather than
+ * lifting it into a file outside this packet's mutation boundary.
+ */
+function ownEntry<T>(record: Readonly<Record<string, T>> | undefined, key: string): T | undefined {
+  return record !== undefined && Object.prototype.hasOwnProperty.call(record, key)
+    ? record[key]
+    : undefined;
 }

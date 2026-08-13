@@ -241,6 +241,18 @@ describe("D — discovery / identity", () => {
     const errand = h.store.listErrands()[0];
     expect(errand?.contextPacketId).toBe(`${instance.instanceId}@v${String(instance.version)}`);
     const intent = deriveDispatchIntent(instance, admitted(), "implement", createStaticProviderRegistry({}));
+    // ch13-p1b (family 7): the THIRD dispatch site the tree has. The
+    // field travels here too, with its three declared parts — the body
+    // read from the fixture's own CATALOG (the render's input), while
+    // the shipped BYTES are pinned by literal at the operator-facing
+    // documents.
+    expect(intent.packet.contextBlocks).toEqual([
+      {
+        id: "emit-envelope",
+        body: admitted().contextBlocks?.["emit-envelope"]?.body,
+        provenance: { sources: [{ source: "role_config" }] },
+      },
+    ]);
     expect(intent.packet.expectedVersion).toBe(instance.version);
     expect(errand?.expectedVersion).toBe(intent.packet.expectedVersion);
     expect(errand?.actorId).toBe("codex"); // the current-step role binding (D3)

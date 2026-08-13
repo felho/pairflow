@@ -18,6 +18,7 @@ function intentFor(actor: string): DispatchIntent {
       instruction: "build it",
       availableOps: ["PASS"],
       effectiveAgentConfig: {},
+      contextBlocks: [],
       runtimeContext: "none",
     },
   };

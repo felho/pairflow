@@ -51,6 +51,7 @@ function admit(template: WorkflowTemplate): AdmittedTemplate {
   return result.template;
 }
 import { createKernel } from "./kernel.js";
+import { deriveDispatchIntent } from "./dispatchIntent.js";
 import type { Kernel } from "./kernel.js";
 import { noopDiagnosticsSink } from "../diag/index.js";
 
@@ -331,6 +332,10 @@ describe("committed path — intent derived from POST-commit state", () => {
           // ch12-p2 (E1): the resolved run profile — no agentConfig
           // authored on this template, so the cascade yields `{}`.
           effectiveAgentConfig: {},
+          // ch13-p1b: the rendered blocks — this test-local template
+          // declares no catalog and issues no ref from any position, so
+          // the list is empty and the KEY is still present.
+          contextBlocks: [],
           // ch12-p3 (E1): a context-free run — the explicit `none`.
           runtimeContext: "none",
         },
@@ -2174,5 +2179,168 @@ describe("gate rung — process ordering + one-snapshot (X2, dimension 8)", () =
     await expect(kernel.handle(reviewEmit("th1", "CONVERGED", 1))).rejects.toBe(boom);
     expect((await handle.store.getInstanceDetail("inst-1"))?.transcript).toHaveLength(0);
     expect(rec.events.some((e) => e.kind === "internal_failure")).toBe(true);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Packet ch13-p1b (D10 / family 8) — COMMUNICATION-ONLY, byte-scope precise.
+// The canonical experiment is EXECUTED here, not reviewed: delete a catalog
+// entry together with its refs in ONE edit, and every verdict and transition
+// must come out the same, with the differing bytes CONFINED to the packet
+// artifact plus — exactly where refs rode the config positions and only
+// there — the committed issued-config column.
+//
+// THE GRAIN IS THE COLUMN, not the table: both surfaces C14 names by row id
+// are columns of ONE transcript row, so a lane asserting "the row unchanged"
+// would red in the config-sourced variant by construction and be repaired by
+// weakening — the outcome the re-pin discipline forbids.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * The gated review template with the catalog reachable from the chosen
+ * position. `carrying: false` is the DELETED variant — the entry and its ref
+ * removed in one edit, which is what keeps the document admissible (an
+ * unreferenced entry fails p1a's hygiene lane).
+ */
+function blockCarryingReviewTemplate(
+  source: "config" | "gate",
+  carrying: boolean,
+): WorkflowTemplate {
+  const pipeline: readonly GateBinding[] = [
+    {
+      uses: "g.allow",
+      ...(carrying && source === "gate" ? { contextBlockRefs: ["talk"] } : {}),
+    },
+  ];
+  return {
+    ...gatedReviewTemplate(pipeline),
+    roles: {
+      implementer: { defaultActor: "codex" },
+      reviewer: {
+        defaultActor: "claude",
+        ...(carrying && source === "config"
+          ? { defaultAgentConfig: { promptConcernRefs: ["talk"] } }
+          : {}),
+      },
+    },
+    ...(carrying ? { contextBlocks: { talk: { body: "communication only" } } } : {}),
+  };
+}
+
+interface ExperimentRow {
+  readonly verdict: string;
+  readonly version: number;
+  readonly eventType: string | undefined;
+  /** ch11-C27's gate-decision column, named because D10 mandates asserting it. */
+  readonly gateDecisions: unknown;
+  /** ch12-C10's issued-config column — the ONE column permitted to move. */
+  readonly issuedAgentConfig: unknown;
+  /**
+   * The WHOLE committed row with the one permitted column projected out.
+   * Naming columns alone is blind: the confinement claim is over every
+   * byte of the row, so any OTHER column a leak reached — the payload
+   * digest, the retained envelope, the stamped time — would pass a
+   * two-column watch unseen. Projecting out the permitted column instead
+   * of asserting the row wholesale is what keeps the strong form from
+   * reddening by construction in the config-sourced variant.
+   */
+  readonly rowBeyondTheMovingColumn: Readonly<Record<string, unknown>>;
+  /**
+   * The VACUITY guard: the ids the dispatched step actually renders in the
+   * variant. Deleting something that never rendered would prove nothing,
+   * so the carrying variants assert this is non-empty.
+   */
+  readonly renderedIds: readonly string[];
+}
+
+async function runByteScopeExperiment(
+  source: "config" | "gate",
+  carrying: boolean,
+): Promise<ExperimentRow> {
+  const allow = scriptedInline("allow", [], () => ({ verdict: "allow", reason: "ok" }));
+  const cat = catalogOf({ "g.allow": allow });
+  const handle = openStore(":memory:", createControlledClock(0));
+  await handle.store.createInstance(reviewInstance);
+  const admitted = admitTemplate(blockCarryingReviewTemplate(source, carrying), cat);
+  if (!admitted.ok) {
+    throw new Error(`byte-scope fixture admission failed: ${JSON.stringify(admitted.findings)}`);
+  }
+  const kernel = createKernel({
+    providerRegistry: createStaticProviderRegistry({}),
+    processRunner: createScriptedProcessGateRunner([]),
+    store: handle.store,
+    definitions: { load: () => Promise.resolve(admitted.template) },
+    time: createControlledClock(0),
+    digest: deriveEmitDigest,
+    diag: noopDiagnosticsSink,
+    gates: cat,
+  });
+  // Taken BEFORE the terminal commit, since the review step is where the
+  // refs live and a terminal commit dispatches no one.
+  const renderedIds = deriveDispatchIntent(
+    reviewInstance,
+    admitted.template,
+    "review",
+    createStaticProviderRegistry({}),
+  ).packet.contextBlocks.map((block) => block.id);
+  const outcome = await kernel.handle(reviewEmit("bs1", "CONVERGED", 1));
+  const detail = await handle.store.getInstanceDetail("inst-1");
+  const row = asTransition(detail?.transcript[0] as TranscriptEntry);
+  const rowBeyondTheMovingColumn = Object.fromEntries(
+    Object.entries(row).filter(([column]) => column !== "issuedAgentConfig"),
+  );
+  return {
+    verdict: outcome.kind,
+    version: detail?.instance.version ?? -1,
+    eventType: row.envelope.type,
+    gateDecisions: row.gateDecisions,
+    issuedAgentConfig: row.issuedAgentConfig,
+    rowBeyondTheMovingColumn,
+    renderedIds,
+  };
+}
+
+describe("D10 — deleting a catalog entry moves NO kernel decision (the byte-scope experiment)", () => {
+  it("CONFIG-SOURCED: verdicts and transitions identical; the gate-decision column byte-identical", async () => {
+    const withBlock = await runByteScopeExperiment("config", true);
+    const without = await runByteScopeExperiment("config", false);
+    // Not vacuous: the variant really did render the block that the other
+    // variant deletes.
+    expect(withBlock.renderedIds).toEqual(["talk"]);
+    expect(without.renderedIds).toEqual([]);
+    expect(withBlock.verdict).toBe(without.verdict);
+    expect(withBlock.version).toBe(without.version);
+    expect(withBlock.eventType).toBe(without.eventType);
+    // Asserting the gate-decision column is what CLOSES the lane —
+    // watching only the moving column would let a leak into this one
+    // pass unseen.
+    expect(withBlock.gateDecisions).toEqual(without.gateDecisions);
+    // And the CONFINEMENT itself: EVERY other byte of the committed row
+    // is identical, not just the two columns D10 names. A two-column
+    // watch would pass a leak that reached the payload digest.
+    expect(withBlock.rowBeyondTheMovingColumn).toEqual(without.rowBeyondTheMovingColumn);
+  });
+
+  it("CONFIG-SOURCED: the issued-config column moves, and ONLY it", async () => {
+    // The ref has ALWAYS been config data at this position, so ch12-C10's
+    // column carrying it is exactly the movement C14 permits.
+    const withBlock = await runByteScopeExperiment("config", true);
+    const without = await runByteScopeExperiment("config", false);
+    expect(withBlock.issuedAgentConfig).toEqual({ promptConcernRefs: ["talk"] });
+    expect(without.issuedAgentConfig).toEqual({});
+    expect(withBlock.issuedAgentConfig).not.toEqual(without.issuedAgentConfig);
+  });
+
+  it("GATE-SOURCED: BOTH columns stay byte-identical — the direction a provenance leak would break", async () => {
+    const withBlock = await runByteScopeExperiment("gate", true);
+    const without = await runByteScopeExperiment("gate", false);
+    expect(withBlock.renderedIds).toEqual(["talk"]);
+    expect(without.renderedIds).toEqual([]);
+    expect(withBlock.verdict).toBe(without.verdict);
+    expect(withBlock.version).toBe(without.version);
+    expect(withBlock.gateDecisions).toEqual(without.gateDecisions);
+    expect(withBlock.issuedAgentConfig).toEqual(without.issuedAgentConfig);
+    // A gate-sourced ref moves NOTHING at all: the whole row matches.
+    expect(withBlock.rowBeyondTheMovingColumn).toEqual(without.rowBeyondTheMovingColumn);
   });
 });

@@ -305,6 +305,7 @@ function makeIntent(overrides: Partial<ContextPacket> = {}): DispatchIntent {
     instruction: "do the work",
     availableOps: ["PASS"],
     effectiveAgentConfig: { profile: "stub" },
+    contextBlocks: [],
     runtimeContext: "none",
     ...overrides,
   };
@@ -490,6 +491,39 @@ describe("actorAdapter — H (handoff)", () => {
     const dir = attemptDirOf(noneCwd(root));
     const written = readFileSync(join(dir, "packet.json"), "utf8");
     expect(written).toBe(canonicalize(intent.packet));
+  });
+
+  it("ch13-p1b: the rendered context blocks reach the actor's packet.json INTACT (byte-asserted)", async () => {
+    // The far end of guarantee 3: the operator journey runs no actor, so
+    // the byte grain lands here — where the artifact the actor actually
+    // reads is written.
+    const blocks = [
+      {
+        id: "emit-envelope",
+        body: 'first line\n\n  { "type": "PASS" }\n\nlast line',
+        provenance: {
+          sources: [
+            { source: "role_config" as const },
+            { source: "gate_binding" as const, stepId: "implement", eventType: "PASS" },
+          ],
+        },
+      },
+    ];
+    const root = tempRoot();
+    const stub = writeStub(root);
+    const intent = makeIntent({ contextBlocks: blocks });
+    await run({
+      mapper: mapTo(stub, "emit", "ok"),
+      ingress: ingressReturning({ kind: "committed", version: 3, intent: null }),
+      defaultCwd: root,
+      intent,
+    });
+    const written = readFileSync(join(attemptDirOf(noneCwd(root)), "packet.json"), "utf8");
+    expect(written).toBe(canonicalize(intent.packet));
+    // Read back from the BYTES, not from the object that produced them:
+    // multi-line bodies, literal braces and the provenance list all
+    // survive the canonical encoding.
+    expect((JSON.parse(written) as ContextPacket).contextBlocks).toEqual(blocks);
   });
 
   it("the attempt directory is keyed by enc(attemptId): two attempts of one errand → DISJOINT dirs", async () => {

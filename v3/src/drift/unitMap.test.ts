@@ -208,3 +208,26 @@ describe("the ch13-p1a unit-map flips (packet row D10)", () => {
     });
   });
 });
+
+describe("the ch13-p1b unit-map flips (packet row D12)", () => {
+  const unitMap = loadUnitMap();
+
+  it("pins the TWO packet-owned mappings VERBATIM (the generic lane stays green on a wrong-but-existing target)", () => {
+    // The render is the one l2b unit this packet IMPLEMENTS, and it lives
+    // in its own module beside the run-profile resolver.
+    expect(unitMap["l2b-pseudocode/assemble_context_blocks"]).toEqual({
+      codeRef: "v3/src/kernel/contextBlocks.ts#assembleContextBlocks",
+      disposition: "implement",
+      status: "realized",
+    });
+    // The l2b `dispatch_intent` is a REPRINT whose realization already
+    // exists: it rides the live `alias/inherited` precedent and targets
+    // the same dispatch function the sibling l0d/l0e rows do. Its delta —
+    // the packet field — lands in that same function.
+    expect(unitMap["l2b-pseudocode/dispatch_intent"]).toEqual({
+      codeRef: "v3/src/kernel/dispatchIntent.ts#deriveDispatchIntent",
+      disposition: "alias/inherited",
+      status: "realized",
+    });
+  });
+});

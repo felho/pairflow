@@ -58,7 +58,14 @@ function l0cTemplate(): WorkflowTemplate {
         transitions: { PASS: "implement", CONVERGED: "done" },
         agentConfig: {
           approach: "thorough",
-          prompt_concern_refs: ["reviewer-severity-ontology"],
+          // ch13-p1b (D8): MIGRATED from the snake-spelled `prompt_concern_refs`
+          // — legal open data under the format-open value class, and
+          // therefore silently ignored by every ch13 lane — onto the TYPED
+          // key, together with the catalog entry that resolves it. The two
+          // move in ONE edit: renaming without the entry turns a
+          // silently-ignored open key into an admission failure of this
+          // trace's own template.
+          promptConcernRefs: ["reviewer-severity-ontology"],
           skill_refs: ["test-runner"],
         },
       },
@@ -76,8 +83,26 @@ function l0cTemplate(): WorkflowTemplate {
       reviewer: { defaultActor: "claude", defaultAgentConfig: { mode: "critic" } },
     },
     round: { advanceOnArrivalAt: ["implement"] },
+    contextBlocks: {
+      "reviewer-severity-ontology": {
+        body: "Severity ontology: blocker > major > minor > nit.",
+      },
+    },
   };
 }
+
+/**
+ * ch13-p1b (D8 / family 13): the rendered block the review dispatch now
+ * carries — the L0c slot realized. The ref rides the STEP's agent config,
+ * so its provenance source is the step position.
+ */
+const REVIEW_CONTEXT_BLOCKS = [
+  {
+    id: "reviewer-severity-ontology",
+    body: "Severity ontology: blocker > major > minor > nit.",
+    provenance: { sources: [{ source: "step_config" }] },
+  },
+];
 
 // The worked cascade VALUES the trace must reproduce (§03-l0c).
 const RESOLVE_IMPLEMENT = {
@@ -89,7 +114,7 @@ const RESOLVE_IMPLEMENT = {
 const RESOLVE_REVIEW = {
   mode: "critic",
   approach: "thorough",
-  prompt_concern_refs: ["reviewer-severity-ontology"],
+  promptConcernRefs: ["reviewer-severity-ontology"],
   skill_refs: ["test-runner"],
 };
 
@@ -167,6 +192,11 @@ describe("l0c golden trace — the run profile end-to-end (C family + TR)", () =
     // dispatch(review): effectiveAgentConfig = resolve(review).
     expect(pass.intent?.packet.effectiveAgentConfig).toEqual(RESOLVE_REVIEW);
     const dispatchReview = pass.intent?.packet.effectiveAgentConfig;
+    // ch13-p1b (D8): the cascade's typed ref list resolves to a declared
+    // catalog entry, and the SAME dispatch carries the rendered block.
+    expect(pass.intent?.packet.contextBlocks).toEqual(REVIEW_CONTEXT_BLOCKS);
+    // The implement step issues no ref — the key is present and empty.
+    expect(activated.intent.packet.contextBlocks).toEqual([]);
 
     // emit CONVERGED at v3 → commit review→done (v4, terminal — no intent).
     const converged = (await kernel.handle(

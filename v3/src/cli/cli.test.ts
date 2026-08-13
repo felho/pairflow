@@ -139,6 +139,35 @@ function assertErrorContract(result: Run, expectedClass: string, expectedCode: n
   }
 }
 
+/**
+ * ch13-p1b (ch13v2-C16): the shipped catalog entry's body, TRANSCRIBED
+ * from the canonical `v3/templates/local-pair-v0@1.yaml` — the authored
+ * source. Never computed through the render under test and never pasted
+ * from a failing run: the subject of this growth is ORDER and CONTENT,
+ * and a pasted expectation would assert the implementation against
+ * itself.
+ */
+const EMIT_ENVELOPE_BODY = [
+  "How to emit an operation.",
+  "",
+  "Your dispatch packet is a JSON file; its path is in the",
+  "PAIRFLOW_PACKET environment variable. It carries your task,",
+  "your instruction, and availableOps — the operation types",
+  "this step can move on.",
+  "",
+  "To emit, write ONE JSON object to the path in the",
+  "PAIRFLOW_EMIT environment variable, with EXACTLY two keys:",
+  "",
+  '  { "type": "<one of availableOps>", "payload": <your result> }',
+  "",
+  "Nothing else is read. Extra keys, a missing payload, or an",
+  "unparseable file are taken as producing NO OUTPUT AT ALL —",
+  "silently, with nothing to correct. A well-formed emit can",
+  "still be rejected — the type may not be in availableOps, or",
+  "your role may not be authorized to emit it here — and the",
+  "rejection says which.",
+].join("\n");
+
 /** ch12-P4: the create→start sequence replaces the retired C25 bridge —
  * `create` is genesis (the Created doc carries the minted instance id),
  * `start` is the real single-op START (the `activated` doc). */
@@ -181,9 +210,22 @@ async function startOne(db: string, deps: CliDeps): Promise<string> {
         role: "implementer",
         instruction: "build it",
         availableOps: ["PASS"],
-        // ch12-p2 (E1): the resolved run profile — the canonical template
-        // authors no agentConfig, so the cascade yields the empty map.
-        effectiveAgentConfig: {},
+        // ch12-p2 (E1) + ch13-p1b: the resolved run profile. The
+        // canonical template's only authored agent config is the role
+        // default carrying the catalog ref — and the normalizer's lift
+        // COPIES rather than moves, so that authored key survives at its
+        // own position and rides the ch12 cascade. The ref therefore
+        // lands at BOTH positions: here, and in the rendered blocks below.
+        effectiveAgentConfig: { promptConcernRefs: ["emit-envelope"] },
+        // ch13-p1b: the rendered blocks — the canonical template's
+        // shipped catalog entry, reached from the role config.
+        contextBlocks: [
+          {
+            id: "emit-envelope",
+            body: EMIT_ENVELOPE_BODY,
+            provenance: { sources: [{ source: "role_config" }] },
+          },
+        ],
         // ch12-p3 (E1): a context-free run — the explicit `none`.
         runtimeContext: "none",
       },
@@ -1284,10 +1326,14 @@ describe("cli — ch12-P4 V6: the spec-declaring-template unstartable lane + the
     // CREATE's coverage REQUIRE throws, and `create` maps the "create failed
     // (binding coverage)" prefix to usage 2 (the migrated guard; the 2-vs-1
     // exit split preserved).
+    // ch13-p1b: only the `defaultActor` line is removed. The role's
+    // catalog ref STAYS — dropping it would leave the shipped entry
+    // unreferenced, and the document would fail p1a's hygiene lane
+    // instead of reaching the binding-coverage guard under test.
     const dir = stageTemplates({
       "local-pair-v0@1.yaml": CANONICAL_BYTES().replace(
         "  reviewer:\n    defaultActor: claude\n",
-        "  reviewer: {}\n",
+        "  reviewer:\n",
       ),
     });
     const db = tempDbPath();
@@ -1340,6 +1386,56 @@ describe("cli — the gate-defective write-lane drive (packet ch11-P4 → ch12-P
     // carrier the ch8 W-lane already tests).
     expect(JSON.stringify(details.findings)).toContain("gate_evaluator_unavailable");
     expect(JSON.stringify(details.findings)).toContain("steps.review.gates.CONVERGED[0]");
+  });
+
+  // ── packet ch13-p1b (D11 / family 11): code EXCLUSIVITY over this
+  // packet's own surface. THE PREMISE IS NAMED: this packet mints no lane
+  // and no finding at all, so a document "failing through its lanes" is
+  // unconstructible — the carrier is a validate document failing on the
+  // ch13 lane p1a already ships. p1a's own lane discharges the "only the
+  // ch13 finding carries a code" direction over its whole lane inventory
+  // and is asserted unchanged rather than re-driven; what is owed HERE is
+  // the negative over the OPERATOR entrypoint's documents, which are what
+  // this packet grows.
+  it("ch13-p1b: the operator document gains NO code from anything below the ch13 lane", async () => {
+    // One role's ref is redirected at an undeclared id; the other role
+    // keeps the shipped ref, so the entry stays referenced and the ONLY
+    // coded finding is the resolution lane's.
+    const refDefective = CANONICAL_BYTES().replace(
+      "  reviewer:\n    defaultActor: claude\n    defaultAgentConfig:\n      promptConcernRefs:\n        - emit-envelope\n",
+      "  reviewer:\n    defaultActor: claude\n    defaultAgentConfig:\n      promptConcernRefs:\n        - no-such-block\n",
+    );
+    expect(refDefective).not.toBe(CANONICAL_BYTES());
+    const dir = stageTemplates({ "local-pair-v0@1.yaml": refDefective });
+    const result = await run(
+      ["create", "--db", tempDbPath(), "--task", "t", "--templates-dir", dir],
+      testDeps(),
+    );
+    const err = errorDoc(result);
+    const details = err.details as { stage: string; findings: { code?: string }[] };
+    expect(details.stage).toBe("validate");
+    const codes = details.findings.map((f) => f.code).filter((c) => c !== undefined);
+    // EXACTLY the ratified ch13 code — nothing this packet ships adds a
+    // second one, and the render mints none at all. The gate lane above
+    // is the DISCRIMINATING positive that keeps this from passing by a
+    // tree-wide code famine.
+    expect(codes).toEqual(["unresolved_context_block_ref"]);
+  });
+
+  it("ch13-p1b: the gate schemas' named lane still carries its code IN THE CODE FIELD", () => {
+    // The half that keeps the negative above from passing by a tree-wide
+    // code famine — and it is asserted at the MACHINE shape, not by
+    // finding the token anywhere in the serialized document: a lane that
+    // lost its `code` attribute while keeping the word in its message
+    // would satisfy a containment check and prove nothing.
+    const dir = stageTemplates({ "local-pair-v0@1.yaml": gateDefective });
+    return run(
+      ["create", "--db", tempDbPath(), "--task", "t", "--templates-dir", dir],
+      testDeps(),
+    ).then((res) => {
+      const details = errorDoc(res).details as { findings: { code?: string }[] };
+      expect(details.findings.map((f) => f.code)).toEqual(["gate_evaluator_unavailable"]);
+    });
   });
 });
 

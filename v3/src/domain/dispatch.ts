@@ -1,5 +1,46 @@
-import type { ActorId, EventType, InstanceId, RoleName } from "./ids.js";
+import type { ActorId, BlockId, EventType, InstanceId, RoleName, StepId } from "./ids.js";
 import type { AgentConfig } from "./template.js";
+
+/**
+ * ch13v2-C12 (packet ch13-p1b): ONE emitting position of a rendered
+ * block. The three `source` TOKEN VALUES are C12's own and keep the
+ * model's snake_case verbatim; the member's KEY spellings follow this
+ * tree's camelCase convention. Only the gate-binding arm carries a
+ * location — the model's `at: (step.id, event_type)` pair, FLATTENED to
+ * sibling fields — so the union is what makes "a role/step source has no
+ * location" a type-level fact rather than a convention.
+ */
+export type ContextBlockSource =
+  | { readonly source: "role_config" }
+  | { readonly source: "step_config" }
+  | {
+      readonly source: "gate_binding";
+      readonly stepId: StepId;
+      readonly eventType: EventType;
+    };
+
+/**
+ * ch13v2-C10/C12: every place a rendered block came from, in ENCOUNTER
+ * order. A repeat appends its emitter and is never collapsed — two
+ * bindings of one step and event naming one id yield two IDENTICAL
+ * members, which is the retained-provenance half of the dedup rule.
+ */
+export interface ContextBlockProvenance {
+  readonly sources: readonly ContextBlockSource[];
+}
+
+/**
+ * ch13v2-C10/C12 (packet ch13-p1b): ONE rendered context block on the
+ * dispatch packet — the l2b `ContextBlock` registry row's witness. The
+ * body is the admitted catalog entry's and can come from nowhere else
+ * (a miss ABORTS at the render, never degrades). COMMUNICATION ONLY
+ * (C14): no kernel decision reads it.
+ */
+export interface ContextBlock {
+  readonly id: BlockId;
+  readonly body: string;
+  readonly provenance: ContextBlockProvenance;
+}
 
 /**
  * l0e/RuntimeContextProjection (packet ch12-p3, T2): the actor-facing view of
@@ -39,6 +80,14 @@ export interface ContextPacket {
    * later.
    */
   readonly effectiveAgentConfig: AgentConfig;
+  /**
+   * ch13v2-C12 (packet ch13-p1b): the rendered context blocks — ALWAYS
+   * present (a list, possibly empty), in the render's fixed order, each
+   * member carrying its id, its body from the admitted catalog, and
+   * every position that emitted it. COMMUNICATION ONLY (C14): no kernel
+   * decision reads any of it, and the adapter carries it as data.
+   */
+  readonly contextBlocks: readonly ContextBlock[];
   /**
    * l0e/RuntimeContextProjection (packet ch12-p3, E1/T2): the actor-facing
    * runtime-context view — the branded projection for a provisioned run

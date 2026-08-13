@@ -307,7 +307,18 @@ describe("CREATE (L1/G1)", () => {
   it("throws binding coverage at create — fail at create, not mid-run", async () => {
     const h = makeHarness((raw) => ({
       ...raw,
-      roles: { implementer: { defaultActor: "codex" }, reviewer: {} },
+      // ch13-p1b: both roles keep the shipped catalog ref — dropping it
+      // would leave the entry unreferenced and the fixture would fail
+      // p1a's hygiene lane instead of reaching the claim under test.
+      // What this case removes is the reviewer's `defaultActor`, and
+      // only that.
+      roles: {
+        implementer: {
+          defaultActor: "codex",
+          defaultAgentConfig: { promptConcernRefs: ["emit-envelope"] },
+        },
+        reviewer: { defaultAgentConfig: { promptConcernRefs: ["emit-envelope"] } },
+      },
     }));
     await expect(
       h.kernel.create({ instanceId: "i1", templateRef: REF, task: "T" }),
@@ -339,6 +350,18 @@ describe("START (L2/L3) — the fork and the window lanes", () => {
     expect(outcome.intent.actor).toBe("codex");
     expect(outcome.intent.packet.expectedVersion).toBe(2);
     expect(outcome.intent.packet.task).toBe("T");
+    // ch13-p1b (family 7): the ACTIVATION dispatch site carries the
+    // rendered blocks too — the fixture's shipped catalog entry, reached
+    // from the role config. The body is read from the fixture's own
+    // CATALOG (the render's input); the shipped bytes are pinned by
+    // literal at the operator-facing documents.
+    expect(outcome.intent.packet.contextBlocks).toEqual([
+      {
+        id: "emit-envelope",
+        body: fixtureTemplate().contextBlocks?.["emit-envelope"]?.body,
+        provenance: { sources: [{ source: "role_config" }] },
+      },
+    ]);
     const instance = await loadOrThrow(h, "i1");
     expect(instance).toEqual({
       instanceId: "i1",

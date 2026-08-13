@@ -43,7 +43,14 @@ export type {
   WorkflowInstance,
 } from "./instance.js";
 export type { EventEnvelope } from "./envelope.js";
-export type { ContextPacket, DispatchIntent, RuntimeContextProjection } from "./dispatch.js";
+export type {
+  ContextBlock,
+  ContextBlockProvenance,
+  ContextBlockSource,
+  ContextPacket,
+  DispatchIntent,
+  RuntimeContextProjection,
+} from "./dispatch.js";
 export type {
   Accepted,
   Activated,

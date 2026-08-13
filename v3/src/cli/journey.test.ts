@@ -21,6 +21,50 @@ const execFileAsync = promisify(execFile);
  * test-side seams: no injected deps, no scripted clocks or sinks.
  */
 
+/**
+ * ch13-p1b (ch13v2-C16): the shipped catalog entry's body, TRANSCRIBED
+ * from the canonical `v3/templates/local-pair-v0@1.yaml` this journey
+ * drives — the authored source, never the render's own output.
+ */
+const EMIT_ENVELOPE_BODY = [
+  "How to emit an operation.",
+  "",
+  "Your dispatch packet is a JSON file; its path is in the",
+  "PAIRFLOW_PACKET environment variable. It carries your task,",
+  "your instruction, and availableOps — the operation types",
+  "this step can move on.",
+  "",
+  "To emit, write ONE JSON object to the path in the",
+  "PAIRFLOW_EMIT environment variable, with EXACTLY two keys:",
+  "",
+  '  { "type": "<one of availableOps>", "payload": <your result> }',
+  "",
+  "Nothing else is read. Extra keys, a missing payload, or an",
+  "unparseable file are taken as producing NO OUTPUT AT ALL —",
+  "silently, with nothing to correct. A well-formed emit can",
+  "still be rejected — the type may not be in availableOps, or",
+  "your role may not be authorized to emit it here — and the",
+  "rejection says which.",
+].join("\n");
+
+/**
+ * ch13-p1b (D14 / family 10): the rendered blocks a dispatch from the
+ * canonical template carries. The entry is ROLE-SYMMETRIC — both roles
+ * reference it — so the same value is expected at each role's dispatch,
+ * and a single-role drive could not tell a symmetric authoring from a
+ * one-sided one.
+ */
+const SHIPPED_CONTEXT_BLOCKS = [
+  {
+    id: "emit-envelope",
+    body: EMIT_ENVELOPE_BODY,
+    provenance: { sources: [{ source: "role_config" }] },
+  },
+];
+
+/** The role default carrying the ref rides the ch12 cascade too (the lift COPIES). */
+const SHIPPED_EFFECTIVE_AGENT_CONFIG = { promptConcernRefs: ["emit-envelope"] };
+
 const dirs: string[] = [];
 
 afterEach(() => {
@@ -84,7 +128,8 @@ describe("cli — the full-lifecycle journey smoke (packet ch8-P2: J1/J2)", () =
             role: "implementer",
             instruction: "build it",
             availableOps: ["PASS"],
-            effectiveAgentConfig: {},
+            effectiveAgentConfig: SHIPPED_EFFECTIVE_AGENT_CONFIG,
+            contextBlocks: SHIPPED_CONTEXT_BLOCKS,
             runtimeContext: "none",
           },
         },
@@ -95,7 +140,30 @@ describe("cli — the full-lifecycle journey smoke (packet ch8-P2: J1/J2)", () =
         "submit", "--db", db, "--instance", id, "--type", "PASS",
         "--expected-version", "2", "--expected-role", "implementer", "--templates-dir", templatesDir,
       );
-      expect(JSON.parse(pass.stdout.trim())).toMatchObject({ kind: "committed", version: 3 });
+      // ch13-p1b (D14 / family 10): the OTHER role's dispatch. The
+      // activation document can only ever carry the START step's role,
+      // so the reviewer's packet rides the SUBMIT verb's committed
+      // document — asserted here by FULL equality (it was a containment
+      // assert), which is what makes the shipped entry's ratified
+      // role-SYMMETRY observable end-to-end.
+      expect(JSON.parse(pass.stdout.trim())).toEqual({
+        kind: "committed",
+        version: 3,
+        intent: {
+          actor: "claude",
+          packet: {
+            instanceId: id,
+            expectedVersion: 3,
+            task: "journey",
+            role: "reviewer",
+            instruction: "review it",
+            availableOps: ["PASS", "CONVERGED"],
+            effectiveAgentConfig: SHIPPED_EFFECTIVE_AGENT_CONFIG,
+            contextBlocks: SHIPPED_CONTEXT_BLOCKS,
+            runtimeContext: "none",
+          },
+        },
+      });
 
       const converged = await cli(
         "submit", "--db", db, "--instance", id, "--type", "CONVERGED",
@@ -198,7 +266,8 @@ describe("cli — the full-lifecycle journey smoke (packet ch8-P2: J1/J2)", () =
             role: "implementer",
             instruction: "build it",
             availableOps: ["PASS"],
-            effectiveAgentConfig: {},
+            effectiveAgentConfig: SHIPPED_EFFECTIVE_AGENT_CONFIG,
+            contextBlocks: SHIPPED_CONTEXT_BLOCKS,
             runtimeContext: "none",
           },
         },
@@ -338,7 +407,11 @@ round:
             role: "implementer",
             instruction: "build it",
             availableOps: ["PASS"],
+            // This journey authors its OWN gated template (above), which
+            // declares no catalog and issues no ref — so the cascade is
+            // empty and the rendered list is too, with the key present.
             effectiveAgentConfig: {},
+            contextBlocks: [],
             runtimeContext: "none",
           },
         },

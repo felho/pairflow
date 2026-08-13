@@ -379,10 +379,14 @@
     "status": "realized"
   },
   "l2b-pseudocode/assemble_context_blocks": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/contextBlocks.ts#assembleContextBlocks",
+    "disposition": "implement",
+    "status": "realized"
   },
   "l2b-pseudocode/dispatch_intent": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/dispatchIntent.ts#deriveDispatchIntent",
+    "disposition": "alias/inherited",
+    "status": "realized"
   },
   "l2b-pseudocode/validate_context_refs": {
     "codeRef": "v3/src/definition/schema/templateFormat.ts#templateFormat",

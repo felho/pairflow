@@ -5,6 +5,7 @@ import type {
   AgentConfig,
   BlockId,
   CapabilityProfile,
+  ContextBlock,
   ContextBlockCatalog,
   ContextPacket,
   DispatchIntent,
@@ -138,11 +139,12 @@ interface RealizedTypeTable {
   readonly "l0e/RuntimeContextProjection": RuntimeContextProjection;
   readonly "l0e/RuntimeContextRef": RuntimeContextRef;
   readonly "l0e/RuntimeContextRequirement": RuntimeContextRequirement;
-  // ch13-p1a (ch13v2-C13): the definition side's two l2b rows. The
-  // `ContextBlock` row stays pending — its witness is the packet's
-  // rendered block member type, which ships with the render side.
+  // ch13-p1a (ch13v2-C13): the definition side's two l2b rows.
   readonly "l2b/context_blocks catalog": ContextBlockCatalog;
   readonly "l2b/ContextBlockRef": BlockId;
+  // ch13-p1b: the render side's row — its witness is the type the
+  // packet's `contextBlocks` members carry.
+  readonly "l2b/ContextBlock": ContextBlock;
 }
 
 export type RegistryEntry =
@@ -349,10 +351,11 @@ export const DOMAIN_REGISTRY: Readonly<Record<string, RegistryEntry>> = {
   "l2a/ProcessResult": { kind: "realized", typeName: "ProcessResult" },
   // ── l2b (3) ────────────────────────────────────────────────────────
   // ch13-p1a: the definition side flips both rows with the type names
-  // ch13v2-C13 assigns them.
+  // ch13v2-C13 assigns them. ch13-p1b flips the third with the render
+  // side's packet member type.
   "l2b/context_blocks catalog": { kind: "realized", typeName: "ContextBlockCatalog" },
   "l2b/ContextBlockRef": { kind: "realized", typeName: "BlockId" },
-  "l2b/ContextBlock": { kind: "pending" },
+  "l2b/ContextBlock": { kind: "realized", typeName: "ContextBlock" },
   // ── l3 (5) ─────────────────────────────────────────────────────────
   "l3/wait step + RESUME_WAIT": { kind: "pending" },
   "l3/human_gate": { kind: "pending" },
@@ -518,6 +521,7 @@ export const REALIZED_TYPE_TABLE_KEYS = [
   "l0e/RuntimeContextRequirement",
   "l2b/context_blocks catalog",
   "l2b/ContextBlockRef",
+  "l2b/ContextBlock",
 ] as const satisfies readonly (keyof RealizedTypeTable)[];
 
 type TypeTableFullyListed =

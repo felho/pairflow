@@ -217,7 +217,18 @@ describe("the ch13-p1a realized rows (the l2b definition-side slice)", () => {
     });
   });
 
-  it("the render side's row stays PENDING — its witness ships with the packet's block member type", () => {
-    expect(DOMAIN_REGISTRY["l2b/ContextBlock"]).toEqual({ kind: "pending" });
+});
+
+// ── ch13-p1b (D12): the render side's ONE row. Same exposure, same
+// remedy — the key-set lane and the `import type` binding both pass a
+// wrong-but-existing typeName, so the packet-owned row is pinned
+// VERBATIM rather than deferred. ─────────────────────────────────────────
+
+describe("the ch13-p1b realized row (the l2b render-side slice)", () => {
+  it("pins the row VERBATIM — its witness is the type the packet's blocks carry", () => {
+    expect(DOMAIN_REGISTRY["l2b/ContextBlock"]).toEqual({
+      kind: "realized",
+      typeName: "ContextBlock",
+    });
   });
 });

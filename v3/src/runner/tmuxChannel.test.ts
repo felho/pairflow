@@ -724,6 +724,7 @@ function makeIntent(): DispatchIntent {
     instruction: "do the work",
     availableOps: ["PASS"],
     effectiveAgentConfig: { profile: "stub" },
+    contextBlocks: [],
     runtimeContext: "none",
   };
   return { actor: "codex", packet };

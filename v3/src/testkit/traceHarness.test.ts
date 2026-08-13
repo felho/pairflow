@@ -88,6 +88,7 @@ function fakeSeams(detail: InstanceDetail, committedVersions: readonly number[])
         instruction: "build it",
         availableOps: ["PASS"],
         effectiveAgentConfig: {},
+        contextBlocks: [],
         runtimeContext: "none",
       },
     },
