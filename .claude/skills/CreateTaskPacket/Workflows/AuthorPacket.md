@@ -86,7 +86,7 @@ Read, in this order (current state, never from memory):
    declare the **empty** ledger slice explicitly [R-EMPTY-SLICE]; the
    packet's claim surface is its canonical contract matrices instead.
 3. **First-of-a-kind?** If this packet class has no precedent → the
-   approve is the human's regardless of trust stage [R-FIRST-STOP;
+   approve is the human's regardless of trust stage [README §5.5 first-of-a-kind;
    canonical statement: README §5.5]. Otherwise inherit the chapter's
    declared stage.
 4. **Predicted class + sizing (BEFORE drafting):** read the chapter's
@@ -130,7 +130,7 @@ For kernel-semantic packets:
 2. Pull the unit pseudocode **verbatim** from
    `v3/model/units/` — no paraphrase.
 3. For every contract/type row: pull the registry **field lists** from the
-   model source, never entity names alone [R-FIELD-LISTS].
+   model source, never entity names alone [R-DELEGATION-CLOSURE].
 4. Pull the **exact rejection strings** (ledger §3) for the slice.
 5. Carry the trace as an **executable expectation** (the committed-row
    sequence tests must reproduce), never narrated behavior.
@@ -141,15 +141,15 @@ For kernel-semantic packets:
 ### 4) State the claim, then enumerate its dimensions
 
 1. Write the packet **Claim** first, stated WIDE — what the surface
-   guarantees, not what the implementation happens to do [R-WIDE-CLAIM].
+   guarantees, not what the implementation happens to do [R-CLAIM-NEGATIVES].
 2. Enumerate the claim's **dimensions** BEFORE deriving any test rows
    [R-DIMENSIONS]. For any validator over a numeric domain the ladder is
    mandatory: value → descriptor → prototype → numeric identity (`-0` via
-   `Object.is`) [R-NUMERIC-LADDER].
+   `Object.is`) [R-DIMENSIONS].
 3. Where the packet declares a surface contract (exit codes, parse rules,
    config resolution, error-doc schemas), write it as a **canonical
    contract matrix** — and remember every lane must be DRIVEN by a test at
-   build time [R-MATRIX-LANES]. Negative tests derive from the claim/matrix,
+   build time [README §4 step 2]. Negative tests derive from the claim/matrix,
    never from the implemented rule list [R-CLAIM-NEGATIVES]. Two
    exhaustiveness disciplines at WRITE time (cheaper than at review):
    - a collapsed lane ("any throw", "all failures") enumerates its
@@ -196,12 +196,12 @@ For kernel-semantic packets:
      the field's own row.
 4. If any validation contract splits malformed-input from
    semantic-failure handling, draw the structure-vs-semantics line in ONE
-   place in the packet [R-STRUCTURE-SEMANTICS].
+   place in the packet (one-place discipline — lens duty, own carrier).
 5. **Delegation closure at WRITE time:** a claim that delegates its
    definition to another artifact (*"P1-declared"*, *"per ledger §X"*,
    *"the ch-N culture"*) is expanded HERE — pull the delegated
    source's FULL rule set (field lists, presence conditions/iffs, enum
-   domains) into the packet's canonical rows (the R-FIELD-LISTS
+   domains) into the packet's canonical rows (the R-DELEGATION-CLOSURE
    discipline extended to cross-artifact references), and state the
    PROOF BOUNDARY for any pulled rule the packet's own surface cannot
    decide. A delegating claim left as a pointer is a self-containment

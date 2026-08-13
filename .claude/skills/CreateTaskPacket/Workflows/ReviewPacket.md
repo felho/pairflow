@@ -156,7 +156,7 @@ drift)*
    never memory); rejection strings match ledger §3 EXACTLY (grep);
    operative material is verbatim (spot-check one unit); contract/type
    rows carry registry **field lists**, not entity names
-   [R-FIELD-LISTS]; the trace is an executable expectation; rejection
+   [R-DELEGATION-CLOSURE]; the trace is an executable expectation; rejection
    branches covered or explicitly deferred, drift-test surface named.
 2. **Projection/Delegation Closure**: every claim that DELEGATES its
    definition (*"P1-declared"*, *"per ledger §X"*, *"canonical body"*)
@@ -202,10 +202,10 @@ driven; wide-claim coverage; the prose-obligation pair; the text
 sweep)*
 
 1. The Claim is WIDE and its dimensions enumerated BEFORE derived test
-   rows [R-WIDE-CLAIM, R-DIMENSIONS]; negatives derive from the
+   rows [R-CLAIM-NEGATIVES, R-DIMENSIONS]; negatives derive from the
    claim/matrix, never the implemented rule list [R-CLAIM-NEGATIVES].
 2. **Every canonical matrix lane is DRIVEN** by a named test
-   obligation [R-MATRIX-LANES]. A lane declared "cannot occur" either
+   obligation [README §4 step 2]. A lane declared "cannot occur" either
    leaves the matrix for an explicitly-marked non-lane note (with the
    prior-contract proof cited) or gets driven. **Sensitivity probe
    (adopted at the ch8 boundary — the ch8-P2 arm-gate-2 catch)
@@ -244,8 +244,8 @@ sweep)*
    range/scalar consistency** — lane ranges and counts stated in prose
    verified against the actual lane set.
 5. Numeric-domain validators state the full ladder incl. `-0` via
-   `Object.is` [R-NUMERIC-LADDER]; structure-vs-semantics drawn in ONE
-   place [R-STRUCTURE-SEMANTICS]; test obligations phrased as
+   `Object.is` [R-DIMENSIONS]; structure-vs-semantics drawn in ONE
+   place (one-place discipline — lens duty, own carrier); test obligations phrased as
    EXECUTION [R-EXECUTION]; hostile fixtures staged through preserving
    channels — a stringify-built hostile fixture is a WATCHPOINT
    (a standing authoring discipline — its registry row retired at
