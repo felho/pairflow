@@ -291,3 +291,17 @@ boundary, scored against outcomes, per the learning loop.
   owner the build runs, plus today's measured values kept as a floor
   ("a re-run may extend, never drop"). Ex-ante lens candidate for
   every future packet's set-shaped claims.
+- **Practice-born gates are process debt (recorded 2026-08-13, the
+  user's ruling at the ch13-p1b build launch).** A standing human
+  checkpoint that no ratified mode machinery produced — the
+  "stage-plan approval" the general's kickoffs carried at both ch13
+  builds — works against the autonomy ramp twice over: it bypasses
+  the signal-born gate design (flags/STOPs decide the mode, §5.5),
+  and it HIDES systemic defects — a misreading hand-fixed at an
+  informal gate never becomes a recorded finding, so the packet or
+  process gap it signals is never repaired. The measured case: the
+  p1b session raised its two real questions from its OWN stop
+  discipline; the mandated gate added nothing. Disposition: retired,
+  not codified. Kickoffs are mission + pointer; gates come only from
+  the ratified machinery, and a cold builder's misreading is
+  process-fix DATA, not something to intercept.
