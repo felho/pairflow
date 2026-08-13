@@ -30,7 +30,18 @@ not process rules. Each stays here until its underlying fix lands
   item — do not fix it as a side effect).
 - **Regression suites run SERIALLY and ALONE** — concurrent full-suite
   runs poison the reviewer's regression lens (measured: five
-  concurrent runs produced false journey timeouts), and an
-  interrupted run can orphan a tmux client on the shared default
-  socket, wedging every later tmux call (the per-run-socket fix is a
-  boundary candidate).
+  concurrent runs produced false journey timeouts). The tmux half of
+  the old hazard is fixed — the lanes ride a private per-run server
+  and reap orphans since `a91c08dc`/`a9bbd399` — the lens-poisoning
+  half stands.
+- **Transport (user ruling, 2026-08-10, first exercised at ch13-p1a
+  arm gate 2):** arm runs go PRIMARILY through the `gptsol` agent
+  (Agent tool; model and effort are pinned in the agent definition —
+  the call must NOT pass a model parameter: a `model:` override
+  caused one invalidated pin-mismatch run, recorded in the p5
+  record). `arm_run.sh` stays as the portability fallback; its
+  20-minute cap killed four actively-working runs (the recalibration
+  is a boundary item). Reproduce the guards by hand on this
+  transport: basis-hash check before and after the run, provenance
+  (transport · model · effort · timestamps) in the verdict header.
+  The pin table gains a transport column at the boundary review.
