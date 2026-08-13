@@ -1232,3 +1232,37 @@ lanes this packet declares, which is precisely the class the build-close
 sensitivity pass exists to catch, and neither was visible to any
 instrument the packet names — the suite and the typecheck were green
 throughout. Post-fold verification re-ran the full chain and `ci:local`.
+
+```json
+{
+  "packet_metrics": {
+    "class": "dispatch activation (the l2b render + the packet field + the shipped catalog entry)",
+    "prediction": {
+      "predicted": "projection",
+      "reasoning": "inherited from the ch13-p1 v2 row (basis: the ratified ch13v2 contract); the p1a/p1b split preserved the row's values unchanged",
+      "discovered": "projection"
+    },
+    "provenance": {
+      "anchored": 11,
+      "derived": 4,
+      "new_decision": 1
+    },
+    "rounds": {
+      "review": 7,
+      "doc_refinement": 0,
+      "implementation": 2
+    },
+    "stops": [
+      {
+        "type": "4:flagged-approve",
+        "what": "five approve-ratified routes plus one new-decision row rode ten pre-approval flags to the human; the inherited flag-free letter reached the packet and its §5.5 condition failed at authoring",
+        "resolution": "ratified at the 2026-08-11 approve (db57d42e); flag 1 ratified TWICE — the arm's re-check refuted the first ratified body and the corrected sentences went back for re-ratification rather than being folded silently"
+      }
+    ],
+    "detector_misses": [],
+    "learned": "a packet-declared acceptance lane can be BORN asserting a named projection of its claim's surface — both arm gate-2 blockers were this class (the byte-scope lane watched two named columns; the code-exclusivity positive matched serialized text), invisible to every instrument the packet names; the confinement-minus-permitted-delta fold shape is routed to the boundary",
+    "baseline_note": "LATE-WRITTEN at the ch13 boundary (2026-08-13), from repo-carried records ONLY — rounds from ch13-rederivation-arm/p5/p1b-review-record.md (§3: seven internal panel rounds; §4: two arm gate-1 passes, order inverted on the owner's call), stops from the approve commit db57d42e and plan §13.4, implementation = the one build round plus the one arm-gate-2 fold round; the block was MISSING at build close (a §5.5-convention breach — process-log 2026-08-13 carries the diagnosis), and the flag-6 mutation dual-run never ran at build while the close's own attempt aborted in the harness (same log entry)",
+    "main_thread_model": "claude-opus-5[1m]"
+  }
+}
+```
