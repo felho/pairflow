@@ -155,3 +155,66 @@ prose — the class the catalog holds cleanly), retired when EC lands.
 
 The class assignment in §2 is a judgment call, not a machine output; a re-run
 that disagrees on a specific id should say so rather than silently re-bucket.
+
+## 7. Addendum — the ch13 boundary walk (2026-08-13; discharges plan §1.3 carried item 3)
+
+The obligation: before the plan sequences the chapters that follow ch13,
+walk the post-cut and late-Block-A layers against this audit and record,
+per layer, whether v1-workflow replication needs it EARLIER than the cut
+("build until local WF-7 runs", `approach.md`) implies. Walked at the
+ch13 boundary; every claim was source-cited at execution (the boundary
+session's walk record); the per-layer verdicts:
+
+| Layer (state) | Needs it earlier if target = v1-replacement? | Ground |
+|---|---|---|
+| **EC** emit-contract (post-cut; 11/12 units pending in `unitMap.json` — the tripwire holds) | **YES** — a real actor's malformed/empty payload is ACCEPTED today (no payload validation, no verify-gate family); a swapped-in v3 would be weaker than v1 exactly where v1 mechanizes discipline. For the WF-7 target: NO | this audit §4/§5; `approach.md` "the last v1-parity gap" |
+| **L5** Help (post-cut; 11 units pending) | **PARTIAL** — needed for full local v1 parity by the model's own sentence, but ZERO prompt-parity evidence (none of the 37 v1 concerns is a help instruction) | `approach.md` L5 note |
+| **L3** human decision (PRE-cut; 18 units pending; **no chapter**) | NO — it is inside the cut. But it is the largest unbuilt pre-cut slice and no chapter owns it | audit silent; cut definition |
+| **L4** child workflows (PRE-cut; 14 units pending; **no chapter**) | NO — cut-defining, same gap: no chapter | audit silent |
+| **LC3a** workflow actions (pre-cut; 11 pending) | NO — but an L3 chapter without LC3a leaves approve→commit→merge half-manual; sequence adjacent | L3's `commit_pending` deferral note |
+| **LC1/LC2/LC3b/LC4, L0f, L0g** (pre-cut) | NO for each — audit-silent, no actor-facing content | — |
+| **L2b declared Absents** (computed/templated bodies; the phase axis; conditional bodies — NO level, NO candidate) | **YES** for v1-replacement — 4 of the audit's Class-B concerns need computed bodies, the startup-vs-resume axis has no v3 counterpart; a v1-replacement template must hardcode config-derived values into static prose, which silently lies after a config bump (the shipped caveat's exact hazard). IF v1-replacement becomes a target, these route to the MODEL PLANE for leveling first ("no Absent is speculatively implemented" — plan §1.4); no plan candidate may precede that act | this audit §2/§3 |
+
+**The system-level vs workflow-level split (the owner's 2026-07-26
+sub-question, answered).** Workflow-level prose (role instructions,
+severity/decision rubrics, gate-rule communication) is correctly
+template-carried by the ch13 catalog. THREE system-level instructions
+survive kernel-design erasure, with their carriers:
+
+1. **The packet-read bootstrap** ("your packet is at `$PAIRFLOW_PACKET`
+   — read it"): only ADAPTER-SIDE shaping can carry it — a block inside
+   the packet cannot bootstrap reading the packet, and the adapter
+   already owns the transport (it defines both env names,
+   `actorAdapter.ts`). Today it is supplied BY HAND per invocation.
+2. **The emit envelope** (write ONE `{type, payload}` JSON to
+   `$PAIRFLOW_EMIT`; malformed = silent no-output; well-formed may
+   still be rejected): the recorded retirement plan (EC's
+   `op_contracts` supersedes the interim block) has a GAP — the
+   projection carries per-op SHAPE, not the file-transport MECHANICS.
+   Retiring the interim block on EC alone reopens §5 in a narrower
+   form. The EC chapter's ratification MUST therefore decide the
+   transport carrier: adapter-side shaping (implementation-plane
+   Absent-narrowing) or a kernel-injected default block (a MODEL-PLANE
+   act — not modeled today). Bound into the plan's EC candidate row.
+3. **Per-op payload contracts**: EC's designed, modeled projection —
+   covered, no debate.
+
+**THE STAKE MEASUREMENT (carried here so the EC chapter's transport
+decision never re-derives it).** Today a from-scratch template admits
+CLEANLY with zero catalog and zero refs — the ref check proves
+resolution, not presence, and only the SHIPPED template's entry
+presence is pinned. Its dispatched packet carries `availableOps` but no
+emit instruction; an actor that does not guess the envelope writes no
+emit file, which the system reads as producing NO OUTPUT AT ALL —
+silently, with nothing to correct. The instance sits dispatched
+indefinitely; NO admission-time or run-time signal tells the author an
+instruction was missing. The knowledge is back outside the system —
+§5's finding, re-created per new template. This sentence is the stake
+of the EC transport-carrier decision.
+
+**Sequencing read (recorded, not enacted — chapter entry stays the
+owner's explicit act):** no re-cut is warranted (a mis-drawn cut would
+be a model-plane divergence-stop matter, and the walk found none); the
+cut's own critical path is L3 + L4 (chapters missing); EC is the first
+post-cut chapter with audit-evidenced actor-facing need; ch10
+(recourse card) is audit-silent — no evidence moves it either way.

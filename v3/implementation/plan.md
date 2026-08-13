@@ -172,7 +172,17 @@ digest branch, `offerable_ops`), whose packet-projection leg
 assertions, evidence obligations, from the SAME lookup the validator
 uses) is the MECHANIZED successor to what ch 13 ships as authored
 prose. The model plane calls it "the last v1-parity gap" and orders
-it AFTER the MVP cut — the tension §1.3's carried item (3) re-reads.
+it AFTER the MVP cut — the tension §1.3's carried item (3) re-read at
+the ch13 boundary (2026-08-13; the walk record is
+`v1-prompt-parity-audit.md` §7): the cut stands, and EC is the FIRST
+post-cut chapter with audit-evidenced actor-facing need. RATIFICATION
+DUTY bound here by that walk: the chapter's ratification DECIDES the
+transport carrier of the interim envelope block's retirement —
+adapter-side shaping (implementation-plane Absent-narrowing) or a
+kernel-injected default block (a MODEL-PLANE act, not modeled today) —
+because EC's `op_contracts` projection carries per-op SHAPE, not the
+file-transport mechanics; the STAKE MEASUREMENT lives in the audit §7
+addendum and is not re-derived at that ratification.
 **Retirement obligation bound here (the carrier choice, user-ratified
 2026-07-25): the chapter that enters this candidate carries in its
 DoD the retirement of ch 13's interim emit-envelope catalog entry**
@@ -224,7 +234,11 @@ envelope shape until it lands (§5 of the audit). OBLIGATION: before
 this plan sequences the chapters that follow the L2b chapter, walk
 the post-cut and late-Block-A layers against the audit and record,
 per layer, whether v1-workflow replication needs it EARLIER than the
-cut implies. The walk's explicit sub-question (raised by the owner at
+cut implies — **DISCHARGED at the ch13 boundary (2026-08-13):** the
+walk ran and its per-layer record is `v1-prompt-parity-audit.md` §7;
+no re-cut warranted; the EC candidate row above carries the bound
+ratification duty; the CRITICAL-PATH note below carries the
+sequencing read. The walk's explicit sub-question (raised by the owner at
 the ch13 draft ratification round, 2026-07-26): which actor-facing
 instructions are SYSTEM-level rather than workflow-level, and does
 each have a template-INDEPENDENT carrier — the candidate carriers
@@ -248,6 +262,18 @@ receipt lives in the ch9-C26 map entry's open note). WORK ITEM: the
 gate runner's spawn outcomes join the existing best-effort diag
 channel, with tests, owned by the next runner-touching chapter; the
 ch9-C26 map entry's UNDER-REALIZATION note retires with it.
+
+**Critical-path note (recorded at the ch13 boundary walk, 2026-08-13
+— sequencing input for the next-chapter derivation; chapter entry
+stays the owner's explicit act):** the MVP cut's own remaining
+critical path is **L3 (human decision-request, 18 pending units) and
+L4 (child workflows, 14 pending units) — NEITHER has a chapter**; they
+are what "local WF-7 runs" still needs, ahead of any post-cut layer.
+LC3a (workflow actions) sequences adjacent to L3 (the `commit_pending`
+action), else approve→commit→merge stays half-manual. EC is the first
+post-cut chapter (its row above); the L2b computed-bodies/phase-axis
+Absents route to the MODEL PLANE for leveling FIRST if v1-replacement
+ever becomes a target (audit §7's conditional route).
 
 **Ordering note (walking-skeleton-first, README §3.4).** Chapter 3 before
 chapter 4 does not contradict the principle: ch 3 is the constraint-sink /
