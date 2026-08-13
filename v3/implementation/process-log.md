@@ -5718,3 +5718,58 @@ final CLEAN.
   asserted on the field, never by finding its token in a serialization.
   Not decided here — the disposition, and whether either shape earns a
   template line or a lint, is the boundary's. `Route: boundary-review`
+
+- 2026-08-13 (ch13 CLOSE, the dogfooding checkpoint — RUN, the acceptance
+  floor's live half) · **THE BLOCK REACHES THE ACTOR, END TO END.** The
+  DoD's live half asks for a hand-driven run whose actor's `packet.json`
+  carries the catalog block. Executed on the shipped surfaces with a
+  deterministic stub actor: `create` → `start` (the canonical template,
+  a real `pairflow.worktree` provisioned at
+  `/Users/felho/dev/.pairflow-worktrees/…`) → `runner run --once` (the
+  real adapter over the tmux channel). The captured packet carried
+  `contextBlocks: [{ id: "emit-envelope", body: <the shipped body,
+  verbatim>, provenance: { sources: [{ source: "role_config" }] } }]`
+  beside `availableOps: ["PASS"]`; the actor read `availableOps` out of
+  the packet the block describes, emitted `PASS`, ingress committed it
+  and the errand reached `confirmed`. NO finding: the surface behaved as
+  the chapter's rows say. Worktree and branch removed after the run; the
+  captured packet is the receipt.
+
+- 2026-08-13 (ch13 CLOSE, the mutation-pilot's last data point — NOT
+  OBTAINED, and the failure is itself the measurement) · **THE PILOT
+  COULD NOT RUN ITS OWN SUITE.** ch13-p1b's Build record names its
+  dual-run "the last input to the keep-or-stop decision" and the build
+  never executed it, so the close attempted it: scope
+  `src/kernel/contextBlocks.ts,src/kernel/dispatchIntent.ts,
+  src/domain/dispatch.ts,src/domain/index.ts` through `pnpm v3:mutation`,
+  the committed config untouched. It ABORTED in the dry run, twice
+  (second attempt after `rm -rf .stryker-tmp`), before a single mutant
+  ran: the drift suite resolves the ledger by a repo-root-relative URL
+  (`../../../v3/model/ledger.md` from `src/drift/`), which does not exist
+  inside Stryker's sandbox — `ENOENT: .stryker-tmp/v3/model/ledger.md`.
+  NOT worked around: excluding the drift lanes would remove exactly the
+  suites that kill `domain/index.ts` mutants and yield a
+  non-comparable number. Note the asymmetry with ch13-p1a's successful
+  3 238-mutant run over `src/definition/**` on the same profile — the
+  abort is reproducible today and its cause is in the harness, not in
+  this packet. The receipt stands as friction data for the keep/stop
+  verdict. `Route: boundary-review`
+
+- 2026-08-13 (ch13 CLOSE, the ratification act — caught by the OWNER at
+  the gate) · **A SUBAGENT MODEL OVERRIDE WENT SILENTLY UNAPPLIED, AND
+  ONLY THE HUMAN SAW IT.** The owner asked for a Fable pass over the
+  ratification block's text; the invocation requested Fable; the pass ran
+  on OPUS. Nothing in the invocation, the agent's own report, or any gate
+  surfaced the discrepancy — the reviewer does not state its tier and no
+  check compares requested-vs-actual, so the loop's own record would have
+  claimed a Fable review that never happened. The owner caught it at the
+  ratification and ordered the correction, which is now IN the ratified
+  `arms` text rather than smoothed. THE CLASS is the ch13-p1a arm gate-2
+  pin nonconformance one level up (that run was INVALIDATED by a pin
+  mismatch the runner DID validate) — the same failure, on the transport
+  that has no pin check: `arm_run.sh` validates its header pin, the Agent
+  transport validates nothing. Two candidate closures for the boundary to
+  weigh: a requested-vs-actual tier assertion on any agent invocation
+  whose record names a tier, or the narrower rule that a record may name
+  a tier only when the tier is machine-confirmed. Not decided here.
+  `Route: boundary-review`
