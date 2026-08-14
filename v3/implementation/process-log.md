@@ -5858,3 +5858,25 @@ final CLEAN.
   observation (WATCH). The REV-registry gap (p1b's id-less review
   binding) stays acknowledged — a REV row is minted on second need,
   per the admission bias.
+
+- 2026-08-14 (the boundary tooling batch's arm leg — the
+  verification-surface rule's own receipt) · **SIX EXECUTED
+  COUNTEREXAMPLES, TWO OF THEM THE GATES' OWN BLIND SPOTS.** The
+  four-member batch went through one full adversarial round + two
+  scoped re-checks (yield 4 → 1 → 1, transport gptsol, byte guards
+  clean every round). Round 1: a non-object packet_metrics value
+  satisfied the exactly-one count; a side-effecting BASELINE command
+  left the target mutated (the green-baseline gate's own blind spot —
+  the guard guarded the mutation path, not its own instrument run);
+  an unchecked mv leaked the tmp verdict and substituted exit lanes;
+  a lookalike token prefix-matched. Re-check 1: the fold's restore
+  path crashed on a dir-replacement (unguarded digest). Re-check 2:
+  a same-byte SYMLINK passed the intact-guard (is_file() follows
+  symlinks). Every fold shipped with negative selftest lanes
+  (check_packet 140 → 143 red dims; probe_runner 12 → 32 cases, the
+  count now computed, not hardcoded). The pattern the batch's own
+  review keeps proving: the author's premise IS the blind spot — a
+  gate's builder cannot see the vacuous way to satisfy their own
+  count, and only the executed-counterexample discipline finds it.
+  Rule attribution: [R-CLAIM-FORM-PROBES] ×4, [R-LANE-SENSITIVITY]
+  ×2 — the first tally under the new convention.
