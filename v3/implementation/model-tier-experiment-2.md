@@ -320,3 +320,11 @@ design and this divergence is informative, not a defect. Spread:
   block was missing at build close and was late-written at this
   boundary from repo-carried records (process-log 2026-08-13 names
   the breach; the block's `baseline_note` names its sources).
+- 2026-08-14 — ch14 (human decision core) RATIFIED with main-thread
+  arm = **Fable-class** (the §2 alternating assignment following
+  ch13, the experiment's first Opus chapter; recorded at chapter
+  ratification per §5). Panel lenses and the external arm unchanged
+  (arm-pin.md); the mutation pilot is STOPPED (ch13 boundary verdict
+  (b)) — no dual-run. The chapter's per-packet difficulty scores
+  append here at each approve, main-thread model machine-confirmed
+  per the TIER-RECORD rule.

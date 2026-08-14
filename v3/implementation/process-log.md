@@ -5880,3 +5880,44 @@ final CLEAN.
   count, and only the executed-counterexample discipline finds it.
   Rule attribution: [R-CLAIM-FORM-PROBES] ×4, [R-LANE-SENSITIVITY]
   ×2 — the first tally under the new convention.
+- 2026-08-14 · ch14 (human decision core) RATIFIED (user GO). The L3
+  human-decision surface entered as chapter 14, the FOURTH live use
+  of the map-extension mechanism — and the first deriving NOT from a
+  prior named candidate but from the ch13 boundary's critical-path
+  note (L3 + L4 chapterless = the MVP cut's own critical path; the
+  user opened the session on that note's letter, "elvileg az L3
+  jön"). Two scoping decisions, taken stepwise with the
+  one-decision-per-message cadence: (1) LC3a stays OUT — the user's
+  own framing ("how much must these two share one contract") decided
+  it: the model already factored the sharedness (ChoicePoint, the
+  shared arrival spine, the Directive family), so the sharedness is
+  CONTRACT-level, realized as the ch14 draft's shared-grain
+  ChoicePoint C-rows (key → { target, payload? }, no `emits` — §8.2
+  chapter grain), while the CAS-claim run protocol and the
+  ActionRunner leg are genuinely LC3a's own machinery; LC3a entered
+  as the SEVENTH named candidate with three bindings (adjacency =
+  the next implementation chapter, entry act staying the user's;
+  anchoring = its draft extends the ch14 rows additively, the
+  re-lock holding the fork; carried-item home = plan item (4) lands
+  there, runner-touching by construction). Scale was the second
+  ground: 18 units is ch11/ch12-scale, 29 would exceed every
+  precedent and muddy the Fable data point. (2) Acceptance floor =
+  capability AND shipped wiring (the ch13 disposition-1 precedent,
+  R-ACTIVATION-JOURNEY): local-pair-v0 gains operator +
+  human_approval + commit_pending, journey smoke through the shipped
+  entrypoint; v1-faithful, no product decision smuggled; the known
+  commit_pending → commit_action two-step accepted as the ladder's
+  own rhythm. Standing carriers routed at ratification: the
+  integer-key ban bundle rides HERE (first format-touching chapter
+  since the boundary named the carrier); carried item (4) and the
+  sixth candidate (gate-config) explicitly NOT taken, with grounds
+  (no spawn; human_gate is a step type, not the gates/ surface).
+  Main-thread arm: Fable-class (the §2 alternating assignment,
+  recorded in the experiment's §8 log; the session's model was set
+  to Fable BEFORE entry — the ch13 tier-deviation lesson applied
+  forward). The ratification presentation itself ran as a
+  decision-inventory round: the user asked "what substantive
+  decisions does this ratification carry" before GO — the answer
+  separated already-ratified scoping from the six ratification-borne
+  items (adjacency binding the heaviest) — a cadence worth keeping
+  for chapter ratifications.
