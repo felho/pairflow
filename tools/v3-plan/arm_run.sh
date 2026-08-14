@@ -46,10 +46,32 @@ if [ "$REQUIRE_CLEAN" = 1 ]; then
 fi
 G_BEFORE="$(guard)" || { echo "arm_run: GUARD MEASUREMENT FAILED (before)"; exit 6; }
 
+# BYTE-GUARD SELF-TRIP FIX (process-log 2026-08-07): codex output is
+# written to a mktemp file OUTSIDE the repo — a repo-pathed $OUT used
+# to appear as a new/changed untracked file between the two guard
+# takes, tripping the guard (exit 4) on every repo-pathed run before
+# pin validation. The tmp file moves to the requested $OUT only AFTER
+# the post-run guard comparison, so the guard never sees it. (A
+# repo-pathed PROMPT file is fine as-is: it exists before AND after,
+# so the untracked hash set is identical.)
+OUT_TMP="$(mktemp)" || { echo "arm_run: mktemp failed"; exit 6; }
+# Arm fold (2026-08-14 review, finding 3): the publish itself is
+# CHECKED — a failed mv used to fall through and misclassify as
+# pin-mismatch (empty header fields), an exit-lane substitution; and
+# the tmp file leaked. publish() reports failure loudly and the trap
+# clears any unpublished tmp on every exit.
+trap '[ -f "$OUT_TMP" ] && rm -f "$OUT_TMP"' EXIT
+publish() {  # $1 = the lane's message context; returns 0 iff $OUT is written
+  if mv -f "$OUT_TMP" "$OUT" 2>/dev/null; then return 0; fi
+  echo "arm_run: OUTPUT PUBLISH FAILED ($1) — verdict preserved at $OUT_TMP (not deleted)"
+  trap - EXIT  # keep the tmp file for manual recovery
+  return 1
+}
+
 set -m  # own process group for the codex job => killable as a group
 codex exec --sandbox danger-full-access -m "$MODEL" \
   -c "model_reasoning_effort=$EFFORT" -c approval_policy=never \
-  - < "$PROMPT" > "$OUT" 2>&1 &
+  - < "$PROMPT" > "$OUT_TMP" 2>&1 &
 CPID=$!
 TIMED_OUT=0
 SECS=0
@@ -68,22 +90,31 @@ if [ "$TIMED_OUT" = 1 ]; then
   # the POST-guard is mandatory on EVERY exit lane (NEW-ARM-03: a
   # timed-out reviewer's repo writes must surface as a guard trip,
   # which OUTRANKS the timeout classification)
-  G_AFTER="$(guard)" || { echo "arm_run: GUARD MEASUREMENT FAILED (after timeout)"; exit 6; }
+  G_AFTER="$(guard)" || { publish "after-timeout guard-infra lane" || true; echo "arm_run: GUARD MEASUREMENT FAILED (after timeout)"; exit 6; }
   if [ "$G_BEFORE" != "$G_AFTER" ]; then
+    publish "timed-out guard-trip lane" || true
     echo "arm_run: BYTE GUARD TRIP during a TIMED-OUT run — verdict INVALID, tree touched"
     diff <(printf '%s' "$G_BEFORE") <(printf '%s' "$G_AFTER") || true
     exit 4
   fi
+  publish "timeout lane" || true
   echo "arm_run: TIMEOUT after ${TIMEOUT}s, process group killed, guards clean (infra lane, §6 item 8)"
   exit 5
 fi
 
-G_AFTER="$(guard)" || { echo "arm_run: GUARD MEASUREMENT FAILED (after)"; exit 6; }
+G_AFTER="$(guard)" || { publish "guard-infra lane" || true; echo "arm_run: GUARD MEASUREMENT FAILED (after)"; exit 6; }
 if [ "$G_BEFORE" != "$G_AFTER" ]; then
+  publish "guard-trip lane" || true
   echo "arm_run: BYTE GUARD TRIP — verdict INVALID"
   diff <(printf '%s' "$G_BEFORE") <(printf '%s' "$G_AFTER") || true
   exit 4
 fi
+# the guard comparison is done — the verdict may now land at its
+# requested (possibly repo-pathed) home; every later step reads $OUT.
+# A failed publish here is an INFRA failure (exit 5, the codex-error
+# lane's class): the header checks below read $OUT and would otherwise
+# misclassify an unwritten file as a pin mismatch.
+publish "normal lane" || exit 5
 # rc FIRST (ARM-02: a dead codex must classify as codex-error, never pin-mismatch)
 [ "$CODEX_RC" -eq 0 ] || { echo "arm_run: codex exit $CODEX_RC (infra lane)"; exit 5; }
 HDR_MODEL="$(grep -m1 '^model:' "$OUT" | awk '{print $2}')"

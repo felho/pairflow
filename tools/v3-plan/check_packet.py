@@ -78,6 +78,16 @@ Packets (v3/implementation/packets/*.md, README.md excluded):
       POSITIVELY too: the audited commit must change the packet file
       itself — a code-only or follow-up commit is the wrong audit
       target.
+      The build-close METRICS GATE rides this path (ch13 boundary —
+      the p1b missing-block breach): the packet's bytes AT THE
+      AUDITED COMMIT must carry EXACTLY ONE packet_metrics block —
+      zero blocks is the loud "packet_metrics missing at build close
+      — the block is written once at build close" error (the §5.5
+      convention) — and a ch13+ packet (the filename's ch<N>- number)
+      must carry main_thread_model in that block. POST-BUILD ONLY:
+      P7 keeps the block itself optional on the plain lint path, and
+      main_thread_model stays optional there and for pre-ch13
+      chapters.
   P9. Fold-time prose-tally cross-lock (the ch8-opening deferred fix;
       AL-20 applied to the packet's own header): every UNFENCED prose
       occurrence of the tally form `<n> anchored / <m> derived /
@@ -229,6 +239,16 @@ Drafts (v3/implementation/contracts/*.md, README.md excluded):
       gating on it would red every future approve. Terminality is a
       FORM rule, not a lint claim — no transition out of superseded
       exists to be checked from a single document's bytes.
+  D9. The superseded-target token scan (ch13 boundary — the ch11
+      pointer case), REPORT-ONLY: packet manifest refs refuse a
+      superseded target (P4/D8.7), but cross-contract
+      contract:<surface>#Cn tokens in CONTRACT files were scanned by
+      nothing. Every ratified-or-later draft's C-row TABLE LINES and
+      realized_map string values are scanned with the P10 token
+      regex; a token targeting a superseded draft emits a NOTE on the
+      note: channel — NEVER an error (the LEAVE-WITH-RECORD state is
+      legitimate; the scan makes it visible). Context/prose sections
+      are deliberately not scanned — history lives there.
 
 History-audit continuity (ADR-015): D5 and P8 audit HISTORY against
 the CURRENT repo-relative path via `git show <commit>:<rel>`. Commits
@@ -935,7 +955,8 @@ def check_draft(path: Path, checker: Checker) -> dict | None:
             f"does not match filename"
         )
 
-    rows_list = [C_ROW_RE.match(line).group(1) for line in c_row_lines(text)]  # type: ignore[union-attr]
+    row_lines = c_row_lines(text)
+    rows_list = [C_ROW_RE.match(line).group(1) for line in row_lines]  # type: ignore[union-attr]
     dupes = {r for r in rows_list if rows_list.count(r) > 1}
     if dupes:
         checker.error(f"{path.name}: duplicate C-row ids {sorted(dupes)}")
@@ -1030,7 +1051,20 @@ def check_draft(path: Path, checker: Checker) -> dict | None:
                         f"landing-site string"
                     )
 
-    return {"status": status, "rows": rows}
+    # The superseded-target token scan's inputs (ch13 boundary — the
+    # ch11 pointer case): the C-row TABLE LINES and the realized_map
+    # values are the two machine surfaces cross-contract tokens live
+    # on; Context/prose sections deliberately stay out (history lives
+    # there). Resolution needs the FULL drafts dict, so the scan
+    # itself runs after collect_drafts — see scan_superseded_targets.
+    map_obj = maps[0] if len(maps) == 1 and isinstance(maps[0], dict) else {}
+    return {
+        "status": status,
+        "rows": rows,
+        "name": path.name,
+        "c_lines": row_lines,
+        "map": map_obj,
+    }
 
 
 # ---------------------------------------------------------------- packets
@@ -1776,6 +1810,52 @@ def check_post_build(
         return
     frame_rel, text = shown
     blocks = json_blocks(text, packet_path.name, checker)
+    # The build-close METRICS GATE (ch13 boundary — the p1b
+    # missing-block breach): P7 leaves a MISSING packet_metrics block
+    # silently green on the plain lint path (the block is optional
+    # there by design — it does not exist until close), so the
+    # build-close audit is the one place the §5.5 convention can bind:
+    # the packet's bytes AT THE AUDITED COMMIT carry exactly one
+    # block, and a ch13+ packet's block carries main_thread_model.
+    metrics_blocks = block_by_key(blocks, "packet_metrics")
+    if len(metrics_blocks) == 0:
+        checker.error(
+            f"{packet_path.name}: packet_metrics missing at build close — the "
+            f"block is written once at build close (the §5.5 convention); the "
+            f"audited commit's packet bytes must carry exactly one "
+            f"packet_metrics block (ch13 boundary — the p1b missing-block "
+            f"breach)"
+        )
+    elif len(metrics_blocks) > 1:
+        checker.error(
+            f"{packet_path.name}: {len(metrics_blocks)} packet_metrics blocks "
+            f"at the audited commit; exactly one — the block is written once "
+            f"at build close (the §5.5 convention)"
+        )
+    elif not isinstance(metrics_blocks[0], dict):
+        # Arm fold (2026-08-14 review, finding 1): a non-object value —
+        # {"packet_metrics": "not-an-object"} — satisfied the exactly-one
+        # count while the required field could not even exist. The gate
+        # refuses the shape here; the DEEP schema stays P7's job.
+        checker.error(
+            f"{packet_path.name}: packet_metrics at the audited commit is "
+            f"not an object — the block's value must be an object (the "
+            f"exactly-one gate is not satisfiable by a non-object value)"
+        )
+    else:
+        chapter_m = re.match(r"ch(\d+)-", packet_path.name)
+        if (
+            chapter_m is not None
+            and int(chapter_m.group(1)) >= 13
+            and "main_thread_model" not in metrics_blocks[0]
+        ):
+            checker.error(
+                f"{packet_path.name}: packet_metrics at the audited commit "
+                f"lacks main_thread_model — required at build close for ch13+ "
+                f"(ch13 boundary — the p1b missing-block breach); the key "
+                f"stays optional on the plain lint path and for pre-ch13 "
+                f"chapters"
+            )
     boundaries = block_by_key(blocks, "mutation_boundary")
     if len(boundaries) != 1:
         checker.error(
@@ -1871,6 +1951,75 @@ def collect_drafts(
     return drafts, reopened, superseded
 
 
+def scan_superseded_targets(drafts: dict[str, dict], checker: Checker) -> None:
+    """The superseded-target token scan (ch13 boundary — the ch11
+    pointer case), REPORT-ONLY: packet manifest refs REFUSE a
+    superseded target (P4/D8.7), but cross-contract contract:<surface>#Cn
+    tokens in CONTRACT files' C-row lines and realized_map values were
+    scanned by nothing — the LEAVE-WITH-RECORD items stayed invisible.
+    Every ratified-or-later draft's two machine surfaces (C-row TABLE
+    LINES, realized_map string values) are scanned with the P10 token
+    regex; a token whose target draft is superseded emits a NOTE on the
+    note: channel — NEVER an error: leaving a recorded pointer in place
+    is a legitimate, deliberate state (the target's own record names
+    what happened), and this scan exists to keep it VISIBLE, not to
+    forbid it. Context/prose sections are not scanned — history
+    deliberately lives there."""
+
+    def resolve(surface: str) -> dict | None:
+        if surface in drafts:
+            return drafts[surface]
+        # A token written without the ch<N>- prefix resolves to the
+        # unique ch*-<surface> draft; ambiguity or no match stays
+        # silent — the scan is report-only, never a near-miss oracle.
+        matches = [k for k in drafts if re.fullmatch(rf"ch\d+-{re.escape(surface)}", k)]
+        return drafts[matches[0]] if len(matches) == 1 else None
+
+    def bounded(text: str, m: "re.Match[str]") -> bool:
+        # Arm fold (2026-08-14 review, finding 4): CONTRACT_TOKEN_RE has
+        # no trailing boundary, so `contract:x#C1oops` prefix-matched as
+        # a valid token. A match immediately followed by an alphanumeric
+        # is a lookalike, not a token — skipped, report-only either way.
+        end = m.end()
+        return end >= len(text) or not text[end].isalnum()
+
+    def emit(name: str, where: str, token: str) -> None:
+        checker.note(
+            f"{name} {where}: token {token} targets a SUPERSEDED draft "
+            f"(recorded successor may exist — see the target's record)"
+        )
+
+    seen: set[tuple[str, str, str]] = set()
+    for _slug, info in sorted(drafts.items()):
+        if info["status"] == "draft":
+            continue
+        name = info["name"]
+        for line in info["c_lines"]:
+            row_id = C_ROW_RE.match(line).group(1)  # type: ignore[union-attr]
+            for m in CONTRACT_TOKEN_RE.finditer(line):
+                if not bounded(line, m):
+                    continue
+                target = resolve(m.group(1))
+                if target is not None and target["status"] == "superseded":
+                    key = (name, f"row {row_id}", m.group(0))
+                    if key not in seen:
+                        seen.add(key)
+                        emit(*key)
+        for map_key in sorted(info["map"]):
+            value = info["map"][map_key]
+            if not isinstance(value, str):
+                continue
+            for m in CONTRACT_TOKEN_RE.finditer(value):
+                if not bounded(value, m):
+                    continue
+                target = resolve(m.group(1))
+                if target is not None and target["status"] == "superseded":
+                    key = (name, f"realized_map['{map_key}']", m.group(0))
+                    if key not in seen:
+                        seen.add(key)
+                        emit(*key)
+
+
 def lint(
     packets_dir: Path,
     contracts_dir: Path,
@@ -1894,6 +2043,7 @@ def lint(
             f"proves nothing; a nonexistent directory is an error, never a pass"
         )
     drafts, reopened, superseded = collect_drafts(contracts_dir, checker)
+    scan_superseded_targets(drafts, checker)
     # D8: superseded deliberately does NOT join this gate — it is a
     # PERMANENT resting state, so gating on it would red every future
     # approve, close and flip. Its enforcement is anchor-side.
@@ -1916,6 +2066,7 @@ def lint(
         "drafts": len(drafts),
         "reopened": reopened,  # the NAMES — D6 says the summary lists them
         "superseded": superseded,  # …and D8.9 says the same for these
+        "notes": checker.notes,  # report-only channel (superseded-target scan)
     }
     return checker.errors, stats
 
@@ -1929,6 +2080,8 @@ def run_lint(
     errors, stats = lint(packets_dir, contracts_dir, adr_dir, forbid_reopened=forbid_reopened)
     for msg in errors:
         print(f"packet-lint FAIL: {msg}", file=sys.stderr)
+    for msg in stats["notes"]:
+        print(f"packet-lint note: {msg}")
     reopened = stats["reopened"]
     reopened_note = f"{len(reopened)} reopened" + (f": {', '.join(reopened)}" if reopened else "")
     superseded = stats["superseded"]
@@ -1940,7 +2093,7 @@ def run_lint(
         f"{stats['grandfathered']} pre-v2 grandfathered, "
         f"{stats['drafts']} draft(s) linted "
         f"({reopened_note}, {superseded_note}), "
-        f"{len(errors)} error(s)"
+        f"{len(errors)} error(s), {len(stats['notes'])} note(s)"
     )
     return 1 if errors else 0
 
@@ -2078,7 +2231,7 @@ def build_superseded_fixture() -> tuple[tempfile.TemporaryDirectory, Path, Path,
 
 # The pinned size of the red-fixture register (see the check at the end
 # of run_selftest for why a printed number was not enough).
-EXPECTED_RED_DIMS = 140
+EXPECTED_RED_DIMS = 143
 
 
 def run_selftest() -> int:
@@ -3194,14 +3347,76 @@ def run_selftest() -> int:
         "realized_map present on status 'superseded'",
     )
 
+    # ---- D9 superseded-target token scan (report-only — the ch11
+    # pointer case): a realized draft citing the superseded draft in a
+    # C-row line AND a realized_map value gets a NOTE on both machine
+    # surfaces, and NO error — the LEAVE-WITH-RECORD state is
+    # legitimate; the scan makes it visible.
+    CITING_V1 = """# citing draft fixture
+
+```json
+{"contract_draft": {"chapter": "ch9", "surface": "other-surface", "status": "draft"}}
+```
+
+| ID | Rule |
+|---|---|
+| C1 | delegates to contract:ch9-test-surface#C1 |
+| C2 | lookalike contract:ch9-test-surface#C1oops is not a token |
+"""
+    fixture = build_superseded_fixture()
+    if fixture is None:
+        failures.append("selftest fixture setup failed: superseded-target-scan")
+    else:
+        tmp, root, _draft, packet4, _text, _off = fixture
+        packet4.unlink()  # the anchor dim owns packet-side redness
+        citing = root / "contracts" / "ch9-other-surface-contract.md"
+        citing.write_text(CITING_V1, encoding="utf-8")
+        _git_ok(root, "add", "-A")
+        _git_ok(root, "commit", "-q", "-m", "citing-content")
+        citing_sha = _git_out(root, "rev-parse", "HEAD")
+        realized = (
+            CITING_V1.replace('"status": "draft"', '"status": "realized"')
+            + RATIFICATION_TMPL.replace("%DATE%", "2026-08-06").replace("%COMMIT%", citing_sha)
+            + '\n```json\n{"realized_map": {"C1": "landed beside contract:ch9-test-surface#C1", "C2": "lookalike contract:ch9-test-surface#C1oops only"}}\n```\n'
+        )
+        citing.write_text(realized, encoding="utf-8")
+        errors, stats = lint(root / "packets", root / "contracts", ADR_DIR)
+        expect_green("superseded-target scan stays error-free", errors)
+        notes = stats["notes"]
+        row_note = (
+            "ch9-other-surface-contract.md row C1: token "
+            "contract:ch9-test-surface#C1 targets a SUPERSEDED draft"
+        )
+        if not any(row_note in n for n in notes):
+            failures.append(
+                f"selftest claim NOT held: superseded-target C-row note missing ({notes})"
+            )
+        if not any(
+            "realized_map['C1']" in n and "targets a SUPERSEDED draft" in n for n in notes
+        ):
+            failures.append(
+                f"selftest claim NOT held: superseded-target realized_map note missing ({notes})"
+            )
+        # Arm fold (2026-08-14 review, finding 4): the lookalike
+        # `...#C1oops` (row C2 and map key C2) must yield NO note —
+        # the bounded-token check refuses the prefix match.
+        if any("row C2" in n or "realized_map['C2']" in n for n in notes):
+            failures.append(
+                f"selftest claim NOT held: lookalike token wrongly noted ({notes})"
+            )
+        tmp.cleanup()
+
     # ---- P8 post-build (pinned bytes + merge rejection)
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         pdir = root / "packets"
         pdir.mkdir()
         packet = pdir / "ch9-p1-test.md"
+        # carries the build-close metrics block: these lanes prove the
+        # BOUNDARY rules, so the metrics gate must not be what reds them
         packet.write_text(
-            '# p\n\n```json\n{"mutation_boundary": {"files": ["x.txt"]}}\n```\n',
+            '# p\n\n```json\n{"mutation_boundary": {"files": ["x.txt"]}}\n```\n'
+            '\n```json\n{"packet_metrics": {"class": "t"}}\n```\n',
             encoding="utf-8",
         )
         (root / "x.txt").write_text("x", encoding="utf-8")
@@ -3349,6 +3564,66 @@ def run_selftest() -> int:
                 check_post_build(packet, _git_out(root, "rev-parse", "HEAD"), checker)
                 assert_red("post-build-empty-commit", checker.errors, "EMPTY change list")
 
+    # ---- P8 build-close metrics gate (ch13 boundary — the p1b
+    # missing-block breach): zero metrics blocks at the audited commit
+    # is red on the post-build path (P7 keeps the block optional at
+    # plain lint), and a ch13+ packet's block must carry
+    # main_thread_model — a ch12 packet without it stays green.
+    def _expect_metrics_gate(
+        name: str, packet_name: str, metrics_json: str | None, substr: str | None
+    ) -> None:
+        """A minimal valid build-shaped repo — ONE root commit landing
+        the packet with its boundary file, green on every other P8
+        rule, so a red can only come from the metrics gate."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            pdir = root / "packets"
+            pdir.mkdir()
+            gate_packet = pdir / packet_name
+            text = '# p\n\n```json\n{"mutation_boundary": {"files": ["x.txt"]}}\n```\n'
+            if metrics_json is not None:
+                text += f"\n```json\n{metrics_json}\n```\n"
+            gate_packet.write_text(text, encoding="utf-8")
+            (root / "x.txt").write_text("x", encoding="utf-8")
+            if not (_git_ok(root, "init", "-q") and _git_ok(root, "add", "-A") and _git_ok(root, "commit", "-q", "-m", "build")):
+                failures.append(f"selftest git fixture setup failed ({name})")
+                return
+            checker = Checker()
+            check_post_build(gate_packet, _git_out(root, "rev-parse", "HEAD"), checker)
+            if substr is None:
+                if checker.errors:
+                    failures.append(f"selftest green NOT green: {name} ({checker.errors[0]})")
+            else:
+                assert_red(name, checker.errors, substr)
+
+    _expect_metrics_gate(
+        "post-build-metrics-missing",
+        "ch9-p1-test.md",
+        None,
+        "packet_metrics missing at build close",
+    )
+    _expect_metrics_gate(
+        "post-build-ch13-missing-main-thread-model",
+        "ch13-p9-test.md",
+        '{"packet_metrics": {"class": "t"}}',
+        "required at build close for ch13+",
+    )
+    _expect_metrics_gate(
+        "post-build-ch12-no-main-thread-model-green",
+        "ch12-p9-test.md",
+        '{"packet_metrics": {"class": "t"}}',
+        None,
+    )
+    # Arm fold (2026-08-14 review, finding 1): a NON-OBJECT value
+    # satisfied the exactly-one count while the required field could
+    # not even exist — refused on the post-build path.
+    _expect_metrics_gate(
+        "post-build-metrics-not-an-object",
+        "ch13-p9-test.md",
+        '{"packet_metrics": "not-an-object"}',
+        "is not an object",
+    )
+
     # ---- ADR-015 missing-directory loud guard
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
@@ -3370,7 +3645,12 @@ def run_selftest() -> int:
         root = Path(tmp)
         old_pdir = root / "docs" / "v3" / "implementation" / "packets"
         old_pdir.mkdir(parents=True)
-        alias_packet_text = '# p\n\n```json\n{"mutation_boundary": {"files": ["x.txt"]}}\n```\n'
+        # the metrics block rides along: polarity 2 must stay a clean
+        # green through the build-close metrics gate
+        alias_packet_text = (
+            '# p\n\n```json\n{"mutation_boundary": {"files": ["x.txt"]}}\n```\n'
+            '\n```json\n{"packet_metrics": {"class": "t"}}\n```\n'
+        )
         (old_pdir / "ch9-p1-test.md").write_text(alias_packet_text, encoding="utf-8")
         (root / "x.txt").write_text("x", encoding="utf-8")
         new_pdir = root / "v3" / "implementation" / "packets"
