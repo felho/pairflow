@@ -328,3 +328,14 @@ design and this divergence is informative, not a defect. Spread:
   (b)) — no dual-run. The chapter's per-packet difficulty scores
   append here at each approve, main-thread model machine-confirmed
   per the TIER-RECORD rule.
+
+- 2026-08-15 — ch14 assignment REVISED (the user's cost ruling): the
+  Fable-class main-thread arm covered the chapter ratification AND
+  the full draft round (scoping, the 26-row contract, the reopen
+  calls, the expressibility rulings — the high-judgment phase); from
+  ch14-P1 on the main thread runs OPUS-class (a new session, model
+  set BEFORE entry — the ch13 lesson). The ch14 data point is
+  therefore SPLIT: the draft phase counts as the Fable measurement,
+  the packet builds as Opus; whether the §2 alternation continues at
+  all is the ch14 boundary's question. Review layers unchanged
+  (panel Opus, arm gptsol per pin).

@@ -3413,7 +3413,10 @@ decision target; an undeclared payload field; a wait with empty
 decision arriving on a bare wait and a resume arriving on a decision
 wait); the **integer-key ban rows** (the bundle: ban + ch8-C10
 reopen + re-lock + the ch13v2-C10 narrowing — the reopen act rides
-this draft's ratification); and the shipped template's PRESENCE rule
+this draft's ratification; aligned at the ch14 draft ratification,
+2026-08-15: the act's reopen SET also carries ch8-C9 and ch11-C1 —
+the step-class partition's falsified keyset universals — with
+ch14-C26 as the normative carrier); and the shipped template's PRESENCE rule
 (the gate id, the wait id, and that the wiring exists — its prose is
 packet-time authoring, not a contract row). Ratification is
 permanently human; packets anchor as

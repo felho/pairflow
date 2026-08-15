@@ -1,0 +1,297 @@
+# ch14 — human-decision contract
+
+```json
+{"contract_draft": {"chapter": "ch14", "surface": "human-decision", "status": "draft"}}
+```
+
+## Context (non-normative by declaration)
+
+**The declaration authority.** This contract is authored ON the ADR-019
+schema substrate (the ch13v2 precedent): structural rules of the
+template surface live as DATA in
+`v3/src/definition/schema/templateFormat.ts`; this contract states
+DECISIONS and cites declarations by TAG (ADR-019 D4 — one authority,
+pointers everywhere else); where a row glosses an attribute in passing,
+the gloss is non-binding paraphrase and the declaration's bytes govern.
+This chapter's declaration GROWTH — the decision/wait/recommends
+nodes, the id-grammar tightening (C10), the `d-codes` growth (C8),
+the `[n-advances-round]` edge-set growth (C11), the three per-class
+presence RELAXATIONS on the step node with their hand-lane
+re-imposition (C2), and the role-set equality's re-homing (C7) —
+lands at ch14-P1's build, NOT at this ratification. The rows
+below name the intended tags (`[d-step-type]`, `[d-decisions]`,
+`[d-decision-entry]`, `[d-decision-target]`, `[d-decision-payload]`,
+`[d-payload-spec]`, `[d-wait]`, `[d-wait-kind]`, `[d-resume-events]`,
+`[d-on-resume]`, `[d-recommends]`) with the exact spellings being the
+realizing act's to fix — the tag-naming practice (the ch13v2 draft
+exercised; ADR-019 D12's spelling clause applied by analogy) — and the
+citation closure over the grown nodes closes at the chapter close
+(the ch13v2 forward-scope pattern; any exemption owed there is taken
+by P1's build-close schema re-lock ACT — D4(iv): never asserted by
+the packet).
+
+**The second locking contract — the coexistence decision this
+ratification carries.** The contract-draft template (§3) flagged
+"multiple contracts locking ONE file" as *"a boundary topic when a
+second locking contract exists"* — this draft IS the second contract
+binding `templateFormat.ts`'s bytes (`ch13-context-block-v2` holds the
+first lock, in `realized` status). The mechanics this ratification
+adopts: (i) this draft's ratifying act records the schema lock in the
+ordinary ADR-019 D4 form — the citations below are pinned to named
+bytes; (ii) ch14-P1's declaration edit turns BOTH locks red — the
+designed transient of the re-lock rule; (iii) P1's build-close act
+therefore appends one block per bound contract: this draft's ordinary
+`ratified → ratified` schema re-lock, and a `realized`-state
+block-append on `ch13-context-block-v2` recording the new bytes with
+no status change and no C-row motion (its `arms` naming the act, the
+2026-08-09 arms-may-name-the-act rule) — a transition the template
+does not yet enumerate, ADMITTED BY the act that first exercises it
+(the amendment-rides-the-act carrier: the citation-closure precedent's
+own admission path), the template §4 edit riding P1's commit. Every
+future edit of the declaration pays one block per bound contract; that
+cost is accepted here rather than weakening either lock.
+
+**Business invariant.** L3 introduces the human as DECISION-MAKER: a
+`human_gate` step parks the instance and asks its bound operator; the
+operator's decision routes the workflow through the gate's declared
+`decisions` map; a human may decide AGAINST the machine's recorded
+recommendation, but only explicitly and on the record (the override
+rule — the fiduciary seed). With it comes the WAITING axis's other
+half: the minimal bare `wait` step and its resume, realized for
+`commit_pending` ⇐ [COMMIT] → done. The kernel knows no decision
+names — `approve` / `request_rework` are the anchor template's
+vocabulary, never kernel vocabulary.
+
+**Control model.** THREE entry handlers, each with its own guards and
+its own atomic CAS commit — `HANDLE` (actor envelope),
+`SUBMIT_DECISION` (operator decision, a KICKOFF sibling),
+`RESUME_WAIT` (resume event) — share ONE target-entry rule
+(`apply_target_entry_effects`) so the entry paths cannot drift, and
+one post-commit derivation (`post_commit_output`) selects the outbound
+effect from the resulting status. The routing maps are ONE construct
+at the shared grain — the ChoicePoint: a declared key set, an
+authorized selector, guards, one shared arrival. Three instances exist
+after this chapter: `transitions` (principal-committed by the bound
+actor), `decisions` (principal-committed by the bound operator),
+`onResume` (kernel-classified — the event's validated type is the
+key). The rows declare the ChoicePoint at the SHARED grain
+(key → `{ target, payload? }`, `emits` deliberately absent — the §8.2
+chapter-grain rule); LC3a's draft EXTENDS these rows additively
+(opening disposition 1), never a parallel shape.
+
+**Read-path.** Definition-static validation runs at ADMISSION on both
+channels (the declared schema plus this chapter's hand lanes — C8);
+the kernel reads only pinned ADMITTED definitions. The Ask
+(`HumanDecisionRequest`) is DERIVED post-commit from committed state
+(the pending DECISION_REQUEST + the pinned template) — never stored;
+the floor's detail read re-derives it (C21). The transcript is the
+record: DECISION_REQUEST / DECISION_MADE / WAIT_RESUMED ride the
+committed rows (C22).
+
+**Forbidden fallback.** No half-entered gate: the park and its
+DECISION_REQUEST commit as one visible transition or not at all (C13).
+No silent override: choosing against a recorded recommendation without
+the flag is rejected, and a flag that is not against a recorded
+recommendation — agreement included — is rejected (C16). No decision name reaches kernel logic: routing is by declared
+key through the shared arrival; lifecycle meaning comes from the
+TARGET's type only (C4, C11). No new rejection name and no new
+registry surface: the 54-name registry is byte-untouched (C19).
+
+**Allowed resolution / missing data.** A template with no `type` key
+on any step is fully legal (every pre-ch14 file — the agent-step
+class). A `human_gate` whose firing edge declares no `recommends`
+parks with no recommendation — every decision is then equal and
+override never applies (C13, C16). A bare wait declaring a resume
+event with no `onResume` route is admissible; the runtime answers
+`no_resume_transition` (C3, C18 — the deliberate reachability of that
+name). A version-less operator intent is `missing_version` — the
+F-W4-2 canonicalization, never an absent-vs-current `Stale` (C15,
+C18).
+
+**Model relation, named.** (a) The model exhibit authors steps as a
+LIST with `on_pass:`/`on_converged:` edge sugar; the realized format
+is the ch8 map form (`steps` map + `transitions` map + sibling
+`gates`) — the standing relation since ch8/ch11, not this draft's to
+re-litigate. `recommends` follows the SAME realization (an edge-keyed
+sibling map — C6). (b) The model's `validate_decision_gates` unit
+RETURNs on the first issue and names six `issue(…)` tokens; the
+realized family ACCUMULATES per ch8-C21 and carries the six names as
+machine `code` values (C8) — the sketch's control flow is form, the
+names are contract. (c) The reprint deltas: `COMPLETE`'s precondition
+widens from ACTIVE-only to non-TERMINAL (a resumed decision/wait
+arrival may complete — C11); `RECEIVE` routes the two new
+operator intents; the binding-coverage loop learns to SKIP
+role-less steps (C7); and the decision-target domain is `steps ∪
+terminal` where the validator SKETCH checks steps only — the sketch's
+`template.step(target)` is resolution shorthand, and the model's own
+terminal arrival branch presupposes the wider domain (C4). (d) The
+model carries an internal placement conflict — `validate_decision_gates`'
+header says "definition load (CREATE_INSTANCE)" while `CREATE_INSTANCE`
+itself says definition-static validation happened at ADMISSION —
+resolved for admission (the ch11 sync's standing answer; plan §14.1
+agrees). (e) The model's issue names,
+transcript row names, wait kinds, and decision-key exhibits are model
+TOKEN VALUES and keep the model's exact spelling; authored format KEYS
+follow the camelCase rename culture (ch11-C13/C16/C37, ch12, ch13) —
+`resumeEvents`, `onResume`; the step-`type` enum follows the ch12-C1
+authored↔stored precedent (C1). Rows of this contract name step
+classes and format keys by their AUTHORED tokens; the stored/domain
+form follows C1's map and the C14/C22 store seam, and the KERNEL
+reads the ADMITTED form (camelCase keys — C11's `advancesRound`,
+C18's `onResume`).
+
+**Reopen-vs-aggregate-note calls (template §4), this draft's authoring
+duty — the full table:**
+
+- **ch12-C13 (operator-intent wire keysets) and ch12-C12 (transcript
+  entry classes): AGGREGATE-NOTED (C9, C22)** — ch12-C23 names both
+  sets as growing additively "each in its realizing chapter"; C12's
+  "BOTH classes consume the ONE uniqueness" sentence described the
+  pre-arrival pair and is noted, not edited (C22 keeps the
+  discipline's spirit for this chapter's entries). ch12-C21's floor
+  sentences and ch12-C10's absence-by-class rule are EXTENDED by the
+  new classes through the same note (pointers, no act); ch8-C16's
+  role-set discipline needs no act (parametric on roles referenced —
+  C7's re-homed lane realizes it over role-less steps).
+- **ch12-C23's wait-kind set: `human_decision` is pre-authorized BY
+  NAME; the AUTHORED bare-wait kind namespace is the stronger
+  arrival** — a closed kernel enum gaining an open authored data
+  class beside it. The call: AGGREGATE-NOTED (C14) under C23's
+  general additive clause, WITH the guard that keeps the kernel's
+  set kernel-owned: C3's PARAMETRIC reservation of ch12-C23's
+  kernel-kind set (C3 canonical — never a closed count here), so the
+  two namespaces cannot collide at admission, today or at a later
+  kernel kind's arrival — the ratifier may elect a ch12-C23 reopen
+  instead.
+- **ch8-C10 (the id grammar): a HARD PROMISE the ban falsifies —
+  REOPENED**, riding THIS ratification (the
+  ch13-draft-carrying-the-ch11-reopen precedent; boundary verdict
+  (f)'s bundle).
+- **ch8-C9 (the step keyset): a HARD PROMISE the step-class
+  partition falsifies — REOPENED, the SAME ch8
+  realized → reopened → realized cycle as C10** (one act, two row
+  edits). ch8-C7's forward declaration covers ADDITIVE OPTIONAL keys
+  (which is what `type` and `recommends` are on the agent class —
+  no act needed for those, the ch11-C1 aggregate-statement culture,
+  C1/C6); it does not cover partitioning the step space into classes
+  two of which DROP required keys. The prepared edit scopes C9's
+  keyset to the agent class (absent `type`) and delegates the
+  per-type keysets to `contract:ch14-human-decision#C1` /
+  `contract:ch14-human-decision#C2` /
+  `contract:ch14-human-decision#C3`. The act's carrier is C26.
+- **ch11-C1 ("A step map gains the OPTIONAL `gates` key… ch8-C9's
+  step keyset becomes…"): the same falsified universal — REOPENED**
+  (its own one-cycle act riding this ratification — C26 carries it;
+  the prepared edit scopes its aggregate to the agent class).
+  ch8-C11/C12 are FIELD rules, true wherever their field exists
+  (presence was C9's; C12's runtime parenthetical glosses its
+  EMPTY-map case, which the new classes never author) — no
+  act; ch8-C13's keyset pointer routes through C9's reopened text —
+  no act; ch8-C24's `kind` reservation is the ROOT discriminator
+  under C13's fixed-keyset scope, which the nested `wait.kind` never
+  meets — no act, noted.
+- **ch13v2-C10: a true-through-arrival row** (the substrate still
+  hoists; admitted templates just stop carrying the class):
+  AGGREGATE-NOTED here in C10 — the boundary verdict's "narrowing"
+  is discharged by that note plus the named fixture rework, no
+  ch13v2 row edit; the ratifier may elect a full reopen instead.
+
+**Substrate probes (executed 2026-08-14, this authoring; the packet
+probe discipline pulled forward):**
+
+- **PROBE-CH14-1** (the integer-key re-order class, re-executed): a JS
+  record enumeration hoists canonical decimal spellings of
+  0…2³²−2 to the front and re-sorts them ascending among themselves;
+  `"4294967295"` (2³²−1), `"01"` (non-canonical), `"-1"`, and `"1.5"`
+  are OUTSIDE the class and keep authored position; plain ids keep
+  insertion order. 8/8 cases pass (node v24.18.0) — byte-identical to
+  the ch13-p1b refined-class measurement C10 bans against.
+- **SWEEP-CH14-1** (the ban's migration sweep, full enumeration,
+  executed 2026-08-14; membership predicate: a CONSUMER is a tree
+  site whose ASSERTED OUTCOME depends on an in-class key standing in
+  an id-namespace position — an in-class OCCURRENCE whose assertions
+  do not turn on the key is enumerated but not a consumer): zero
+  authored template files and zero shipped ids carry an in-class
+  key; ONE consumer — `v3/src/kernel/contextBlocks.test.ts`
+  "SUBSTRATE: an array-index-like event type hoists…" (the
+  ch13v2-C10 boundary-pin fixture, which ADMITS `"10"` as an event
+  type and asserts the hoist ORDER on it — breaks under the ban, the
+  named P1 rework duty in C10) — plus the expected-survivor
+  OCCURRENCE class: three refusal fixtures in
+  `v3/src/definition/validate.test.ts` (the step-id `"1"` start
+  case, the role-name `"1"` case, and the typed-distinct-keys case
+  around lines 248–285), each containment-form on other lanes; P1's
+  re-run classifies the class rather than rediscovering it.
+  Delegated gate-config schemas' own keys (the exit-code map) are
+  OUTSIDE the id namespace (C10's named exclusion).
+
+**Decision-home triage (template §1, K0→K4) — the DECIDED-HERE rows:
+C1 (authored type tokens under the ch12-C1 authored↔stored map), C2
+(per-type closed keysets + the hand-lane home + the declared presence
+relaxation), C3 (the parametric kernel-kind reservation), C4 (decision
+keys join the one id grammar; the target-domain widening), C5
+(undeclared submitted payload fields carry as data), C6 (`recommends`
+as an edge-keyed sibling map), C8 (the six model issue names join the
+realized issue-code namespace; accumulate over the sketch's
+first-return), C23 (the CLI verbs' floor-read resolution + the `by`
+default + the not-found read class).** All triage ROW-HOME: none moves
+model meaning (each realizes a model rule on the flat format, picks
+between standing realization precedents, or resolves an internal model
+inconsistency in the model's own favor; the refusal surface and the
+rejection registry are unchanged), and none carries beyond-chapter
+architecture. The lock-coexistence mechanics
+above are PROCESS, homed in the contract-draft template's §4 amendment
+riding P1's act — not a row of this surface. ONE K0 route, recorded
+(raised by the ratifier at this draft's review, 2026-08-15): a `sys:`
+PREFIX on the kernel-owned wait kinds — the ch11 gate-reason
+precedent's structural separation, which would retire C3's parametric
+reservation and every future kernel-kind migration sweep — is
+MODEL-SHAPED (the kernel kinds are model-verbatim tokens in the
+pseudocode guards, the invariant record, and the realized ch12 store
+rows), so it routes to the fix-FIRST model-wave path, user-gated,
+never a draft-local decision; until that wave rules, C3's parametric
+reservation is the standing guard. Every other row carries
+the model's own rule or a boundary-ratified bundle member; the ban
+(C10) is the ch13 boundary verdict (f)'s carried decision, executed
+here, not re-decided.
+
+**Draft metrics (template §5):** rounds to ratify: 2 full five-lens
+panel rounds + 1 targeted reconciliation round + the external arm
+round and its re-check (CLEAN) · new-decision rows: 10 DECIDED-HERE
+markers across 8 rows (C1, C2, C3, C4 ×2, C5, C6, C8 ×2, C23) ·
+post-ratification reopenings: 0 (at first ratification).
+
+## Contract rows (every normative statement is a C-row)
+
+| ID | Rule |
+|---|---|
+| C1 | A step MAY carry `type`, the step-class discriminator — intended declaration `[d-step-type]` (P1 growth; today the key is an unknown-key refusal, the fail-closed present state). Authored value tokens follow the ch12-C1 authored↔stored precedent — DECIDED HERE: authored `humanGate` \| `wait`, stored/domain form the model's `human_gate` \| `wait` (the direct channel's input is the domain type, so it admits the stored form, exactly as ch12-C1's mode tokens). An ABSENT `type` is the agent-step class (every pre-ch14 template; no `agent` token is minted — §8.2 no-speculative-keys). The three classes PARTITION the step space THIS chapter admits — the class set grows additively with later step types in their realizing chapters (LC3a's `action` the first named), never by silent extension. Each class's keyset is C2/C3's; the AGENT class's aggregate, stated (the ch11-C1 aggregate-statement culture): `role`, `instruction`, `transitions`, + optional `agentConfig` (ch8-C9), + optional `gates` (ch11-C1), + optional `recommends` (C6 — an ADDITIVE OPTIONAL key under ch8-C7's forward declaration, behavior-preserving default: absent = none). `type` itself sits at STEP grain, not inside any class's keyset: it is the class DISCRIMINATOR (an additive optional key under the same ch8-C7 authority, default absent = agent), and a PRESENT legal value always selects C2/C3's keysets — no `agent` token exists, so the agent class carries it only by absence; every class's ADMITTED form additionally carries the admission-produced channel-direct fields (C2's carve-out, class-general). An unknown `type` value is an admission finding (enum, both channels). |
+| C2 | The `humanGate` step keyset, CLOSED: exactly `{ type, role, instruction, decisions }` — `role` REQUIRED (the decision authority the binding must cover, C7), `instruction` REQUIRED (it is the Ask's `question`, C20), `decisions` REQUIRED (C4). `transitions`, `gates`, `agentConfig`, `recommends` are REFUSED on this type — DECIDED HERE (fail-closed per the ch8-C13 culture): a gate dispatches no agent (`agentConfig` dead), its inbound guarding lives on the SOURCE step's edge (`gates` dead), and its routing map IS `decisions` (`transitions` dead — dead config is refused, the ch11-C2 culture, not tolerated). EXPRESSIBILITY, decided — both directions: type-CONDITIONAL keyset/presence rules are not expressible in the current declaration vocabulary (no field-discriminated union exists), and a discriminated-union construct serving this ONE declaration position fails ADR-019 D7's ≥2-position test — so the per-type rules live as NAMED HAND LANES in the definition-static family (C8; the ch13v2-C9 named-hand-rule precedent), the designed R7-protocol home, revisited only when a second discriminated position arrives; AND the standing DECLARED presence lanes must not contradict them — at P1 the step node's `role`, `instruction`, and `transitions` presence flips declaration-OPTIONAL with the per-class presence re-imposed by the hand lanes (a hand lane can only ADD findings, never retract a declared one; the relaxation is the ch8-C9/ch11-C1 reopens' delegated consequence — the Context call table; its dependent-lane knobs are C7(a)'s named duties). The per-type field GRAMMARS (C4, C5) are ordinary declarable nodes and ride the schema. The per-type keysets bind the AUTHORED document on both channels; the ADMITTED form additionally carries the standing admission-produced channel-direct fields (`advancesRound`, the ch13v2 produced ref positions) — producer-owned, never authorable, outside these keysets by the standing rule. |
+| C3 | The `wait` step keyset, CLOSED: exactly `{ type, wait, onResume }` — no `role`, no `instruction` (nothing asks and nothing dispatches; a bare wait parks silently). `wait` REQUIRED, a CLOSED map `{ kind, resumeEvents }`, BOTH fields REQUIRED (intended `[d-wait]`, `[d-wait-kind]`, `[d-resume-events]`): `kind` a nonempty id-grammar string (C10's ban included) that is NOT a member of the KERNEL-OWNED wait-kind set ch12-C23 names — PARAMETRIC on that set, today `kickoff_pending` \| `human_decision` \| `child_workflow` \| `timeout`, growing additively with each realizing chapter's kernel kind (LC3a's `action_pending` next) and never a closed count here — DECIDED HERE: an authored collision would alias the KICKOFF resume machinery, the decision-wait read surfaces (the floor's pending-Ask read keys on `human_decision`), or a future kernel arrival's own machinery, so it is an admission finding; the reservation is what keeps the kernel's enumerable kind set kernel-owned beside the authored namespace, and a later kernel kind's arrival extends the reservation in its own chapter with its own migration sweep (this row needs no reopen for it — the Context call table's ground); `resumeEvents` REQUIRED, a NONEMPTY list of unique event-type ids (id grammar — a wait no event can resume is dead config). `onResume` REQUIRED, an open map event-type → target (intended `[d-on-resume]`; target domain = steps ∪ terminal, the `d-target` domain): its keys must be MEMBERS of `resumeEvents` (an outside key is dead config, refused — the ch11-C2 culture), while a `resumeEvents` member WITHOUT an `onResume` route is ADMISSIBLE — INCLUDING the degenerate all-members-routeless empty `onResume` map (one uniform rule, no empty special case) — deliberate: the runtime's `no_resume_transition` (C18) stays reachable, the model's own rejection surface. Scoping note: ch8-C24's `kind` reservation is the ROOT format-family discriminator under ch8-C13's fixed-keyset scope; the nested `wait.kind` never meets it. |
+| C4 | The ChoicePoint at the SHARED grain (opening disposition 1 — LC3a extends these rows additively, never a parallel shape): a keyed routing map OFFERS a declared key set; an AUTHORIZED SELECTOR picks one key; guards validate; the commit routes by the key through the ONE shared arrival (C11). `decisions` is its second instance (intended `[d-decisions]`, `[d-decision-entry]`, `[d-decision-target]`): an open map whose KEYS are data — the gate's decision vocabulary, which the kernel never interprets (`decisions-carry-no-lifecycle-meaning` invariant's home beside C11, disposition review) — and whose entries are CLOSED maps `{ target, payload? }`: `target` REQUIRED — an ABSENT `target` is the entry's missing-key refusal (the shape family, C8), while a PRESENT non-string or unresolvable `target` draws the membership lane's ONE finding (`decision_target_unresolved` — the realized `d-target` precedent: a non-string target IS the membership fault, one finding for both); the domain is steps ∪ terminal (the `d-target` domain — DECIDED HERE as the model-relation delta Context (c) names: the validator sketch checks steps only, and the model's own terminal arrival branch presupposes the wider domain); `payload` per C5; any other entry key REFUSED (a `paylod` typo silently dropping a required-field rule is the named accident class). `emits` is deliberately ABSENT — the §8.2 chapter-grain rule, no key without its consumer; it arrives with LC3a's `outcomes` extension, and whether LC3a's declaration REUSES these entry nodes with an `emits` growth or mints its own is LC3a's realization call — this row's closed entry binds the `decisions` position only. ≥1 decision REQUIRED (a gate no one can answer is refused — the model's `decision_gate_empty`). DECIDED HERE: decision keys JOIN the one id-grammar namespace (C10) — they feed record enumeration (`decision_keys`), the wait record's `resume_events`, and transcript row values, so they need the same enumeration-stable grammar as every other id class. Route values at the shared grain: a route names a target entered through the shared arrival — a SELF-TARGET included, which genuinely re-arrives (arrival effects run; the model's route-value rule); the `stay` route is L5's, not admitted here. Selector authority is per instance: `transitions` and `decisions` principal-committed (the bound actor / the bound operator), `onResume` kernel-classified (C18); `proposed` stays reserved (L9). |
+| C5 | The per-decision payload schema (intended `[d-decision-payload]`, `[d-payload-spec]`): `payload` OPTIONAL, a map field-name → spec; field names are id-grammar strings (C10's ban included — they are enumerated by `required_fields`); each spec a CLOSED map `{ required?: bool }` — `required` itself OPTIONAL with absent = not-required (the model's own guard binds only a PRESENT `required`, and its filter reads truthiness, so `{}` is a legal spec meaning optional); a non-map spec, an unknown spec key (no nested types yet), or a present non-boolean `required` is refused (the model's `invalid_decision_payload_schema` family). The spec legislates REQUIRED-PRESENCE ONLY — DECIDED HERE, the model's letter kept against the fail-closed pull: payload fields a submitted decision carries BEYOND the declared spec are CARRIED as uninterpreted data (recorded in DECISION_MADE, delivered in the handoff — C17), never refused: no registry name covers such a shape and inventing one is the divergence stop (the ch12-C9 model-faithful-inert precedent); the recorded hazard is an authoring surprise, not a kernel risk. |
+| C6 | `recommends` — the edge attribute, realized as an edge-keyed SIBLING map on the SOURCE (agent) step — DECIDED HERE (the model puts `recommends` on the transition edge; the format's transition values are plain targets, and the standing realization of edge-keyed attachments is the sibling map, the ch11 `gates` precedent): an open map event-type → decision key (intended `[d-recommends]`). Rules: keys ⊆ `keys(transitions)` (an outside key is dead config, refused — the same ch11-C2 lane shape); the referenced transition's TARGET must be a `humanGate` step (the model's `recommends_on_non_gate` — a recommendation is meaningful only where a decision will be asked); the VALUE must be a member of that gate's declared decision keys (the model's `recommends_unknown_decision`); value grammar = the decision-key grammar (C4). `recommends` is legal on agent steps only (C2/C3 close the other keysets). Warn-sensitive / dynamic recommendation is a named Absent (deferred — the recommendation is the firing edge's STATIC declaration, recorded with its source, C13). |
+| C7 | The `operator` role is an ORDINARY role — the ROLES map itself grows no new format surface: a `humanGate`'s `role` names a declared role (id grammar), and `defaultActor` stays the ordinary optional roles-entry key (`human` is a value, not a semantic). Two consumers of the role field DO need role-less-step tolerance, named here because both break on C24's shipped `commit_pending` otherwise: (a) the role-set EQUALITY (ch8-C16): the declared `d-roleset` collect has no per-member absence tolerance in the current vocabulary, and the only existing knob (skipping the whole rule on an absent operand) would silently disable the equality for every wait-bearing template — the refused class — so at P1 the equality RE-HOMES as a NAMED HAND LANE (the C8 family — one home for this chapter's class-aware rules, both channels), absence-tolerant by construction (a role-less step contributes nothing; grammar-invalid suppression semantics carried over), and the declared `d-roleset` crossRule retires in the same edit; the presence relaxation's dependent declared lanes (the gates-subset lane's now-optional `transitions` operand) are the same edit's named knob duties, legitimate because the per-class hand presence lanes guarantee an accompanying honest finding; (b) the binding-coverage loop ALREADY demands `binding[step.role]` for EVERY declared step (a superset of "reachable", so `humanGate` roles need no growth — the model's assigned-human requirement holds today), and its ch14 delta is the inverse: it SKIPS role-less (`wait`) steps, else the shipped template throws at CREATE — P2's kernel duty, landing BEFORE P3's shipped template. |
+| C8 | The definition-static family — `validate_decision_gates` beside the existing family, under `admit_definition`, BOTH channels: this chapter's lanes are (i) the DECLARED lanes of the C1/C3–C6 nodes (schema growth at P1, enumerated by the declaration itself — the ch13v2-C19 parameterized-inventory culture), (ii) the NAMED HAND LANES for the type-conditional rules C2/C3 legislate (the expressibility ruling in C2), and (iii) the RE-HOMED role-set equality lane (C7(a)'s ch8-C16 cross-rule, absence-tolerant, code-less). Findings ACCUMULATE in the validate stage as `{path, message}` entries with dotted paths, list members at ch11-C7's index-segment grain (load staging per ch8-C36 unchanged) — DECIDED HERE: the model unit's first-issue RETURN is sketch control flow, not contract; the accumulate culture governs (the realized ch11/ch13 precedent). This chapter's containers JOIN ch8-C21's container-precondition rule whole (the ch11-C21 sibling form): a `decisions`, entry, `payload`, spec, `wait`, `resumeEvents`, `onResume`, or `recommends` container that is MISSING-where-required or not its required kind yields ITS OWN finding and SUPPRESSES the dependent lanes — `decisions: "x"` is ONE finding at the container, never a key-iteration cascade; the model's separate present-but-non-map `payload` check is one of these container lanes AND carries `invalid_decision_payload_schema` (the model's letter — a stated exception to the otherwise code-less container lanes). The model's six issue names JOIN the realized issue-code namespace — its home ch11-C20/C21 (admission failures are definition issues, never registry rejections), riding ch8-C23's channel boundary — as machine `code` values on exactly their lanes (additive `d-codes` growth at P1, which ALSO corrects the declaration's stale "disjoint from registry names" comment and grows the node's `rows` attribution by this row (the accumulating-rows convention); model-verbatim snake_case — machine tokens keep model spelling, the ch13v2-C12 rule) — DECIDED HERE against the zero-code alternative, on the ch11 precedent (model-named validator issues realized as codes) and the divergence stop's pull: `invalid_decision_gate_config` (the decisions/entry shape+keyset hand lanes), `decision_gate_empty` (the ≥1-decision lane), `decision_target_unresolved` (the decision-target membership lane), `invalid_decision_payload_schema` (the C5 spec lanes), `recommends_on_non_gate` and `recommends_unknown_decision` (the C6 cross-lanes). NO other lane of this chapter carries a code, AND the codes owe ch13v2-C18's POSITIVE half too: ≥1 build-driven lane asserts a decision-gate code's actual VALUE in the CLI JSON at the far end (equality, never presence or serialized-text containment) on a ch14-only fixture, with its negative twin — the owning packet's duty. The rejection registry is untouched (C19): the code and registry namespaces are GOVERNANCE-separate (ch11-C20 owns the codes, the ledger the registry) — their token sets already overlap on two pre-existing names, so the registry claim rides the MEASURED fact that all six new codes are absent from the 54-name list, not on token disjointness. |
+| C9 | The wire admission carrier: the two operator intents enter through `RECEIVE`'s operator-intent source class beside START/KICKOFF/CANCEL (the ch12-C13 ingress), each wire keyset CLOSED and strictly fail-closed at ingress — an unknown or malformed wire key draws the ingress's standing `invalid_shape` (the ch4 CHK-C culture; no new name): `SUBMIT_DECISION` = `{ instance_id, op_id, expected_version, request_ref, verdict, override?, payload?, by }`, `RESUME_WAIT` = `{ instance_id, op_id, expected_version, type }`. The keyset governs key MEMBERSHIP at ingress; field PRESENCE is deliberately the ladder's and the guards' business (an absent `expected_version` reaches the version rung's `missing_version`, an absent `by` the authority rung's `operator_not_authorized`) — stated so the closed keyset is never read as an ingress presence check. The operator-intent wire keysets grow ADDITIVELY under ch12-C23's pre-authorization (aggregate-note arrival — no ch12 reopen). The ADR-019 D2 extension point "the operator-intent wire (ch12-C13)" is NOT taken: the wire guard stays hand code (a declared-schema migration of that surface is its own future act, per D6). Both intents route through `admit_input` — the load-first admission companion (announced at L0d, arriving here): ONE call loads the instance (`unknown_instance` on a miss) and runs the ladder; expectations evaluate LAZILY, each at its own rung in rung order, and a rung-local read over committed state (the instance, its pinned template, step positions) is INFALLIBLE by load-time validation — such a read growing a reject/assert branch is a NEW finding, never a silent property; the loaded instance leaves only through Accepted. `HANDLE` deliberately keeps its inline load (the model's chosen asymmetry — its lineage runs from L0a). |
+| C10 | THE INTEGER-KEY BAN (the ch13 boundary verdict (f) bundle, executed here): the ONE id grammar — ch8-C10's namespace (step ids, terminal ids, role names, event types) PLUS this chapter's key classes joining it (decision keys C4, payload field names C5, wait kinds C3; resume-event members are event types) — additionally REFUSES the canonical decimal integer spellings of 0…2³²−2, the measured JS record re-order class (receipt: PROBE-CH14-1 — `"4294967295"`, `"01"`, and `"-1"` are outside the class and stay legal; `"1.5"` is also outside the class but was never legal, the standing dot ban refuses it). Strict start; a relaxation needs its own act. NAMED EXCLUSIONS, three: delegated gate-config schemas' own keys (the exit-code map) are OUTSIDE the id namespace — their schemas own their key semantics; the CLI `runOverrides` key surface stays under ch12-C9's standing INERT-dead-key rule — lookup-only, never order-walked, and an in-class key there is necessarily dead once the ban lands (no new lane, the ratified ch12 disposition unmoved); and the `capabilityProfile` position is a TYPE-LEVEL channel-direct surface with no authored form (the (h) disposition) — no admission walk exists for the ban to bind. The ban's carrier is the AUTHORED id namespace, where enumeration order is load-bearing. The bundle's four members, each with its carrier: (1) the BAN — this row; (2) the ch8-C10 REOPEN — rides THIS ratification in the ONE ch8 cycle C26 carries (C10's edit adds the ban clause with this contract cited as migration authority); (3) the SCHEMA RE-LOCK — P1's build tightens `vc-id-class`'s grammar and P1's build-close act records the new bytes with ONE block per bound contract (this draft's ordinary re-lock; ch13v2's realized-state block-append — the Context's coexistence mechanics, this parenthetical their row-side anchor); (4) the ch13v2-C10 NARROWING — AGGREGATE-NOTED: that row's hoisting exception stays TRUE (the substrate still hoists) but its operative class becomes INADMISSIBLE from P1 on, so the order rule over admitted templates simplifies to "as authored"; the breaking consumer (SWEEP-CH14-1's site 1: the `contextBlocks.test.ts` boundary-pin fixture, which admits `"10"` as an event type) is REWORKED at P1 — the in-class key's pin flips to an ADMISSION-REFUSAL assertion, and the no-hoist half stays pinned by the fixture's `"01"` with a NEW `"4294967295"` case joining it — and SWEEP-CH14-1's site 2 (the `validate.test.ts` refusal fixture) is re-classified by P1's re-run. Migration: SWEEP-CH14-1 measured ZERO authored/shipped files affected; the sweep re-runs at P1's build. |
+| C11 | The shared arrival — `apply_target_entry_effects(instance, template, from_step_id, target)`, ONE function shared by HANDLE, SUBMIT_DECISION, and RESUME_WAIT (the entry paths cannot drift; every ChoicePoint routes through it): writes the position (`current_step ← target`), advances the round IFF the admitted per-edge `advancesRound` says so, then fans out by the TARGET's type — terminal ⇒ the COMPLETE rule (the reprint delta: COMPLETE's precondition WIDENS from ACTIVE-only to non-TERMINAL — a resumed decision or wait arrival may complete; double-completion stays barred by the model's own fail-loud kernel integrity guard, never a registry rejection); `humanGate` ⇒ `park_for_human_decision` (C13); `wait` ⇒ `park_for_wait` (C14); agent step ⇒ ACTIVE with `wait := null`. The fan-out's branch set grows WITH C1's class set — a later step type adds its park branch in its realizing chapter (LC3a's `action` the first named). HANDLE's inline arrival REFACTORS ONTO this function with byte-identical behavior on every existing path — the existing golden traces green unchanged are the refactor's proof obligation. The `advancesRound` EXPANSION BASIS widens: the admitted per-edge expansion covers ALL THREE edge classes — `transitions`, `decisions`, `onResume` (`[n-advances-round]`'s edge SOURCES widen WITH per-class target extraction — a `decisions` entry's target sits under its `target` key, an `onResume` value IS the target — a widening of the existing hook arm's declared attributes, which is an ADR-019 AMENDMENT in the D11 attribute-widening class, its D7 admission case the three independent edge positions under the established D10/D12 position-reading; the amendment rides P1's realizing act and is recorded at the ADR, never silent — no packet re-decides the construct; without the widening a rework loop-back could not open a new round). This row is the `decisions-carry-no-lifecycle-meaning` invariant's co-home with C4 (disposition review): lifecycle meaning comes from the target's TYPE, never from a key name. |
+| C12 | `post_commit_output(instance, template)` — PURE derivation, no mutation: reads the post-commit status and selects the outbound effect — TERMINAL ⇒ none; WAITING(`human_decision`) ⇒ the Ask (C20); WAITING(any other kind THIS chapter admits) ⇒ none (a bare wait awaits an inbound event; the selection's branch set grows with later wait kinds in their realizing chapters — LC3a's `action_pending` ⇒ `ActionRequest` the first named); ACTIVE ⇒ `DispatchIntent`. All three entry handlers return `Committed(version, post_commit_output(…))`. The DIRECTIVE family at the shared grain: a directive is a PROJECTED, DELIVERABLE ask object derived post-commit — `HumanDecisionRequest` joins `DispatchIntent` as the second member (addressee: operator); later members (`ActionRequest`, `ActionIntent`, `SpawnIntent`, `HelpRequest`) are their own chapters'. |
+| C13 | `park_for_human_decision` runs INSIDE the arrival's atomic commit: the WAITING park and the DECISION_REQUEST append are ONE visible transition — an append failure rolls the commit back, no half-entered gate exists (this row is the `park-is-one-visible-transition` invariant's home, disposition test). DECISION_REQUEST's field list, CLOSED: `{ request_ref (fresh), recipient (the gate's role), decisions (the declared key list), recommendation?, recommendation_source? { from_step, event_type }, context_ref? }` — `recommendation` is the FIRING edge's declared `recommends` (reconstructed from the arrival — the `incoming_recommendation` read; ABSENT on BOTH absence branches: no `transitions` edge fired the arrival at all (a decision- or resume-routed entry, where `recommends` is unauthorable — C2/C3) or the firing edge declared none — and then every decision is equal and override never applies), `recommendation_source` is present IFF `recommendation` is (the pair travels together — audit: WHERE it came from, not just what), and `context_ref` is the arriving commit's payload surface where one exists (a transition's payload; a decision's recorded payload — the second source is this realization's stated widening of the model's transition-only `payload_of_transition_into`, anticipating the model's own LC3b generalization; a named delta), ABSENT otherwise — the exact projection is the owning packet's, within this rule. The wait state set in the same commit: `wait := { kind: human_decision, requested_by: gate id, request_ref, resume_events: the declared decision keys }`. |
+| C14 | The wait record grows — the AGGREGATE-NOTE arrival the Context call table argues (`human_decision` pre-authorized BY NAME in ch12-C23; the authored bare-wait kind class under C23's general additive clause, with C3's parametric reservation keeping the kernel set kernel-owned): the bare-wait park writes `{ kind: the step's declared kind, requested_by: the wait step's id, resume_events: the step's declared list }`; the decision wait alone among THIS chapter's kinds additionally carries `request_ref` (C13's write); stored canonical JSON keeps the model's snake keys (`requested_by`, `resume_events`, `request_ref` — the store casing seam, unchanged rule). The realized closed-kind seam is NAMED, four consumers: the domain `WaitReason` kind union and the store's own kind guard + encoder both open at P2 (P2-internal ordering, stated: the guard and encoder open BEFORE or WITH the park writers — a persisted decision wait never meets the closed decode); the wait-kind `@ts-expect-error` negative pin in the process-gate suite retires with the union's opening; and the two testkit replay checkers advance position on transition rows only, so a decision- or resume-routed arrival is invisible to them (fixture-scoped today) — dispositions the owning packet states, not assumes. A bare-wait park appends NO transcript row of its own — the arrival's committing entry is the record; wait state lives in the instance record. This row is the `waiting-is-honest` invariant's home (disposition CHECKER), with the split STATED: the existing S5 checker already asserts the wait ⇔ WAITING iff in both directions (measured), so the owning packet's disposition call may not stop at "satisfied" — the CHAPTER's honest half, the kind ↔ position correspondence (`human_decision` only at a parked `humanGate` with a live `request_ref`; an authored kind only at a `wait` step declaring it), is NOT covered by that iff, and the packet states where it lands (a checker extension or named test lanes). |
+| C15 | SUBMIT_DECISION's admission — rung ORDER is contract (`admit_input`, the operator-intent parameterization): idempotency (the kind-aware compare over DIGEST-LESS op-carrying rows — C22's new classes, not lifecycle facts: a committed row under the same `(instance_id, op_id)` of the intent's OWN committed entry kind is `Duplicate` and ANY other kind is `op_id_collision`; the digest compare stays transition-only, and the realized compare's kind parameter widens from the lifecycle-fact domain to the entry-kind domain — the owning packet's named seam) → state (WAITING ∧ `wait.kind = human_decision`, else `not_awaiting_decision`) → correlation (`request_ref` = the wait's, else `decision_request_mismatch` — the correlate rung's FIRST realized arrival; ch11-P1's recorded A13 omission closes, and its stale "arrives with kernel events" doc-comment is the owning packet's named correction) → version (ABSENT ⇒ `missing_version`, the F-W4-2 canonicalization — never absent-vs-current `Stale`; mismatch ⇒ `Stale`) → authority (`by` vs `binding[gate.role]` — missing and mismatch BOTH `operator_not_authorized`, the L1 both-branches house style; this is OPERATOR authority on the intent's own path, NOT the actor-envelope capability gate — the L1 capability narrowing does not run here, a human decision being a different input class). This row is the `decision-is-operator-intent-not-actor-envelope` invariant's home, disposition type/schema WITH the split stated: the type half is the CLASS SEPARATION — the intent's realized wire type is a distinct shape no envelope type is assignable to and `RECEIVE`'s source routing is the runtime carrier (C9); the invariant's five-guard body (wait-kind, correlation, authority, op_id, CAS) realizes as THIS row's rung tests. THEN the key-scoped guards, AFTER the ChoicePoint selection (their reject names live at the call site), in the model's FIXED order: `verdict` ∉ the declared keys ⇒ `unknown_decision`, then a declared-REQUIRED payload field absent or EMPTY ⇒ `missing_required_field` (empty, closed: `null`, `""`, `[]`, `{}` — the realized length-based nonempty culture extended to the JSON empties; no whitespace trimming, matching every standing surface), then C16's override guards — an unknown verdict never reaches the override guards (this row co-homes the `a-decision-carries-its-required-payload` invariant with C17, disposition test). |
+| C16 | The override rule — the only place the machine's recommendation and the human's verdict meet; runs AFTER C15's key-scoped guards (the stated order — the verdict is known-declared and its required payload present by the time these bind): `against` := a recommendation is RECORDED on the pending request AND `verdict` ≠ it; `against` ∧ ¬`override` ⇒ `override_required`; ¬`against` ∧ `override` ⇒ `override_not_applicable` (agreement with the recommendation, or no recommendation recorded — either way there is nothing to override). DECISION_MADE's field list, CLOSED: `{ op_id, decision, payload?, by, request_ref, override? }` — the wire's `verdict` records as the entry's `decision` field (the model's own two spellings, stated so the seam cannot fork; the token domain is the gate's declared keys and is UNRELATED to ch11-C25's `GateDecision.verdict` (`allow`\|`warn`\|`block`) — one spelling, two wire shapes, named against conflation) — and `override` recorded `true` IFF `against` (ABSENT otherwise — audit-clean: present exactly when a human decided against the machine, on the record). This row is the `override-is-explicit-and-recorded` invariant's home (disposition test). The commit: append DECISION_MADE, apply C17's round/context rule, route `decisions[verdict].target` through the shared arrival (C11), `version + 1`. |
+| C17 | Round and context on a decision commit: advancement is keyed on the ADMITTED `advancesRound` of the (gate → target) edge (C11's widened expansion) — NEVER on a verdict name; on an advancing loop-back the stale decision/review context CLEARS (`clear_stale_decision_context`) and the submitted payload rides as the rework target's FIRST-dispatch handoff — the declared required fields' delivery point (undeclared carried fields per C5 ride the same handoff as data). This row is the `a-loop-back-resumes-clean` invariant's home (disposition test) and co-homes `a-decision-carries-its-required-payload` with C15. |
+| C18 | RESUME_WAIT's admission — rung ORDER is contract: idempotency (C15's shared fact-row rule) → state (WAITING, else `not_waiting`) → correlation (`type` ∈ `wait.resume_events`, else `resume_event_mismatch`) → version (absent ⇒ `missing_version` [F-W4-2]; mismatch ⇒ `Stale`) — NO authority rung on this path today (the selection is KERNEL-CLASSIFIED: the event's validated type is the key; an authority hook is a named later slice). THEN the wait-SHAPE guard, AFTER admission (the order is contract), TOTAL over the position read: the current step not a bare `wait` step ⇒ `not_bare_wait` — a decision wait resumes ONLY via SUBMIT_DECISION (NB a mismatching event on a decision wait draws `resume_event_mismatch` FIRST — the rung order's designed outcome, since a decision wait's `resume_events` are its decision keys), and a KERNEL-OWNED hold is decided by the same guard: a `kickoff_pending` hold carries NO current step (the position is null until ACTIVE), which is not a bare `wait` step ⇒ `not_bare_wait` — `RESUME_WAIT(KICKOFF)` on a deferred hold passes the correlation rung (`KICKOFF` is the hold's declared resume event) and dies HERE; the kickoff hold's only resume is KICKOFF's own path, never this one. Then `onResume[type]` (the admitted form) absent ⇒ `no_resume_transition` (REACHABLE by design — C3 admits a partial or empty `onResume`). The commit: append WAIT_RESUMED `{ op_id, kind, event }` (CLOSED field list), route the `onResume` target through the shared arrival, `version + 1`. The anchor realization: `commit_pending` ⇐ [COMMIT] → done. This row is the `a-parked-wait-resumes-only-on-a-matching-event` invariant's home (disposition test). Declared Absents, named: result payloads on resume; the resume ACTION (the actual git commit/merge — LC3a·LC2·LC4); child-event resume sources (L4 — which arrive as `kernel_event` on THIS SAME handler, the model's forward shape); timeouts / escalation / non-exact correlation (L9); a resume authority hook. |
+| C19 | The rejection surface: ZERO new registry names — the 54-name registry is BYTE-UNTOUCHED, asserted before AND after (the drift suite's duty). The chapter's contribution is the BEHAVIORAL scoped extension: the first live writers arrive for `not_awaiting_decision`, `decision_request_mismatch`, `operator_not_authorized`, `unknown_decision`, `missing_required_field`, `override_required`, `override_not_applicable`, `not_waiting`, `not_bare_wait`, `resume_event_mismatch`, `no_resume_transition` — plus `unknown_instance` (the `admit_input` load), `invalid_shape` (the two wires' ingress refusal, C9), `Stale`/`Duplicate`/`op_id_collision` on the two new paths, and the F-W4-2 `missing_version` canonicalization on BOTH operator paths. `Duplicate` \| `Stale` \| `Rejected` outcomes pass through the entry handlers unchanged and surface as DATA documents in their ch6 outcome classes (C23). The ch12 lifecycle guards' `state_violation` THROW class is untouched and gains reachable population (a KICKOFF against a decision-parked instance lands as ch12's pinned internal throw, never a data outcome) — named here, outside the rejection enumeration by class. |
+| C20 | `HumanDecisionRequest` — the Ask, the human-facing analog of `DispatchIntent`; field list CLOSED: `{ instance_id, expected_version (the current version — the CAS the submit needs), request_ref, operator (the bound human from `binding[gate.role]`), question (the gate's instruction), recommendation?, context (the projected decision context — the task and the arrival's payload surface; projection detail is the owning packet's), allowed_decisions (the declared key list), decision_requirements (per-decision required-field lists from the SAME declared decisions) }` — SELF-CONTAINED by construction: everything the submit path will guard is in the operator's hand (e.g. `request_rework` ⇒ a required `instruction`). DERIVED, never stored — recomputable from committed state (the pending DECISION_REQUEST + the pinned template); local/derived delivery, a durable channel is L8's named Absent. The realized TS shape lands in `domain/` (the `l3/HumanDecisionRequest` registry row's witness). |
+| C21 | The floor read: `getInstanceDetail` exposes the pending Ask (the C20 derivation) when the instance is parked WAITING(`human_decision`) — the committed-rows-only rule UNCHANGED (a derivation over committed state, no new store surface), and the derivation reads the PINNED TEMPLATE, so the floor's read seam gains the definition-store dependency (the floor or its composition root — the wiring the owning packet names); `getTimeline` returns the three new entry kinds with their kind visible (ch12-C12's rule extended by class — forced at P2 by the union growth, while the pending-Ask read lands at P3 per plan §14.4). The floor stays read-only — no write surface grows. |
+| C22 | The transcript entry classes: DECISION_REQUEST, DECISION_MADE, and WAIT_RESUMED join the entry-class set — NEW union variants beside the transition and lifecycle-fact classes (never a `LifecycleFactKind` growth: DECISION_REQUEST is a kernel-derived class fitting neither existing variant; the realized shapes are the owning packet's), ADDITIVE under ch12-C23's named entry-class-set delegation. ch12-C12's "BOTH classes consume the ONE uniqueness" sentence described the pre-arrival pair — AGGREGATE-NOTED here (the Context call table), with the discipline's spirit kept FOR THIS CHAPTER'S ENTRIES: each op-carrying entry this chapter adds consumes the ONE `(instance_id, op_id)` uniqueness — DECISION_MADE and WAIT_RESUMED do (a rejected attempt never consumes it, the ch12 op_id-fact rule); DECISION_REQUEST carries NO `op_id` and consumes nothing — it is kernel-derived, appended by the ARRIVAL's commit beside the arriving entry (its correlation handle is `request_ref`), the one class forced OUT of both existing variants; whether the two op-carrying rows realize as fact-kind growth or new variants is the owning packet's call — this row fixes their FIELD LISTS, op consumption, and absence-by-class. The testkit's op-uniqueness checker reads `opId` off every non-transition entry — its read opens with the class growth (the owning packet's named delta). None of the three carries `issued_agent_config` or `gateDecisions` (absent by class — ch12-C10's rule extended by class). Stored canonical JSON keeps the model's snake keys (the C14 store casing seam, same rule). |
+| C23 | The operator CLI — zero growth beyond TWO verbs, both inheriting the ch6-P4a canonical channel/error/exit matrices UNCHANGED (stdout one data document, stderr one error doc, the ch6 exit classes; kernel outcomes as DATA documents in their outcome classes): `submit-decision <instance-id> --decision <key> [--override] [--payload <json>] [--by <operator>]` and `resume <instance-id> --event <type>`. Both mint their nonce `op_id` (the ch12-C13 request-scoped nonce family). DECIDED HERE, three clauses: (a) the wire's correlation/CAS inputs are resolved by ONE floor detail read INSIDE the verb — `submit-decision` reads `request_ref` AND `expected_version`, `resume` reads `expected_version` only (its wire carries no `request_ref`); `--decision`'s value IS the wire's `verdict` (C16's seam, the CLI leg) — the operator addresses the INSTANCE, not a version, and a race lands as the kernel's own `Stale` / `decision_request_mismatch` DATA outcomes, never a CLI retry loop; (b) `--by` is OPTIONAL, defaulting to the SAME read's bound operator (the derived Ask's own `operator` field — no second load); the authority rung stays drivable by an explicit wrong `--by`, which is the journey's named authority negative; (c) when the detail read shows NO pending decision request, `submit-decision` cannot construct a legal wire intent and reports the absence as the inherited ch6 READ-side not-found error document (stderr, class `not_found`, exit 3 — the standing read-verdict class), never a fabricated kernel outcome; a raced submit's rejection stays the kernel's own. The floor's pending-Ask read (C21) is the operator's discovery surface. |
+| C24 | The shipped wiring — PRESENCE grain (the gate id, the wait id, and that the wiring exists; instruction prose is packet-time authoring): `local-pair-v0` gains the `operator` role (`defaultActor: human`); the review step's CONVERGED transition RETARGETS to the `human_approval` `humanGate` with `recommends: { CONVERGED: approve }` declared on the SOURCE step for that edge (C6's sibling map; the L2 converge gates stay on the edge — unchanged); the gate declares `approve → commit_pending` and `request_rework → implement` with payload `{ instruction: { required: true }, refs: { required: false } }`; a `commit_pending` wait step (`kind: commit_pending`, `resumeEvents: [COMMIT]`, `onResume: { COMMIT: done }`). v1-FAITHFUL (opening disposition 2): READY_FOR_HUMAN_APPROVAL and the commit wait are v1's live behavior — no product decision smuggled; the known `commit_pending` → `commit_action` two-step at LC3a is the ladder's accepted rhythm. Ripple — ONE named re-pin family: membership = suites consuming the canonical file or the shared fixture (the ch13v2-C16 criterion; enumeration the owning packet's), the golden-trace re-pins the template change reaches included, absence-consumers swept by key AND value. The ACTIVATION proof: ≥1 journey smoke park → decide → resume THROUGH the shipped entrypoint (subprocess, production bindings, deterministic actors — R-ACTIVATION-JOURNEY), the operator side driven via the two shipped verbs. |
+| C25 | The chapter's drift and trace surfaces: the unit-map lock extends with the 18 `l3-pseudocode` ids (per-unit dispositions are the owning packets' authoring-time discovery — the authority as ever); the 5 `l3/*` domain-registry rows flip realized by their owning packets WITH their realized type names and the registry's sync surfaces — named here exactly BECAUSE omitting a flip trips no gate; the `l3` golden trace: converge → park + Ask; approve → `commit_pending`; COMMIT → done; PLUS the alternate override rework round (request_rework with override and instruction → implement, new round, cleared context, instruction as handoff). The 8 invariants realize per the ch-5 map dispositions (5 test / 1 type-schema / 1 review / 1 checker), each homed in its row above (C13, C14, C15, C16, C17, C18, C4+C11, C15+C17). |
+| C26 | The ratification act's REOPEN SET, carried normatively (the ch13-C16 precedent): (1) the ch8 contract — ONE realized → reopened → realized cycle editing TWO rows: C10 gains the ban clause (this contract cited as migration authority) and C9 scopes its keyset to the agent class, delegating the per-type keysets to `contract:ch14-human-decision#C1` / `contract:ch14-human-decision#C2` / `contract:ch14-human-decision#C3`; the same act updates the `realized_map` entries (C10 gains the delegation annotation — the ban's code half realizes at ch14-P1, the ch8-C14 vacuous-delegation form; C9 likewise), appends the file's reopen record, and increments its reopening metric. (2) the ch11 contract — ONE cycle editing C1 (its step-keyset aggregate scoped to the agent class), with the same map-annotation, record, and metric duties. Commit ORDER, fixed: the content commit (this file + the plan §14.3/§14.5 alignment edit recording the wider act — R-ALIGNED-UP, propagation-class) → the ch8 cycle (two commits) → the ch11 cycle (two commits, its C1 edit reading ch8-C9's new text) → the ratifying commit; both reopens are HUMAN-resolved STOPs riding the ratification GO (never inferred — template §4), and the zero-reopened gate points (packet approve / chapter close / process flips) all sit OUTSIDE the two transient windows. The known red-window surface, measured at authoring at fully-qualified-anchor grain: 9 sites in 4 packet files — the ch8 window's 4 (the ch8-P1 V4/V5 rows + their two manifest entries) and the ch11 window's 5 (the ch11-P4 F2 row + manifest, the ch11-P2a D1 row + manifest, the ch11-P3b W3 manifest) — loud-red for each window by design, closed at that cycle's second commit. |
+
+## Ratification history (empty at `draft` — blocks are appended by the lifecycle acts)
+
+## Realized map (empty until chapter close)

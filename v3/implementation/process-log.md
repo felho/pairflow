@@ -5921,3 +5921,32 @@ final CLEAN.
   separated already-ratified scoping from the six ratification-borne
   items (adjacency binding the heaviest) — a cadence worth keeping
   for chapter ratifications.
+
+- 2026-08-15 · ch14 draft review round — a MODEL-WAVE CANDIDATE routed
+  by K0 triage: the ratifier raised a `sys:` prefix for the
+  KERNEL-OWNED wait kinds (the ch11 gate-reason precedent — system
+  tokens structurally demarcated from authored tokens sharing one
+  field), which would retire the ch14-C3 parametric reservation and
+  every future kernel-kind migration sweep. Routed model-plane, not
+  draft-local: the kernel kinds (`kickoff_pending`, `human_decision`)
+  are model-verbatim tokens in the pseudocode guards, the invariant
+  record, and the realized ch12 store rows — a rename is a model
+  vocabulary act (the fix-FIRST path, user-gated). The next model
+  wave decides; if adopted, the rename lands as the ch11 `sys:`
+  reopen did (own act, own sweep — cheap while zero authored kinds
+  ship). Recorded in the ch14 draft's Context triage; until the wave
+  rules, C3's parametric reservation is the standing guard.
+
+- 2026-08-15 · ch14 contract-draft RATIFIED (user GO after a stepwise
+  digest walk — all 5 digest points EZX-expanded and approved one at
+  a time, two of them with follow-up challenges the walk resolved:
+  the sys:-prefix K0 routing and the hand-lane-vs-construct weighing
+  on the role-set equality). The review loop: 2 full five-lens Opus
+  panel rounds + 1 targeted reconciliation + the gptsol external arm
+  (3 findings folded, re-check CLEAN). The act: content commit (draft
+  + plan §14.3 alignment + this log + the tier-log split note) → the
+  ch8 reopen cycle (C9 class-scoping + C10 integer ban, one
+  realized→reopened→realized cycle) → the ch11 cycle (C1 agent-class
+  scoping) → the ratifying commit (schema lock on templateFormat.ts;
+  ch14-C26 carries the reopen set). Main-thread model from P1 on:
+  Opus (the user's cost ruling — tier log §8).
