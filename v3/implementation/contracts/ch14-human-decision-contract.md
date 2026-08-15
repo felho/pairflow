@@ -1,7 +1,7 @@
 # ch14 — human-decision contract
 
 ```json
-{"contract_draft": {"chapter": "ch14", "surface": "human-decision", "status": "draft"}}
+{"contract_draft": {"chapter": "ch14", "surface": "human-decision", "status": "ratified"}}
 ```
 
 ## Context (non-normative by declaration)
@@ -293,5 +293,9 @@ post-ratification reopenings: 0 (at first ratification).
 | C26 | The ratification act's REOPEN SET, carried normatively (the ch13-C16 precedent): (1) the ch8 contract — ONE realized → reopened → realized cycle editing TWO rows: C10 gains the ban clause (this contract cited as migration authority) and C9 scopes its keyset to the agent class, delegating the per-type keysets to `contract:ch14-human-decision#C1` / `contract:ch14-human-decision#C2` / `contract:ch14-human-decision#C3`; the same act updates the `realized_map` entries (C10 gains the delegation annotation — the ban's code half realizes at ch14-P1, the ch8-C14 vacuous-delegation form; C9 likewise), appends the file's reopen record, and increments its reopening metric. (2) the ch11 contract — ONE cycle editing C1 (its step-keyset aggregate scoped to the agent class), with the same map-annotation, record, and metric duties. Commit ORDER, fixed: the content commit (this file + the plan §14.3/§14.5 alignment edit recording the wider act — R-ALIGNED-UP, propagation-class) → the ch8 cycle (two commits) → the ch11 cycle (two commits, its C1 edit reading ch8-C9's new text) → the ratifying commit; both reopens are HUMAN-resolved STOPs riding the ratification GO (never inferred — template §4), and the zero-reopened gate points (packet approve / chapter close / process flips) all sit OUTSIDE the two transient windows. The known red-window surface, measured at authoring at fully-qualified-anchor grain: 9 sites in 4 packet files — the ch8 window's 4 (the ch8-P1 V4/V5 rows + their two manifest entries) and the ch11 window's 5 (the ch11-P4 F2 row + manifest, the ch11-P2a D1 row + manifest, the ch11-P3b W3 manifest) — loud-red for each window by design, closed at that cycle's second commit. |
 
 ## Ratification history (empty at `draft` — blocks are appended by the lifecycle acts)
+
+```json
+{"ratification": {"date": "2026-08-15", "arms": ["two full five-lens fresh-context Opus panel rounds + one targeted lens-4 reconciliation round (agent-run; every finding folded — the round-by-round record is the session's review log)", "agent-invoked gptsol arm (pin gpt-5.6-sol/high) on the approve-ready bytes: 3 findings folded, its re-check CLEAN on the folded basis", "the ratifier's stepwise digest walk (2026-08-14/15): all 5 digest points EZX-expanded and approved one at a time, incl. the sys:-prefix K0 routing and the hand-lane-vs-construct challenge; the GO resolved the ch8/ch11 reopen STOPs carried by C26"], "commit": "8d61d0a149f98171f5cd0672107885bbb2439184", "schema": {"path": "v3/src/definition/schema/templateFormat.ts", "sha256": "fa8bc5a22a3370127fa948ae42c1310b631dec961527754f80792c9394494e3d"}}}
+```
 
 ## Realized map (empty until chapter close)
