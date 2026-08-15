@@ -1,7 +1,7 @@
 # ch8 — template-format contract
 
 ```json
-{"contract_draft": {"chapter": "ch8", "surface": "template-format", "status": "reopened"}}
+{"contract_draft": {"chapter": "ch8", "surface": "template-format", "status": "realized"}}
 ```
 
 ## Context (non-normative by declaration)
@@ -247,7 +247,54 @@ successor semantics realize at ch14's own close.
 ```
 
 
+```json
+{"ratification": {"date": "2026-08-15", "arms": ["the ch14 draft ratification's reopen rider (ch14-C26): the edits' grounds and prepared shape reviewed by the ch14 draft's two full Opus panel rounds + targeted reconciliation + the agent-invoked gptsol arm (pin gpt-5.6-sol/high, re-check CLEAN); the reopen resolved as the ratifying user's explicit STOP decision at the ch14 GO, diff-reviewed"], "commit": "92ec7ac9e82dcf0810655281d58f1b62652bb269"}}
+```
+
 ## Realized map (empty until chapter close)
+
+```json
+{"realized_map": {
+  "C1": "ch8-P1 G2 \u2014 v3/src/definition/load.ts; load.test.ts G2 lane",
+  "C2": "ch8-P1 G4 \u2014 load.ts warnings promotion; load.test.ts G4 lanes",
+  "C3": "ch8-P1 G5 \u2014 load.ts; load.test.ts multi-document lane",
+  "C4": "ch8-P1 G6 (+ rounds 3-6: document-wide structural uniqueKeys, SameValueZero) \u2014 load.ts; load.test.ts G6 lanes",
+  "C5": "ch8-P1 G8 + V15 \u2014 load.ts resolve guard; validate.ts acyclicity; both suites' lanes",
+  "C6": "ch8-P1 G3 \u2014 load.ts strict TextDecoder; load.test.ts invalid-byte lane",
+  "C7": "ch8-P1 V1 \u2014 validate.ts root keyset; validate.test.ts V1 lanes",
+  "C8": "ch8-P1 V2 + V3 (+ ch8-P2 T2: the C8-mirrored CLI ref grammar) \u2014 validate.ts id regex + version source ladder; cli/main.ts parseTemplateRef; validate.test.ts dimension-2 ladder + cli.test.ts T2 ladder",
+  "C9": "ch8-P1 V4 \u2014 validate.ts; validate.test.ts (agent-class scope since the 2026-08-15 reopen; the per-type keysets realize VACUOUSLY here \u2014 delegation, the successor realizes at ch14's close)",
+  "C10": "ch8-P1 V5 \u2014 validate.ts shared id grammar; validate.test.ts id-class \u00d7 form grid (the integer-ban clause realizes VACUOUSLY here \u2014 delegation, the code half lands at ch14-P1)",
+  "C11": "ch8-P1 V6 \u2014 validate.ts; validate.test.ts",
+  "C12": "ch8-P1 V7 \u2014 validate.ts; validate.test.ts empty-transitions positive",
+  "C13": "ch8-P1 V8 \u2014 validate.ts fixed-vs-open keysets; validate.test.ts unknown-key lanes",
+  "C14": "ch8-P1 V9 (+ rounds 3/6: own-property-safe records, lossless Map fallback, one-memo identity) \u2014 validate.ts; validate.test.ts V9 lanes ; reopened at the ch12 ratification (human-approved 2026-07-18, ratified 2026-07-19) \u2014 successor contract:ch12-runtime-core#C7; realized vacuously (delegation \u2014 the successor realizes at ch12's close)",
+  "C15": "ch8-P1 V10 \u2014 validate.ts; validate.test.ts",
+  "C16": "ch8-P1 V11 (+ ch8-P2 M6: the start.ts pointer retirement; start.ts itself was later retired at ch12-P1b, commit 6aec56d4) \u2014 validate.ts; validate.test.ts role-set lanes",
+  "C17": "ch8-P1 V12 \u2014 validate.ts; validate.test.ts",
+  "C18": "ch8-P1 V13 \u2014 validate.ts; validate.test.ts",
+  "C19": "ch8-P1 V14 \u2014 validate.ts; validate.test.ts",
+  "C20": "ch8-P1 E1 + E5 + S4 \u2014 errors.ts finding forms; load.ts; E5's exact read-path finding shapes; both suites' ordering/read lanes",
+  "C21": "ch8-P1 E2 + E5 \u2014 validate.ts accumulation + dependent-lane suppression; E5's exact {path, message} keyset; validate.test.ts dimensions 5-6 + the keyset lane",
+  "C22": "ch8-P1 E3 \u2014 load.ts/validate.ts; both suites (the every-stage catch is G1's, anchored at C36)",
+  "C23": "ch8-P1 E4 \u2014 errors.ts nameless load side; the close registry-name sweep",
+  "C24": "ch8-P1 V16 \u2014 validate.ts; validate.test.ts kind-reserved negative",
+  "C25": "ch8-P1 V17 \u2014 vacuously realized at v0 (empty appendix; unknown keys fall to C13's V8 lane)",
+  "C26": "ch8-P1 S1 \u2014 fileDefinitionStore.ts byte-exact listing; fileDefinitionStore.test.ts dimension-9 lanes",
+  "C27": "ch8-P1 S2 \u2014 fileDefinitionStore.ts post-validate ref check; store suite",
+  "C28": "ch8-P1 S3 + S4 \u2014 fileDefinitionStore.ts + ports/definition.ts comment; S4's unlistable-directory-is-not-absent branch; store suite invalid-vs-absent lanes",
+  "C29": "ch8-P2 A1-A4 + ch8-P1 B4 \u2014 cli/common.ts resolveTemplatesDir (eager gate); B4's public file-store surface (definition/index.ts); cli.test.ts A lanes + the breaking-sweep",
+  "C30": "ch8-P2 T1-T2 \u2014 cli/main.ts parseTemplateRef (C8-mirrored grammar); cli.test.ts T2 ladder",
+  "C31": "ch8-P2 D1-D5 (+ ch8-P2 A3/W2, ch8-P1 E5/B4: the loadTemplate path + typed-error surface the verb consumes) \u2014 cli/dev/main.ts verbValidate; dev.test.ts D lanes",
+  "C32": "ch8-P2 M1-M3 + M5 + M7 \u2014 v3/templates/local-pair-v0@1.yaml; the builtin deleted; M5's MD-1 debt-closure sweep; testkit/templateFixture.test.ts equality pin",
+  "C33": "ch8-P1 B3 \u2014 v3/package.json yaml@2 dependency; ADR-012",
+  "C34": "ch8-P1 G7 \u2014 load.ts two-mechanism directive union; load.test.ts G7 lanes",
+  "C35": "ch8-P1 G9 \u2014 merge-key non-feature; load.test.ts G9 lanes",
+  "C36": "ch8-P1 G1 + G8 \u2014 load.ts staged short-circuiting pipeline; G8's resolve-stage toJS/alias guard; both suites' combination lanes",
+  "C37": "ch8-P2 M4 + A3 \u2014 cli/dev/main.ts replay repoint to the testkit fixture, kept outside --templates-dir; dev.test.ts A3/M4 replay lanes",
+  "C38": "ch8-P2 W1-W4 + ch8-P1 B4 \u2014 cli/main.ts + cli/dev/main.ts type-based per-verb catches over B4's typed store/error surface; cli.test.ts/dev.test.ts W lanes + journey.test.ts"
+}}
+```
 
 
 
