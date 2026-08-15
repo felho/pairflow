@@ -1,7 +1,7 @@
 # ch8 — template-format contract
 
 ```json
-{"contract_draft": {"chapter": "ch8", "surface": "template-format", "status": "realized"}}
+{"contract_draft": {"chapter": "ch8", "surface": "template-format", "status": "reopened"}}
 ```
 
 ## Context (non-normative by declaration)
@@ -162,7 +162,7 @@ full parse ("elég sok szem látta"); the draft's legibility for a
 human ratifier is boundary-review material.
 
 **Close metrics (recorded at the ch8 close, 2026-07-11):**
-post-ratification reopenings: 1 (the 2026-07-19 ch12-ratification pointer reopen — C14's value domain delegated to the ch12 successor, closed by re-ratification within the same act); every row realized across ch8-P1
+post-ratification reopenings: 2 (the 2026-08-15 ch14-ratification reopen — C9 scoped to the agent class + C10's integer-key ban, one cycle; and the 2026-07-19 ch12-ratification pointer reopen — C14's value domain delegated to the ch12 successor, closed by re-ratification within the same act); every row realized across ch8-P1
 (C1–C28, C33–C36) and ch8-P2 (C29–C32, C37–C38) — the realized flip +
 map in ONE act (this commit). The boundary review resolved the queued
 legibility question: the depth-is-the-human's-risk-call clause
@@ -177,6 +177,17 @@ reopen. Reopen-delta new-decision rows: 0 (a pointer conversion; the
 narrowing decision lives in the ch12 draft). The pointer row realizes
 VACUOUSLY — the successor semantics realize at ch12's own close.
 
+**Reopen record (2026-08-15, the ch14 draft ratification — the reopen
+set its C26 carries).** Reopened from `realized` (the post-close
+escape hatch, the ratifier's resolved STOP): C9 scoped to the AGENT
+class with the per-type keysets delegated to the ch14 contract (the
+step-class partition falsified the universal keyset), and C10's id
+grammar gains the integer-key ban (ch13 boundary verdict (f); the
+code half lands at ch14-P1). Reopen-delta new-decision rows: 0 (both
+decisions live in the ch14 draft; these edits scope and point). C9's
+delegated keysets and C10's ban clause realize VACUOUSLY here — the
+successor semantics realize at ch14's own close.
+
 ## Contract rows (every normative statement is a C-row)
 
 | ID | Rule |
@@ -189,8 +200,8 @@ VACUOUSLY — the successor semantics realize at ch12's own close.
 | C6 | Template files are UTF-8 and are decoded STRICTLY (`TextDecoder` fatal mode): invalid byte sequences are a read-stage load error — never the platform's silent U+FFFD substitution, which would repair a malformed file into a different one (probe P19b). |
 | C7 | Top-level shape: a map with EXACTLY the keys `ref`, `start`, `steps`, `terminal`, `roles` — all five required. A NON-MAP root (the empty document's `null`, a list, a scalar — probe P10) is ONE validate finding at the root path (C21), never five missing-key findings. Forward declaration (the C25 mirror, plan §8.2 rule 2): the fixed keysets grow ONLY by ADDITIVE OPTIONAL keys ratified in the realizing chapter (first expected: the L2 gate core's key), each with a behavior-preserving default — never by silent extension. (The post-`realized` carrier mechanics — a new ratification act on this draft vs a successor surface — are the process layer's call at that chapter, not this row's; this row fixes only that the growth is additive.) |
 | C8 | `ref` is a map with exactly `id` and `version`; `id` is a STRING (a non-string resolved value is rejected) matching `^[a-z0-9][a-z0-9-]*$` (filename-safe); `version` is an integer ≥ 1 written as a PLAIN scalar in decimal form — the scalar's SOURCE TEXT must match `^[1-9][0-9]*$`, where "source text" means the RAW representation including quote/style characters (the range slice or node type, never the quote-stripping `.source` — probe P11), because the resolved value cannot carry the distinction: `1.0` resolves to integral 1 and `0x10` to 16 (probes P3/P19a) — float forms, quoted/string forms, and alternative bases are ALL rejected on the source form. `version` must additionally be ANCHOR-FREE, NON-ALIASED, and TAG-FREE, and its RESOLVED value must be a SAFE integer (`Number.isSafeInteger` — past 2^53−1 distinct source strings collapse to one float, defeating identity) — the tag token, like the anchor token, sits OUTSIDE the range slice: `version: !!str 1` slices to `1`, types PLAIN, raises no warning (a standard resolvable tag), yet resolves to the STRING `"1"` (probes P21/P22); the resolved-type check is the symmetric belt the `id` clause already carries. |
-| C9 | `steps` is a NONEMPTY map of step-id → step; a step is a map with exactly `role`, `instruction`, `transitions`, plus the optional `agentConfig`. |
-| C10 | Step ids, TERMINAL ids, role names, and event types are nonempty strings containing no whitespace character (`/\s/u`) and NO `.` — the dot is C21's path-segment separator, and banning it in every id class keeps each error path's segment boundaries reconstructable on the machine-read error-doc surface (strict start; a relaxation would first need a C21 path-escaping grammar). Terminal ids share the transition-target namespace with step ids (C19), so the whole namespace carries ONE grammar. |
+| C9 | `steps` is a NONEMPTY map of step-id → step. A step of the AGENT class — selected by the ABSENCE of the `type` discriminator, and the only class this surface defines — is a map with exactly `role`, `instruction`, `transitions`, plus the optional `agentConfig`; the step-class discriminator and the other classes' keysets are delegated to `contract:ch14-human-decision#C1` / `contract:ch14-human-decision#C2` / `contract:ch14-human-decision#C3` (the 2026-08-15 reopen's scoping). |
+| C10 | Step ids, TERMINAL ids, role names, and event types are nonempty strings containing no whitespace character (`/\s/u`) and NO `.` — the dot is C21's path-segment separator, and banning it in every id class keeps each error path's segment boundaries reconstructable on the machine-read error-doc surface (strict start; a relaxation would first need a C21 path-escaping grammar). Terminal ids share the transition-target namespace with step ids (C19), so the whole namespace carries ONE grammar — which additionally refuses the canonical decimal integer spellings of 0…2³²−2, the measured JS record enumeration re-order class (`"01"`, `"-1"`, `"4294967295"` stay legal); migration authority, receipts, and the code carrier (the ch14-P1 `vc-id-class` tightening): `contract:ch14-human-decision#C10`. |
 | C11 | `instruction` is a nonempty string; multiline prose is first-class via block scalars and the format performs NO whitespace normalization — trailing-newline behavior is the author's, via the chomping indicator (probe P4). |
 | C12 | `transitions` is a map of event-type → target id and MAY be empty: a step with no transitions is semantically defined (at runtime every event yields the model's `no_transition` rejection) — the format does not forbid the shape. |
 | C13 | The shape has two kinds of map: FIXED-KEYSET maps (the top level, `ref`, each step, each roles entry — their legal keysets are C7/C8/C9/C15) and OPEN-KEY maps (`steps`, `transitions`, `roles` — their KEYS are data: step ids, event types, role names, governed by C10 and C16; their VALUES are governed by their own rows, e.g. C19 for transition targets). The unknown-key rule binds the FIXED-KEYSET maps only: an unknown key there is a validation error naming the exact path and the offending key (plan §8.2 rule 4, fail-closed); an open-key map has no "unknown" key by construction. `agentConfig` is exempt entirely (C14). |
@@ -238,47 +249,6 @@ VACUOUSLY — the successor semantics realize at ch12's own close.
 
 ## Realized map (empty until chapter close)
 
-```json
-{"realized_map": {
-  "C1": "ch8-P1 G2 — v3/src/definition/load.ts; load.test.ts G2 lane",
-  "C2": "ch8-P1 G4 — load.ts warnings promotion; load.test.ts G4 lanes",
-  "C3": "ch8-P1 G5 — load.ts; load.test.ts multi-document lane",
-  "C4": "ch8-P1 G6 (+ rounds 3-6: document-wide structural uniqueKeys, SameValueZero) — load.ts; load.test.ts G6 lanes",
-  "C5": "ch8-P1 G8 + V15 — load.ts resolve guard; validate.ts acyclicity; both suites' lanes",
-  "C6": "ch8-P1 G3 — load.ts strict TextDecoder; load.test.ts invalid-byte lane",
-  "C7": "ch8-P1 V1 — validate.ts root keyset; validate.test.ts V1 lanes",
-  "C8": "ch8-P1 V2 + V3 (+ ch8-P2 T2: the C8-mirrored CLI ref grammar) — validate.ts id regex + version source ladder; cli/main.ts parseTemplateRef; validate.test.ts dimension-2 ladder + cli.test.ts T2 ladder",
-  "C9": "ch8-P1 V4 — validate.ts; validate.test.ts",
-  "C10": "ch8-P1 V5 — validate.ts shared id grammar; validate.test.ts id-class × form grid",
-  "C11": "ch8-P1 V6 — validate.ts; validate.test.ts",
-  "C12": "ch8-P1 V7 — validate.ts; validate.test.ts empty-transitions positive",
-  "C13": "ch8-P1 V8 — validate.ts fixed-vs-open keysets; validate.test.ts unknown-key lanes",
-  "C14": "ch8-P1 V9 (+ rounds 3/6: own-property-safe records, lossless Map fallback, one-memo identity) — validate.ts; validate.test.ts V9 lanes ; reopened at the ch12 ratification (human-approved 2026-07-18, ratified 2026-07-19) — successor contract:ch12-runtime-core#C7; realized vacuously (delegation — the successor realizes at ch12's close)",
-  "C15": "ch8-P1 V10 — validate.ts; validate.test.ts",
-  "C16": "ch8-P1 V11 (+ ch8-P2 M6: the start.ts pointer retirement; start.ts itself was later retired at ch12-P1b, commit 6aec56d4) — validate.ts; validate.test.ts role-set lanes",
-  "C17": "ch8-P1 V12 — validate.ts; validate.test.ts",
-  "C18": "ch8-P1 V13 — validate.ts; validate.test.ts",
-  "C19": "ch8-P1 V14 — validate.ts; validate.test.ts",
-  "C20": "ch8-P1 E1 + E5 + S4 — errors.ts finding forms; load.ts; E5's exact read-path finding shapes; both suites' ordering/read lanes",
-  "C21": "ch8-P1 E2 + E5 — validate.ts accumulation + dependent-lane suppression; E5's exact {path, message} keyset; validate.test.ts dimensions 5-6 + the keyset lane",
-  "C22": "ch8-P1 E3 — load.ts/validate.ts; both suites (the every-stage catch is G1's, anchored at C36)",
-  "C23": "ch8-P1 E4 — errors.ts nameless load side; the close registry-name sweep",
-  "C24": "ch8-P1 V16 — validate.ts; validate.test.ts kind-reserved negative",
-  "C25": "ch8-P1 V17 — vacuously realized at v0 (empty appendix; unknown keys fall to C13's V8 lane)",
-  "C26": "ch8-P1 S1 — fileDefinitionStore.ts byte-exact listing; fileDefinitionStore.test.ts dimension-9 lanes",
-  "C27": "ch8-P1 S2 — fileDefinitionStore.ts post-validate ref check; store suite",
-  "C28": "ch8-P1 S3 + S4 — fileDefinitionStore.ts + ports/definition.ts comment; S4's unlistable-directory-is-not-absent branch; store suite invalid-vs-absent lanes",
-  "C29": "ch8-P2 A1-A4 + ch8-P1 B4 — cli/common.ts resolveTemplatesDir (eager gate); B4's public file-store surface (definition/index.ts); cli.test.ts A lanes + the breaking-sweep",
-  "C30": "ch8-P2 T1-T2 — cli/main.ts parseTemplateRef (C8-mirrored grammar); cli.test.ts T2 ladder",
-  "C31": "ch8-P2 D1-D5 (+ ch8-P2 A3/W2, ch8-P1 E5/B4: the loadTemplate path + typed-error surface the verb consumes) — cli/dev/main.ts verbValidate; dev.test.ts D lanes",
-  "C32": "ch8-P2 M1-M3 + M5 + M7 — v3/templates/local-pair-v0@1.yaml; the builtin deleted; M5's MD-1 debt-closure sweep; testkit/templateFixture.test.ts equality pin",
-  "C33": "ch8-P1 B3 — v3/package.json yaml@2 dependency; ADR-012",
-  "C34": "ch8-P1 G7 — load.ts two-mechanism directive union; load.test.ts G7 lanes",
-  "C35": "ch8-P1 G9 — merge-key non-feature; load.test.ts G9 lanes",
-  "C36": "ch8-P1 G1 + G8 — load.ts staged short-circuiting pipeline; G8's resolve-stage toJS/alias guard; both suites' combination lanes",
-  "C37": "ch8-P2 M4 + A3 — cli/dev/main.ts replay repoint to the testkit fixture, kept outside --templates-dir; dev.test.ts A3/M4 replay lanes",
-  "C38": "ch8-P2 W1-W4 + ch8-P1 B4 — cli/main.ts + cli/dev/main.ts type-based per-verb catches over B4's typed store/error surface; cli.test.ts/dev.test.ts W lanes + journey.test.ts"
-}}
-```
+
 
 
