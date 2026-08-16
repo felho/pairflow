@@ -1010,21 +1010,89 @@ recorded honestly. The class is the guard's own tokenizer being part of
 the guard: a probe harness that cannot see failure measures nothing.
 Author: build agent. `[R-CLAIM-FORM-PROBES]`
 
-**Test delta: 2313 → 2634 (+321) across 74 files**, no new test home
+**Test delta: 2313 → 2720 (+407) across 74 files**, no new test home
 minted; the growth lands in the homes the embedding gates named
-(`admit.test.ts` 140→396, `validate.test.ts` 174→287, `engine.test.ts`
+(`admit.test.ts` 140→448, `validate.test.ts` 174→321, `engine.test.ts`
 249→273, `dev.test.ts` 46→67, `contextBlocks.test.ts` 36→37, the two
-drift suites +3).
+drift suites +3). The last +86 is the build-close arm's AFTERMATH
+(below), which expanded five families to their declared memberships.
 
-**Mutation probes: eleven, all receipt-backed** through the probe
-runner (backup-before, restore-from-copy, `cmp`-verified after), one per
-declared family plus the plan's build-close tracked item — the load
-guard's inverse direction (remove the reader, keep the inventory entry),
-which went RED as required and discharges that row from the plan rather
-than from this prose.
+**Mutation probes: eleven at the build, all receipt-backed** through the
+probe runner (backup-before, restore-from-copy, `cmp`-verified after),
+one per declared family plus the plan's build-close tracked item — the
+load guard's inverse direction (remove the reader, keep the inventory
+entry), which went RED as required and discharges that row from the plan
+rather than from this prose. The table is the receipts read back, one
+row each; every row carries `baseline: green`, `exit 1`,
+`suite_red: true` and `restore_verified: true`, and the MUTATION column
+is what the receipt's captured output evidences (the runner stores the
+mutated digest, never the mutated bytes).
+
+| family | mutation | expected red | observed | receipt |
+|---|---|---|---|---|
+| 1 — declared lanes | `templateFormat.ts`: the `d-wait-kind` presence lane stops producing its finding | that one lane's row, admission succeeding where it must refuse | 1 of 77 red — `d-wait-kind: presence`, `expected true to be false` at `ch14Fail` | `PROBE-CH14P1-B1` |
+| 2 — class partition | `templateSurface.ts`: the AGENT class stops refusing `decisions` | the agent refusal cell and D3's composition rule, both directions | 3 of 63 red — the refusal cell, the two-finding rule (the class finding missing), and its converse | `PROBE-CH14P1-B2` |
+| 3 — reference rules | `templateFormat.ts`: the `keysSubsetOf` lane's absent-operand knob | the ABSENT-operand row's honest finding | 1 of 32 red — an EXTRA `internal validator failure: the keysSubsetOf lane could not be decided` beside the missing-key finding | `PROBE-CH14P1-B3` |
+| 4 — accumulation | `templateSurface.ts`: the `decisions` container's dependent suppression | the container's finding ALONE | 1 of 17 red — 2 findings under the container where 1 is owed | `PROBE-CH14P1-B4` |
+| 5 — code carriage | `templateFormat.ts`: the `decisions` container lane's `code` assignment | that lane carrying `invalid_decision_gate_config` by value | 1 of 15 red — the finding fires with `code: undefined` | `PROBE-CH14P1-B5` |
+| 6 — the ban | `templateFormat.ts`: the ban's UPPER edge narrowed | every citing position, at the ceiling | 20 of 105 red — `4294967293` and `4294967294` admitted at all TEN positions at once | `PROBE-CH14P1-B6` |
+| 7 — non-movement | `templateFormat.ts`: the ban clause removed from the grammar MESSAGE (the refusal itself intact) | the ONE delta, asserted positively | 1 of 5 red — the standing clause survives, the grown half is gone | `PROBE-CH14P1-B7` |
+| 8 — hand lanes | `templateSurface.ts`: `timeout` dropped from the kernel wait-kind constant | every member of that constant | 4 of 13 red — `timeout` admitted, and the other three messages lose it from their enumeration | `PROBE-CH14P1-B8` |
+| 9 — load guard | `defineSurface.ts`: the inert-POSITION closure refusal | the position-key row, both directions | 1 of 3 red — `closureProblems` returns empty where one problem is owed | `PROBE-CH14P1-B9` |
+| 10 — produced form | `templateFormat.ts`: the per-class decision-target extraction | the decision class's own edges | 2 of 3 red — every `gate` edge computes `false`, the non-decision class unaffected | `PROBE-CH14P1-B10` |
+| build-close tracked item (the load guard's INVERSE) | `defineSurface.ts`, a SECOND distinct mutation of the same file (distinct `mutated_sha256`): the reader removed, the inventory entry kept | the acceptance lanes the removed reader feeds | 1 of 3 red — the same lane, and the captured output is byte-identical to B9's apart from its timestamps, which is the honest limit of what the receipt evidences | `PROBE-CH14P1-B11` |
+
+**AFTERMATH of the build-close arm's gate-2 review (external arm, no
+product defects found; eight findings on the ACCEPTANCE bodies).** Five
+of the ten families were not expanded to their declared memberships and
+two were plausibly blind; all eight are closed, +86 tests. Family 1's
+file half now runs the whole thirty-lane declaration-derived register
+with the finding SET asserted by equality; family 2's file half runs the
+full `CLASS_KEYSETS × authorable × required` cross-product on authored
+fixtures; family 3 is parameterized over five rules × four operand
+states, each with its own whole finding set; family 4 asserts each
+container row's whole ORDERED set by literal value instead of a count;
+family 5's exclusivity census forbids ANY own `code` rather than a
+`decision`-prefixed one — a filter that could not see four of the six
+names; family 7 enumerates the three PRODUCTION callers of the touched
+entry points and compares whole rows, plus the file channel's whole
+`{stage, findings}` document per caller-reachable failure; family 8's
+eight members are GENERATED on both channels from ONE register instead
+of counted as a literal list. Seven further receipt-backed probes
+(`PROBE-CH14P1-A1`…`A7`, receipts under `/tmp/ch14p1-aftermath/`) prove
+the expansions sensitive, each RED with a green baseline and a
+byte-verified restore: A1 attaches `invalid_decision_gate_config` to the
+uncoded `wait` container lane (invisible to the retired prefix filter);
+A2 swaps one accumulated finding's MESSAGE while the count stays 2 (the
+retired `>= 2` assertion would have stayed green); A3–A7 drive the
+file-channel lane register, the file-channel class labels, rule 4's
+remote-operand stand-down, the reservation's file half, and the file
+channel's own copy of the ONE delta.
+
+**ONE question the aftermath surfaced, RULED by the ratifier
+(2026-08-16).** The `recommends_on_non_gate` hand lane fired when the
+REMOTE step's own `type` was unusable — i.e. when that step's class was
+never decided — reporting "routes to step 'gate', which is not a
+humanGate step" beside the enum finding that names the real mistake,
+while the same lane already STOOD DOWN where the remote step is not a
+container at all. THE RULING: the lane STANDS DOWN. An undecided class
+is a THIRD state beside the two the build's own defect-(a) resolution
+separated — `terminal` (resolves, definitively not a gate → finding)
+and unresolvable (already standing down) — and that resolution never
+ruled on it. The ground is the packet's own: D2's per-step gate exists
+so that a step whose class was never decided draws no class cascade,
+D16 stands its two hand lanes down because "a second finding at a
+remote path would mis-address the author", and D7 binds the hand lanes
+to the engine's suppression discipline. No admit/refuse verdict moves
+either way — the template is refused under both readings — so what the
+ruling buys is that the author is sent to the typo and not to a
+consequence of it. Realized in the residual module (the declaration is
+untouched, so the schema digest is unmoved), pinned by family 3's
+rule-4 broken-operand row, and driven: removing the stand-down reds
+that row (`PROBE-CH14P1-A8`, green baseline, byte-verified restore).
 
 **Verification, re-run by the orchestrator rather than inherited:**
-`v3:typecheck` PASS · `v3:lint` PASS · `v3:test` 2634/2634 PASS ·
+`v3:typecheck` PASS · `v3:lint` PASS · `v3:test` 2720/2720 PASS ·
 `v3:coverage` PASS (validation mode) · `v3:adr-check` PASS ·
 `v3:deferred` 1 marker / 0 errors · `v3:packet-lint` exactly TWO errors,
 one per bound contract, both naming `fa8bc5a2…` recorded against

@@ -453,7 +453,14 @@ function recommendsFindings(
     const isTerminal = Array.isArray(terminal) && (terminal as readonly unknown[]).includes(target);
     if (!isContainer(targetStep) && !isTerminal) continue;
     const path = `steps.${stepId}.recommends.${event}`;
-    if (!isContainer(targetStep) || stepClassOf(targetStep, tokens) !== "human_gate") {
+    // A target that IS a step but whose discriminator is unusable has no
+    // class yet — a third state beside terminal and unresolvable. The
+    // lane stands down: that step's own `type` lane owns the authored
+    // mistake, and naming a class the author never declared would
+    // mis-address them (ratified 2026-08-16).
+    const targetClass = isContainer(targetStep) ? stepClassOf(targetStep, tokens) : undefined;
+    if (isContainer(targetStep) && targetClass === undefined) continue;
+    if (targetClass !== "human_gate") {
       findings.push({
         path,
         code: STEP_CLASS_CODES.onNonGate,

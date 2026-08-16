@@ -1,10 +1,16 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import type { WorkflowTemplate } from "../domain/index.js";
 import { createGateRegistry } from "../gates/index.js";
 import type { GateCatalog, InlineGateRegistration } from "../ports/index.js";
+import { fixtureTemplate } from "../testkit/templateFixture.js";
 import { admitTemplate } from "./admit.js";
 import type { ValidationFinding } from "./errors.js";
+import { createFileDefinitionStore } from "./fileDefinitionStore.js";
+import { loadTemplate } from "./load.js";
 
 /**
  * `admitTemplate` (packet ch11-P2a, A1–A7): the admission lane grid over
@@ -1938,140 +1944,305 @@ describe("ch14-P1 family 2 — the discriminator GATE is per STEP, never templat
 // domain, a BROKEN operand container (suppression asserted positively)
 // and an ABSENT operand. ─────────────────────────────────────────────────
 
-describe("ch14-P1 family 3 — reference rule 1: a decision target ∈ steps ∪ terminal (D4)", () => {
-  it("violating: an unresolvable target", () => {
-    expect(ch14Fail(ch14({ gate: { decisions: { approve: { target: "ghost" } } } }))).toStrictEqual([
-      { path: "steps.gate.decisions.approve.target", code: "decision_target_unresolved",
-        message: "decision target must name a step or a terminal id; got \"ghost\"" },
-    ]);
-  });
+/** The ONE id grammar's message tail — the D9 ban clause beside the
+ * standing whitespace/dot clause — spelled once so a row asserting a
+ * grammar finding by literal value cannot drift from its neighbours. */
+const ID_RULE =
+  ': ids contain no whitespace and no "." and are not the canonical decimal spelling of an ' +
+  "integer in 0…4294967294 (a JS record hoists those keys)";
 
-  // EVERY member of the domain — the terminal half is the case a build
-  // following the model SKETCH (which checks steps only) would miss.
-  for (const [claim, target] of [["a step", "implement"], ["a TERMINAL", "done"], ["its OWN gate", "gate"]] as const) {
-    it(`conforming: ${claim}`, () => {
-      expect(admitTemplate(ch14({ gate: { decisions: { go: { target } } } }), catalog).ok).toBe(true);
+/** One cross-position reference rule, expanded over dimension 9's FOUR
+ * operand states. Each state asserts the WHOLE finding set, which is what
+ * makes a stand-down provable: a lane that fired anyway would appear as a
+ * spurious extra member rather than passing a containment check. */
+interface ReferenceRuleRow {
+  readonly rule: string;
+  /** What the rule dereferences — the node whose four states are driven. */
+  readonly operand: string;
+  readonly violating: readonly (readonly [string, () => WorkflowTemplate, readonly ValidationFinding[]])[];
+  /** EVERY member of the declared domain, not a sample. */
+  readonly conforming: readonly (readonly [string, () => WorkflowTemplate])[];
+  /** The operand present but of the WRONG KIND: its own container finding
+   * alone, this rule standing down (→[suppression]). */
+  readonly broken: readonly (readonly [string, () => WorkflowTemplate, readonly ValidationFinding[]])[];
+  /** The operand ABSENT: the declared knob's proof for the declared
+   * lanes, D16's stand-down rule for the two hand lanes. */
+  readonly absent: readonly (readonly [string, () => WorkflowTemplate, readonly ValidationFinding[]])[];
+}
+
+/** Drop a key from a step of a freshly built fixture — a key authored
+ * `undefined` is PRESENT and meets its own value lane, which is a
+ * different case from the missing-key one an absent operand stages. */
+function dropStepKey(template: WorkflowTemplate, id: string, key: string): WorkflowTemplate {
+  const steps = (template as unknown as { steps: Record<string, Raw> }).steps;
+  const step = steps[id];
+  if (step === undefined) throw new Error("fixture");
+  steps[id] = without(step, key);
+  return template;
+}
+
+/** Drop a ROOT key, for the operands that live at the template root. */
+function dropRootKey(template: WorkflowTemplate, key: string): WorkflowTemplate {
+  delete (template as unknown as Raw)[key];
+  return template;
+}
+
+const REFERENCE_RULES: readonly ReferenceRuleRow[] = [
+  {
+    rule: "1. a decision target ∈ steps ∪ terminal (D4)",
+    operand: "the `steps` map and the `terminal` list — a UNION selector, so BOTH halves are driven",
+    violating: [
+      ["an unresolvable target", () => ch14({ gate: { decisions: { approve: { target: "ghost" } } } }), [
+        { path: "steps.gate.decisions.approve.target", code: "decision_target_unresolved",
+          message: "decision target must name a step or a terminal id; got \"ghost\"" },
+      ]],
+    ],
+    // EVERY member of the domain — the TERMINAL half is the case a build
+    // following the model SKETCH (which checks steps only) would miss.
+    conforming: [
+      ["a step", () => ch14({ gate: { decisions: { go: { target: "implement" } } } })],
+      ["a TERMINAL", () => ch14({ gate: { decisions: { go: { target: "done" } } } })],
+      ["its OWN gate (the self-target that genuinely re-arrives)",
+        () => ch14({ gate: { decisions: { go: { target: "gate" } } } })],
+    ],
+    broken: [
+      ["a non-map `steps` (the union's first half)", () => ch14({}, { steps: "x" }), [
+        { path: "steps", message: "steps must be a NONEMPTY map of step-id -> step" },
+      ]],
+      ["a non-list `terminal` (the union's second half)",
+        () => ch14({ gate: { decisions: { approve: { target: "done" } } } }, { terminal: 5 }), [
+          { path: "terminal", message: "terminal must be a nonempty list of unique ids" },
+        ]],
+    ],
+    absent: [
+      ["`terminal` absent", () => dropRootKey(ch14({ gate: { decisions: { approve: { target: "done" } } } }), "terminal"), [
+        { path: "$", message: "missing required key \"terminal\"" },
+      ]],
+      ["`steps` absent", () => dropRootKey(ch14(), "steps"), [
+        { path: "$", message: "missing required key \"steps\"" },
+      ]],
+    ],
+  },
+  {
+    rule: "2. onResume keys ⊆ the step's own resumeEvents (D5, declared)",
+    operand: "the SIBLING-NESTED `^.wait.resumeEvents` list",
+    violating: [
+      ["a key outside the declared resume events", () => ch14({ hold: { onResume: { GHOST: "done" } } }), [
+        { path: "steps.hold.onResume.GHOST",
+          message: "dead resume route: 'GHOST' is not a declared resume event of step 'hold'" },
+      ]],
+    ],
+    conforming: [
+      ["every declared member routed",
+        () => ch14({ hold: { wait: { kind: "k", resumeEvents: ["A", "B"] }, onResume: { A: "done", B: "implement" } } })],
+      ["a member with NO route beside one that has one — admissible by design",
+        () => ch14({ hold: { wait: { kind: "k", resumeEvents: ["A", "B"] }, onResume: { A: "done" } } })],
+      ["the EMPTY onResume map", () => ch14({ hold: { onResume: {} } })],
+    ],
+    broken: [
+      ["a non-map `wait`", () => ch14({ hold: { wait: 5 } }), [
+        { path: "steps.hold.wait", message: "wait must be a map with exactly kind and resumeEvents; got 5" },
+      ]],
+      ["a non-list `resumeEvents`", () => ch14({ hold: { wait: { kind: "k", resumeEvents: "A" } } }), [
+        { path: "steps.hold.wait.resumeEvents",
+          message: "resumeEvents must be a nonempty list of event-type ids; got \"A\"" },
+      ]],
+    ],
+    absent: [
+      // The declared `whenOperandAbsent: "skip"` knob's proof: without it
+      // this answers `internal validator failure` instead of the class
+      // hand lane's honest finding (PROBE-CH14P1-5).
+      ["`wait` absent — the declared knob's proof", () => dropStepKey(ch14(), "hold", "wait"), [
+        { path: "steps.hold", message: "missing required key \"wait\"" },
+      ]],
+      ["`resumeEvents` absent inside a present `wait`", () => ch14({ hold: { wait: { kind: "k" } } }), [
+        { path: "steps.hold.wait", message: "missing required key \"resumeEvents\"" },
+      ]],
+    ],
+  },
+  {
+    rule: "3. recommends keys ⊆ keys(transitions) (D16, declared)",
+    operand: "the SIBLING `transitions` map",
+    violating: [
+      ["a key outside keys(transitions)", () => ch14({ implement: { recommends: { GHOST: "approve" } } }), [
+        { path: "steps.implement.recommends.GHOST",
+          message: "dead recommendation: 'GHOST' is not a transition of step 'implement'" },
+      ]],
+    ],
+    conforming: [
+      ["every declared transition key recommended",
+        () => ch14({ implement: { transitions: { PASS: "gate", ALSO: "gate" }, recommends: { PASS: "approve", ALSO: "approve" } } })],
+      ["the EMPTY recommends map", () => ch14({ implement: { recommends: {} } })],
+    ],
+    broken: [
+      // The WRONG-KIND operand: the gap a rule driven only for its ABSENT
+      // state leaves open.
+      ["a non-map `transitions`",
+        () => ch14({ implement: { transitions: 5, recommends: { PASS: "approve" } }, hold: null }), [
+          { path: "steps.implement.transitions",
+            message: "transitions must be a map of event-type -> target id (it may be empty)" },
+        ]],
+    ],
+    absent: [
+      ["`transitions` absent",
+        () => dropStepKey(ch14({ implement: { recommends: { PASS: "approve" } }, hold: null }), "implement", "transitions"), [
+          { path: "steps.implement", message: "missing required key \"transitions\"" },
+        ]],
+    ],
+  },
+  {
+    rule: "4. the recommended edge's TARGET is a humanGate (D16, hand — a two-hop dereference)",
+    operand: "the REMOTE step named by `transitions[event]`, and its class discriminator",
+    violating: [
+      ["the target is another STEP",
+        () => ch14({ implement: { transitions: { PASS: "gate", SKIP: "hold" }, recommends: { SKIP: "approve" } } }), [
+          { path: "steps.implement.recommends.SKIP", code: "recommends_on_non_gate",
+            message: "recommends: 'SKIP' routes to step 'hold', which is not a humanGate step — " +
+              "a recommendation is meaningful only where a decision will be asked" },
+        ]],
+      // A TERMINAL target RESOLVES and is definitively not a gate — the
+      // build-time defect this discipline caught (the lane had stood down
+      // on it, conflating "terminal" with "unresolvable").
+      ["the target is a TERMINAL — it resolves, and is still not a gate",
+        () => ch14({ implement: { transitions: { PASS: "gate", SKIP: "done" }, recommends: { SKIP: "approve" } } }), [
+          { path: "steps.implement.recommends.SKIP", code: "recommends_on_non_gate",
+            message: "recommends: 'SKIP' routes to step 'done', which is not a humanGate step — " +
+              "a recommendation is meaningful only where a decision will be asked" },
+        ]],
+    ],
+    conforming: [
+      ["the target IS a humanGate", () => ch14({ implement: { recommends: { PASS: "approve" } } })],
+    ],
+    broken: [
+      ["the remote step is not a map at all — its own container finding ALONE",
+        () => ch14({ implement: { recommends: { PASS: "approve" } } },
+          { steps: {
+            implement: { role: "implementer", instruction: "i", transitions: { PASS: "gate" }, recommends: { PASS: "approve" } },
+            gate: 5,
+          } }), [
+          { path: "steps.gate",
+            message: "a step must be a map with exactly role, instruction, transitions (+ optional agentConfig, gates)" },
+        ]],
+      // The remote step's DISCRIMINATOR is unusable, so its class was never
+      // decided — a third state beside `terminal` (resolves, definitively
+      // not a gate) and unresolvable (already stands down). The lane STANDS
+      // DOWN: the step's own type lane owns the authored mistake, and a
+      // second finding naming a class the author never declared would
+      // mis-address them. Ratified 2026-08-16 at the gate-2 aftermath.
+      ["the remote step's own `type` is unusable — its class was never decided",
+        () => ch14({ implement: { recommends: { PASS: "approve" } }, gate: { type: "nope" } }), [
+          { path: "steps.gate.type", message: "type must be one of human_gate, wait; got \"nope\"" },
+        ]],
+    ],
+    absent: [
+      ["the agent step has no `transitions` — the operand cannot be read",
+        () => dropStepKey(ch14({ implement: { recommends: { PASS: "approve" } }, hold: null }), "implement", "transitions"), [
+          { path: "steps.implement", message: "missing required key \"transitions\"" },
+        ]],
+      ["the transition target does not resolve — the declared membership lane already named it",
+        () => ch14({ implement: { transitions: { PASS: "ghost" }, recommends: { PASS: "approve" } }, hold: null }), [
+          { path: "steps.implement.transitions.PASS",
+            message: "transition target must name a step or a terminal id; got \"ghost\"" },
+        ]],
+    ],
+  },
+  {
+    rule: "5. the recommends VALUE ∈ that gate's declared decision keys (D16, hand — the second hop)",
+    operand: "the REMOTE gate's `decisions` keyset",
+    violating: [
+      ["a value naming no decision of that gate", () => ch14({ implement: { recommends: { PASS: "ghost" } } }), [
+        { path: "steps.implement.recommends.PASS", code: "recommends_unknown_decision",
+          message: "recommends: 'ghost' is not a declared decision of step 'gate'" },
+      ]],
+    ],
+    conforming: [
+      ["the gate's first declared decision", () => ch14({
+        implement: { recommends: { PASS: "approve" } },
+        gate: { decisions: { approve: { target: "done" }, request_rework: { target: "implement" } } },
+      })],
+      ["the gate's second declared decision", () => ch14({
+        implement: { recommends: { PASS: "request_rework" } },
+        gate: { decisions: { approve: { target: "done" }, request_rework: { target: "implement" } } },
+      })],
+    ],
+    broken: [
+      ["a non-map `decisions` on the target gate",
+        () => ch14({ implement: { recommends: { PASS: "approve" } }, gate: { decisions: "x" } }), [
+          { path: "steps.gate.decisions", code: "invalid_decision_gate_config",
+            message: "decisions must be a map of decision key -> { target, payload? }; got \"x\"" },
+        ]],
+      // The build-time defect this discipline caught: a grammar-invalid
+      // value drew BOTH its grammar finding and a membership finding,
+      // where the declared engine suppresses.
+      ["the VALUE's own grammar fails — the grammar finding ALONE",
+        () => ch14({ implement: { recommends: { PASS: "a b" } } }), [
+          { path: "steps.implement.recommends.PASS", message: `invalid decision key "a b"${ID_RULE}` },
+        ]],
+    ],
+    absent: [
+      ["the target gate declares no `decisions` at all",
+        () => dropStepKey(ch14({ implement: { recommends: { PASS: "approve" } } }), "gate", "decisions"), [
+          { path: "steps.gate", code: "invalid_decision_gate_config", message: "missing required key \"decisions\"" },
+        ]],
+      ["a `recommends` map on a class that refuses it — the class refusal ALONE",
+        () => ch14({ gate: { recommends: { PASS: "approve" } } }), [
+          { path: "steps.gate.recommends",
+            message: "unknown key recommends on a human_gate step " +
+              "(a human_gate step's keys are type, role, instruction, decisions)" },
+        ]],
+    ],
+  },
+];
+
+// ⚠ THE OPEN QUESTION rule 4's broken-operand rows record. When the
+// REMOTE step's own `type` is unusable its class is never decided, and
+// `recommends_on_non_gate` still reports it as "not a humanGate" beside
+// the enum finding that names the real mistake — while the SAME lane
+// stands down when the remote step is not a container at all. Two
+// readings are defensible and no admit/refuse verdict moves either way:
+// the build's defect-(a) resolution ("a target that RESOLVES and is
+// definitively not a gate draws the finding") admits it, while D2's
+// per-step gate ("never … for a step whose class was never decided"),
+// D16's stand-down ground ("a second finding at a remote path would
+// mis-address the author") and D7's "the hand lanes owe the SAME
+// discipline" refuse it. The whole set is pinned AS OBSERVED so a change
+// of mind reds loudly and is adjudicated rather than drifted into; the
+// packet's Build record carries the question for the ratifier.
+
+describe("ch14-P1 family 3 — the five reference rules × dimension 9's four operand states", () => {
+  for (const row of REFERENCE_RULES) {
+    describe(`${row.rule} — operand: ${row.operand}`, () => {
+      for (const [claim, make, findings] of row.violating) {
+        it(`VIOLATING: ${claim}`, () => {
+          expect(ch14Fail(make())).toStrictEqual(findings);
+        });
+      }
+      for (const [claim, make] of row.conforming) {
+        it(`CONFORMING: ${claim}`, () => {
+          expect(admitTemplate(make(), catalog).ok).toBe(true);
+        });
+      }
+      for (const [claim, make, findings] of row.broken) {
+        it(`BROKEN operand: ${claim}`, () => {
+          expect(ch14Fail(make())).toStrictEqual(findings);
+        });
+      }
+      for (const [claim, make, findings] of row.absent) {
+        it(`ABSENT operand: ${claim}`, () => {
+          expect(ch14Fail(make())).toStrictEqual(findings);
+        });
+      }
     });
   }
 
-  it("BROKEN operand: a non-map `steps` yields its container finding and this lane stands down", () => {
-    const findings = ch14Fail(ch14({}, { steps: "x" }));
-    expect(findings).toStrictEqual([
-      { path: "steps", message: "steps must be a NONEMPTY map of step-id -> step" },
-    ]);
-  });
-});
-
-describe("ch14-P1 family 3 — reference rule 2: onResume keys ⊆ the step's own resumeEvents (D5)", () => {
-  it("violating: a key outside the declared resume events", () => {
-    expect(ch14Fail(ch14({ hold: { onResume: { GHOST: "done" } } }))).toStrictEqual([
-      { path: "steps.hold.onResume.GHOST",
-        message: "dead resume route: 'GHOST' is not a declared resume event of step 'hold'" },
-    ]);
-  });
-
-  it("conforming at every member of the domain", () => {
-    expect(
-      admitTemplate(
-        ch14({ hold: { wait: { kind: "k", resumeEvents: ["A", "B"] }, onResume: { A: "done", B: "implement" } } }),
-        catalog,
-      ).ok,
-    ).toBe(true);
-  });
-
-  it("BROKEN operand: a non-map `wait` yields its container finding ALONE", () => {
-    expect(ch14Fail(ch14({ hold: { wait: 5 } }))).toStrictEqual([
-      { path: "steps.hold.wait", message: "wait must be a map with exactly kind and resumeEvents; got 5" },
-    ]);
-  });
-
-  it("BROKEN operand: a non-list `resumeEvents` likewise", () => {
-    expect(ch14Fail(ch14({ hold: { wait: { kind: "k", resumeEvents: "A" } } }))).toStrictEqual([
-      { path: "steps.hold.wait.resumeEvents",
-        message: "resumeEvents must be a nonempty list of event-type ids; got \"A\"" },
-    ]);
-  });
-
-  it("ABSENT operand: the declared knob's proof — the class hand lane's honest finding, never an internal failure", () => {
-    const template = ch14();
-    const steps = (template as unknown as { steps: Record<string, Raw> }).steps;
-    const hold = steps["hold"];
-    if (hold === undefined) throw new Error("fixture");
-    steps["hold"] = without(hold, "wait");
-    const findings = ch14Fail(template);
-    expect(findings).toStrictEqual([{ path: "steps.hold", message: "missing required key \"wait\"" }]);
-  });
-});
-
-describe("ch14-P1 family 3 — reference rules 3-5: the three `recommends` rules (D16)", () => {
-  it("rule 3 violating: a key outside keys(transitions)", () => {
-    expect(ch14Fail(ch14({ implement: { recommends: { GHOST: "approve" } } }))).toStrictEqual([
-      { path: "steps.implement.recommends.GHOST",
-        message: "dead recommendation: 'GHOST' is not a transition of step 'implement'" },
-    ]);
-  });
-
-  it("rule 4 violating: the referenced transition's target is not a humanGate (a STEP target)", () => {
-    expect(
-      ch14Fail(ch14({ implement: { transitions: { PASS: "gate", SKIP: "hold" }, recommends: { SKIP: "approve" } } })),
-    ).toStrictEqual([
-      { path: "steps.implement.recommends.SKIP", code: "recommends_on_non_gate",
-        message: "recommends: 'SKIP' routes to step 'hold', which is not a humanGate step — " +
-          "a recommendation is meaningful only where a decision will be asked" },
-    ]);
-  });
-
-  it("rule 4 violating: a TERMINAL target resolves and is still not a gate", () => {
-    expect(
-      ch14Fail(ch14({ implement: { transitions: { PASS: "gate", SKIP: "done" }, recommends: { SKIP: "approve" } } })),
-    ).toStrictEqual([
-      { path: "steps.implement.recommends.SKIP", code: "recommends_on_non_gate",
-        message: "recommends: 'SKIP' routes to step 'done', which is not a humanGate step — " +
-          "a recommendation is meaningful only where a decision will be asked" },
-    ]);
-  });
-
-  it("rule 5 violating: the value is not a declared decision of that gate", () => {
-    expect(ch14Fail(ch14({ implement: { recommends: { PASS: "ghost" } } }))).toStrictEqual([
-      { path: "steps.implement.recommends.PASS", code: "recommends_unknown_decision",
-        message: "recommends: 'ghost' is not a declared decision of step 'gate'" },
-    ]);
-  });
-
-  it("conforming at every member: each declared decision key of the target gate", () => {
-    for (const decision of ["approve", "request_rework"]) {
-      expect(
-        admitTemplate(
-          ch14({
-            implement: { recommends: { PASS: decision } },
-            gate: { decisions: { approve: { target: "done" }, request_rework: { target: "implement" } } },
-          }),
-          catalog,
-        ).ok,
-      ).toBe(true);
+  it("the register carries dimension 9's FIVE rules, each with all FOUR operand states", () => {
+    expect(REFERENCE_RULES).toHaveLength(5);
+    for (const row of REFERENCE_RULES) {
+      expect(row.violating.length, `${row.rule}: violating`).toBeGreaterThanOrEqual(1);
+      expect(row.conforming.length, `${row.rule}: conforming`).toBeGreaterThanOrEqual(1);
+      expect(row.broken.length, `${row.rule}: broken operand`).toBeGreaterThanOrEqual(1);
+      expect(row.absent.length, `${row.rule}: absent operand`).toBeGreaterThanOrEqual(1);
     }
-  });
-
-  it("BROKEN operand: a non-map `decisions` on the target gate yields its container finding, both lanes standing down", () => {
-    const findings = ch14Fail(ch14({ implement: { recommends: { PASS: "approve" } }, gate: { decisions: "x" } }));
-    expect(findings.filter((finding) => finding.path.startsWith("steps.implement.recommends"))).toStrictEqual([]);
-  });
-
-  it("ABSENT operand: an agent step with no `transitions` stands BOTH hand lanes down", () => {
-    const template = ch14({ implement: { recommends: { PASS: "approve" } }, hold: null });
-    const steps = (template as unknown as { steps: Record<string, Raw> }).steps;
-    const step = steps["implement"];
-    if (step === undefined) throw new Error("fixture");
-    steps["implement"] = without(step, "transitions");
-    const findings = ch14Fail(template);
-    expect(findings.filter((finding) => finding.path.startsWith("steps.implement.recommends"))).toStrictEqual([]);
-    expect(findings).toContainEqual({ path: "steps.implement", message: "missing required key \"transitions\"" });
-  });
-
-  it("ABSENT operand: a `recommends` map on a class that refuses it draws the class refusal ALONE", () => {
-    const findings = ch14Fail(ch14({ gate: { recommends: { PASS: "approve" } } }));
-    expect(findings).toHaveLength(1);
-    expect(findings[0]?.path).toBe("steps.gate.recommends");
   });
 });
 
@@ -2083,8 +2254,16 @@ interface AccumulationRow {
   readonly container: string;
   /** Two INDEPENDENT faults in different positions → BOTH findings. */
   readonly both: () => WorkflowTemplate;
+  /** The whole ORDERED finding set the `both` fixture owes, by LITERAL
+   * value. A COUNT (`>= 2`) is not content: it survives a build that
+   * emits the right number of wrong findings — swapping one expected
+   * code or message here reds while the count stays 2, which is the
+   * mutation this column exists to catch. */
+  readonly bothFindings: readonly ValidationFinding[];
   /** A fault UNDER a broken container → the container's finding ALONE. */
   readonly suppressed: () => WorkflowTemplate;
+  /** The suppressed side's whole set, likewise by literal value. */
+  readonly suppressedFindings: readonly ValidationFinding[];
   readonly containerPath: string;
   /** The prefix the two INDEPENDENT faults share — the container's own
    * path where both sit inside it, its PARENT where the container is one
@@ -2095,29 +2274,105 @@ interface AccumulationRow {
 const ACCUMULATION: readonly AccumulationRow[] = [
   { container: "decisions", containerPath: "steps.gate.decisions",
     both: () => ch14({ gate: { decisions: { approve: { target: "ghost" }, rework: { target: "phantom" } } } }),
-    suppressed: () => ch14({ gate: { decisions: 5 } }) },
+    bothFindings: [
+      { path: "steps.gate.decisions.approve.target", code: "decision_target_unresolved",
+        message: "decision target must name a step or a terminal id; got \"ghost\"" },
+      { path: "steps.gate.decisions.rework.target", code: "decision_target_unresolved",
+        message: "decision target must name a step or a terminal id; got \"phantom\"" },
+    ],
+    suppressed: () => ch14({ gate: { decisions: 5 } }),
+    suppressedFindings: [
+      { path: "steps.gate.decisions", code: "invalid_decision_gate_config",
+        message: "decisions must be a map of decision key -> { target, payload? }; got 5" },
+    ] },
   { container: "a decision entry", containerPath: "steps.gate.decisions.approve",
     both: () => ch14({ gate: { decisions: { approve: { target: "ghost", paylod: {} } } } }),
-    suppressed: () => ch14({ gate: { decisions: { approve: 5 } } }) },
+    bothFindings: [
+      { path: "steps.gate.decisions.approve.paylod", code: "invalid_decision_gate_config",
+        message: "unknown decision key 'paylod' (allowed: target, payload)" },
+      { path: "steps.gate.decisions.approve.target", code: "decision_target_unresolved",
+        message: "decision target must name a step or a terminal id; got \"ghost\"" },
+    ],
+    suppressed: () => ch14({ gate: { decisions: { approve: 5 } } }),
+    suppressedFindings: [
+      { path: "steps.gate.decisions.approve", code: "invalid_decision_gate_config",
+        message: "a decision must be a map with exactly target (+ optional payload); got 5" },
+    ] },
   { container: "payload", containerPath: "steps.gate.decisions.approve.payload",
     both: () => ch14({ gate: { decisions: { approve: { target: "done", payload: { a: true, b: true } } } } }),
-    suppressed: () => ch14({ gate: { decisions: { approve: { target: "done", payload: 5 } } } }) },
+    bothFindings: [
+      { path: "steps.gate.decisions.approve.payload.a", code: "invalid_decision_payload_schema",
+        message: "a payload field spec must be a map with the single optional key required; got true" },
+      { path: "steps.gate.decisions.approve.payload.b", code: "invalid_decision_payload_schema",
+        message: "a payload field spec must be a map with the single optional key required; got true" },
+    ],
+    suppressed: () => ch14({ gate: { decisions: { approve: { target: "done", payload: 5 } } } }),
+    suppressedFindings: [
+      { path: "steps.gate.decisions.approve.payload", code: "invalid_decision_payload_schema",
+        message: "payload must be a map of field name -> { required? }; got 5" },
+    ] },
   { container: "a payload field spec", containerPath: "steps.gate.decisions.approve.payload.a",
     bothPrefix: "steps.gate.decisions.approve.payload",
     both: () => ch14({ gate: { decisions: { approve: { target: "done", payload: { a: { type: "md" }, b: { nested: 1 } } } } } }),
-    suppressed: () => ch14({ gate: { decisions: { approve: { target: "done", payload: { a: 5 } } } } }) },
+    bothFindings: [
+      { path: "steps.gate.decisions.approve.payload.a.type", code: "invalid_decision_payload_schema",
+        message: "unknown payload spec key 'type' (allowed: required)" },
+      { path: "steps.gate.decisions.approve.payload.b.nested", code: "invalid_decision_payload_schema",
+        message: "unknown payload spec key 'nested' (allowed: required)" },
+    ],
+    suppressed: () => ch14({ gate: { decisions: { approve: { target: "done", payload: { a: 5 } } } } }),
+    suppressedFindings: [
+      { path: "steps.gate.decisions.approve.payload.a", code: "invalid_decision_payload_schema",
+        message: "a payload field spec must be a map with the single optional key required; got 5" },
+    ] },
   { container: "wait", containerPath: "steps.hold.wait",
     both: () => ch14({ hold: { wait: { kind: "a b", resumeEvents: ["c d"] } } }),
-    suppressed: () => ch14({ hold: { wait: 5 } }) },
+    bothFindings: [
+      { path: "steps.hold.wait.kind", message: `invalid wait kind "a b"${ID_RULE}` },
+      { path: "steps.hold.wait.resumeEvents[0]", message: `invalid event type "c d"${ID_RULE}` },
+    ],
+    suppressed: () => ch14({ hold: { wait: 5 } }),
+    suppressedFindings: [
+      { path: "steps.hold.wait", message: "wait must be a map with exactly kind and resumeEvents; got 5" },
+    ] },
   { container: "resumeEvents", containerPath: "steps.hold.wait.resumeEvents",
     both: () => ch14({ hold: { wait: { kind: "k", resumeEvents: ["a b", "c d"] } } }),
-    suppressed: () => ch14({ hold: { wait: { kind: "k", resumeEvents: 5 } } }) },
+    bothFindings: [
+      { path: "steps.hold.wait.resumeEvents[0]", message: `invalid event type "a b"${ID_RULE}` },
+      { path: "steps.hold.wait.resumeEvents[1]", message: `invalid event type "c d"${ID_RULE}` },
+    ],
+    suppressed: () => ch14({ hold: { wait: { kind: "k", resumeEvents: 5 } } }),
+    suppressedFindings: [
+      { path: "steps.hold.wait.resumeEvents",
+        message: "resumeEvents must be a nonempty list of event-type ids; got 5" },
+    ] },
   { container: "onResume", containerPath: "steps.hold.onResume",
     both: () => ch14({ hold: { onResume: { GHOST: "done", PHANTOM: "done" } } }),
-    suppressed: () => ch14({ hold: { onResume: 5 } }) },
+    bothFindings: [
+      { path: "steps.hold.onResume.GHOST",
+        message: "dead resume route: 'GHOST' is not a declared resume event of step 'hold'" },
+      { path: "steps.hold.onResume.PHANTOM",
+        message: "dead resume route: 'PHANTOM' is not a declared resume event of step 'hold'" },
+    ],
+    suppressed: () => ch14({ hold: { onResume: 5 } }),
+    suppressedFindings: [
+      { path: "steps.hold.onResume",
+        message: "onResume must be a map of event-type -> target id (it may be empty); got 5" },
+    ] },
   { container: "recommends", containerPath: "steps.implement.recommends",
     both: () => ch14({ implement: { transitions: { PASS: "gate", SKIP: "hold" }, recommends: { GHOST: "approve", SKIP: "approve" } } }),
-    suppressed: () => ch14({ implement: { recommends: 5 } }) },
+    bothFindings: [
+      { path: "steps.implement.recommends.GHOST",
+        message: "dead recommendation: 'GHOST' is not a transition of step 'implement'" },
+      { path: "steps.implement.recommends.SKIP", code: "recommends_on_non_gate",
+        message: "recommends: 'SKIP' routes to step 'hold', which is not a humanGate step — " +
+          "a recommendation is meaningful only where a decision will be asked" },
+    ],
+    suppressed: () => ch14({ implement: { recommends: 5 } }),
+    suppressedFindings: [
+      { path: "steps.implement.recommends",
+        message: "recommends must be a map of event-type -> decision key; got 5" },
+    ] },
 ];
 
 describe("ch14-P1 family 4 — findings accumulate; a broken container suppresses its dependents", () => {
@@ -2125,14 +2380,13 @@ describe("ch14-P1 family 4 — findings accumulate; a broken container suppresse
     it(`${row.container}: two INDEPENDENT faults yield BOTH findings (a first-return build reds here)`, () => {
       const findings = ch14Fail(row.both());
       const own = findings.filter((finding) => finding.path.startsWith(row.bothPrefix ?? row.containerPath));
-      expect(own.length).toBeGreaterThanOrEqual(2);
+      expect(own).toStrictEqual(row.bothFindings);
     });
 
     it(`${row.container}: a fault UNDER a broken container yields the container's finding ALONE`, () => {
       const findings = ch14Fail(row.suppressed());
       const own = findings.filter((finding) => finding.path.startsWith(row.containerPath));
-      expect(own).toHaveLength(1);
-      expect(own[0]?.path).toBe(row.containerPath);
+      expect(own).toStrictEqual(row.suppressedFindings);
     });
   }
 
@@ -2240,7 +2494,12 @@ describe("ch14-P1 family 5 — the six names, by VALUE, on exactly the lanes the
     ];
     for (const [claim, make] of uncoded) {
       const findings = ch14Fail(make());
-      const coded = findings.filter((finding) => finding.code !== undefined && finding.code.startsWith("decision"));
+      // ANY own `code` field, with NO prefix filter: four of the six
+      // names (`invalid_decision_*`, `recommends_*`) do not begin with
+      // "decision", so a prefix-filtered census would let a code land on
+      // these lanes unseen — the exclusivity claim is code-LESS, not
+      // "carries no name from one spelling family".
+      const coded = findings.filter((finding) => finding.code !== undefined);
       expect(coded, claim).toStrictEqual([]);
     }
   });
@@ -2374,11 +2633,140 @@ describe("ch14-P1 family 6 — the ban binds wherever the ONE grammar is cited",
   // this boundary could host — is what carries it.
 });
 
-// ── FAMILY 7: NON-MOVEMENT. The corpus is derived from the CALLERS of
-// the entry points this packet touches; the ONE delta is asserted
-// POSITIVELY so its ABSENCE reds as loudly as an extra one, and the
-// THREE carrier moves are asserted UNCHANGED so a build that
-// manufactures a message change to satisfy the family reds instead. ──────
+// ── FAMILY 7: NON-MOVEMENT. →[parity-corpus] rules the corpus DERIVED
+// from the CALLERS of the entry points this packet touches — never from a
+// file list, which the ADR-019 D5 parity gate measured as UNDER-counting
+// the surface. The enumeration below is that derivation, re-run at this
+// build: every PRODUCTION call site of `admitTemplate`, of the file
+// pipeline's `loadTemplate` (whose validate stage is the sole consumer of
+// `admitFromSource`), and of the dev CLI's validate verb. Each caller is
+// REPLAYED and its WHOLE row compared — the admitted value entire, or the
+// entire `{stage, findings}` document — so a moved path, message, code or
+// produced field surfaces as a row difference rather than slipping past a
+// containment check. The ONE delta is asserted POSITIVELY so its ABSENCE
+// reds as loudly as an extra one, and the THREE carrier moves are
+// asserted UNCHANGED so a build that manufactures a message change to
+// satisfy the family reds instead. ───────────────────────────────────────
+
+/** The canonical authoring file — the SINGLE source both channels and
+ * every production caller reach (ADR-005; the testkit builder is
+ * equality-pinned to it). */
+const CANONICAL_DIR = join(process.cwd(), "templates");
+const CANONICAL_FILE = "local-pair-v0@1.yaml";
+const canonicalBytes = (): Uint8Array =>
+  new Uint8Array(readFileSync(join(CANONICAL_DIR, CANONICAL_FILE)));
+
+/** One PRODUCTION caller of a touched entry point. `site` is the
+ * enumeration's own record: a caller that moves or disappears is a
+ * re-derivation the next build owes, not a silent corpus shrink. */
+interface ParityCaller {
+  readonly site: string;
+  readonly entry: string;
+  /** The WHOLE row this caller observes. */
+  readonly row: () => Promise<unknown>;
+}
+
+const PARITY_CALLERS: readonly ParityCaller[] = [
+  {
+    site: "src/cli/dev/main.ts:576 — verbReplay",
+    entry: "admitTemplate",
+    row: async () => {
+      const result = admitTemplate(fixtureTemplate(), createGateRegistry());
+      return result.ok ? result.template : result.findings;
+    },
+  },
+  {
+    site: "src/cli/dev/main.ts:667 — verbValidate",
+    entry: "loadTemplate (file pipeline → admitFromSource)",
+    row: async () => {
+      const result = loadTemplate(canonicalBytes(), {
+        path: join(CANONICAL_DIR, CANONICAL_FILE),
+        catalog: createGateRegistry(),
+      });
+      return result.ok ? result.template : result.error;
+    },
+  },
+  {
+    site: "src/definition/fileDefinitionStore.ts:78 — the pinned DefinitionStore.load",
+    entry: "loadTemplate (reached by cli/main.ts ×5, cli/runnerVerbs.ts ×2, cli/dev/main.ts inject)",
+    row: async () => {
+      const store = createFileDefinitionStore(CANONICAL_DIR, createGateRegistry());
+      return await store.load({ id: "local-pair-v0", version: 1 });
+    },
+  },
+];
+
+describe("ch14-P1 family 7 — the caller-derived corpus: every production caller replayed, WHOLE rows compared", () => {
+  it("the enumeration is the derivation's own record — three production call sites, two entry points", () => {
+    expect(PARITY_CALLERS.map((caller) => caller.site)).toStrictEqual([
+      "src/cli/dev/main.ts:576 — verbReplay",
+      "src/cli/dev/main.ts:667 — verbValidate",
+      "src/definition/fileDefinitionStore.ts:78 — the pinned DefinitionStore.load",
+    ]);
+  });
+
+  it("every caller observes the SAME whole admitted value — the two channels have not forked", async () => {
+    const rows = await Promise.all(PARITY_CALLERS.map(async (caller) => await caller.row()));
+    const [direct] = rows;
+    expect(direct, "the canonical fixture must still ADMIT — dev replay throws unreachable otherwise").toBeDefined();
+    for (const [index, row] of rows.entries()) {
+      expect(row, `${PARITY_CALLERS[index]?.site ?? ""} (${PARITY_CALLERS[index]?.entry ?? ""})`).toEqual(direct);
+    }
+  });
+
+  // The whole-row comparison above is only as strong as the row's own
+  // shape, so the produced positions the widened hook writes are named
+  // here: a build that dropped `advancesRound` from the canonical
+  // template's steps would still make all three rows EQUAL.
+  it("the whole row carries the produced positions the widening touches", async () => {
+    const row = (await (PARITY_CALLERS[0]?.row() ?? Promise.resolve(undefined))) as
+      | { steps: Record<string, Record<string, unknown>> }
+      | undefined;
+    const steps = row?.steps ?? {};
+    for (const [id, step] of Object.entries(steps)) {
+      expect(step["advancesRound"], `steps.${id}.advancesRound`).toBeDefined();
+    }
+  });
+});
+
+describe("ch14-P1 family 7 — the file channel's whole findings DOCUMENT, per caller-reachable failure", () => {
+  // `admitFromSource` (src/definition/load.ts:253) has no caller but the
+  // validate stage, so its parity is measured where the two production
+  // loadTemplate callers observe it: the whole `{stage, findings}`
+  // document, compared entire rather than probed for one member.
+  const hostile: readonly (readonly [string, string, unknown])[] = [
+    ["a step with no `role` — the FIRST relaxed key, carrier move 1",
+      "ref:\n  id: t\n  version: 1\nstart: s\nsteps:\n  s:\n    instruction: i\n    transitions: {}\nterminal:\n  - done\nroles:\n  r: {}\n",
+      { stage: "validate", findings: [
+        { path: "steps.s", message: 'missing required key "role"' },
+      ] }],
+    ["an undeclared role — carrier move 2, direction 1",
+      "ref:\n  id: t\n  version: 1\nstart: s\nsteps:\n  s:\n    role: ghost\n    instruction: i\n    transitions: {}\nterminal:\n  - done\nroles:\n  r: {}\n",
+      { stage: "validate", findings: [
+        { path: "roles", message: 'role "ghost" is used by steps but not declared' },
+        { path: "roles.r", message: 'role "r" is declared but not used by any step' },
+      ] }],
+    ["a non-map step — carrier move 3, the BYTE-IDENTICAL container message",
+      "ref:\n  id: t\n  version: 1\nstart: s\nsteps:\n  s: 5\nterminal:\n  - done\nroles:\n  r: {}\n",
+      { stage: "validate", findings: [
+        { path: "steps.s",
+          message: "a step must be a map with exactly role, instruction, transitions (+ optional agentConfig, gates)" },
+      ] }],
+    ["an in-class integer id — the ONE delta, at the file channel's own entry",
+      "ref:\n  id: t\n  version: 1\nstart: \"10\"\nsteps:\n  \"10\":\n    role: r\n    instruction: i\n    transitions: {}\nterminal:\n  - done\nroles:\n  r: {}\n",
+      { stage: "validate", findings: [
+        { path: "steps", message: `invalid step id "10"${ID_RULE}` },
+      ] }],
+  ];
+  for (const [claim, text, document] of hostile) {
+    it(claim, () => {
+      const result = loadTemplate(new TextEncoder().encode(text), { catalog: createGateRegistry() });
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect({ stage: result.error.stage, findings: result.error.findings }).toStrictEqual(document);
+    });
+  }
+});
 
 describe("ch14-P1 family 7 — the ONE delta, asserted POSITIVELY", () => {
   it("the id grammar's message GROWS its ban clause and KEEPS its standing one", () => {
@@ -2387,9 +2775,15 @@ describe("ch14-P1 family 7 — the ONE delta, asserted POSITIVELY", () => {
     expect(message).toContain('ids contain no whitespace and no "."');
     expect(message).toContain("are not the canonical decimal spelling of an integer in 0…4294967294");
   });
+
+  it("and it is the ONLY delta: the whole finding set at that position is the grown message and nothing else", () => {
+    expect(ch14Fail(BAN_POSITIONS[0]?.template("10") ?? ch14())).toStrictEqual([
+      { path: "steps", message: `invalid step id "10"${ID_RULE}` },
+    ]);
+  });
 });
 
-describe("ch14-P1 family 7 — the THREE carrier moves, asserted UNCHANGED", () => {
+describe("ch14-P1 family 7 — the THREE carrier moves, asserted UNCHANGED (whole finding sets)", () => {
   it("move 1: the three relaxed keys' presence findings keep their PATHS and MESSAGES", () => {
     for (const key of ["role", "instruction", "transitions"] as const) {
       const template = ch14({ gate: null, hold: null }, { roles: { implementer: {} } });
@@ -2398,31 +2792,32 @@ describe("ch14-P1 family 7 — the THREE carrier moves, asserted UNCHANGED", () 
       if (step === undefined) throw new Error("fixture");
       steps["implement"] = { ...without(step, key), transitions: { PASS: "done" } };
       if (key === "transitions") delete steps["implement"]?.["transitions"];
-      expect(ch14Fail(template)).toContainEqual({
-        path: "steps.implement",
-        message: `missing required key "${key}"`,
-      });
+      expect(ch14Fail(template), key).toStrictEqual([
+        { path: "steps.implement", message: `missing required key "${key}"` },
+      ]);
     }
   });
 
   it("move 2: the role-set equality's findings keep BOTH directions' paths and wordings", () => {
-    const used = ch14Fail(ch14({ implement: { role: "ghost" } }));
-    expect(used).toContainEqual({ path: "roles", message: 'role "ghost" is used by steps but not declared' });
-    const declared = ch14Fail(ch14({}, { roles: { implementer: {}, operator: {}, spare: {} } }));
-    expect(declared).toContainEqual({
-      path: "roles.spare",
-      message: 'role "spare" is declared but not used by any step',
-    });
+    // Swapping the only user of `implementer` for a ghost stages BOTH
+    // directions at once, so the whole set names both — the container
+    // grain for used-but-undeclared, the entry grain for
+    // declared-but-unused (D6's two `at` values, carried over from the
+    // retired declared rule).
+    expect(ch14Fail(ch14({ implement: { role: "ghost" } }))).toStrictEqual([
+      { path: "roles", message: 'role "ghost" is used by steps but not declared' },
+      { path: "roles.implementer", message: 'role "implementer" is declared but not used by any step' },
+    ]);
+    expect(ch14Fail(ch14({}, { roles: { implementer: {}, operator: {}, spare: {} } }))).toStrictEqual([
+      { path: "roles.spare", message: 'role "spare" is declared but not used by any step' },
+    ]);
   });
 
   it("move 3: the step node's container message is held BYTE-IDENTICAL (class wording rides the hand lanes)", () => {
-    const findings = ch14Fail(
-      ch14({ gate: null, hold: null }, { steps: { implement: 5 }, roles: {} }),
-    );
-    expect(findings).toContainEqual({
-      path: "steps.implement",
-      message: "a step must be a map with exactly role, instruction, transitions (+ optional agentConfig, gates)",
-    });
+    expect(ch14Fail(ch14({ gate: null, hold: null }, { steps: { implement: 5 }, roles: {} }))).toStrictEqual([
+      { path: "steps.implement",
+        message: "a step must be a map with exactly role, instruction, transitions (+ optional agentConfig, gates)" },
+    ]);
   });
 });
 
@@ -2432,65 +2827,315 @@ describe("ch14-P1 family 7 — the admitted-VALUE re-pin set, measured and expec
       steps: { implement: { role: "implementer", instruction: "i", transitions: { PASS: "done" } } } }));
     expect(steps["implement"]?.["advancesRound"]).toStrictEqual({ PASS: false });
   });
+
+  it("and the CANONICAL template — the one every production caller loads — carries no such edge either", async () => {
+    const row = (await (PARITY_CALLERS[0]?.row() ?? Promise.resolve(undefined))) as
+      | { steps: Record<string, Record<string, unknown>> }
+      | undefined;
+    for (const [id, step] of Object.entries(row?.steps ?? {})) {
+      expect(step["type"], `steps.${id}.type — no ch14 class is authored at this basis`).toBeUndefined();
+      expect(step["decisions"], `steps.${id}.decisions`).toBeUndefined();
+      expect(step["wait"], `steps.${id}.wait`).toBeUndefined();
+    }
+  });
 });
 
 // ── FAMILY 8: THE HAND LANES — the half no declaration enumerates, and
-// which therefore needs its own inventory. ───────────────────────────────
+// which therefore needs its own inventory. →[lane-drive]'s hand half.
+//
+// The inventory is ONE register, and BOTH channels are GENERATED from it:
+// a member that exists on the direct channel and was never authored as a
+// file cannot hide here, and neither can a file-channel sample that
+// drifted from its direct twin. The eight members are the packet's own
+// (D3's three class keysets and their presence re-imposition, D4's
+// `decisions`-absent lane and ≥1-decision floor, D5's kernel-owned
+// wait-kind reservation, D6's re-homed role-set equality, and D16's two
+// two-hop rules); a COUNT over a literal list is not a drive, so each
+// member carries its fixtures and its whole finding set on both sides.
+//
+// The two channels differ in exactly what dimension 1 says they differ
+// in — the class LABEL a message names is the AUTHORED spelling, so a
+// `humanGate` step is called `humanGate` in a file finding and
+// `human_gate` in a direct one. That difference is carried in the data,
+// never smoothed over. ───────────────────────────────────────────────────
 
-describe("ch14-P1 family 8 — the hand-lane inventory", () => {
-  it("its membership is the set this packet owns, named once", () => {
-    expect([
-      "the three class keysets",
-      "the per-class presence re-imposition",
-      "the `decisions`-absent-on-a-humanGate presence lane",
-      "the ≥1-decision floor",
-      "the kernel-owned wait-kind reservation",
-      "the re-homed role-set equality",
-      "recommends_on_non_gate",
-      "recommends_unknown_decision",
-    ]).toHaveLength(8);
+const HAND_HEAD = "ref:\n  id: t\n  version: 1\nstart: implement\n";
+const HAND_TAIL = "terminal:\n  - done\nroles:\n  implementer: {}\n  operator: {}\n";
+const HAND_AGENT = "  implement:\n    role: implementer\n    instruction: i\n    transitions:\n      PASS: gate\n";
+const HAND_GATE =
+  "  gate:\n    type: humanGate\n    role: operator\n    instruction: q\n" +
+  "    decisions:\n      approve:\n        target: done\n";
+const HAND_WAIT =
+  "  hold:\n    type: wait\n    wait:\n      kind: commit_pending\n      resumeEvents:\n        - COMMIT\n" +
+  "    onResume:\n      COMMIT: done\n";
+
+/** The direct fixture's FILE twin, each step block replaceable — the same
+ * three-class document `ch14()` builds, in its authored spelling. */
+function handFile(over: { agent?: string; gate?: string; wait?: string; tail?: string } = {}): string {
+  return (
+    HAND_HEAD +
+    "steps:\n" +
+    (over.agent ?? HAND_AGENT) +
+    (over.gate ?? HAND_GATE) +
+    (over.wait ?? HAND_WAIT) +
+    (over.tail ?? HAND_TAIL)
+  );
+}
+
+function handFileFindings(text: string): readonly ValidationFinding[] {
+  const result = loadTemplate(new TextEncoder().encode(text), { catalog: createGateRegistry() });
+  expect(result.ok).toBe(false);
+  if (result.ok) throw new Error("expected the file walk to refuse");
+  expect(result.error.stage).toBe("validate");
+  return result.error.findings as readonly ValidationFinding[];
+}
+
+/** The eight members →[lane-drive]'s hand half owns. Named once, here,
+ * because no declaration enumerates them. */
+const HAND_LANE_MEMBERS = [
+  "the three class keysets",
+  "the per-class presence re-imposition",
+  "the `decisions`-absent-on-a-humanGate presence lane",
+  "the ≥1-decision floor",
+  "the kernel-owned wait-kind reservation",
+  "the re-homed role-set equality",
+  "recommends_on_non_gate",
+  "recommends_unknown_decision",
+] as const;
+
+interface HandLaneRow {
+  readonly member: (typeof HAND_LANE_MEMBERS)[number];
+  readonly claim: string;
+  readonly direct: () => WorkflowTemplate;
+  readonly directFindings: readonly ValidationFinding[];
+  readonly file: () => string;
+  readonly fileFindings: readonly ValidationFinding[];
+}
+
+/** ch14-C3's named constant, MIRRORED from `templateSurface.ts`'s
+ * `KERNEL_WAIT_KINDS` (whose membership owner is ch12-C23). Drift between
+ * the two is what the reservation rows exist to catch: a later kernel
+ * kind added to that row without extending the constant reds here. */
+const RESERVED_WAIT_KINDS = ["kickoff_pending", "human_decision", "child_workflow", "timeout"] as const;
+const RESERVED_LIST = RESERVED_WAIT_KINDS.join(", ");
+const reservedMessage = (kind: string): string =>
+  `wait kind '${kind}' is reserved by the kernel (reserved: ${RESERVED_LIST}) — ` +
+  "an authored collision would alias the kernel's own resume machinery";
+
+const HAND_LANES: readonly HandLaneRow[] = [
+  // ── member 1: the three class keysets ──────────────────────────────
+  {
+    member: "the three class keysets",
+    claim: "the AGENT class refuses `decisions`",
+    direct: () => ch14({ implement: { decisions: { approve: { target: "done" } } } }),
+    directFindings: [
+      { path: "steps.implement.decisions",
+        message: "unknown key decisions on an agent step " +
+          "(an agent step's keys are role, instruction, transitions, agentConfig, gates, recommends)" },
+    ],
+    file: () => handFile({ agent: HAND_AGENT + "    decisions:\n      approve:\n        target: done\n" }),
+    fileFindings: [
+      { path: "steps.implement.decisions",
+        message: "unknown key decisions on an agent step " +
+          "(an agent step's keys are role, instruction, transitions, agentConfig, gates, recommends)" },
+    ],
+  },
+  {
+    member: "the three class keysets",
+    claim: "the humanGate class refuses `transitions`",
+    direct: () => ch14({ gate: { transitions: { PASS: "done" } } }),
+    directFindings: [
+      { path: "steps.gate.transitions",
+        message: "unknown key transitions on a human_gate step " +
+          "(a human_gate step's keys are type, role, instruction, decisions)" },
+    ],
+    file: () => handFile({ gate: HAND_GATE + "    transitions:\n      PASS: done\n" }),
+    fileFindings: [
+      { path: "steps.gate.transitions",
+        message: "unknown key transitions on a humanGate step " +
+          "(a humanGate step's keys are type, role, instruction, decisions)" },
+    ],
+  },
+  {
+    member: "the three class keysets",
+    claim: "the wait class refuses `role`",
+    direct: () => ch14({ hold: { role: "operator" } }),
+    directFindings: [
+      { path: "steps.hold.role",
+        message: "unknown key role on a wait step (a wait step's keys are type, wait, onResume)" },
+    ],
+    file: () => handFile({ wait: HAND_WAIT + "    role: operator\n" }),
+    fileFindings: [
+      { path: "steps.hold.role",
+        message: "unknown key role on a wait step (a wait step's keys are type, wait, onResume)" },
+    ],
+  },
+  // ── member 2: the per-class presence re-imposition ─────────────────
+  {
+    member: "the per-class presence re-imposition",
+    claim: "the AGENT class demands `instruction`",
+    direct: () => dropStepKey(ch14(), "implement", "instruction"),
+    directFindings: [{ path: "steps.implement", message: "missing required key \"instruction\"" }],
+    file: () => handFile({ agent: "  implement:\n    role: implementer\n    transitions:\n      PASS: gate\n" }),
+    fileFindings: [{ path: "steps.implement", message: "missing required key \"instruction\"" }],
+  },
+  {
+    member: "the per-class presence re-imposition",
+    claim: "the humanGate class demands `role`",
+    direct: () => dropStepKey(ch14(), "gate", "role"),
+    directFindings: [{ path: "steps.gate", message: "missing required key \"role\"" }],
+    file: () => handFile({
+      gate: "  gate:\n    type: humanGate\n    instruction: q\n    decisions:\n      approve:\n        target: done\n",
+      tail: "terminal:\n  - done\nroles:\n  implementer: {}\n",
+    }),
+    fileFindings: [{ path: "steps.gate", message: "missing required key \"role\"" }],
+  },
+  {
+    member: "the per-class presence re-imposition",
+    claim: "the wait class demands `onResume` — required BUT legally empty, the pair a builder reads as optional",
+    direct: () => dropStepKey(ch14(), "hold", "onResume"),
+    directFindings: [{ path: "steps.hold", message: "missing required key \"onResume\"" }],
+    file: () => handFile({
+      wait: "  hold:\n    type: wait\n    wait:\n      kind: commit_pending\n      resumeEvents:\n        - COMMIT\n",
+    }),
+    fileFindings: [{ path: "steps.hold", message: "missing required key \"onResume\"" }],
+  },
+  // ── member 3: the `decisions`-absent presence lane (the ONE presence
+  // lane of the three classes that carries a code) ────────────────────
+  {
+    member: "the `decisions`-absent-on-a-humanGate presence lane",
+    claim: "a humanGate with no `decisions` — the one coded presence lane",
+    direct: () => dropStepKey(ch14(), "gate", "decisions"),
+    directFindings: [
+      { path: "steps.gate", code: "invalid_decision_gate_config", message: "missing required key \"decisions\"" },
+    ],
+    file: () => handFile({ gate: "  gate:\n    type: humanGate\n    role: operator\n    instruction: q\n" }),
+    fileFindings: [
+      { path: "steps.gate", code: "invalid_decision_gate_config", message: "missing required key \"decisions\"" },
+    ],
+  },
+  // ── member 4: the ≥1-decision floor ────────────────────────────────
+  {
+    member: "the ≥1-decision floor",
+    claim: "an EMPTY decisions map — exactly ONE finding, since `nonempty` is NOT declared beside the hand floor",
+    direct: () => ch14({ gate: { decisions: {} } }),
+    directFindings: [
+      { path: "steps.gate.decisions", code: "decision_gate_empty",
+        message: "decisions must declare at least one decision (a gate no one can answer is refused)" },
+    ],
+    file: () => handFile({
+      gate: "  gate:\n    type: humanGate\n    role: operator\n    instruction: q\n    decisions: {}\n",
+    }),
+    fileFindings: [
+      { path: "steps.gate.decisions", code: "decision_gate_empty",
+        message: "decisions must declare at least one decision (a gate no one can answer is refused)" },
+    ],
+  },
+  // ── member 5: the kernel-owned wait-kind reservation, PARAMETERIZED
+  // over ch14-C3's named constant — every member driven on both
+  // channels, so a later kernel kind added without extending the
+  // reservation reds in its own chapter. ───────────────────────────────
+  ...RESERVED_WAIT_KINDS.map((kind): HandLaneRow => ({
+    member: "the kernel-owned wait-kind reservation",
+    claim: `the reserved kind '${kind}' is refused as an AUTHORED wait kind`,
+    direct: () => ch14({ hold: { wait: { kind, resumeEvents: ["COMMIT"] } } }),
+    directFindings: [{ path: "steps.hold.wait.kind", message: reservedMessage(kind) }],
+    file: () => handFile({
+      wait: `  hold:\n    type: wait\n    wait:\n      kind: ${kind}\n      resumeEvents:\n        - COMMIT\n    onResume:\n      COMMIT: done\n`,
+    }),
+    fileFindings: [{ path: "steps.hold.wait.kind", message: reservedMessage(kind) }],
+  })),
+  // ── member 6: the re-homed role-set equality, both directions ───────
+  {
+    member: "the re-homed role-set equality",
+    claim: "direction 1: used-but-undeclared, at the CONTAINER grain",
+    direct: () => ch14({ implement: { role: "ghost" } }),
+    directFindings: [
+      { path: "roles", message: 'role "ghost" is used by steps but not declared' },
+      { path: "roles.implementer", message: 'role "implementer" is declared but not used by any step' },
+    ],
+    file: () => handFile({ agent: HAND_AGENT.replace("role: implementer", "role: ghost") }),
+    fileFindings: [
+      { path: "roles", message: 'role "ghost" is used by steps but not declared' },
+      { path: "roles.implementer", message: 'role "implementer" is declared but not used by any step' },
+    ],
+  },
+  {
+    member: "the re-homed role-set equality",
+    claim: "direction 2: declared-but-unused, at the ENTRY grain — a role-LESS wait step contributes nothing",
+    direct: () => ch14({}, { roles: { implementer: {}, operator: {}, spare: {} } }),
+    directFindings: [
+      { path: "roles.spare", message: 'role "spare" is declared but not used by any step' },
+    ],
+    file: () => handFile({ tail: "terminal:\n  - done\nroles:\n  implementer: {}\n  operator: {}\n  spare: {}\n" }),
+    fileFindings: [
+      { path: "roles.spare", message: 'role "spare" is declared but not used by any step' },
+    ],
+  },
+  // ── members 7 and 8: D16's two two-hop `recommends` rules ───────────
+  {
+    member: "recommends_on_non_gate",
+    claim: "a recommendation routing to a step that is not a humanGate",
+    direct: () => ch14({ implement: { transitions: { PASS: "gate", SKIP: "done" }, recommends: { SKIP: "approve" } } }),
+    directFindings: [
+      { path: "steps.implement.recommends.SKIP", code: "recommends_on_non_gate",
+        message: "recommends: 'SKIP' routes to step 'done', which is not a humanGate step — " +
+          "a recommendation is meaningful only where a decision will be asked" },
+    ],
+    file: () => handFile({
+      agent: "  implement:\n    role: implementer\n    instruction: i\n    transitions:\n      PASS: gate\n      SKIP: done\n    recommends:\n      SKIP: approve\n",
+    }),
+    fileFindings: [
+      { path: "steps.implement.recommends.SKIP", code: "recommends_on_non_gate",
+        message: "recommends: 'SKIP' routes to step 'done', which is not a humanGate step — " +
+          "a recommendation is meaningful only where a decision will be asked" },
+    ],
+  },
+  {
+    member: "recommends_unknown_decision",
+    claim: "a recommendation naming no decision of the gate it routes to",
+    direct: () => ch14({ implement: { recommends: { PASS: "ghost" } } }),
+    directFindings: [
+      { path: "steps.implement.recommends.PASS", code: "recommends_unknown_decision",
+        message: "recommends: 'ghost' is not a declared decision of step 'gate'" },
+    ],
+    file: () => handFile({ agent: HAND_AGENT + "    recommends:\n      PASS: ghost\n" }),
+    fileFindings: [
+      { path: "steps.implement.recommends.PASS", code: "recommends_unknown_decision",
+        message: "recommends: 'ghost' is not a declared decision of step 'gate'" },
+    ],
+  },
+];
+
+describe("ch14-P1 family 8 — the hand-lane inventory, GENERATED on both channels from ONE register", () => {
+  it("the register covers every member this packet owns, and every member is DRIVEN rather than counted", () => {
+    expect(new Set(HAND_LANES.map((row) => row.member))).toStrictEqual(new Set(HAND_LANE_MEMBERS));
+    expect(HAND_LANE_MEMBERS).toHaveLength(8);
+    // Every row carries a driver on BOTH channels — a member present on
+    // one side only is the blind spot this register exists to close.
+    for (const row of HAND_LANES) {
+      expect(row.directFindings.length, `${row.member}: ${row.claim} (direct)`).toBeGreaterThanOrEqual(1);
+      expect(row.fileFindings.length, `${row.member}: ${row.claim} (file)`).toBeGreaterThanOrEqual(1);
+    }
   });
 
-  // PARAMETERIZED over ch14-C3's named constant, so a later kernel kind
-  // added to ch12-C23 without extending the reservation reds in its own
-  // chapter. The list here is that row's own, mirrored — drift between
-  // the two is what this lane exists to catch.
-  for (const kind of ["kickoff_pending", "human_decision", "child_workflow", "timeout"] as const) {
-    it(`the reservation refuses the kernel-owned kind '${kind}' as an AUTHORED wait kind`, () => {
-      expect(ch14Fail(ch14({ hold: { wait: { kind, resumeEvents: ["COMMIT"] } } }))).toStrictEqual([
-        { path: "steps.hold.wait.kind",
-          message: `wait kind '${kind}' is reserved by the kernel ` +
-            "(reserved: kickoff_pending, human_decision, child_workflow, timeout) — " +
-            "an authored collision would alias the kernel's own resume machinery" },
-      ]);
+  for (const row of HAND_LANES) {
+    it(`DIRECT — ${row.member}: ${row.claim}`, () => {
+      expect(ch14Fail(row.direct())).toStrictEqual(row.directFindings);
+    });
+
+    it(`FILE — ${row.member}: ${row.claim}`, () => {
+      expect(handFileFindings(row.file())).toStrictEqual(row.fileFindings);
     });
   }
 
-  it("an authored kind OUTSIDE the reserved set admits — the reservation does not close the namespace", () => {
+  it("an authored wait kind OUTSIDE the reserved set admits on BOTH channels — the reservation does not close the namespace", () => {
     expect(admitTemplate(ch14({ hold: { wait: { kind: "commit_pending", resumeEvents: ["COMMIT"] } } }), catalog).ok).toBe(true);
-  });
-
-  it("`nonempty` is NOT declared on `decisions` beside the hand floor: an empty map yields exactly ONE finding", () => {
-    expect(ch14Fail(ch14({ gate: { decisions: {} } }))).toStrictEqual([
-      { path: "steps.gate.decisions", code: "decision_gate_empty",
-        message: "decisions must declare at least one decision (a gate no one can answer is refused)" },
-    ]);
+    expect(loadTemplate(new TextEncoder().encode(handFile()), { catalog: createGateRegistry() }).ok).toBe(true);
   });
 });
 
-describe("ch14-P1 family 8 — the re-homed role-set equality, dimension 10's full crossing", () => {
-  it("direction 1: used-but-undeclared, at the CONTAINER grain", () => {
-    expect(ch14Fail(ch14({ implement: { role: "ghost" } }))).toContainEqual({
-      path: "roles", message: 'role "ghost" is used by steps but not declared',
-    });
-  });
-
-  it("direction 2: declared-but-unused, at the ENTRY grain", () => {
-    expect(ch14Fail(ch14({}, { roles: { implementer: {}, operator: {}, spare: {} } }))).toContainEqual({
-      path: "roles.spare", message: 'role "spare" is declared but not used by any step',
-    });
-  });
-
+describe("ch14-P1 family 8 — the role-set equality's remaining crossings (dimension 10)", () => {
   it("a ROLE-LESS step contributes nothing: a wait step does not make its roles map over-declared", () => {
     // The case the retired declaration could not express — its `collect`
     // had no per-member absence tolerance, and the only existing knob
@@ -2499,17 +3144,16 @@ describe("ch14-P1 family 8 — the re-homed role-set equality, dimension 10's fu
   });
 
   it("the grammar-invalid SUPPRESSION carries over: a bad role stands the equality down", () => {
-    const findings = ch14Fail(ch14({ implement: { role: "a b" } }));
-    expect(findings.filter((finding) => finding.path.startsWith("roles"))).toStrictEqual([]);
-    expect(findings).toHaveLength(1);
+    expect(ch14Fail(ch14({ implement: { role: "a b" } }))).toStrictEqual([
+      { path: "steps.implement.role", message: `invalid role name "a b"${ID_RULE}` },
+    ]);
   });
 
   it("the BROKEN-`steps` stand-down is SILENCE, not an internal validator failure — with a NONEMPTY roles map", () => {
     // The discriminating case the parity corpus cannot reach: its only
     // broken-`steps` fixture pairs it with an EMPTY roles map, where both
     // directions are empty regardless.
-    const findings = ch14Fail(ch14({}, { steps: "x", roles: { implementer: {}, operator: {} } }));
-    expect(findings).toStrictEqual([
+    expect(ch14Fail(ch14({}, { steps: "x", roles: { implementer: {}, operator: {} } }))).toStrictEqual([
       { path: "steps", message: "steps must be a NONEMPTY map of step-id -> step" },
     ]);
   });
@@ -2565,3 +3209,4 @@ describe("ch14-P1 family 10 — the widened hook's admitted `advancesRound` map"
     expect(steps["hold"]?.["advancesRound"]).toStrictEqual({ COMMIT: false, ABORT: false });
   });
 });
+
