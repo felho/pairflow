@@ -145,10 +145,12 @@ new-decision rows: 4 DECIDED-HERE markers across 4 rows ·
 post-ratification reopenings: 0
 
 **Close metrics (template §5, recorded at the 2026-08-13 chapter
-close):** post-ratification reopenings: 0 — the two blocks beyond the
-first are the 2026-08-10 SCHEMA RE-LOCK and this close's CITATION
-CLOSURE, and §5's amended count names both as non-reopens (the draft
-never entered `reopened`) · rows realized: 19 of 19, by 2 packets
+close):** post-ratification reopenings: 0 — the blocks beyond the
+first are the 2026-08-10 SCHEMA RE-LOCK, this close's CITATION
+CLOSURE, and (appended 2026-08-16, after this close) the COEXISTENCE
+block ch14-P1's re-lock owes this draft for binding the same
+declaration file; §5's amended count names all three as non-reopens
+(the draft never entered `reopened`) · rows realized: 19 of 19, by 2 packets
 (`ch13-p1a`, `ch13-p1b`; `ch13-p0` anchors no row — its ledger slice
 is a declared empty one) · the four ADR-019 D4 FORWARD-SCOPED
 EXEMPTIONS closed by this act: `[d-ctx-role-refs]`, `[d-ctx-step-refs]`,
@@ -191,6 +193,10 @@ declaration-side notes deleted in the same commit
 
 ```json
 {"ratification": {"date": "2026-08-13", "arms": ["chapter-close CITATION CLOSURE (contract-draft-template §4, the narrow rule admitted by this act): the C-row growth is CITATION-ONLY — the four declaration tags `[d-ctx-role-refs]`, `[d-ctx-step-refs]`, `[n-ctx-role-refs]`, `[n-ctx-step-refs]`, each verified rowed to ch13v2-C13 in the declaration and each now cited back by it, closing their ADR-019 D4 forward-scoped exemptions at the act those exemptions named — and the declaration delta under the new sha256 is the three exemption notes DELETED, nothing else (comment-only; no code line moved) — so what an arm would read here is a pointer set, not a decision; the DECISIONS these bytes carry were reviewed at their own acts (the 2026-08-08 ratification's three Opus panel rounds + close + codex arm and re-check, and the 2026-08-10 re-lock's ch13-p1a build-close arm gate 2)", "the realized_map: built in a fresh context from the ch13-p1a/ch13-p1b provenance manifests, every cited path and symbol grep-verified against the tree, then machine-checked by `pnpm v3:realized-map` — green, zero MISSING (the six uncited-ref notes are report-only and legitimate: the parameterized lane-driving duty and the gate walk genuinely drive the rows they are not named on)", "this block: one fresh-context review at the owner's call, before the ratifying act — its shape against the lint's draft rules, each factual claim against the tree, and the arms' honesty; one review pass, not a panel; it required one edit (this arm list's comment-only clause) and the edit was taken. MODEL, recorded because it DEVIATES from what the owner asked: the call was for a FABLE pass and the invocation requested Fable, but the pass RAN ON OPUS — the owner caught the discrepancy at the ratification. The review is kept on its merits (a different tier than intended is a provenance fact, not an invalidation, and nothing in the verdict depends on the tier), and the deviation is named here rather than smoothed; the silent model-override failure itself is a boundary item"], "commit": "057d57650fc9e8e3d0c1cfc136dcab84f9078966", "schema": {"path": "v3/src/definition/schema/templateFormat.ts", "sha256": "fa8bc5a22a3370127fa948ae42c1310b631dec961527754f80792c9394494e3d"}}}
+```
+
+```json
+{"ratification": {"date": "2026-08-16", "arms": ["the SCHEMA RE-LOCK act of a DIFFERENT chapter, recorded here because this draft binds the same declaration bytes: ch14-P1's build (commit 889909ee) edited templateFormat.ts, which turned this draft's lock red as well. No status change, no C-row motion, no realized_map movement — this block records the new bytes and nothing else. The transition (a block appended to a draft already at `realized`, for a STANDALONE re-lock) is admitted by the contract-draft-template §4 amendment riding this same commit"], "commit": "889909eedfaf54be19bdb51345eb17c2e2607eea", "schema": {"path": "v3/src/definition/schema/templateFormat.ts", "sha256": "d9a58122f2c83d20e8ef07e18a0a69d4d57146bbf7c0a6066bf16c0ba23f5164"}}}
 ```
 
 ## Realized map (empty until chapter close)

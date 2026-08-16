@@ -315,6 +315,25 @@ draft ──(human ratification)──▶ ratified ──(chapter close)──�
   must record bytes that CANNOT EXIST before the first, so the two
   commits are forced by the ordering and not by convention. This
   transition does NOT count toward §5's reopening metric.
+  **COEXISTENCE — more than one draft binding ONE declaration file
+  (added 2026-08-16, admitted by the act that first exercises it:
+  ch14-P1's re-lock, where `ch14-human-decision` and
+  `ch13-context-block-v2` both pin `templateFormat.ts`).** An edit to
+  that file turns EVERY bound lock red, so commit 2 appends ONE BLOCK
+  PER BOUND CONTRACT, each recording the same new `sha256` and naming
+  the same commit 1. A bound draft already at `realized` receives its
+  block THERE — `realized` → `realized`, no status change, no C-row
+  motion, no `realized_map` movement — which is the state pair this
+  clause admits; the tree's earlier instance of such an append came
+  from the citation-closure bullet's own narrow scope and did not
+  authorize it for a standalone re-lock. The cost is per bound
+  contract on every future edit of that file, and it is accepted here
+  rather than weakening any lock. PLACEMENT, stated because the one
+  comparable earlier act went the other way: ch13-p1a carried its own
+  form-authority amendment in COMMIT ONE (a pure-docs commit before
+  the build), while this amendment rides commit 2 — deliberately, so
+  the build commit's bytes stay clean for the post-build boundary
+  audit, a constraint that pure-docs commit never faced.
 - **Supersede (ONE commit, from `ratified` only):** when a line is
   re-derived rather than repaired, the draft is archived IN PLACE —
   the file never moves (§2) — by a single commit that flips status
@@ -385,11 +404,14 @@ is testable only if measured.
 **Amended 2026-08-09 — what the reopening number COUNTS.** It read
 "= ratification blocks beyond the first", which counts the wrong
 thing: a block is appended by every transition that ratifies
-anything, and three of those are not reopens — a non-reopening
-AMENDMENT to a ratified draft, the SCHEMA RE-LOCK (§4), and the
+anything, and FOUR of those are not reopens — a non-reopening
+AMENDMENT to a ratified draft, the SCHEMA RE-LOCK (§4), the
 CITATION CLOSURE at the chapter close (§4, added 2026-08-13; its
 block records a moved C-row line, and it still is not a reopen: the
-move is a citation, and the draft never entered `reopened`). Under the
+move is a citation, and the draft never entered `reopened`), and the
+COEXISTENCE BLOCK a re-lock appends to a SECOND draft bound to the
+same declaration file (§4, added 2026-08-16 — `realized` →
+`realized`, recording bytes and nothing else). Under the
 old wording a draft that had never reopened could be required to
 record a nonzero reopen count, which is a false number carrying a
 true-sounding name. The metric now counts **the number of times the
