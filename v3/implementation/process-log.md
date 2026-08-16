@@ -5950,3 +5950,68 @@ final CLEAN.
   scoping) → the ratifying commit (schema lock on templateFormat.ts;
   ch14-C26 carries the reopen set). Main-thread model from P1 on:
   Opus (the user's cost ruling — tier log §8).
+
+- 2026-08-16 · ch14-P1 BUILT and CLOSED (4 commits: build 889909ee →
+  gate-2 aftermath f6579c0e → re-check fold 4f7544fc → the re-lock act
+  d89228ca, with e48b6f2f recording the gate closure). Six friction
+  items, none fixed in place — capture, don't fix:
+
+  (a) **The external arm's PRIMARY transport cannot carry a large
+  packet.** The gptsol-agent transport died with `Prompt is too long`
+  before producing any verdict on a ~96 KB packet; the charter was
+  ~4 KB, so what overflows is the reviewing agent's own context once it
+  reads packet + contract. The `arm_run.sh` fallback then carried FIVE
+  runs cleanly (gate 1, its re-check, and gate 2 ×3 — pin
+  gpt-5.6-sol/high validated, byte guards clean, ~650 s each).
+  Boundary question: does arm-pin.md's transport column change, or does
+  the primary keep priority with a size caveat?
+
+  (b) **Two instrument-integrity failures in the probe harness, both
+  producing FALSE GREEN.** The build's first four probes piped their
+  command through `tail`, which masks the exit code — four vacuous
+  GREEN receipts, caught by the executor and re-run. Then an aftermath
+  probe's `-t 'family 1 (file channel)'` filter had its parentheses
+  read as a regex, selected ZERO tests, and yielded a baseline the
+  runner cannot distinguish from a real green. The runner's
+  green-baseline gate does not protect against a baseline that is green
+  because nothing ran. Candidate: the runner measures and records the
+  SELECTED TEST COUNT, and refuses zero.
+
+  (c) **The loop's own fold debt dominated the late rounds.** Panel
+  rounds 2 and 3 and both reconciliations found predominantly
+  propagation misses from the previous fold — a rule regrained, its
+  surfaces left written for the old grain — not defects in the original
+  authoring. The clearest instance: the code-grain fold moved the
+  guard's key from kind to position and left the probe receipt's
+  conclusion, the row's compiler-scope sentence and a family's build
+  trap all arguing the old grain. Lens 4's reconciliation duty caught
+  each, one round later than the fold.
+
+  (d) **Gate 2's yield curve: 8 → 5 → 1, zero product defects across
+  all three rounds.** Every finding was test-evidence or packet-docs:
+  five of ten acceptance families had been SAMPLED rather than expanded
+  to their declared memberships, and four assertions were true and
+  blind (a count instead of content; a whole-set assertion taken after
+  a prefix narrowing; two mirrored registers guarded by shape). The
+  gate closed on a convergence judgement (user, 2026-08-16) with one
+  residual routed boundary-review — the arm's own recommendation, on
+  the ground that another text-based cross-module lock buys brittleness
+  over proof. Data for the boundary's arm-yield read: this gate found
+  nothing in the product and everything in the proof.
+
+  (e) **Packet size: 96 KB at approve** against the template's advisory
+  48 KB / +50%-growth thresholds, both breached. The comparator is
+  ch13-p1a at 94 KB, shipped. Recommendation recorded at the approve:
+  accept-with-note, and recalibrate the v0 thresholds at a boundary
+  rather than per packet — every packet of this generation breaches
+  them.
+
+  (f) **The user approves WITH ADDITIONS, and they cluster.** Four at
+  this approve, each marked "an addition, not a condition", and every
+  one demanded DURABILITY of a decision just accepted: give the
+  deferred item a carrier outside the packet's prose (the plan's
+  build-close tracked item); make a divergence from precedent state
+  itself in the act; extend a deferral to cover the half that goes
+  silently dead rather than breaking (an unnecessary cast still
+  compiles). Worth anticipating wherever a packet defers, diverges, or
+  leaves something to prose.
