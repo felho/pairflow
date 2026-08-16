@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import { describe, expect, it } from "vitest";
 
 import type { WorkflowTemplate } from "../domain/index.js";
@@ -2103,6 +2105,10 @@ function ch14Hold(body: string): string {
 const APPROVE_DONE = "    decisions:\n      approve:\n        target: done\n";
 
 interface FileLaneRow {
+  /** The lane's CHANNEL-INDEPENDENT identity — the half the direct
+   * register carries verbatim. `lane` beside it is this channel's own
+   * prose, which the two registers legitimately word differently. */
+  readonly id: string;
   readonly node: string;
   readonly lane: string;
   readonly text: string;
@@ -2110,67 +2116,67 @@ interface FileLaneRow {
 }
 
 const CH14_FILE_LANES: readonly FileLaneRow[] = [
-  { node: "d-step-type", lane: "value (an unknown token)",
+  { id: "d-step-type/value-unknown-token", node: "d-step-type", lane: "value (an unknown token)",
     text: ch14File({ gate: ch14Gate(APPROVE_DONE).replace("humanGate", "nope") }),
     findings: [
       { path: "steps.gate.type", message: "type must be one of humanGate, wait; got \"nope\"" },
     ] },
-  { node: "d-step-type", lane: "value (the STORED spelling is not this channel's authored one)",
+  { id: "d-step-type/value-other-channels-spelling", node: "d-step-type", lane: "value (the STORED spelling is not this channel's authored one)",
     text: ch14File({ gate: ch14Gate(APPROVE_DONE).replace("humanGate", "human_gate") }),
     findings: [
       { path: "steps.gate.type", message: "type must be one of humanGate, wait; got \"human_gate\"" },
     ] },
-  { node: "d-decisions", lane: "container",
+  { id: "d-decisions/container", node: "d-decisions", lane: "container",
     text: ch14File({ gate: ch14Gate("    decisions: x\n") }),
     findings: [
       { path: "steps.gate.decisions", code: "invalid_decision_gate_config", message: "decisions must be a map of decision key -> { target, payload? }; got \"x\"" },
     ] },
-  { node: "d-decision-key", lane: "key grammar",
+  { id: "d-decision-key/key-grammar", node: "d-decision-key", lane: "key grammar",
     text: ch14File({ gate: ch14Gate("    decisions:\n      \"a b\":\n        target: done\n") }),
     findings: [
       { path: "steps.gate.decisions", message: `invalid decision key "a b"${ID_RULE}` },
     ] },
-  { node: "d-decision-entry", lane: "container",
+  { id: "d-decision-entry/container", node: "d-decision-entry", lane: "container",
     text: ch14File({ gate: ch14Gate("    decisions:\n      approve: 5\n") }),
     findings: [
       { path: "steps.gate.decisions.approve", code: "invalid_decision_gate_config", message: "a decision must be a map with exactly target (+ optional payload); got 5" },
     ] },
-  { node: "d-decision-entry", lane: "unknown key",
+  { id: "d-decision-entry/unknown-key", node: "d-decision-entry", lane: "unknown key",
     text: ch14File({ gate: ch14Gate("    decisions:\n      approve:\n        target: done\n        paylod: {}\n") }),
     findings: [
       { path: "steps.gate.decisions.approve.paylod", code: "invalid_decision_gate_config", message: "unknown decision key 'paylod' (allowed: target, payload)" },
     ] },
-  { node: "d-decision-entry", lane: "missing `target`",
+  { id: "d-decision-entry/missing-target", node: "d-decision-entry", lane: "missing `target`",
     text: ch14File({ gate: ch14Gate("    decisions:\n      approve: {}\n") }),
     findings: [
       { path: "steps.gate.decisions.approve", code: "invalid_decision_gate_config", message: "missing required key \"target\"" },
     ] },
-  { node: "d-decision-target", lane: "membership (unresolvable)",
+  { id: "d-decision-target/membership-unresolvable", node: "d-decision-target", lane: "membership (unresolvable)",
     text: ch14File({ gate: ch14Gate("    decisions:\n      approve:\n        target: ghost\n") }),
     findings: [
       { path: "steps.gate.decisions.approve.target", code: "decision_target_unresolved", message: "decision target must name a step or a terminal id; got \"ghost\"" },
     ] },
-  { node: "d-decision-target", lane: "membership owns the NON-STRING fault too — ONE finding, no type lane",
+  { id: "d-decision-target/membership-non-string", node: "d-decision-target", lane: "membership owns the NON-STRING fault too — ONE finding, no type lane",
     text: ch14File({ gate: ch14Gate("    decisions:\n      approve:\n        target: 5\n") }),
     findings: [
       { path: "steps.gate.decisions.approve.target", code: "decision_target_unresolved", message: "decision target must name a step or a terminal id; got 5" },
     ] },
-  { node: "d-decision-payload", lane: "container",
+  { id: "d-decision-payload/container", node: "d-decision-payload", lane: "container",
     text: ch14File({ gate: ch14Gate("    decisions:\n      approve:\n        target: done\n        payload: true\n") }),
     findings: [
       { path: "steps.gate.decisions.approve.payload", code: "invalid_decision_payload_schema", message: "payload must be a map of field name -> { required? }; got true" },
     ] },
-  { node: "d-payload-field", lane: "key grammar",
+  { id: "d-payload-field/key-grammar", node: "d-payload-field", lane: "key grammar",
     text: ch14File({ gate: ch14Gate("    decisions:\n      approve:\n        target: done\n        payload:\n          \"a.b\": {}\n") }),
     findings: [
       { path: "steps.gate.decisions.approve.payload", message: `invalid payload field name "a.b"${ID_RULE}` },
     ] },
-  { node: "d-payload-spec", lane: "container",
+  { id: "d-payload-spec/container", node: "d-payload-spec", lane: "container",
     text: ch14File({ gate: ch14Gate("    decisions:\n      approve:\n        target: done\n        payload:\n          instruction: true\n") }),
     findings: [
       { path: "steps.gate.decisions.approve.payload.instruction", code: "invalid_decision_payload_schema", message: "a payload field spec must be a map with the single optional key required; got true" },
     ] },
-  { node: "d-payload-spec", lane: "unknown key (no nested types yet)",
+  { id: "d-payload-spec/unknown-key", node: "d-payload-spec", lane: "unknown key (no nested types yet)",
     text: ch14File({ gate: ch14Gate("    decisions:\n      approve:\n        target: done\n        payload:\n          instruction:\n            type: markdown\n") }),
     findings: [
       { path: "steps.gate.decisions.approve.payload.instruction.type", code: "invalid_decision_payload_schema", message: "unknown payload spec key 'type' (allowed: required)" },
@@ -2178,91 +2184,157 @@ const CH14_FILE_LANES: readonly FileLaneRow[] = [
   // YAML 1.2's unquoted `yes` arrives as a STRING, which is the model's
   // own `NOT "yes"` case — driven by the substrate rather than by a hand
   // check, and reachable only on this channel.
-  { node: "d-payload-required", lane: "value (YAML's unquoted `yes` is a STRING)",
+  { id: "d-payload-required/value-non-boolean-scalar", node: "d-payload-required", lane: "value (YAML's unquoted `yes` is a STRING)",
     text: ch14File({ gate: ch14Gate("    decisions:\n      approve:\n        target: done\n        payload:\n          instruction:\n            required: yes\n") }),
     findings: [
       { path: "steps.gate.decisions.approve.payload.instruction.required", code: "invalid_decision_payload_schema", message: "required must be one of true, false; got \"yes\"" },
     ] },
-  { node: "d-payload-required", lane: "value (a QUOTED boolean is not a boolean)",
+  { id: "d-payload-required/value-quoted-boolean", node: "d-payload-required", lane: "value (a QUOTED boolean is not a boolean)",
     text: ch14File({ gate: ch14Gate("    decisions:\n      approve:\n        target: done\n        payload:\n          instruction:\n            required: \"true\"\n") }),
     findings: [
       { path: "steps.gate.decisions.approve.payload.instruction.required", code: "invalid_decision_payload_schema", message: "required must be one of true, false; got \"true\"" },
     ] },
-  { node: "d-wait", lane: "container",
+  { id: "d-wait/container", node: "d-wait", lane: "container",
     text: ch14File({ wait: ch14Hold("    wait: 5\n    onResume: {}\n") }),
     findings: [
       { path: "steps.hold.wait", message: "wait must be a map with exactly kind and resumeEvents; got 5" },
     ] },
-  { node: "d-wait", lane: "unknown key",
+  { id: "d-wait/unknown-key", node: "d-wait", lane: "unknown key",
     text: ch14File({ wait: ch14Hold("    wait:\n      kind: k\n      resumeEvents:\n        - E\n      extra: 1\n    onResume: {}\n") }),
     findings: [
       { path: "steps.hold.wait.extra", message: "unknown key \"extra\" (a wait's only keys are kind, resumeEvents)" },
     ] },
-  { node: "d-wait-kind", lane: "presence",
+  { id: "d-wait-kind/presence", node: "d-wait-kind", lane: "presence",
     text: ch14File({ wait: ch14Hold("    wait:\n      resumeEvents:\n        - E\n    onResume: {}\n") }),
     findings: [
       { path: "steps.hold.wait", message: "missing required key \"kind\"" },
     ] },
-  { node: "d-wait-kind", lane: "type (a non-string kind)",
+  { id: "d-wait-kind/type-non-string", node: "d-wait-kind", lane: "type (a non-string kind)",
     text: ch14File({ wait: ch14Hold("    wait:\n      kind: 5\n      resumeEvents:\n        - E\n    onResume: {}\n") }),
     findings: [
       { path: "steps.hold.wait.kind", message: "wait kind must be a nonempty string, got 5" },
     ] },
-  { node: "d-resume-events", lane: "presence",
+  { id: "d-resume-events/presence", node: "d-resume-events", lane: "presence",
     text: ch14File({ wait: ch14Hold("    wait:\n      kind: k\n    onResume: {}\n") }),
     findings: [
       { path: "steps.hold.wait", message: "missing required key \"resumeEvents\"" },
     ] },
-  { node: "d-resume-events", lane: "container",
+  { id: "d-resume-events/container", node: "d-resume-events", lane: "container",
     text: ch14File({ wait: ch14Hold("    wait:\n      kind: k\n      resumeEvents: COMMIT\n    onResume: {}\n") }),
     findings: [
       { path: "steps.hold.wait.resumeEvents", message: "resumeEvents must be a nonempty list of event-type ids; got \"COMMIT\"" },
     ] },
-  { node: "d-resume-events", lane: "nonempty (a wait no event can resume is dead config)",
+  { id: "d-resume-events/nonempty", node: "d-resume-events", lane: "nonempty (a wait no event can resume is dead config)",
     text: ch14File({ wait: ch14Hold("    wait:\n      kind: k\n      resumeEvents: []\n    onResume: {}\n") }),
     findings: [
       { path: "steps.hold.wait.resumeEvents", message: "resumeEvents must be a NONEMPTY list" },
     ] },
-  { node: "d-resume-events", lane: "per-occurrence uniqueness",
+  { id: "d-resume-events/per-occurrence-uniqueness", node: "d-resume-events", lane: "per-occurrence uniqueness",
     text: ch14File({ wait: ch14Hold("    wait:\n      kind: k\n      resumeEvents:\n        - E\n        - E\n    onResume: {}\n") }),
     findings: [
       { path: "steps.hold.wait.resumeEvents[1]", message: "duplicate resume event \"E\"" },
     ] },
-  { node: "d-resume-event", lane: "member grammar",
+  { id: "d-resume-event/member-grammar", node: "d-resume-event", lane: "member grammar",
     text: ch14File({ wait: ch14Hold("    wait:\n      kind: k\n      resumeEvents:\n        - \"a b\"\n    onResume: {}\n") }),
     findings: [
       { path: "steps.hold.wait.resumeEvents[0]", message: `invalid event type "a b"${ID_RULE}` },
     ] },
-  { node: "d-on-resume", lane: "container",
+  { id: "d-on-resume/container", node: "d-on-resume", lane: "container",
     text: ch14File({ wait: ch14Hold("    wait:\n      kind: k\n      resumeEvents:\n        - E\n    onResume: 5\n") }),
     findings: [
       { path: "steps.hold.onResume", message: "onResume must be a map of event-type -> target id (it may be empty); got 5" },
     ] },
-  { node: "d-on-resume", lane: "keysSubsetOf the step's own resumeEvents (dead route)",
+  { id: "d-on-resume/dead-route", node: "d-on-resume", lane: "keysSubsetOf the step's own resumeEvents (dead route)",
     text: ch14File({ wait: ch14Hold("    wait:\n      kind: k\n      resumeEvents:\n        - E\n    onResume:\n      GHOST: done\n") }),
     findings: [
       { path: "steps.hold.onResume.GHOST", message: "dead resume route: 'GHOST' is not a declared resume event of step 'hold'" },
     ] },
-  { node: "d-resume-target", lane: "membership",
-    text: ch14File({ wait: ch14Hold("    wait:\n      kind: k\n      resumeEvents:\n        - E\n    onResume:\n      E: ghost\n") }),
+  { id: "d-resume-target/membership", node: "d-resume-target", lane: "membership",
+    text: ch14File({ wait: ch14Hold("    wait:\n      kind: k\n      resumeEvents:\n        - COMMIT\n    onResume:\n      COMMIT: ghost\n") }),
     findings: [
-      { path: "steps.hold.onResume.E", message: "resume target must name a step or a terminal id; got \"ghost\"" },
+      { path: "steps.hold.onResume.COMMIT", message: "resume target must name a step or a terminal id; got \"ghost\"" },
     ] },
-  { node: "d-recommends", lane: "container",
+  { id: "d-recommends/container", node: "d-recommends", lane: "container",
     text: ch14File({ agent: CH14_AGENT + "    recommends: 5\n" }),
     findings: [
       { path: "steps.implement.recommends", message: "recommends must be a map of event-type -> decision key; got 5" },
     ] },
-  { node: "d-recommends", lane: "keysSubsetOf keys(transitions) (dead recommendation)",
+  { id: "d-recommends/dead-recommendation", node: "d-recommends", lane: "keysSubsetOf keys(transitions) (dead recommendation)",
     text: ch14File({ agent: CH14_AGENT + "    recommends:\n      GHOST: approve\n" }),
     findings: [
       { path: "steps.implement.recommends.GHOST", message: "dead recommendation: 'GHOST' is not a transition of step 'implement'" },
     ] },
-  { node: "d-recommends-value", lane: "value grammar (the decision-key class)",
+  { id: "d-recommends-value/value-grammar", node: "d-recommends-value", lane: "value grammar (the decision-key class)",
     text: ch14File({ agent: CH14_AGENT + "    recommends:\n      PASS: \"a b\"\n" }),
     findings: [
       { path: "steps.implement.recommends.PASS", message: `invalid decision key "a b"${ID_RULE}` },
     ] },
+];
+
+/** A lane's CONTENT identity: its channel-independent id plus the SHAPE
+ * of the finding set it owes — every path, with its code where it
+ * carries one. A shared literal of these is what locks the two channel
+ * registers together (see `CH14_LANE_IDENTITIES`). */
+function laneIdentity(row: { readonly id: string; readonly findings: readonly ValidationFinding[] }): string {
+  const shape = row.findings
+    .map((finding) => (finding.code === undefined ? finding.path : `${finding.path}#${finding.code}`))
+    .join(" + ");
+  return `${row.id} | ${shape}`;
+}
+
+/** THE SHARED LANE REGISTER, compared by CONTENT.
+ *
+ * Family 1 runs the same declaration-derived register on both channels,
+ * and the two halves live in two test MODULES: a genuinely shared
+ * register is impossible between them, because importing one test file
+ * from the other re-registers its whole suite. So the CONTENT comparison
+ * is the mechanism — this list is spelled BYTE-IDENTICALLY in
+ * `admit.test.ts` and `validate.test.ts`, each half asserts its own
+ * register against it by equality, and each half additionally asserts
+ * that every entry appears verbatim in the SIBLING module's source. The
+ * pair is what closes the drift: a lane substituted in one register reds
+ * against its own list, and a list edited to match it reds against the
+ * sibling.
+ *
+ * Each entry is `<node>/<lane key> | <finding path>[#<code>]` — the
+ * lane's identity plus the SHAPE of what it owes, so a row that keeps
+ * its label while driving a NEIGHBOUR's case reds too. A node-set and a
+ * count are not content: the arm's proving substitution kept both
+ * (gate-2 re-check finding 2). The `lane` PROSE is deliberately not in
+ * the identity: each channel names its own case (`humanGate` authored
+ * against `human_gate` stored, YAML's unquoted `yes` against a JS
+ * string), and dimension 1 rules that difference legitimate. */
+const CH14_LANE_IDENTITIES: readonly string[] = [
+  "d-step-type/value-unknown-token | steps.gate.type",
+  "d-step-type/value-other-channels-spelling | steps.gate.type",
+  "d-decisions/container | steps.gate.decisions#invalid_decision_gate_config",
+  "d-decision-key/key-grammar | steps.gate.decisions",
+  "d-decision-entry/container | steps.gate.decisions.approve#invalid_decision_gate_config",
+  "d-decision-entry/unknown-key | steps.gate.decisions.approve.paylod#invalid_decision_gate_config",
+  "d-decision-entry/missing-target | steps.gate.decisions.approve#invalid_decision_gate_config",
+  "d-decision-target/membership-unresolvable | steps.gate.decisions.approve.target#decision_target_unresolved",
+  "d-decision-target/membership-non-string | steps.gate.decisions.approve.target#decision_target_unresolved",
+  "d-decision-payload/container | steps.gate.decisions.approve.payload#invalid_decision_payload_schema",
+  "d-payload-field/key-grammar | steps.gate.decisions.approve.payload",
+  "d-payload-spec/container | steps.gate.decisions.approve.payload.instruction#invalid_decision_payload_schema",
+  "d-payload-spec/unknown-key | steps.gate.decisions.approve.payload.instruction.type#invalid_decision_payload_schema",
+  "d-payload-required/value-non-boolean-scalar | steps.gate.decisions.approve.payload.instruction.required#invalid_decision_payload_schema",
+  "d-payload-required/value-quoted-boolean | steps.gate.decisions.approve.payload.instruction.required#invalid_decision_payload_schema",
+  "d-wait/container | steps.hold.wait",
+  "d-wait/unknown-key | steps.hold.wait.extra",
+  "d-wait-kind/presence | steps.hold.wait",
+  "d-wait-kind/type-non-string | steps.hold.wait.kind",
+  "d-resume-events/presence | steps.hold.wait",
+  "d-resume-events/container | steps.hold.wait.resumeEvents",
+  "d-resume-events/nonempty | steps.hold.wait.resumeEvents",
+  "d-resume-events/per-occurrence-uniqueness | steps.hold.wait.resumeEvents[1]",
+  "d-resume-event/member-grammar | steps.hold.wait.resumeEvents[0]",
+  "d-on-resume/container | steps.hold.onResume",
+  "d-on-resume/dead-route | steps.hold.onResume.GHOST",
+  "d-resume-target/membership | steps.hold.onResume.COMMIT",
+  "d-recommends/container | steps.implement.recommends",
+  "d-recommends/dead-recommendation | steps.implement.recommends.GHOST",
+  "d-recommends-value/value-grammar | steps.implement.recommends.PASS",
 ];
 
 describe("ch14-P1 family 1 (file channel) — every declared lane, finding SET asserted WHOLE", () => {
@@ -2286,9 +2358,22 @@ describe("ch14-P1 family 1 (file channel) — every declared lane, finding SET a
       ]),
     );
     expect(new Set(CH14_FILE_LANES.map((row) => `${row.node} ${row.lane}`)).size).toBe(CH14_FILE_LANES.length);
-    // The direct register carries the same thirty lanes; a lane added to
-    // one side and not the other reds on this count.
-    expect(CH14_FILE_LANES).toHaveLength(30);
+  });
+
+  it("this register IS the shared one, by CONTENT — identity and finding shape, in order", () => {
+    expect(CH14_FILE_LANES.map(laneIdentity)).toStrictEqual(CH14_LANE_IDENTITIES);
+  });
+
+  it("and the DIRECT register carries the same content — every identity present verbatim in its module", () => {
+    // The cross-module half of the lock. Reading the sibling's SOURCE is
+    // what an import cannot do here without re-registering its suite;
+    // the drift suites already read source text for the same reason.
+    const sibling = readFileSync(new URL("./admit.test.ts", import.meta.url), "utf8");
+    for (const identity of CH14_LANE_IDENTITIES) {
+      expect(sibling, `lane identity missing from the direct register: ${identity}`).toContain(
+        JSON.stringify(identity),
+      );
+    }
   });
 
   it("the CONFORMING direction: the three-class file admits whole", () => {

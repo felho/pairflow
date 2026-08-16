@@ -1010,12 +1010,15 @@ recorded honestly. The class is the guard's own tokenizer being part of
 the guard: a probe harness that cannot see failure measures nothing.
 Author: build agent. `[R-CLAIM-FORM-PROBES]`
 
-**Test delta: 2313 → 2720 (+407) across 74 files**, no new test home
+**Test delta: 2313 → 2759 (+446) across 74 files**, no new test home
 minted; the growth lands in the homes the embedding gates named
-(`admit.test.ts` 140→448, `validate.test.ts` 174→321, `engine.test.ts`
+(`admit.test.ts` 140→485, `validate.test.ts` 174→323, `engine.test.ts`
 249→273, `dev.test.ts` 46→67, `contextBlocks.test.ts` 36→37, the two
-drift suites +3). The last +86 is the build-close arm's AFTERMATH
-(below), which expanded five families to their declared memberships.
+drift suites +3). Of that growth the +86 before the last is the
+build-close arm's AFTERMATH (below), which expanded five families to
+their declared memberships, and the final +39 is the gate-2 RE-CHECK's,
+which closed the expansion the first aftermath left half-done and
+re-grounded three assertion bodies on content.
 
 **Mutation probes: eleven at the build, all receipt-backed** through the
 probe runner (backup-before, restore-from-copy, `cmp`-verified after),
@@ -1045,12 +1048,17 @@ mutated digest, never the mutated bytes).
 **AFTERMATH of the build-close arm's gate-2 review (external arm, no
 product defects found; eight findings on the ACCEPTANCE bodies).** Five
 of the ten families were not expanded to their declared memberships and
-two were plausibly blind; all eight are closed, +86 tests. Family 1's
+two were plausibly blind; +86 tests. SEVEN of the eight closed outright
+and the EIGHTH closed HALF — family 3's expansion landed on the DIRECT
+channel only — which the gate-2 RE-CHECK below names and closes; this
+paragraph claimed all eight, and that claim was the re-check's own
+finding 1. Family 1's
 file half now runs the whole thirty-lane declaration-derived register
 with the finding SET asserted by equality; family 2's file half runs the
 full `CLASS_KEYSETS × authorable × required` cross-product on authored
 fixtures; family 3 is parameterized over five rules × four operand
-states, each with its own whole finding set; family 4 asserts each
+states, each with its own whole finding set (on the DIRECT channel; its
+file half arrives at the re-check below); family 4 asserts each
 container row's whole ORDERED set by literal value instead of a count;
 family 5's exclusivity census forbids ANY own `code` rather than a
 `decision`-prefixed one — a filter that could not see four of the six
@@ -1091,8 +1099,68 @@ untouched, so the schema digest is unmoved), pinned by family 3's
 rule-4 broken-operand row, and driven: removing the stand-down reds
 that row (`PROBE-CH14P1-A8`, green baseline, byte-verified restore).
 
+**AFTERMATH of the gate-2 RE-CHECK (external arm, no product defects
+found; five findings — four on the ACCEPTANCE bodies, one on this
+record).** All five closed, +39 tests (2720 → 2759). No production byte
+moved: `admit.test.ts` and `validate.test.ts` are the only files edited,
+and the declaration's digest is unchanged (`d9a58122…`).
+
+- **1 (packet-docs).** This record claimed all eight gate-2 findings
+  closed while one had closed on one channel only. Corrected in the
+  aftermath paragraph above and by finding 3's row below.
+- **2 (test-evidence): family 1's two mirrored 30-lane registers could
+  drift apart silently** — a node SET and a lane COUNT are shape, and the
+  arm's substitution kept both. Each row now carries a CHANNEL-INDEPENDENT
+  lane identity, and both modules carry the same `CH14_LANE_IDENTITIES`
+  literal, spelled `<node>/<lane key> | <finding path>[#<code>]` — the
+  lane's identity plus the SHAPE of what it owes, so a row that keeps its
+  label while driving a neighbour's case reds too. Each half asserts its
+  own register against that list by equality AND asserts every entry
+  verbatim in the SIBLING module's SOURCE. The two directions are what
+  close the drift: a substituted lane reds against its own list, a list
+  edited to match one reds against the other. A genuinely shared register
+  is impossible here — importing one test module from the other
+  re-registers its suite — so the content comparison IS the mechanism,
+  and the comment where the register lives says exactly that. Four
+  fixtures were re-keyed so the two channels' paths coincide
+  (`NOPE`→`GHOST`, `E`→`COMMIT`); the differences that remain are
+  dimension 1's two, which ride the per-channel PROSE label and not the
+  identity.
+- **3 (test-evidence): family 3's five-rules × four-operand-states matrix
+  ran on the direct channel alone.** The register now carries BOTH
+  channels' fixtures per case, on family 8's one-register idiom (the
+  `handFile` builder moves up beside the ch14 fixtures and both families
+  generate from it): 35 cases × 2 channels + the register check = 71
+  lanes, from 36. Every case's file half agrees with its direct half
+  finding for finding EXCEPT the two dimension-1 divergences, which are
+  declared per case (`fileFindings`) rather than smoothed over — so the
+  expansion also MEASURES the packet's two-outcome-class claim instead of
+  assuming it. No product defect surfaced.
+- **4 (test-evidence): family 4's whole-set assertions were taken AFTER a
+  prefix filter**, so a spurious finding outside the container was
+  invisible. The filter is retired; both sides assert the WHOLE
+  document's finding set by literal value. Two `wait`-container rows
+  gained an empty `onResume` so the container's faults are the document's
+  only faults — staging the fixture, never re-narrowing the assertion.
+- **5 (bookkeeping): the stale `OPEN QUESTION` comment** at the family-3
+  register is replaced by a present-tense statement of the 2026-08-16
+  ruling; the ruling's own ground stays at the rows that pin it.
+
+Four receipt-backed probes, all through the probe runner with a green
+baseline, a non-masking command, a `-t` filter measured to select a
+NON-ZERO set, and a byte-verified restore (receipts under
+`/tmp/ch14p1-recheck/`; every row carries `baseline: green`, `exit 1`,
+`suite_red: true`, `restore_verified: true`):
+
+| finding | mutation | observed | receipt |
+|---|---|---|---|
+| 2 | `admit.test.ts`: one lane SUBSTITUTED for another — id, prose label, node set and count all kept | 1 of 46 red, and the red one is the CONTENT check: every legacy shape assertion stayed green in the same receipt, which reproduces the arm's measured blindness beside its fix | `PROBE-CH14P1-C2a` |
+| 2 | `admit.test.ts`: a register row renamed TOGETHER with its own literal entry — the drift a duplicated literal would otherwise hide | 1 of 46 red — only the cross-module sibling check | `PROBE-CH14P1-C2b` |
+| 3 | `templateSurface.ts`: rule 4's ratified stand-down regressed on the FILE channel only | 1 of 71 red — the FILE row, its direct twin green, which is the hole exactly where the arm measured it | `PROBE-CH14P1-C3` |
+| 4 | `templateSurface.ts`: the role-set equality's declared-but-unused direction stops reading the used set | 16 of 17 red, every extra finding at `roles.*` — outside every prefix the retired filter narrowed to | `PROBE-CH14P1-C4` |
+
 **Verification, re-run by the orchestrator rather than inherited:**
-`v3:typecheck` PASS · `v3:lint` PASS · `v3:test` 2720/2720 PASS ·
+`v3:typecheck` PASS · `v3:lint` PASS · `v3:test` 2759/2759 PASS ·
 `v3:coverage` PASS (validation mode) · `v3:adr-check` PASS ·
 `v3:deferred` 1 marker / 0 errors · `v3:packet-lint` exactly TWO errors,
 one per bound contract, both naming `fa8bc5a2…` recorded against
