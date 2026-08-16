@@ -33,6 +33,11 @@ V3 design memos (open questions, design syntheses) live in
   on the settled direction of
   [`../topics/_dynamic-orchestrator-workflow.md`](../topics/_dynamic-orchestrator-workflow.md),
   plus a reception/adoption snapshot (2026-07-24).
+- **`loop-engineering-capture.md`** — a small article capture (not a codebase
+  study): Addy Osmani's *Practical Loop Engineering*, read against the v3
+  model. Parks three cheap deterministic stop signals (done-predicate vs
+  quality-judge split, progress-stagnation budget, identical-action
+  repetition) for the L9 liveness/recovery contracts (2026-08-16).
 - **`bitsafe-ai-os-capture.md`** — a raw information capture (not analysis) of
   BitSafe's "How BitSafe Runs on AI" public writing. Internal links inside the
   captured material point at the *source* repo and intentionally do not
