@@ -1167,6 +1167,25 @@ one per bound contract, both naming `fa8bc5a2…` recorded against
 `d9a58122…` in the working tree — the ratified transient flag 5 prices,
 cleared by the follow-up commit.
 
+**GATE 2 CLOSES ON A CONVERGENCE JUDGEMENT, not on a clean verdict —
+the ratifier's call, 2026-08-16.** Three rounds ran on the built bodies:
+8 findings at the build commit, 5 at the aftermath, 1 at the closing
+pass, with ZERO product defects in all three. The arm's own closing
+recommendation was to end here rather than fold again, and the packet
+records that rather than manufacturing a clean verdict it did not get.
+
+ONE RESIDUAL, named with its route rather than folded: family 1's
+cross-channel lock compares the SHAPE of what each lane owes, not its
+MEANING. Two lanes whose finding paths coincide can be substituted for
+each other with their identities kept and all 46 rows stay green —
+reproduced by the arm in a scratch copy, not inferred. Folding it was
+declined on the arm's measured ground: the source-reading half of that
+lock is already syntactically over-sensitive (a pure reformat reds it),
+so a further text-based cross-module lock buys brittleness rather than
+proof. The general question — how two mirrored test registers prove
+SEMANTIC agreement without brittle source reading — is every packet's,
+not this one's. `Route: boundary-review`
+
 **The declaration's new digest, for the follow-up act:**
 `d9a58122f2c83d20e8ef07e18a0a69d4d57146bbf7c0a6066bf16c0ba23f5164`.
 
@@ -1176,10 +1195,11 @@ cleared by the follow-up commit.
     "class": "kernel-semantic",
     "prediction": { "predicted": "projection", "reasoning": "plan §14.4's row, basis resolved at the draft ratification", "discovered": "projection" },
     "provenance": { "anchored": 12, "derived": 3, "new_decision": 2 },
-    "rounds": { "review": 3, "doc_refinement": 0, "implementation": 1 },
+    "rounds": { "review": 3, "doc_refinement": 0, "implementation": 3 },
     "stops": [
       { "type": "1:open-choice", "what": "a ratified C-row assigns a machine code to a container lane the declaration vocabulary cannot carry one on, and an authored code there is silently dropped", "resolution": "the human ruled the vocabulary widens (2026-08-15) under two binding conditions — the widening recorded in the ADR tally inside the act this packet already opens, and the load guard made loud for the defect class with its own regression lane; D17 carries it" },
-      { "type": "4:flagged-approve", "what": "nine pre-approval flags, seven approve-ratified routes and two new-decision rows, so the plan row's flag-free-⇒-autonomous letter does not reach this packet", "resolution": "the human worked the flags one at a time and approved (2026-08-16), adding four durability duties: the plan's build-close tracked item, the follow-up commit's divergence sentence, the marker's second half, and the ADR tally entry verified by name at the close" }
+      { "type": "4:flagged-approve", "what": "nine pre-approval flags, seven approve-ratified routes and two new-decision rows, so the plan row's flag-free-⇒-autonomous letter does not reach this packet", "resolution": "the human worked the flags one at a time and approved (2026-08-16), adding four durability duties: the plan's build-close tracked item, the follow-up commit's divergence sentence, the marker's second half, and the ADR tally entry verified by name at the close" },
+      { "type": "3:plateau", "what": "the build-close arm gate ran three rounds on the built bodies — 8 findings, then 5, then 1, with zero product defects throughout — and its own closing recommendation was to stop rather than fold again, the remaining item being a test register's maintenance blind spot whose fix the arm measured as buying brittleness over proof", "resolution": "the human closed the gate on a convergence judgement (2026-08-16); the residual is dispositioned boundary-review in the Build record rather than folded, so the bytes stabilize" }
     ],
     "detector_misses": [],
     "learned": "a fold that regrains a rule owes the surfaces written for the old grain — three of the last four rounds' findings were the loop's own fold debt, not the packet's design",
