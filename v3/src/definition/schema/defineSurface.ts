@@ -85,6 +85,120 @@ const SLOTS = new Set([
 
 const SELECTOR_HEADS = new Set(["$", "^"]);
 
+// ---------------------------------------------------------------------------
+// THE ADMITTED-ATTRIBUTE INVENTORY (ADR-019 D13's condition 2, ch14-P1).
+// ---------------------------------------------------------------------------
+
+/**
+ * The POSITION a node occupies, which is the third key of the inventory
+ * and NOT a refinement anything here invented: ADR-019 D11 already
+ * legislates applicability in exactly these terms, and this gate's three
+ * standing refusals (`channel` and `default` off a fixed-map field,
+ * `presence` on a plain-map typed field) were each position-scoped before
+ * they were data.
+ *
+ * MEASURED, and the measurement is why the key is not the node's KIND
+ * alone (receipt PROBE-CH14P1-7): `presence` on a `string` FIELD of a
+ * fixed map is legitimate and FIRES, while `presence` on a `string` ENTRY
+ * of an open map loads clean and produces byte-identical findings with and
+ * without it. ONE kind carries the same attribute as both a live and an
+ * inert case, so no kind-keyed allowlist can separate them.
+ */
+type NodePosition =
+  | "root"
+  | "field"
+  | "plainField"
+  | "entry"
+  | "member"
+  | "keyClass"
+  | "mapCase"
+  | "valueClass";
+
+/** Bookkeeping every node carries at every position. */
+const STRUCTURAL_ATTRIBUTES: readonly string[] = ["kind", "tag", "rows"];
+
+/**
+ * Attributes whose READER is position-scoped rather than kind-scoped —
+ * the half a kind-grain inventory cannot express.
+ *
+ * - `channel`   — read only on a field of a `map.fixed` (`evalMapFixed`
+ *                 scopes legality, presence and evaluation together).
+ * - `default`   — materialized only where an ABSENCE exists to fill, which
+ *                 is a field of a `map.fixed` and nowhere else.
+ * - `presence`  — the missing-key lane is `evalMapFixed`'s; an open map's
+ *                 entry, a list member and a plain map's typed field have
+ *                 no absence the walk can detect.
+ */
+const POSITION_SCOPED: Readonly<Record<string, readonly NodePosition[]>> = {
+  channel: ["field"],
+  default: ["field"],
+  presence: ["field"],
+};
+
+/**
+ * `gating` is read by `evalValueClassRef` alone — the REFERRING site's
+ * mark — so it is admitted on a `valueClass` reference at any position and
+ * is inert everywhere else. (A container's own `nonempty.gating` is a
+ * different attribute with its own reader.)
+ */
+const KIND_SCOPED: Readonly<Record<string, readonly NodeDecl["kind"][]>> = {
+  gating: ["valueClass"],
+};
+
+/** Each kind's OWN attributes — the ones its interface declares and the
+ * engine's `eval*` for that kind reads. */
+const KIND_ATTRIBUTES: Readonly<Record<NodeDecl["kind"], readonly string[]>> = {
+  "map.fixed": ["containerMessage", "missingMessage", "unknownMessage", "laneOrder", "fields", "removedKeys", "code"],
+  "map.open": ["containerMessage", "nonempty", "keyClass", "keyLaneAt", "deepKeyStringness", "keysSubsetOf", "entry", "code"],
+  "map.plain": ["containerMessage", "canonicalJsonSafe", "fields"],
+  list: ["containerMessage", "nonempty", "member", "memberLaneAt", "unique", "disjointFrom", "memberOf"],
+  string: ["typeMessage", "nonempty", "grammar", "memberOf"],
+  integer: ["sourceForm", "resolvedForm"],
+  enum: ["members", "message", "code"],
+  union: ["literals", "mapCase", "removedValues", "message"],
+  raw: ["containerMessage"],
+  valueClass: ["valueClass", "label"],
+  delegate: ["registry", "by", "beltMessage", "dependsOn"],
+};
+
+/**
+ * Is `attribute` READ on a node of `kind` sitting at `position`?
+ *
+ * FAIL-CLOSED BY CONSTRUCTION, which is the property the guard is for: a
+ * vocabulary attribute added later without its entry here is REFUSED at
+ * its first use — loud and self-correcting. The INVERSE — an entry whose
+ * reader was deleted — an allowlist cannot see, and this rule does not
+ * claim it: that direction is a mutation-probe duty.
+ */
+function attributeAdmitted(attribute: string, kind: NodeDecl["kind"], position: NodePosition): boolean {
+  if (STRUCTURAL_ATTRIBUTES.includes(attribute)) return true;
+  const positions = POSITION_SCOPED[attribute];
+  if (positions !== undefined) return positions.includes(position);
+  const kinds = KIND_SCOPED[attribute];
+  if (kinds !== undefined) return kinds.includes(kind);
+  return KIND_ATTRIBUTES[kind].includes(attribute);
+}
+
+/**
+ * Every attribute a node carries that its position does not admit. A
+ * POSITION-illegal attribute is TYPE-legal by construction (`presence` is
+ * declared on the shared node base and an open map's entry is a full
+ * node), so this reaches ordinary straight-authored declarations and not
+ * only cast-authored ones.
+ */
+function attributeProblems(decl: NodeDecl, where: string, position: NodePosition): string[] {
+  const problems: string[] = [];
+  for (const attribute of Object.keys(decl)) {
+    if (attributeAdmitted(attribute, decl.kind, position)) continue;
+    problems.push(
+      `${where}: node "${decl.tag}" carries ${attribute}, which the vocabulary does not admit on a ` +
+        `${decl.kind} at this position (${position}) — an attribute the engine does not read here must ` +
+        `refuse the load, never ride along inert`,
+    );
+  }
+  return problems;
+}
+
 function slotProblems(template: MessageTemplate, where: string): string[] {
   const problems: string[] = [];
   for (const match of template.matchAll(/\{(\w+)\}/gu)) {
@@ -263,6 +377,14 @@ function selectorProblems(selector: Selector, where: string, ctx: Context, base:
   return leafProblems(selector, where, ctx, base);
 }
 
+/** ch8-C23's closed namespace, checked wherever a `code` is declarable —
+ * ONE reader, so a new code-bearing grain joins it by calling this rather
+ * than by growing a fourth copy of the same sentence. */
+function codeProblem(code: string | undefined, where: string, ctx: Context): string[] {
+  if (code === undefined || ctx.codes.has(code)) return [];
+  return [`${where}: issue code ${JSON.stringify(code)} is outside the declared namespace`];
+}
+
 function checkMembership(
   rule: { readonly target: Selector; readonly message: MessageTemplate; readonly code?: string },
   where: string,
@@ -271,9 +393,7 @@ function checkMembership(
 ): void {
   ctx.problems.push(...selectorProblems(rule.target, where, ctx, base));
   ctx.problems.push(...slotProblems(rule.message, where));
-  if (rule.code !== undefined && !ctx.codes.has(rule.code)) {
-    ctx.problems.push(`${where}: issue code ${JSON.stringify(rule.code)} is outside the declared namespace`);
-  }
+  ctx.problems.push(...codeProblem(rule.code, where, ctx));
 }
 
 /** The position a child of `at` occupies, or undefined where the enclosing
@@ -284,17 +404,18 @@ function childAt(ctx: Context, at: DeclCursor | undefined, step: Parameters<type
 }
 
 /**
- * Walk one node. `channelHonoured` says whether a `channel` mark at THIS
- * position is read by the engine — true only for a field of a `map.fixed`.
- * `at` is the node's own position and `parentAt` its container's — the
- * declaration operands of `$`-relative and `^`-relative paths, carried
- * rather than derived, because a list member's address ends in `[]` and
- * chopping it lands on the wrong container.
+ * Walk one node. `position` is the slot the node occupies — the third key
+ * of the admitted-attribute inventory, and the thing that decides whether
+ * an attribute is READ here at all. `at` is the node's own position and
+ * `parentAt` its container's — the declaration operands of `$`-relative
+ * and `^`-relative paths, carried rather than derived, because a list
+ * member's address ends in `[]` and chopping it lands on the wrong
+ * container.
  */
 function checkNode(
   decl: NodeDecl,
   where: string,
-  channelHonoured: boolean,
+  position: NodePosition,
   ctx: Context,
   at: DeclCursor | undefined,
   parentAt: DeclCursor | undefined,
@@ -303,38 +424,28 @@ function checkNode(
   ctx.tags.push(decl.tag);
   ctx.nodeTags.add(decl.tag);
   if (decl.rows.length === 0) ctx.problems.push(`${where}: node "${decl.tag}" cites no ratified row`);
-  if (decl.channel !== undefined && !channelHonoured) {
-    ctx.problems.push(
-      `${where}: node "${decl.tag}" carries channel ${JSON.stringify(decl.channel)}, ` +
-        `which is read only on a field of a map.fixed`,
-    );
-  }
-  // A `default:` fills an ABSENCE, and a field of a fixed map is the only
-  // position where absence is a thing the walk can detect: an entry that
-  // is not in an open map does not exist, and neither does a list member.
-  // Declared anywhere else it was accepted and never materialized —
-  // pass-and-ignore, the shape this substrate refuses.
-  if (!channelHonoured && Object.prototype.hasOwnProperty.call(decl, "default")) {
-    ctx.problems.push(
-      `${where}: node "${decl.tag}" carries a default, which is materialized only on a field of a ` +
-        `map.fixed — the only position where an absence exists to fill`,
-    );
-  }
-  if (decl.presence?.code !== undefined && !ctx.codes.has(decl.presence.code)) {
-    ctx.problems.push(
-      `${where}: issue code ${JSON.stringify(decl.presence.code)} is outside the declared namespace`,
-    );
-  }
+  // The applicability guard, at attribute × kind × POSITION. The three
+  // refusals this gate used to spell one at a time — `channel` and
+  // `default` off a fixed-map field, `presence` on a plain-map typed
+  // field — are inventory entries now, and every OTHER unadmitted pair
+  // joins them by construction rather than by a future edit remembering to.
+  ctx.problems.push(...attributeProblems(decl, where, position));
+  ctx.problems.push(...codeProblem(decl.presence?.code, where, ctx));
   if (decl.presence?.message !== undefined) ctx.problems.push(...slotProblems(decl.presence.message, where));
 
   switch (decl.kind) {
     case "map.fixed": {
       ctx.problems.push(...slotProblems(decl.containerMessage, where), ...slotProblems(decl.unknownMessage, where));
       if (decl.missingMessage !== undefined) ctx.problems.push(...slotProblems(decl.missingMessage, where));
+      // →[namespace-check] at the widened grain: the container and
+      // unknown-key lanes' code is a member of the declared namespace like
+      // every other, and the check joins the new position in the same edit
+      // that opens it (ADR-019 D13).
+      ctx.problems.push(...codeProblem(decl.code, where, ctx));
       for (const [name, field] of Object.entries(decl.fields)) {
         const site = `${where}.${name}`;
         ctx.problems.push(...defaultProblems(field, site, ctx));
-        checkNode(field, site, true, ctx, childAt(ctx, at, { kind: "field", name }), at, decl);
+        checkNode(field, site, "field", ctx, childAt(ctx, at, { kind: "field", name }), at, decl);
       }
       for (const [key, message] of Object.entries(decl.removedKeys ?? {})) {
         ctx.problems.push(...slotProblems(message, `${where}.removedKeys.${key}`));
@@ -343,6 +454,7 @@ function checkNode(
     }
     case "map.open": {
       ctx.problems.push(...slotProblems(decl.containerMessage, where));
+      ctx.problems.push(...codeProblem(decl.code, where, ctx));
       if (decl.nonempty !== undefined) ctx.problems.push(...slotProblems(decl.nonempty.message, where));
       if (decl.deepKeyStringness !== undefined) {
         ctx.problems.push(...slotProblems(decl.deepKeyStringness.message, where));
@@ -351,12 +463,12 @@ function checkNode(
       // map's container — the engine builds its frame that way too.
       if (decl.keysSubsetOf !== undefined) checkMembership(decl.keysSubsetOf, `${where}.keysSubsetOf`, ctx, parentAt);
       if (decl.keyClass !== undefined) {
-        checkNode(decl.keyClass, `${where}<key>`, false, ctx, childAt(ctx, at, { kind: "keyClass" }), at);
+        checkNode(decl.keyClass, `${where}<key>`, "keyClass", ctx, childAt(ctx, at, { kind: "keyClass" }), at);
       }
       // Only the ENTRY subtree is owned: the key class and the
        // keysSubsetOf lane sit beside the entries, not inside them.
       if (at !== undefined) ctx.entryOwners.push(at);
-      checkNode(decl.entry, `${where}.*`, false, ctx, childAt(ctx, at, { kind: "entry" }), at);
+      checkNode(decl.entry, `${where}.*`, "entry", ctx, childAt(ctx, at, { kind: "entry" }), at);
       if (at !== undefined) ctx.entryOwners.pop();
       return;
     }
@@ -368,7 +480,7 @@ function checkNode(
       // list as its `parentValue`, and a list is not a container to read.
       if (decl.memberOf !== undefined) checkMembership(decl.memberOf, `${where}.memberOf`, ctx, at);
       if (decl.disjointFrom !== undefined) checkMembership(decl.disjointFrom, `${where}.disjointFrom`, ctx, at);
-      checkNode(decl.member, `${where}[]`, false, ctx, childAt(ctx, at, { kind: "member" }), at);
+      checkNode(decl.member, `${where}[]`, "member", ctx, childAt(ctx, at, { kind: "member" }), at);
       return;
     }
     case "string": {
@@ -389,10 +501,7 @@ function checkNode(
       if (decl.resolvedForm !== undefined) ctx.problems.push(...slotProblems(decl.resolvedForm.message, where));
       return;
     case "enum": {
-      ctx.problems.push(...slotProblems(decl.message, where));
-      if (decl.code !== undefined && !ctx.codes.has(decl.code)) {
-        ctx.problems.push(`${where}: issue code ${JSON.stringify(decl.code)} is outside the declared namespace`);
-      }
+      ctx.problems.push(...slotProblems(decl.message, where), ...codeProblem(decl.code, where, ctx));
       return;
     }
     case "union": {
@@ -401,7 +510,7 @@ function checkNode(
         ctx.problems.push(...slotProblems(message, `${where}.removedValues.${value}`));
       }
       // A union's map case is evaluated AT THE UNION'S OWN ADDRESS.
-      if (decl.mapCase !== undefined) checkNode(decl.mapCase, where, false, ctx, at, parentAt);
+      if (decl.mapCase !== undefined) checkNode(decl.mapCase, where, "mapCase", ctx, at, parentAt);
       return;
     }
     case "raw":
@@ -412,20 +521,13 @@ function checkNode(
         ...slotProblems(decl.containerMessage, where),
         ...slotProblems(decl.canonicalJsonSafe.message, where),
       );
-      // D11: the TYPED SUBSET descends like a fixed map's fields, with
-      // `channelHonoured` false — so `channel` and `default` on a plain
-      // field hit the standing guards above. `presence` is refused HERE:
-      // a plain map has no missing-key lane, and an attribute the engine
-      // does not read must refuse the load, never ride along inert.
+      // D11: the TYPED SUBSET descends like a fixed map's fields, at its
+      // own POSITION — so `presence`, `channel` and `default` on a plain
+      // field are refused by the one applicability inventory rather than
+      // by a check spelled here, which is what makes the NEXT inert
+      // attribute refused too instead of waiting for someone to notice.
       for (const [name, field] of Object.entries(decl.fields ?? {})) {
-        const site = `${where}.${name}`;
-        if (field.presence !== undefined) {
-          ctx.problems.push(
-            `${site}: node "${field.tag}" carries presence, which is read only on a field of a ` +
-              `map.fixed — a plain map has no missing-key lane`,
-          );
-        }
-        checkNode(field, site, false, ctx, childAt(ctx, at, { kind: "field", name }), at, decl);
+        checkNode(field, `${where}.${name}`, "plainField", ctx, childAt(ctx, at, { kind: "field", name }), at, decl);
       }
       return;
     }
@@ -695,9 +797,31 @@ function resolveHooks(surface: SurfaceDecl, ctx: Context): void {
       if (hookPosition(ctx, hook.advanceSet) === undefined) {
         ctx.problems.push(`${where}.advanceSet: ${JSON.stringify(hook.advanceSet)} is not a declared position`);
       }
-      for (const [label, name] of [["edges", hook.edges], ["into", hook.into]] as const) {
-        const problem = fieldProblem(ctx, entry, name, `${where}.${label}`);
-        if (problem !== undefined) ctx.problems.push(problem);
+      const intoProblem = fieldProblem(ctx, entry, hook.into, `${where}.into`);
+      if (intoProblem !== undefined) ctx.problems.push(intoProblem);
+      // ADR-019 D13: each EDGE CLASS is resolved on its own — the map
+      // field, that it IS an edge map, and the per-class target
+      // extraction. A `targetAt` naming nothing would leave every edge of
+      // that class flagged `false` in silence, which is the same
+      // computes-nothing-quietly failure the hook guards already refuse.
+      for (const source of hook.edges) {
+        const fromProblem = fieldProblem(ctx, entry, source.from, `${where}.edges`);
+        if (fromProblem !== undefined) {
+          ctx.problems.push(fromProblem);
+          continue;
+        }
+        const edgeAt = descend(ctx.surface, entry, { kind: "field", name: source.from });
+        const edgeEntry = edgeAt === undefined ? undefined : descend(ctx.surface, edgeAt, { kind: "entry" });
+        if (edgeEntry === undefined) {
+          const kind = edgeAt === undefined ? "?" : (derefNode(ctx.surface, edgeAt.node)?.kind ?? edgeAt.node.kind);
+          ctx.problems.push(
+            `${where}.edges: ${JSON.stringify(source.from)} is a ${kind}; an edge class walks a map.open`,
+          );
+          continue;
+        }
+        if (source.targetAt === undefined) continue;
+        const targetProblem = fieldProblem(ctx, edgeEntry, source.targetAt, `${where}.edges.targetAt`);
+        if (targetProblem !== undefined) ctx.problems.push(targetProblem);
       }
       continue;
     }
@@ -810,14 +934,14 @@ export function closureProblems(surface: SurfaceDecl): readonly string[] {
   checkBranch(substrate.codes, "substrate.codes", ctx);
   checkBranch(substrate.internalFailure, "substrate.internalFailure", ctx, [substrate.internalFailure.message]);
 
-  checkNode(surface.root, "$", false, ctx, ctx.root, undefined);
+  checkNode(surface.root, "$", "root", ctx, ctx.root, undefined);
   for (const [name, decl] of Object.entries(surface.valueClasses)) {
     // A value-class DEFINITION has no address of its own: the engine only
     // ever evaluates it at a reference site, and its `^` is that site's
     // container. So it is walked without a position, and a `^` written
     // inside one does not resolve — loudly, at load, which is the recorded
     // disposition rather than a silence.
-    checkNode(decl, `valueClass "${name}"`, false, ctx, undefined, undefined);
+    checkNode(decl, `valueClass "${name}"`, "valueClass", ctx, undefined, undefined);
     // A value-class definition's tag is never STATUSED by the engine (the
     // reference's tag is), so it must not count as a dependsOn target.
     ctx.nodeTags.delete(decl.tag);

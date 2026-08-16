@@ -1094,7 +1094,9 @@ function evalMapFixed(
   const value = frame.value;
   const slots = baseSlots(frame);
   if (!isContainer(value)) {
-    run.emit(frame.path, render(decl.containerMessage, slots));
+    // ADR-019 D13: the CONTAINER lane's declared `code` (undefined on every
+    // node that declares none, so the carriage is additive by construction).
+    run.emit(frame.path, render(decl.containerMessage, slots), decl.code);
     return { ok: false };
   }
   const container = value;
@@ -1125,6 +1127,7 @@ function evalMapFixed(
         run.emit(
           frame.path,
           render(decl.unknownMessage, { ...slots, key, value: key, keys: scoped.join(", ") }),
+          decl.code,
         );
         continue;
       }
@@ -1132,7 +1135,10 @@ function evalMapFixed(
       const at = joinPath(frame.path, key);
       const removed = ownMessage(decl.removedKeys, key);
       const keySlots: Slots = { ...slots, path: at, key, value: key, keys: scoped.join(", ") };
-      run.emit(at, render(removed ?? decl.unknownMessage, keySlots));
+      // ADR-019 D13: the UNKNOWN-KEY lane shares the node-grain `code` —
+      // the two lanes' messages are node-grain templates with no per-lane
+      // carrier, so one attribute serves both (the enum-grain precedent).
+      run.emit(at, render(removed ?? decl.unknownMessage, keySlots), decl.code);
     }
   };
 
@@ -1230,7 +1236,8 @@ function evalMapOpen(
   const value = frame.value;
   const slots = baseSlots(frame);
   if (!isContainer(value)) {
-    run.emit(frame.path, render(decl.containerMessage, slots));
+    // ADR-019 D13: an open map's ONE coded lane is its container precondition.
+    run.emit(frame.path, render(decl.containerMessage, slots), decl.code);
     return { ok: false };
   }
   const container = value;

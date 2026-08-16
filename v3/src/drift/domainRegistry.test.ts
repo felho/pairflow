@@ -232,3 +232,30 @@ describe("the ch13-p1b realized row (the l2b render-side slice)", () => {
     });
   });
 });
+
+// ── ch14-p1 (ch14-C25's registry-flip clause + plan §14.5's DoD line):
+// the ONE l3 row the definition side realizes. Its witness is the
+// step-class discriminator's own token union at FIELD grain — the shared
+// `Step` interface would be satisfied by every agent step and would
+// witness nothing, so the row is pinned VERBATIM here rather than left to
+// the key-set lane, which a wrong-but-existing typeName passes. ──────────
+
+describe("the ch14-p1 realized row (the l3 definition-side slice)", () => {
+  it("pins the row VERBATIM — a wrong-but-existing typeName is content-red", () => {
+    expect(DOMAIN_REGISTRY["l3/human_gate"]).toEqual({
+      kind: "realized",
+      typeName: "StepType",
+    });
+  });
+
+  it("the OTHER four l3 rows stay pending — they are ch14-P2's by their own C-rows", () => {
+    for (const id of [
+      "l3/wait step + RESUME_WAIT",
+      "l3/apply_target_entry_effects(...)",
+      "l3/HumanDecisionRequest",
+      "l3/DECISION_REQUEST / DECISION_MADE",
+    ]) {
+      expect(DOMAIN_REGISTRY[id], id).toEqual({ kind: "pending" });
+    }
+  });
+});

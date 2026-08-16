@@ -10,7 +10,10 @@ each carries a dated marker) · amended 2026-08-09 (D12 — the
 nested-source normalizer hook construct, admitted under D7; and D4's
 FORWARD-SCOPED EXEMPTION, the form that makes a rowed-but-uncited node
 legal for a bounded interval; user-ratified — each carries a dated
-marker)
+marker) · amended 2026-08-16 (D13 — TWO attribute widenings in ONE act:
+`[n-advances-round]`'s edge SOURCES and the `code` attribute at the
+container / unknown-key grains, both in D11's existing-attribute-at-a-
+new-grain class; user-ratified at ch14-p1's approve)
 Links: supersedes — · amends — · depends-on ADR-011 · related ADR-003, ADR-012, ADR-013
 
 ## Context
@@ -265,7 +268,12 @@ flavours that must not be confused:
 **Admitted under this rule so far**: one construct, D10 (2026-08-07);
 one attribute widening at a new grain, D11 (2026-08-08 — not a new
 construct, recorded here so the tally cannot silently drift); a second
-construct, D12 (2026-08-09 — the nested-source normalizer hook).
+construct, D12 (2026-08-09 — the nested-source normalizer hook); and TWO
+further attribute widenings in ONE act, D13 (2026-08-16 — the
+`expandAdvancesRound` hook's `edges` attribute widened from one edge map
+to the three declared edge classes with per-class target extraction, and
+the `code` attribute admitted at the CONTAINER-lane and UNKNOWN-KEY-lane
+grains; neither is a new construct).
 
 ### D8 — the two open constructs — RULED: BOTH ACCEPTED (user, 2026-08-05)
 
@@ -516,6 +524,76 @@ one.** This amendment authorizes the kind; ch13-p1a's build adds the
 arm and its two entries, and the schema re-lock act records the new
 declaration bytes. The expected live behavioural delta of THIS act is
 zero.
+
+### D13 — TWO attribute widenings, ONE act (amendment, user-ratified 2026-08-16)
+
+**ADMITTED, both in D11's class** — an existing attribute at a new
+grain, not a new construct — and recorded in ONE act because ch14-P1's
+realizing build carries both. Neither is a live capability until that
+build; the expected behavioural delta of THIS record is zero.
+
+**(a) `expandAdvancesRound`'s edge SOURCES.** The hook's `edges`
+attribute named ONE edge map (`transitions`) and now names a LIST of
+edge classes, each declaring where its target sits: absent = the edge
+VALUE is the target (`transitions`, `onResume`), `targetAt: "target"` =
+the target sits under that key of the edge value (`decisions`).
+ch14-C11 ratified the widening and classed it; this section RECORDS it,
+which is why the edit rides the realizing act's commit rather than a
+prerequisite one — nothing here AUTHORIZES a construct the declaration
+could not otherwise use.
+
+Its D7 admission case is the THREE independent edge positions under the
+established D10/D12 position-reading. Its counterfactual is stated
+rather than implied: without it, the round-advance flag map covers
+transition edges only, so a rework loop-back through a decision edge
+could not open a new round, and the missing half would be filled by
+hand-written normalizer code — the derivation scattering D3 exists to
+end.
+
+**(b) `code` at the CONTAINER and UNKNOWN-KEY grains.** MEASURED at
+ch14-P1's authoring (receipt PROBE-CH14P1-6): the vocabulary admitted
+`code` at exactly three grains — the membership rule, the `presence`
+block and the `enum` node — and a `code` authored at a container lane
+was accepted at load and silently dropped at runtime, as was a code
+outside the declared namespace at that position. ch14-C8 assigns
+container-lane codes, so the ratified rule was not expressible.
+
+Its D7 admission case is the SIX declared container / unknown-key
+positions ch14-C8's table assigns (the `decisions` container, the
+decision-entry container and unknown-key lanes, the `payload`
+container, the payload-spec container and unknown-key lanes), so each
+widened grain carries ≥2 on its own. The attribute's SPELLING resolves
+at NODE grain: the container and unknown-key messages are node-grain
+templates with no per-lane carrier, so one attribute on `map.fixed`
+serves both of that kind's coded lanes and one on `map.open` serves its
+single container lane — the enum-grain precedent. The declaration-load
+NAMESPACE check joins the new position in the same edit.
+
+**THE APPLICABILITY GUARD THIS ACT OWES, and its grain.** D11 already
+legislates that an attribute the engine does not read at a grain is
+REFUSED at declaration load rather than accepted-and-ignored. This act
+generalizes that from three hand-spelled refusals to ONE inventory
+keyed on attribute × kind × POSITION, fail-closed by construction: a
+vocabulary attribute added later without its inventory entry is refused
+at its first use.
+
+The POSITION key is not decoration — it is measured (receipt
+PROBE-CH14P1-7): `presence` on a `string` FIELD of a fixed map is
+legitimate and fires, while `presence` on a `string` ENTRY of an open
+map loads clean and produces byte-identical findings with and without
+it. ONE kind carries the same attribute as both a live and an inert
+case, so a kind-keyed allowlist cannot separate them.
+
+The guard's INVERSE — an inventory entry whose READER was deleted — is
+NOT closed by an allowlist and is not claimed to be: an allowlist
+cannot see an absent reader. That direction is discharged by a
+mutation probe under the standing protocol, receipt-backed.
+
+**The D9 tripwires, checked rather than assumed.** Tripwire 1 fires on
+a single-use CONSTRUCT admitted to make one row fit; neither half here
+adds a construct, and each carries ≥2 independent positions on its own.
+Tripwire 3 — an admission whose counterfactual was never stated — is
+answered per half above.
 
 ## Alternatives Considered
 

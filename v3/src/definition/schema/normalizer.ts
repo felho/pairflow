@@ -44,11 +44,18 @@ function ownGet(record: Record<string, unknown>, key: string): unknown {
 }
 
 /**
- * R4's first member (ch11-C39): expand each entry's edge map into a
- * COMPLETE per-edge boolean map against the declared advancing set. An
- * absent declaration yields all-false (ch11-C38's none-default); the
- * PRODUCER MONOPOLY holds — the map is recomputed and overwrites whatever
- * the input carried.
+ * R4's first member (ch11-C39, widened by ch14-C11): expand each entry's
+ * edge maps into a COMPLETE per-edge boolean map against the declared
+ * advancing set. An absent declaration yields all-false (ch11-C38's
+ * none-default); the PRODUCER MONOPOLY holds — the map is recomputed and
+ * overwrites whatever the input carried.
+ *
+ * ADR-019 D13's widening: the edge SOURCES are all three edge classes,
+ * each with its own declared target extraction — a `decisions` entry's
+ * target sits under its `target` key, while a `transitions` or `onResume`
+ * value IS the target. Without it a rework loop-back could not open a new
+ * round. The extraction is DATA on the declaration, never a branch on a
+ * field name here (ADR-019 D9 tripwire #2).
  */
 function expandFlagMaps(
   surface: SurfaceDecl,
@@ -67,11 +74,15 @@ function expandFlagMaps(
   }
   for (const entry of reachAll(surface, root, hook.over, { kind: "entry" })) {
     if (!isRecord(entry.value)) continue;
-    const edges = ownGet(entry.value, hook.edges);
     const flags: Record<string, boolean> = {};
-    if (isRecord(edges)) {
+    for (const source of hook.edges) {
+      const edges = ownGet(entry.value, source.from);
+      if (!isRecord(edges)) continue;
       for (const edge of Object.keys(edges)) {
-        defineOwn(flags, edge, advancing.has(ownGet(edges, edge) as string));
+        const value = ownGet(edges, edge);
+        const target =
+          source.targetAt === undefined ? value : isRecord(value) ? ownGet(value, source.targetAt) : undefined;
+        defineOwn(flags, edge, advancing.has(target as string));
       }
     }
     defineOwn(entry.value, hook.into, flags);

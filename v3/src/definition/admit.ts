@@ -32,9 +32,10 @@ import { runTemplateSurface } from "./schema/templateSurface.js";
  *   ONLY sanctioned producer of the `AdmittedTemplate` brand.
  *
  * NOT here: the admitted FORM is computed by the normalizer (ADR-019 D3),
- * and the audited residual — the runtime-context cross-rule (R3) and the
- * uses-scoped source ladder (R7) — lives in `schema/templateSurface.ts`,
- * wired into this same finding stream.
+ * and the audited residual — the runtime-context cross-rule (R3), the
+ * uses-scoped source ladder (R8, boundary-kept) and the ch14 step-class
+ * lanes (R7) — lives in `schema/templateSurface.ts`, wired into this same
+ * finding stream.
  */
 export type AdmitResult =
   | { readonly ok: true; readonly template: AdmittedTemplate }

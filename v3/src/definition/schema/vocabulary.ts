@@ -209,6 +209,19 @@ interface NodeBase {
  * `Object.keys(fields)`; each field declares its own `presence`. */
 export interface MapFixedDecl extends NodeBase {
   readonly kind: "map.fixed";
+  /**
+   * vocabulary #17 at the CONTAINER and UNKNOWN-KEY grains (ADR-019 D13,
+   * user-ratified 2026-08-16 — the existing `code` attribute at a new
+   * grain, the D11 shape). ONE node-grain attribute serves BOTH of this
+   * kind's coded lanes, because their messages are node-grain templates
+   * with no per-lane carrier to hang a second attribute on; the choice
+   * follows the enum-grain precedent. The missing-key lane keeps its own
+   * `presence.code` — that carrier already existed.
+   *
+   * It is a member of the surface's declared code namespace like every
+   * other `code`, checked at declaration load.
+   */
+  readonly code?: string;
   readonly containerMessage: MessageTemplate;
   /** The default missing-key wording for fields whose `presence` states
    * none. */
@@ -223,6 +236,9 @@ export interface MapFixedDecl extends NodeBase {
 /** vocabulary #1 `map.open` — an open key class. */
 export interface MapOpenDecl extends NodeBase {
   readonly kind: "map.open";
+  /** vocabulary #17 at the CONTAINER grain (ADR-019 D13) — an open map has
+   * one coded lane, its container precondition. See `MapFixedDecl.code`. */
+  readonly code?: string;
   readonly containerMessage: MessageTemplate;
   /** vocabulary #3 on a map. `gating` is OPT-IN and the template surface
    * does not use it: ch8-C21's suppression binds MISSING or WRONG-KIND
@@ -408,6 +424,25 @@ export interface EqualsRuleDecl {
  * `normalizer.ts`, never in the validator. Each hook is a named capability
  * with its ratified rows; adding one is D7 format growth, not an edit.
  */
+/**
+ * ONE edge class an `expandAdvancesRound` hook expands over (ADR-019 D13,
+ * user-ratified 2026-08-16 — the hook arm's declared attribute WIDENED, an
+ * existing attribute at a new grain rather than a new construct).
+ *
+ * The edge map is an open map on the entry; what its VALUE holds differs
+ * per class, so the extraction is declared rather than guessed: `targetAt`
+ * absent means the value IS the target (`transitions`, `onResume`), and
+ * `targetAt: "target"` means the target sits under that key of the edge
+ * value (`decisions`). Both halves are resolved at declaration load.
+ */
+export interface EdgeSourceDecl {
+  /** The entry's own field holding the edge map. */
+  readonly from: string;
+  /** The key inside an edge VALUE that holds the target id. Absent = the
+   * edge value is itself the target. */
+  readonly targetAt?: string;
+}
+
 export type NormalizerHookDecl =
   | {
       readonly tag: string;
@@ -415,8 +450,9 @@ export type NormalizerHookDecl =
       readonly hook: "expandAdvancesRound";
       /** The open map of entries the flag map is expanded per. */
       readonly over: NormalizerPath;
-      /** The entry's edge map, relative to the entry. */
-      readonly edges: string;
+      /** The entry's edge maps, relative to the entry — ONE per edge class
+       * (ch14-C11's widening: `transitions`, `decisions`, `onResume`). */
+      readonly edges: readonly EdgeSourceDecl[];
       /** The declared advancing set. */
       readonly advanceSet: NormalizerPath;
       /** The produced sibling field. */

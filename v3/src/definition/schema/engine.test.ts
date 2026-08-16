@@ -1,6 +1,7 @@
 import { parseDocument } from "yaml";
 import { describe, expect, it } from "vitest";
 
+import { REJECTION_NAMES } from "../../domain/index.js";
 import type { GateCatalog, GateRegistration } from "../../ports/index.js";
 import type { ValidationFinding } from "../errors.js";
 import { instanceKey, runSurface } from "./engine.js";
@@ -8,7 +9,7 @@ import type { EngineChannel } from "./engine.js";
 import { closureProblems, defineSurface, SurfaceDeclarationError } from "./defineSurface.js";
 import { normalize } from "./normalizer.js";
 import { templateFormat } from "./templateFormat.js";
-import type { NodeDecl, SurfaceDecl } from "./vocabulary.js";
+import type { EdgeSourceDecl, NodeDecl, SurfaceDecl } from "./vocabulary.js";
 
 /**
  * The ENGINE's own suite (ADR-019's P3 build). It tests the VOCABULARY's
@@ -1311,7 +1312,7 @@ describe("the normalizer (ADR-019 D3) — derivation, never validation", () => {
           })),
         })),
       }),
-      { hook: "expandAdvancesRound", over: "$.outer.*.inner", edges: "transitions", advanceSet: "$.adv", into: "flags" },
+      { hook: "expandAdvancesRound", over: "$.outer.*.inner", edges: [{ from: "transitions" }], advanceSet: "$.adv", into: "flags" },
     );
     expect(closureProblems(surface)).toStrictEqual([]);
     const value = { adv: ["b"], outer: { one: { inner: { s: { transitions: { GO: "b", STAY: "a" } } } } } };
@@ -1328,7 +1329,7 @@ describe("the normalizer (ADR-019 D3) — derivation, never validation", () => {
           flags: { kind: "raw", tag: "fl", rows: ROWS },
         })),
       }),
-      { hook: "expandAdvancesRound", over: "$.steps", edges: "transitions", advanceSet: "$.sets.*", into: "flags" },
+      { hook: "expandAdvancesRound", over: "$.steps", edges: [{ from: "transitions" }], advanceSet: "$.sets.*", into: "flags" },
     );
     expect(closureProblems(surface)).toStrictEqual([]);
     const value = { sets: { first: ["a"], second: ["b"] }, steps: { s: { transitions: { TO_A: "a", TO_B: "b" } } } };
@@ -1601,11 +1602,13 @@ describe("the declaration GATE: a declaration that is not closed never becomes a
       },
     });
 
-  const hookSurface = (over: Partial<Record<"over" | "edges" | "into" | "advanceSet", string>>): SurfaceDecl =>
+  const hookSurface = (
+    over: Partial<Record<"over" | "into" | "advanceSet", string>> & { edges?: readonly EdgeSourceDecl[] },
+  ): SurfaceDecl =>
     base({
       normalizers: [{
         tag: "n-h", rows: ["x"], hook: "expandAdvancesRound",
-        over: over.over ?? "$.steps", edges: over.edges ?? "transitions",
+        over: over.over ?? "$.steps", edges: over.edges ?? [{ from: "transitions" }],
         advanceSet: over.advanceSet ?? "$.adv", into: over.into ?? "flags",
       }],
     }, {
@@ -1617,6 +1620,11 @@ describe("the declaration GATE: a declaration that is not closed never becomes a
             fields: {
               transitions: { kind: "map.open", tag: "tr", rows: ["x"], containerMessage: "c", keyLaneAt: "container",
                 entry: { kind: "string", tag: "trv", rows: ["x"], typeMessage: "t" } },
+              // ADR-019 D13's second edge class shape: an open map whose
+              // ENTRY is a fixed map, so `targetAt` has a field to resolve.
+              choices: { kind: "map.open", tag: "ch", rows: ["x"], containerMessage: "c", keyLaneAt: "container",
+                entry: { kind: "map.fixed", tag: "che", rows: ["x"], containerMessage: "c", unknownMessage: "u",
+                  fields: { target: { kind: "string", tag: "cht", rows: ["x"], typeMessage: "t" } } } },
               flags: { kind: "raw", tag: "fl", rows: ["x"], channel: "direct" },
             } } },
       },
@@ -1639,7 +1647,7 @@ describe("the declaration GATE: a declaration that is not closed never becomes a
       normalizers: [{
         tag: "n-h", rows: ["x"], hook: "expandAdvancesRound",
         over: ok ? "$.dotted.plain" : "$.dotted.a.b",
-        edges: "transitions", advanceSet: "$.adv", into: "flags",
+        edges: [{ from: "transitions" }], advanceSet: "$.adv", into: "flags",
       }],
     }, {
       fields: {
@@ -1685,7 +1693,7 @@ describe("the declaration GATE: a declaration that is not closed never becomes a
     { claim: "a channel mark where the engine does not read one",
       make: (ok) => base({}, { fields: { list: { kind: "list", tag: "l", rows: ["x"], containerMessage: "c", memberLaneAt: "index",
         member: { kind: "string", tag: "lm", rows: ["x"], typeMessage: "t", ...(ok ? {} : { channel: "file" }) } } } }),
-      problem: /carries channel "file", which is read only on a field of a map\.fixed/u },
+      problem: /node "lm" carries channel, which the vocabulary does not admit on a string at this position \(member\)/u },
     { claim: "a dependsOn naming a tag nothing declares",
       make: (ok) => base({}, {
         fields: {
@@ -1771,7 +1779,7 @@ describe("the declaration GATE: a declaration that is not closed never becomes a
       make: (ok) => hookSurface({ over: ok ? "$.steps" : "$.setps" }),
       problem: /over: "\$\.setps" is not a declared position/u },
     { claim: "a normalizer reading an entry field the entry does not declare",
-      make: (ok) => hookSurface({ edges: ok ? "transitions" : "trasitions" }),
+      make: (ok) => hookSurface({ edges: [{ from: ok ? "transitions" : "trasitions" }] }),
       problem: /edges: "trasitions" is not a field of "\$\.steps\.\*"/u },
     { claim: "a normalizer WRITING a field the entry does not declare",
       make: (ok) => hookSurface({ into: ok ? "flags" : "flgas" }),
@@ -1910,7 +1918,7 @@ describe("the declaration GATE: a declaration that is not closed never becomes a
             ...(ok ? {} : { default: "abc" }) },
         },
       }, { fields: { id: { kind: "valueClass", tag: "id", rows: ["x"], valueClass: "idClass" } } }),
-      problem: /carries a default, which is materialized only on a field of a map\.fixed/u },
+      problem: /node "vc" carries default, which the vocabulary does not admit on a string at this position \(valueClass\)/u },
     { claim: "a value class that resolves to ITSELF — the walk would never terminate",
       make: (ok) => base({
         valueClasses: {
@@ -1940,19 +1948,19 @@ describe("the declaration GATE: a declaration that is not closed never becomes a
         canonicalJsonSafe: { message: "k" },
         fields: { refs: { kind: "string", tag: "cfgr", rows: ["x"], typeMessage: "t",
           ...(ok ? {} : { presence: { required: true } }) } } } } }),
-      problem: /carries presence, which is read only on a field of a map\.fixed — a plain map has no missing-key lane/u },
+      problem: /node "cfgr" carries presence, which the vocabulary does not admit on a string at this position \(plainField\)/u },
     { claim: "a `default` on a TYPED plain-map field (D11)",
       make: (ok) => base({}, { fields: { cfg: { kind: "map.plain", tag: "cfg", rows: ["x"], containerMessage: "c",
         canonicalJsonSafe: { message: "k" },
         fields: { refs: { kind: "string", tag: "cfgr", rows: ["x"], typeMessage: "t",
           ...(ok ? {} : { default: "abc" }) } } } } }),
-      problem: /carries a default, which is materialized only on a field of a map\.fixed/u },
+      problem: /node "cfgr" carries default, which the vocabulary does not admit on a string at this position \(plainField\)/u },
     { claim: "a `channel` on a TYPED plain-map field (D11)",
       make: (ok) => base({}, { fields: { cfg: { kind: "map.plain", tag: "cfg", rows: ["x"], containerMessage: "c",
         canonicalJsonSafe: { message: "k" },
         fields: { refs: { kind: "string", tag: "cfgr", rows: ["x"], typeMessage: "t",
           ...(ok ? {} : { channel: "file" }) } } } } }),
-      problem: /carries channel "file", which is read only on a field of a map\.fixed/u },
+      problem: /node "cfgr" carries channel, which the vocabulary does not admit on a string at this position \(plainField\)/u },
     // --- ch13-p1a family 4: the NESTED-SOURCE hook's load guard. Its
     // operand paths and every dynamic field name it reads or writes, the
     // nested source included — a name that reaches nothing would leave
@@ -1973,6 +1981,55 @@ describe("the declaration GATE: a declaration that is not closed never becomes a
     { claim: "a nested-source normalizer WRITING a field the entry does not declare",
       make: (ok) => liftSurface({ into: ok ? "lifted" : "liftde" }),
       problem: /into: "liftde" is not a field of "\$\.roles\.\*" \(fields: config, lifted\)/u },
+    // --- packet ch14-p1 family 9: the WIDENED hook's own load guard
+    // (ADR-019 D13(a)) and the applicability inventory (D13's condition 2).
+    { claim: "an edge CLASS naming a field the landing entry does not declare",
+      make: (ok) => hookSurface({ edges: [{ from: ok ? "transitions" : "trasitions" }] }),
+      problem: /edges: "trasitions" is not a field of "\$\.steps\.\*"/u },
+    { claim: "an edge CLASS landing on a node of the WRONG KIND",
+      make: (ok) => hookSurface({ edges: [{ from: ok ? "transitions" : "flags" }] }),
+      problem: /edges: "flags" is a raw; an edge class walks a map\.open/u },
+    { claim: "an edge class's per-class TARGET EXTRACTION naming a field the edge entry does not declare",
+      make: (ok) => hookSurface({ edges: [{ from: "choices", targetAt: ok ? "target" : "trget" }] }),
+      problem: /edges\.targetAt: "trget" is not a field of "\$\.steps\.\*\.choices\.\*" \(fields: target\)/u },
+    { claim: "an issue code outside the closed namespace at the CONTAINER grain (the widened position)",
+      make: (ok) => base({}, { fields: { m: { kind: "map.open", tag: "m", rows: ["x"], containerMessage: "c",
+        keyLaneAt: "container", entry: { kind: "string", tag: "me", rows: ["x"], typeMessage: "t" },
+        code: ok ? "gate_evaluator_unavailable" : "made_up_container_code" } } }),
+      problem: /issue code "made_up_container_code" is outside the declared namespace/u },
+    { claim: "an issue code outside the closed namespace at the UNKNOWN-KEY grain (the widened position)",
+      make: (ok) => base({}, { fields: { m: { kind: "map.fixed", tag: "m", rows: ["x"], containerMessage: "c",
+        unknownMessage: "u", fields: {}, code: ok ? "gate_evaluator_unavailable" : "made_up_unknown_code" } } }),
+      problem: /issue code "made_up_unknown_code" is outside the declared namespace/u },
+    // The POSITION-grain negative is STRAIGHT-authored by construction:
+    // `presence` is declared on the shared node base, so an open map's
+    // entry carrying it is TYPE-legal and a cast would prove nothing.
+    { claim: "a `presence` on an open map's ENTRY, where no missing-key lane exists (the POSITION grain)",
+      make: (ok) => base({}, { fields: { m: { kind: "map.open", tag: "m", rows: ["x"], containerMessage: "c",
+        keyLaneAt: "container",
+        entry: { kind: "string", tag: "me", rows: ["x"], typeMessage: "t",
+          ...(ok ? {} : { presence: { required: true } }) } } } }),
+      problem: /node "me" carries presence, which the vocabulary does not admit on a string at this position \(entry\)/u },
+    { claim: "a `presence` on a LIST MEMBER, likewise",
+      make: (ok) => base({}, { fields: { l: { kind: "list", tag: "l", rows: ["x"], containerMessage: "c",
+        memberLaneAt: "index",
+        member: { kind: "string", tag: "lm", rows: ["x"], typeMessage: "t",
+          ...(ok ? {} : { presence: { required: true } }) } } } }),
+      problem: /node "lm" carries presence, which the vocabulary does not admit on a string at this position \(member\)/u },
+    // The KIND-grain negative must be CAST-AUTHORED: an attribute the
+    // kind's interface omits is a compile error before the guard ever
+    // sees it. It also names a pair the code widening does NOT admit —
+    // `code` at a container lane is legal after this build and cannot
+    // serve as its own negative.
+    { claim: "a `code` on a LIST, a kind the widening does not reach (the KIND grain, cast-authored)",
+      make: (ok) => base({}, { fields: { l: { kind: "list", tag: "l", rows: ["x"], containerMessage: "c",
+        memberLaneAt: "index", member: { kind: "string", tag: "lm", rows: ["x"], typeMessage: "t" },
+        ...(ok ? {} : { code: "gate_evaluator_unavailable" }) } } }),
+      problem: /node "l" carries code, which the vocabulary does not admit on a list at this position \(field\)/u },
+    { claim: "a `gating` on a kind whose evaluation never reads one (cast-authored)",
+      make: (ok) => base({}, { fields: { s: { kind: "string", tag: "s", rows: ["x"], typeMessage: "t",
+        ...(ok ? {} : { gating: true }) } } }),
+      problem: /node "s" carries gating, which the vocabulary does not admit on a string at this position \(field\)/u },
   ];
 
   for (const guard of GUARDS) {
@@ -1990,7 +2047,7 @@ describe("the declaration GATE: a declaration that is not closed never becomes a
   }
 
   it("the guard register is complete, unique and PINNED", () => {
-    expect(GUARDS).toHaveLength(48);
+    expect(GUARDS).toHaveLength(57);
     expect(new Set(GUARDS.map((guard) => guard.claim)).size).toBe(GUARDS.length);
   });
 
@@ -2143,5 +2200,140 @@ describe("the liftNestedList hook (packet ch13-p1a, D4) — derivation from a NE
     expect(value.outer.a.one.cfg).toStrictEqual({ refs: ["x"] });
     // …and the two do not share one array.
     expect(value.outer.a.one.cfg.refs).not.toBe((value.outer.a.one as Record<string, unknown>)["out"]);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// packet ch14-p1 — family 9's SAME-KIND twin, and family 5's
+// declaration-WIDE code census. Both are properties of the DECLARATION
+// rather than of any document, which is why they live here.
+// ═══════════════════════════════════════════════════════════════════════
+
+describe("ch14-P1 family 9 — the applicability inventory's POSITION key, driven in BOTH directions", () => {
+  // D17's measured counterexample (receipt PROBE-CH14P1-7), which is what
+  // fixes the inventory's key at attribute × kind × POSITION: the SAME
+  // attribute on the SAME kind is legitimate one position and inert the
+  // next, so no kind-keyed allowlist can separate them.
+  const sameKind = (where: "field" | "entry"): SurfaceDecl =>
+    ({
+      substrate: templateFormat.substrate,
+      valueClasses: {},
+      crossRules: [],
+      normalizers: [],
+      root: {
+        kind: "map.fixed", tag: "root", rows: ["x"], containerMessage: "c", unknownMessage: "u",
+        fields: {
+          named: { kind: "string", tag: "named", rows: ["x"], typeMessage: "t",
+            ...(where === "field" ? { presence: { required: true } } : {}) },
+          open: { kind: "map.open", tag: "open", rows: ["x"], containerMessage: "c", keyLaneAt: "container",
+            entry: { kind: "string", tag: "entry", rows: ["x"], typeMessage: "t",
+              ...(where === "entry" ? { presence: { required: true } } : {}) } },
+        },
+      },
+    }) as unknown as SurfaceDecl;
+
+  it("the LEGITIMATE position loads clean — and the attribute FIRES", () => {
+    const surface = sameKind("field");
+    expect(closureProblems(surface)).toStrictEqual([]);
+    expect(runSurface(surface, { open: {} }, { channel: { kind: "direct" } }).findings).toStrictEqual([
+      { path: "$", message: 'missing required key "named"' },
+    ]);
+  });
+
+  it("the INERT position is REFUSED at load, naming the attribute and the node", () => {
+    const problems = closureProblems(sameKind("entry"));
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toMatch(
+      /node "entry" carries presence, which the vocabulary does not admit on a string at this position \(entry\)/u,
+    );
+  });
+
+  it("FAIL-CLOSED by construction: the live declaration passes the inventory at every position", () => {
+    expect(closureProblems(templateFormat)).toStrictEqual([]);
+  });
+});
+
+describe("ch14-P1 family 5 — the DECLARATION-WIDE code census (the exclusivity negative)", () => {
+  // The same walk PROBE-CH14P1-6 established as an idiom, one key wider.
+  // A chapter-scoped inventory cannot see a code landing on a node this
+  // chapter never touches; this one can.
+  function codePositions(surface: SurfaceDecl): readonly string[] {
+    const found: string[] = [];
+    const visit = (node: NodeDecl, where: string): void => {
+      const carrier = node as unknown as Record<string, unknown>;
+      for (const [attribute, value] of Object.entries(carrier)) {
+        if (attribute === "code" && typeof value === "string") found.push(`${node.tag}.code=${value}`);
+      }
+      if (node.presence?.code !== undefined) found.push(`${node.tag}.presence.code=${node.presence.code}`);
+      for (const rule of ["memberOf", "keysSubsetOf", "disjointFrom"] as const) {
+        const membership = carrier[rule] as { readonly code?: string } | undefined;
+        if (membership?.code !== undefined) found.push(`${node.tag}.${rule}.code=${membership.code}`);
+      }
+      switch (node.kind) {
+        case "map.fixed":
+        case "map.plain":
+          for (const [name, field] of Object.entries(node.fields ?? {})) visit(field, `${where}.${name}`);
+          return;
+        case "map.open":
+          if (node.keyClass !== undefined) visit(node.keyClass, `${where}<key>`);
+          visit(node.entry, `${where}.*`);
+          return;
+        case "list":
+          visit(node.member, `${where}[]`);
+          return;
+        case "union":
+          if (node.mapCase !== undefined) visit(node.mapCase, where);
+          return;
+        default:
+          return;
+      }
+    };
+    visit(surface.root, "$");
+    for (const [name, decl] of Object.entries(surface.valueClasses)) visit(decl, `valueClass "${name}"`);
+    return found.sort();
+  }
+
+  it("the set of code-bearing DECLARATION positions is EXACTLY the ch14 table plus the two pre-existing ones", () => {
+    expect(codePositions(templateFormat)).toStrictEqual([
+      // The ch14 growth, per the code table.
+      "d-decision-entry.code=invalid_decision_gate_config",
+      "d-decision-payload.code=invalid_decision_payload_schema",
+      "d-decision-target.memberOf.code=decision_target_unresolved",
+      "d-decision-target.presence.code=invalid_decision_gate_config",
+      "d-decisions.code=invalid_decision_gate_config",
+      "d-payload-required.code=invalid_decision_payload_schema",
+      "d-payload-spec.code=invalid_decision_payload_schema",
+      // The TWO pre-existing declared code positions, measured: the
+      // gate-evaluator membership lane and the context-block-ref one. The
+      // other three coded lanes live OUTSIDE the declaration — one hand
+      // lane in the audited residual, two inside delegated gate-config
+      // validators — and are asserted by their own inventory, because a
+      // census of declaration nodes cannot see them and a baseline of
+      // five would red a correct declaration.
+      "d-uses.memberOf.code=gate_evaluator_unavailable",
+      "vc-blockidlist.memberOf.code=unresolved_context_block_ref",
+    ]);
+  });
+
+  it("ch14-C8's MEASURED ground: all six new codes are ABSENT from the 54-name rejection registry", () => {
+    // The `d-codes` node's disjointness claim was false of the token sets
+    // — two pre-existing names already overlap — so the ch14 growth rests
+    // on this measurement instead, and the measurement is pinned here
+    // rather than asserted in a comment.
+    expect(REJECTION_NAMES).toHaveLength(54);
+    const six = [
+      "invalid_decision_gate_config", "decision_gate_empty", "decision_target_unresolved",
+      "invalid_decision_payload_schema", "recommends_on_non_gate", "recommends_unknown_decision",
+    ];
+    expect(six.filter((code) => (REJECTION_NAMES as readonly string[]).includes(code))).toStrictEqual([]);
+    for (const code of six) expect(templateFormat.substrate.codes.values).toContain(code);
+  });
+
+  it("every declared code is a member of the closed namespace — the check that joins the NEW position", () => {
+    const declared = new Set(templateFormat.substrate.codes.values);
+    for (const position of codePositions(templateFormat)) {
+      const code = position.slice(position.indexOf("=") + 1);
+      expect(declared.has(code), position).toBe(true);
+    }
   });
 });

@@ -306,12 +306,54 @@ describe("family 2 — the render order is source order, then authored order", (
     expect(ids(assembleContextBlocks(template, "implement"))).toEqual(["gate-first", "gate-second"]);
   });
 
-  it("SUBSTRATE: an array-index-like event type hoists, a near-miss does not (the class boundary, PINNED)", () => {
-    // Re-executed at this build against the live engine: `10` hoists to
-    // the front and `01` keeps its authored position. Both are legal
-    // event types (the id class bans whitespace and "." only), which is
-    // what makes them usable as fixtures at all. Sampling ONE side of
-    // the boundary measures nothing.
+  // ── ch14-P1 (ch14-C10, the integer-key ban): SWEEP-CH14-1's ONE
+  // measured consumer, REWORKED. This fixture used to ADMIT `"10"` as an
+  // event type and pin the hoist ORDER on it; the ban makes that class
+  // INADMISSIBLE, so the in-class pin flips to an admission-REFUSAL
+  // assertion and the no-hoist half keeps its own pin — with the boundary
+  // member `"4294967295"` (2³²−1, outside the class) joining `"01"`, so
+  // the "near-miss does not hoist" half is still measured on BOTH sides.
+  //
+  // ch13v2-C10 stays TRUE through the arrival: the substrate still hoists.
+  // What changed is that an admitted template can no longer carry the
+  // class, so the order rule over admitted templates simplifies to "as
+  // authored" — which is exactly what the second lane below pins.
+
+  const inClassKeyTemplate = (): WorkflowTemplate => ({
+    ref: { id: "t", version: 1 },
+    start: "implement",
+    steps: {
+      implement: {
+        role: "implementer",
+        instruction: "build it",
+        transitions: { zz: "review", "10": "review" },
+        gates: {
+          zz: [{ uses: "declarative.threshold", config: {}, contextBlockRefs: ["from-zz"] }],
+          "10": [{ uses: "declarative.threshold", config: {}, contextBlockRefs: ["from-ten"] }],
+        },
+      },
+      review: { role: "reviewer", instruction: "review it", transitions: { CONVERGED: "done" } },
+    },
+    terminal: ["done"],
+    roles: { implementer: { defaultActor: "codex" }, reviewer: { defaultActor: "claude" } },
+    contextBlocks: { "from-zz": { body: "Z" }, "from-ten": { body: "T" } },
+  });
+
+  it("SUBSTRATE: an array-index-like event type is now REFUSED at admission (ch14-C10's ban)", () => {
+    const result = admitTemplate(inClassKeyTemplate(), gateCatalog);
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("expected the ban to refuse an in-class event type");
+    // The key stands in TWO positions — the transitions event type and the
+    // gates key that mirrors it — and the ban binds the id-namespace one.
+    const paths = result.findings.map((finding) => finding.path);
+    expect(paths).toContain("steps.implement.transitions");
+    expect(JSON.stringify(result.findings)).toContain("4294967294");
+  });
+
+  it("SUBSTRATE: the near misses do NOT hoist, so an admitted template's order is as authored (PINNED)", () => {
+    // `01` is non-canonical and `4294967295` is 2³²−1 — both OUTSIDE the
+    // banned class, both legal, and neither hoists. Sampling one side of
+    // the boundary measures nothing, which is why both ride here.
     const template = admit({
       ref: { id: "t", version: 1 },
       start: "implement",
@@ -319,11 +361,11 @@ describe("family 2 — the render order is source order, then authored order", (
         implement: {
           role: "implementer",
           instruction: "build it",
-          transitions: { zz: "review", "10": "review", "01": "review" },
+          transitions: { zz: "review", "01": "review", "4294967295": "review" },
           gates: {
             zz: [{ uses: "declarative.threshold", config: {}, contextBlockRefs: ["from-zz"] }],
-            "10": [{ uses: "declarative.threshold", config: {}, contextBlockRefs: ["from-ten"] }],
             "01": [{ uses: "declarative.threshold", config: {}, contextBlockRefs: ["from-oh-one"] }],
+            "4294967295": [{ uses: "declarative.threshold", config: {}, contextBlockRefs: ["from-ceiling"] }],
           },
         },
         review: { role: "reviewer", instruction: "review it", transitions: { CONVERGED: "done" } },
@@ -332,18 +374,18 @@ describe("family 2 — the render order is source order, then authored order", (
       roles: { implementer: { defaultActor: "codex" }, reviewer: { defaultActor: "claude" } },
       contextBlocks: {
         "from-zz": { body: "Z" },
-        "from-ten": { body: "T" },
         "from-oh-one": { body: "O" },
+        "from-ceiling": { body: "C" },
       },
     });
     // The admitted record's own enumeration is the render's order source —
     // asserted here so a substrate change names itself instead of
     // surfacing as an unexplained render defect.
-    expect(Object.keys(template.steps.implement?.gates ?? {})).toEqual(["10", "zz", "01"]);
+    expect(Object.keys(template.steps.implement?.gates ?? {})).toEqual(["zz", "01", "4294967295"]);
     expect(ids(assembleContextBlocks(template, "implement"))).toEqual([
-      "from-ten",
       "from-zz",
       "from-oh-one",
+      "from-ceiling",
     ]);
   });
 });

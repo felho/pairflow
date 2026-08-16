@@ -3432,7 +3432,7 @@ the §1.3 convention.
 
 | Packet | Content | Mode |
 |---|---|---|
-| ch14-P1 | the definition side: the format's decision/wait keys + the `operator` role, `validate_decision_gates` under `admit_definition` with its issue lanes, the integer-key ban bundle's code half (the re-lock act its build triggers), the registry flips it owns | flag-free approve → autonomous build (measurement; the §5.5 fallbacks stand); predicted: projection (basis: the chapter draft — pending ratification) |
+| ch14-P1 | the definition side: the format's decision/wait keys + the `operator` role, `validate_decision_gates` under `admit_definition` with its issue lanes, the integer-key ban bundle's code half (the re-lock act its build triggers), the registry flips it owns | flag-free approve → autonomous build (measurement; the §5.5 fallbacks stand); predicted: projection (basis: the chapter draft — pending ratification). The inherited flag-free-⇒-autonomous letter REACHES this packet and its §5.5 condition then fails at authoring: the packet carries `approve-ratified` routes (the two amendment placements, the re-lock's doubled red window, the build-choice names, the two registry flips), plus two new-decision rows (the resolved code-grain STOP and the type-relaxation scope call), so the MODE resolves to **human approve** (STOP `4:flagged-approve`) — recorded in place at ch14-p1 pre-approval, 2026-08-15, on the ch13-P0 / ch13-p1a precedent. **BUILD-CLOSE TRACKED ITEM** (aligned at ch14-p1 pre-approval, 2026-08-16, the ratifier's addition at the flag-2 approve): the load guard's REVERSE direction — a declared inventory entry whose READER disappears — is not closed by the inventory and is not claimed to be; it is discharged at THIS packet's build close by an EXECUTED mutation probe (remove the reader, keep the entry) with its receipt, under the standing probe protocol. The receipt is collected from this row, never from the packet's prose |
 | ch14-P2 | the kernel core: `apply_target_entry_effects` factored out + `post_commit_output`, `park_for_human_decision` / `park_for_wait`, `SUBMIT_DECISION` + `RESUME_WAIT` over `admit_input` (the F-W4-2 delta), the DECISION_REQUEST/DECISION_MADE transcript pair, the override rule, the HumanDecisionRequest value, the `l3-pseudocode` golden trace | flag-free approve → autonomous build (measurement); predicted: projection (basis: the chapter draft — pending ratification) |
 | ch14-P3 | the activation: the two operator CLI verbs + the floor's pending-Ask read, the shipped template wiring (`operator` role + `human_approval` + `commit_pending`), the golden-trace re-pins the template change reaches, the journey smoke through the shipped entrypoint | flag-free approve → autonomous build (measurement); predicted: projection (basis: the chapter draft — pending ratification) |
 
@@ -3442,7 +3442,15 @@ wires what the kernel realizes — the ch13 producer-precedes-consumer
 reading; the §8.2 no-speculative-keys stance binds at CHAPTER grain,
 so P1's keys being consumed at P2/P3 is inside the stance, not an
 exception to it). One packet = packet file + code + tests in ONE
-commit. In-chapter splits stay the loop's per §5.5.
+commit, with ONE named exception class: the schema re-lock a
+declaration edit owes each contract bound to it lands in a FOLLOW-UP
+commit, because its block records the build commit's own sha (the
+form authority's §4 shape), together with the form-authority prose
+that act entails. That follow-up is a human act inside the order, not
+a packet boundary; its choreography is recorded in the
+owning packet's own rows and rides its approve rather than being
+settled here (aligned at ch14-p1 pre-approval, 2026-08-15; the
+ch13-p1a precedent). In-chapter splits stay the loop's per §5.5.
 
 ### 14.5 Deliverables and DoD
 

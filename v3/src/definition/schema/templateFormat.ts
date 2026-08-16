@@ -15,14 +15,18 @@ import type { NodeDecl, SurfaceDecl } from "./vocabulary.js";
  * is cited by it) is checked mechanically at review — no standing code
  * check exists for it yet.
  *
- * Every node below realizes the re-expression column of
+ * Most nodes below realize the re-expression column of
  * `v3/implementation/schema-expressiveness-audit.md` (the standing pin is
  * recorded in ADR-019's Context — never restated here, so it cannot go
- * stale twice) and carries the ratified rows it realizes in `rows`. The
- * audited residual stays PROSE/CODE and is NOT declared here — R2
- * (unreferenced hygiene), R3 (the existential cross-rule over resolved
- * registrations), R4 (derivation — the normalizer's), R5 (the
- * cross-artifact store check), R6 (substrate wording), R7 (see
+ * stale twice) and carry the ratified rows they realize in `rows`. The
+ * ch14 decision/wait nodes are the FIRST that realize no re-expression
+ * row: the audit is a phase record of the pre-ch14 corpus, and a surface
+ * that grows after it simply has no row there to realize. The audited
+ * residual stays PROSE/CODE and is NOT declared here — R2 (unreferenced
+ * hygiene), R3 (the existential cross-rule over resolved registrations),
+ * R4 (derivation — the normalizer's), R5 (the cross-artifact store
+ * check), R6 (substrate wording), R7 (single-use-construct rows — the
+ * ch14 step-class lanes, see `d-step`'s note), R8 (boundary-kept — see
  * `d-gate-config`'s note) — with ONE exception since D10: R1's
  * value-shaped reference belt became the `validKeysOf` construct and IS
  * declared below (`vc-blockidlist`).
@@ -32,17 +36,39 @@ import type { NodeDecl, SurfaceDecl } from "./vocabulary.js";
 // Value classes (vocabulary #15).
 // ---------------------------------------------------------------------------
 
-/** ch8-C10: ONE grammar for every id class — nonempty, no whitespace, no
- * dot. The citing site supplies `{label}`. */
+/**
+ * ch8-C10 (+ ch14-C10): ONE grammar for every id class — nonempty, no
+ * whitespace, no dot, and NOT the canonical decimal spelling of an integer
+ * in 0…2³²−2. The citing site supplies `{label}`.
+ *
+ * THE INTEGER-KEY BAN (ch14-C10, the ch13 boundary verdict (f)'s bundle):
+ * a JS record HOISTS exactly those spellings to the front of its own
+ * enumeration and re-sorts them ascending among themselves, so a key in
+ * that class makes an authored map's order unreadable. The class is
+ * expressed as ONE negative lookahead inside this same grammar, so it
+ * lands in ONE place and reaches every id position BY CITATION — nothing
+ * per-position, nothing to keep in sync.
+ *
+ * The alternation's branches are the class, not a rounding of it (receipt
+ * PROBE-CH14P1-2): `0`, then 1–9 digits with no leading zero, then the
+ * ten-digit prefixes up to 4294967294. `"4294967295"` (2³²−1), `"01"`
+ * (non-canonical), `"-1"` and `"1e3"` are OUTSIDE the class and stay
+ * legal; `"1.5"` is outside it too and was never legal — the standing dot
+ * clause refuses it.
+ */
 const idClass: NodeDecl = {
   kind: "string",
   tag: "vc-id-class",
-  rows: ["ch8-C10"],
+  rows: ["ch8-C10", "ch14-C10"],
   typeMessage: "{label} must be a nonempty string, got {value}",
   nonempty: { message: "{label} must be a nonempty string, got {value}" },
   grammar: {
-    re: "^[^\\s.]+$",
-    message: 'invalid {label} {valueJson}: ids contain no whitespace and no "."',
+    re:
+      "^(?!(?:0|[1-9]\\d{0,8}|[1-3]\\d{9}|4[01]\\d{8}|42[0-8]\\d{7}|429[0-3]\\d{6}|4294[0-8]\\d{5}" +
+      "|42949[0-5]\\d{4}|429496[0-6]\\d{3}|4294967[01]\\d{2}|42949672[0-8]\\d|429496729[0-4])$)[^\\s.]+$",
+    message:
+      'invalid {label} {valueJson}: ids contain no whitespace and no "." and are not the canonical ' +
+      "decimal spelling of an integer in 0…4294967294 (a JS record hoists those keys)",
   },
 };
 
@@ -136,8 +162,9 @@ const blockIdList: NodeDecl = {
 const transitionsNode: NodeDecl = {
   kind: "map.open",
   tag: "d-transitions",
-  rows: ["ch8-C12", "ch8-C10"],
-  presence: { required: true },
+  rows: ["ch8-C12", "ch8-C10", "ch14-C2"],
+  // ch14-C2: declaration-OPTIONAL from ch14-P1 — presence is class
+  // business now and the hand lanes re-impose it (see `d-step`).
   containerMessage: "transitions must be a map of event-type -> target id (it may be empty)",
   keyClass: { kind: "valueClass", tag: "d-event-type", rows: ["ch8-C10"], valueClass: "idClass", label: "event type" },
   keyLaneAt: "container",
@@ -152,6 +179,219 @@ const transitionsNode: NodeDecl = {
       target: { union: [{ keysOf: "$.steps" }, { valuesOf: "$.terminal" }] },
       message: "transition target must name a step or a terminal id; got {value}",
     },
+  },
+};
+
+/** The `steps ∪ terminal` target domain, cited by all three edge classes
+ * (ch14-C4's decision target, ch14-C3's resume target) exactly as
+ * `d-target` cites it for a transition. */
+const targetDomain = { union: [{ keysOf: "$.steps" }, { valuesOf: "$.terminal" }] } as const;
+
+/**
+ * ch14-C4: the decision vocabulary's DECLARABLE half — the ChoicePoint's
+ * second instance. An open map whose KEYS carry the one id grammar and
+ * whose entries are CLOSED `{ target, payload? }` maps.
+ *
+ * The type-CONDITIONAL half is NOT here and cannot be: `decisions` is
+ * legal on a `humanGate` step only, it is REQUIRED there, and it must
+ * offer at least one decision — three rules a field-discriminated union
+ * would express and this vocabulary has none (ch14-C2's expressibility
+ * ruling). They live as named hand lanes in `templateSurface.ts`.
+ */
+const decisionsNode: NodeDecl = {
+  kind: "map.open",
+  tag: "d-decisions",
+  rows: ["ch14-C4", "ch14-C8", "ch14-C10"],
+  code: "invalid_decision_gate_config",
+  containerMessage: "decisions must be a map of decision key -> { target, payload? }; got {value}",
+  keyClass: {
+    kind: "valueClass",
+    tag: "d-decision-key",
+    rows: ["ch14-C4", "ch14-C10"],
+    valueClass: "idClass",
+    label: "decision key",
+  },
+  keyLaneAt: "container",
+  entry: {
+    kind: "map.fixed",
+    tag: "d-decision-entry",
+    rows: ["ch14-C4", "ch14-C8"],
+    code: "invalid_decision_gate_config",
+    containerMessage: "a decision must be a map with exactly target (+ optional payload); got {value}",
+    unknownMessage: "unknown decision key '{key}' (allowed: {keys})",
+    fields: {
+      target: {
+        kind: "string",
+        tag: "d-decision-target",
+        rows: ["ch14-C4"],
+        // The `d-target` precedent read whole: NO `typeMessage`, so a
+        // non-string target IS the membership fault and ONE finding
+        // covers both. An ABSENT target is the entry's missing-key
+        // refusal, in the same shape family and under the same code.
+        presence: { required: true, code: "invalid_decision_gate_config" },
+        memberOf: {
+          relation: "memberOf",
+          target: targetDomain,
+          code: "decision_target_unresolved",
+          message: "decision target must name a step or a terminal id; got {value}",
+        },
+      },
+      payload: {
+        kind: "map.open",
+        tag: "d-decision-payload",
+        rows: ["ch14-C5", "ch14-C8", "ch14-C10"],
+        code: "invalid_decision_payload_schema",
+        containerMessage: "payload must be a map of field name -> { required? }; got {value}",
+        keyClass: {
+          kind: "valueClass",
+          tag: "d-payload-field",
+          rows: ["ch14-C5", "ch14-C10"],
+          valueClass: "idClass",
+          label: "payload field name",
+        },
+        keyLaneAt: "container",
+        entry: {
+          kind: "map.fixed",
+          tag: "d-payload-spec",
+          rows: ["ch14-C5", "ch14-C8"],
+          code: "invalid_decision_payload_schema",
+          containerMessage: "a payload field spec must be a map with the single optional key required; got {value}",
+          unknownMessage: "unknown payload spec key '{key}' (allowed: {keys})",
+          fields: {
+            // ch14-C5: `required` OPTIONAL, absent = not-required. The
+            // enum's members are the two BOOLEANS — the vocabulary's
+            // members are value-typed already, so the value lane needs no
+            // growth and YAML 1.2's unquoted `yes` arrives as a STRING and
+            // is refused (receipt PROBE-CH14P1-1).
+            required: {
+              kind: "enum",
+              tag: "d-payload-required",
+              rows: ["ch14-C5", "ch14-C8"],
+              members: [{ value: true }, { value: false }],
+              code: "invalid_decision_payload_schema",
+              message: "required must be one of {members}; got {value}",
+            },
+          },
+        },
+      },
+    },
+  },
+};
+
+/**
+ * ch14-C3: the bare wait's DECLARABLE half. `wait` is a closed
+ * `{ kind, resumeEvents }` map; `onResume` is its sibling routing map.
+ *
+ * NOT here, and named so the split is legible: the reservation of the
+ * KERNEL-OWNED wait kinds (no selector reads a constant set) and the
+ * class rules that make `wait`/`onResume` legal ONLY on a `wait` step —
+ * both hand lanes in `templateSurface.ts`.
+ */
+const waitNode: NodeDecl = {
+  kind: "map.fixed",
+  tag: "d-wait",
+  rows: ["ch14-C3"],
+  containerMessage: "wait must be a map with exactly kind and resumeEvents; got {value}",
+  unknownMessage: "unknown key {value} (a wait's only keys are kind, resumeEvents)",
+  fields: {
+    kind: {
+      kind: "valueClass",
+      tag: "d-wait-kind",
+      rows: ["ch14-C3", "ch14-C10"],
+      valueClass: "idClass",
+      label: "wait kind",
+      presence: { required: true },
+    },
+    resumeEvents: {
+      kind: "list",
+      tag: "d-resume-events",
+      rows: ["ch14-C3", "ch14-C10"],
+      presence: { required: true },
+      containerMessage: "resumeEvents must be a nonempty list of event-type ids; got {value}",
+      nonempty: { message: "resumeEvents must be a NONEMPTY list" },
+      memberLaneAt: "index",
+      member: {
+        // A resume-event member IS an event type (ch14-C10), so it cites
+        // the event-type class rather than minting a seventh one.
+        kind: "valueClass",
+        tag: "d-resume-event",
+        rows: ["ch14-C3", "ch14-C10"],
+        valueClass: "idClass",
+        label: "event type",
+      },
+      unique: { grain: "perOccurrence", at: "index", message: "duplicate resume event {valueJson}" },
+    },
+  },
+};
+
+/**
+ * ch14-C3: `onResume` — event type → target. Its keys must be MEMBERS of
+ * the step's own declared `resumeEvents`, which is a `keysSubsetOf` over a
+ * SIBLING'S NESTED list (receipt PROBE-CH14P1-3), so the dead-route rule
+ * is declared and not hand code. A `resumeEvents` member WITHOUT a route
+ * is admissible — the empty map included — deliberately, so the runtime's
+ * `no_resume_transition` stays reachable.
+ *
+ * `whenOperandAbsent: "skip"`: the operand is CLASS-scoped, and a step
+ * authoring `onResume` with no `wait` would otherwise answer `internal
+ * validator failure` instead of the class hand lane's honest finding
+ * (measured, PROBE-CH14P1-5).
+ */
+const onResumeNode: NodeDecl = {
+  kind: "map.open",
+  tag: "d-on-resume",
+  rows: ["ch14-C3"],
+  containerMessage: "onResume must be a map of event-type -> target id (it may be empty); got {value}",
+  keyLaneAt: "container",
+  keysSubsetOf: {
+    relation: "keysSubsetOf",
+    target: { valuesOf: "^.wait.resumeEvents" },
+    whenOperandAbsent: "skip",
+    message: "dead resume route: '{key}' is not a declared resume event of step '{ownerKey}'",
+  },
+  entry: {
+    kind: "string",
+    tag: "d-resume-target",
+    rows: ["ch14-C3"],
+    // The `d-target` precedent: no type message, one finding for both.
+    memberOf: {
+      relation: "memberOf",
+      target: targetDomain,
+      message: "resume target must name a step or a terminal id; got {value}",
+    },
+  },
+};
+
+/**
+ * ch14-C6: `recommends` — the edge attribute, realized as an edge-keyed
+ * SIBLING map on the SOURCE step (the `gates` precedent: the format's
+ * transition values are plain targets, so an edge attribute attaches as a
+ * sibling map). Its KEYS inherit the id grammar only transitively, through
+ * this subset lane; its VALUES carry the decision-key class.
+ *
+ * The two-hop rules — the referenced transition's TARGET is a `humanGate`,
+ * and the VALUE is one of that gate's declared decision keys — are hand
+ * lanes: no selector resolves a value to a NODE and then reads a field on
+ * it, which is what a two-hop dereference needs.
+ */
+const recommendsNode: NodeDecl = {
+  kind: "map.open",
+  tag: "d-recommends",
+  rows: ["ch14-C6", "ch14-C10"],
+  containerMessage: "recommends must be a map of event-type -> decision key; got {value}",
+  keyLaneAt: "container",
+  keysSubsetOf: {
+    relation: "keysSubsetOf",
+    target: { keysOf: "^.transitions" },
+    whenOperandAbsent: "skip",
+    message: "dead recommendation: '{key}' is not a transition of step '{ownerKey}'",
+  },
+  entry: {
+    kind: "valueClass",
+    tag: "d-recommends-value",
+    rows: ["ch14-C6", "ch14-C10"],
+    valueClass: "idClass",
+    label: "decision key",
   },
 };
 
@@ -213,31 +453,71 @@ const gateBindingNode: NodeDecl = {
   },
 };
 
+/**
+ * ch14-C1/C2/C3: the step node holds the UNION of the three classes'
+ * fields, which is the ONE thing a reader must not mistake for a keyset.
+ * The declaration alone would admit `decisions` on an agent step and
+ * `role` on a wait step; the PARTITION is enforced by the named hand
+ * lanes in `templateSurface.ts` (residual R7 — the family whose only
+ * declaration would need a single-use field-discriminated union, refused
+ * by ADR-019 D7's ≥2-position test) and by nothing here.
+ *
+ * That is also why `role`, `instruction` and `transitions` are no longer
+ * declaration-REQUIRED: a required-key lane cannot be class-conditional,
+ * so their presence RE-IMPOSES per class in the hand lanes, at the same
+ * paths and with the same messages this node's lane used to emit. The
+ * container message below still enumerates the AGENT keyset literally and
+ * is held byte-identical for exactly that reason — class-specific wording
+ * rides the hand lanes.
+ */
 const stepNode: NodeDecl = {
   kind: "map.fixed",
   tag: "d-step",
-  rows: ["ch8-C9", "ch8-C13", "ch11-C1"],
+  rows: ["ch8-C9", "ch8-C13", "ch11-C1", "ch14-C1", "ch14-C2", "ch14-C3", "ch14-C6"],
   containerMessage:
     "a step must be a map with exactly role, instruction, transitions (+ optional agentConfig, gates)",
   unknownMessage: "unknown key {value}",
   laneOrder: "unknownThenMissingThenValues",
   fields: {
+    /**
+     * ch14-C1: the step-class DISCRIMINATOR, an ordinary additive optional
+     * field. ABSENT is the agent class and no `agent` token is minted.
+     *
+     * The `d-act-mode` precedent read whole: a token whose authored and
+     * stored spellings DIFFER is two channel-scoped members (the direct
+     * channel's input IS the domain type, whose token domain is the
+     * stored form), while a token IDENTICAL on both sides is ONE unscoped
+     * member with its `store`. So `wait` is a single member rather than a
+     * duplicated pair, and each channel still renders only its own
+     * spellings.
+     */
+    type: {
+      kind: "enum",
+      tag: "d-step-type",
+      rows: ["ch14-C1"],
+      members: [
+        { value: "humanGate", store: "human_gate", channel: "file" },
+        { value: "human_gate", channel: "direct" },
+        { value: "wait", store: "wait" },
+      ],
+      message: "type must be one of {members}; got {value}",
+    },
     role: {
       kind: "valueClass",
       tag: "d-role-ref",
-      rows: ["ch8-C10", "ch8-C16"],
+      rows: ["ch8-C10", "ch8-C16", "ch14-C2"],
       valueClass: "idClass",
       label: "role name",
-      presence: { required: true },
       // A grammar-invalid role makes the USED-role set unreliable, so the
-      // role-set equality is suppressed rather than cascaded.
+      // role-set equality is suppressed rather than cascaded. The lane it
+      // gates is now the RE-HOMED hand lane (ch14-C7(a)), which reads the
+      // same reliability signal.
       gating: true,
     },
     instruction: {
       kind: "string",
       tag: "d-instruction",
-      rows: ["ch8-C11"],
-      presence: { required: true },
+      rows: ["ch8-C11", "ch14-C2"],
       typeMessage: "instruction must be a nonempty string",
       nonempty: { message: "instruction must be a nonempty string" },
     },
@@ -287,6 +567,14 @@ const stepNode: NodeDecl = {
       keysSubsetOf: {
         relation: "keysSubsetOf",
         target: { keysOf: "^.transitions" },
+        // ch14-C2/C7(a)'s named knob duty: `transitions` is
+        // declaration-OPTIONAL from ch14-P1, so an absent operand is now
+        // LEGITIMATE for this lane — without the knob a wait or gate step
+        // would answer `internal validator failure` where the class hand
+        // lane's honest finding belongs (measured, PROBE-CH14P1-5). The
+        // suppression the reliability signal used to give it is unchanged:
+        // a wrong-KIND `transitions` still stands this lane down.
+        whenOperandAbsent: "skip",
         message: "dead gate config: '{key}' is not a transition of step '{ownerKey}'",
       },
       entry: {
@@ -299,6 +587,13 @@ const stepNode: NodeDecl = {
         member: gateBindingNode,
       },
     },
+    // ── ch14: the two new classes' fields and the agent class's edge
+    // attribute. Every one of them is legal HERE and partitioned by the
+    // hand lanes; see this node's header.
+    decisions: decisionsNode,
+    wait: waitNode,
+    onResume: onResumeNode,
+    recommends: recommendsNode,
   },
 };
 
@@ -649,19 +944,32 @@ export const templateFormat: SurfaceDecl = defineSurface({
         message: "cyclic value structure: the resolved template graph must be acyclic",
       },
     },
-    // ch8-C23: the CLOSED issue-code namespace, disjoint from registry
-    // names. `unresolved_context_block_ref` rides the declared resolution
-    // lane below since the ch13v2 adoption; its end-to-end CLI travel is
-    // P5's (ch13v2-C18).
+    // ch8-C23: the CLOSED issue-code namespace. It is NOT disjoint from
+    // the rejection-registry token set — two pre-existing names already
+    // overlap — and the separation it carries is a GOVERNANCE one
+    // (ch11-C20 owns the codes, the ledger owns the registry). The ch14
+    // growth rides the MEASURED fact that all six new codes are absent
+    // from the 54-name registry, never on token disjointness (ch14-C8).
+    // `unresolved_context_block_ref` rides the declared resolution lane
+    // below since the ch13v2 adoption; its end-to-end CLI travel is P5's
+    // (ch13v2-C18).
     codes: {
       tag: "d-codes",
-      rows: ["ch8-C23"],
+      rows: ["ch8-C23", "ch14-C8"],
       values: [
         "gate_evaluator_unavailable",
         "runtime_context_required_for_process_gate",
         "invalid_process_gate_config",
         "gate_config_not_supported",
         "unresolved_context_block_ref",
+        // ch14-C8: the six `validate_decision_gates` issue names, kept in
+        // the model's own snake_case spelling.
+        "invalid_decision_gate_config",
+        "decision_gate_empty",
+        "decision_target_unresolved",
+        "invalid_decision_payload_schema",
+        "recommends_on_non_gate",
+        "recommends_unknown_decision",
       ],
     },
     internalFailure: {
@@ -673,30 +981,25 @@ export const templateFormat: SurfaceDecl = defineSurface({
   },
   root: rootNode,
   valueClasses: { idClass, agentConfigValue, blockId, blockIdList },
-  crossRules: [
-    {
-      tag: "d-roleset",
-      rows: ["ch8-C16"],
-      relation: "equals",
-      left: { keysOf: "$.roles" },
-      right: { collect: "$.steps.*.role" },
-      missingFromLeft: {
-        at: "roles",
-        message: "role {valueJson} is used by steps but not declared",
-      },
-      missingFromRight: {
-        at: "roles.{valueRaw}",
-        message: "role {valueJson} is declared but not used by any step",
-      },
-    },
-  ],
+  // ch14-C7(a): EMPTY since ch14-P1. The role-set equality's `d-roleset`
+  // cross rule RETIRED here and re-homed as a named hand lane in
+  // `templateSurface.ts`: its `collect` over `$.steps.*.role` has no
+  // per-member absence tolerance, and the only existing knob would have
+  // disabled the equality for every wait-bearing template. The `equals`
+  // relation itself is unchanged and keeps its engine-suite drivers.
+  crossRules: [],
   normalizers: [
     {
       tag: "n-advances-round",
-      rows: ["ch11-C39", "ch11-C38"],
+      rows: ["ch11-C39", "ch11-C38", "ch14-C11"],
       hook: "expandAdvancesRound",
       over: "$.steps",
-      edges: "transitions",
+      // ch14-C11 (ADR-019 D13): the edge SOURCES are all THREE edge
+      // classes, each with its own target extraction — a `decisions`
+      // entry's target sits under its `target` key, while a `transitions`
+      // or `onResume` value IS the target. Without the widening a rework
+      // loop-back could not open a new round.
+      edges: [{ from: "transitions" }, { from: "decisions", targetAt: "target" }, { from: "onResume" }],
       advanceSet: "$.round.advanceOnArrivalAt",
       into: "advancesRound",
     },

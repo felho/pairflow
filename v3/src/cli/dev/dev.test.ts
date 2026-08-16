@@ -1313,3 +1313,92 @@ describe("dev cli — the ch13 code EXCLUSIVITY over family 1's whole inventory"
     });
   }
 });
+
+// ── packet ch14-p1 family 5: the CODE's end-to-end TRAVEL. The carrier
+// exists end to end already (`ValidationFinding.code` →
+// `TemplateLoadError.toJSON`'s {stage, findings} document → this verb's
+// coded-finding lane), so this packet adds lanes and no code. The
+// assertion is on the code FIELD by EQUALITY — never presence, and never
+// a containment over the serialized text. ────────────────────────────────
+
+const ch14File = (over: { readonly target?: string; readonly kind?: string } = {}): string => `
+ref:
+  id: ch14-decision-v0
+  version: 1
+start: implement
+steps:
+  implement:
+    role: implementer
+    instruction: |-
+      build it
+    transitions:
+      PASS: approval
+  approval:
+    type: humanGate
+    role: operator
+    instruction: |-
+      approve or send back
+    decisions:
+      approve:
+        target: ${over.target ?? "commit_pending"}
+      request_rework:
+        target: implement
+        payload:
+          instruction:
+            required: true
+  commit_pending:
+    type: wait
+    wait:
+      kind: ${over.kind ?? "commit_pending"}
+      resumeEvents:
+        - COMMIT
+    onResume:
+      COMMIT: done
+terminal:
+  - done
+roles:
+  implementer:
+    defaultActor: codex
+  operator:
+    defaultActor: human
+`;
+
+describe("dev cli — the ch14 decision codes travel to the far end of the document (packet ch14-p1, family 5)", () => {
+  it("POSITIVE: a decision-gate fault's code arrives in the CLI document, asserted by VALUE on the `code` field", async () => {
+    const dir = tempDir();
+    const path = join(dir, "ch14-bad.yaml");
+    writeFileSync(path, ch14File({ target: "ghost" }));
+    const res = await runDev(["validate", path], testDeps());
+    expect(res.stdout).toEqual([]);
+    const err = assertError(res, "internal", EXIT.internal);
+    expect(err.name).toBe("TemplateInvalid");
+    const details = err.details as { stage: string; findings: { path: string; code?: string }[] };
+    expect(details.stage).toBe("validate");
+    const coded = details.findings.find((finding) => finding.path === "steps.approval.decisions.approve.target");
+    expect(coded?.code).toBe("decision_target_unresolved");
+  });
+
+  it("NEGATIVE TWIN: an UNCODED ch14 lane arrives with NO code field at all", async () => {
+    const dir = tempDir();
+    const path = join(dir, "ch14-reserved.yaml");
+    writeFileSync(path, ch14File({ kind: "human_decision" }));
+    const res = await runDev(["validate", path], testDeps());
+    const err = assertError(res, "internal", EXIT.internal);
+    const details = err.details as { stage: string; findings: { path: string; code?: string }[] };
+    const finding = details.findings.find((one) => one.path === "steps.commit_pending.wait.kind");
+    expect(finding).toBeDefined();
+    expect(finding).not.toHaveProperty("code");
+  });
+
+  it("DISCRIMINATES: the same file with the fault corrected validates clean", async () => {
+    const dir = tempDir();
+    const path = join(dir, "ch14-ok.yaml");
+    writeFileSync(path, ch14File());
+    const res = await runDev(["validate", path], testDeps());
+    expect(res.code).toBe(EXIT.ok);
+    expect(JSON.parse(res.stdout[0] ?? "")).toEqual({
+      valid: true,
+      ref: { id: "ch14-decision-v0", version: 1 },
+    });
+  });
+});

@@ -445,7 +445,9 @@
     "status": "pending"
   },
   "l3-pseudocode/validate_decision_gates": {
-    "status": "pending"
+    "status": "realized",
+    "disposition": "implement",
+    "codeRef": "v3/src/definition/schema/templateSurface.ts#stepClassFindings"
   },
   "l4-pseudocode/CHILD_LIFECYCLE": {
     "status": "pending"

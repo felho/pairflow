@@ -2007,3 +2007,279 @@ describe("ch13-p1a family 2 — the C9 stand-down over the derived trigger set (
     });
   }
 });
+
+// ═══════════════════════════════════════════════════════════════════════
+// packet ch14-p1 — the human-decision / bare-wait DECLARATION surface on
+// the FILE-WALK channel. Both entries reach ONE computation, so this half
+// exists for what DIFFERENTIATES the channels — the `type` token DOMAIN
+// (ch14-C1's authored↔stored map), the produced-field carve-out, and the
+// cases only a file can EXPRESS (a non-string key, a duplicate key) —
+// plus every lane driven through the real file entry, because a
+// one-channel lane is exactly where a blind spot hides.
+// ═══════════════════════════════════════════════════════════════════════
+
+const CH14_HEAD = "ref:\n  id: t\n  version: 1\nstart: implement\n";
+const CH14_TAIL = "terminal:\n  - done\nroles:\n  implementer: {}\n  operator: {}\n";
+
+const CH14_AGENT = "  implement:\n    role: implementer\n    instruction: i\n    transitions:\n      PASS: gate\n";
+const CH14_GATE =
+  "  gate:\n    type: humanGate\n    role: operator\n    instruction: q\n" +
+  "    decisions:\n      approve:\n        target: done\n";
+const CH14_WAIT =
+  "  hold:\n    type: wait\n    wait:\n      kind: commit_pending\n      resumeEvents:\n        - COMMIT\n" +
+  "    onResume:\n      COMMIT: done\n";
+
+/** A three-class FILE, each step block replaceable. */
+function ch14File(over: { agent?: string; gate?: string; wait?: string; tail?: string } = {}): string {
+  return (
+    CH14_HEAD +
+    "steps:\n" +
+    (over.agent ?? CH14_AGENT) +
+    (over.gate ?? CH14_GATE) +
+    (over.wait ?? CH14_WAIT) +
+    (over.tail ?? CH14_TAIL)
+  );
+}
+
+function ch14Findings(text: string): readonly ValidationFinding[] {
+  return expectValidateErr(text).findings as readonly ValidationFinding[];
+}
+
+describe("ch14-P1 family 1 (file channel) — the discriminator's TOKEN DOMAIN and its STORE pin", () => {
+  it("the authored camelCase spelling admits, and the ADMITTED value carries the STORED token", () => {
+    const result = load(ch14File());
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const steps = result.template.steps as unknown as Record<string, Record<string, unknown>>;
+    expect(steps["gate"]?.["type"]).toBe("human_gate");
+    // `wait` is IDENTICAL on both sides — one unscoped member with its
+    // own store, not a duplicated pair.
+    expect(steps["hold"]?.["type"]).toBe("wait");
+  });
+
+  it("SENSITIVITY TWIN: the STORED token is refused as an authored FILE value", () => {
+    const findings = ch14Findings(ch14File({ gate: CH14_GATE.replace("humanGate", "human_gate") }));
+    expect(findings).toContainEqual({
+      path: "steps.gate.type",
+      message: 'type must be one of humanGate, wait; got "human_gate"',
+    });
+  });
+
+  it("each channel renders its OWN spellings — the enum lane filters members before rendering", () => {
+    const findings = ch14Findings(ch14File({ gate: CH14_GATE.replace("humanGate", "nope") }));
+    expect(findings).toContainEqual({
+      path: "steps.gate.type",
+      message: 'type must be one of humanGate, wait; got "nope"',
+    });
+  });
+});
+
+describe("ch14-P1 family 1 (file channel) — every ch14 lane through the real file entry", () => {
+  const lanes: readonly (readonly [string, string, ValidationFinding])[] = [
+    ["the `decisions` container lane", ch14File({ gate: "  gate:\n    type: humanGate\n    role: operator\n    instruction: q\n    decisions: x\n" }),
+      { path: "steps.gate.decisions", code: "invalid_decision_gate_config",
+        message: 'decisions must be a map of decision key -> { target, payload? }; got "x"' }],
+    ["the decision-entry container lane", ch14File({ gate: "  gate:\n    type: humanGate\n    role: operator\n    instruction: q\n    decisions:\n      approve: 5\n" }),
+      { path: "steps.gate.decisions.approve", code: "invalid_decision_gate_config",
+        message: "a decision must be a map with exactly target (+ optional payload); got 5" }],
+    ["the decision-entry unknown-key lane", ch14File({ gate: "  gate:\n    type: humanGate\n    role: operator\n    instruction: q\n    decisions:\n      approve:\n        target: done\n        paylod: {}\n" }),
+      { path: "steps.gate.decisions.approve.paylod", code: "invalid_decision_gate_config",
+        message: "unknown decision key 'paylod' (allowed: target, payload)" }],
+    ["the entry's missing-`target` lane", ch14File({ gate: "  gate:\n    type: humanGate\n    role: operator\n    instruction: q\n    decisions:\n      approve: {}\n" }),
+      { path: "steps.gate.decisions.approve", code: "invalid_decision_gate_config",
+        message: 'missing required key "target"' }],
+    ["the decision-target membership lane", ch14File({ gate: "  gate:\n    type: humanGate\n    role: operator\n    instruction: q\n    decisions:\n      approve:\n        target: ghost\n" }),
+      { path: "steps.gate.decisions.approve.target", code: "decision_target_unresolved",
+        message: 'decision target must name a step or a terminal id; got "ghost"' }],
+    ["the `payload` container lane", ch14File({ gate: "  gate:\n    type: humanGate\n    role: operator\n    instruction: q\n    decisions:\n      approve:\n        target: done\n        payload: true\n" }),
+      { path: "steps.gate.decisions.approve.payload", code: "invalid_decision_payload_schema",
+        message: "payload must be a map of field name -> { required? }; got true" }],
+    ["the spec container lane", ch14File({ gate: "  gate:\n    type: humanGate\n    role: operator\n    instruction: q\n    decisions:\n      approve:\n        target: done\n        payload:\n          instruction: true\n" }),
+      { path: "steps.gate.decisions.approve.payload.instruction", code: "invalid_decision_payload_schema",
+        message: "a payload field spec must be a map with the single optional key required; got true" }],
+    ["the spec unknown-key lane", ch14File({ gate: "  gate:\n    type: humanGate\n    role: operator\n    instruction: q\n    decisions:\n      approve:\n        target: done\n        payload:\n          instruction:\n            type: markdown\n" }),
+      { path: "steps.gate.decisions.approve.payload.instruction.type", code: "invalid_decision_payload_schema",
+        message: "unknown payload spec key 'type' (allowed: required)" }],
+    // YAML 1.2's unquoted `yes` arrives as a STRING, which is the model's
+    // own `NOT "yes"` case — driven by the substrate rather than by a hand
+    // check, and reachable only on this channel.
+    ["the spec `required` value lane (YAML's unquoted `yes` is a STRING)", ch14File({ gate: "  gate:\n    type: humanGate\n    role: operator\n    instruction: q\n    decisions:\n      approve:\n        target: done\n        payload:\n          instruction:\n            required: yes\n" }),
+      { path: "steps.gate.decisions.approve.payload.instruction.required", code: "invalid_decision_payload_schema",
+        message: 'required must be one of true, false; got "yes"' }],
+    ["the `wait` container lane", ch14File({ wait: "  hold:\n    type: wait\n    wait: 5\n    onResume: {}\n" }),
+      { path: "steps.hold.wait", message: "wait must be a map with exactly kind and resumeEvents; got 5" }],
+    ["the `wait` unknown-key lane", ch14File({ wait: "  hold:\n    type: wait\n    wait:\n      kind: k\n      resumeEvents:\n        - E\n      extra: 1\n    onResume: {}\n" }),
+      { path: "steps.hold.wait.extra", message: 'unknown key "extra" (a wait\'s only keys are kind, resumeEvents)' }],
+    ["the `resumeEvents` nonempty lane", ch14File({ wait: "  hold:\n    type: wait\n    wait:\n      kind: k\n      resumeEvents: []\n    onResume: {}\n" }),
+      { path: "steps.hold.wait.resumeEvents", message: "resumeEvents must be a NONEMPTY list" }],
+    ["the `resumeEvents` uniqueness lane", ch14File({ wait: "  hold:\n    type: wait\n    wait:\n      kind: k\n      resumeEvents:\n        - E\n        - E\n    onResume: {}\n" }),
+      { path: "steps.hold.wait.resumeEvents[1]", message: 'duplicate resume event "E"' }],
+    ["the `onResume` container lane", ch14File({ wait: "  hold:\n    type: wait\n    wait:\n      kind: k\n      resumeEvents:\n        - E\n    onResume: 5\n" }),
+      { path: "steps.hold.onResume",
+        message: "onResume must be a map of event-type -> target id (it may be empty); got 5" }],
+    ["the `onResume` dead-route lane", ch14File({ wait: "  hold:\n    type: wait\n    wait:\n      kind: k\n      resumeEvents:\n        - E\n    onResume:\n      GHOST: done\n" }),
+      { path: "steps.hold.onResume.GHOST",
+        message: "dead resume route: 'GHOST' is not a declared resume event of step 'hold'" }],
+    ["the resume-target membership lane", ch14File({ wait: "  hold:\n    type: wait\n    wait:\n      kind: k\n      resumeEvents:\n        - E\n    onResume:\n      E: ghost\n" }),
+      { path: "steps.hold.onResume.E", message: 'resume target must name a step or a terminal id; got "ghost"' }],
+    ["the `recommends` container lane", ch14File({ agent: CH14_AGENT + "    recommends: 5\n" }),
+      { path: "steps.implement.recommends", message: "recommends must be a map of event-type -> decision key; got 5" }],
+    ["the `recommends` dead-recommendation lane", ch14File({ agent: CH14_AGENT + "    recommends:\n      GHOST: approve\n" }),
+      { path: "steps.implement.recommends.GHOST",
+        message: "dead recommendation: 'GHOST' is not a transition of step 'implement'" }],
+  ];
+  for (const [claim, text, finding] of lanes) {
+    it(claim, () => {
+      expect(ch14Findings(text)).toContainEqual(finding);
+    });
+  }
+
+  it("the CONFORMING direction: the three-class file admits whole", () => {
+    expect(load(ch14File()).ok).toBe(true);
+  });
+});
+
+describe("ch14-P1 family 1 (file channel) — the cases only a FILE can express", () => {
+  it("a NON-STRING decision key: refused before the own-key scan can be blinded", () => {
+    const findings = ch14Findings(
+      ch14File({ gate: "  gate:\n    type: humanGate\n    role: operator\n    instruction: q\n    decisions:\n      10:\n        target: done\n" }),
+    );
+    expect(findings.map((finding) => finding.path)).toContain("steps.gate.decisions");
+    expect(JSON.stringify(findings)).toContain("decision key must be a nonempty string");
+  });
+
+  it("a DUPLICATE decision key: the substrate's own uniqueness lane fires at the parse stage", () => {
+    const result = load(
+      ch14File({ gate: "  gate:\n    type: humanGate\n    role: operator\n    instruction: q\n    decisions:\n      approve:\n        target: done\n      approve:\n        target: implement\n" }),
+    );
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(JSON.stringify(result.error.findings)).toContain("Map keys must be unique");
+  });
+
+  it("a NON-STRING resume-event member", () => {
+    const findings = ch14Findings(
+      ch14File({ wait: "  hold:\n    type: wait\n    wait:\n      kind: k\n      resumeEvents:\n        - 5\n    onResume: {}\n" }),
+    );
+    expect(findings).toContainEqual({
+      path: "steps.hold.wait.resumeEvents[0]",
+      message: "event type must be a nonempty string, got 5",
+    });
+  });
+});
+
+describe("ch14-P1 family 2 (file channel) — the class partition, in the AUTHORED spelling", () => {
+  it("a `humanGate` refuses `transitions`, and the message names the class as the author wrote it", () => {
+    expect(ch14Findings(ch14File({ gate: CH14_GATE + "    transitions:\n      PASS: done\n" }))).toContainEqual({
+      path: "steps.gate.transitions",
+      message: "unknown key transitions on a humanGate step (a humanGate step's keys are type, role, instruction, decisions)",
+    });
+  });
+
+  it("a `wait` refuses `role`", () => {
+    expect(ch14Findings(ch14File({ wait: CH14_WAIT + "    role: operator\n" }))).toContainEqual({
+      path: "steps.hold.role",
+      message: "unknown key role on a wait step (a wait step's keys are type, wait, onResume)",
+    });
+  });
+
+  it("an agent step refuses `decisions`", () => {
+    expect(
+      ch14Findings(ch14File({ agent: CH14_AGENT + "    decisions:\n      approve:\n        target: done\n" })),
+    ).toContainEqual({
+      path: "steps.implement.decisions",
+      message: "unknown key decisions on an agent step " +
+        "(an agent step's keys are role, instruction, transitions, agentConfig, gates, recommends)",
+    });
+  });
+
+  it("the presence re-imposition fires on this channel too, at the retired lane's own path and wording", () => {
+    const findings = ch14Findings(
+      ch14File({ gate: "  gate:\n    type: humanGate\n    role: operator\n    instruction: q\n" }),
+    );
+    expect(findings).toContainEqual({
+      path: "steps.gate",
+      message: 'missing required key "decisions"',
+      code: "invalid_decision_gate_config",
+    });
+  });
+
+  it("the produced channel-direct positions stay FILE-illegal — the carve-out is the direct channel's", () => {
+    expect(ch14Findings(ch14File({ agent: CH14_AGENT + "    advancesRound: {}\n" })).map((f) => f.path)).toContain(
+      "steps.implement.advancesRound",
+    );
+  });
+});
+
+describe("ch14-P1 family 6 (file channel) — the ban at the positions this chapter adds", () => {
+  const banned: readonly (readonly [string, string, string])[] = [
+    ["a decision key", ch14File({ gate: '  gate:\n    type: humanGate\n    role: operator\n    instruction: q\n    decisions:\n      "10":\n        target: done\n' }), "steps.gate.decisions"],
+    ["a payload field name", ch14File({ gate: '  gate:\n    type: humanGate\n    role: operator\n    instruction: q\n    decisions:\n      approve:\n        target: done\n        payload:\n          "10": {}\n' }), "steps.gate.decisions.approve.payload"],
+    ["a wait kind", ch14File({ wait: '  hold:\n    type: wait\n    wait:\n      kind: "10"\n      resumeEvents:\n        - E\n    onResume: {}\n' }), "steps.hold.wait.kind"],
+    ["a resume event", ch14File({ wait: '  hold:\n    type: wait\n    wait:\n      kind: k\n      resumeEvents:\n        - "10"\n    onResume: {}\n' }), "steps.hold.wait.resumeEvents[0]"],
+    ["a recommends value", ch14File({ agent: CH14_AGENT + '    recommends:\n      PASS: "10"\n', gate: '  gate:\n    type: humanGate\n    role: operator\n    instruction: q\n    decisions:\n      "10":\n        target: done\n' }), "steps.implement.recommends.PASS"],
+  ];
+  for (const [claim, text, path] of banned) {
+    it(`${claim} in the banned class is REFUSED on the file channel`, () => {
+      const own = ch14Findings(text).filter((finding) => finding.path === path);
+      expect(own.map((finding) => finding.message).join("\n")).toContain("0…4294967294");
+    });
+  }
+
+  it("the measured NON-members stay legal on this channel too", () => {
+    expect(
+      load(ch14File({ wait: '  hold:\n    type: wait\n    wait:\n      kind: "4294967295"\n      resumeEvents:\n        - "01"\n    onResume: {}\n' })).ok,
+    ).toBe(true);
+  });
+});
+
+describe("ch14-P1 family 8 (file channel) — the hand lanes fire through the file entry", () => {
+  it("the ≥1-decision floor", () => {
+    expect(
+      ch14Findings(ch14File({ gate: "  gate:\n    type: humanGate\n    role: operator\n    instruction: q\n    decisions: {}\n" })),
+    ).toContainEqual({
+      path: "steps.gate.decisions",
+      code: "decision_gate_empty",
+      message: "decisions must declare at least one decision (a gate no one can answer is refused)",
+    });
+  });
+
+  it("the kernel-owned wait-kind reservation", () => {
+    expect(
+      ch14Findings(ch14File({ wait: "  hold:\n    type: wait\n    wait:\n      kind: human_decision\n      resumeEvents:\n        - E\n    onResume: {}\n" })),
+    ).toContainEqual({
+      path: "steps.hold.wait.kind",
+      message: "wait kind 'human_decision' is reserved by the kernel " +
+        "(reserved: kickoff_pending, human_decision, child_workflow, timeout) — " +
+        "an authored collision would alias the kernel's own resume machinery",
+    });
+  });
+
+  it("the re-homed role-set equality, both directions", () => {
+    expect(ch14Findings(ch14File({ tail: "terminal:\n  - done\nroles:\n  implementer: {}\n  operator: {}\n  spare: {}\n" }))).toContainEqual({
+      path: "roles.spare",
+      message: 'role "spare" is declared but not used by any step',
+    });
+    expect(
+      ch14Findings(ch14File({ agent: CH14_AGENT.replace("role: implementer", "role: ghost") })),
+    ).toContainEqual({ path: "roles", message: 'role "ghost" is used by steps but not declared' });
+  });
+
+  it("the two two-hop `recommends` rules", () => {
+    expect(ch14Findings(ch14File({ agent: CH14_AGENT + "    recommends:\n      PASS: ghost\n" }))).toContainEqual({
+      path: "steps.implement.recommends.PASS",
+      code: "recommends_unknown_decision",
+      message: "recommends: 'ghost' is not a declared decision of step 'gate'",
+    });
+    expect(
+      ch14Findings(
+        ch14File({ agent: "  implement:\n    role: implementer\n    instruction: i\n    transitions:\n      PASS: gate\n      SKIP: done\n    recommends:\n      SKIP: approve\n" }),
+      ),
+    ).toContainEqual({
+      path: "steps.implement.recommends.SKIP",
+      code: "recommends_on_non_gate",
+      message: "recommends: 'SKIP' routes to step 'done', which is not a humanGate step — " +
+        "a recommendation is meaningful only where a decision will be asked",
+    });
+  });
+});

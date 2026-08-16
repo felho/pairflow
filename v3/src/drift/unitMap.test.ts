@@ -231,3 +231,24 @@ describe("the ch13-p1b unit-map flips (packet row D12)", () => {
     });
   });
 });
+
+
+describe("the ch14-p1 unit-map flip (packet row D12)", () => {
+  const unitMap = loadUnitMap();
+
+  it("pins the packet-owned mapping VERBATIM, FULLY QUALIFIED (a second row of the same bare name exists)", () => {
+    // `implement` rather than `generated/mapped`: the unit's load-bearing
+    // half — the per-type class rules — is NOT expressible in the
+    // declaration vocabulary, so it realizes as named hand lanes in the
+    // audited residual's module, with the ordinary field grammars riding
+    // the schema beside them.
+    expect(unitMap["l3-pseudocode/validate_decision_gates"]).toEqual({
+      codeRef: "v3/src/definition/schema/templateSurface.ts#stepClassFindings",
+      disposition: "implement",
+      status: "realized",
+    });
+    // The fully-qualified address matters: a bare-name edit would flip
+    // the wrong row.
+    expect(unitMap["auto-action-pseudocode/validate_decision_gates"]).toEqual({ status: "pending" });
+  });
+});

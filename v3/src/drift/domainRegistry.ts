@@ -22,6 +22,7 @@ import type {
   RuntimeContextRef,
   RuntimeContextRequirement,
   Step,
+  StepType,
   TerminalDisposition,
   TranscriptEntry,
   WaitReason,
@@ -145,6 +146,11 @@ interface RealizedTypeTable {
   // ch13-p1b: the render side's row — its witness is the type the
   // packet's `contextBlocks` members carry.
   readonly "l2b/ContextBlock": ContextBlock;
+  // ch14-p1 (ch14-C1): the definition side's l3 row. The witness is the
+  // step-class discriminator's own token union at FIELD grain — the
+  // shared `Step` interface would be satisfied by every agent step and
+  // would witness nothing.
+  readonly "l3/human_gate": StepType;
 }
 
 export type RegistryEntry =
@@ -358,7 +364,12 @@ export const DOMAIN_REGISTRY: Readonly<Record<string, RegistryEntry>> = {
   "l2b/ContextBlock": { kind: "realized", typeName: "ContextBlock" },
   // ── l3 (5) ─────────────────────────────────────────────────────────
   "l3/wait step + RESUME_WAIT": { kind: "pending" },
-  "l3/human_gate": { kind: "pending" },
+  // ch14-p1: the definition side flips the `human_gate` row with the
+  // FIELD-grain type witness ch14-C1 mints — the step-class discriminator
+  // union, not the shared `Step` interface every agent step already
+  // satisfies (which would make the row vacuous). The other four l3 rows
+  // are ch14-P2's by their own C-rows.
+  "l3/human_gate": { kind: "realized", typeName: "StepType" },
   "l3/apply_target_entry_effects(...)": { kind: "pending" },
   "l3/HumanDecisionRequest": { kind: "pending" },
   "l3/DECISION_REQUEST / DECISION_MADE": { kind: "pending" },
@@ -522,6 +533,7 @@ export const REALIZED_TYPE_TABLE_KEYS = [
   "l2b/context_blocks catalog",
   "l2b/ContextBlockRef",
   "l2b/ContextBlock",
+  "l3/human_gate",
 ] as const satisfies readonly (keyof RealizedTypeTable)[];
 
 type TypeTableFullyListed =
