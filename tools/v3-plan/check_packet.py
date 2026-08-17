@@ -1070,6 +1070,48 @@ def check_draft(path: Path, checker: Checker) -> dict | None:
 # ---------------------------------------------------------------- packets
 
 
+def diff_tree_tokens(
+    root: Path,
+    commit: str,
+    args: list[str],
+    label: str,
+    checker: Checker,
+) -> list[str] | None:
+    """git diff-tree output as NUL-separated tokens, read with NO
+    normalization of any kind — the shared sink for every audit that
+    compares a commit's paths against a declared list.
+
+    THREE measured false-green channels live in the naive reading, and
+    all three are ALIASING: a real path compared as a DIFFERENT path,
+    so a green verdict certifies a file that was never declared.
+      (a) line-oriented parsing splits on separators GIT DOES NOT USE
+          — python's splitlines() breaks on U+0085 and U+2028, so a
+          path carrying one reads as a legal member plus a silently
+          discarded remainder;
+      (b) .strip() aliases distinct files onto a declared member —
+          " v3/src/x.ts" is a different tree entirely, and "x.ts " a
+          different file in the same directory;
+      (c) text=True applies UNIVERSAL NEWLINE translation, which
+          rewrites a CR inside a real path to LF before any of the
+          above runs — so even -z parsing aliases "x.ts\\r" onto
+          "x.ts\\n".
+    -z removes git's own quoting and gives NUL field separation;
+    reading BYTES and decoding with surrogateescape removes (c) and
+    keeps undecodable bytes distinct rather than collapsing them.
+    (ch14-p2a pre-approval arm, rounds 4-5, each reproduced.)"""
+    out = subprocess.run(
+        ["git", "-C", str(root), "diff-tree", "--no-commit-id", "-z", "-r", *args, commit],
+        capture_output=True,
+    )
+    if out.returncode != 0:
+        checker.error(
+            f"--post-build: git diff-tree failed for {label}: "
+            f"{out.stderr.decode('utf-8', 'replace').strip()}"
+        )
+        return None
+    return out.stdout.decode("utf-8", "surrogateescape").split("\0")
+
+
 def check_boundary_files(name: str, boundary: object, checker: Checker) -> list[str] | None:
     """P2's full shape rules — ONE implementation shared by the
     fold-time check and the --post-build audit (the audit reads the
@@ -1885,15 +1927,16 @@ def check_post_build(
     # --root: a ROOT commit otherwise yields an EMPTY change list — the
     # same vacuous-audit class as the merge-commit hole above; with
     # --root it diffs against the empty tree and lists every file.
-    out = subprocess.run(
-        ["git", "-C", str(root), "diff-tree", "--root", "--no-commit-id", "--name-only", "-r", commit],
-        capture_output=True,
-        text=True,
-    )
-    if out.returncode != 0:
-        checker.error(f"--post-build: git diff-tree failed for '{commit}': {out.stderr.strip()}")
+    # The path-ALIASING family, closed at the sink that has audited
+    # every packet build commit since the boundary tooling shipped: a
+    # real path compared as a DIFFERENT path means a build commit can
+    # land a file OUTSIDE its declared boundary and still audit green.
+    # Measured on this very code (ch14-p2a pre-approval arm, round 5):
+    # a committed " x.txt" passed a boundary declaring "x.txt".
+    tokens = diff_tree_tokens(root, commit, ["--root", "--name-only"], f"'{commit}'", checker)
+    if tokens is None:
         return
-    changed = {line.strip() for line in out.stdout.splitlines() if line.strip()}
+    changed = {token for token in tokens if token}
     # The vacuous-audit family, closed at the SINK: whatever produced an
     # empty change list (--allow-empty, a wrong sha, a git surprise),
     # a packet build commit lands at least the packet file itself
@@ -2231,7 +2274,7 @@ def build_superseded_fixture() -> tuple[tempfile.TemporaryDirectory, Path, Path,
 
 # The pinned size of the red-fixture register (see the check at the end
 # of run_selftest for why a printed number was not enough).
-EXPECTED_RED_DIMS = 143
+EXPECTED_RED_DIMS = 145
 
 
 def run_selftest() -> int:
@@ -3563,6 +3606,47 @@ def run_selftest() -> int:
                 checker = Checker()
                 check_post_build(packet, _git_out(root, "rev-parse", "HEAD"), checker)
                 assert_red("post-build-empty-commit", checker.errors, "EMPTY change list")
+
+    # ---- P8 BUILD-BOUNDARY path fidelity: the aliasing family on the
+    # sink that audits every packet build commit. Both fixtures commit
+    # a REAL file whose path only LOOKS like the declared member.
+    for label, smuggled_rel in (
+        ("post-build-boundary-leading-space", " x.txt"),
+        ("post-build-boundary-carriage-return", "x.txt\rhidden"),
+    ):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            pdir = root / "packets"
+            pdir.mkdir()
+            packet = pdir / "ch9-p1-test.md"
+            packet.write_text(
+                '# p\n\n```json\n{"mutation_boundary": {"files": ["x.txt"]}}\n```\n'
+                '\n```json\n{"packet_metrics": {"class": "t"}}\n```\n',
+                encoding="utf-8",
+            )
+            (root / "x.txt").write_text("x", encoding="utf-8")
+            if not (
+                _git_ok(root, "init", "-q")
+                and _git_ok(root, "add", "-A")
+                and _git_ok(root, "commit", "-q", "-m", "base")
+            ):
+                failures.append(f"selftest git fixture setup failed ({label})")
+                continue
+            try:
+                (root / smuggled_rel).write_text("smuggled", encoding="utf-8")
+            except OSError:
+                failures.append(
+                    f"selftest could not create the {label} fixture path — the dim did NOT run"
+                )
+                continue
+            packet.write_text(
+                packet.read_text(encoding="utf-8") + "\nbuild\n", encoding="utf-8"
+            )
+            _git_ok(root, "add", "-A")
+            _git_ok(root, "commit", "-q", "-m", "build")
+            checker = Checker()
+            check_post_build(packet, _git_out(root, "rev-parse", "HEAD"), checker)
+            assert_red(label, checker.errors, "OUTSIDE")
 
     # ---- P8 build-close metrics gate (ch13 boundary — the p1b
     # missing-block breach): zero metrics blocks at the audited commit
