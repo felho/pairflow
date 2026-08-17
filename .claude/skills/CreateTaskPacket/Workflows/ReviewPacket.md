@@ -834,7 +834,8 @@ Gate Coverage Matrix: <complete | missing/unknown cells listed>
 Lens reports: 1 substrate | 2 projection | 3 negatives | 4 mirror | 5 downstream — each: pass | findings | skipped(<reason>)
 Findings by type: <taxonomy-tagged list, considered_not_finding included, dispositions + routes>
 Dispositions: folded <n> / narrowed <n> / declined <n> / deferred-to-build <n> / routed <n> · severity: P0/P1 <n> · P2 <n> · P3 <n>
-Yield: <accepted CONTENT findings this round, first-occurrence counted> · plateau counter: <k>/2
+Fold ratio: <folded / accepted, as a fraction AND a percentage> — §3's triage-inspection signal made READABLE AT ITS OWN ROUND (adopted 2026-08-17, the user's addition at ch14-p2a round 3): a ratio near 1.0 means the round folded ~everything, which §3 names a signal to inspect the triage, never a quality sign. Without this field the rule has no surface and a fold-everything round is only visible in the NEXT round's byproduct crop — measured at ch14-p2a, where three consecutive whole-file-rewrite folds each seeded ~20 byproducts of the previous one. No threshold is set (a boundary question); the field's job is to make the ratio unmissable at the report the human reads.
+Yield: <accepted CONTENT findings this round, first-occurrence counted> · <classified: new-design-error / fold-byproduct / reproduction> · plateau counter: <k>/2
 Size: <md KB> (Δ <±%> since the first full round; v0 thresholds 48 KB / +50% — breach flagged, advisory)
 Verdict: approve | refine | split | STOP <member token>
 ```
@@ -854,7 +855,9 @@ of ANY class voids.
 reasons and the ACTUAL models used), `Gate Coverage Matrix`,
 `Yield` and `Size` (EVERY round — the size check is mandatory per
 round and a zero-yield round is exactly what drives the plateau
-counter), `Dispositions` (any round that considered findings), and
+counter), `Dispositions` and `Fold ratio` (any round that considered
+findings — the ratio is computed from the dispositions, so a report
+carrying one without the other is incomplete), and
 verdict lines — each filled or carrying an explicit one-line reason.
 A verdict delivered in commentary without the report block is a
 workflow defect to fix BEFORE handing back.
