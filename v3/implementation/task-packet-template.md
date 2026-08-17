@@ -250,6 +250,54 @@ contract-draft template defers to it:
   the EMPTY TREE, an empty change list red regardless of cause.
   Invocation: README §4 step 8 (build-close; no CI surface runs this
   mode).
+- **The `instrument_manifest` block (OPT-IN; defined here at the
+  ch14-p2a boundary):** the confinement of the plan §14.4 SECOND
+  named exception — the INSTRUMENT-LANDING commit, where a packet
+  whose acceptance proof needs a baseline recomputable at a
+  pre-change ref lands its measuring instrument in the build commit's
+  PARENT. Shape `{"files": [...]}`: exact keyset, nonempty, unique,
+  repo-relative, and every path under `v3/src/testkit/` — so "no
+  product code, no declaration bytes" is STRUCTURAL, refused at
+  declaration time rather than reviewed after the fact. Declaring the
+  block BINDS the `--post-build` audit: the audited commit's FIRST
+  PARENT is audited in the SAME invocation — nonempty change list, no
+  packet file (declaration bytes are outside the confinement, and a
+  parent carrying the packet is the build commit's twin), a subset of
+  the manifest, ADDITIONS ONLY (every entry a git addition; a
+  modified or deleted file is inside the manifest by path while still
+  changing what its existing consumers see), and ORDINARY BLOBS ONLY
+  (100644 / 100755 — an added symlink or gitlink satisfies both other
+  axes while its content lives where the confinement never looks). A
+  declaring build commit with NO parent is red, because the exception
+  would be unsatisfiable. The three axes were found open ONE AT A
+  TIME, by three consecutive reviews of the same guard (ch14-p2a
+  pre-approval arm, 2026-08-17): first the audit that could never run
+  at all, then the path check that would pass a total rewrite, then
+  the status check that would pass a symlink, and finally two path
+  aliases the parser itself opened (a stripped path, and a U+0085 in
+  a path that python — never git — reads as a line break; both closed
+  by parsing `--raw -z` and never normalizing a path). The instrument
+  ref must carry a green `pnpm v3:test` AND a green `pnpm
+  v3:typecheck`, both recorded in the owning packet's Build record —
+  two commands, because the suite is `vitest run` alone and a
+  type-invalid added file passes it while `tsc --noEmit` refuses it.
+  NEITHER EXIT CODE IS THE EVIDENCE that the instrument's selftest
+  RAN: a file of skipped cases exits zero from both. The proof of
+  execution is the runner's machine-read per-file summary — passed
+  > 0 and skipped = 0 for the selftest file — recorded beside the
+  commands. Their reach: an added test file is discovered by the
+  existing vitest glob and both added files are typechecked, so the
+  run covers the new selftest as well as every pre-existing test —
+  and that same auto-discovery is why the receipt is required, since
+  an addition can change what an existing run does. It is still not a
+  correctness proof for the added files; that is the instrument's own
+  selftest's job. What remains for a human is reading the added
+  files — a residual, not a gate.
+  WHAT P12 DOES NOT CONSTRAIN, at the contract grain: the testkit
+  prefix admits kinds a given packet may not intend (a `.d.ts`, a
+  config file). The per-packet MANIFEST is the narrowing surface —
+  a packet naming only `.ts` files gets that narrowing from its own
+  declaration.
 - **The `mirror_map` block (OPT-IN; defined here at the ch13
   boundary — the P11 lint predates this definition, which is the
   form-authority gap the boundary closed):** a packet whose target's

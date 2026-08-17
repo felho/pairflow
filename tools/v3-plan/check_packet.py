@@ -134,6 +134,57 @@ Packets (v3/implementation/packets/*.md, README.md excluded):
       The semantic tail — a PARAPHRASED restatement carrying none of
       the declared literals — is named as the review-side duty, not
       claimed here.
+  P12. instrument_manifest (ch14-p2a boundary — the plan's SECOND
+      named exception, §14.4): the INSTRUMENT-LANDING commit's
+      confinement, opt-in BY DECLARATION (at most one block; a packet
+      without it is untouched). Shape: {"files": [...]} — exact
+      keyset, nonempty, unique, repo-relative, and every path under
+      v3/src/testkit/ — the PACKET-LEVEL confinement, red at
+      DECLARATION time rather than only at audit time. Declaring the
+      block BINDS the --post-build audit: the audited commit's FIRST
+      PARENT is the instrument commit and is audited in the same
+      invocation, on THREE axes because each was measured open in
+      turn (ch14-p2a pre-approval arm, 2026-08-17, three rounds).
+      PATH: nonempty change list, no packet file (declaration bytes
+      are outside the confinement, and a parent carrying the packet
+      is the build commit's twin), a subset of the manifest.
+      CHANGE KIND: ADDITIONS ONLY — every diff-tree record's status
+      'A'. A MODIFIED or DELETED file is inside the manifest by path
+      while still changing what existing consumers see, and the
+      testkit barrel alone has 35 importers (34 test modules and the
+      dev runtime). OBJECT KIND: ordinary blobs only (100644 /
+      100755) — an added SYMLINK or GITLINK satisfies both other
+      axes while its content lives where the confinement never
+      looks. An unparseable or TRUNCATED diff-tree record is red,
+      never a pass. PATH FIDELITY underlies all three axes: the audit
+      parses `--raw -z` and compares paths VERBATIM, because a
+      line-oriented read splits on separators git does not use
+      (python's splitlines() breaks on U+0085, so a path containing
+      one reads as a legal member plus a discarded remainder) and a
+      stripped path aliases distinct files onto a declared member
+      (" v3/…" is a different tree entirely). Both were LIVE
+      false-green channels, measured, not theorized.
+      A build commit that declares the block with no parent is red:
+      the exception would be unsatisfiable.
+      Why the leg exists at all: the exception was stated as
+      machine-checkable, but P8's own path refuses any commit that
+      does not change the packet file — so the instrument commit
+      could never be passed to it, and the claim named a check that
+      never ran.
+      WHAT IT DOES NOT PROVE, so no reader takes more from a green.
+      (a) That the added files are semantically correct, or that the
+      instrument measures what it claims — that is the instrument's
+      own selftest's job. (b) That nothing pre-existing MOVED: an
+      added file can be picked up by an existing glob (v3's vitest
+      include is src/**/*.test.ts, its tsconfig include is src), so
+      an addition can change what an existing run does. That channel
+      is covered by requiring a green pre-existing suite AT the
+      instrument ref, not by this audit. (c) At the CONTRACT grain,
+      the testkit prefix admits kinds a given packet may not intend
+      (a .d.ts, a config file); the packet-level manifest is what
+      narrows it, and a packet naming only .ts files gets that
+      narrowing from its own declaration rather than from P12.
+      P12 bounds the BLAST RADIUS. It is not a behaviour proof.
 
 Drafts (v3/implementation/contracts/*.md, README.md excluded):
   D1. contract_draft = {chapter, surface, status}: exact keyset;
@@ -344,6 +395,28 @@ SCHEMA_LOCK_KEYS = {"path", "sha256"}
 MUTATION_BOUNDARY_KEYS = {"files"}
 PACKET_ROWS_KEYS = {"rows"}
 ROW_KEYS = {"id", "class", "refs"}
+
+# P12 (ch14-p2a boundary): the INSTRUMENT-LANDING commit's manifest.
+# The plan's second named exception (§14.4) lets a packet whose
+# acceptance proof needs a baseline recomputable at a PRE-CHANGE ref
+# land its measuring instrument in the build commit's PARENT — a
+# single commit cannot both introduce an instrument and be the change
+# that instrument baselines. The confinement that keeps the exception
+# from becoming a hole is CONTENT-defined, and this block is what
+# makes it machine-checkable rather than narrated.
+INSTRUMENT_MANIFEST_KEYS = {"files"}
+# "No product code, no declaration bytes" enforced STRUCTURALLY rather
+# than by review: the testkit is ADR-005's home for test machinery, so
+# a path outside it cannot be a behaviour-preserving instrument. The
+# set is deliberately CLOSED — widening it is a contract edit, which
+# is exactly the visibility the exception needs.
+INSTRUMENT_PATH_PREFIXES = ("v3/src/testkit/",)
+# …and ORDINARY FILES only. A symlink (120000) or a gitlink/submodule
+# pointer (160000) satisfies both the path prefix and the add-only
+# rule while carrying content that lives somewhere the confinement
+# never looks — the mode-smuggling channel, measured open by the
+# ch14-p2a pre-approval arm's third round (2026-08-17).
+INSTRUMENT_BLOB_MODES = {"100644", "100755"}
 
 # P10 (ch12 boundary): the prose↔manifest ref-drift class. A contract
 # token cited inside a row's "(anchored: …)" / "(derived: …)" prose
@@ -1139,6 +1212,45 @@ def check_boundary_files(name: str, boundary: object, checker: Checker) -> list[
     return files
 
 
+def check_instrument_files(name: str, manifest: object, checker: Checker) -> list[str] | None:
+    """P12's shape rules — ONE implementation shared by the fold-time
+    check and the --post-build parent audit, for the same reason P2
+    shares its own: the audit reads the commit's bytes, so a subset
+    check over a malformed manifest would prove nothing. Returns the
+    files list only when fully valid."""
+    if not isinstance(manifest, dict) or set(manifest.keys()) != INSTRUMENT_MANIFEST_KEYS:
+        checker.error(
+            f"{name}: instrument_manifest must be an object with exactly keys "
+            f"{sorted(INSTRUMENT_MANIFEST_KEYS)}"
+        )
+        return None
+    files = manifest.get("files")
+    if not isinstance(files, list) or not files or not all(
+        isinstance(f, str) and f and not f.startswith("/") and ".." not in f for f in files
+    ):
+        checker.error(
+            f"{name}: instrument_manifest.files must be a nonempty list of "
+            f"repo-relative paths"
+        )
+        return None
+    if len(set(files)) != len(files):
+        checker.error(f"{name}: instrument_manifest.files has duplicates")
+        return None
+    # The confinement itself, checked at DECLARATION time and not only
+    # at audit time: a manifest naming a product path is red before any
+    # commit exists, so the exception cannot be claimed for a commit
+    # that was never eligible for it.
+    outside = sorted(f for f in files if not f.startswith(INSTRUMENT_PATH_PREFIXES))
+    if outside:
+        checker.error(
+            f"{name}: instrument_manifest.files must name TESTKIT paths only "
+            f"(behaviour-preserving instrument, no product code, no declaration "
+            f"bytes) — outside {list(INSTRUMENT_PATH_PREFIXES)}: {outside}"
+        )
+        return None
+    return files
+
+
 def check_ref(name: str, row_id: str, ref: object, drafts: dict[str, dict], adr_dir: Path, checker: Checker) -> None:
     """P4: strict-or-prose-prefixed; anything else is loud."""
     label = f"{name}: rows['{row_id}'] ref"
@@ -1694,6 +1806,19 @@ def check_packet(
         )
     for metrics in metrics_blocks:
         check_packet_metrics(path.name, metrics, checker, declared_counts=tally)
+
+    # P12: instrument_manifest (optional, AT MOST ONE) — opt-in BY
+    # DECLARATION like mirror_map: a packet without the block is
+    # untouched, and a packet WITH it has bound itself to the parent
+    # audit on the --post-build path.
+    instrument_blocks = block_by_key(blocks, "instrument_manifest")
+    if len(instrument_blocks) > 1:
+        checker.error(
+            f"{path.name}: {len(instrument_blocks)} instrument_manifest blocks; "
+            f"at most one"
+        )
+    for manifest in instrument_blocks:
+        check_instrument_files(path.name, manifest, checker)
     return True
 
 
@@ -1963,6 +2088,151 @@ def check_post_build(
         checker.error(
             f"{packet_path.name}: commit {commit} touches files OUTSIDE the declared "
             f"mutation boundary: {outside}"
+        )
+    check_instrument_commit(packet_path, commit, root, frame_rel, blocks, checker)
+
+
+def check_instrument_commit(
+    packet_path: Path,
+    commit: str,
+    root: Path,
+    frame_rel: str,
+    blocks: list[dict],
+    checker: Checker,
+) -> None:
+    """P12's audit leg: the plan's SECOND named exception (§14.4) —
+    the instrument-landing commit — audited from the BUILD commit's
+    own audit rather than as a separate invocation nobody is bound to
+    run. The exception's confinement was stated as machine-checkable;
+    the ratified --post-build path could not check it at all (it
+    refuses any commit that does not change the packet file, and the
+    instrument commit by definition does not carry it), so the claim
+    named a check that never ran. This closes that: the manifest is
+    read from the packet's bytes AT THE AUDITED COMMIT, and the
+    audited commit's FIRST PARENT is the instrument commit."""
+    manifests = block_by_key(blocks, "instrument_manifest")
+    if not manifests:
+        return
+    if len(manifests) != 1:
+        checker.error(
+            f"{packet_path.name}: --post-build needs at most one instrument_manifest "
+            f"block, found {len(manifests)}"
+        )
+        return
+    files = check_instrument_files(packet_path.name, manifests[0], checker)
+    if files is None:
+        return
+    parents = subprocess.run(
+        ["git", "-C", str(root), "rev-list", "--parents", "-n", "1", commit],
+        capture_output=True,
+        text=True,
+    )
+    fields = parents.stdout.split() if parents.returncode == 0 else []
+    if len(fields) < 2:
+        # A ROOT build commit has no parent to carry the instrument —
+        # the same vacuous class the boundary audit closes: declaring
+        # the exception while nothing can satisfy it must be loud.
+        checker.error(
+            f"--post-build: commit {commit} declares an instrument_manifest but has "
+            f"NO parent — the instrument-landing commit is the build commit's parent "
+            f"(plan §14.4, second named exception)"
+        )
+        return
+    parent = fields[1]
+    # --RAW, not --name-only and not --name-status: the confinement is
+    # a claim about three things at once — WHICH paths, WHAT KIND of
+    # change, and WHAT KIND of object — and each was found open in turn
+    # by the same reviewer on the same day (2026-08-17). A path check
+    # accepts a MODIFY or DELETE of an existing file, which is how a
+    # "testkit-only" commit could still rewrite the barrel 34 test
+    # modules and the dev runtime import; and status alone accepts an
+    # ADDED SYMLINK or GITLINK, which is content smuggled in under a
+    # permitted path. --raw carries the destination MODE beside the
+    # status, so one parse closes both.
+    tokens = diff_tree_tokens(
+        root, parent, ["--raw"], f"instrument commit '{parent}'", checker
+    )
+    if tokens is None:
+        return
+    entries: list[tuple[str, str, str]] = []
+    idx = 0
+    while idx < len(tokens):
+        token = tokens[idx]
+        if token == "":
+            idx += 1
+            continue
+        meta = token[1:].split() if token.startswith(":") else []
+        if not token.startswith(":") or len(meta) < 5 or not meta[4]:
+            checker.error(
+                f"--post-build: unparseable diff-tree record for instrument commit "
+                f"'{parent}': {token!r} — an unreadable record is never a pass"
+            )
+            return
+        status = meta[4][0]
+        # rename and copy records carry TWO paths (source then
+        # destination); the destination is what lands
+        path_count = 2 if status in ("R", "C") else 1
+        if idx + path_count >= len(tokens) or not tokens[idx + path_count]:
+            checker.error(
+                f"--post-build: truncated diff-tree record for instrument commit "
+                f"'{parent}' at {token!r} — a missing path is never a pass"
+            )
+            return
+        entries.append((status, meta[1], tokens[idx + path_count]))
+        idx += path_count + 1
+    changed = {path for _status, _mode, path in entries}
+    if not changed:
+        checker.error(
+            f"--post-build: instrument commit {parent} has an EMPTY change list — a "
+            f"declared instrument lands at least its own hook, so this audit proves "
+            f"nothing (wrong parent or empty commit)"
+        )
+        return
+    # The exception is defined by CONTENT: an instrument commit that
+    # carries the packet file is the build commit's twin, not an
+    # instrument landing — and the packet file is declaration bytes,
+    # which the confinement excludes by name.
+    if frame_rel in changed:
+        checker.error(
+            f"--post-build: instrument commit {parent} changes the packet file "
+            f"'{frame_rel}' — the instrument landing carries testkit additions only, "
+            f"never declaration bytes (plan §14.4)"
+        )
+        return
+    outside = sorted(changed - set(files))
+    if outside:
+        checker.error(
+            f"{packet_path.name}: instrument commit {parent} touches files OUTSIDE the "
+            f"declared instrument_manifest: {outside}"
+        )
+        return
+    # ADDITIONS ONLY, enforced: every path the instrument commit
+    # touches must be an ADDITION. A modified or deleted testkit file
+    # is inside the manifest by path and still changes what existing
+    # consumers see — the exact hole a path-only check leaves open.
+    not_added = sorted(f"{status} {path}" for status, _mode, path in entries if status != "A")
+    if not_added:
+        checker.error(
+            f"{packet_path.name}: instrument commit {parent} is not ADDITIONS ONLY — "
+            f"a modified or deleted file changes what existing consumers see: "
+            f"{not_added}"
+        )
+        return
+    # ORDINARY FILES ONLY. Path plus add-only still admits an added
+    # SYMLINK (mode 120000) or GITLINK/submodule pointer (160000) at a
+    # permitted path: content smuggled past a confinement that reads
+    # names. A symlink's bytes live wherever it points, and a gitlink's
+    # live in another repository — neither is reviewable as "two new
+    # files", which is exactly what the residual human read assumes.
+    bad_mode = sorted(
+        f"{mode} {path}" for _status, mode, path in entries
+        if mode not in INSTRUMENT_BLOB_MODES
+    )
+    if bad_mode:
+        checker.error(
+            f"{packet_path.name}: instrument commit {parent} adds a non-ORDINARY-FILE "
+            f"entry — a symlink or gitlink carries content the confinement never sees "
+            f"(allowed modes {sorted(INSTRUMENT_BLOB_MODES)}): {bad_mode}"
         )
 
 
@@ -2274,7 +2544,7 @@ def build_superseded_fixture() -> tuple[tempfile.TemporaryDirectory, Path, Path,
 
 # The pinned size of the red-fixture register (see the check at the end
 # of run_selftest for why a printed number was not enough).
-EXPECTED_RED_DIMS = 145
+EXPECTED_RED_DIMS = 161
 
 
 def run_selftest() -> int:
@@ -3607,6 +3877,253 @@ def run_selftest() -> int:
                 check_post_build(packet, _git_out(root, "rev-parse", "HEAD"), checker)
                 assert_red("post-build-empty-commit", checker.errors, "EMPTY change list")
 
+    # ---- P12 instrument_manifest: shape at declaration time
+    for label, block, needle in (
+        (
+            "instrument-manifest-keyset",
+            '{"instrument_manifest": {"files": ["v3/src/testkit/h.ts"], "extra": 1}}',
+            "exactly keys",
+        ),
+        (
+            "instrument-manifest-empty",
+            '{"instrument_manifest": {"files": []}}',
+            "nonempty list",
+        ),
+        (
+            "instrument-manifest-duplicates",
+            '{"instrument_manifest": {"files": ["v3/src/testkit/h.ts", "v3/src/testkit/h.ts"]}}',
+            "has duplicates",
+        ),
+        # THE confinement negative: a product path is refused before
+        # any commit exists — the exception cannot be claimed for a
+        # commit that was never eligible for it
+        (
+            "instrument-manifest-product-path",
+            '{"instrument_manifest": {"files": ["v3/src/testkit/h.ts", "v3/src/kernel/kernel.ts"]}}',
+            "TESTKIT paths only",
+        ),
+    ):
+        checker = Checker()
+        check_instrument_files("p.md", json.loads(block)["instrument_manifest"], checker)
+        assert_red(label, checker.errors, needle)
+
+    # ---- P12 instrument_manifest: the parent audit on --post-build
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        pdir = root / "packets"
+        pdir.mkdir()
+        packet = pdir / "ch14-p9-test.md"
+        hook = root / "v3" / "src" / "testkit"
+        hook.mkdir(parents=True)
+        base = (
+            '# p\n\n```json\n{"mutation_boundary": {"files": ["x.txt"]}}\n```\n'
+            '\n```json\n{"packet_metrics": {"class": "t", "main_thread_model": "m"}}\n```\n'
+            '\n```json\n{"instrument_manifest": {"files": ["v3/src/testkit/hook.ts"]}}\n```\n'
+        )
+        packet.write_text(base, encoding="utf-8")
+        (root / "x.txt").write_text("x", encoding="utf-8")
+        if not (
+            _git_ok(root, "init", "-q")
+            and _git_ok(root, "add", "-A")
+            and _git_ok(root, "commit", "-q", "-m", "base")
+        ):
+            failures.append("selftest git fixture setup failed (instrument-manifest)")
+        else:
+            def _instrument_build(parent_files: dict[str, str], note: str) -> str:
+                for rel, body in parent_files.items():
+                    p = root / rel
+                    p.parent.mkdir(parents=True, exist_ok=True)
+                    p.write_text(body, encoding="utf-8")
+                _git_ok(root, "add", "-A")
+                _git_ok(root, "commit", "-q", "-m", f"instrument-{note}")
+                (root / "x.txt").write_text(f"x-{note}", encoding="utf-8")
+                packet.write_text(
+                    packet.read_text(encoding="utf-8") + f"\nbuild {note}\n", encoding="utf-8"
+                )
+                _git_ok(root, "add", "-A")
+                _git_ok(root, "commit", "-q", "-m", f"build-{note}")
+                return _git_out(root, "rev-parse", "HEAD")
+
+            # GREEN: a lawful instrument landing (testkit only) followed
+            # by the ordinary build commit
+            sha = _instrument_build({"v3/src/testkit/hook.ts": "export const h = 1\n"}, "ok")
+            checker = Checker()
+            check_post_build(packet, sha, checker)
+            if checker.errors:
+                failures.append(
+                    f"selftest green NOT green: lawful instrument landing "
+                    f"({checker.errors[0]})"
+                )
+            # RED: the instrument commit reaches product code — the
+            # threat the whole leg exists for
+            sha = _instrument_build(
+                {
+                    "v3/src/testkit/hook.ts": "export const h = 2\n",
+                    "x.txt": "product-touched-in-instrument",
+                },
+                "product",
+            )
+            checker = Checker()
+            check_post_build(packet, sha, checker)
+            assert_red(
+                "instrument-commit-outside-manifest",
+                checker.errors,
+                "OUTSIDE the declared instrument_manifest",
+            )
+            # RED: the instrument commit carries the packet file —
+            # declaration bytes are outside the confinement by name
+            (root / "v3" / "src" / "testkit" / "hook.ts").write_text("export const h = 3\n", encoding="utf-8")
+            packet.write_text(packet.read_text(encoding="utf-8") + "\ndecl in instrument\n", encoding="utf-8")
+            _git_ok(root, "add", "-A")
+            _git_ok(root, "commit", "-q", "-m", "instrument-with-packet")
+            (root / "x.txt").write_text("x-after", encoding="utf-8")
+            packet.write_text(packet.read_text(encoding="utf-8") + "\nbuild after\n", encoding="utf-8")
+            _git_ok(root, "add", "-A")
+            _git_ok(root, "commit", "-q", "-m", "build-after")
+            checker = Checker()
+            check_post_build(packet, _git_out(root, "rev-parse", "HEAD"), checker)
+            assert_red(
+                "instrument-commit-carries-packet",
+                checker.errors,
+                "changes the packet file",
+            )
+            # RED: an --allow-empty parent proves nothing
+            _git_ok(root, "commit", "-q", "--allow-empty", "-m", "empty-instrument")
+            (root / "x.txt").write_text("x-empty-parent", encoding="utf-8")
+            packet.write_text(packet.read_text(encoding="utf-8") + "\nbuild empty parent\n", encoding="utf-8")
+            _git_ok(root, "add", "-A")
+            _git_ok(root, "commit", "-q", "-m", "build-empty-parent")
+            checker = Checker()
+            check_post_build(packet, _git_out(root, "rev-parse", "HEAD"), checker)
+            assert_red(
+                "instrument-commit-empty",
+                checker.errors,
+                "EMPTY change list",
+            )
+            # ADD-ONLY: a MODIFY of a manifest-listed file is inside
+            # the manifest by path and still changes what existing
+            # consumers see — the hole a path-only check leaves open
+            sha = _instrument_build(
+                {"v3/src/testkit/hook.ts": "export const h = 99 // rewritten\n"},
+                "modify",
+            )
+            checker = Checker()
+            check_post_build(packet, sha, checker)
+            assert_red(
+                "instrument-commit-modifies-existing",
+                checker.errors,
+                "not ADDITIONS ONLY",
+            )
+            # …and a DELETE of one, the same class from the other side
+            (root / "v3" / "src" / "testkit" / "hook.ts").unlink()
+            _git_ok(root, "add", "-A")
+            _git_ok(root, "commit", "-q", "-m", "instrument-delete")
+            (root / "x.txt").write_text("x-after-delete", encoding="utf-8")
+            packet.write_text(
+                packet.read_text(encoding="utf-8") + "\nbuild after delete\n", encoding="utf-8"
+            )
+            _git_ok(root, "add", "-A")
+            _git_ok(root, "commit", "-q", "-m", "build-after-delete")
+            checker = Checker()
+            check_post_build(packet, _git_out(root, "rev-parse", "HEAD"), checker)
+            assert_red(
+                "instrument-commit-deletes-existing",
+                checker.errors,
+                "not ADDITIONS ONLY",
+            )
+            # MODE: an ADDED SYMLINK at a permitted path satisfies the
+            # prefix and the add-only rule while its bytes live
+            # wherever it points — content the confinement never sees
+            link = root / "v3" / "src" / "testkit" / "smuggled.ts"
+            link.symlink_to("/etc/hosts")
+            _git_ok(root, "add", "-A")
+            _git_ok(root, "commit", "-q", "-m", "instrument-symlink")
+            (root / "x.txt").write_text("x-after-link", encoding="utf-8")
+            packet_text = packet.read_text(encoding="utf-8").replace(
+                '"files": ["v3/src/testkit/hook.ts"]',
+                '"files": ["v3/src/testkit/hook.ts", "v3/src/testkit/smuggled.ts"]',
+            )
+            packet.write_text(packet_text + "\nbuild after link\n", encoding="utf-8")
+            _git_ok(root, "add", "-A")
+            _git_ok(root, "commit", "-q", "-m", "build-after-link")
+            checker = Checker()
+            check_post_build(packet, _git_out(root, "rev-parse", "HEAD"), checker)
+            assert_red(
+                "instrument-commit-adds-symlink",
+                checker.errors,
+                "non-ORDINARY-FILE",
+            )
+
+    # ---- P12 PATH FIDELITY: two measured false-green channels, each a
+    # way for a REAL path to be compared as a DIFFERENT path. Both are
+    # parser bugs rather than rule gaps, which is why they get dims:
+    # the rule was always right, the reading of git's output was not.
+    for label, smuggled_rel, needle in (
+        # a LEADING SPACE on the WHOLE path: a top-level directory
+        # literally named " v3" is a distinct tree, not even under the
+        # testkit prefix, yet strip() makes it compare equal
+        ("instrument-path-leading-space", " v3/src/testkit/hook.ts", "OUTSIDE"),
+        # a TRAILING SPACE: a different file in the same directory,
+        # aliased onto the declared member by the same strip()
+        ("instrument-path-trailing-space", "v3/src/testkit/hook.ts ", "OUTSIDE"),
+        # U+0085 (NEL) is a line separator to python's splitlines() and
+        # NOT to git: a line-oriented parse reads the prefix as a legal
+        # member and silently drops the remainder
+        (
+            "instrument-path-unicode-newline",
+            "v3/src/testkit/hook.ts\u0085hidden.ts",
+            "OUTSIDE",
+        ),
+        # a CR inside a real path: text=True would translate it to
+        # LF before any -z parsing ran, aliasing this onto the
+        # declared member. Reading BYTES is what closes it.
+        (
+            "instrument-path-carriage-return",
+            "v3/src/testkit/hook.ts\rhidden.ts",
+            "OUTSIDE",
+        ),
+    ):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            pdir = root / "packets"
+            pdir.mkdir()
+            packet = pdir / "ch14-p9-test.md"
+            (root / "x.txt").write_text("x", encoding="utf-8")
+            testkit = root / "v3" / "src" / "testkit"
+            testkit.mkdir(parents=True)
+            (testkit / "hook.ts").write_text("export const h = 1\n", encoding="utf-8")
+            if not (
+                _git_ok(root, "init", "-q")
+                and _git_ok(root, "add", "-A")
+                and _git_ok(root, "commit", "-q", "-m", "base")
+            ):
+                failures.append(f"selftest git fixture setup failed ({label})")
+                continue
+            smuggled = root / smuggled_rel
+            try:
+                smuggled.parent.mkdir(parents=True, exist_ok=True)
+                smuggled.write_text("export const smuggled = 1\n", encoding="utf-8")
+            except OSError:
+                failures.append(
+                    f"selftest could not create the {label} fixture path — the dim did NOT run"
+                )
+                continue
+            _git_ok(root, "add", "-A")
+            _git_ok(root, "commit", "-q", "-m", "instrument")
+            packet.write_text(
+                '# p\n\n```json\n{"mutation_boundary": {"files": ["x.txt"]}}\n```\n'
+                '\n```json\n{"packet_metrics": {"class": "t", "main_thread_model": "m"}}\n```\n'
+                '\n```json\n{"instrument_manifest": {"files": '
+                '["v3/src/testkit/hook.ts"]}}\n```\n',
+                encoding="utf-8",
+            )
+            (root / "x.txt").write_text("x-built", encoding="utf-8")
+            _git_ok(root, "add", "-A")
+            _git_ok(root, "commit", "-q", "-m", "build")
+            checker = Checker()
+            check_post_build(packet, _git_out(root, "rev-parse", "HEAD"), checker)
+            assert_red(label, checker.errors, needle)
+
     # ---- P8 BUILD-BOUNDARY path fidelity: the aliasing family on the
     # sink that audits every packet build commit. Both fixtures commit
     # a REAL file whose path only LOOKS like the declared member.
@@ -3647,6 +4164,134 @@ def run_selftest() -> int:
             checker = Checker()
             check_post_build(packet, _git_out(root, "rev-parse", "HEAD"), checker)
             assert_red(label, checker.errors, "OUTSIDE")
+
+    # ---- P12 MODE: an added GITLINK (submodule pointer, 160000)
+    # satisfies path + add-only while its content lives in ANOTHER
+    # repository entirely
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp) / "outer"
+        inner = Path(tmp) / "inner"
+        for d in (root, inner):
+            d.mkdir(parents=True)
+        (inner / "f.txt").write_text("inner", encoding="utf-8")
+        pdir = root / "packets"
+        pdir.mkdir()
+        packet = pdir / "ch14-p9-test.md"
+        (root / "x.txt").write_text("x", encoding="utf-8")
+        inner_ok = (
+            _git_ok(inner, "init", "-q")
+            and _git_ok(inner, "add", "-A")
+            and _git_ok(inner, "commit", "-q", "-m", "inner")
+        )
+        if not (
+            inner_ok
+            and _git_ok(root, "init", "-q")
+            and _git_ok(root, "add", "-A")
+            and _git_ok(root, "commit", "-q", "-m", "base")
+        ):
+            failures.append("selftest git fixture setup failed (instrument-gitlink)")
+        else:
+            # A BARE gitlink, staged straight into the index: `submodule
+            # add` would also write a root .gitmodules, which the PATH
+            # leg rejects first — and then this dim would be proving the
+            # path check a second time instead of the mode check
+            inner_sha = _git_out(inner, "rev-parse", "HEAD")
+            added = bool(inner_sha) and _git_ok(
+                root, "update-index", "--add", "--cacheinfo",
+                f"160000,{inner_sha},v3/src/testkit/vendored",
+            )
+            if not added:
+                # a git build refusing the staged gitlink is an
+                # ENVIRONMENT limit, never a silent pass — the dim stays
+                # unexercised and says so
+                failures.append(
+                    "selftest could not stage a gitlink fixture (update-index refused) "
+                    "— the instrument-commit-adds-gitlink dim did NOT run"
+                )
+            else:
+                _git_ok(root, "commit", "-q", "-m", "instrument-gitlink")
+                packet.write_text(
+                    '# p\n\n```json\n{"mutation_boundary": {"files": ["x.txt"]}}\n```\n'
+                    '\n```json\n{"packet_metrics": {"class": "t", "main_thread_model": "m"}}\n```\n'
+                    '\n```json\n{"instrument_manifest": {"files": '
+                    '["v3/src/testkit/vendored"]}}\n```\n',
+                    encoding="utf-8",
+                )
+                (root / "x.txt").write_text("x-built", encoding="utf-8")
+                _git_ok(root, "add", "-A")
+                _git_ok(root, "commit", "-q", "-m", "build")
+                checker = Checker()
+                check_post_build(packet, _git_out(root, "rev-parse", "HEAD"), checker)
+                assert_red(
+                    "instrument-commit-adds-gitlink",
+                    checker.errors,
+                    "non-ORDINARY-FILE",
+                )
+
+    # ---- P12: the REAL build topology — the packet file does not
+    # exist at the instrument commit at all and is ADDED by the build
+    # commit. The green lane above starts from a packet already
+    # tracked at base, so it does not exercise absent→NEW; a false red
+    # here would only surface at the actual build close.
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        pdir = root / "packets"
+        pdir.mkdir()
+        (root / "x.txt").write_text("x", encoding="utf-8")
+        if not (
+            _git_ok(root, "init", "-q")
+            and _git_ok(root, "add", "-A")
+            and _git_ok(root, "commit", "-q", "-m", "base")
+        ):
+            failures.append("selftest git fixture setup failed (instrument-absent-packet)")
+        else:
+            hook = root / "v3" / "src" / "testkit"
+            hook.mkdir(parents=True)
+            (hook / "hook.ts").write_text("export const h = 1\n", encoding="utf-8")
+            _git_ok(root, "add", "-A")
+            _git_ok(root, "commit", "-q", "-m", "instrument-landing")
+            packet = pdir / "ch14-p9-test.md"
+            packet.write_text(
+                '# p\n\n```json\n{"mutation_boundary": {"files": ["x.txt"]}}\n```\n'
+                '\n```json\n{"packet_metrics": {"class": "t", "main_thread_model": "m"}}\n```\n'
+                '\n```json\n{"instrument_manifest": {"files": ["v3/src/testkit/hook.ts"]}}\n```\n',
+                encoding="utf-8",
+            )
+            (root / "x.txt").write_text("x-built", encoding="utf-8")
+            _git_ok(root, "add", "-A")
+            _git_ok(root, "commit", "-q", "-m", "build")
+            checker = Checker()
+            check_post_build(packet, _git_out(root, "rev-parse", "HEAD"), checker)
+            if checker.errors:
+                failures.append(
+                    f"selftest green NOT green: real absent→NEW build topology "
+                    f"({checker.errors[0]})"
+                )
+
+    # ---- P12: a ROOT build commit declaring the exception is
+    # unsatisfiable — nothing can carry the instrument
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        pdir = root / "packets"
+        pdir.mkdir()
+        packet = pdir / "ch14-p9-test.md"
+        packet.write_text(
+            '# p\n\n```json\n{"mutation_boundary": {"files": ["x.txt", "packets/ch14-p9-test.md"]}}\n```\n'
+            '\n```json\n{"packet_metrics": {"class": "t", "main_thread_model": "m"}}\n```\n'
+            '\n```json\n{"instrument_manifest": {"files": ["v3/src/testkit/hook.ts"]}}\n```\n',
+            encoding="utf-8",
+        )
+        (root / "x.txt").write_text("x", encoding="utf-8")
+        if not (
+            _git_ok(root, "init", "-q")
+            and _git_ok(root, "add", "-A")
+            and _git_ok(root, "commit", "-q", "-m", "root")
+        ):
+            failures.append("selftest git fixture setup failed (instrument-root)")
+        else:
+            checker = Checker()
+            check_post_build(packet, _git_out(root, "rev-parse", "HEAD"), checker)
+            assert_red("instrument-manifest-no-parent", checker.errors, "NO parent")
 
     # ---- P8 build-close metrics gate (ch13 boundary — the p1b
     # missing-block breach): zero metrics blocks at the audited commit
