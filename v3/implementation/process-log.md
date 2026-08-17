@@ -6015,3 +6015,143 @@ final CLEAN.
   silently dead rather than breaking (an unnecessary cast still
   compiles). Worth anticipating wherever a packet defers, diverges, or
   leaves something to prose.
+
+- 2026-08-17 · ch14-p2a authoring · THE TRIAGE RULE HAD NO SURFACE. §3's
+  "a round folding ~everything is a triage-inspection signal, never a
+  quality sign" was violated in three consecutive panel rounds and
+  stayed invisible, because no round-report field carries the ratio.
+  Each fold was a whole-file rewrite, so each round's ~35 findings ran
+  ~20 fold-byproducts of the previous fold — the loop converged on the
+  packet's substance while chasing its own last move. TWO fixes, the
+  user's additions at the round-3 report (2026-08-17): (i) the round
+  header gains a FOLD RATIO (folded / accepted) from round 4 on, so the
+  signal is readable at the round it happens rather than three rounds
+  later — ReviewPacket's Report block and its validity gate edited in
+  the same act; (ii) the standing lesson beside it, not yet a rule:
+  a TARGETED EDIT generates fewer byproducts than a rewrite, so fold
+  size is itself a review-cost lever. Boundary review decides whether
+  (ii) becomes a rule and whether the ratio wants a threshold
+
+- 2026-08-17 · ch14-p2a approve · TWO ITEMS ROUTED TO THE BOUNDARY
+  REVIEW (the ratifier's routing at this approve, explicitly NOT
+  conditions on the act). (1) An INSTRUMENT-ADMISSION rule, mirroring
+  ADR-019 D7's form: a new checker or guard is admitted only with a
+  NAMED DEFECT CLASS, a BACKING INCIDENT OR MEASUREMENT, and a
+  CHEAPEST-ALTERNATIVE comparison — and retroactively, this chapter's
+  accumulated instruments get one pass under that test. The gap it
+  closes: ADR-019 governs declaration constructs, nothing governs
+  verification apparatus, so instruments accrete on plausibility.
+  (2) THREE NAMED TRIM CANDIDATES from ch14-p2a's K17, to be reviewed
+  there rather than trimmed now — the gate-time baseline RECOMPUTATION
+  leg, the per-trace receipt GRANULARITY (exact commands + exit codes),
+  and the SEPARATE negative probes for the erasure sub-step. The
+  instrument's CORE is justified by measured recurrence (p2b's two new
+  entry classes, P3's named golden-trace re-pins); these three tiers are
+  where the ROI question stays open. ch14-p2b is authored in light of
+  whatever the boundary rules — a live dependency, not a note
+
+- 2026-08-17 · ch14-p2a approve · WHAT AN "EXCEPTION" COSTS, MEASURED —
+  entered as DATA for the boundary review's ROI question, recorded
+  independently of how the last round was decided. The plan §14.4
+  second named exception (the instrument-landing commit) took FOUR
+  review rounds on one exception class before its guard held, and the
+  finding curve is the point: the rounds did not repeat each other,
+  they walked one claim inward. Round 1 fixed a git-topological
+  impossibility (one commit cannot both introduce an instrument and be
+  what it baselines). Round 2 found the confinement's audit COULD NOT
+  RUN — the ratified `--post-build` path refuses any commit that does
+  not change the packet file, and the instrument commit by definition
+  does not carry it, so the machine-checkability claim named a check
+  that never executed. Round 3 found the freshly-built check was
+  PATH-ONLY: it would have passed a total rewrite or deletion of an
+  existing testkit file, and the barrel alone has 35 importers. Round 4
+  found the freshly-added status check MODE-BLIND: an added symlink or
+  gitlink passes path and add-only while its bytes live outside the
+  tree. ONE SHAPE UNDERNEATH ALL FOUR: a confinement asserted in prose,
+  with nothing measuring it — each round closed the stated claim and
+  exposed the next unstated one. THE NUMBER IS THE FINDING: an
+  exception to the one-commit rule cost four adversarial rounds and
+  three checker legs to make honest, and that is the real price of an
+  "exception" in this system — it belongs in the instrument-admission
+  discussion beside the admission tests themselves, because it is the
+  denominator those tests are weighed against
+
+- 2026-08-17 · ch14-p2a approve · A STOPPING RULE, DECLARED BY THE
+  RATIFIER at the fourth round rather than discovered at the sixth.
+  Further findings on the instrument-landing exception class ROUTE TO
+  THE BOUNDARY REVIEW by default instead of opening another round —
+  UNLESS a finding names a genuine FALSE-GREEN CHANNEL, one that
+  undermines what the gate claims to prove. The series ends; the escape
+  hatch stays. Why the shape matters: an open-ended "keep hardening
+  until clean" has no fixed point when each round's fix is the next
+  round's surface, and a flat "stop now" would suppress exactly the
+  class the guard exists for. The rule separates COST from SAFETY —
+  refinement is deferrable, a false green is not
+
+- 2026-08-17 · ch14-p2a approve · THE STOPPING RULE'S FIRST APPLICATION,
+  the same day it was declared — and the escape hatch fired. The review
+  run held under the rule separated its findings itself: THREE
+  FALSE-GREEN channels (acted on, below) and three ROUTE items (parked
+  here, not folded). What the split bought: the round was not decided by
+  whoever argued hardest for their finding, because the LABEL carried
+  the decision, and the reviewer was told the labelling rule in advance
+  so an inflated label would have been visible as inflation. The three
+  false greens were all in the round-4 fix itself, and two were MY
+  parser rather than the rule: a `.strip()` on the path aliased distinct
+  files onto a declared manifest member (" v3/src/testkit/hook.ts" is a
+  different tree, outside the prefix entirely), and a line-oriented read
+  split on U+0085 — a separator PYTHON honours and GIT does not — so a
+  path carrying one passed as a legal member with its remainder silently
+  dropped. Both closed by parsing `--raw -z` and never normalizing a
+  path. The third was in the RECEIPT, not the audit: `pnpm v3:test` is
+  `vitest run` alone, so the "both added files are typechecked" claim
+  had no backing command — a type-invalid added file is green under
+  vitest and red under `tsc --noEmit`. Closed by requiring `pnpm
+  v3:typecheck` beside it. THE LESSON UNDERNEATH, and it is not the same
+  as the earlier rounds': those found the RULE unstated; this one found
+  the rule stated correctly and the READING of git's output wrong. A
+  guard can be right in every sentence and still false-green on how it
+  parses its own evidence — which is why "the checker exists" was never
+  the claim worth making, and why a fix to a guard needs the same
+  adversarial pass as the guard did
+
+- 2026-08-17 · ch14-p2a approve · THREE ITEMS ROUTED under the stopping
+  rule (labelled ROUTE by the review, parked for the boundary review
+  rather than folded). (1) The instrument audit checks `changed ⊆
+  manifest`, so a hook may land WITHOUT its declared selftest; whether
+  the manifest should be an EXACT SET rather than a bound, and whether
+  selftest presence should be its own rule, is a contract-grain
+  question. (2) The template still calls the "no declaration bytes"
+  claim structural in one place while conceding two paragraphs later
+  that the general testkit prefix admits a `.d.ts` or a config file —
+  a prose correction whose right home is the same pass that decides
+  (1). (3) The symlink and gitlink fixtures do not separately assert
+  their git-commit step; a diagnostic weakness that cannot cause a
+  silent green (the mode-specific substring assert and the pinned dim
+  counter both red it), so it waits
+
+- 2026-08-17 · ch14-p2a APPROVE · THE SIX NEW-DECISION ROWS ADMITTED AS
+  SUBJECTS, and the reading's LETTER recorded because the letter is what
+  a future packet will cite, not the outcome. They are admitted on TWO
+  properties, both required: they share ONE FORCING ORIGIN — the
+  location the arrival spine touches, so the decisions are forced by
+  where the work lands rather than chosen — and EACH ROW NAMES ITS OWN
+  RISK. A future packet citing this precedent must demonstrate THOSE
+  TWO PROPERTIES, never the count: "ch14-p2a carried six" is not an
+  argument, and six rows without a shared forcing origin are a mass
+  however well each is written. K17 is admitted WITH an explicit ROI
+  reservation — it is verification apparatus rather than domain work,
+  it cost six review rounds, and its three named trim candidates are
+  already routed to the boundary review
+
+- 2026-08-17 · ch14-p2a APPROVE · single-packet allowed RATIFIED on
+  clause 6's SEPARATE reading, with its FALSIFIER noted in the record:
+  the closure proof FAILS if K16 is deferred. ROUTED as a rule
+  candidate: clause 6 over MULTIPLE HARD STOPS is carried only WITH a
+  stated falsifier — what this packet offered voluntarily becomes the
+  EXPECTED FORM. The gap it closes: "SEPARATE" means "would need its own
+  closure elsewhere", which is a strong instrument and therefore a
+  dangerous precedent — any tightly coupled work can be described as
+  inseparable. A falsifier is what distinguishes a real inseparability
+  claim from a lenient reading, because it names in advance the deferral
+  that would break the proof
