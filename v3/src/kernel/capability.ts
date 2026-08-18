@@ -31,8 +31,15 @@ export function capability(
     return profile;
   }
   const step = ownEntry(template.steps, stepId);
-  if (step !== undefined && role === step.role) {
-    return Object.keys(step.transitions);
+  // K11 (ch14-p2a) — THE SILENT CELL, written out because the compiler
+  // cannot surface it: with `role` optional, `role === step.role` is
+  // false for every role-less step, so the fall-through below would
+  // hand back an EMPTY capability set without anything looking wrong.
+  // The role-less answer IS empty at this packet (a gate's vocabulary
+  // is `decisions`, routed at p2b), but it is empty BY CLASS and not by
+  // a failed comparison, so the branch says which.
+  if (step !== undefined && step.role !== undefined && role === step.role) {
+    return Object.keys(step.transitions ?? {});
   }
   return [];
 }

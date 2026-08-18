@@ -16,6 +16,17 @@ import { deriveEmitDigest } from "./emit/index.js";
 import { createGateRegistry } from "./gates/index.js";
 import { createKernel, deriveDispatchIntent } from "./kernel/index.js";
 import { openStore } from "./store/index.js";
+import type { DispatchIntent, HumanDecisionRequest } from "./domain/index.js";
+
+/**
+ * K6 (packet ch14-p2a): `committed.intent` widened to
+ * `DispatchIntent | HumanDecisionRequest | null`. This narrows on a
+ * DISCRIMINATING key — `packet`, which only a dispatch carries — never
+ * on truthiness and never by a bare type assertion.
+ */
+const asDispatch = (intent: DispatchIntent | HumanDecisionRequest | null | undefined) =>
+  intent !== null && intent !== undefined && "packet" in intent ? intent : null;
+
 import {
   createControlledClock,
   createScriptedProcessGateRunner,
@@ -218,7 +229,7 @@ describe("l2b golden trace — the context-block render end-to-end (packet ch13-
       )) as Extract<Outcome, { kind: "committed" }>;
       expect(pass.kind).toBe("committed");
       expect(pass.version).toBe(3);
-      expect(pass.intent?.packet.contextBlocks).toEqual(REVIEW_BLOCKS_AUTHORIZED);
+      expect(asDispatch(pass.intent)?.packet.contextBlocks).toEqual(REVIEW_BLOCKS_AUTHORIZED);
 
       // The committed rows the run produces, asserted beside the render.
       const converged = (await kernel.handle(
@@ -267,10 +278,10 @@ describe("l2b golden trace — the context-block render end-to-end (packet ch13-
       // The WHOLE rendered document changes with authority — which is
       // what this leg proves, while the per-rule authority family proves
       // the predicate itself on its own documents.
-      expect(pass.intent?.packet.contextBlocks).toEqual(REVIEW_BLOCKS_NARROWED);
+      expect(asDispatch(pass.intent)?.packet.contextBlocks).toEqual(REVIEW_BLOCKS_NARROWED);
       // The silenced event is STILL a navigation affordance on the packet:
       // the two fields disagreeing on purpose is the point.
-      expect(pass.intent?.packet.availableOps).toEqual(["PASS", "CONVERGED"]);
+      expect(asDispatch(pass.intent)?.packet.availableOps).toEqual(["PASS", "CONVERGED"]);
     } finally {
       close();
     }

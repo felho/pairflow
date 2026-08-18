@@ -248,13 +248,22 @@ describe("the ch14-p1 realized row (the l3 definition-side slice)", () => {
     });
   });
 
-  it("the OTHER four l3 rows stay pending — they are ch14-P2's by their own C-rows", () => {
-    for (const id of [
-      "l3/wait step + RESUME_WAIT",
-      "l3/apply_target_entry_effects(...)",
-      "l3/HumanDecisionRequest",
-      "l3/DECISION_REQUEST / DECISION_MADE",
-    ]) {
+  it("ch14-p2a flips exactly TWO l3 rows, each pinned to its realized name", () => {
+    // Pinned VERBATIM, because the key-set lane cannot see a
+    // wrong-but-existing target: a row flipped to the wrong type would
+    // stay green everywhere else.
+    expect(DOMAIN_REGISTRY["l3/apply_target_entry_effects(...)"]).toEqual({
+      kind: "realized",
+      typeName: "ArrivalEffect",
+    });
+    expect(DOMAIN_REGISTRY["l3/HumanDecisionRequest"]).toEqual({
+      kind: "realized",
+      typeName: "HumanDecisionRequest",
+    });
+  });
+
+  it("the remaining two l3 rows stay pending — they are ch14-p2b's by their own C-rows", () => {
+    for (const id of ["l3/wait step + RESUME_WAIT", "l3/DECISION_REQUEST / DECISION_MADE"]) {
       expect(DOMAIN_REGISTRY[id], id).toEqual({ kind: "pending" });
     }
   });

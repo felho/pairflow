@@ -1122,3 +1122,97 @@ describe("bundle transcript pass-through fidelity — mixed fact + transition ro
     expect(bundle?.transcript).toHaveLength(mixedDetail.transcript.length);
   });
 });
+
+describe("the DECISION_REQUEST row class (packet ch14-p2a, K16)", () => {
+  const parkedStore = async (
+    request: Record<string, unknown>,
+  ): Promise<{ store: StorePort; close: () => void }> => {
+    const handle = openStore(":memory:", createControlledClock(0));
+    await handle.store.createInstance(instance);
+    await handle.store.commitTransition({
+      instanceId: "inst-1",
+      expectedVersion: 1,
+      envelope: env("a1", "PASS", 1),
+      payloadDigest: "sha256:d",
+      gateDecisions: [],
+      arrival: {
+        newCurrentStep: "review",
+        newRound: 1,
+        newKernelStatus: "WAITING",
+        newTerminalDisposition: null,
+        newWait: {
+          kind: "human_decision",
+          requestedBy: "review",
+          resumeEvents: ["approve"],
+          requestRef: "req-1",
+        },
+        issuedAgentConfig: {},
+        decisionRequest: request,
+      } as never,
+    });
+    return { store: handle.store, close: () => handle.close() };
+  };
+
+  const BASE_REQUEST = {
+    requestRef: "req-1",
+    recipient: "operator",
+    decisions: ["approve", "reject"],
+    recommendation: "approve",
+    recommendationSource: { fromStep: "implement", eventType: "PASS" },
+  };
+
+  it("projects the sanitized fields and CONFINES the context surface to a presence bit", async () => {
+    const seed = await parkedStore({ ...BASE_REQUEST, contextRef: { secret: MARKER_A } });
+    const diag = emptyDiag();
+    const bundle = await exportWith(seed.store, diag.reader);
+    const row = bundle?.transcript.find((r) => "entryKind" in r && r.entryKind === "DECISION_REQUEST");
+
+    // THE TWO-DIRECTION PROOF the confinement claim rests on, over the
+    // surfaces this packet OWNS — never a policy pair: PRESENT in the
+    // stored row, ABSENT from the bundle.
+    const detail = await seed.store.getInstanceDetail("inst-1");
+    const stored = detail?.transcript[1];
+    expect(stored?.entryKind === "DECISION_REQUEST" ? stored.contextRef : undefined).toEqual({
+      secret: MARKER_A,
+    });
+    expect(JSON.stringify(bundle)).not.toContain(MARKER_A);
+    expect(row).toStrictEqual({
+      seq: 2,
+      entryKind: "DECISION_REQUEST",
+      requestRef: "req-1",
+      recipient: "operator",
+      decisions: ["approve", "reject"],
+      recommendation: "approve",
+      recommendationSource: { fromStep: "implement", eventType: "PASS" },
+      hadContext: true,
+      committedAt: 0,
+    });
+    seed.close();
+    diag.close();
+  });
+
+  it("the presence bit tells 'omitted' from 'never had one'", async () => {
+    const seed = await parkedStore(BASE_REQUEST);
+    const diag = emptyDiag();
+    const bundle = await exportWith(seed.store, diag.reader);
+    expect(bundle?.transcript.find((r) => "entryKind" in r && r.entryKind === "DECISION_REQUEST")).toMatchObject({
+      hadContext: false,
+    });
+    seed.close();
+    diag.close();
+  });
+
+  it("the omission is UNIFORM under the pass-through policy too — fail-closed, structurally", async () => {
+    const seed = await parkedStore({ ...BASE_REQUEST, contextRef: { secret: MARKER_A } });
+    const diag = emptyDiag();
+    // The redaction seam's only member takes an ENVELOPE, which an
+    // envelope-less row cannot supply — so no policy can be consulted
+    // about this field without widening the port. Widening it is a
+    // NAMED DEFERRAL, routed to the chapter that next touches the
+    // bundle; until then the value is omitted for everyone.
+    const bundle = await exportWith(seed.store, diag.reader, devPassthroughRedactionPolicy);
+    expect(JSON.stringify(bundle)).not.toContain(MARKER_A);
+    seed.close();
+    diag.close();
+  });
+});

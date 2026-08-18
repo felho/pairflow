@@ -324,6 +324,30 @@ port-shape change, the `[d-gc-*]` paper declarations, a per-surface
 parity gate. Never a while-we-are-here act (the routing entry's own
 rule).
 
+**Eighth and ninth named candidates (added at ch14-p2a pre-approval,
+2026-08-16 — the two `later-chapter` routes that packet takes, landing
+their plan-map rows in the routing act itself per the §7 rule; the
+packet's own K18 and K16 carry the reasoning, this map carries the
+obligation):**
+
+- **A non-agent `start` step refused at ADMISSION.** ch14-p2a closes
+  the reachable defect with a fail-loud kernel guard at each activation
+  commit, because a declaration rule does not belong in a packet whose
+  boundary excludes the definition plane. The durable home is an
+  admission cross-rule: a template whose `start` step carries a `type`
+  is refused at `admit_definition`, which retires the kernel guard.
+  Scope: the next definition-plane-touching chapter's ordinary work.
+  Never a while-we-are-here act.
+- **The bundle redaction seam and envelope-less rows.** The debug
+  bundle's policy predicate takes an ENVELOPE, so no policy can be
+  consulted about a field on an envelope-less transcript row;
+  ch14-p2a omits the field uniformly, fail-closed, under both shipped
+  policies. The durable question — may a pass-through policy carry a
+  decision request's context surface, and what shape does the seam take
+  to ask it — belongs to the next bundle-touching chapter, together
+  with the port change and both shipped policies' suites. Scope: that
+  chapter's ordinary work. Never a while-we-are-here act.
+
 **Critical-path note (recorded at the ch13 boundary walk, 2026-08-13
 — sequencing input for the next-chapter derivation; chapter entry
 stays the owner's explicit act):** the MVP cut's own remaining
@@ -3442,7 +3466,7 @@ wires what the kernel realizes — the ch13 producer-precedes-consumer
 reading; the §8.2 no-speculative-keys stance binds at CHAPTER grain,
 so P1's keys being consumed at P2/P3 is inside the stance, not an
 exception to it). One packet = packet file + code + tests in ONE
-commit, with ONE named exception class: the schema re-lock a
+commit, with TWO named exception classes. THE FIRST: the schema re-lock a
 declaration edit owes each contract bound to it lands in a FOLLOW-UP
 commit, because its block records the build commit's own sha (the
 form authority's §4 shape), together with the form-authority prose
@@ -3451,6 +3475,128 @@ a packet boundary; its choreography is recorded in the
 owning packet's own rows and rides its approve rather than being
 settled here (aligned at ch14-p1 pre-approval, 2026-08-15; the
 ch13-p1a precedent). In-chapter splits stay the loop's per §5.5.
+
+**THE SECOND named exception class — the INSTRUMENT-LANDING commit
+(aligned at ch14-p2a pre-approval, 2026-08-17):** where a packet's
+acceptance proof requires a baseline RECOMPUTABLE at a pre-change ref,
+the measuring instrument must EXIST at that ref — and a single commit
+cannot both introduce an instrument and be the change the instrument
+baselines. The reason is stated here so the exception reads as
+time-forced rather than convenient, and the two exceptions are mirror
+images: the schema re-lock is forced AFTER the build because its block
+records the build commit's own sha; this one is forced BEFORE it
+because a ref cannot carry an instrument landed later. Every
+alternative breaks a ratified rule — a sibling commit is not an
+ancestor, and overlaying the instrument onto an old checkout means the
+cited ref does not carry it and the instrument's provenance is
+unratified.
+THE EXCEPTION IS DEFINED BY CONTENT, not by intent, and the definition
+is machine-checkable: the instrument commit carries BEHAVIOUR-PRESERVING
+TESTKIT ADDITIONS ONLY — the measuring hook and its selftest — and NO
+product code, NO declaration bytes, and NOT the packet file. THE
+CARRIER OF THAT DEFINITION IS A MACHINE BLOCK, `instrument_manifest`,
+and the audit leg that reads it was BUILT for this exception rather
+than assumed: the ratified `--post-build` path could not check the
+instrument commit at all — it refuses any commit that does not change
+the packet file, which the instrument commit by definition does not —
+so the first form of this paragraph named a check that could never run
+(caught by the pre-approval arm, 2026-08-17, and closed in the same
+act). The realized shape binds the two commits together: declaring the
+manifest makes the BUILD commit's audit also audit its FIRST PARENT —
+nonempty change list, no packet file, a subset of the manifest whose
+own paths must all sit under the testkit (so "no product code" is
+refused at DECLARATION time and not merely at audit time), and
+ADDITIONS ONLY (every entry a git addition), and ORDINARY BLOBS ONLY
+(no symlink, no gitlink). THE THREE AXES ARE ONE CLAIM MEASURED THREE
+WAYS, and each was found open in turn at this pre-approval rather than
+reasoned about in advance: without add-only, a commit may modify or
+delete an existing testkit file, which is inside the manifest by path
+while changing what every existing consumer of that file sees; without
+the mode leg, an added symlink or gitlink satisfies both other axes
+while its bytes live where the confinement never looks. One audit, two
+commits, nothing optional to remember; a product path, a non-addition,
+or a non-blob in an instrument commit is an audit failure, not a
+judgement call. Beside it, the receipt for what no path check reaches:
+THE INSTRUMENT COMMIT'S REF MUST CARRY A GREEN `pnpm v3:test` AND A
+GREEN `pnpm v3:typecheck`, both recorded in the owning packet's Build
+record. TWO COMMANDS, because the suite alone is `vitest run` and a
+type-invalid added file passes it while `tsc --noEmit` refuses it —
+requiring only the first would leave the typecheck claim below
+unbacked, which is a false green in the receipt rather than in the
+audit. AND NEITHER COMMAND'S EXIT CODE IS THE EVIDENCE: a file of
+skipped cases exits zero from both, so the instrument selftest's proof
+of execution is the runner's machine-read per-file summary — passed
+> 0 and skipped = 0 — carried in the Build record. Its reach is stated
+exactly, because this is where earlier forms of this paragraph
+overclaimed in BOTH directions. It is not a proof that the added files
+are correct — that is the instrument's own selftest's job, shipped in
+the same commit. And it is not blind to them either: an added test
+file is DISCOVERED BY THE EXISTING GLOB (`src/**/*.test.ts`), and both
+added files are typechecked under `include: ["src"]`, so the suite at
+that ref runs the new selftest as well as every old test. That same
+glob is why the receipt is REQUIRED and not optional — an addition can
+change what an existing run does precisely because existing
+configuration picks it up. What remains after all of it is a human
+read of the added files, named as a residual rather than a gate. The
+build commit that follows is
+the ordinary one-commit shape, packet file included. Like the first
+exception, this is an act inside the order rather than a packet
+boundary, and its per-packet choreography is recorded in the owning
+packet's own rows.
+
+**The instrument-landing exception, MEASURED AGAINST ITS OWN CONTENTS
+(aligned at ch14-p2a build, 2026-08-18):** the exception above is kept,
+and one thing it was built to carry is now known NOT to fit inside it.
+The ch14-p2a gate specified a leg that RECOMPUTES a baseline digest at
+the pre-change ref, so that a cited ref would have to reproduce its own
+number rather than merely be an ancestor. That leg is DROPPED, and the
+reason belongs here rather than only in the packet: recomputing at the
+pre-change ref requires the measurement to be TAKEN there, and taking it
+requires wiring inside an EXISTING file — while the instrument commit
+that puts the measuring hook at that ref is ADD-ONLY by the very
+confinement that makes this exception auditable. THE HOOK IS ADDITIVE;
+ITS CALL SITE IS NOT. So the exception cannot carry an instrument whose
+measurement must modify something that already exists, and that is a
+PROPERTY OF THE EXCEPTION rather than a defect of one packet's gate.
+WHAT IS NO LONGER PROVEN IS NAMED, not inherited silently: a post-hoc
+FABRICATED BASELINE — a receipt asserting a digest never computed at the
+ref it cites. What stands in its place is less, and is written as less:
+the gate's TEXT half remains the primary re-pin guard (the defect class
+being a changed expectation, which bytes catch and digests do not), the
+instrument commit's ancestry remains a cheap precondition it always was,
+and the receipt's claim is scoped to the equality it actually evidences.
+Two alternatives were declined with their reasons recorded — relaxing
+add-only would reopen a confinement whose carve-out is semantically
+uncheckable, and building substitute proof machinery at the ROOT of the
+evidence chain, at the last step of a build, runs against this chapter's
+measured new-mechanism error rate.
+
+**The ch14-P2 split, EXECUTED (aligned at ch14-p2a pre-approval,
+2026-08-16):** the in-chapter split pre-authorization — §5.5's, kept
+by the ORDER paragraph above the two exception classes — was
+taken — the combined `ch14-P2` scope trips six risk-gate hard stops
+and the implementation-closure proof fails. WHICH stops, the per-part
+re-evaluation, the closure proof and the coverage-union partition are
+materialized ONCE, in `packets/ch14-p2a-arrival-spine.md`'s
+`## Sizing/risk`, and are deliberately not restated here — not even in
+summary — so the two cannot drift. Shape: `foundation → delivery`,
+depth 1, coverage union preserved and declared.
+
+**The prose line above is HISTORY from this point:** its `ch14-P2` row
+never acquires a packet file, and its `Order:` sentence is superseded by
+the Order line below. **This is ch14's LIVE Packets-and-flow-mode
+table**, and the mechanical next-packet derivation reads it.
+
+| Packet | Content | Mode |
+|---|---|---|
+| ch14-p2a | the arrival half: `apply_target_entry_effects` factored out of HANDLE with its golden-trace parity obligation and the machine gate that distinguishes a compiler-forced narrow from a re-pin, `park_for_human_decision` / `park_for_wait`, `post_commit_output` and the `HumanDecisionRequest` value, the DECISION_REQUEST transcript class with the chapter's one fenced schema bump, the debug bundle's third row class, the wait record's opened kind seam, the binding-coverage role-less skip with the activation guard it makes necessary, the `Step` type relaxation ch14-P1 deferred, and the registry flips it owns | inherited from the `ch14-P2` row (flag-free approve → autonomous build, measurement; the §5.5 fallbacks stand); predicted: projection (basis: the ratified `ch14-human-decision` contract). The inherited letter REACHES this packet and its §5.5 condition then fails at authoring: the packet carries six new-decision rows and six `approve-ratified` routes — each enumerated ONCE, in the packet's own header and flags — so the MODE resolves to **human approve** (STOP `4:flagged-approve`), recorded in place at ch14-p2a pre-approval, 2026-08-16, on the ch14-P1 / ch13-p1a precedent. ONE of those routes is the RATIFIER's own binding condition at that approve, recorded here because it originated outside the packet: the compiler-forced-vs-re-pin distinction must be machine-checkable in both halves rather than narrative; its realization is the packet's K17 |
+| ch14-p2b | the delivery half — its content is enumerated ONCE, in `packets/ch14-p2a-arrival-spine.md`'s out-of-scope row, and deliberately not repeated here, so the two cannot drift | inherited from the `ch14-P2` row; predicted: projection |
+| ch14-P3 | the activation: the two operator CLI verbs + the floor's pending-Ask read, the shipped template wiring (`operator` role + `human_approval` + `commit_pending`), the golden-trace re-pins the template change reaches, the journey smoke through the shipped entrypoint | flag-free approve → autonomous build (measurement); predicted: projection (basis: the ratified `ch14-human-decision` contract) — carried UNCHANGED from the prose line's row, which the split does not touch |
+
+Order: ch14-p2a → ch14-p2b → ch14-P3 (the arrival precedes the intents
+that route through it, and the activation wires what the kernel
+realizes — the same producer-precedes-consumer reading the
+P1 → P2 → P3 order already carried).
 
 ### 14.5 Deliverables and DoD
 

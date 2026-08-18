@@ -35,6 +35,8 @@ import type { StorePort } from "../ports/store.js";
 import type { TimeSource } from "../ports/time.js";
 import { admitLoaded } from "./admission.js";
 import { resolveAgentConfig } from "./agentConfig.js";
+import { applyTargetEntryEffects } from "./arrival.js";
+import { postCommitOutput } from "./postCommitOutput.js";
 import { capability } from "./capability.js";
 import { deriveDispatchIntent } from "./dispatchIntent.js";
 import { deriveGateProjection } from "./gateProjection.js";
@@ -491,7 +493,13 @@ export function createKernel(deps: KernelDeps): Kernel {
 
     // Navigation (L0b): does this action exist here? `step` is defined
     // past the state rung; the `?.` is the type-level belt only.
-    const target = step?.transitions[envelope.type];
+    // K11 (ch14-p2a): `transitions` is optional since the class set
+    // opened, and the extra `?.` is not a type-level belt like the one
+    // beside it — it carries MEANING. An actor event arriving at a
+    // `humanGate` or `wait` step finds no transition map at all, and
+    // `no_transition` is the honest answer: those classes are left by
+    // DECISION and RESUME routing (p2b), never by an actor transition.
+    const target = step?.transitions?.[envelope.type];
     if (target === undefined || step === undefined) {
       return { kind: "rejected", reason: "no_transition" };
     }
@@ -506,7 +514,16 @@ export function createKernel(deps: KernelDeps): Kernel {
     }
     // L1 action authorization: the action EXISTS as a transition, but
     // may this role emit it here? Dormant under default derivation.
-    if (!capability(template, step.role, instance.currentStep).includes(envelope.type)) {
+    // A role-less step grants nothing through the transition channel:
+    // `not_authorized` rather than a throw, because the position is a
+    // legitimately admitted step and the actor simply has no authority
+    // there. (Unreachable while the `no_transition` rung above fires
+    // first for the same classes; stated so the ordering is not the
+    // only thing holding it.)
+    if (
+      step.role === undefined ||
+      !capability(template, step.role, instance.currentStep).includes(envelope.type)
+    ) {
       return { kind: "rejected", reason: "not_authorized" };
     }
 
@@ -629,26 +646,6 @@ export function createKernel(deps: KernelDeps): Kernel {
       });
     }
 
-    const terminal = template.terminal.includes(target);
-    // The axis derivation (E3): a terminal arrival takes the COMPLETE
-    // branch (TERMINAL + "done", E4); a non-terminal commit writes
-    // ACTIVE + null. Non-null disposition EXACTLY when TERMINAL — the
-    // type face of the single-write rule (T1).
-    const axis = terminal
-      ? complete()
-      : {
-          newKernelStatus: "ACTIVE" as const,
-          newTerminalDisposition: null,
-        };
-    // K1 (packet ch11-P2c): round advancement is DECLARED transition
-    // semantics — the CURRENT step's admission-normalized flag for the
-    // committed event type, never inferred from target equality (the
-    // ch-4 heuristic retired, C39's ban). `=== true` is explicit-flag
-    // consumption (an admitted map is complete, D3); the `?.` exists only
-    // because the TYPE is shared with the raw pre-admission form.
-    const newRound =
-      step.advancesRound?.[envelope.type] === true ? instance.round + 1 : instance.round;
-
     // C1 (packet ch12-p2): the run profile the kernel ISSUES for this
     // dispatched step — resolved on the OPTIMISTIC commit path, downstream
     // of every synchronous admission guard and the gate pipeline (a
@@ -660,17 +657,34 @@ export function createKernel(deps: KernelDeps): Kernel {
     // equals the packet's effective_agent_config byte-identically.
     const issuedAgentConfig = resolveAgentConfig(template, instance.currentStep, instance);
 
+    // K1 (packet ch14-p2a): the inline arrival is REFACTORED onto the
+    // one shared target-entry rule. `HANDLE` is this packet's only
+    // ARRIVAL inhabitant; the two operator intents join it at p2b, and
+    // what p2a proves is STRUCTURAL — one function, one signature, no
+    // second copy.
+    //
+    // The mint rides INSIDE the restart loop (K2): a CAS-restarted
+    // attempt mints again, so the committed ref is the winning
+    // attempt's and the losing attempt's value is burned from the
+    // shared sequence. Hoisting it out would pin a ref computed against
+    // stale state onto a commit that re-resolved its target.
+    const arrival = applyTargetEntryEffects(
+      { newRequestId },
+      instance,
+      template,
+      { stepId: instance.currentStep, edgeKey: envelope.type },
+      target,
+      "payload" in envelope ? { payload: envelope.payload } : {},
+      issuedAgentConfig,
+    );
+
     const result = await store.commitTransition({
       instanceId: instance.instanceId,
       expectedVersion: instance.version,
       envelope,
       payloadDigest,
       gateDecisions,
-      newCurrentStep: target,
-      newRound,
-      newKernelStatus: axis.newKernelStatus,
-      newTerminalDisposition: axis.newTerminalDisposition,
-      issuedAgentConfig,
+      arrival,
     });
     switch (result.kind) {
       case "duplicate_op":
@@ -682,21 +696,29 @@ export function createKernel(deps: KernelDeps): Kernel {
       case "cas_conflict":
         return "restart";
       case "committed": {
-        // Post-commit intent guard (the l0d HANDLE unit): a TERMINAL
-        // instance derives no intent — `kernel_status = TERMINAL ⇒ none`.
-        if (axis.newKernelStatus === "TERMINAL") {
-          return { kind: "committed", version: result.version, intent: null };
-        }
+        // K5 (packet ch14-p2a): the post-commit assembly must carry the
+        // ARRIVAL's wait — reproducing the pre-ch14 assembly verbatim
+        // would read a PRE-arrival wait and return no Ask at all.
         const committed: WorkflowInstance = {
           ...instance,
-          currentStep: target,
-          round: newRound,
-          kernelStatus: axis.newKernelStatus,
-          terminalDisposition: axis.newTerminalDisposition,
+          currentStep: arrival.newCurrentStep,
+          round: arrival.newRound,
+          kernelStatus: arrival.newKernelStatus,
+          terminalDisposition: arrival.newTerminalDisposition,
+          wait: arrival.newWait,
           version: result.version,
         };
-        const intent = deriveDispatchIntent(committed, template, target, providerRegistry, envelope.payload);
-        return { kind: "committed", version: result.version, intent };
+        return {
+          kind: "committed",
+          version: result.version,
+          intent: postCommitOutput(
+            committed,
+            template,
+            providerRegistry,
+            envelope.payload,
+            arrival.decisionRequest,
+          ),
+        };
       }
     }
   }

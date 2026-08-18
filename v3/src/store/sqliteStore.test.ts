@@ -14,6 +14,27 @@ import type {
 import { deriveEmitDigest } from "../emit/index.js";
 import { createControlledClock } from "../testkit/index.js";
 import { openStore } from "./sqliteStore.js";
+import type { StoreHandle } from "./sqliteStore.js";
+import type {
+  ArrivalEffect,
+  ArrivalEffectFields,
+  DecisionRequestBody,
+} from "../ports/store.js";
+
+/**
+ * K1 (packet ch14-p2a): the arrival effect is BRANDED, and its only
+ * sanctioned producer is `applyTargetEntryEffects` — that is what makes
+ * "the object the store receives is the object the arrival returned" a
+ * property the TYPE carries rather than a lane's aspiration.
+ *
+ * A fixture is not a caller on that path. This file authors effects
+ * directly to drive rules on either side of the port, the same class as
+ * the deliberately-loose builders that author admission-negative input.
+ * The seal lives here ONCE and named, so the bypass is visible instead
+ * of sprinkled through the suite.
+ */
+const arrivalFixture = (fields: ArrivalEffectFields): ArrivalEffect => fields as ArrivalEffect;
+
 
 // ch12-p1b: transcript reads are now the discriminated union
 // TransitionEntry | LifecycleFactEntry. These commitTransition-only
@@ -84,11 +105,14 @@ describe("commitTransition — atomic transition commit (l0a invariant)", () => 
       envelope: envelope("a1", 1),
       payloadDigest: DIGEST,
       gateDecisions: [],
-      newCurrentStep: "review",
-      newRound: 1,
-      newKernelStatus: "ACTIVE",
-      newTerminalDisposition: null,
-      issuedAgentConfig: {},
+      arrival: arrivalFixture({
+        newCurrentStep: "review",
+        newRound: 1,
+        newKernelStatus: "ACTIVE",
+        newTerminalDisposition: null,
+        newWait: null,
+        issuedAgentConfig: {},
+      }),
     });
 
     expect(result).toEqual({ kind: "committed", version: 2 });
@@ -111,11 +135,14 @@ describe("commitTransition — atomic transition commit (l0a invariant)", () => 
       envelope: envelope("b2", 7),
       payloadDigest: DIGEST,
       gateDecisions: [],
-      newCurrentStep: "review",
-      newRound: 1,
-      newKernelStatus: "ACTIVE",
-      newTerminalDisposition: null,
-      issuedAgentConfig: {},
+      arrival: arrivalFixture({
+        newCurrentStep: "review",
+        newRound: 1,
+        newKernelStatus: "ACTIVE",
+        newTerminalDisposition: null,
+        newWait: null,
+        issuedAgentConfig: {},
+      }),
     });
 
     expect(result).toEqual({ kind: "cas_conflict" });
@@ -134,11 +161,14 @@ describe("commitTransition — atomic transition commit (l0a invariant)", () => 
       envelope: envelope("a1", 1),
       payloadDigest: DIGEST,
       gateDecisions: [],
-      newCurrentStep: "review",
-      newRound: 1,
-      newKernelStatus: "ACTIVE",
-      newTerminalDisposition: null,
-      issuedAgentConfig: {},
+      arrival: arrivalFixture({
+        newCurrentStep: "review",
+        newRound: 1,
+        newKernelStatus: "ACTIVE",
+        newTerminalDisposition: null,
+        newWait: null,
+        issuedAgentConfig: {},
+      }),
     });
     await handle.store.commitTransition({
       instanceId: "inst-1",
@@ -146,11 +176,14 @@ describe("commitTransition — atomic transition commit (l0a invariant)", () => 
       envelope: envelope("b2", 2),
       payloadDigest: DIGEST,
       gateDecisions: [],
-      newCurrentStep: "implement",
-      newRound: 2,
-      newKernelStatus: "ACTIVE",
-      newTerminalDisposition: null,
-      issuedAgentConfig: {},
+      arrival: arrivalFixture({
+        newCurrentStep: "implement",
+        newRound: 2,
+        newKernelStatus: "ACTIVE",
+        newTerminalDisposition: null,
+        newWait: null,
+        issuedAgentConfig: {},
+      }),
     });
 
     // op a1 retransmitted with its (now stale) original expectation:
@@ -160,11 +193,14 @@ describe("commitTransition — atomic transition commit (l0a invariant)", () => 
       envelope: envelope("a1", 1),
       payloadDigest: DIGEST,
       gateDecisions: [],
-      newCurrentStep: "review",
-      newRound: 1,
-      newKernelStatus: "ACTIVE",
-      newTerminalDisposition: null,
-      issuedAgentConfig: {},
+      arrival: arrivalFixture({
+        newCurrentStep: "review",
+        newRound: 1,
+        newKernelStatus: "ACTIVE",
+        newTerminalDisposition: null,
+        newWait: null,
+        issuedAgentConfig: {},
+      }),
     });
     expect(result).toEqual({ kind: "duplicate_op" });
     const detail = await handle.store.getInstanceDetail("inst-1");
@@ -182,11 +218,14 @@ describe("commitTransition — atomic transition commit (l0a invariant)", () => 
         envelope: envelope(opId, i + 1),
         payloadDigest: DIGEST,
         gateDecisions: [],
-        newCurrentStep: "review",
-        newRound: 1,
-        newKernelStatus: "ACTIVE",
-        newTerminalDisposition: null,
-        issuedAgentConfig: {},
+        arrival: arrivalFixture({
+          newCurrentStep: "review",
+          newRound: 1,
+          newKernelStatus: "ACTIVE",
+          newTerminalDisposition: null,
+          newWait: null,
+          issuedAgentConfig: {},
+        }),
       });
     }
     const detail = await handle.store.getInstanceDetail("inst-1");
@@ -218,11 +257,14 @@ describe("commitTransition — atomic transition commit (l0a invariant)", () => 
         envelope: envelope("a1", 1),
         payloadDigest: DIGEST,
         gateDecisions: [],
-        newCurrentStep: "review",
-        newRound: 1,
-        newKernelStatus: "ACTIVE",
-        newTerminalDisposition: null,
-        issuedAgentConfig: {},
+        arrival: arrivalFixture({
+          newCurrentStep: "review",
+          newRound: 1,
+          newKernelStatus: "ACTIVE",
+          newTerminalDisposition: null,
+          newWait: null,
+          issuedAgentConfig: {},
+        }),
       }),
     ).rejects.toThrow(/fault: split transaction/);
 
@@ -247,11 +289,14 @@ describe("commitTransition — atomic transition commit (l0a invariant)", () => 
       envelope: envelope("a1", 1),
       payloadDigest: DIGEST,
       gateDecisions: [],
-      newCurrentStep: "review",
-      newRound: 1,
-      newKernelStatus: "ACTIVE",
-      newTerminalDisposition: null,
-      issuedAgentConfig: {},
+      arrival: arrivalFixture({
+        newCurrentStep: "review",
+        newRound: 1,
+        newKernelStatus: "ACTIVE",
+        newTerminalDisposition: null,
+        newWait: null,
+        issuedAgentConfig: {},
+      }),
     });
     expect(result).toEqual({ kind: "committed", version: 2 });
     handle.close();
@@ -276,11 +321,14 @@ describe("CHK-A1-SCHEMA — the uniqueness constraint lives in the database", ()
       envelope: envelope("a1", 1),
       payloadDigest: DIGEST,
       gateDecisions: [],
-      newCurrentStep: "review",
-      newRound: 1,
-      newKernelStatus: "ACTIVE",
-      newTerminalDisposition: null,
-      issuedAgentConfig: {},
+      arrival: arrivalFixture({
+        newCurrentStep: "review",
+        newRound: 1,
+        newKernelStatus: "ACTIVE",
+        newTerminalDisposition: null,
+        newWait: null,
+        issuedAgentConfig: {},
+      }),
     });
     handle.close();
 
@@ -309,11 +357,14 @@ describe("CHK-C-TS-SOURCE — timestamps come from the injected TimeSource", () 
       envelope: envelope("a1", 1),
       payloadDigest: DIGEST,
       gateDecisions: [],
-      newCurrentStep: "review",
-      newRound: 1,
-      newKernelStatus: "ACTIVE",
-      newTerminalDisposition: null,
-      issuedAgentConfig: {},
+      arrival: arrivalFixture({
+        newCurrentStep: "review",
+        newRound: 1,
+        newKernelStatus: "ACTIVE",
+        newTerminalDisposition: null,
+        newWait: null,
+        issuedAgentConfig: {},
+      }),
     });
     clock.advance(500);
     await handle.store.commitTransition({
@@ -322,11 +373,14 @@ describe("CHK-C-TS-SOURCE — timestamps come from the injected TimeSource", () 
       envelope: envelope("b2", 2),
       payloadDigest: DIGEST,
       gateDecisions: [],
-      newCurrentStep: "implement",
-      newRound: 2,
-      newKernelStatus: "ACTIVE",
-      newTerminalDisposition: null,
-      issuedAgentConfig: {},
+      arrival: arrivalFixture({
+        newCurrentStep: "implement",
+        newRound: 2,
+        newKernelStatus: "ACTIVE",
+        newTerminalDisposition: null,
+        newWait: null,
+        issuedAgentConfig: {},
+      }),
     });
 
     const detail = await handle.store.getInstanceDetail("inst-1");
@@ -402,11 +456,14 @@ describe("op_id_collision — the digest-aware idempotency rung (packet ch5-P4)"
       envelope: envelope("a1", 1),
       payloadDigest: DIGEST,
       gateDecisions: [],
-      newCurrentStep: "review",
-      newRound: 1,
-      newKernelStatus: "ACTIVE",
-      newTerminalDisposition: null,
-      issuedAgentConfig: {},
+      arrival: arrivalFixture({
+        newCurrentStep: "review",
+        newRound: 1,
+        newKernelStatus: "ACTIVE",
+        newTerminalDisposition: null,
+        newWait: null,
+        issuedAgentConfig: {},
+      }),
     });
 
     const collided = await handle.store.commitTransition({
@@ -415,11 +472,14 @@ describe("op_id_collision — the digest-aware idempotency rung (packet ch5-P4)"
       envelope: differingEnvelope("a1", 2),
       payloadDigest: deriveEmitDigest(differingEnvelope("a1", 2)),
       gateDecisions: [],
-      newCurrentStep: "review",
-      newRound: 1,
-      newKernelStatus: "ACTIVE",
-      newTerminalDisposition: null,
-      issuedAgentConfig: {},
+      arrival: arrivalFixture({
+        newCurrentStep: "review",
+        newRound: 1,
+        newKernelStatus: "ACTIVE",
+        newTerminalDisposition: null,
+        newWait: null,
+        issuedAgentConfig: {},
+      }),
     });
     expect(collided).toEqual({ kind: "op_id_collision" });
     const detail = await handle.store.getInstanceDetail("inst-1");
@@ -437,11 +497,14 @@ describe("op_id_collision — the digest-aware idempotency rung (packet ch5-P4)"
       envelope: envelope("a1", 1),
       payloadDigest: DIGEST,
       gateDecisions: [],
-      newCurrentStep: "review",
-      newRound: 1,
-      newKernelStatus: "ACTIVE",
-      newTerminalDisposition: null,
-      issuedAgentConfig: {},
+      arrival: arrivalFixture({
+        newCurrentStep: "review",
+        newRound: 1,
+        newKernelStatus: "ACTIVE",
+        newTerminalDisposition: null,
+        newWait: null,
+        issuedAgentConfig: {},
+      }),
     });
     await handle.store.commitTransition({
       instanceId: "inst-1",
@@ -449,11 +512,14 @@ describe("op_id_collision — the digest-aware idempotency rung (packet ch5-P4)"
       envelope: envelope("b2", 2),
       payloadDigest: DIGEST,
       gateDecisions: [],
-      newCurrentStep: "implement",
-      newRound: 2,
-      newKernelStatus: "ACTIVE",
-      newTerminalDisposition: null,
-      issuedAgentConfig: {},
+      arrival: arrivalFixture({
+        newCurrentStep: "implement",
+        newRound: 2,
+        newKernelStatus: "ACTIVE",
+        newTerminalDisposition: null,
+        newWait: null,
+        issuedAgentConfig: {},
+      }),
     });
 
     const collided = await handle.store.commitTransition({
@@ -462,11 +528,14 @@ describe("op_id_collision — the digest-aware idempotency rung (packet ch5-P4)"
       envelope: differingEnvelope("a1", 1),
       payloadDigest: deriveEmitDigest(differingEnvelope("a1", 1)),
       gateDecisions: [],
-      newCurrentStep: "review",
-      newRound: 1,
-      newKernelStatus: "ACTIVE",
-      newTerminalDisposition: null,
-      issuedAgentConfig: {},
+      arrival: arrivalFixture({
+        newCurrentStep: "review",
+        newRound: 1,
+        newKernelStatus: "ACTIVE",
+        newTerminalDisposition: null,
+        newWait: null,
+        issuedAgentConfig: {},
+      }),
     });
     expect(collided).toEqual({ kind: "op_id_collision" });
     handle.close();
@@ -481,11 +550,14 @@ describe("op_id_collision — the digest-aware idempotency rung (packet ch5-P4)"
       envelope: envelope("a1", 1),
       payloadDigest: DIGEST,
       gateDecisions: [],
-      newCurrentStep: "review",
-      newRound: 1,
-      newKernelStatus: "ACTIVE",
-      newTerminalDisposition: null,
-      issuedAgentConfig: {},
+      arrival: arrivalFixture({
+        newCurrentStep: "review",
+        newRound: 1,
+        newKernelStatus: "ACTIVE",
+        newTerminalDisposition: null,
+        newWait: null,
+        issuedAgentConfig: {},
+      }),
     });
     const detail = await handle.store.getInstanceDetail("inst-1");
     expect(asTransition(detail?.transcript[0]).payloadDigest).toBe(DIGEST);
@@ -497,8 +569,8 @@ describe("op_id_collision — the digest-aware idempotency rung (packet ch5-P4)"
   });
 });
 
-describe("schema → v5 — THE ch12 lifecycle-axis bump rides the fenced wipe (packet ch12-p1a, S1, ADR-003)", () => {
-  it("a known PROTOTYPE store at marker '4' wipes on open and re-marks as '5'", async () => {
+describe("schema → v6 — the ch14 transcript-class bump rides the SAME fenced wipe (packet ch14-p2a, K8; ADR-003)", () => {
+  it("a known PROTOTYPE store at marker '4' wipes on open and re-marks as '6'", async () => {
     const path = tempDbPath();
     const first = openStore(path, createControlledClock(0));
     await first.store.createInstance(instance);
@@ -516,7 +588,7 @@ describe("schema → v5 — THE ch12 lifecycle-axis bump rides the fenced wipe (
     const marker = check
       .prepare("SELECT value FROM meta WHERE key = 'schema_version'")
       .get() as { value: string };
-    expect(marker.value).toBe("5");
+    expect(marker.value).toBe("6");
     check.close();
   });
 
@@ -597,11 +669,14 @@ describe("getTimeline — the ch6-P1 cursor read", () => {
         envelope: envelope(opId, version),
         payloadDigest: DIGEST,
         gateDecisions: [],
-        newCurrentStep: "review",
-        newRound: 1,
-        newKernelStatus: "ACTIVE",
-        newTerminalDisposition: null,
-        issuedAgentConfig: {},
+        arrival: arrivalFixture({
+          newCurrentStep: "review",
+          newRound: 1,
+          newKernelStatus: "ACTIVE",
+          newTerminalDisposition: null,
+          newWait: null,
+          issuedAgentConfig: {},
+        }),
       });
       expect(result.kind).toBe("committed");
     }
@@ -648,11 +723,14 @@ describe("getTimeline — the ch6-P1 cursor read", () => {
       envelope: envelope("a1", 1),
       payloadDigest: DIGEST,
       gateDecisions: [],
-      newCurrentStep: "review",
-      newRound: 1,
-      newKernelStatus: "ACTIVE",
-      newTerminalDisposition: null,
-      issuedAgentConfig: issued,
+      arrival: arrivalFixture({
+        newCurrentStep: "review",
+        newRound: 1,
+        newKernelStatus: "ACTIVE",
+        newTerminalDisposition: null,
+        newWait: null,
+        issuedAgentConfig: issued,
+      }),
     });
     const d0 = (await handle.store.getInstanceDetail("inst-1"))?.transcript[0];
     const t0 = (await handle.store.getTimeline("inst-1", 0))?.[0];
@@ -703,11 +781,14 @@ describe("getTimeline — the ch6-P1 cursor read", () => {
       envelope: envelope("d4", 4),
       payloadDigest: DIGEST,
       gateDecisions: [],
-      newCurrentStep: "review",
-      newRound: 1,
-      newKernelStatus: "ACTIVE",
-      newTerminalDisposition: null,
-      issuedAgentConfig: {},
+      arrival: arrivalFixture({
+        newCurrentStep: "review",
+        newRound: 1,
+        newKernelStatus: "ACTIVE",
+        newTerminalDisposition: null,
+        newWait: null,
+        issuedAgentConfig: {},
+      }),
     });
     expect(result).toEqual({ kind: "committed", version: 5 });
     handle.close();
@@ -736,11 +817,14 @@ describe("getTimeline — the ch6-P1 cursor read", () => {
       envelope: envelope("x9", 1),
       payloadDigest: DIGEST,
       gateDecisions: [],
-      newCurrentStep: "review",
-      newRound: 1,
-      newKernelStatus: "ACTIVE",
-      newTerminalDisposition: null,
-      issuedAgentConfig: {},
+      arrival: arrivalFixture({
+        newCurrentStep: "review",
+        newRound: 1,
+        newKernelStatus: "ACTIVE",
+        newTerminalDisposition: null,
+        newWait: null,
+        issuedAgentConfig: {},
+      }),
     });
     expect(result).toEqual({ kind: "committed", version: 2 });
     handle.close();
@@ -764,11 +848,14 @@ describe("expectedRole round-trip (packet ch11-P1, W6)", () => {
       envelope: roleEnvelope,
       payloadDigest: "dg-role",
       gateDecisions: [],
-      newCurrentStep: "review",
-      newRound: 1,
-      newKernelStatus: "ACTIVE",
-      newTerminalDisposition: null,
-      issuedAgentConfig: {},
+      arrival: arrivalFixture({
+        newCurrentStep: "review",
+        newRound: 1,
+        newKernelStatus: "ACTIVE",
+        newTerminalDisposition: null,
+        newWait: null,
+        issuedAgentConfig: {},
+      }),
     });
     expect(result.kind).toBe("committed");
     const detail = await handle.store.getInstanceDetail("inst-1");
@@ -798,11 +885,14 @@ describe("gate_decisions — the retained-decision column (packet ch11-P2b, S1�
       envelope: envelope("a1", 1),
       payloadDigest: DIGEST,
       gateDecisions: decisions,
-      newCurrentStep: "review",
-      newRound: 1,
-      newKernelStatus: "ACTIVE",
-      newTerminalDisposition: null,
-      issuedAgentConfig: {},
+      arrival: arrivalFixture({
+        newCurrentStep: "review",
+        newRound: 1,
+        newKernelStatus: "ACTIVE",
+        newTerminalDisposition: null,
+        newWait: null,
+        issuedAgentConfig: {},
+      }),
     });
     expect(result.kind).toBe("committed");
     // One write, two reads: a mapper divergence between getInstanceDetail
@@ -824,11 +914,14 @@ describe("gate_decisions — the retained-decision column (packet ch11-P2b, S1�
       envelope: envelope("a1", 1),
       payloadDigest: DIGEST,
       gateDecisions: [],
-      newCurrentStep: "review",
-      newRound: 1,
-      newKernelStatus: "ACTIVE",
-      newTerminalDisposition: null,
-      issuedAgentConfig: {},
+      arrival: arrivalFixture({
+        newCurrentStep: "review",
+        newRound: 1,
+        newKernelStatus: "ACTIVE",
+        newTerminalDisposition: null,
+        newWait: null,
+        issuedAgentConfig: {},
+      }),
     });
     const detail = await handle.store.getInstanceDetail("inst-1");
     expect(asTransition(detail?.transcript[0]).gateDecisions).toEqual([]);
@@ -925,14 +1018,17 @@ describe("the axis columns — schema shape (packet ch12-p1a, S2–S11)", () => 
       envelope: envelope("a1", 1),
       payloadDigest: DIGEST,
       gateDecisions: [],
-      newCurrentStep: "review",
-      newRound: 1,
-      newKernelStatus: "ACTIVE",
-      newTerminalDisposition: null,
-      // Multi-key with UNSORTED input order — so the byte assertion below
-      // is SENSITIVE to a `canonicalJson` → `JSON.stringify` regression
-      // (which would write '{"zeta":1,"alpha":2}' verbatim).
-      issuedAgentConfig: { zeta: 1, alpha: 2 },
+      arrival: arrivalFixture({
+        newCurrentStep: "review",
+        newRound: 1,
+        newKernelStatus: "ACTIVE",
+        newTerminalDisposition: null,
+        newWait: null,
+        // Multi-key with UNSORTED input order — so the byte assertion below
+        // is SENSITIVE to a `canonicalJson` → `JSON.stringify` regression
+        // (which would write '{"zeta":1,"alpha":2}' verbatim).
+        issuedAgentConfig: { zeta: 1, alpha: 2 },
+      }),
     });
     handle.close();
     const raw = new DatabaseSync(path);
@@ -955,11 +1051,14 @@ describe("the axis columns — schema shape (packet ch12-p1a, S2–S11)", () => 
       envelope: envelope("a1", 1),
       payloadDigest: DIGEST,
       gateDecisions: [],
-      newCurrentStep: "review",
-      newRound: 1,
-      newKernelStatus: "ACTIVE",
-      newTerminalDisposition: null,
-      issuedAgentConfig: {},
+      arrival: arrivalFixture({
+        newCurrentStep: "review",
+        newRound: 1,
+        newKernelStatus: "ACTIVE",
+        newTerminalDisposition: null,
+        newWait: null,
+        issuedAgentConfig: {},
+      }),
     });
     let read = await handle.store.loadInstance("inst-1");
     expect(read?.kernelStatus).toBe("ACTIVE");
@@ -970,11 +1069,14 @@ describe("the axis columns — schema shape (packet ch12-p1a, S2–S11)", () => 
       envelope: envelope("b2", 2),
       payloadDigest: DIGEST,
       gateDecisions: [],
-      newCurrentStep: "done",
-      newRound: 1,
-      newKernelStatus: "TERMINAL",
-      newTerminalDisposition: "done",
-      issuedAgentConfig: {},
+      arrival: arrivalFixture({
+        newCurrentStep: "done",
+        newRound: 1,
+        newKernelStatus: "TERMINAL",
+        newTerminalDisposition: "done",
+        newWait: null,
+        issuedAgentConfig: {},
+      }),
     });
     read = await handle.store.loadInstance("inst-1");
     expect(read?.kernelStatus).toBe("TERMINAL");
@@ -1062,11 +1164,14 @@ describe("the axis columns — schema shape (packet ch12-p1a, S2–S11)", () => 
         envelope: envelope("a1", 1),
         payloadDigest: DIGEST,
         gateDecisions: [],
-        newCurrentStep: "review",
-        newRound: 1,
-        newKernelStatus: "ACTIVE",
-        newTerminalDisposition: null,
-        issuedAgentConfig: {},
+        arrival: arrivalFixture({
+          newCurrentStep: "review",
+          newRound: 1,
+          newKernelStatus: "ACTIVE",
+          newTerminalDisposition: null,
+          newWait: null,
+          issuedAgentConfig: {},
+        }),
       });
       expect(committed.kind).toBe("committed");
       const raw = new DatabaseSync(path);
@@ -1354,6 +1459,323 @@ describe("commitLifecycle — the uniform-commit write member (packet ch12-p1b, 
     expect(row.run_overrides).toBe('{"review":{"budget":2,"mode":"strict"}}');
     const loaded = await handle.store.loadInstance("lc-ro");
     expect(loaded?.runOverrides).toEqual({ review: { budget: 2, mode: "strict" } });
+    handle.close();
+  });
+});
+
+describe("the DECISION_REQUEST class — the op-less third entry class (packet ch14-p2a, K8)", () => {
+  const park = (overrides: Partial<DecisionRequestBody> = {}): DecisionRequestBody => ({
+    requestRef: "req-1000-1",
+    recipient: "operator",
+    decisions: ["approve", "reject"],
+    ...overrides,
+  });
+
+  const commitPark = async (
+    handle: StoreHandle,
+    request: DecisionRequestBody,
+    opId = "a1",
+    expectedVersion = 1,
+  ) =>
+    handle.store.commitTransition({
+      instanceId: "inst-1",
+      expectedVersion,
+      envelope: envelope(opId, expectedVersion),
+      payloadDigest: DIGEST,
+      gateDecisions: [],
+      arrival: arrivalFixture({
+        newCurrentStep: "gate",
+        newRound: 1,
+        newKernelStatus: "WAITING",
+        newTerminalDisposition: null,
+        newWait: {
+          kind: "human_decision",
+          requestedBy: "gate",
+          resumeEvents: ["approve", "reject"],
+          requestRef: request.requestRef,
+        },
+        issuedAgentConfig: {},
+        decisionRequest: request,
+      }),
+    });
+
+  it("round-trips the op-less row BESIDE the transition, in ONE commit", async () => {
+    const handle = openStore(tempDbPath(), createControlledClock(0));
+    await handle.store.createInstance(instance);
+    expect(await commitPark(handle, park({ recommendation: "approve", recommendationSource: { fromStep: "implement", eventType: "PASS" }, contextRef: { note: "n" } }))).toEqual({
+      kind: "committed",
+      version: 2,
+    });
+    const detail = await handle.store.getInstanceDetail("inst-1");
+    expect(detail?.transcript.map((e) => e.entryKind)).toEqual(["transition", "DECISION_REQUEST"]);
+    expect(detail?.transcript[1]).toStrictEqual({
+      entryKind: "DECISION_REQUEST",
+      seq: 2,
+      requestRef: "req-1000-1",
+      recipient: "operator",
+      decisions: ["approve", "reject"],
+      recommendation: "approve",
+      recommendationSource: { fromStep: "implement", eventType: "PASS" },
+      contextRef: { note: "n" },
+      committedAt: 0,
+    });
+    // The wait record carries the ref back too.
+    expect(detail?.instance.wait?.requestRef).toBe("req-1000-1");
+    handle.close();
+  });
+
+  it("stores the body as canonical JSON with the model's SNAKE keys", async () => {
+    const path = tempDbPath();
+    const handle = openStore(path, createControlledClock(0));
+    await handle.store.createInstance(instance);
+    await commitPark(handle, park({ recommendation: "approve", recommendationSource: { fromStep: "implement", eventType: "PASS" } }));
+    handle.close();
+    const raw = new DatabaseSync(path);
+    const row = raw
+      .prepare("SELECT op_id, entry_body, envelope, payload_digest, gate_decisions, issued_agent_config FROM transcript WHERE entry_kind = 'DECISION_REQUEST'")
+      .get() as {
+      op_id: string | null;
+      entry_body: string;
+      envelope: string | null;
+      payload_digest: string | null;
+      gate_decisions: string | null;
+      issued_agent_config: string | null;
+    };
+    // OP-LESS by class, and every transition-only column NULL.
+    expect(row.op_id).toBeNull();
+    expect([row.envelope, row.payload_digest, row.gate_decisions, row.issued_agent_config]).toEqual([
+      null,
+      null,
+      null,
+      null,
+    ]);
+    expect(row.entry_body).toBe(
+      '{"decisions":["approve","reject"],"recipient":"operator","recommendation":"approve","recommendation_source":{"event_type":"PASS","from_step":"implement"},"request_ref":"req-1000-1"}',
+    );
+    raw.close();
+  });
+
+  it("records a FALSY context surface as PRESENT — presence, never truth", async () => {
+    const path = tempDbPath();
+    const handle = openStore(path, createControlledClock(0));
+    await handle.store.createInstance(instance);
+    await commitPark(handle, park({ contextRef: null }));
+    const detail = await handle.store.getInstanceDetail("inst-1");
+    const row = detail?.transcript[1];
+    expect(row?.entryKind === "DECISION_REQUEST" && "contextRef" in row).toBe(true);
+    expect(row?.entryKind === "DECISION_REQUEST" ? row.contextRef : "missing").toBeNull();
+    handle.close();
+  });
+
+  it("lets MANY op-less rows coexist under one instance (UNIQUE treats NULLs as distinct)", async () => {
+    const handle = openStore(tempDbPath(), createControlledClock(0));
+    await handle.store.createInstance(instance);
+    await commitPark(handle, park({ requestRef: "req-a" }), "a1", 1);
+    await commitPark(handle, park({ requestRef: "req-b" }), "a2", 2);
+    const detail = await handle.store.getInstanceDetail("inst-1");
+    expect(detail?.transcript.map((e) => e.entryKind)).toEqual([
+      "transition",
+      "DECISION_REQUEST",
+      "transition",
+      "DECISION_REQUEST",
+    ]);
+    handle.close();
+  });
+
+  it("still raises on an op-carrying DUPLICATE — the relaxation did not weaken uniqueness", async () => {
+    const handle = openStore(tempDbPath(), createControlledClock(0));
+    await handle.store.createInstance(instance);
+    await commitPark(handle, park(), "a1", 1);
+    expect(await commitPark(handle, park({ requestRef: "req-2" }), "a1", 2)).toEqual({
+      kind: "duplicate_op",
+    });
+    handle.close();
+  });
+
+  it("findOp NEVER matches an op-less row", async () => {
+    const handle = openStore(tempDbPath(), createControlledClock(0));
+    await handle.store.createInstance(instance);
+    await commitPark(handle, park());
+    expect(await handle.store.findOp("inst-1", "req-1000-1")).toBeNull();
+    handle.close();
+  });
+});
+
+describe("the INHERITED op_id guarantee — the DDL's NOT NULL, moved to the mapper (K8)", () => {
+  const openWithRow = async (
+    mutate: (raw: DatabaseSync) => void,
+  ): Promise<{ path: string; handle: StoreHandle }> => {
+    const path = tempDbPath();
+    const handle = openStore(path, createControlledClock(0));
+    await handle.store.createInstance(instance);
+    await handle.store.commitTransition({
+      instanceId: "inst-1",
+      expectedVersion: 1,
+      envelope: envelope("a1", 1),
+      payloadDigest: DIGEST,
+      gateDecisions: [],
+      arrival: arrivalFixture({
+        newCurrentStep: "review",
+        newRound: 1,
+        newKernelStatus: "ACTIVE",
+        newTerminalDisposition: null,
+        newWait: null,
+        issuedAgentConfig: {},
+      }),
+    });
+    handle.close();
+    const raw = new DatabaseSync(path);
+    mutate(raw);
+    raw.close();
+    return { path, handle: openStore(path, createControlledClock(0)) };
+  };
+
+  it("REFUSES an op-carrying row whose op_id went NULL", async () => {
+    const { handle } = await openWithRow((raw) => {
+      raw.prepare("UPDATE transcript SET op_id = NULL WHERE entry_kind = 'transition'").run();
+    });
+    expect(() => handle.store.getInstanceDetail("inst-1")).toThrow(/NULL op_id/);
+    handle.close();
+  });
+
+  it("REFUSES an op-LESS row that carries one — the check binds BOTH directions", async () => {
+    const { handle } = await openWithRow((raw) => {
+      raw
+        .prepare(
+          "INSERT INTO transcript (instance_id, seq, op_id, entry_kind, entry_body, committed_at) VALUES ('inst-1', 9, 'smuggled', 'DECISION_REQUEST', ?, 0)",
+        )
+        .run('{"decisions":[],"recipient":"operator","request_ref":"r"}');
+    });
+    expect(() => handle.store.getInstanceDetail("inst-1")).toThrow(/carries an op_id/);
+    handle.close();
+  });
+
+  it("REFUSES an op-less row with no entry_body, and a transition row that has one", async () => {
+    const a = await openWithRow((raw) => {
+      raw
+        .prepare(
+          "INSERT INTO transcript (instance_id, seq, op_id, entry_kind, entry_body, committed_at) VALUES ('inst-1', 9, NULL, 'DECISION_REQUEST', NULL, 0)",
+        )
+        .run();
+    });
+    expect(() => a.handle.store.getInstanceDetail("inst-1")).toThrow(/NULL entry_body/);
+    a.handle.close();
+
+    const b = await openWithRow((raw) => {
+      raw.prepare("UPDATE transcript SET entry_body = '{}' WHERE entry_kind = 'transition'").run();
+    });
+    expect(() => b.handle.store.getInstanceDetail("inst-1")).toThrow(
+      /non-null entry_body/,
+    );
+    b.handle.close();
+  });
+
+  it("REFUSES a recommendation and its source stored APART", async () => {
+    const { handle } = await openWithRow((raw) => {
+      raw
+        .prepare(
+          "INSERT INTO transcript (instance_id, seq, op_id, entry_kind, entry_body, committed_at) VALUES ('inst-1', 9, NULL, 'DECISION_REQUEST', ?, 0)",
+        )
+        .run('{"decisions":[],"recipient":"operator","recommendation":"approve","request_ref":"r"}');
+    });
+    expect(() => handle.store.getInstanceDetail("inst-1")).toThrow(/travel together/);
+    handle.close();
+  });
+});
+
+describe("the park is ONE visible transition (packet ch14-p2a, K2 — the atomicity invariant)", () => {
+  it("a SECOND-ROW append failure rolls the state write back — no half-entered gate", async () => {
+    const path = tempDbPath();
+    const handle = openStore(path, createControlledClock(0));
+    await handle.store.createInstance(instance);
+
+    // The seam K2 names, and it needs NO new production surface: the
+    // ch12-p1a atomicity staging, PREDICATED ON THE NEW ROW'S ENTRY
+    // KIND so the fault is SECOND-ROW-specific — strictly stronger than
+    // a blanket hook, and the rollback is the real SQLite transaction's
+    // rather than a simulation. A second connection to the same file
+    // installs it, so no test machinery enters production store code.
+    const raw = new DatabaseSync(path);
+    raw.exec(
+      "CREATE TRIGGER fault_second_row BEFORE INSERT ON transcript " +
+        "WHEN NEW.entry_kind = 'DECISION_REQUEST' " +
+        "BEGIN SELECT RAISE(ABORT, 'fault: second row'); END",
+    );
+    raw.close();
+
+    await expect(
+      handle.store.commitTransition({
+        instanceId: "inst-1",
+        expectedVersion: 1,
+        envelope: envelope("a1", 1),
+        payloadDigest: DIGEST,
+        gateDecisions: [],
+        arrival: arrivalFixture({
+          newCurrentStep: "gate",
+          newRound: 1,
+          newKernelStatus: "WAITING",
+          newTerminalDisposition: null,
+          newWait: {
+            kind: "human_decision",
+            requestedBy: "gate",
+            resumeEvents: ["approve"],
+            requestRef: "req-1",
+          },
+          issuedAgentConfig: {},
+          decisionRequest: {
+            requestRef: "req-1",
+            recipient: "operator",
+            decisions: ["approve"],
+          },
+        }),
+      }),
+    ).rejects.toThrow(/fault: second row/);
+
+    // ALL THREE halves rolled back — the failure DIRECTION is the half a
+    // positive-only lane cannot see.
+    const check = new DatabaseSync(path);
+    const row = check
+      .prepare("SELECT current_step, kernel_status, wait, version FROM instances WHERE instance_id = 'inst-1'")
+      .get() as { current_step: string; kernel_status: string; wait: string | null; version: number };
+    expect(row).toMatchObject({
+      current_step: "implement",
+      kernel_status: "ACTIVE",
+      wait: null,
+      version: 1,
+    });
+    // …and NEITHER transcript row survived: not the request row the
+    // trigger refused, and not the transition row that preceded it.
+    const count = check.prepare("SELECT COUNT(*) AS n FROM transcript").get() as { n: number };
+    expect(count.n).toBe(0);
+    check.exec("DROP TRIGGER fault_second_row");
+    check.close();
+
+    // No transaction leaked: with the fault removed the SAME commit
+    // goes through cleanly on the same handle, and BOTH rows land.
+    const result = await handle.store.commitTransition({
+      instanceId: "inst-1",
+      expectedVersion: 1,
+      envelope: envelope("a1", 1),
+      payloadDigest: DIGEST,
+      gateDecisions: [],
+      arrival: arrivalFixture({
+        newCurrentStep: "gate",
+        newRound: 1,
+        newKernelStatus: "WAITING",
+        newTerminalDisposition: null,
+        newWait: {
+          kind: "human_decision",
+          requestedBy: "gate",
+          resumeEvents: ["approve"],
+          requestRef: "req-1",
+        },
+        issuedAgentConfig: {},
+        decisionRequest: { requestRef: "req-1", recipient: "operator", decisions: ["approve"] },
+      }),
+    });
+    expect(result).toEqual({ kind: "committed", version: 2 });
+    const detail = await handle.store.getInstanceDetail("inst-1");
+    expect(detail?.transcript.map((e) => e.entryKind)).toEqual(["transition", "DECISION_REQUEST"]);
     handle.close();
   });
 });

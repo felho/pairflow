@@ -1,11 +1,13 @@
 import type {
   AgentConfig,
+  DecisionRecommendationSource,
   EventEnvelope,
   InstanceId,
   KernelStatus,
   LifecycleFactKind,
   OpId,
   RetainedGateDecision,
+  RoleName,
   RuntimeContext,
   StepId,
   TerminalDisposition,
@@ -22,6 +24,72 @@ import type {
  * CHK-C-TS-SOURCE; the implementation stamps created_at / committed_at
  * inside the commit boundary from its injected TimeSource (plan §4.3).
  */
+/**
+ * K1 (packet ch14-p2a): the ARRIVAL's committed effect, as ONE closed
+ * record — every state change a target entry produces, plus the optional
+ * second row the human-gate park appends.
+ *
+ * THE MEMBER LIST IS CLOSED, and `newWait` is ALWAYS EXPLICIT (a value
+ * or null) rather than optional: the `commitLifecycle` F1 rule is
+ * adopted here so the S5 same-move clear cannot be FORGOTTEN. An
+ * optional field would let an agent-branch arrival silently leave a
+ * stale wait behind, which is a state no reader could explain.
+ *
+ * THE BRAND IS THE POINT, on the live `AdmittedTemplate` precedent: a
+ * unique-symbol brand with no runtime value, whose only sanctioned
+ * producer is the arrival function. A caller cannot hand-build a
+ * substitute (it does not typecheck) and cannot swap ONE member (the
+ * field is the whole record), so "the object the store receives is the
+ * object the arrival returned" becomes a property the TYPE carries
+ * rather than a lane's aspiration.
+ */
+declare const arrivalEffectBrand: unique symbol;
+
+export interface ArrivalEffectFields {
+  readonly newCurrentStep: StepId;
+  readonly newRound: number;
+  readonly newKernelStatus: KernelStatus;
+  /**
+   * Non-null EXACTLY when the commit enters TERMINAL — the type face of
+   * the single-write rule (T1).
+   */
+  readonly newTerminalDisposition: TerminalDisposition | null;
+  /** ALWAYS explicit: value or null. See the class comment. */
+  readonly newWait: WaitReason | null;
+  /**
+   * The human-gate park's SECOND ROW, appended in the SAME transaction
+   * as the state write. Two commits would be exactly the half-entered
+   * gate the atomicity rule forbids, and a kernel-side compensating
+   * delete would be a second correctness mechanism beside the
+   * transaction (REV-A1-TXN).
+   */
+  readonly decisionRequest?: DecisionRequestBody;
+  /**
+   * Resolved from the step being LEFT, not the target — a REQUIRED
+   * member of the record rather than a sibling of it, so a caller
+   * cannot substitute its own.
+   */
+  readonly issuedAgentConfig: AgentConfig;
+}
+
+export type ArrivalEffect = ArrivalEffectFields & { readonly [arrivalEffectBrand]: true };
+
+/**
+ * The park's committed record (K2's closed field list). `recommendation`
+ * and `recommendationSource` travel TOGETHER in both directions —
+ * present together, absent together — because the audit question is
+ * where a recommendation came from and not only what it was.
+ */
+export interface DecisionRequestBody {
+  readonly requestRef: string;
+  readonly recipient: RoleName;
+  readonly decisions: readonly string[];
+  readonly recommendation?: string;
+  readonly recommendationSource?: DecisionRecommendationSource;
+  /** Present IFF the arriving entry carried a payload — presence, not truth. */
+  readonly contextRef?: unknown;
+}
+
 export interface CommitTransitionInput {
   readonly instanceId: InstanceId;
   readonly expectedVersion: number;
@@ -35,29 +103,17 @@ export interface CommitTransitionInput {
    * transaction and stamps nothing into the list.
    */
   readonly gateDecisions: readonly RetainedGateDecision[];
-  readonly newCurrentStep: StepId;
-  readonly newRound: number;
   /**
-   * E3 (packet ch12-p1a): the axis replacement of the ch-4 `newStatus`
-   * field. Both fields ride the SAME transaction the commit always used
+   * K1 (packet ch14-p2a): the arrival's effect, NESTED as one branded
+   * field rather than flattened alongside the caller's members. The
+   * remaining members above stay the CALLER's, and the port type is what
+   * closes the split — which is what made the caller-substitution defect
+   * provable instead of merely asserted.
+   *
+   * Both halves ride the SAME transaction the commit always used
    * (REV-A1-TXN unchanged).
    */
-  readonly newKernelStatus: KernelStatus;
-  /**
-   * Non-null EXACTLY when the commit enters TERMINAL — the type face of
-   * the single-write rule (T1): a terminal arrival writes `TERMINAL` +
-   * `"done"` (the COMPLETE branch), a non-terminal commit writes
-   * `ACTIVE` + null.
-   */
-  readonly newTerminalDisposition: TerminalDisposition | null;
-  /**
-   * C2/C10 (packet ch12-p2): the run profile the kernel issued for this
-   * dispatched step — the store writes it CANONICAL JSON into the
-   * transition row's `issued_agent_config` column (in place of the P1a
-   * NULL) inside the SAME commit transaction (REV-A1-TXN unchanged). A
-   * map, possibly `{}`; never null on a transition row.
-   */
-  readonly issuedAgentConfig: AgentConfig;
+  readonly arrival: ArrivalEffect;
 }
 
 /**

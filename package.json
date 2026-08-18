@@ -67,6 +67,8 @@
     "v3:typecheck": "pnpm --dir v3 typecheck",
     "v3:lint": "pnpm --dir v3 lint",
     "v3:test": "pnpm --dir v3 test",
+    "v3:trace-digests": "bash ./tools/v3-plan/trace_digests.sh",
+    "v3:trace-narrow": "python3 ./tools/v3-plan/check_trace_narrow.py --selftest",
     "v3:mutation": "pnpm --dir v3 mutation",
     "v3:adr-check": "bash ./v3/adr/check.sh",
     "v3:coverage": "python3 ./tools/v3-plan/check_coverage.py --selftest && python3 ./tools/v3-plan/check_coverage.py",

@@ -390,8 +390,19 @@ export const __probeOldRunningToken: KernelStatus = "RUNNING";
 export const __probeBadDisposition: TerminalDisposition = "abandoned";
 // @ts-expect-error the model token is snake `deferred_kickoff` — a camelCase fork is rejected.
 export const __probeBadActivationMode: ActivationMode = "deferredKickoff";
-export const __probeBadWaitKind: WaitReason = {
-  // @ts-expect-error the ch12 wait-kind set is exactly {kickoff_pending} (C23 additive growth).
+// RETIRED at ch14-p2a (K4): the wait-kind pin asserted that the set was
+// exactly {kickoff_pending}. That union OPENED — a `wait` step declares
+// its own authored kind, and admission (not this type) owns the
+// collision refusal against the kernel-owned set — so the pin now
+// describes a rule that no longer exists and its directive goes unused.
+//
+// It is retired rather than deleted-in-silence, and the retirement is
+// ASSERTED by the other pins in this block staying red: a bare deletion
+// is indistinguishable from a suite that stopped compiling, because the
+// compiler's unused-directive error cannot see a directive that is not
+// there. The value stays as a POSITIVE pin instead — an authored kind
+// is now legal, and this is the shape that says so.
+export const __probeAuthoredWaitKind: WaitReason = {
   kind: "help_pending",
   requestedBy: "activation",
   resumeEvents: [],

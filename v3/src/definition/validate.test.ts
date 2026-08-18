@@ -730,7 +730,7 @@ describe("dimension 12 — the canonical example round-trip", () => {
     expect(step?.instruction).toBe("i");
     expect(Object.keys(step?.transitions ?? {})).toStrictEqual(["__proto__"]);
     expect(Object.hasOwn(step?.transitions ?? {}, "__proto__")).toBe(true);
-    expect(step?.transitions["__proto__"]).toBe("done");
+    expect(step?.transitions?.["__proto__"]).toBe("done");
   });
 
   it("loads the draft's canonical example to the exact WorkflowTemplate value", () => {

@@ -27,6 +27,17 @@ function admit(template: WorkflowTemplate): AdmittedTemplate {
   return result.template;
 }
 import type { TraceFixture } from "./testkit/index.js";
+import type { DispatchIntent, HumanDecisionRequest } from "./domain/index.js";
+
+/**
+ * K6 (packet ch14-p2a): `committed.intent` widened to
+ * `DispatchIntent | HumanDecisionRequest | null`. This narrows on a
+ * DISCRIMINATING key — `packet`, which only a dispatch carries — never
+ * on truthiness and never by a bare type assertion.
+ */
+const asDispatch = (intent: DispatchIntent | HumanDecisionRequest | null | undefined) =>
+  intent !== null && intent !== undefined && "packet" in intent ? intent : null;
+
 
 /**
  * The l0b chapter trace as a golden test (packet ch4-P4; refactored
@@ -125,13 +136,13 @@ describe("l0b golden trace — the walking skeleton end-to-end (on the harness)"
         (o): o is Extract<Outcome, { kind: "committed" }> => o.kind === "committed",
       );
     expect(committed.map((o) => o.version)).toEqual([3, 4, 5, 6]);
-    expect(committed.map((o) => o.intent?.actor ?? null)).toEqual([
+    expect(committed.map((o) => asDispatch(o.intent)?.actor ?? null)).toEqual([
       "claude",
       "codex",
       "claude",
       null,
     ]);
-    expect(committed[0]?.intent?.packet).toMatchObject({
+    expect(asDispatch(committed[0]?.intent)?.packet).toMatchObject({
       expectedVersion: 3,
       instruction: "review it",
       availableOps: ["PASS", "CONVERGED"],

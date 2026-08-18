@@ -44,10 +44,24 @@ export function deriveDispatchIntent(
   if (step === undefined) {
     throw new Error(`kernel integrity: dispatch target step '${stepId}' has no definition`);
   }
-  const actor = instance.binding[step.role];
+  // K11 (ch14-p2a): `role`, `instruction` and `transitions` are optional
+  // since the class set opened, and a DISPATCH only ever targets an
+  // AGENT step — the fan-out routes `humanGate` and `wait` elsewhere and
+  // never reaches here. So their absence is kernel-integrity drift, in
+  // the same fail-loud register as the unknown-step throw above, and NOT
+  // a narrowing convenience: a default would let a mis-routed gate
+  // dispatch a context packet with an empty instruction.
+  const { role, instruction, transitions } = step;
+  if (role === undefined || instruction === undefined || transitions === undefined) {
+    throw new Error(
+      `kernel integrity: dispatch target step '${stepId}' is not an agent step ` +
+        `(role/instruction/transitions absent) — the arrival fan-out routes non-agent classes`,
+    );
+  }
+  const actor = instance.binding[role];
   if (actor === undefined) {
     throw new Error(
-      `kernel integrity: role '${step.role}' unbound — the start invariant should have failed`,
+      `kernel integrity: role '${role}' unbound — the start invariant should have failed`,
     );
   }
   // G2 (packet ch12-p1b): every dispatch site is task-guaranteed
@@ -63,10 +77,10 @@ export function deriveDispatchIntent(
     expectedVersion: instance.version,
     task: instance.task,
     // Dispatched-as role (l1) — echoed back as expectedRole.
-    role: step.role,
-    instruction: step.instruction,
+    role,
+    instruction,
     ...(handoff !== undefined ? { handoff } : {}),
-    availableOps: Object.keys(step.transitions),
+    availableOps: Object.keys(transitions),
     // E1 (packet ch12-p2): the resolved run profile, ALWAYS present (a
     // map, possibly `{}`) — replaces the L0b conditional raw agentConfig
     // pass-through spread.

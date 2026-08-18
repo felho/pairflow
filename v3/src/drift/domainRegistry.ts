@@ -370,8 +370,16 @@ export const DOMAIN_REGISTRY: Readonly<Record<string, RegistryEntry>> = {
   // satisfies (which would make the row vacuous). The other four l3 rows
   // are ch14-P2's by their own C-rows.
   "l3/human_gate": { kind: "realized", typeName: "StepType" },
-  "l3/apply_target_entry_effects(...)": { kind: "pending" },
-  "l3/HumanDecisionRequest": { kind: "pending" },
+  // ch14-p2a (K13): the two rows this packet realizes, each pinned
+  // VERBATIM to its realized name — the registry test pins KEY SETS and
+  // not dispositions, so a wrong-but-existing target would otherwise
+  // stay green on the generic lane.
+  //
+  // The arrival's witness is its EFFECT RECORD rather than the function:
+  // the record is what the port carries and what the brand protects, so
+  // pinning it is what a drift check can actually compare.
+  "l3/apply_target_entry_effects(...)": { kind: "realized", typeName: "ArrivalEffect" },
+  "l3/HumanDecisionRequest": { kind: "realized", typeName: "HumanDecisionRequest" },
   "l3/DECISION_REQUEST / DECISION_MADE": { kind: "pending" },
   // ── storage-scope (2) — the sealed-projection contract's rows ─────
   "storage-scope/shape": { kind: "contract-row" },

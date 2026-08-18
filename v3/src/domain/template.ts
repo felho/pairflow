@@ -84,22 +84,35 @@ export interface Step {
    */
   readonly type?: StepType;
   /**
-   * DEFERRED(ch14-p2): `role`, `instruction` and `transitions` RELAX to
-   * optional with the consumers that make the relaxation reachable — the
-   * `humanGate` class drops `transitions` and the `wait` class drops all
-   * three, so the type is honest for every ADMITTED value only while its
-   * own fixtures for those classes are cast-authored. TWO halves of the
-   * debt, and only the first announces itself: (1) the relaxation with
-   * its kernel/runner/testkit call-site sweep, and (2) the RETIREMENT of
-   * the type-bypassing casts ch14-P1's own direct-channel fixtures for
-   * the two new classes are written through — after the relaxation those
-   * casts become unnecessary, and an unnecessary cast still COMPILES, so
-   * they go silently dead rather than breaking.
+   * RELAXED(ch14-p2a, K11): `role`, `instruction` and `transitions` are
+   * OPTIONAL, because the class set they were written for no longer
+   * holds — the `humanGate` class carries no `transitions` and the
+   * `wait` class carries none of the three. The type is now honest for
+   * every ADMITTED value rather than honest for the agent class and
+   * cast-authored elsewhere.
+   *
+   * The CLASS DISCIPLINE is unchanged and still lives at ADMISSION: an
+   * agent step without a role is refused there, not here. This type
+   * states what an admitted value MAY carry; it has never been the
+   * place where a class's requirements are enforced.
+   *
+   * The relaxation's cost is a per-site narrow at every production READ
+   * (the compiler enumerates them), and TWO cells it cannot surface
+   * because both stay compile-clean: an error message that said
+   * "terminal step" now also means "role-less step", and a role
+   * comparison that now yields an EMPTY capability set for a role-less
+   * step. Those are driven by lanes, not by the type.
+   *
+   * The ch14-P1 casts these fixtures were written through are NOT
+   * retired wholesale here: the P1 obligation assumed the casts become
+   * unnecessary, and the measurement says otherwise — they are double
+   * assertions over builders typed loose ON PURPOSE, to author
+   * admission-negative input. The per-site census is K11's.
    */
-  readonly role: RoleName;
-  readonly instruction: string;
+  readonly role?: RoleName;
+  readonly instruction?: string;
   /** event_type → target step; every target ∈ steps ∪ terminal. */
-  readonly transitions: Readonly<Record<EventType, StepId>>;
+  readonly transitions?: Readonly<Record<EventType, StepId>>;
   /**
    * ch14-C4 (packet ch14-p1): a `humanGate`'s declared decision
    * vocabulary — the gate's transition map, keyed by DATA the kernel

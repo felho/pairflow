@@ -1,4 +1,4 @@
-import type { DispatchIntent } from "./dispatch.js";
+import type { DispatchIntent, HumanDecisionRequest } from "./dispatch.js";
 import type { InstanceId } from "./ids.js";
 import type { RejectionName } from "./rejections.js";
 
@@ -20,7 +20,25 @@ import type { RejectionName } from "./rejections.js";
  * an excess property.
  */
 export type Outcome =
-  | { readonly kind: "committed"; readonly version: number; readonly intent: DispatchIntent | null }
+  | {
+      readonly kind: "committed";
+      readonly version: number;
+      /**
+       * K6 (packet ch14-p2a): WIDENED from `DispatchIntent | null`. The
+       * committed arm's outbound effect is now selected from the status
+       * the arrival set — a dispatch for an ACTIVE run, the ASK for a
+       * run parked at a human gate, and null for a terminal run or a
+       * bare wait.
+       *
+       * NARROW ON A DISCRIMINATING FIELD at every read site — never a
+       * truthiness check and never a bare type assertion. The two
+       * members share no key by construction, so a discriminator
+       * exists; a `typecheck` run forces *a* narrow and cannot see
+       * WHICH, which is why the rule is driven by a lane rather than
+       * left to the compiler.
+       */
+      readonly intent: DispatchIntent | HumanDecisionRequest | null;
+    }
   | { readonly kind: "duplicate" }
   | { readonly kind: "stale"; readonly currentVersion: number }
   | {

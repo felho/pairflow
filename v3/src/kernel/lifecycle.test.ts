@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import { PROVISIONING_FAILURE_REASONS } from "../domain/index.js";
-import type { RuntimeContextRef, TranscriptEntry, WorkflowInstance } from "../domain/index.js";
+import type {
+  RuntimeContextRef,
+  TranscriptEntry,
+  WorkflowInstance,
+  WorkflowTemplate,
+} from "../domain/index.js";
 import { admitTemplate } from "../definition/index.js";
 import { deriveEmitDigest } from "../emit/index.js";
 import { createGateRegistry } from "../gates/index.js";
@@ -2018,5 +2023,106 @@ describe("start — N5 cross-process request-id freshness (two kernels, one stor
     expect(idB).toBe("req-1000-1");
     expect(idB).toBe(idA);
     handle.close();
+  });
+});
+
+describe("the activation guard (packet ch14-p2a, K18) and the role-less binding skip (K10)", () => {
+  /** A template whose START step is a human_gate — creatable TODAY. */
+  const gateAtStart = (raw: WorkflowTemplate): WorkflowTemplate => ({
+    ...raw,
+    start: "gate",
+    steps: {
+      ...raw.steps,
+      gate: {
+        type: "human_gate",
+        role: "reviewer",
+        instruction: "approve?",
+        decisions: { approve: { target: "implement" } },
+      },
+    },
+  });
+
+  /** A template carrying a role-less `wait` step ANYWHERE. */
+  const withWaitStep = (raw: WorkflowTemplate): WorkflowTemplate => ({
+    ...raw,
+    steps: {
+      ...raw.steps,
+      hold: {
+        type: "wait",
+        wait: { kind: "ci_pending", resumeEvents: ["CI_DONE"] },
+        onResume: { CI_DONE: "implement" },
+      },
+    },
+  });
+
+  it("K10: a template carrying a ROLE-LESS step still CREATES — the loop skips it", async () => {
+    const h = makeHarness(withWaitStep);
+    await expect(
+      h.kernel.create({
+        instanceId: "i1",
+        templateRef: { id: "local-pair-v0", version: 1 },
+        task: "t",
+      }),
+    ).resolves.toMatchObject({ kind: "created" });
+    h.close();
+  });
+
+  it("K10's no-effect twin: a role-BEARING step whose role is UNBOUND still fails create", async () => {
+    // The predicate skips on the STEP having no declared role, NEVER on
+    // the BINDING lacking an entry — one character apart in the loop,
+    // and the wrong one silently disables binding coverage for every
+    // step while still passing the lane above. This is the twin that
+    // catches it: an auditor role with NO default actor, left unbound.
+    const h = makeHarness((raw) => ({
+      ...withWaitStep(raw),
+      steps: {
+        ...withWaitStep(raw).steps,
+        audit: { role: "auditor", instruction: "audit", transitions: { PASS: "implement" } },
+      },
+      roles: { ...raw.roles, auditor: {} },
+    }));
+    await expect(
+      h.kernel.create({
+        instanceId: "i2",
+        templateRef: { id: "local-pair-v0", version: 1 },
+        task: "t",
+      }),
+    ).rejects.toThrow(/binding coverage/);
+    h.close();
+  });
+
+  it("K18: activating a NON-AGENT start throws — and COMMITS NOTHING", async () => {
+    const h = makeHarness(gateAtStart);
+    await h.kernel.create({
+      instanceId: "i1",
+      templateRef: { id: "local-pair-v0", version: 1 },
+      task: "t",
+    });
+    await expect(h.kernel.start({ instanceId: "i1", opId: "op-start" })).rejects.toThrow(
+      /only the agent class can be activated/,
+    );
+
+    // THE ASSERTION THAT SEPARATES THE TWO PLACEMENTS. A post-commit
+    // guard throws the same message while leaving a durably committed
+    // ACTIVE-at-a-gate instance behind it; only a PRE-commit guard
+    // leaves the run untouched.
+    const after = await h.store.loadInstance("i1");
+    expect(after).toMatchObject({ kernelStatus: "CREATED", currentStep: null, version: 1 });
+    const detail = await h.store.getInstanceDetail("i1");
+    expect(detail?.transcript).toEqual([]);
+    h.close();
+  });
+
+  it("K18: an AGENT start is unaffected", async () => {
+    const h = makeHarness();
+    await h.kernel.create({
+      instanceId: "i1",
+      templateRef: { id: "local-pair-v0", version: 1 },
+      task: "t",
+    });
+    await expect(h.kernel.start({ instanceId: "i1", opId: "op-start" })).resolves.toMatchObject({
+      kind: "activated",
+    });
+    h.close();
   });
 });

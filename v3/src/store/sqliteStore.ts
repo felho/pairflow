@@ -3,11 +3,14 @@ import { DatabaseSync } from "node:sqlite";
 import type {
   ActivationMode,
   AgentConfig,
+  DecisionRecommendationSource,
+  DecisionRequestEntry,
   EventEnvelope,
   InstanceId,
   KernelStatus,
   LifecycleFactKind,
   RetainedGateDecision,
+  RoleName,
   RuntimeContext,
   TerminalDisposition,
   TranscriptEntry,
@@ -18,6 +21,7 @@ import type {
   CommitLifecycleInput,
   CommitTransitionInput,
   CommitTransitionResult,
+  DecisionRequestBody,
   InstanceDetail,
   StorePort,
 } from "../ports/store.js";
@@ -45,7 +49,25 @@ import type { TimeSource } from "../ports/time.js";
 // fenced wipe: a known PROTOTYPE marker at any other version wipes on
 // open; anything else still refuses. No migration path exists (no data
 // carry — the bump recreates, never converts).
-const SCHEMA_VERSION = "5";
+// ch14 (packet ch14-p2a, K8): the transcript's THIRD entry class. Two
+// DDL deltas, both forced by a class that is kernel-derived rather than
+// op-carrying: `op_id` becomes NULLABLE (an op-less row is
+// INEXPRESSIBLE under NOT NULL), and the class's own fields ride one new
+// `entry_body` column carrying canonical JSON with the model's SNAKE
+// keys — the same store casing seam the `wait` column follows.
+//
+// SQLite's UNIQUE treats NULLs as DISTINCT, so many op-less rows coexist
+// under one instance while an op-carrying duplicate still raises
+// (receipt PROBE-CH14P2A-1, measured on the live driver). STRICT keeps
+// the PRIMARY KEY's columns implicitly NOT NULL, so relaxing `op_id`
+// cannot weaken `(instance_id, seq)`.
+//
+// THE GUARANTEE THE DDL USED TO CARRY IS NOT DROPPED, it MOVES: with
+// NOT NULL gone, the mapper takes over a CLASS-CONDITIONAL check — the
+// two op-carrying classes require `op_id` present, the op-less class
+// requires it absent — because a relaxation that leaves no carrier is
+// how a guarantee silently disappears.
+const SCHEMA_VERSION = "6";
 
 const SCHEMA = `
 CREATE TABLE meta (
@@ -73,12 +95,13 @@ CREATE TABLE instances (
 CREATE TABLE transcript (
   instance_id         TEXT    NOT NULL,
   seq                 INTEGER NOT NULL,
-  op_id               TEXT    NOT NULL,
+  op_id               TEXT,
   entry_kind          TEXT    NOT NULL,
   envelope            TEXT,
   payload_digest      TEXT,
   gate_decisions      TEXT,
   issued_agent_config TEXT,
+  entry_body          TEXT,
   committed_at        INTEGER NOT NULL,
   PRIMARY KEY (instance_id, seq),
   UNIQUE (instance_id, op_id)
@@ -156,6 +179,91 @@ function parseActivationMode(value: string): ActivationMode {
   return value as ActivationMode;
 }
 
+// ── The DECISION_REQUEST body (K8/C22) — the SAME casing seam ────────
+// The class's own fields ride one column as canonical JSON with the
+// model's SNAKE keys, exactly as the wait column does. The TS grain
+// stays camelCase; the model's TOKEN spelling is what is preserved,
+// never the TS field spelling.
+
+function encodeDecisionRequestBody(body: DecisionRequestBody): string {
+  return canonicalJson({
+    // `context_ref` is spread on PRESENCE (K3): an authored `{}`, `null`,
+    // `""` or `0` must record as faithfully as an object, so the test is
+    // `!== undefined` and never truthiness.
+    ...(body.contextRef !== undefined ? { context_ref: body.contextRef } : {}),
+    decisions: body.decisions,
+    ...(body.recommendation !== undefined ? { recommendation: body.recommendation } : {}),
+    ...(body.recommendationSource !== undefined
+      ? {
+          recommendation_source: {
+            event_type: body.recommendationSource.eventType,
+            from_step: body.recommendationSource.fromStep,
+          },
+        }
+      : {}),
+    recipient: body.recipient,
+    request_ref: body.requestRef,
+  });
+}
+
+function decodeDecisionRequestEntry(
+  seq: number,
+  text: string,
+  committedAt: number,
+): DecisionRequestEntry {
+  const parsed = JSON.parse(text) as {
+    context_ref?: unknown;
+    decisions?: unknown;
+    recommendation?: unknown;
+    recommendation_source?: unknown;
+    recipient?: unknown;
+    request_ref?: unknown;
+  };
+  const source = parsed.recommendation_source as
+    | { from_step?: unknown; event_type?: unknown }
+    | undefined;
+  if (
+    typeof parsed.request_ref !== "string" ||
+    typeof parsed.recipient !== "string" ||
+    !Array.isArray(parsed.decisions) ||
+    parsed.decisions.some((key) => typeof key !== "string") ||
+    (parsed.recommendation !== undefined && typeof parsed.recommendation !== "string") ||
+    (source !== undefined &&
+      (typeof source.from_step !== "string" || typeof source.event_type !== "string"))
+  ) {
+    throw new Error(`store integrity: malformed decision_request body at seq ${String(seq)}`);
+  }
+  // The PAIR RULE, refused in both directions rather than repaired: a
+  // recommendation without its source, or a source without its
+  // recommendation, is a half-written audit answer.
+  if ((parsed.recommendation === undefined) !== (source === undefined)) {
+    throw new Error(
+      `store integrity: decision_request seq ${String(seq)} carries recommendation and ` +
+        `recommendation_source apart (they travel together)`,
+    );
+  }
+  return {
+    entryKind: "DECISION_REQUEST",
+    seq,
+    requestRef: parsed.request_ref,
+    recipient: parsed.recipient,
+    decisions: parsed.decisions as readonly string[],
+    ...(parsed.recommendation !== undefined ? { recommendation: parsed.recommendation } : {}),
+    ...(source !== undefined
+      ? {
+          recommendationSource: {
+            fromStep: source.from_step as string,
+            eventType: source.event_type as string,
+          },
+        }
+      : {}),
+    // Presence again, on the read side: `"context_ref" in parsed` and
+    // never a truth test, so a stored `null` decodes as PRESENT.
+    ...("context_ref" in parsed ? { contextRef: parsed.context_ref } : {}),
+    committedAt,
+  };
+}
+
 // ── The wait encoding (S5) — stored snake keys, TS camelCase (T4) ────
 
 function encodeWait(wait: WaitReason | null): string | null {
@@ -164,6 +272,10 @@ function encodeWait(wait: WaitReason | null): string | null {
   }
   return canonicalJson({
     kind: wait.kind,
+    // K4 (ch14-p2a): present IFF the human-gate park wrote this record.
+    // Spread-on-presence, never a null placeholder — a stored `null`
+    // would make "no ref" and "a ref we lost" the same bytes.
+    ...(wait.requestRef !== undefined ? { request_ref: wait.requestRef } : {}),
     requested_by: wait.requestedBy,
     resume_events: wait.resumeEvents,
   });
@@ -175,14 +287,24 @@ function decodeWait(text: string | null): WaitReason | null {
   }
   const parsed = JSON.parse(text) as {
     kind?: unknown;
+    request_ref?: unknown;
     requested_by?: unknown;
     resume_events?: unknown;
   };
+  // K4 (ch14-p2a): the kind guard OPENS with the union. It was an
+  // equality against the single kernel-owned member; a `wait` step now
+  // declares its own authored kind, so a persisted decision wait or an
+  // authored wait must never meet a closed decode. What stays checked is
+  // the SHAPE — a nonempty string kind, not a membership list, because
+  // admission owns the collision refusal and a second membership
+  // constant here would be a competing authority.
   if (
-    parsed.kind !== "kickoff_pending" ||
+    typeof parsed.kind !== "string" ||
+    parsed.kind === "" ||
     typeof parsed.requested_by !== "string" ||
     !Array.isArray(parsed.resume_events) ||
-    parsed.resume_events.some((event) => typeof event !== "string")
+    parsed.resume_events.some((event) => typeof event !== "string") ||
+    (parsed.request_ref !== undefined && typeof parsed.request_ref !== "string")
   ) {
     throw new Error(`store integrity: malformed wait value '${text}'`);
   }
@@ -190,6 +312,7 @@ function decodeWait(text: string | null): WaitReason | null {
     kind: parsed.kind,
     requestedBy: parsed.requested_by,
     resumeEvents: parsed.resume_events as readonly string[],
+    ...(parsed.request_ref !== undefined ? { requestRef: parsed.request_ref } : {}),
   };
 }
 
@@ -325,12 +448,15 @@ function rowToInstance(row: InstanceRow): WorkflowInstance {
 
 interface TranscriptRow {
   seq: number;
-  op_id: string;
+  /** NULLABLE since schema 6 (K8): the op-less class carries none. */
+  op_id: string | null;
   entry_kind: string;
   envelope: string | null;
   payload_digest: string | null;
   gate_decisions: string | null;
   issued_agent_config: string | null;
+  /** The op-less class's own fields, canonical JSON with SNAKE keys. */
+  entry_body: string | null;
   committed_at: number;
 }
 
@@ -348,6 +474,56 @@ const LIFECYCLE_FACT_KINDS: readonly LifecycleFactKind[] = [
  * row missing a class field, or a fact row carrying one, is integrity
  * drift. */
 function toTranscriptEntry(row: TranscriptRow): TranscriptEntry {
+  // THE INHERITED INVARIANT (K8, ch14-p2a). Until schema 6 the DDL's
+  // `op_id TEXT NOT NULL` was the ONLY thing guaranteeing an op-carrying
+  // row has an op id — the mapper passed the column through unchecked.
+  // Relaxing the column to make the op-less class expressible would have
+  // dropped that guarantee entirely, so it MOVES here rather than
+  // disappearing, and it is CLASS-CONDITIONAL in both directions: the
+  // two op-carrying classes require it PRESENT, the op-less class
+  // requires it ABSENT. A row that has it backwards is integrity drift.
+  const opLess = row.entry_kind === "DECISION_REQUEST";
+  if (!opLess && row.op_id === null) {
+    throw new Error(
+      `store integrity: ${row.entry_kind} row seq ${String(row.seq)} has a NULL op_id ` +
+        `(op-carrying class; the DDL's NOT NULL moved here at schema 6)`,
+    );
+  }
+  if (opLess && row.op_id !== null) {
+    throw new Error(
+      `store integrity: DECISION_REQUEST row seq ${String(row.seq)} carries an op_id ` +
+        `(the class is op-less — it consumes no (instance_id, op_id) uniqueness)`,
+    );
+  }
+  // …and the entry_body column iff, the same rule from the other side:
+  // the op-less class REQUIRES it, the other two refuse it. Checking one
+  // direction only would let a build route the new class through the
+  // fact branch and still read green on everything but `op_id`.
+  if (opLess && row.entry_body === null) {
+    throw new Error(
+      `store integrity: DECISION_REQUEST row seq ${String(row.seq)} has a NULL entry_body ` +
+        `(the class's fields live there)`,
+    );
+  }
+  if (!opLess && row.entry_body !== null) {
+    throw new Error(
+      `store integrity: ${row.entry_kind} row seq ${String(row.seq)} carries a non-null entry_body ` +
+        `(op-less-class-only field)`,
+    );
+  }
+  if (opLess) {
+    if (
+      row.envelope !== null ||
+      row.payload_digest !== null ||
+      row.gate_decisions !== null ||
+      row.issued_agent_config !== null
+    ) {
+      throw new Error(
+        `store integrity: DECISION_REQUEST row seq ${String(row.seq)} carries a transition-only field (class iff)`,
+      );
+    }
+    return decodeDecisionRequestEntry(row.seq, row.entry_body as string, row.committed_at);
+  }
   if (row.entry_kind === "transition") {
     // S11/C3 class iff (packet ch12-p2): a transition row carries all
     // four class fields NON-NULL — issued_agent_config joins the trio now
@@ -398,7 +574,7 @@ function toTranscriptEntry(row: TranscriptRow): TranscriptEntry {
     return {
       entryKind: row.entry_kind as LifecycleFactKind,
       seq: row.seq,
-      opId: row.op_id,
+      opId: row.op_id as string,
       committedAt: row.committed_at,
     };
   }
@@ -583,20 +759,26 @@ export function openStore(path: string, time: TimeSource): StoreHandle {
           );
         }
 
-        // E3: both axis fields ride the SAME transaction the commit
-        // always used (REV-A1-TXN unchanged).
+        // E3: the axis fields ride the SAME transaction the commit
+        // always used (REV-A1-TXN unchanged). K1 (ch14-p2a): they now
+        // arrive NESTED in the arrival's branded effect record, and the
+        // `wait` column joins them — ALWAYS written, value or null, so
+        // the S5 same-move clear cannot be forgotten by an arrival that
+        // simply omitted the field.
+        const arrival = input.arrival;
         const cas = db
           .prepare(
             `UPDATE instances
                SET current_step = ?, round = ?, kernel_status = ?,
-                   terminal_disposition = ?, version = version + 1
+                   terminal_disposition = ?, wait = ?, version = version + 1
              WHERE instance_id = ? AND version = ?`,
           )
           .run(
-            input.newCurrentStep,
-            input.newRound,
-            input.newKernelStatus,
-            input.newTerminalDisposition,
+            arrival.newCurrentStep,
+            arrival.newRound,
+            arrival.newKernelStatus,
+            arrival.newTerminalDisposition,
+            encodeWait(arrival.newWait),
             input.instanceId,
             input.expectedVersion,
           );
@@ -621,9 +803,29 @@ export function openStore(path: string, time: TimeSource): StoreHandle {
           JSON.stringify(input.envelope),
           input.payloadDigest,
           JSON.stringify(input.gateDecisions),
-          canonicalJson(input.issuedAgentConfig),
+          canonicalJson(arrival.issuedAgentConfig),
           time.now(),
         );
+        // K2 (ch14-p2a): the human-gate park's SECOND ROW, in the SAME
+        // transaction as the state write above. An append failure rolls
+        // the whole commit back, and no half-entered gate exists — two
+        // commits would BE that half-entered gate, and a kernel-side
+        // compensating delete would be a second correctness mechanism
+        // beside the transaction.
+        //
+        // The row is OP-LESS by class: `op_id` NULL (it consumes no
+        // uniqueness), the transition-only columns NULL, and the class's
+        // own fields in `entry_body` as canonical JSON with snake keys.
+        if (arrival.decisionRequest !== undefined) {
+          db.prepare(
+            "INSERT INTO transcript (instance_id, seq, op_id, entry_kind, envelope, payload_digest, gate_decisions, issued_agent_config, entry_body, committed_at) VALUES (?, ?, NULL, 'DECISION_REQUEST', NULL, NULL, NULL, NULL, ?, ?)",
+          ).run(
+            input.instanceId,
+            next.seq + 1,
+            encodeDecisionRequestBody(arrival.decisionRequest),
+            time.now(),
+          );
+        }
         db.exec("COMMIT");
         return Promise.resolve({ kind: "committed", version: input.expectedVersion + 1 });
       } catch (error) {
@@ -739,7 +941,7 @@ export function openStore(path: string, time: TimeSource): StoreHandle {
       }
       const entries = db
         .prepare(
-          "SELECT seq, op_id, entry_kind, envelope, payload_digest, gate_decisions, issued_agent_config, committed_at FROM transcript WHERE instance_id = ? ORDER BY seq",
+          "SELECT seq, op_id, entry_kind, envelope, payload_digest, gate_decisions, issued_agent_config, entry_body, committed_at FROM transcript WHERE instance_id = ? ORDER BY seq",
         )
         .all(instanceId) as unknown as TranscriptRow[];
       return Promise.resolve({
@@ -780,7 +982,7 @@ export function openStore(path: string, time: TimeSource): StoreHandle {
             ? null
             : (db
                 .prepare(
-                  "SELECT seq, op_id, entry_kind, envelope, payload_digest, gate_decisions, issued_agent_config, committed_at FROM transcript WHERE instance_id = ? AND seq > ? ORDER BY seq",
+                  "SELECT seq, op_id, entry_kind, envelope, payload_digest, gate_decisions, issued_agent_config, entry_body, committed_at FROM transcript WHERE instance_id = ? AND seq > ? ORDER BY seq",
                 )
                 .all(instanceId, afterSeq) as unknown as TranscriptRow[]);
         db.exec("COMMIT");

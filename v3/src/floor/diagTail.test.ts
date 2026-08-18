@@ -111,7 +111,11 @@ function committedRows(rows: readonly DiagTailRow[]): TranscriptEntry[] {
 /** [seq, opId] per class (C12): a transition's op id rides its
  * envelope, a fact's rides the row itself. */
 function opIdOf(entry: TranscriptEntry): string {
-  return entry.entryKind === "transition" ? entry.envelope.opId : entry.opId;
+  if (entry.entryKind === "transition") return entry.envelope.opId;
+  // K12 (ch14-p2a): the DECISION_REQUEST class is OP-LESS — kernel-
+  // derived, correlated by `requestRef`. An op-less row is not an op.
+  if (entry.entryKind === "DECISION_REQUEST") return entry.requestRef;
+  return entry.opId;
 }
 
 function diagEvents(rows: readonly DiagTailRow[]): DiagnosticEvent[] {

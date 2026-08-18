@@ -134,6 +134,20 @@ function resolveBinding(
   // (draft C16, realized ch8-P1); reachability-aware relaxation stays
   // deferred-additive.
   for (const [stepId, step] of Object.entries(template.steps)) {
+    // K10 (ch14-p2a): SKIP a step that declares NO ROLE — a `wait` step
+    // is role-less by class, and without this the loop throws at CREATE
+    // blaming an unbound role the template never declared.
+    //
+    // THE PREDICATE IS THE ROW: it skips on the STEP having no declared
+    // role, NEVER on the BINDING lacking an entry. The two are one
+    // character apart here (`step.role === undefined` versus
+    // `binding[...] === undefined`) and the wrong one silently disables
+    // binding coverage for EVERY step while looking like it does this.
+    // The no-effect twin therefore binds with it: a role-BEARING step
+    // whose role is unbound still fails create, unchanged.
+    if (step.role === undefined) {
+      continue;
+    }
     if (binding[step.role] === undefined) {
       throw new Error(
         `create failed (binding coverage): role '${step.role}' (step '${stepId}') is unbound — ` +
@@ -142,6 +156,52 @@ function resolveBinding(
     }
   }
   return binding;
+}
+
+/**
+ * K18 (packet ch14-p2a): no commit may write ACTIVE at a `start` step
+ * whose class is not the AGENT class.
+ *
+ * WHY IT EXISTS. The activation path commits ACTIVE at the template's
+ * start step and derives a dispatch from it DIRECTLY, without routing
+ * through the arrival — a FOURTH entry the model does not have. So the
+ * arrival's fan-out never sees it, and a non-agent start reaches
+ * `deriveDispatchIntent` with no role, instruction or transitions.
+ *
+ * IT REPAIRS A LIVE LATENT DEFECT for one class and forecloses a
+ * newly-created one for the other. A `human_gate` CARRIES a role, so a
+ * gate-at-start template is creatable at this basis already and its
+ * activation throws a raw TypeError AFTER the commit — leaving a
+ * durably committed ACTIVE-at-a-gate instance behind the throw. A
+ * `wait` step is role-less and was refused by create's binding
+ * coverage; K10's skip is what makes THAT case reachable at all.
+ *
+ * THE PLACEMENT IS PART OF THE DECISION. The only site all activation
+ * paths share is the POST-commit half, and a guard there would leave
+ * exactly the committed-state wreckage above. So it runs PRE-COMMIT,
+ * which requires it at EACH site that commits an activation — the
+ * duplication is the price of the rule, stated rather than discovered.
+ *
+ * What this does NOT do is make a start-at-gate run legal-but-parked:
+ * `Activated`'s intent is a required DispatchIntent, so the activated
+ * arm cannot express a park, and inventing one would be a fourth entry
+ * path the contract does not authorize.
+ *
+ * The better long-term home is refusing a non-agent `start` at
+ * ADMISSION; that is a declaration rule, outside this packet's plane,
+ * and is routed to a later chapter with a plan-map row.
+ */
+function assertAgentStart(template: WorkflowTemplate, instanceId: InstanceId): void {
+  const startStep = Object.prototype.hasOwnProperty.call(template.steps, template.start)
+    ? template.steps[template.start]
+    : undefined;
+  if (startStep?.type !== undefined) {
+    throw new Error(
+      `kernel integrity: activation of instance '${instanceId}' at start step ` +
+        `'${template.start}' of class '${startStep.type}' — only the agent class can be activated ` +
+        `(a non-agent start is an entry the contract does not authorize)`,
+    );
+  }
 }
 
 /**
@@ -210,6 +270,8 @@ async function activateOrHold(
 ): Promise<ActivateOrHoldResult> {
   const { instance, template, newRuntimeContext, fact, expectedVersion } = args;
   if (instance.activationMode === "immediate") {
+    // K18: PRE-COMMIT, so a refused activation leaves NOTHING committed.
+    assertAgentStart(template, instance.instanceId);
     // The composed activation commit (L2/L7): ACTIVE + template.start + round
     // 1 + the resolved context (+ the STARTED fact on the none path), one move.
     const result = await deps.store.commitLifecycle({
@@ -567,6 +629,10 @@ export async function kickoff(
       );
     }
     const template = await loadPinnedTemplate(deps.definitions, instance);
+    // K18: the SECOND activation-committing site. The duplication is the
+    // rule's stated price — a single shared guard exists only in the
+    // post-commit half, which is exactly where it would be useless.
+    assertAgentStart(template, instance.instanceId);
     const result = await deps.store.commitLifecycle({
       instanceId: instance.instanceId,
       expectedVersion: instance.version,

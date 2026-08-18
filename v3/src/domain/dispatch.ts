@@ -104,3 +104,48 @@ export interface DispatchIntent {
   readonly actor: ActorId;
   readonly packet: ContextPacket;
 }
+
+/**
+ * l3/HumanDecisionRequest (packet ch14-p2a, K7) — the Ask.
+ *
+ * DERIVED, never stored, recomputable from committed state: the pending
+ * DECISION_REQUEST plus the pinned template. The field list is CLOSED
+ * and spelled at the TYPE grain (camelCase), because this is a
+ * never-stored TS value whose sibling directive is camelCase
+ * throughout; the contract's snake spellings are the MODEL's tokens it
+ * quotes, not field declarations.
+ *
+ * THE PROVENANCE OF EACH RESOLVED FIELD IS CONTRACT, not incidental,
+ * because every one has a plausible wrong source that a presence
+ * assertion cannot see:
+ *   - `operator` is `binding[gate.role]` — the RESOLVED ACTOR ID, never
+ *     the role name;
+ *   - `question` is the GATE's instruction, never the arriving step's;
+ *   - `allowedDecisions` and `decisionRequirements` are the GATE's;
+ *   - `expectedVersion` is the POST-COMMIT version, off by exactly one
+ *     if a build projects the pre-commit instance.
+ */
+export interface HumanDecisionRequest {
+  readonly instanceId: InstanceId;
+  readonly expectedVersion: number;
+  readonly requestRef: string;
+  /** The resolved ACTOR id — operator-authored untrusted text (K19). */
+  readonly operator: string;
+  /** The gate's instruction — template-authored (K19). */
+  readonly question: string;
+  readonly recommendation?: string;
+  readonly context: HumanDecisionContext;
+  readonly allowedDecisions: readonly string[];
+  readonly decisionRequirements: Readonly<Record<string, readonly string[]>>;
+}
+
+/**
+ * C20's delegated projection, CLOSED at `{ task, handoff? }`: the run's
+ * task, plus the request's context surface where one was recorded.
+ */
+export interface HumanDecisionContext {
+  /** UNTRUSTED but OPERATOR-authored — a distinct provenance from actor text (K19). */
+  readonly task: string;
+  /** UNTRUSTED actor-authored, copied verbatim (K19). Present IFF recorded. */
+  readonly handoff?: unknown;
+}

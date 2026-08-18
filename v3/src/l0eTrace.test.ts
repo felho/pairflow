@@ -22,6 +22,17 @@ import {
   fixtureDefinitionStore,
 } from "./testkit/index.js";
 import type { ScriptedProvisionBehavior } from "./testkit/index.js";
+import type { DispatchIntent, HumanDecisionRequest } from "./domain/index.js";
+
+/**
+ * K6 (packet ch14-p2a): `committed.intent` widened to
+ * `DispatchIntent | HumanDecisionRequest | null`. This narrows on a
+ * DISCRIMINATING key — `packet`, which only a dispatch carries — never
+ * on truthiness and never by a bare type assertion.
+ */
+const asDispatch = (intent: DispatchIntent | HumanDecisionRequest | null | undefined) =>
+  intent !== null && intent !== undefined && "packet" in intent ? intent : null;
+
 
 /**
  * The l0e chapter trace as a golden test (packet ch12-p3, TR family): the
@@ -167,9 +178,9 @@ describe("l0e golden trace — the provisioned-immediate run (TR family)", () =>
     })) as Extract<Outcome, { kind: "committed" }>;
     expect(pass.kind).toBe("committed");
     expect(pass.version).toBe(4);
-    expect(pass.intent?.packet.runtimeContext).toEqual(PROJECTION);
+    expect(asDispatch(pass.intent)?.packet.runtimeContext).toEqual(PROJECTION);
     // The RAW ref never enters the packet (projection-never-the-ref).
-    expect(pass.intent?.packet.runtimeContext).not.toEqual(READY_REF);
+    expect(asDispatch(pass.intent)?.packet.runtimeContext).not.toEqual(READY_REF);
 
     close();
   });

@@ -54,6 +54,22 @@ import { createKernel } from "./kernel.js";
 import { deriveDispatchIntent } from "./dispatchIntent.js";
 import type { Kernel } from "./kernel.js";
 import { noopDiagnosticsSink } from "../diag/index.js";
+import type { ArrivalEffect, ArrivalEffectFields } from "../ports/store.js";
+
+/**
+ * K1 (packet ch14-p2a): the arrival effect is BRANDED, and its only
+ * sanctioned producer is `applyTargetEntryEffects` — that is what makes
+ * "the object the store receives is the object the arrival returned" a
+ * property the TYPE carries rather than a lane's aspiration.
+ *
+ * A fixture is not a caller on that path. This file authors effects
+ * directly to drive rules on either side of the port, the same class as
+ * the deliberately-loose builders that author admission-negative input.
+ * The seal lives here ONCE and named, so the bypass is visible instead
+ * of sprinkled through the suite.
+ */
+const arrivalFixture = (fields: ArrivalEffectFields): ArrivalEffect => fields as ArrivalEffect;
+
 
 // Test-local fixtures: the testkit MD-1 template builder is ch4-P4's
 // deliverable; P3 wires the kernel against hand-built shapes.
@@ -695,11 +711,14 @@ describe("L1 authority — CAS restart × terminal (dimension 6, A12)", () => {
             envelope: envelope("w1", "CONVERGED", 1, { ref: "w" }, "reviewer"),
             payloadDigest: "dg-w",
             gateDecisions: [],
-            newCurrentStep: "done",
-            newRound: 1,
-            newKernelStatus: "TERMINAL",
-            newTerminalDisposition: "done",
-            issuedAgentConfig: {},
+            arrival: arrivalFixture({
+              newCurrentStep: "done",
+              newRound: 1,
+              newKernelStatus: "TERMINAL",
+              newTerminalDisposition: "done",
+              newWait: null,
+              issuedAgentConfig: {},
+            }),
           });
           expect(winner.kind).toBe("committed");
           // ...and THIS attempt reports the conflict → whole-handle restart.
@@ -847,11 +866,14 @@ async function seedReviewWithHistory(store: StorePort): Promise<void> {
       },
       payloadDigest: `seed-digest-${opId}`,
       gateDecisions: [],
-      newCurrentStep,
-      newRound: 1,
-      newKernelStatus: "ACTIVE",
-      newTerminalDisposition: null,
-      issuedAgentConfig: {},
+      arrival: arrivalFixture({
+        newCurrentStep,
+        newRound: 1,
+        newKernelStatus: "ACTIVE",
+        newTerminalDisposition: null,
+        newWait: null,
+        issuedAgentConfig: {},
+      }),
     });
     if (seeded.kind !== "committed") {
       throw new Error(`history seed failed at ${opId}: ${seeded.kind}`);

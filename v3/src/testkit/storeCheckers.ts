@@ -50,9 +50,19 @@ export function checkOpUniqueness(detail: InstanceDetail): string[] {
   const violations: string[] = [];
   const seen = new Set<string>();
   for (const entry of detail.transcript) {
-    // BOTH classes consume the ONE (instance_id, op_id) uniqueness
-    // (C12): a transition's op id rides its envelope, a fact's rides
-    // the row itself.
+    // TWO of the three classes consume the ONE (instance_id, op_id)
+    // uniqueness (C12): a transition's op id rides its envelope, a
+    // fact's rides the row itself.
+    //
+    // K12 (ch14-p2a): the DECISION_REQUEST class is OP-LESS — kernel-
+    // derived, consuming no uniqueness, correlated by `requestRef`. It
+    // is SKIPPED rather than read, because recording an `undefined` as
+    // a seen key would make a SECOND op-less row report a FALSE
+    // duplicate. The rule is one line long and general: an op-less row
+    // is not an op.
+    if (entry.entryKind === "DECISION_REQUEST") {
+      continue;
+    }
     const opId = entry.entryKind === "transition" ? entry.envelope.opId : entry.opId;
     if (seen.has(opId)) {
       violations.push(`op uniqueness: duplicated op '${opId}' in the transcript`);
@@ -151,7 +161,12 @@ export function checkTerminalSink(
         `terminal sink: reconstructed position '${position}' has no step entry (corrupt history)`,
       ];
     }
-    const target = step.transitions[entry.envelope.type];
+    // DEFERRED(ch14-p2b): this replay advances position on TRANSITION
+    // rows only, so a decision- or resume-routed arrival is INVISIBLE
+    // to it. Unreachable at ch14-p2a (a park leaves WAITING, so no
+    // further transition row can commit), and p2b owns closing this
+    // WITH the arrivals that create it.
+    const target = step.transitions?.[entry.envelope.type];
     if (target === undefined) {
       return [
         `terminal sink: no transition for '${entry.envelope.type}' at '${position}' — reconstruction failed (corrupt history)`,
@@ -265,7 +280,12 @@ export function checkRoundReconstruction(
         `round reconstruction: reconstructed position '${position}' has no step entry (corrupt history)`,
       ];
     }
-    const target = step.transitions[entry.envelope.type];
+    // DEFERRED(ch14-p2b): this replay advances position on TRANSITION
+    // rows only, so a decision- or resume-routed arrival is INVISIBLE
+    // to it. Unreachable at ch14-p2a (a park leaves WAITING, so no
+    // further transition row can commit), and p2b owns closing this
+    // WITH the arrivals that create it.
+    const target = step.transitions?.[entry.envelope.type];
     if (target === undefined) {
       return [
         `round reconstruction: no transition for '${entry.envelope.type}' at '${position}' — reconstruction failed (corrupt history)`,

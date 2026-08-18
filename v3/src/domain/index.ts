@@ -33,6 +33,8 @@ export type {
 } from "./gate.js";
 export type {
   ActivationMode,
+  DecisionRecommendationSource,
+  DecisionRequestEntry,
   KernelStatus,
   LifecycleFactEntry,
   LifecycleFactKind,
@@ -53,6 +55,8 @@ export type {
   ContextBlockSource,
   ContextPacket,
   DispatchIntent,
+  HumanDecisionContext,
+  HumanDecisionRequest,
   RuntimeContextProjection,
 } from "./dispatch.js";
 export type {

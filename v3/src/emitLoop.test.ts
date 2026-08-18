@@ -158,7 +158,11 @@ describe("CT-A3-EMITLIB-REFRESH — a refresh after Stale is a NEW logical op (I
     const detail = await store.getInstanceDetail("inst-1");
     expect(
       detail?.transcript.map((entry) =>
-        entry.entryKind === "transition" ? entry.envelope.opId : entry.opId,
+        entry.entryKind === "transition"
+          ? entry.envelope.opId
+          : entry.entryKind === "DECISION_REQUEST"
+            ? entry.requestRef
+            : entry.opId,
       ),
     ).toEqual(["op-start", winner.opId, refreshed.opId]);
     expect(detail?.instance.version).toBe(4);

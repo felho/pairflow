@@ -1,10 +1,12 @@
 import type {
+  DecisionRecommendationSource,
   EpochMillis,
   EventEnvelope,
   InstanceId,
   LifecycleFactKind,
   OpId,
   RejectionName,
+  RoleName,
   TranscriptEntry,
   WorkflowInstance,
 } from "../domain/index.js";
@@ -72,7 +74,47 @@ export interface BundleFactRow {
   readonly committedAt: EpochMillis;
 }
 
-export type BundleRow = BundleTranscriptRow | BundleFactRow;
+/**
+ * K16 (packet ch14-p2a): the THIRD row class. The fact row above
+ * requires a lifecycle-fact kind and an op id, and the DECISION_REQUEST
+ * class satisfies neither — so a third shape is FORCED by the union
+ * growth rather than chosen.
+ *
+ * What IS chosen is the content: the request's sanitized fields, all
+ * kernel-minted or admitted id-grammar tokens, spelled camelCase
+ * because this is a never-stored TS projection.
+ *
+ * `contextRef` is NOT carried. It is replaced by `hadContext`, and the
+ * bit is not decoration: the envelope row beside this one carries
+ * exactly such a flag so a reader can tell "omitted by policy" from
+ * "never had one", and a shape that dropped the field without it would
+ * under-report SILENTLY — the one thing this surface exists to prevent.
+ *
+ * THE OMISSION IS FAIL-CLOSED AND UNIFORM under BOTH shipped policies,
+ * for a structural reason rather than a preference: the redaction seam's
+ * only member takes an ENVELOPE, which an envelope-less row cannot
+ * supply, so no policy can be consulted about this field without
+ * widening the seam. Widening it is a NAMED DEFERRAL — it touches a
+ * port outside this packet's boundary and would change both shipped
+ * policies and their suites — routed to the chapter that next touches
+ * the bundle. Until then the value is omitted for everyone, the
+ * conservative reading of the standing rule that the production policy
+ * omits payloads and a context surface is a payload by provenance.
+ */
+export interface BundleDecisionRequestRow {
+  readonly seq: number;
+  readonly entryKind: "DECISION_REQUEST";
+  readonly requestRef: string;
+  readonly recipient: RoleName;
+  readonly decisions: readonly string[];
+  readonly recommendation?: string;
+  readonly recommendationSource?: DecisionRecommendationSource;
+  /** Presence, never the value — see the class comment. */
+  readonly hadContext: boolean;
+  readonly committedAt: EpochMillis;
+}
+
+export type BundleRow = BundleTranscriptRow | BundleFactRow | BundleDecisionRequestRow;
 
 /**
  * The bundle diag-row projection (the ch7-P3 J matrix): a COPY of
@@ -230,8 +272,26 @@ function toDiagRow(event: DiagnosticEvent): BundleDiagRow {
 }
 
 function toBundleRow(entry: TranscriptEntry, policy: RedactionPolicy): BundleRow {
-  // F4: exhaustive discriminant — a fact row maps to its own shape,
+  // F4: exhaustive discriminant — each class maps to its own shape,
   // pass-through fidelity preserved (every detail row appears).
+  if (entry.entryKind === "DECISION_REQUEST") {
+    return {
+      seq: entry.seq,
+      entryKind: entry.entryKind,
+      requestRef: entry.requestRef,
+      recipient: entry.recipient,
+      decisions: entry.decisions,
+      ...(entry.recommendation !== undefined ? { recommendation: entry.recommendation } : {}),
+      ...(entry.recommendationSource !== undefined
+        ? { recommendationSource: entry.recommendationSource }
+        : {}),
+      // PRESENCE, computed the same way the envelope row's `hasPayload`
+      // is — `in`, not truthiness, so an authored `{}`/`null`/`""`/`0`
+      // reports as present.
+      hadContext: "contextRef" in entry,
+      committedAt: entry.committedAt,
+    };
+  }
   if (entry.entryKind !== "transition") {
     return {
       seq: entry.seq,

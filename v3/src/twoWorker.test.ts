@@ -165,7 +165,11 @@ describe("CT-B-TWOWORKER — two workers, one instance stream, winner-independen
       expect(
         detail?.transcript.map((entry) => [
           entry.seq,
-          entry.entryKind === "transition" ? entry.envelope.opId : entry.opId,
+          entry.entryKind === "transition"
+            ? entry.envelope.opId
+            : entry.entryKind === "DECISION_REQUEST"
+              ? entry.requestRef
+              : entry.opId,
         ]),
       ).toEqual([
         [1, "op-start"],

@@ -180,10 +180,22 @@ export function createDeliveryLoop(
         `delivery integrity: step '${instance.currentStep}' has no definition (instance '${instance.instanceId}')`,
       );
     }
-    const actor = instance.binding[step.role];
+    // K11 (ch14-p2a): `role` is optional since the class set opened.
+    // Delivery addresses the actor of a DISPATCHED step, and only agent
+    // steps dispatch — a role-less position here means a dispatch was
+    // derived for a class that has no actor, which is integrity drift in
+    // the same register as the missing-definition throw above.
+    const { role } = step;
+    if (role === undefined) {
+      throw new Error(
+        `delivery integrity: step '${instance.currentStep}' declares no role ` +
+          `(instance '${instance.instanceId}') — only agent steps dispatch`,
+      );
+    }
+    const actor = instance.binding[role];
     if (actor === undefined) {
       throw new Error(
-        `delivery integrity: role '${step.role}' unbound (instance '${instance.instanceId}')`,
+        `delivery integrity: role '${role}' unbound (instance '${instance.instanceId}')`,
       );
     }
     return actor;

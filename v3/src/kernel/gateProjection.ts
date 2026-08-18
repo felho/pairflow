@@ -75,13 +75,32 @@ function derivePolicyView(
       );
     }
     const eventType = entry.envelope.type;
-    const target = step.transitions[eventType];
+    // DEFERRED(ch14-p2b): this policy-view replay advances position on
+    // TRANSITION rows only — the SAME blindness as the two testkit
+    // replay checkers, with a PRODUCTION inhabitant. Unreachable at
+    // ch14-p2a (a park leaves WAITING, so no further transition row can
+    // commit); at p2b a decision-routed arrival makes it resume from the
+    // PRE-GATE position and throw on the next transition row for any
+    // gated workflow crossing a `humanGate`.
+    // K11 (ch14-p2a): `transitions` and `role` are optional since the
+    // class set opened. This replay walks COMMITTED TRANSITION rows, and
+    // a transition can only have been committed FROM an agent step — so
+    // their absence here is corrupt committed history, the same register
+    // as the two throws around it, never a projection that skips a row.
+    const { role, transitions } = step;
+    if (transitions === undefined || role === undefined) {
+      throw new Error(
+        `kernel integrity: gate projection replay reached non-agent step '${position}' ` +
+          `(role/transitions absent) with a committed transition row (corrupt committed history)`,
+      );
+    }
+    const target = transitions[eventType];
     if (target === undefined) {
       throw new Error(
         `kernel integrity: gate projection replay found no transition for '${eventType}' at '${position}' (corrupt committed history)`,
       );
     }
-    history.push({ stepId: position, eventType, role: step.role });
+    history.push({ stepId: position, eventType, role });
     position = target;
   }
   return history;

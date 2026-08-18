@@ -24,15 +24,35 @@ export type TerminalDisposition = "done" | "failed" | "cancelled";
 
 /**
  * l0d/WaitReason (T3/T4): typed waiting — non-null IFF the instance is
- * WAITING (S5's iff). The kind union is the ch12 wait-kind set, grown
- * only additively (C23); stored canonical JSON carries the model's
- * snake keys (`requested_by`, `resume_events`) — the store mapper owns
- * the casing seam.
+ * WAITING (S5's iff). Stored canonical JSON carries the model's snake
+ * keys (`requested_by`, `resume_events`, `request_ref`) — the store
+ * mapper owns the casing seam, and the TYPE grain is camelCase
+ * throughout (K3's casing decision).
+ *
+ * OPENED at ch14-p2a (K4): `kind` was the single kernel-owned member
+ * `kickoff_pending`; it now also admits this chapter's kernel kind
+ * (`human_decision`) and the AUTHORED kinds a `wait` step declares.
+ * The authored class is open by construction, so `kind` is a plain
+ * string rather than a union — which has a consequence the type cannot
+ * hide: `kind` CANNOT discriminate a union, so `requestRef` is an
+ * optional field with a presence RULE rather than a variant.
+ *
+ * `requestRef` is present IFF the record was written by the human-gate
+ * park. That rule is carried by a driven lane, not by this type, and
+ * saying so here is the honest form — a reader must not infer from the
+ * optionality that a bare wait might carry one.
+ *
+ * THE KERNEL-OWNED SET IS NOT RESTATED HERE. Admission owns the
+ * collision refusal between authored kinds and kernel-owned ones; a
+ * second membership constant beside it would be two authorities for
+ * one rule. The kernel writes what the admitted step declares.
  */
 export interface WaitReason {
-  readonly kind: "kickoff_pending";
+  readonly kind: string;
   readonly requestedBy: string;
   readonly resumeEvents: readonly string[];
+  /** Present IFF written by the human-gate park (K4's presence rule). */
+  readonly requestRef?: string;
 }
 
 /**
@@ -201,7 +221,60 @@ export interface LifecycleFactEntry {
   readonly committedAt: EpochMillis;
 }
 
+/**
+ * ch14-C13/C22 (packet ch14-p2a, K2/K8): the recommendation a firing
+ * edge declared, WITH where it came from. The pair travels together in
+ * both directions — present together, absent together — because the
+ * audit question is where a recommendation came from and not only what
+ * it was. Absent entirely on BOTH of C13's absence branches, and then
+ * every decision is equal and override never applies.
+ */
+export interface DecisionRecommendationSource {
+  readonly fromStep: StepId;
+  readonly eventType: string;
+}
+
+/**
+ * A DECISION_REQUEST transcript row (ch14-C22; packet ch14-p2a, K8) —
+ * the human-gate park's record, appended in the SAME atomic move as
+ * the WAITING state write.
+ *
+ * A NEW ENTRY CLASS beside the transition and lifecycle-fact classes,
+ * never a `LifecycleFactKind` growth: it is KERNEL-DERIVED, carries no
+ * `opId`, consumes no `(instance_id, op_id)` uniqueness, and its
+ * correlation handle is `requestRef`. Reading it as a fact kind would
+ * put an op-less row into the op-consumption class, which is exactly
+ * the confusion the separate variant prevents.
+ *
+ * ABSENCE BY CLASS (C10's rule, third branch): the transition-only
+ * fields are ABSENT here rather than known-empty, and this class's own
+ * fields are absent on the other two.
+ */
+export interface DecisionRequestEntry {
+  readonly entryKind: "DECISION_REQUEST";
+  readonly seq: number;
+  /** Fresh per park attempt; the correlation handle in place of an op id. */
+  readonly requestRef: string;
+  /** The GATE's role — never the arriving step's. */
+  readonly recipient: RoleName;
+  /** The gate's DECLARED decision keys, in declaration order. */
+  readonly decisions: readonly string[];
+  /** The FIRING edge's declared `recommends`, absent on both absence branches. */
+  readonly recommendation?: string;
+  /** Present IFF `recommendation` is — the pair travels together. */
+  readonly recommendationSource?: DecisionRecommendationSource;
+  /**
+   * The arriving entry's payload SURFACE (K3(ii)), present IFF that
+   * payload is not ABSENT. A presence test, never a truth test: an
+   * authored `{}`, `null`, `""` or `0` records as faithfully as an
+   * authored object.
+   */
+  readonly contextRef?: unknown;
+  readonly committedAt: EpochMillis;
+}
+
 /** The discriminated transcript entry (S11's staged type face, landed
- * at P1b with the fact writers). Narrow on `entryKind` — exhaustive
- * switch/discriminant, never a cast (F4). */
-export type TranscriptEntry = TransitionEntry | LifecycleFactEntry;
+ * at P1b with the fact writers; the DECISION_REQUEST class joins at
+ * ch14-p2a). Narrow on `entryKind` — exhaustive switch/discriminant,
+ * never a cast (F4). */
+export type TranscriptEntry = TransitionEntry | LifecycleFactEntry | DecisionRequestEntry;

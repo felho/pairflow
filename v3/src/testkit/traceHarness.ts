@@ -13,7 +13,11 @@ import type {
   TemplateRef,
   TerminalDisposition,
 } from "../domain/index.js";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+
 import type { InstanceDetail, StorePort } from "../ports/store.js";
+
+import { replayDigest } from "./replayDigest.js";
 import { runAllCheckers } from "./storeCheckers.js";
 import type { EvidenceResolveSeam } from "./storeCheckers.js";
 
@@ -220,6 +224,29 @@ function assertOutcome(
   }
 }
 
+/**
+ * K17's digest sink (packet ch14-p2a). OPT-IN by environment: absent
+ * variable ⇒ absent behaviour, so every existing run is untouched.
+ *
+ * WHAT THE RECORDED PAIR EVIDENCES, scoped: the replayed behaviour of a
+ * named trace at THIS tree. Comparing two such records across an edit
+ * is the gate's (b) half. It is NOT provenance — the gate-time
+ * recomputation leg that would have bound a number to the ref it cites
+ * is dropped (it collides with the add-only instrument-landing
+ * confinement), so a reader must take exactly the equality and no more.
+ */
+function recordReplayDigest(name: string, detail: InstanceDetail): void {
+  const target = process.env["V3_TRACE_DIGESTS"];
+  if (target === undefined || target === "") return;
+  // An EMPTY file is the ordinary starting state (a caller that
+  // pre-created the path), not a corrupt one — reading it as `{}` keeps
+  // the sink total rather than making the first trace throw.
+  const raw = existsSync(target) ? readFileSync(target, "utf8").trim() : "";
+  const existing = raw === "" ? {} : (JSON.parse(raw) as Record<string, unknown>);
+  existing[name] = replayDigest(detail);
+  writeFileSync(target, `${JSON.stringify(existing, null, 2)}\n`, "utf8");
+}
+
 export async function replayTrace(
   fixture: TraceFixture,
   seams: TraceSeams,
@@ -339,12 +366,30 @@ export async function replayTrace(
     throw new Error(`${fixture.name}: final read found no instance '${instanceId}'`);
   }
 
+  // K17 (packet ch14-p2a) — the BEHAVIOUR half's measurement point,
+  // OPT-IN and inert unless asked for. The digest is taken here rather
+  // than inside each trace file because the fixtures are file-local:
+  // this is the one seam every golden trace already passes through.
+  //
+  // It writes nothing and computes nothing unless `V3_TRACE_DIGESTS`
+  // names a file, so the default path is byte-unchanged.
+  recordReplayDigest(fixture.name, finalDetail);
+
   // [seq, opId] per class (C12): a transition's op id rides its
-  // envelope, a fact's rides the row itself.
-  const rows = finalDetail.transcript.map(
-    (entry) =>
-      [entry.seq, entry.entryKind === "transition" ? entry.envelope.opId : entry.opId] as const,
-  );
+  // envelope, a fact's rides the row itself — and K12 (ch14-p2a): the
+  // DECISION_REQUEST class has NO op id at all, so it contributes its
+  // correlation handle instead. The pair stays total over the union
+  // rather than dropping the row, because a fixture's expected
+  // transcript must still see every committed row in seq order.
+  const rows = finalDetail.transcript.map((entry) => {
+    if (entry.entryKind === "DECISION_REQUEST") {
+      return [entry.seq, entry.requestRef] as const;
+    }
+    return [
+      entry.seq,
+      entry.entryKind === "transition" ? entry.envelope.opId : entry.opId,
+    ] as const;
+  });
   const expectedRows = fixture.finalTranscript;
   const rowsMatch =
     rows.length === expectedRows.length &&

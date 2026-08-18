@@ -76,7 +76,15 @@ export function assembleContextBlocks(
   // is the third indexed lookup: the roles cross-rule is an EQUALITY, and
   // the half that carries this is that every step's role must be a
   // DECLARED roles key — so the read's key is always own.
-  for (const ref of template.roles[step.role]?.promptConcernRefs ?? []) {
+  // K11 (ch14-p2a): `role` is optional since the class set opened. This
+  // render feeds a DISPATCH context packet, which only an agent step
+  // receives, so a role-less step here is drift — but the render's own
+  // belt culture answers it TOTALLY rather than throwing: no role means
+  // no role layer, the same vacuity an absent `promptConcernRefs` takes.
+  const roleName = step.role;
+  for (const ref of (roleName === undefined
+    ? undefined
+    : template.roles[roleName]?.promptConcernRefs) ?? []) {
     emit(ref, { source: "role_config" });
   }
 
@@ -92,7 +100,12 @@ export function assembleContextBlocks(
   // authority logic and no part of it is reimplemented here; the step's
   // own gates record is the ITERATION DOMAIN, which is what discharges
   // the membership half.
-  const authorized = new Set<string>(capability(template, step.role, stepId));
+  // A role-less step authorizes nothing through the transition channel,
+  // so the gate walk's iteration domain is empty — stated as a branch
+  // rather than reached by a comparison that happens to fail.
+  const authorized = new Set<string>(
+    roleName === undefined ? [] : capability(template, roleName, stepId),
+  );
   // The gates record is reached by its OWN ENUMERATION and never indexed
   // — own-key by construction, so a guard here would be dead code. The
   // unit's coarser walk (index the record by an authorized op) would meet

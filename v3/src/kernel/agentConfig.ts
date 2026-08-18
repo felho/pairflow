@@ -34,7 +34,12 @@ export function resolveAgentConfig(
   if (step === undefined) {
     return {};
   }
-  const roleDefault = template.roles[step.role]?.defaultAgentConfig;
+  // K11 (ch14-p2a): `role` is OPTIONAL since the class set opened — a
+  // `wait` step carries none. A role-less step has NO role layer, which
+  // is the same vacuity the `undefined` step above takes, reached for a
+  // different reason and therefore written as its own branch.
+  const roleDefault =
+    step.role === undefined ? undefined : template.roles[step.role]?.defaultAgentConfig;
   const stepConfig = step.agentConfig;
   // R4: a step with no matching override entry reads as `undefined` here
   // and contributes `{}` — the override is inert.

@@ -16,6 +16,17 @@ import { createGateRegistry } from "./gates/index.js";
 import { createKernel } from "./kernel/index.js";
 import { openStore } from "./store/index.js";
 import { createControlledClock, createScriptedProcessGateRunner, fixtureDefinitionStore } from "./testkit/index.js";
+import type { DispatchIntent, HumanDecisionRequest } from "./domain/index.js";
+
+/**
+ * K6 (packet ch14-p2a): `committed.intent` widened to
+ * `DispatchIntent | HumanDecisionRequest | null`. This narrows on a
+ * DISCRIMINATING key — `packet`, which only a dispatch carries — never
+ * on truthiness and never by a bare type assertion.
+ */
+const asDispatch = (intent: DispatchIntent | HumanDecisionRequest | null | undefined) =>
+  intent !== null && intent !== undefined && "packet" in intent ? intent : null;
+
 
 /**
  * The l0c chapter trace as a golden test (packet ch12-p2, TR family): a
@@ -190,11 +201,11 @@ describe("l0c golden trace — the run profile end-to-end (C family + TR)", () =
     expect(pass.kind).toBe("committed");
     expect(pass.version).toBe(3);
     // dispatch(review): effectiveAgentConfig = resolve(review).
-    expect(pass.intent?.packet.effectiveAgentConfig).toEqual(RESOLVE_REVIEW);
-    const dispatchReview = pass.intent?.packet.effectiveAgentConfig;
+    expect(asDispatch(pass.intent)?.packet.effectiveAgentConfig).toEqual(RESOLVE_REVIEW);
+    const dispatchReview = asDispatch(pass.intent)?.packet.effectiveAgentConfig;
     // ch13-p1b (D8): the cascade's typed ref list resolves to a declared
     // catalog entry, and the SAME dispatch carries the rendered block.
-    expect(pass.intent?.packet.contextBlocks).toEqual(REVIEW_CONTEXT_BLOCKS);
+    expect(asDispatch(pass.intent)?.packet.contextBlocks).toEqual(REVIEW_CONTEXT_BLOCKS);
     // The implement step issues no ref — the key is present and empty.
     expect(activated.intent.packet.contextBlocks).toEqual([]);
 
