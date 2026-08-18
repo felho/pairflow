@@ -6155,3 +6155,22 @@ final CLEAN.
   inseparable. A falsifier is what distinguishes a real inseparability
   claim from a lenient reading, because it names in advance the deferral
   that would break the proof
+
+- 2026-08-18 · ch14-p2a build · TRIM CANDIDATE #1 CLOSED BY MEASUREMENT,
+  and the way it closed is the reusable part. The three trim candidates
+  routed to the boundary review were ROI questions — is this tier of
+  instrument worth its cost. The first, K17's GATE-TIME BASELINE
+  RECOMPUTATION leg, did not close on cost: it closed because the leg
+  COLLIDES WITH ITS OWN EXCEPTION. Recomputing a baseline at the
+  pre-change ref requires the measurement to be taken there, which
+  requires wiring inside an EXISTING file, while the instrument-landing
+  commit that puts the hook at that ref is ADD-ONLY by the confinement
+  that makes the exception auditable. The hook is additive; its call
+  site is not. THE GENERAL FORM, which is what the boundary review
+  should carry forward: an exception defined by a CONTENT confinement
+  bounds not only what may ride it but what KIND of instrument it can
+  carry at all — and that second limit is invisible until an instrument
+  needs it. The residual is recorded rather than inherited: a post-hoc
+  fabricated baseline is no longer refused. THE OTHER TWO CANDIDATES
+  REMAIN OPEN there — the per-trace receipt GRANULARITY and the erasure
+  step's SEPARATE negative probes — and neither is touched by this.
