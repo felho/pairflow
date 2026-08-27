@@ -6349,3 +6349,36 @@ final CLEAN.
     that. It is "ran a command, and the command measured something
     adjacent to the claim" — which reads as verified in prose and survives
     review far longer than an ordinary error.
+
+- 2026-08-27 · ch14-p2b build entry · THE §4 BUILD-EXECUTION-CONTEXT
+  PARAGRAPH READS STANDING-ONLY TO A FRESH CONTEXT — raised by the owner
+  after the loop STOPPED to ask permission for something the letter
+  already makes the default.
+
+  WHAT HAPPENED, because the incident is the evidence: at the build entry
+  the loop treated the fresh-context delegated build as a STANDING-MODE
+  facility and put it to the ratifier as a permission question, offering
+  "I continue here" as the per-packet default. It is not. README §4's
+  build-execution-context paragraph is unconditional — *"the DEFAULT is a
+  FRESH-CONTEXT DELEGATED build"* — and assigns the split directly: the
+  subagent executes steps 1–3, the MAIN context retains orchestration,
+  the full verification chain, both §5.5 arm gates, and the
+  one-packet-one-commit boundary. Nothing in it is scoped to a mode.
+
+  WHERE THE MISREADING CAME FROM, and this is the part worth fixing: the
+  two surfaces the loop DID read both mention delegation only inside the
+  standing-mode clause. AGENTS.md's entry-mode bullet says standing mode
+  is *"valid only with the conductor architecture (heavy steps in
+  fresh-context subagents…)"*; the `CreateTaskPacket` SKILL.md carries
+  the same sentence. A reader who checks those two and stops concludes
+  that delegation is standing-mode machinery — which is exactly what
+  happened, and the loop compounded it by not reading the surface
+  AGENTS.md itself names as the build-loop authority (§4).
+
+  PROPOSED: §4's paragraph states EXPLICITLY that the fresh-context
+  delegated default applies in PER-PACKET mode too, and that standing
+  mode only GENERALIZES it across packets rather than introducing it.
+  Secondarily, the two mode bullets that mention delegation gain a
+  pointer to §4 rather than reading as its definition — a facility
+  described only inside one mode's clause will keep being read as that
+  mode's.
