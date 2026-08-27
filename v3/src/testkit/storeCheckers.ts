@@ -243,7 +243,10 @@ export function checkTerminalSink(
   // It reads the SAME reconstructed position the walk above produced —
   // a second walk would be a second authority — and therefore inherits
   // that walk's position blindness to decision- and resume-routed
-  // arrivals, already marked at its two DEFERRED(ch14-p2b) sites.
+  // arrivals, which the walk's own two deferral markers already carry.
+  // Those markers are NOT re-spelled here: the deferral tooling scans
+  // for the marker token, and a prose mention of it in a comment that
+  // defers nothing is a nonconforming occurrence the gate rejects.
   if (wait !== null) {
     const parkedStep = Object.prototype.hasOwnProperty.call(template.steps, position)
       ? template.steps[position]
