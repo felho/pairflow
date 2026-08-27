@@ -6225,3 +6225,80 @@ final CLEAN.
   make it opt-in per invocation, or record the build commit's sha in the
   packet so the leg binds to THAT commit rather than to whichever one is
   being audited.
+
+- 2026-08-27 · ch14-p2b authoring · WHERE THE LOOP SPENDS THE RATIFIER, AND
+  WHERE IT ACTUALLY BREAKS — four boundary-review items from ONE
+  measurement, raised by the owner's own question at this session's end
+  ("was that ask required by the process, or was it yours?"). THE
+  MEASUREMENT: four human touchpoints were taken in this session, and in
+  THREE of them the ratifier's answer amounted to the same sentence —
+  *the ratified letter already decides this; proceed, but record it more
+  loudly than you were going to*. The aftermath batch's size was answered
+  "all five are p2a's own ratified claim surface, close them under p2a's
+  letter"; the lint batch was answered "A, with two conditions", both
+  conditions about RECORDING durability rather than about the decision;
+  the fourth was a `refine` verdict offered for optional pre-discussion,
+  which the §5.5 matrix makes AUTONOMOUS outright. The diagnosis the four
+  items share: at these points the loop does not need the ratifier's
+  DECISIONS, it needs RATIFICATION DURABILITY — a different and much
+  cheaper interaction, and mostly a mechanizable one.
+
+  **(1) LETTER-FIRST, WITH ITS CARVE-OUT — the carve-out is the owner's
+  amendment at this recording and is the half the loop got wrong.** The
+  proposed default: where a ratified surface (a packet row, a C-row, a
+  README rule, plan text) already decides the case, EXECUTE THE
+  LETTER-FOLLOWING PATH WITHOUT ASKING and record it; come to the
+  ratifier only when PROPOSING TO DEVIATE from it. The first form of this
+  item was cut wrong — "does the letter already decide this?" — which
+  cannot separate *the letter decides it and I will follow it* from *the
+  letter decides it and I want not to*. TWO CLASSES ALWAYS COME TO THE
+  RATIFIER regardless: **waiving a RED GATE**, and **any contradiction
+  between two RATIFIED SURFACES** — because the letter cannot decide a
+  case where the letter itself is what is in dispute. THE LOOP'S OWN
+  MISCLASSIFICATION IS THE EVIDENCE and is recorded as such: it filed
+  touchpoint 3 — proceeding past a RED post-build audit whose redness came
+  from README §4 (an aftermath commit is audited at its own sha) colliding
+  with the `instrument_manifest` leg (which binds the audited commit's
+  FIRST PARENT) — as "not needed". It was needed, on BOTH limbs of the
+  carve-out at once. A rule that would have deleted three touchpoints and
+  also deleted the one legitimate one is not the rule to adopt; this is.
+  Sibling: the owner's standing assume-then-ASK rule says verify a step is
+  not something you can EXECUTE yourself before asking. This adds: verify
+  it is not something already DECIDED — and then stops, deliberately,
+  short of the disputed-letter case.
+
+  **(2) LOUD RECORDING AS A STANDING DEFAULT, not as a thing the ratifier
+  must ask for.** What the owner actually ADDED at two touchpoints was
+  durability: name the cross-packet unit-map move in the commit message
+  with its ground and its precedent; make the Build-record correction of a
+  ratified row's prose CITE THE MEASURED LINES rather than assert the
+  replacement sentence. Both are general. Proposed: an edit that moves
+  ANOTHER packet's ratified surface, and a correction of ratified prose,
+  each carry their evidence in the commit message and in the owning
+  packet's record BY DEFAULT. Then the ask disappears and the value
+  survives it.
+
+  **(3) NOTHING READS A PACKET'S DECLARED OBLIGATIONS BACK AGAINST THE
+  TREE — second occurrence, and the highest-autonomy-yield item here.**
+  Already logged at the ch14-p2a aftermath; this session is its second
+  data point and sharpens it. Of p2a's seven open obligations, ONE was
+  caught by a machine gate and SIX by nothing — an invariant disposition,
+  a test family, a doc comment, five barrel re-exports, a type-table
+  binding. This is where autonomy actually fails: not at decisions, but at
+  claims nothing measures. A loop that failed LOUDLY on its own
+  declarations would need the ratifier LESS, because the alternative to
+  asking is not guessing — it is being caught.
+
+  **(4) A CHEAP MECHANICAL PASS BEFORE THE PANEL, because round 1 spent
+  five Opus lenses on arithmetic.** The ch14-p2b first panel returned ~40
+  findings, 14 of them P1 — and the majority of the P1s were not semantic:
+  a boundary file whose absence a `tsc` probe finds in one run, three
+  transcribed counts that disagree with the lists they summarize, and test
+  families with no landing site in the declared boundary. The
+  downstream-viability lens found the boundary gap by ACTUALLY RUNNING the
+  change and reading `tsc`'s answer, which is mechanizable. Proposed: an
+  authoring-side self-check (counts recomputed from the blocks they
+  summarize; a type-probe over the declared shape changes; every declared
+  test family resolved to a boundary file) runs BEFORE the panel, so the
+  panel's Opus-class attention lands on semantics rather than on
+  bookkeeping the tree can answer.
