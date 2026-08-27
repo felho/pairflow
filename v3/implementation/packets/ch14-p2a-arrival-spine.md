@@ -677,6 +677,7 @@ its source in the same sentence that carries it.
       "v3/src/drift/traceDigestBaseline.json",
       "v3/src/drift/traceNarrowReceipts.json",
       "v3/src/drift/unitMap.json",
+      "v3/src/drift/unitMap.test.ts",
       "v3/src/emitLoop.test.ts",
       "v3/src/floor/debugBundle.test.ts",
       "v3/src/floor/debugBundle.ts",
@@ -713,6 +714,7 @@ its source in the same sentence that carries it.
       "v3/src/store/sqliteStore.test.ts",
       "v3/src/store/sqliteStore.ts",
       "v3/src/testkit/index.ts",
+      "v3/src/testkit/replayDigest.ts",
       "v3/src/testkit/storeCheckers.test.ts",
       "v3/src/testkit/storeCheckers.ts",
       "v3/src/testkit/templateFixture.ts",
@@ -1502,6 +1504,112 @@ lanes; K18's guard moved to the post-commit half reds the
 committed-state lane; the arrival's own-property guard replaced by a
 plain index reds the prototype-spelling lane.
 
+## Aftermath (fold 1, 2026-08-27) — the obligations this build left open
+
+**How they were found, which is the whole lesson:** the build's own
+close ran `pnpm v3:check-docs` and read its four greens as the gate set.
+That mode runs NEITHER of the two bridges that would have caught any of
+this — `check_coverage.py` in its DEFAULT (build-close) mode, and
+`pnpm v3:lint`. Seven declared obligations were open; ONE was caught by
+a machine gate and six by nothing at all. Author of every fix below:
+the orchestrator. Green after the fold: `v3:typecheck` clean ·
+`v3:lint` clean · `v3:test` 2847 passed / 79 files (2836 at the build;
++11 lanes) · `check_coverage.py` (build-close) OK · `check-docs
+--mode packet-approve` 4/4.
+
+1. **The ELEVEN unit-map rows K13 declares never flipped** — the ONLY
+   one a gate caught (`COVERAGE FAIL: unit map lock … packet-owned …
+   but the manifest says pending`, ×11). Flipped with their declared
+   dispositions, and pinned VERBATIM in `unitMap.test.ts` on the
+   ch12-p1a/p1b precedent, because the generic resolution lane stays
+   green on a wrong-but-existing symbol. The four inline rows
+   (`park_for_human_decision`, `park_for_wait`,
+   `incoming_recommendation`, `decision_keys`) address the CONTAINING
+   function — the same form `l0d/HANDLE → #createKernel` already
+   uses. [R-EXECUTION]
+2. **`l3/waiting-is-honest` was declared `checker` and no checker
+   existed** — only the pre-existing S5 wait⇔WAITING iff, which flag 5
+   explicitly said was NOT the disposition. Built as the EXTENSION flag
+   5 names, inside `checkTerminalSink`, over the SAME reconstructed
+   position (a second walk would be a second authority), carrying all
+   three C14 conjuncts. Its scoping guard — conjunct (iii) binds only
+   when `requestedBy === position` — exists because a deferred-mode run
+   held at a `wait`-class START step would otherwise false-violate; that
+   guard is receipt-backed (`PROBE-CH14P2A-AFT-1`: dropped scoping ⇒
+   suite RED, restore byte-verified). [R-LANE-SENSITIVITY]
+3. **Family 16's lanes were never written** — `storeCheckers.test.ts`
+   was untouched by the build. Both directions now drive: two op-less
+   rows report NO violation (K12's false-duplicate defect), and
+   duplicate op-carrying rows BESIDE op-less ones still report, so the
+   skip cannot become a blanket. [R-EXECUTION]
+4. **K9's stated DOC-ONLY visit never happened** — `floor.ts` still
+   enumerated "BOTH transcript entry classes", which the third class
+   falsifies, and that comment was K9's sole stated reason for the file
+   being in the boundary. Reworded to name no count at all: the class
+   set grows per realizing chapter, so a number there goes stale
+   silently. [R-PRESENT-TENSE]
+5. **The barrel re-exports the embedding gates declare were absent** —
+   `kernel/` (the arrival, the post-commit selection, the Ask and
+   `requiredFields`), `ports/` (`ArrivalEffect`, `ArrivalEffectFields`,
+   `DecisionRequestBody`), `testkit/` (the replay-digest hook),
+   `floor/` (`BundleDecisionRequestRow` + `BundleRow`; `BundleFactRow`
+   rides with them, a standing gap the third arm made visible — a union
+   export whose arm cannot be named is not usable). [none]
+6. **K13's registry pin was a STRING, not a binding.** Both l3 rows
+   carried `typeName` values with no `RealizedTypeTable` entry, so the
+   module's own documented guarantee — "a vanished or renamed export is
+   a compile error" — did not hold for either. Both are bound now
+   (and listed in `REALIZED_TYPE_TABLE_KEYS`, whose completeness lock
+   caught the omission immediately).
+   **K13's PROSE IS CORRECTED HERE, on a measurement rather than an
+   assertion.** K13 states the witness lands in `domain/` *"because the
+   drift registry imports only from `domain/` at this basis"*. That
+   ground is FALSE as measured on the file at this fold —
+   `grep -n 'from "\.\./' v3/src/drift/domainRegistry.ts` returns FIVE
+   import sources, of which three are not `domain/`: line 42
+   `from "../ports/gate.js"`, line 46 `from "../kernel/index.js"`,
+   line 49 `from "../ports/runtimeContextProvider.js"` (line 32 is
+   `domain/index.js`; line 57 is this fold's own `ports/store.js`). The
+   ADR-007 type-import allowance is what those three already ride. So
+   the BUILT placement in `ports/store.ts` stands — the store's
+   transition input is what carries the record — and the packet's
+   sentence is wrong, not the code. The type is NOT moved. [none]
+7. **`pnpm v3:lint` was RED at the build — 9 errors, never run.** A
+   named AGENTS.md bridge and a `ci:local` member; the Build record
+   above claims typecheck and the doc gates and is silent on it. Seven
+   were hygiene the refactor orphaned (three type imports in
+   `kernel.ts` and `sqliteStore.ts`, three destructuring throwaways in
+   this packet's own new Ask suite, one redundant assertion in the
+   instrument file). TWO touched ratified decisions and are recorded
+   separately:
+   - **`kernel.ts#complete` was DEAD** — this packet's arrival took over
+     the terminal branch, leaving a second unreachable statement of one
+     rule: the surviving parallel path the registry's own doc forbids.
+     It is DELETED, and `l0d-pseudocode/COMPLETE`'s unit-map address
+     MOVES to `arrival.ts#applyTargetEntryEffects`, the function that
+     now carries the branch. **The unit did not change; its address
+     did.** The row is ch12-p1a's, so this fold edits another packet's
+     mapping — named here, in the commit message, and in the test's own
+     pin comment rather than moved quietly, on the ratifier's condition
+     at this approve. Form: the containing-symbol precedent
+     `l0d/HANDLE → #createKernel`.
+   - **The `admit.test.ts` return cast was measured before removal**, on
+     the K11 census question. The file carries THIRTEEN
+     `as unknown as WorkflowTemplate` casts; the linter flags exactly
+     ONE — this builder's, whose own doc-comment calls its output "a
+     structurally valid template". Removing it is K11's *"re-type where
+     it authors a LEGAL class value"* half; the twelve loose builders at
+     illegal-input sites are untouched, so the census survives intact
+     and no exemption was needed.
+
+**Boundary, EXTENDED aftermath-scoped** (README §4 — the aftermath
+commit is audited against the extended boundary at its own sha): two
+paths this fold touches that the build's boundary did not name —
+`v3/src/drift/unitMap.test.ts` (the VERBATIM pins item 1 adds) and
+`v3/src/testkit/replayDigest.ts` (the instrument file, previously
+reachable only through `instrument_manifest`, whose one lint error
+item 7 clears).
+
 **Residuals carried, none silent.** Three `DEFERRED(ch14-p2b)` markers
 ride the position-blind replay readers (the two testkit checkers and the
 gate pipeline's policy view). The K11 census retained the P1 loose
@@ -1516,7 +1624,7 @@ the bundle.
     "class": "kernel-semantic",
     "prediction": { "predicted": "projection", "reasoning": "inherited from plan \u00a714.4's ch14-P2 row through the split; basis the ratified ch14-human-decision contract", "discovered": "projection" },
     "provenance": { "anchored": 7, "derived": 7, "new_decision": 6 },
-    "rounds": { "review": 5, "doc_refinement": 4, "implementation": 1 },
+    "rounds": { "review": 5, "doc_refinement": 4, "implementation": 2 },
     "stops": [
       { "type": "4:flagged-approve", "what": "nine pre-approval flags, resolved one at a time", "resolution": "approved with the six new-decision rows admitted as SUBJECTS on a shared forcing origin, and single-packet ratified on clause 6's falsifier" },
       { "type": "2:scope-changing-split", "what": "K17's gate was git-topologically unrealizable under the one-commit rule", "resolution": "a SECOND named exception class in plan \u00a714.4 — the instrument-landing commit — defined by content and machine-checked by P12" },
@@ -1524,7 +1632,9 @@ the bundle.
     ],
     "detector_misses": [
       { "found_at": "arm-approve", "what": "the instrument-landing confinement was stated as machine-checkable while the ratified audit path refuses any commit that does not change the packet file — the instrument commit could never be passed to it, so the claim named a check that never ran", "why_missed": "the claim was reviewed as PROSE and reads correctly; nothing compared it against the checker it named" },
-      { "found_at": "arm-approve", "what": "the post-build boundary audit has compared git paths through strip/splitlines/text-mode since the boundary tooling shipped, so a real path could be audited as a DIFFERENT path — a build commit could land a file outside its declared boundary and audit green", "why_missed": "the guard was correct in every sentence and wrong in how it read its own evidence; every review read the rule, none read the parse" }
+      { "found_at": "arm-approve", "what": "the post-build boundary audit has compared git paths through strip/splitlines/text-mode since the boundary tooling shipped, so a real path could be audited as a DIFFERENT path — a build commit could land a file outside its declared boundary and audit green", "why_missed": "the guard was correct in every sentence and wrong in how it read its own evidence; every review read the rule, none read the parse" },
+      { "found_at": "implementation", "what": "SEVEN declared obligations were unbuilt at the build's own close (11 unit-map flips, the waiting-is-honest checker, family 16's lanes, K9's doc visit, five barrel re-exports, K13's RealizedTypeTable binding, and a RED v3:lint) — the close read check-docs' four greens as the gate set, and that mode runs NEITHER check_coverage.py in build-close mode NOR v3:lint", "why_missed": "the build-close gate column (README \u00a75.5) is a SEPARATE invocation from the composite doc runner, and nothing in the close sequence names it — the runner's own \"not covered here\" note is advisory prose, not a gate" },
+      { "found_at": "implementation", "what": "six of those seven were caught by NO machine gate at all — an invariant disposition (checker), a test family, a doc comment, barrel exports and a type-table binding are all prose obligations with no lock", "why_missed": "the packet's own learned line names this class; what the build lacked was any surface that reads a packet's declared obligations back against the tree" }
     ],
     "learned": "a confinement asserted in prose with nothing measuring it survives every review that reads the prose",
     "main_thread_model": "claude-opus-5[1m]"

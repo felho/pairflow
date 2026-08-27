@@ -5,6 +5,21 @@ import type { DecisionRequestBody } from "./../ports/store.js";
 import { humanDecisionRequest, requiredFields } from "./humanDecisionRequest.js";
 
 /**
+ * Drop keys from a request body WITHOUT a destructuring throwaway: the
+ * lint's unused-vars rule is at its strict default here (no
+ * ignoreRestSiblings, no `_` pattern), so `const { a: _drop, ...rest }`
+ * is an error rather than an idiom. Typed, so a dropped key that stops
+ * existing is a compile error rather than a silently vacuous lane.
+ */
+function omit<T extends object, K extends keyof T>(value: T, ...keys: readonly K[]): Omit<T, K> {
+  const copy = { ...value } as Record<string, unknown>;
+  for (const key of keys) {
+    delete copy[key as string];
+  }
+  return copy as Omit<T, K>;
+}
+
+/**
  * Family: the Ask's field VALUES (dimension 8) — not presence.
  *
  * Every field here has a PLAUSIBLE WRONG SOURCE that a presence
@@ -99,7 +114,7 @@ describe("the Ask's resolved values (dimension 8)", () => {
   });
 
   it("omits recommendation entirely when the request carried none", () => {
-    const { recommendation: _drop, recommendationSource: _drop2, ...bare } = REQUEST;
+    const bare = omit(REQUEST, "recommendation", "recommendationSource");
     expect("recommendation" in ask(PARKED(), TEMPLATE(), bare)).toBe(false);
   });
 });
@@ -113,7 +128,7 @@ describe("the context projection, CLOSED at { task, handoff? }", () => {
   });
 
   it("omits handoff when no context surface was recorded", () => {
-    const { contextRef: _drop, ...noContext } = REQUEST;
+    const noContext = omit(REQUEST, "contextRef");
     expect("handoff" in ask(PARKED(), TEMPLATE(), noContext).context).toBe(false);
   });
 

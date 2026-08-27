@@ -10,6 +10,7 @@ import type {
   ContextPacket,
   DispatchIntent,
   EventEnvelope,
+  HumanDecisionRequest,
   GateBinding,
   GateDecision,
   GatePipeline,
@@ -46,6 +47,14 @@ import type { CancelInput, CreateInput, Kernel, KickoffInput, StartInput } from 
 // ch12-p3 D2: the l0e provider port shapes live in ports/ (the injected
 // contract) — the same ADR-007 type-import allowance as the l2/l2a witnesses.
 import type { ProviderRegistry, RuntimeContextProvider } from "../ports/runtimeContextProvider.js";
+// ch14-p2a K13: the arrival's effect record lives in ports/ (the store's
+// transition input is what carries it), reached under the SAME ADR-007
+// allowance. K13's prose put this witness in `domain/`; the ground it
+// gave — "the drift registry imports only from domain/ at this basis" —
+// is measurably false (ports/gate.js and kernel/index.js are imported
+// above), so the built placement stands and the prose is corrected in
+// the packet's Build record rather than the type being moved.
+import type { ArrivalEffect } from "../ports/store.js";
 
 /**
  * The PI-3 domain-registry manifest (packet ch5-P1): every ledger §4
@@ -151,6 +160,15 @@ interface RealizedTypeTable {
   // shared `Step` interface would be satisfied by every agent step and
   // would witness nothing.
   readonly "l3/human_gate": StepType;
+  // ch14-p2a K13, bound at the aftermath fold: the row's VERBATIM pin in
+  // the drift test compares a STRING, so on its own it cannot see the
+  // type it names disappear. These two bindings are what make "pinned to
+  // its realized type name" a compile-checked claim rather than a
+  // spelling. The arrival's witness is its EFFECT RECORD, not the
+  // function — the record is what the port carries and what the brand
+  // protects, so it is the thing a drift check can actually compare.
+  readonly "l3/apply_target_entry_effects(...)": ArrivalEffect;
+  readonly "l3/HumanDecisionRequest": HumanDecisionRequest;
 }
 
 export type RegistryEntry =
@@ -542,6 +560,8 @@ export const REALIZED_TYPE_TABLE_KEYS = [
   "l2b/ContextBlockRef",
   "l2b/ContextBlock",
   "l3/human_gate",
+  "l3/apply_target_entry_effects(...)",
+  "l3/HumanDecisionRequest",
 ] as const satisfies readonly (keyof RealizedTypeTable)[];
 
 type TypeTableFullyListed =

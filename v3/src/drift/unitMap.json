@@ -167,7 +167,7 @@
     "status": "realized"
   },
   "l0d-pseudocode/COMPLETE": {
-    "codeRef": "v3/src/kernel/kernel.ts#complete",
+    "codeRef": "v3/src/kernel/arrival.ts#applyTargetEntryEffects",
     "disposition": "implement",
     "status": "realized"
   },
@@ -397,10 +397,14 @@
     "status": "pending"
   },
   "l3-pseudocode/CREATE_INSTANCE": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/lifecycle.ts#createInstance",
+    "disposition": "implement",
+    "status": "realized"
   },
   "l3-pseudocode/HANDLE": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/kernel.ts#createKernel",
+    "disposition": "implement",
+    "status": "realized"
   },
   "l3-pseudocode/RECEIVE": {
     "status": "pending"
@@ -415,34 +419,52 @@
     "status": "pending"
   },
   "l3-pseudocode/apply_target_entry_effects": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/arrival.ts#applyTargetEntryEffects",
+    "disposition": "implement",
+    "status": "realized"
   },
   "l3-pseudocode/choice_point": {
     "status": "pending"
   },
   "l3-pseudocode/decision_keys": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/arrival.ts#applyTargetEntryEffects",
+    "disposition": "implement",
+    "status": "realized"
   },
   "l3-pseudocode/directive": {
-    "status": "pending"
+    "codeRef": "v3/src/domain/dispatch.ts#HumanDecisionRequest",
+    "disposition": "review-only",
+    "status": "realized"
   },
   "l3-pseudocode/human_decision_request": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/humanDecisionRequest.ts#humanDecisionRequest",
+    "disposition": "implement",
+    "status": "realized"
   },
   "l3-pseudocode/incoming_recommendation": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/arrival.ts#applyTargetEntryEffects",
+    "disposition": "implement",
+    "status": "realized"
   },
   "l3-pseudocode/park_for_human_decision": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/arrival.ts#applyTargetEntryEffects",
+    "disposition": "implement",
+    "status": "realized"
   },
   "l3-pseudocode/park_for_wait": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/arrival.ts#applyTargetEntryEffects",
+    "disposition": "implement",
+    "status": "realized"
   },
   "l3-pseudocode/post_commit_output": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/postCommitOutput.ts#postCommitOutput",
+    "disposition": "implement",
+    "status": "realized"
   },
   "l3-pseudocode/required_fields": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/humanDecisionRequest.ts#requiredFields",
+    "disposition": "implement",
+    "status": "realized"
   },
   "l3-pseudocode/validate_decision_gates": {
     "status": "realized",

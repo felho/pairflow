@@ -587,3 +587,182 @@ describe("checkTerminalSink — the wait iff both directions + fact-after-termin
     ).toBe(true);
   });
 });
+
+// ── ch14-p2a aftermath: the two obligations the packet declared and the
+// build left open. Both are of the class the packet's own `learned` line
+// names — a rule asserted in prose with nothing measuring it. ───────────
+
+/**
+ * A gate- and wait-bearing template. `fixtureTemplate()` cannot serve
+ * here: it is equality-pinned to the shipped `local-pair-v0@1.yaml`,
+ * whose gate wiring is ch14-P3's, so the correspondence's fixtures are
+ * LOCAL by necessity rather than by preference.
+ */
+const CORRESPONDENCE_TEMPLATE: WorkflowTemplate = {
+  ref: { id: "t-corr", version: 1 },
+  start: "implement",
+  steps: {
+    implement: {
+      role: "implementer",
+      instruction: "build it",
+      transitions: { PASS: "gate", HOLD: "hold" },
+    },
+    gate: {
+      type: "human_gate",
+      role: "operator",
+      instruction: "approve it?",
+      decisions: { approve: { target: "implement" }, reject: { target: "done" } },
+    },
+    hold: {
+      type: "wait",
+      wait: { kind: "ci_pending", resumeEvents: ["CI_DONE"] },
+      onResume: { CI_DONE: "implement" },
+    },
+  },
+  terminal: ["done"],
+  roles: { implementer: { defaultActor: "codex" }, operator: { defaultActor: "human-1" } },
+};
+
+/** The same template with the WAIT step at `start` — the only shape that
+ * puts a kernel-owned activation hold at a `wait` position, which is the
+ * exemption conjunct (iii) is scoped against. */
+const WAIT_START_TEMPLATE: WorkflowTemplate = { ...CORRESPONDENCE_TEMPLATE, start: "hold" };
+
+const ACTIVATION_HOLD = {
+  kind: "kickoff_pending",
+  requestedBy: "activation",
+  resumeEvents: ["KICKOFF"],
+} as const;
+
+/** Parked, mid-run: the STARTED fact plus the rows that replay to `at`. */
+function parked(
+  rows: readonly TranscriptEntry[],
+  wait: WorkflowInstance["wait"],
+  at: string | null,
+): InstanceDetail {
+  return detail(rows, {
+    currentStep: at,
+    kernelStatus: "WAITING",
+    terminalDisposition: null,
+    wait,
+  });
+}
+
+const toGate = [startedFact("s0"), row(2, "a1", "PASS")];
+const toHold = [startedFact("s0"), row(2, "a1", "HOLD")];
+
+const DECISION_WAIT = {
+  kind: "human_decision",
+  requestedBy: "gate",
+  resumeEvents: ["approve", "reject"],
+  requestRef: "req-1000-1",
+} as const;
+
+describe("checkTerminalSink — l3/waiting-is-honest, the kind↔position half (ch14-C14)", () => {
+  // The S5 iff above this says a WAITING run HAS a wait. It says nothing
+  // about that wait's KIND agreeing with WHERE the run is parked, which
+  // is the chapter's own half and the reason the disposition is `checker`
+  // rather than `satisfied`.
+
+  it("green: a decision wait at a parked humanGate with a live request_ref is clean", () => {
+    expect(checkTerminalSink(parked(toGate, DECISION_WAIT, "gate"), CORRESPONDENCE_TEMPLATE)).toEqual(
+      [],
+    );
+  });
+
+  it("green: an authored kind at the wait step DECLARING it is clean", () => {
+    const wait = { kind: "ci_pending", requestedBy: "hold", resumeEvents: ["CI_DONE"] };
+    expect(checkTerminalSink(parked(toHold, wait, "hold"), CORRESPONDENCE_TEMPLATE)).toEqual([]);
+  });
+
+  it("(i) a human_decision record at a NON-gate position is a violation", () => {
+    // Replays to `implement` (an agent step) — the kernel's decision kind
+    // exists only at a parked gate.
+    const wrongPosition = parked([startedFact("s0")], DECISION_WAIT, "implement");
+    expect(
+      checkTerminalSink(wrongPosition, CORRESPONDENCE_TEMPLATE).some((v) =>
+        v.includes("human_decision"),
+      ),
+    ).toBe(true);
+  });
+
+  it("(ii) a human_decision record at a gate with NO live request_ref is a violation", () => {
+    const noRef = parked(
+      toGate,
+      { kind: "human_decision", requestedBy: "gate", resumeEvents: ["approve", "reject"] },
+      "gate",
+    );
+    expect(
+      checkTerminalSink(noRef, CORRESPONDENCE_TEMPLATE).some((v) => v.includes("request_ref")),
+    ).toBe(true);
+  });
+
+  it("(iii) an authored kind at a wait step declaring a DIFFERENT one is a violation", () => {
+    const drifted = parked(
+      toHold,
+      { kind: "deploy_pending", requestedBy: "hold", resumeEvents: ["CI_DONE"] },
+      "hold",
+    );
+    expect(
+      checkTerminalSink(drifted, CORRESPONDENCE_TEMPLATE).some((v) =>
+        v.includes("declares wait kind"),
+      ),
+    ).toBe(true);
+  });
+
+  it("(iii) the activation hold at a wait-class START step is NOT a violation (the scoping's own negative)", () => {
+    // The kernel-owned hold names no step (`requestedBy: activation`), so
+    // it is outside the correspondence — and a build that dropped that
+    // scoping would red exactly here while every other lane stayed green.
+    const hold = parked([], ACTIVATION_HOLD, null);
+    expect(checkTerminalSink(hold, WAIT_START_TEMPLATE)).toEqual([]);
+  });
+
+  it("the aggregator carries the correspondence", () => {
+    const wrongPosition = parked([startedFact("s0")], DECISION_WAIT, "implement");
+    expect(
+      runAllCheckers(wrongPosition, CORRESPONDENCE_TEMPLATE).some((v) =>
+        v.includes("human_decision"),
+      ),
+    ).toBe(true);
+  });
+});
+
+// ── K12's checker-contract boundary (family 16): the op-less class is
+// SKIPPED, and the skip must not become a blanket. ─────────────────────
+
+function decisionRequestRow(seq: number, requestRef: string): TranscriptEntry {
+  return {
+    entryKind: "DECISION_REQUEST",
+    seq,
+    requestRef,
+    recipient: "operator",
+    decisions: ["approve", "reject"],
+    committedAt: 1_000 + seq,
+  };
+}
+
+describe("checkOpUniqueness — the op-less class boundary (ch14-p2a, K12)", () => {
+  it("TWO op-less rows on one instance report NO violation", () => {
+    // The false-duplicate defect K12 names: recording `undefined` as a
+    // seen key makes the SECOND op-less row look like a repeat.
+    const twoOpLess = detail([
+      startedFact("s0"),
+      decisionRequestRow(2, "req-1000-1"),
+      decisionRequestRow(3, "req-1000-2"),
+    ]);
+    expect(checkOpUniqueness(twoOpLess)).toEqual([]);
+  });
+
+  it("the skip is NOT a blanket: duplicate op-carrying rows beside op-less rows still report", () => {
+    const mixed = detail([
+      decisionRequestRow(1, "req-1000-1"),
+      row(2, "a1", "PASS"),
+      decisionRequestRow(3, "req-1000-2"),
+      row(4, "a1", "PASS"),
+    ]);
+    const violations = checkOpUniqueness(mixed);
+    expect(violations).toHaveLength(1);
+    expect(violations[0]).toContain("a1");
+  });
+});

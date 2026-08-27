@@ -46,6 +46,11 @@ export {
   runAllCheckers,
 } from "./storeCheckers.js";
 export type { EvidenceResolveSeam } from "./storeCheckers.js";
+// ch14-p2a: the replay-digest hook — the instrument K17's behaviour half
+// measures with, landed in the build commit's PARENT under the plan's
+// instrument-landing exception and re-exported here with the build.
+export { canonicalize, replayDigest } from "./replayDigest.js";
+export type { ReplayDigestPair } from "./replayDigest.js";
 export { replayTrace, TraceMismatchError } from "./traceHarness.js";
 export type {
   ExpectedOutcome,

@@ -61,8 +61,13 @@ function toCompactInstance(instance: WorkflowInstance): CompactInstance {
  * state discriminant (R1 — the ch12 two-axis lifecycle + wait-kind +
  * runtime-context state, the locator EXCLUDED); `getInstanceDetail`
  * exposes the FULL stored state including the opaque runtime-context ref
- * (R2 — an operator/debug read); `getTimeline` returns both transcript
- * entry classes with their kind visible (R3). The retired ch-4
+ * (R2 — an operator/debug read); `getTimeline` returns EVERY committed
+ * transcript entry class with its kind visible (R3 — ch12-C12's rule
+ * extended by class at ch14-p2a, when the kernel-derived op-less
+ * DECISION_REQUEST class joined the transition and lifecycle-fact pair;
+ * the count is deliberately not stated, because the class set grows with
+ * each realizing chapter and a number here would go stale silently).
+ * The retired ch-4
  * `status`/`LifecycleStatus` field appears in NO floor read doc
  * (C11/C24 named replacement).
  */

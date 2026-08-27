@@ -25,7 +25,15 @@ import { loadTemplate } from "./load.js";
 const catalog = createGateRegistry();
 
 /** A structurally valid template; `reviewGates` is written onto the
- * review step's `gates` verbatim (hostile shapes bypass the type). */
+ * review step's `gates` verbatim (hostile shapes bypass the type).
+ *
+ * The RETURN cast this builder carried is GONE, not forgotten: K11's
+ * relaxation made `Step`'s three fields optional, so the literal below
+ * assigns directly. That is K11's "re-type where it authors a LEGAL class
+ * value" half — the loose-builder half is untouched (twelve casts remain
+ * in this file, each at a site that authors ILLEGAL input), and the
+ * hostility still enters through the `Record<string, unknown>` review
+ * step above. */
 function template(reviewGates?: unknown): WorkflowTemplate {
   const review: Record<string, unknown> = {
     role: "reviewer",
@@ -44,7 +52,7 @@ function template(reviewGates?: unknown): WorkflowTemplate {
     },
     terminal: ["done"],
     roles: { implementer: { defaultActor: "codex" }, reviewer: { defaultActor: "claude" } },
-  } as unknown as WorkflowTemplate;
+  };
 }
 
 function admitFail(reviewGates: unknown, cat: GateCatalog = catalog): readonly ValidationFinding[] {

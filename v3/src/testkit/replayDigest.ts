@@ -63,7 +63,7 @@ export function canonicalize(value: unknown, seen: Set<object> = new Set()): str
     default:
       break;
   }
-  const obj = value as object;
+  const obj: object = value;
   if (seen.has(obj)) throw new TypeError(`${NON_REPRESENTABLE}: cycle`);
   seen.add(obj);
   try {

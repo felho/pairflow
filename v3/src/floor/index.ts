@@ -13,8 +13,15 @@ export {
 export type { DiagTail, DiagTailRow, Tail } from "./tail.js";
 export { createDebugBundleExporter, redactPayloadsPolicy } from "./debugBundle.js";
 export type {
+  // ch14-p2a: the bundle's THIRD row shape and the union it joins. The
+  // fact arm comes with them — a union export whose arm cannot be named
+  // is not usable from outside, and its absence was a standing gap the
+  // third arm made visible.
+  BundleDecisionRequestRow,
   BundleDiagRow,
   BundleEnvelopeMeta,
+  BundleFactRow,
+  BundleRow,
   BundleTranscriptRow,
   DebugBundle,
   DebugBundleExporter,

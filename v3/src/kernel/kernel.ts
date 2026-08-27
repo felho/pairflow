@@ -7,7 +7,6 @@ import type {
   GateDecision,
   GateProjection,
   InstanceId,
-  KernelStatus,
   KickoffOutcome,
   Outcome,
   RejectionName,
@@ -18,7 +17,6 @@ import type {
   RuntimeContextReadyOutcome,
   RuntimeContextRef,
   StartOutcome,
-  TerminalDisposition,
   WorkflowInstance,
   WorkflowTemplate,
 } from "../domain/index.js";
@@ -38,7 +36,6 @@ import { resolveAgentConfig } from "./agentConfig.js";
 import { applyTargetEntryEffects } from "./arrival.js";
 import { postCommitOutput } from "./postCommitOutput.js";
 import { capability } from "./capability.js";
-import { deriveDispatchIntent } from "./dispatchIntent.js";
 import { deriveGateProjection } from "./gateProjection.js";
 import { runProcessGate } from "./processGate.js";
 import {
@@ -204,22 +201,15 @@ interface AttemptContext {
   payloadDigest?: string;
 }
 
-/**
- * l0d-pseudocode/COMPLETE (packet ch12-p1a, E4): the kernel-internal
- * terminal branch — never routed, never exported as a handler (done
- * originates only from a terminal step). The unit's REQUIRE
- * `kernel_status = ACTIVE` is structural at P1a: this branch is reached
- * only from an admitted ACTIVE commit (the E5 state rung admits only
- * ACTIVE), so the guard is stated as the invariant it protects. Both
- * axis writes land in the SAME atomic commit as the transition (E3) —
- * the single-write discipline's only P1a writer (T1).
- */
-function complete(): {
-  readonly newKernelStatus: KernelStatus;
-  readonly newTerminalDisposition: TerminalDisposition;
-} {
-  return { newKernelStatus: "TERMINAL", newTerminalDisposition: "done" };
-}
+// l0d-pseudocode/COMPLETE lived HERE (packet ch12-p1a, E4) until the
+// ch14-p2a aftermath fold. p2a's ratified arrival took over the terminal
+// branch — `applyTargetEntryEffects` writes TERMINAL + `done` in the
+// arrival's own effect record — which left this function a DEAD PARALLEL
+// PATH: a second, unreachable statement of one rule, which the domain
+// registry's own doc forbids as a surviving parallel path. So it is
+// deleted rather than kept behind a lint exemption, and the unit-map row
+// re-points to the function that now carries the branch. The unit did
+// not change; its address did.
 
 function errorFields(error: unknown): { readonly name: string; readonly message: string } {
   return error instanceof Error

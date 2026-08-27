@@ -81,8 +81,14 @@ describe("the unit→code manifest (v3/model/units ↔ drift/unitMap.json)", () 
       disposition: "implement",
       status: "realized",
     });
+    // RE-POINTED at the ch14-p2a aftermath fold, and loudly: p2a's
+    // ratified arrival took over the terminal branch, which left
+    // `kernel.ts#complete` a dead parallel path — the exact shape the
+    // registry's own doc forbids. The unit did not change; its ADDRESS
+    // did, to the function that now carries the branch. Same
+    // containing-symbol form as `l0d/HANDLE → #createKernel`.
     expect(unitMap["l0d-pseudocode/COMPLETE"]).toEqual({
-      codeRef: "v3/src/kernel/kernel.ts#complete",
+      codeRef: "v3/src/kernel/arrival.ts#applyTargetEntryEffects",
       disposition: "implement",
       status: "realized",
     });
@@ -250,5 +256,89 @@ describe("the ch14-p1 unit-map flip (packet row D12)", () => {
     // The fully-qualified address matters: a bare-name edit would flip
     // the wrong row.
     expect(unitMap["auto-action-pseudocode/validate_decision_gates"]).toEqual({ status: "pending" });
+  });
+});
+
+describe("the ch14-p2a unit-map flips (packet row K13 — the aftermath fold)", () => {
+  const unitMap = loadUnitMap();
+
+  it("pins the ELEVEN packet-owned mappings VERBATIM, FULLY QUALIFIED", () => {
+    // The generic resolution lane below stays green on a
+    // wrong-but-existing symbol, so every packet-owned row is an exact
+    // string here — and every address is FULLY QUALIFIED, because four
+    // of these bare names (HANDLE, CREATE_INSTANCE, RECEIVE, directive)
+    // also exist in other sections.
+    //
+    // The four inline rows address the function that CONTAINS them
+    // (`applyTargetEntryEffects`): the arrival's fan-out realizes the
+    // two parks, the recommendation read and the decision-key read as
+    // branches rather than as separate exports — the same
+    // containing-symbol form `l0d/HANDLE → #createKernel` already uses.
+    expect(unitMap["l3-pseudocode/apply_target_entry_effects"]).toEqual({
+      codeRef: "v3/src/kernel/arrival.ts#applyTargetEntryEffects",
+      disposition: "implement",
+      status: "realized",
+    });
+    for (const inline of [
+      "l3-pseudocode/park_for_human_decision",
+      "l3-pseudocode/park_for_wait",
+      "l3-pseudocode/incoming_recommendation",
+      "l3-pseudocode/decision_keys",
+    ]) {
+      expect(unitMap[inline], inline).toEqual({
+        codeRef: "v3/src/kernel/arrival.ts#applyTargetEntryEffects",
+        disposition: "implement",
+        status: "realized",
+      });
+    }
+    expect(unitMap["l3-pseudocode/post_commit_output"]).toEqual({
+      codeRef: "v3/src/kernel/postCommitOutput.ts#postCommitOutput",
+      disposition: "implement",
+      status: "realized",
+    });
+    expect(unitMap["l3-pseudocode/human_decision_request"]).toEqual({
+      codeRef: "v3/src/kernel/humanDecisionRequest.ts#humanDecisionRequest",
+      disposition: "implement",
+      status: "realized",
+    });
+    // Its own export, because the Ask and p2b's submit guard read ONE
+    // function — the reason it was minted at p2a at all.
+    expect(unitMap["l3-pseudocode/required_fields"]).toEqual({
+      codeRef: "v3/src/kernel/humanDecisionRequest.ts#requiredFields",
+      disposition: "implement",
+      status: "realized",
+    });
+    // REVIEW-ONLY: a family block, not a routine. Its witness is the
+    // family's second member — the one this chapter added.
+    expect(unitMap["l3-pseudocode/directive"]).toEqual({
+      codeRef: "v3/src/domain/dispatch.ts#HumanDecisionRequest",
+      disposition: "review-only",
+      status: "realized",
+    });
+    // The two REPRINTS, each carrying one delta: HANDLE's arrival line
+    // and CREATE_INSTANCE's role-less binding skip.
+    expect(unitMap["l3-pseudocode/HANDLE"]).toEqual({
+      codeRef: "v3/src/kernel/kernel.ts#createKernel",
+      disposition: "implement",
+      status: "realized",
+    });
+    expect(unitMap["l3-pseudocode/CREATE_INSTANCE"]).toEqual({
+      codeRef: "v3/src/kernel/lifecycle.ts#createInstance",
+      disposition: "implement",
+      status: "realized",
+    });
+  });
+
+  it("leaves ch14-p2b's l3 rows pending — the delivery half is not this packet's", () => {
+    for (const id of [
+      "l3-pseudocode/SUBMIT_DECISION",
+      "l3-pseudocode/RESUME_WAIT",
+      "l3-pseudocode/admit_input",
+      "l3-pseudocode/choice_point",
+      "l3-pseudocode/COMPLETE",
+      "l3-pseudocode/RECEIVE",
+    ]) {
+      expect(unitMap[id], id).toEqual({ status: "pending" });
+    }
   });
 });

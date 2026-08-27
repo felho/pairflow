@@ -10,3 +10,14 @@ export { resolveAgentConfig } from "./agentConfig.js";
 // The lifecycle entry family (packet ch12-p1b) — the ch-4 one-shot's
 // StartInstanceInput retired with it (C24).
 export type { CancelInput, CreateInput, KickoffInput, StartInput } from "./lifecycle.js";
+// ch14-p2a: the arrival spine's three modules. The ONE target-entry rule
+// every arrival applies, the post-commit selection that reads the status
+// it set, and the Ask derivation — each named here rather than reached
+// through a deep path, the convention this barrel already follows.
+export { applyTargetEntryEffects } from "./arrival.js";
+export type { ArrivalDeps, ArrivalFrom, ArrivingEntry } from "./arrival.js";
+export { postCommitOutput } from "./postCommitOutput.js";
+// `requiredFields` travels WITH the Ask deliberately: the Ask's
+// `decisionRequirements` and the submit path's required-payload guard
+// must read ONE function, which is why it was minted as its own export.
+export { humanDecisionRequest, requiredFields } from "./humanDecisionRequest.js";

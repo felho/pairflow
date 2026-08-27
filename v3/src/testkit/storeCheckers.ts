@@ -235,6 +235,49 @@ export function checkTerminalSink(
   if (kernelStatus === "WAITING" && wait === null) {
     violations.push("terminal sink: WAITING instance without a typed wait (S5 iff)");
   }
+  // (e) l3/waiting-is-honest — the CHAPTER's half (ch14-C14). The S5 iff
+  // above says a WAITING run HAS a wait; it says nothing about that
+  // wait's KIND agreeing with WHERE the run is parked, which is why the
+  // disposition is `checker` and not `satisfied by the existing iff`.
+  //
+  // It reads the SAME reconstructed position the walk above produced —
+  // a second walk would be a second authority — and therefore inherits
+  // that walk's position blindness to decision- and resume-routed
+  // arrivals, already marked at its two DEFERRED(ch14-p2b) sites.
+  if (wait !== null) {
+    const parkedStep = Object.prototype.hasOwnProperty.call(template.steps, position)
+      ? template.steps[position]
+      : undefined;
+    if (wait.kind === "human_decision") {
+      // (i) the kernel's decision kind exists ONLY at a parked gate.
+      if (parkedStep?.type !== "human_gate") {
+        violations.push(
+          `waiting is honest: a 'human_decision' wait at position '${position}', which is not a humanGate step`,
+        );
+      }
+      // (ii) …and only WITH the correlation handle its resumer needs —
+      // a decision park with no live request_ref is unanswerable.
+      if (wait.requestRef === undefined) {
+        violations.push(
+          `waiting is honest: a 'human_decision' wait at '${position}' carries no live request_ref`,
+        );
+      }
+    }
+    // (iii) an AUTHORED kind belongs only at a `wait` step DECLARING it.
+    // SCOPED to the record this position's own arrival wrote: the
+    // kernel-owned activation hold names no step (`requestedBy:
+    // activation`), so a deferred-mode run held at a wait-class START
+    // step is outside the correspondence rather than a false violation.
+    if (
+      parkedStep?.type === "wait" &&
+      wait.requestedBy === position &&
+      wait.kind !== parkedStep.wait?.kind
+    ) {
+      violations.push(
+        `waiting is honest: wait kind '${wait.kind}' at '${position}', which declares wait kind '${String(parkedStep.wait?.kind)}'`,
+      );
+    }
+  }
   return violations;
 }
 
