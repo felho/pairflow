@@ -4,6 +4,7 @@ import { admitTemplate } from "../definition/index.js";
 import { noopDiagnosticsSink } from "../diag/index.js";
 import type {
   AdmittedTemplate,
+  AgentConfig,
   DecisionMadeEntry,
   DecisionRequestEntry,
   InstanceId,
@@ -11,18 +12,25 @@ import type {
 } from "../domain/index.js";
 import { deriveEmitDigest } from "../emit/index.js";
 import { createGateRegistry } from "../gates/index.js";
+import type { DefinitionStore } from "../ports/definition.js";
 import { createStaticProviderRegistry } from "../ports/index.js";
-import type { CommitOperatorEntryInput, StorePort } from "../ports/index.js";
+import type {
+  CommitOperatorEntryInput,
+  CommitTransitionInput,
+  StorePort,
+} from "../ports/index.js";
 import { openStore } from "../store/index.js";
 import {
   createControlledClock,
   createScriptedProcessGateRunner,
   fixtureDefinitionStore,
 } from "../testkit/index.js";
+import type { AdmitCompareKind } from "./admission.js";
 import { applyTargetEntryEffects } from "./arrival.js";
 import { createKernel } from "./kernel.js";
 import type { Kernel } from "./kernel.js";
-import { submitDecision } from "./operatorIntents.js";
+import { resumeWait, submitDecision } from "./operatorIntents.js";
+import type { OperatorIntentDeps } from "./operatorIntents.js";
 
 /**
  * The two OPERATOR INTENTS' handler suite (packet ch14-p2b) — the home
@@ -53,7 +61,19 @@ const template: WorkflowTemplate = {
     implement: {
       role: "implementer",
       instruction: "build it",
-      transitions: { PASS: "gate", TO_WAIT: "commit_wait", TO_DONE: "done", TO_GATE: "gate" },
+      // `TO_AGENT` is the ACTOR path's AGENT-class target, and it is here
+      // because family 1's membership is dimension 10's four target
+      // classes × the THREE entry paths: without an agent-targeting edge
+      // out of `implement` the actor path could reach only three of the
+      // four, and the twelfth cell would be unauthorable rather than
+      // undriven.
+      transitions: {
+        PASS: "gate",
+        TO_WAIT: "commit_wait",
+        TO_DONE: "done",
+        TO_GATE: "gate",
+        TO_AGENT: "implement",
+      },
       recommends: { PASS: "approve" },
     },
     gate: {
@@ -816,7 +836,7 @@ describe("family 7 — round advancement is EDGE-KEYED, never verdict-named", ()
       // THE SUBMITTED PAYLOAD, and no stale value beside it: the
       // pre-gate transition's `{ stale: … }` must NOT survive here.
       handoff: { instruction: "the operator's instruction" },
-      availableOps: ["PASS", "TO_WAIT", "TO_DONE", "TO_GATE"],
+      availableOps: ["PASS", "TO_WAIT", "TO_DONE", "TO_GATE", "TO_AGENT"],
       effectiveAgentConfig: { profile: "target-side" },
       contextBlocks: [],
       runtimeContext: "none",
@@ -1290,4 +1310,1113 @@ describe("family 14 — dimension 4b: the arriving payload's SOURCE on a re-park
     expect(park).toBeDefined();
     expect("contextRef" in (park as object)).toBe(false);
   });
+});
+
+// ─────────────────────────────────────────────────────────────────────
+// FAMILY 2 — THE LOAD CELL, on BOTH operator paths
+// (build-close aftermath, ch14-p2b: family 2's MEMBERSHIP names the
+// load that PRECEDES the rungs — `unknown_instance` on both paths —
+// "not a rung, which is why it is named rather than assumed inside the
+// ladder". The rung lanes live in `admission.test.ts` over the pure
+// ladder, which by construction cannot reach a load that happens before
+// it; so the cell has no home there and needs one here.)
+// ─────────────────────────────────────────────────────────────────────
+
+describe("family 2 — the LOAD cell: an ABSENT instance on BOTH operator paths", () => {
+  /**
+   * THE LOAD'S ANSWER IS THE ONLY OBSERVABLE, so the lane reads it three
+   * ways at once: the returned reason EXACTLY, that NOTHING was
+   * committed, and that no LATER read of any kind was performed. The
+   * third is what separates "returns the right name" from "returns the
+   * right name after running the ladder anyway" — `admitInput` returns
+   * BEFORE `findOp`, before the pinned-template load and before every
+   * rung, and a build that reordered the load past them would still
+   * answer `unknown_instance` on the first two assertions alone.
+   */
+  interface Watched {
+    readonly deps: OperatorIntentDeps;
+    readonly reads: {
+      loadInstance: number;
+      findOp: number;
+      getTimeline: number;
+      definitions: number;
+      commits: number;
+    };
+    readonly store: StorePort;
+  }
+
+  function absentRig(): Watched {
+    const handle = openStore(":memory:", createControlledClock(1_000));
+    // NO instance is created — `loadInstance` genuinely answers null out
+    // of the REAL store rather than out of a fake that pretends to.
+    const reads = { loadInstance: 0, findOp: 0, getTimeline: 0, definitions: 0, commits: 0 };
+    const backing = fixtureDefinitionStore(admitted);
+    const watched: StorePort = {
+      ...handle.store,
+      loadInstance: (id) => {
+        reads.loadInstance += 1;
+        return handle.store.loadInstance(id);
+      },
+      findOp: (id, opId) => {
+        reads.findOp += 1;
+        return handle.store.findOp(id, opId);
+      },
+      getTimeline: (id, after) => {
+        reads.getTimeline += 1;
+        return handle.store.getTimeline(id, after);
+      },
+      commitOperatorEntry: (input) => {
+        reads.commits += 1;
+        return handle.store.commitOperatorEntry(input);
+      },
+    };
+    const definitions: DefinitionStore = {
+      load: (ref) => {
+        reads.definitions += 1;
+        return backing.load(ref);
+      },
+    };
+    return {
+      deps: {
+        store: watched,
+        definitions,
+        providerRegistry: createStaticProviderRegistry({}),
+        newRequestId: () => "req-never-minted",
+      },
+      reads,
+      store: handle.store,
+    };
+  }
+
+  it("SUBMIT_DECISION against an absent instance → exactly Rejected(unknown_instance), nothing read after the load", async () => {
+    const rig = absentRig();
+    const outcome = await submitDecision(rig.deps, decisionIntent("ghost-1"));
+    // EXACTLY the load's own name — the whole value, not a `kind` probe.
+    expect(outcome).toEqual({ kind: "rejected", reason: "unknown_instance" });
+    // Nothing committed: the instance still does not exist.
+    expect(await rig.store.getInstanceDetail("ghost-1")).toBeNull();
+    expect(rig.reads.commits).toBe(0);
+    // ONE load, and then NOTHING — no idempotency lookup, no pinned
+    // template, no pending-request read. The load is not a rung and it
+    // returns before every rung.
+    expect(rig.reads).toEqual({
+      loadInstance: 1,
+      findOp: 0,
+      getTimeline: 0,
+      definitions: 0,
+      commits: 0,
+    });
+  });
+
+  it("RESUME_WAIT against an absent instance → exactly Rejected(unknown_instance), nothing read after the load", async () => {
+    // BOTH PATHS, because `admitInput` is shared and a per-path
+    // divergence is exactly what a shared helper makes invisible: the
+    // submit lane alone would green a resume path that had its own copy.
+    const rig = absentRig();
+    const outcome = await resumeWait(rig.deps, {
+      intent: "resume-wait",
+      instanceId: "ghost-2",
+      opId: "r1",
+      expectedVersion: 3,
+      type: "COMMIT",
+    });
+    expect(outcome).toEqual({ kind: "rejected", reason: "unknown_instance" });
+    expect(await rig.store.getInstanceDetail("ghost-2")).toBeNull();
+    expect(rig.reads).toEqual({
+      loadInstance: 1,
+      findOp: 0,
+      getTimeline: 0,
+      definitions: 0,
+      commits: 0,
+    });
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────
+// FAMILY 1 — DIMENSION 10's FOUR TARGET CLASSES × THE THREE ENTRY PATHS
+// (build-close aftermath, ch14-p2b: the membership declares "ALL TWELVE
+// ARE REACHABLE" and the build drove a SAMPLE of it — the decision and
+// resume paths over the four classes, with a handful of selected
+// instance fields. The grid is written out here, and both halves of
+// each cell are read as WHOLE VALUES: the post-arrival instance
+// projection and the rows the move APPENDED. A per-path divergence in
+// any unasserted field is exactly what a selected-field read cannot
+// see, and the whole point of a shared arrival is that there is no such
+// field.)
+// ─────────────────────────────────────────────────────────────────────
+
+describe("family 1 — ALL TWELVE CELLS: four target classes × three entry paths, whole values", () => {
+  /** The post-arrival instance projection, WHOLE. */
+  async function projection(store: StorePort, id: InstanceId) {
+    const instance = await store.loadInstance(id);
+    if (instance === null) throw new Error(`instance '${id}' vanished`);
+    const { currentStep, round, kernelStatus, terminalDisposition, wait, version } = instance;
+    return { currentStep, round, kernelStatus, terminalDisposition, wait, version };
+  }
+
+  /** The rows the MOVE appended — everything past the pre-move high-water seq. */
+  async function appended(store: StorePort, id: InstanceId, afterSeq: number) {
+    const detail = await store.getInstanceDetail(id);
+    return (detail?.transcript ?? []).filter((entry) => entry.seq > afterSeq);
+  }
+
+  async function highWater(store: StorePort, id: InstanceId): Promise<number> {
+    const detail = await store.getInstanceDetail(id);
+    return (detail?.transcript ?? []).reduce((max, entry) => Math.max(max, entry.seq), 0);
+  }
+
+  /**
+   * A rig whose store CAPTURES the `issuedAgentConfig` each commit
+   * carries, on BOTH commit members — the store-port seam family 1
+   * names as the honest carrier, since the two operator classes put
+   * `issued_agent_config` ABSENT BY CLASS and a lane reaching for a
+   * committed byte there reaches for an observable that does not exist.
+   */
+  function capturingRig(clockAt = 1_000) {
+    const handle = openStore(":memory:", createControlledClock(clockAt));
+    const seam: AgentConfig[] = [];
+    const capturing: StorePort = {
+      ...handle.store,
+      loadInstance: (id) => handle.store.loadInstance(id),
+      findOp: (id, opId) => handle.store.findOp(id, opId),
+      getTimeline: (id, after) => handle.store.getTimeline(id, after),
+      commitTransition: (input: CommitTransitionInput) => {
+        seam.push(input.arrival.issuedAgentConfig);
+        return handle.store.commitTransition(input);
+      },
+      commitOperatorEntry: (input: CommitOperatorEntryInput) => {
+        seam.push(input.arrival.issuedAgentConfig);
+        return handle.store.commitOperatorEntry(input);
+      },
+    };
+    const kernel = createKernel({
+      providerRegistry: createStaticProviderRegistry({}),
+      processRunner: createScriptedProcessGateRunner([]),
+      store: capturing,
+      definitions: fixtureDefinitionStore(admitted),
+      time: createControlledClock(clockAt),
+      digest: deriveEmitDigest,
+      diag: noopDiagnosticsSink,
+      gates: catalog,
+    });
+    return { kernel, store: handle.store, seam };
+  }
+
+  interface Observed {
+    readonly state: Awaited<ReturnType<typeof projection>>;
+    readonly rows: readonly unknown[];
+    readonly issuedAgentConfig: AgentConfig | undefined;
+  }
+
+  /** ENTRY PATH 1 — the ACTOR envelope through HANDLE. */
+  async function viaActor(id: InstanceId, type: string): Promise<Observed> {
+    const r = capturingRig();
+    await r.kernel.create({ instanceId: id, templateRef: template.ref, task: "ship it" });
+    await r.kernel.start({ instanceId: id, opId: "s0" });
+    const before = await highWater(r.store, id);
+    const outcome = await r.kernel.handle({
+      instanceId: id,
+      opId: "a1",
+      type,
+      actorId: "codex",
+      expectedVersion: 2,
+      expectedRole: "implementer",
+    });
+    if (outcome.kind !== "committed") {
+      throw new Error(`actor path did not commit (${outcome.kind})`);
+    }
+    return {
+      state: await projection(r.store, id),
+      rows: await appended(r.store, id, before),
+      issuedAgentConfig: r.seam[r.seam.length - 1],
+    };
+  }
+
+  /** ENTRY PATH 2 — the operator's DECISION at the parked gate. */
+  async function viaDecision(
+    id: InstanceId,
+    over: Partial<Parameters<Kernel["submitDecision"]>[0]>,
+  ): Promise<Observed> {
+    const r = capturingRig();
+    await r.kernel.create({ instanceId: id, templateRef: template.ref, task: "ship it" });
+    await r.kernel.start({ instanceId: id, opId: "s0" });
+    const park = await r.kernel.handle({
+      instanceId: id,
+      opId: "a1",
+      type: "PASS",
+      actorId: "codex",
+      expectedVersion: 2,
+      expectedRole: "implementer",
+    });
+    if (park.kind !== "committed") throw new Error(`fixture wiring: park (${park.kind})`);
+    const before = await highWater(r.store, id);
+    r.seam.length = 0;
+    const outcome = await r.kernel.submitDecision(
+      decisionIntent(id, { requestRef: "req-1000-1", ...over }),
+    );
+    if (outcome.kind !== "committed") {
+      throw new Error(`decision path did not commit (${outcome.kind})`);
+    }
+    return {
+      state: await projection(r.store, id),
+      rows: await appended(r.store, id, before),
+      issuedAgentConfig: r.seam[r.seam.length - 1],
+    };
+  }
+
+  /** ENTRY PATH 3 — the RESUME of the parked bare wait. */
+  async function viaResume(id: InstanceId, type: string): Promise<Observed> {
+    const r = capturingRig();
+    await r.kernel.create({ instanceId: id, templateRef: template.ref, task: "ship it" });
+    await r.kernel.start({ instanceId: id, opId: "s0" });
+    const park = await r.kernel.handle({
+      instanceId: id,
+      opId: "a1",
+      type: "TO_WAIT",
+      actorId: "codex",
+      expectedVersion: 2,
+      expectedRole: "implementer",
+    });
+    if (park.kind !== "committed") throw new Error(`fixture wiring: wait park (${park.kind})`);
+    const before = await highWater(r.store, id);
+    r.seam.length = 0;
+    const outcome = await r.kernel.resumeWait({
+      intent: "resume-wait",
+      instanceId: id,
+      opId: "r1",
+      expectedVersion: 3,
+      type,
+    });
+    if (outcome.kind !== "committed") {
+      throw new Error(`resume path did not commit (${outcome.kind})`);
+    }
+    return {
+      state: await projection(r.store, id),
+      rows: await appended(r.store, id, before),
+      issuedAgentConfig: r.seam[r.seam.length - 1],
+    };
+  }
+
+  /** The actor envelope each ACTOR cell commits, and its digest. */
+  function actorEnvelope(id: InstanceId, type: string) {
+    return {
+      instanceId: id,
+      opId: "a1",
+      type,
+      actorId: "codex",
+      expectedVersion: 2,
+      expectedRole: "implementer",
+    };
+  }
+
+  function actorRow(id: InstanceId, type: string, seq: number) {
+    const env = actorEnvelope(id, type);
+    return {
+      entryKind: "transition",
+      seq,
+      envelope: env,
+      payloadDigest: deriveEmitDigest(env),
+      gateDecisions: [],
+      // The ACTOR path leaves `implement`, whose role carries
+      // `target-side` — committed by class on this path, which is why
+      // this half of the config rule IS a committed byte here and a seam
+      // capture on the other two.
+      issuedAgentConfig: { profile: "target-side" },
+      committedAt: 1_000,
+    };
+  }
+
+  const GATE_DECISIONS = ["approve", "request_rework", "to_done", "re_park", "to_gate2"];
+  const COMMIT_WAIT_EVENTS = ["COMMIT", "TO_AGENT", "TO_GATE", "TO_WAIT2"];
+
+  interface Cell {
+    readonly path: "actor" | "decision" | "resume";
+    readonly targetClass: "agent" | "terminal" | "wait" | "gate";
+    readonly run: () => Promise<Observed>;
+    readonly state: Awaited<ReturnType<typeof projection>>;
+    readonly rows: readonly unknown[];
+    /**
+     * ABSENT on the two cells the packet names as unable to discriminate
+     * `issuedAgentConfig` at all — resume × terminal and resume × wait,
+     * which resolve to `{}` on BOTH sides. They are members of this
+     * family for the arrival's OTHER assertions; forcing a config
+     * equality onto them would look like coverage while proving nothing.
+     *
+     * Of the ten that DO carry one, these discriminate a from-the-left
+     * build from a from-the-target build: actor × {terminal, wait, gate},
+     * decision × {agent, terminal, wait}, resume × {agent, gate}. The
+     * remaining two — actor × agent (a self-loop, so left IS target) and
+     * decision × gate (both steps carry the `operator` role) — read the
+     * same value either way and are asserted as ordinary whole-value
+     * reads rather than as →[config-from-left] evidence.
+     */
+    readonly issuedAgentConfig?: AgentConfig;
+  }
+
+  const CELLS: readonly Cell[] = [
+    // ── ENTRY PATH: the ACTOR envelope ────────────────────────────────
+    {
+      path: "actor",
+      targetClass: "agent",
+      run: () => viaActor("c-aa", "TO_AGENT"),
+      state: {
+        currentStep: "implement",
+        round: 2,
+        kernelStatus: "ACTIVE",
+        terminalDisposition: null,
+        wait: null,
+        version: 3,
+      },
+      rows: [actorRow("c-aa", "TO_AGENT", 2)],
+      issuedAgentConfig: { profile: "target-side" },
+    },
+    {
+      path: "actor",
+      targetClass: "terminal",
+      run: () => viaActor("c-at", "TO_DONE"),
+      state: {
+        currentStep: "done",
+        round: 1,
+        kernelStatus: "TERMINAL",
+        terminalDisposition: "done",
+        wait: null,
+        version: 3,
+      },
+      rows: [actorRow("c-at", "TO_DONE", 2)],
+      issuedAgentConfig: { profile: "target-side" },
+    },
+    {
+      path: "actor",
+      targetClass: "wait",
+      run: () => viaActor("c-aw", "TO_WAIT"),
+      state: {
+        currentStep: "commit_wait",
+        round: 1,
+        kernelStatus: "WAITING",
+        terminalDisposition: null,
+        wait: {
+          kind: "commit_pending",
+          requestedBy: "commit_wait",
+          resumeEvents: COMMIT_WAIT_EVENTS,
+        },
+        version: 3,
+      },
+      rows: [actorRow("c-aw", "TO_WAIT", 2)],
+      issuedAgentConfig: { profile: "target-side" },
+    },
+    {
+      path: "actor",
+      targetClass: "gate",
+      run: () => viaActor("c-ag", "PASS"),
+      state: {
+        currentStep: "gate",
+        round: 1,
+        kernelStatus: "WAITING",
+        terminalDisposition: null,
+        wait: {
+          kind: "human_decision",
+          requestedBy: "gate",
+          resumeEvents: GATE_DECISIONS,
+          requestRef: "req-1000-1",
+        },
+        version: 3,
+      },
+      rows: [
+        actorRow("c-ag", "PASS", 2),
+        // The gate park's SECOND row, in the SAME commit.
+        {
+          entryKind: "DECISION_REQUEST",
+          seq: 3,
+          requestRef: "req-1000-1",
+          recipient: "operator",
+          decisions: GATE_DECISIONS,
+          // The ONLY cell of the twelve whose source can carry a
+          // recommendation: an agent step's `recommends`.
+          recommendation: "approve",
+          recommendationSource: { fromStep: "implement", eventType: "PASS" },
+          committedAt: 1_000,
+        },
+      ],
+      issuedAgentConfig: { profile: "target-side" },
+    },
+    // ── ENTRY PATH: the operator's DECISION ───────────────────────────
+    {
+      path: "decision",
+      targetClass: "agent",
+      run: () =>
+        viaDecision("c-da", {
+          verdict: "request_rework",
+          payload: { instruction: "again" },
+          override: true,
+        }),
+      state: {
+        currentStep: "implement",
+        round: 2,
+        kernelStatus: "ACTIVE",
+        terminalDisposition: null,
+        wait: null,
+        version: 4,
+      },
+      rows: [
+        {
+          entryKind: "DECISION_MADE",
+          seq: 4,
+          opId: "d1",
+          decision: "request_rework",
+          payload: { instruction: "again" },
+          by: "human-1",
+          requestRef: "req-1000-1",
+          override: true,
+          committedAt: 1_000,
+        },
+      ],
+      issuedAgentConfig: { profile: "left-side" },
+    },
+    {
+      path: "decision",
+      targetClass: "terminal",
+      run: () => viaDecision("c-dt", { verdict: "to_done", override: true }),
+      state: {
+        currentStep: "done",
+        round: 1,
+        kernelStatus: "TERMINAL",
+        terminalDisposition: "done",
+        wait: null,
+        version: 4,
+      },
+      rows: [
+        {
+          entryKind: "DECISION_MADE",
+          seq: 4,
+          opId: "d1",
+          decision: "to_done",
+          by: "human-1",
+          requestRef: "req-1000-1",
+          override: true,
+          committedAt: 1_000,
+        },
+      ],
+      issuedAgentConfig: { profile: "left-side" },
+    },
+    {
+      path: "decision",
+      targetClass: "wait",
+      run: () => viaDecision("c-dw", { verdict: "approve" }),
+      state: {
+        currentStep: "commit_wait",
+        round: 1,
+        kernelStatus: "WAITING",
+        terminalDisposition: null,
+        wait: {
+          kind: "commit_pending",
+          requestedBy: "commit_wait",
+          resumeEvents: COMMIT_WAIT_EVENTS,
+        },
+        version: 4,
+      },
+      rows: [
+        {
+          entryKind: "DECISION_MADE",
+          seq: 4,
+          opId: "d1",
+          decision: "approve",
+          by: "human-1",
+          requestRef: "req-1000-1",
+          // NO `override`: the verdict EQUALS the recommendation, so
+          // there was nothing to override — absence, never `false`.
+          committedAt: 1_000,
+        },
+      ],
+      issuedAgentConfig: { profile: "left-side" },
+    },
+    {
+      path: "decision",
+      targetClass: "gate",
+      run: () => viaDecision("c-dg", { verdict: "to_gate2", override: true }),
+      state: {
+        currentStep: "gate2",
+        round: 1,
+        kernelStatus: "WAITING",
+        terminalDisposition: null,
+        wait: {
+          kind: "human_decision",
+          requestedBy: "gate2",
+          resumeEvents: ["ok"],
+          requestRef: "req-1000-2",
+        },
+        version: 4,
+      },
+      rows: [
+        {
+          entryKind: "DECISION_MADE",
+          seq: 4,
+          opId: "d1",
+          decision: "to_gate2",
+          by: "human-1",
+          requestRef: "req-1000-1",
+          override: true,
+          committedAt: 1_000,
+        },
+        {
+          entryKind: "DECISION_REQUEST",
+          seq: 5,
+          requestRef: "req-1000-2",
+          recipient: "operator",
+          decisions: ["ok"],
+          // NO recommendation and NO source: the SOURCE is a
+          // `human_gate`, which structurally cannot carry `recommends`
+          // (C13's first absence branch).
+          committedAt: 1_000,
+        },
+      ],
+      issuedAgentConfig: { profile: "left-side" },
+    },
+    // ── ENTRY PATH: the RESUME of a bare wait ─────────────────────────
+    {
+      path: "resume",
+      targetClass: "agent",
+      run: () => viaResume("c-ra", "TO_AGENT"),
+      state: {
+        currentStep: "implement",
+        round: 2,
+        kernelStatus: "ACTIVE",
+        terminalDisposition: null,
+        wait: null,
+        version: 4,
+      },
+      rows: [
+        {
+          entryKind: "WAIT_RESUMED",
+          seq: 3,
+          opId: "r1",
+          kind: "commit_pending",
+          event: "TO_AGENT",
+          committedAt: 1_000,
+        },
+      ],
+      // DISCRIMINATING: the LEFT step is a role-less `wait`, so the only
+      // authorable layer resolves to `{}` — a from-the-target build
+      // would read `implement`'s role and yield `target-side` here.
+      issuedAgentConfig: {},
+    },
+    {
+      path: "resume",
+      targetClass: "terminal",
+      run: () => viaResume("c-rt", "COMMIT"),
+      state: {
+        currentStep: "done",
+        round: 1,
+        kernelStatus: "TERMINAL",
+        terminalDisposition: "done",
+        wait: null,
+        version: 4,
+      },
+      rows: [
+        {
+          entryKind: "WAIT_RESUMED",
+          seq: 3,
+          opId: "r1",
+          kind: "commit_pending",
+          event: "COMMIT",
+          committedAt: 1_000,
+        },
+      ],
+      // NO `issuedAgentConfig` — the packet's own carve-out: a terminal
+      // target carries no role, so BOTH resolutions answer `{}`.
+    },
+    {
+      path: "resume",
+      targetClass: "wait",
+      run: () => viaResume("c-rw", "TO_WAIT2"),
+      state: {
+        currentStep: "wait2",
+        round: 1,
+        kernelStatus: "WAITING",
+        terminalDisposition: null,
+        wait: { kind: "other_pending", requestedBy: "wait2", resumeEvents: ["GO"] },
+        version: 4,
+      },
+      rows: [
+        {
+          entryKind: "WAIT_RESUMED",
+          seq: 3,
+          opId: "r1",
+          kind: "commit_pending",
+          event: "TO_WAIT2",
+          committedAt: 1_000,
+        },
+      ],
+      // NO `issuedAgentConfig` — the packet's second carve-out cell: a
+      // `wait` target carries no role either.
+    },
+    {
+      path: "resume",
+      targetClass: "gate",
+      run: () => viaResume("c-rg", "TO_GATE"),
+      state: {
+        currentStep: "gate",
+        round: 1,
+        kernelStatus: "WAITING",
+        terminalDisposition: null,
+        wait: {
+          kind: "human_decision",
+          requestedBy: "gate",
+          resumeEvents: GATE_DECISIONS,
+          requestRef: "req-1000-1",
+        },
+        version: 4,
+      },
+      rows: [
+        {
+          entryKind: "WAIT_RESUMED",
+          seq: 3,
+          opId: "r1",
+          kind: "commit_pending",
+          event: "TO_GATE",
+          committedAt: 1_000,
+        },
+        {
+          entryKind: "DECISION_REQUEST",
+          seq: 4,
+          requestRef: "req-1000-1",
+          recipient: "operator",
+          decisions: GATE_DECISIONS,
+          committedAt: 1_000,
+        },
+      ],
+      // DISCRIMINATING: a from-the-target build reads the gate's
+      // `operator` role and yields `left-side`.
+      issuedAgentConfig: {},
+    },
+  ];
+
+  it("the grid is COMPLETE — four target classes × three entry paths, twelve distinct cells", () => {
+    // The membership stated positively, checked rather than trusted: a
+    // cell dropped in a later edit reds here rather than quietly
+    // shrinking the grid back to the sample this lane replaced.
+    const seen = new Set(CELLS.map((c) => `${c.path}×${c.targetClass}`));
+    expect(seen.size).toBe(12);
+    for (const path of ["actor", "decision", "resume"] as const) {
+      for (const targetClass of ["agent", "terminal", "wait", "gate"] as const) {
+        expect(seen.has(`${path}×${targetClass}`), `missing cell: ${path}×${targetClass}`).toBe(
+          true,
+        );
+      }
+    }
+  });
+
+  for (const cell of CELLS) {
+    it(`${cell.path} → ${cell.targetClass} target: instance projection and committed rows, WHOLE`, async () => {
+      const observed = await cell.run();
+      expect(observed.state).toEqual(cell.state);
+      expect(observed.rows).toEqual(cell.rows);
+      if (cell.issuedAgentConfig !== undefined) {
+        expect(observed.issuedAgentConfig).toEqual(cell.issuedAgentConfig);
+      }
+    });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────
+// FAMILY 3 — THE COMPARE-KIND TOKENS × THE TWO OPERATOR PATHS
+// (build-close aftermath, ch14-p2b: the membership is "the COMPARE-KIND
+// tokens existing after this packet × the two operator paths, read from
+// the EXCLUDED domain at build rather than counted here". The build
+// drove one lifecycle token on one path; the grid is written out here.)
+//
+// THE TOKEN SET IS DERIVED, NEVER TRANSCRIBED. The table below is typed
+// `Record<AdmitCompareKind, KindCell>`, and `AdmitCompareKind` IS the
+// live discriminant expression
+// `Exclude<TranscriptEntry["entryKind"], "transition">`. A token added
+// to the transcript union with no row here is a COMPILE error, and a
+// row for a token the union no longer carries is one too — enforced by
+// `pnpm v3:typecheck`, which the packet's Acceptance names as a check
+// in force. A hand-written list would go stale silently, which is the
+// failure class this whole fold exists to close.
+// ─────────────────────────────────────────────────────────────────────
+
+describe("family 3 — every COMPARE-KIND token × BOTH operator paths", () => {
+  /** The op id EVERY staging consumes, so each lane replays exactly it. */
+  const SHARED_OP = "shared-op";
+
+  interface GateStage {
+    readonly rig: Rig;
+    readonly requestRef: string;
+    readonly version: number;
+  }
+  interface WaitStage {
+    readonly rig: Rig;
+    readonly version: number;
+    /** A resume event the staged wait actually DECLARES. */
+    readonly resumeType: string;
+  }
+
+  interface KindCell {
+    /**
+     * Stage a run PARKED AT A GATE whose transcript already consumed
+     * `SHARED_OP` under this class — or `null` for the OP-LESS class,
+     * which consumes no `(instance_id, op_id)` key and therefore cannot
+     * reach the rung at all.
+     */
+    readonly atGate: ((id: InstanceId) => Promise<GateStage>) | null;
+    /** The same, parked at a BARE WAIT, for the resume path. */
+    readonly atWait: ((id: InstanceId) => Promise<WaitStage>) | null;
+    /** Why the staging looks the way it does, where that is not obvious. */
+    readonly note?: string;
+  }
+
+  async function gateAfter(r: Rig, id: InstanceId, version: number): Promise<GateStage> {
+    const instance = await r.store.loadInstance(id);
+    const requestRef = instance?.wait?.requestRef;
+    if (requestRef === undefined) throw new Error("fixture wiring: no request ref");
+    return { rig: r, requestRef, version };
+  }
+
+  const KIND_CELLS: Readonly<Record<AdmitCompareKind, KindCell>> = {
+    STARTED: {
+      atGate: async (id) => {
+        const r = rig();
+        await r.kernel.create({ instanceId: id, templateRef: template.ref, task: "ship it" });
+        await r.kernel.start({ instanceId: id, opId: SHARED_OP });
+        await r.kernel.handle({
+          instanceId: id,
+          opId: "a1",
+          type: "PASS",
+          actorId: "codex",
+          expectedVersion: 2,
+          expectedRole: "implementer",
+        });
+        return gateAfter(r, id, 3);
+      },
+      atWait: async (id) => {
+        const r = rig();
+        await r.kernel.create({ instanceId: id, templateRef: template.ref, task: "ship it" });
+        await r.kernel.start({ instanceId: id, opId: SHARED_OP });
+        await r.kernel.handle({
+          instanceId: id,
+          opId: "a1",
+          type: "TO_WAIT",
+          actorId: "codex",
+          expectedVersion: 2,
+          expectedRole: "implementer",
+        });
+        return { rig: r, version: 3, resumeType: "COMMIT" };
+      },
+    },
+    CANCELLED: {
+      // THE ONE CLASS WHOSE STAGING CANNOT LEAVE THE RUN PARKED: a
+      // CANCELLED fact takes the run TERMINAL. The lane still measures
+      // the idempotency rung because that rung is FIRST — which is a
+      // property family 2 owns and this staging depends on, stated here
+      // rather than left as an accident of the fixture.
+      note: "cancel takes the run TERMINAL; the idempotency rung answers before the state rung",
+      atGate: async (id) => {
+        const r = rig();
+        await r.kernel.create({ instanceId: id, templateRef: template.ref, task: "ship it" });
+        await r.kernel.start({ instanceId: id, opId: "s0" });
+        await r.kernel.handle({
+          instanceId: id,
+          opId: "a1",
+          type: "PASS",
+          actorId: "codex",
+          expectedVersion: 2,
+          expectedRole: "implementer",
+        });
+        const staged = await gateAfter(r, id, 3);
+        await r.kernel.cancel({ instanceId: id, opId: SHARED_OP });
+        return { ...staged, version: 4 };
+      },
+      atWait: async (id) => {
+        const r = rig();
+        await r.kernel.create({ instanceId: id, templateRef: template.ref, task: "ship it" });
+        await r.kernel.start({ instanceId: id, opId: "s0" });
+        await r.kernel.handle({
+          instanceId: id,
+          opId: "a1",
+          type: "TO_WAIT",
+          actorId: "codex",
+          expectedVersion: 2,
+          expectedRole: "implementer",
+        });
+        await r.kernel.cancel({ instanceId: id, opId: SHARED_OP });
+        return { rig: r, version: 4, resumeType: "COMMIT" };
+      },
+    },
+    TASK_SUPPLIED: {
+      note: "the only op-carrying fact a `deferred_kickoff` run consumes",
+      atGate: async (id) => {
+        const r = rig();
+        await r.kernel.create({
+          instanceId: id,
+          templateRef: template.ref,
+          mode: "deferred_kickoff",
+        });
+        await r.kernel.start({ instanceId: id, opId: "s0" });
+        await r.kernel.kickoff({ instanceId: id, opId: SHARED_OP, task: "ship it" });
+        await r.kernel.handle({
+          instanceId: id,
+          opId: "a1",
+          type: "PASS",
+          actorId: "codex",
+          expectedVersion: 3,
+          expectedRole: "implementer",
+        });
+        return gateAfter(r, id, 4);
+      },
+      atWait: async (id) => {
+        const r = rig();
+        await r.kernel.create({
+          instanceId: id,
+          templateRef: template.ref,
+          mode: "deferred_kickoff",
+        });
+        await r.kernel.start({ instanceId: id, opId: "s0" });
+        await r.kernel.kickoff({ instanceId: id, opId: SHARED_OP, task: "ship it" });
+        await r.kernel.handle({
+          instanceId: id,
+          opId: "a1",
+          type: "TO_WAIT",
+          actorId: "codex",
+          expectedVersion: 3,
+          expectedRole: "implementer",
+        });
+        return { rig: r, version: 4, resumeType: "COMMIT" };
+      },
+    },
+    DECISION_REQUEST: {
+      // OP-LESS BY CLASS: it consumes no `(instance_id, op_id)` key, so
+      // the rung cannot retrieve it and neither path has a stageable
+      // cell. Its own unreachability lane is above and stays as it is;
+      // this row keeps the token IN the derived grid rather than letting
+      // it vanish into an unwritten case.
+      note: "op-less — consumes no key, so the rung cannot reach it on either path",
+      atGate: null,
+      atWait: null,
+    },
+    DECISION_MADE: {
+      atGate: async (id) => {
+        const r = rig();
+        await r.kernel.create({ instanceId: id, templateRef: template.ref, task: "ship it" });
+        await r.kernel.start({ instanceId: id, opId: "s0" });
+        await r.kernel.handle({
+          instanceId: id,
+          opId: "a1",
+          type: "PASS",
+          actorId: "codex",
+          expectedVersion: 2,
+          expectedRole: "implementer",
+        });
+        const first = await gateAfter(r, id, 3);
+        // `re_park` routes the gate back to ITSELF, so the run is parked
+        // at a gate again with a FRESH ref — which is what lets the
+        // submit path be driven against a consumed op id.
+        await r.kernel.submitDecision(
+          decisionIntent(id, {
+            opId: SHARED_OP,
+            requestRef: first.requestRef,
+            verdict: "re_park",
+            override: true,
+          }),
+        );
+        return gateAfter(r, id, 4);
+      },
+      atWait: async (id) => {
+        const r = rig();
+        await r.kernel.create({ instanceId: id, templateRef: template.ref, task: "ship it" });
+        await r.kernel.start({ instanceId: id, opId: "s0" });
+        await r.kernel.handle({
+          instanceId: id,
+          opId: "a1",
+          type: "PASS",
+          actorId: "codex",
+          expectedVersion: 2,
+          expectedRole: "implementer",
+        });
+        const first = await gateAfter(r, id, 3);
+        await r.kernel.submitDecision(
+          decisionIntent(id, {
+            opId: SHARED_OP,
+            requestRef: first.requestRef,
+            verdict: "approve",
+          }),
+        );
+        return { rig: r, version: 4, resumeType: "COMMIT" };
+      },
+    },
+    WAIT_RESUMED: {
+      atGate: async (id) => {
+        const r = rig();
+        await r.kernel.create({ instanceId: id, templateRef: template.ref, task: "ship it" });
+        await r.kernel.start({ instanceId: id, opId: "s0" });
+        await r.kernel.handle({
+          instanceId: id,
+          opId: "a1",
+          type: "TO_WAIT",
+          actorId: "codex",
+          expectedVersion: 2,
+          expectedRole: "implementer",
+        });
+        await r.kernel.resumeWait({
+          intent: "resume-wait",
+          instanceId: id,
+          opId: SHARED_OP,
+          expectedVersion: 3,
+          type: "TO_GATE",
+        });
+        return gateAfter(r, id, 4);
+      },
+      atWait: async (id) => {
+        const r = rig();
+        await r.kernel.create({ instanceId: id, templateRef: template.ref, task: "ship it" });
+        await r.kernel.start({ instanceId: id, opId: "s0" });
+        await r.kernel.handle({
+          instanceId: id,
+          opId: "a1",
+          type: "TO_WAIT",
+          actorId: "codex",
+          expectedVersion: 2,
+          expectedRole: "implementer",
+        });
+        await r.kernel.resumeWait({
+          intent: "resume-wait",
+          instanceId: id,
+          opId: SHARED_OP,
+          expectedVersion: 3,
+          type: "TO_WAIT2",
+        });
+        return { rig: r, version: 4, resumeType: "GO" };
+      },
+    },
+  };
+
+  /**
+   * THE DISPOSITION IS A RULE, NOT A TRANSCRIPTION: the compare is an
+   * equality on the KIND, so a replay of the intent's OWN committed kind
+   * is a Duplicate and every other op-carrying class is a collision. A
+   * per-cell literal would let one wrong expectation hide as data.
+   */
+  function expected(token: AdmitCompareKind, ownKind: AdmitCompareKind) {
+    return token === ownKind
+      ? { kind: "duplicate" }
+      : { kind: "rejected", reason: "op_id_collision" };
+  }
+
+  const TOKENS = Object.keys(KIND_CELLS) as readonly AdmitCompareKind[];
+
+  it("the grid covers the LIVE compare-kind domain, and every op-carrying token is stageable on BOTH paths", () => {
+    // The domain's SIZE is checked here so a token added to the union
+    // (which the `Record` type already compile-forces into the table)
+    // cannot be answered with a `null` pair and quietly skipped: only
+    // the OP-LESS class is allowed to have no staging, and it is named.
+    for (const token of TOKENS) {
+      const cell = KIND_CELLS[token];
+      const stageable = cell.atGate !== null && cell.atWait !== null;
+      expect(stageable, `${token} must be stageable on both paths unless op-less`).toBe(
+        token !== "DECISION_REQUEST",
+      );
+    }
+    expect(TOKENS).toContain("DECISION_REQUEST");
+  });
+
+  for (const token of TOKENS) {
+    const cell = KIND_CELLS[token];
+    const gate = cell.atGate;
+    const wait = cell.atWait;
+
+    if (gate === null || wait === null) {
+      it(`${token}: OP-LESS — the lookup cannot retrieve it, so neither path reaches the compare`, async () => {
+        const base = await parked(`k-ol-${token}`);
+        // Its correlation handle is a `request_ref`, not an op id, and an
+        // `op_id = ?` lookup never matches a NULL row.
+        expect(await base.store.findOp(`k-ol-${token}`, base.requestRef)).toBeNull();
+      });
+      continue;
+    }
+
+    it(`SUBMIT against an op id consumed by a ${token} row → ${JSON.stringify(expected(token, "DECISION_MADE"))}`, async () => {
+      const staged = await gate(`k-s-${token}`);
+      const outcome = await staged.rig.kernel.submitDecision(
+        decisionIntent(`k-s-${token}`, {
+          opId: SHARED_OP,
+          requestRef: staged.requestRef,
+          expectedVersion: staged.version,
+        }),
+      );
+      expect(outcome).toEqual(expected(token, "DECISION_MADE"));
+    });
+
+    it(`RESUME against an op id consumed by a ${token} row → ${JSON.stringify(expected(token, "WAIT_RESUMED"))}`, async () => {
+      const staged = await wait(`k-r-${token}`);
+      const outcome = await staged.rig.kernel.resumeWait({
+        intent: "resume-wait",
+        instanceId: `k-r-${token}`,
+        opId: SHARED_OP,
+        expectedVersion: staged.version,
+        type: staged.resumeType,
+      });
+      expect(outcome).toEqual(expected(token, "WAIT_RESUMED"));
+    });
+  }
+});
+
+describe("family 3 — THE ACTOR PATH'S RECIPROCAL, for BOTH new classes", () => {
+  /**
+   * Opening the store's `findOp` whitelist (→[findop-whitelist]) means
+   * HANDLE's own idempotency rung can now RETRIEVE a row of EITHER new
+   * class under an actor's op id, where before the whitelist rejected it
+   * AT THE STORE. The build drove `DECISION_MADE` only; `WAIT_RESUMED`
+   * went through the same whitelist opening and had no lane.
+   */
+  const RECIPROCALS = [
+    {
+      kind: "DECISION_MADE",
+      id: "i-rc1" as InstanceId,
+      /** Leave the run ACTIVE at an agent step with the op id consumed. */
+      stage: async (id: InstanceId, opId: string): Promise<Rig & { version: number }> => {
+        const base = await parked(id);
+        const outcome = await base.kernel.submitDecision(
+          decisionIntent(id, {
+            opId,
+            requestRef: base.requestRef,
+            verdict: "request_rework",
+            payload: { instruction: "again" },
+            override: true,
+          }),
+        );
+        if (outcome.kind !== "committed") throw new Error(`staging failed (${outcome.kind})`);
+        return { kernel: base.kernel, store: base.store, version: outcome.version };
+      },
+    },
+    {
+      kind: "WAIT_RESUMED",
+      id: "i-rc2" as InstanceId,
+      stage: async (id: InstanceId, opId: string): Promise<Rig & { version: number }> => {
+        const base = await parkedAtWait(id);
+        const outcome = await base.kernel.resumeWait({
+          intent: "resume-wait",
+          instanceId: id,
+          opId,
+          expectedVersion: base.version,
+          type: "TO_AGENT",
+        });
+        if (outcome.kind !== "committed") throw new Error(`staging failed (${outcome.kind})`);
+        return { kernel: base.kernel, store: base.store, version: outcome.version };
+      },
+    },
+  ] as const;
+
+  for (const reciprocal of RECIPROCALS) {
+    it(`an actor envelope replaying a ${reciprocal.kind} op id → op_id_collision`, async () => {
+      const staged = await reciprocal.stage(reciprocal.id, "op-x");
+      const outcome = await staged.kernel.handle({
+        instanceId: reciprocal.id,
+        opId: "op-x",
+        type: "PASS",
+        actorId: "codex",
+        expectedVersion: staged.version,
+        expectedRole: "implementer",
+      });
+      expect(outcome).toEqual({ kind: "rejected", reason: "op_id_collision" });
+    });
+  }
 });

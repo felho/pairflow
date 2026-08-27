@@ -1921,80 +1921,184 @@ describe("family 5 — the two operator classes round-trip, body byte-asserted i
     });
     handle.close();
     const raw = new DatabaseSync(path);
-    const row = raw.prepare("SELECT entry_body, op_id FROM transcript WHERE seq = 1").get() as {
+    const row = raw
+      .prepare(
+        "SELECT entry_body, op_id, envelope, payload_digest, gate_decisions, issued_agent_config FROM transcript WHERE seq = 1",
+      )
+      .get() as {
       entry_body: string;
       op_id: string | null;
+      envelope: string | null;
+      payload_digest: string | null;
+      gate_decisions: string | null;
+      issued_agent_config: string | null;
     };
     expect(row.entry_body).toBe('{"event":"COMMIT","kind":"commit_pending"}');
+    // THE FORWARD DIRECTION AT FULL WIDTH, the same SIX columns the
+    // DECISION_MADE lane reads: a per-class assertion that stopped at
+    // `op_id` would leave the other class's four transition-only columns
+    // unread on the only lane that commits one.
     expect(row.op_id).toBe("r1");
+    expect(row.envelope).toBeNull();
+    expect(row.payload_digest).toBeNull();
+    expect(row.gate_decisions).toBeNull();
+    expect(row.issued_agent_config).toBeNull();
     raw.close();
   });
 
-  it("THE COLUMN IFF IS AN EQUIVALENCE — the REVERSE direction reds for both classes", async () => {
-    // Driving one direction only would let a build route a new class
-    // through the fact branch and still read green on everything but
-    // `op_id`. Both directions, both classes.
-    for (const kind of ["DECISION_MADE", "WAIT_RESUMED"] as const) {
-      const body =
-        kind === "DECISION_MADE"
-          ? '{"by":"h","decision":"approve","request_ref":"R"}'
-          : '{"event":"COMMIT","kind":"commit_pending"}';
+  /**
+   * THE COLUMN IFF IS AN EQUIVALENCE, TABLE-DRIVEN OVER BOTH CLASSES ×
+   * ALL SIX COLUMNS (build-close aftermath, ch14-p2b).
+   *
+   * The earlier form of this lane drove ONE representative of the
+   * transition-only half — `envelope` — and the other three conjuncts
+   * of the branch's `||` rode along unmeasured. That is not a
+   * hypothetical: deleting the `gate_decisions !== null` check from the
+   * operator-class branch of the mapper leaves the whole suite green,
+   * which is the precise blindness a single representative buys. The
+   * grid is therefore written out per column, so each conjunct is
+   * load-bearing ALONE on its own lane, for each class independently.
+   */
+  const CLASS_BODY = {
+    DECISION_MADE: '{"by":"h","decision":"approve","request_ref":"R"}',
+    WAIT_RESUMED: '{"event":"COMMIT","kind":"commit_pending"}',
+  } as const;
 
-      // (a) op-carrying: a NULL op_id on an op-carrying class reds.
-      const noOp = tempDbPath();
-      let handle = openStore(noOp, createControlledClock(0));
-      await handle.store.createInstance({ ...parked, instanceId: "x" });
-      handle.close();
-      let raw = new DatabaseSync(noOp);
-      raw
-        .prepare(
-          "INSERT INTO transcript (instance_id, seq, op_id, entry_kind, envelope, payload_digest, gate_decisions, issued_agent_config, entry_body, committed_at) VALUES ('x', 1, NULL, ?, NULL, NULL, NULL, NULL, ?, 0)",
-        )
-        .run(kind, body);
-      raw.close();
-      handle = openStore(noOp, createControlledClock(0));
-      expect((await integrityError(() => handle.store.getInstanceDetail("x"))).message).toMatch(
-        /NULL op_id/,
-      );
-      handle.close();
+  /**
+   * The FOUR transition-only columns, with a legal-looking value for
+   * each — a shape a build routing the class through the transition
+   * branch would actually write, not a sentinel the decoder would
+   * choke on for an unrelated reason.
+   */
+  const TRANSITION_ONLY = [
+    { column: "envelope", value: "{}" },
+    { column: "payload_digest", value: "digest-1" },
+    { column: "gate_decisions", value: "[]" },
+    { column: "issued_agent_config", value: "{}" },
+  ] as const;
 
-      // (b) body-bearing: a NULL entry_body on a body-bearing class reds.
-      const noBody = tempDbPath();
-      handle = openStore(noBody, createControlledClock(0));
-      await handle.store.createInstance({ ...parked, instanceId: "x" });
-      handle.close();
-      raw = new DatabaseSync(noBody);
-      raw
-        .prepare(
-          "INSERT INTO transcript (instance_id, seq, op_id, entry_kind, envelope, payload_digest, gate_decisions, issued_agent_config, entry_body, committed_at) VALUES ('x', 1, 'o1', ?, NULL, NULL, NULL, NULL, NULL, 0)",
-        )
-        .run(kind);
-      raw.close();
-      handle = openStore(noBody, createControlledClock(0));
-      expect((await integrityError(() => handle.store.getInstanceDetail("x"))).message).toMatch(
-        /NULL entry_body/,
-      );
-      handle.close();
+  const COLUMNS = ["op_id", "entry_body", "envelope", "payload_digest", "gate_decisions", "issued_agent_config"] as const;
 
-      // (c) transition-only columns: a non-null one on these classes reds.
-      const withEnvelope = tempDbPath();
-      handle = openStore(withEnvelope, createControlledClock(0));
-      await handle.store.createInstance({ ...parked, instanceId: "x" });
-      handle.close();
-      raw = new DatabaseSync(withEnvelope);
-      raw
-        .prepare(
-          "INSERT INTO transcript (instance_id, seq, op_id, entry_kind, envelope, payload_digest, gate_decisions, issued_agent_config, entry_body, committed_at) VALUES ('x', 1, 'o1', ?, '{}', NULL, NULL, NULL, ?, 0)",
-        )
-        .run(kind, body);
-      raw.close();
-      handle = openStore(withEnvelope, createControlledClock(0));
-      expect((await integrityError(() => handle.store.getInstanceDetail("x"))).message).toMatch(
-        /transition-only field/,
+  /** Stage ONE raw transcript row on a fresh db and read it back. */
+  async function stagedRow(columns: {
+    readonly op_id: string | null;
+    readonly entry_kind: "DECISION_MADE" | "WAIT_RESUMED";
+    readonly envelope: string | null;
+    readonly payload_digest: string | null;
+    readonly gate_decisions: string | null;
+    readonly issued_agent_config: string | null;
+    readonly entry_body: string | null;
+  }): Promise<Error> {
+    const path = tempDbPath();
+    let handle = openStore(path, createControlledClock(0));
+    await handle.store.createInstance({ ...parked, instanceId: "x" });
+    handle.close();
+    const raw = new DatabaseSync(path);
+    raw
+      .prepare(
+        "INSERT INTO transcript (instance_id, seq, op_id, entry_kind, envelope, payload_digest, gate_decisions, issued_agent_config, entry_body, committed_at) VALUES ('x', 1, ?, ?, ?, ?, ?, ?, ?, 0)",
+      )
+      .run(
+        columns.op_id,
+        columns.entry_kind,
+        columns.envelope,
+        columns.payload_digest,
+        columns.gate_decisions,
+        columns.issued_agent_config,
+        columns.entry_body,
       );
-      handle.close();
+    raw.close();
+    handle = openStore(path, createControlledClock(0));
+    const error = await integrityError(() => handle.store.getInstanceDetail("x"));
+    handle.close();
+    return error;
+  }
+
+  for (const kind of ["DECISION_MADE", "WAIT_RESUMED"] as const) {
+    /** The class's CORRECTLY-SHAPED row — the forward direction's subject. */
+    function wellFormed() {
+      return {
+        op_id: "o1",
+        entry_kind: kind,
+        envelope: null,
+        payload_digest: null,
+        gate_decisions: null,
+        issued_agent_config: null,
+        entry_body: CLASS_BODY[kind],
+      } as const;
     }
-  });
+
+    it(`FORWARD, ${kind}: a correctly-shaped row DECODES and every transition-only column reads NULL`, async () => {
+      const path = tempDbPath();
+      let handle = openStore(path, createControlledClock(0));
+      await handle.store.createInstance({ ...parked, instanceId: "x" });
+      handle.close();
+      const raw = new DatabaseSync(path);
+      const w = wellFormed();
+      raw
+        .prepare(
+          "INSERT INTO transcript (instance_id, seq, op_id, entry_kind, envelope, payload_digest, gate_decisions, issued_agent_config, entry_body, committed_at) VALUES ('x', 1, ?, ?, NULL, NULL, NULL, NULL, ?, 0)",
+        )
+        .run(w.op_id, w.entry_kind, w.entry_body);
+      raw.close();
+      handle = openStore(path, createControlledClock(0));
+      const detail = await handle.store.getInstanceDetail("x");
+      // It DECODES — the forward half of the equivalence.
+      expect(detail?.transcript[0]).toEqual(
+        kind === "DECISION_MADE"
+          ? {
+              entryKind: "DECISION_MADE",
+              seq: 1,
+              opId: "o1",
+              decision: "approve",
+              by: "h",
+              requestRef: "R",
+              committedAt: 0,
+            }
+          : {
+              entryKind: "WAIT_RESUMED",
+              seq: 1,
+              opId: "o1",
+              kind: "commit_pending",
+              event: "COMMIT",
+              committedAt: 0,
+            },
+      );
+      handle.close();
+      // …and the SIX columns read as the class declares them: op_id
+      // PRESENT, entry_body NON-NULL, the four transition-only ones NULL.
+      const check = new DatabaseSync(path);
+      const row = check
+        .prepare(`SELECT ${COLUMNS.join(", ")} FROM transcript WHERE seq = 1`)
+        .get() as Record<(typeof COLUMNS)[number], string | null>;
+      check.close();
+      expect(row.op_id).toBe("o1");
+      expect(row.entry_body).toBe(CLASS_BODY[kind]);
+      for (const { column } of TRANSITION_ONLY) {
+        expect(row[column], `${kind}.${column}`).toBeNull();
+      }
+    });
+
+    // REVERSE, the four transition-only columns — EACH INDEPENDENTLY, so
+    // each conjunct of the branch's `||` is proven load-bearing alone.
+    for (const { column, value } of TRANSITION_ONLY) {
+      it(`REVERSE, ${kind}: a row carrying ONLY a non-null ${column} is refused by the class iff`, async () => {
+        const error = await stagedRow({ ...wellFormed(), [column]: value });
+        expect(error.message).toMatch(/transition-only field \(class iff\)/);
+        expect(error.message).toContain(kind);
+      });
+    }
+
+    it(`REVERSE, ${kind}: a row missing op_id is refused (the op-carrying half)`, async () => {
+      const error = await stagedRow({ ...wellFormed(), op_id: null });
+      expect(error.message).toMatch(/NULL op_id/);
+    });
+
+    it(`REVERSE, ${kind}: a row missing entry_body is refused (the body-bearing half)`, async () => {
+      const error = await stagedRow({ ...wellFormed(), entry_body: null });
+      expect(error.message).toMatch(/NULL entry_body/);
+    });
+  }
 
   it("THE PREDICATE SPLIT: a TRANSITION row still refuses an entry_body, and a fact row still refuses one", async () => {
     // The half that proves `opLess` no longer serves the body rule: the

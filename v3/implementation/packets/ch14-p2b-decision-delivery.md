@@ -1971,6 +1971,82 @@ in the trace (narrowed on a discriminating field instead), and family
 16's rider enumeration initially mis-parsed parameter lines as
 declarations.
 
+---
+
+**ARM GATE 2 — the build-close implementation review with its MANDATORY
+SENSITIVITY PASS (README §5.5, mandatory; no waiver). CLOSED.**
+
+Transport and tier as at gate 1: the `gptsol` agent on the pin's current
+primary, header reporting `gpt-5.6-sol / high`, recorded as the
+transport's self-report rather than a runner-validated header. Byte guard
+by hand before and after: clean, no divergence.
+
+VERDICT `refine`, citing commit `5a11e433`, with EIGHT findings — every
+one of them the same class the sensitivity pass exists to find: a lane
+GREEN BUT BLIND under a correct-looking packet lane text.
+
+**THE PROBE PROTOCOL IS WHY ONLY THREE OF THE EIGHT WERE FOLDED.** §6
+requires that any lane the arm flags "plausibly blind" gets an EXECUTED
+mutate-run-restore verification BEFORE its fold is recorded — "plausibly
+red" becomes "observed red" exactly where the arm's reasoning could err.
+Nine probes ran through `tools/v3-plan/probe_runner.py`, every one with a
+green baseline and a byte-verified restore. The result vindicates the
+requirement: **three confirmed, five refuted.**
+
+CONFIRMED BLIND (the mutation was applied, the full suite ran, and it
+STAYED GREEN): the `unknown_instance` load cell on both operator paths;
+the per-class column iff, where deleting the `gate_decisions` check from
+the mapper's operator branch changed nothing; and the shared diagnostic
+wrapper's rider set, where a spurious `stale` emit on `kickoff` slipped
+through untouched.
+
+REFUTED (the suite went RED — the lane already drives it): the committed
+verdict's readback, the compare-kind domain (tested at the arm's own
+NARROW shape as well as a broader one), the wire's far-end kernel name,
+and Leg B's returned dispatch. A fifth, the `hasPayload` bit under a
+second redaction policy, was refuted on STRUCTURAL grounds rather than by
+probe: the bit is computed from the entry before any policy is in scope,
+so the divergence the arm described is not authorable at all.
+
+Had the findings been folded on the arm's reasoning, five lanes would
+have been rewritten to close holes that were not open, and the suite
+would have grown without a single real gap closing.
+
+**AN INSTRUMENT NOTE WORTH KEEPING:** the first probe run used a wrong
+test command and the runner's GREEN-BASELINE GATE stopped it BEFORE any
+mutation, recording `baseline: RED — instrument broken, receipt would be
+vacuous`. That gate was minted after eleven probes in an earlier chapter
+all ran against an already-red baseline and produced eleven vacuous
+receipts. It earned itself again here.
+
+**THE FOLD, tests only — no production byte changed.** The three measured
+lanes were closed, and three MEMBERSHIPS the arm showed to be sampled
+rather than enumerated were filled: family 1's twelve `target class ×
+entry path` cells (with the packet's own carve-out kept — the two cells
+that cannot discriminate `issuedAgentConfig` carry no config assertion),
+family 3's compare-kind grid over both operator paths plus the actor
+reciprocal for BOTH new classes, and Leg B's returned output asserted
+whole to match Leg A's. Under-enumeration is not blindness and a probe
+cannot decide it; the membership clause is the packet's ratified test
+surface, and reading the built bodies against it is the only instrument
+there is.
+
+**RE-VERIFIED BY RE-RUNNING THE THREE PROBES**, which is the only proof
+that matters here: each mutation that previously left the suite GREEN now
+makes it RED. The findings are closed by measurement, not by assertion.
+
+**THE RIDER COUNT CORRECTED ITSELF, and the correction is the argument
+for the rule that produced it.** The arm said seven riders; the tree says
+NINE, because this packet's own two handlers now ride the wrapper too.
+The aftermath enumerated them from the `lifecycleOp(` call sites rather
+than from any document — which is exactly why Q18 and family 16 were
+rewritten during review to forbid a count in this packet and to require
+enumeration from the call sites. A number written down here would have
+been stale before the build finished.
+
+Final: 81 test files / 3045 tests (from 2982); typecheck, lint, coverage,
+packet-lint, deferred, adr-check, realized-map and check-docs all green.
+
 Evidence gaps: none. `v3:typecheck`, `v3:lint`, `v3:test` (79 files /
 2847 tests), `v3:packet-lint` and `v3:deferred` all completed in the
 arm's environment. `v3:coverage`'s STRICT mode fails on a pre-build tree

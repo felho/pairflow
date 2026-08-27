@@ -1006,6 +1006,43 @@ describe("family 16 — the two operator intents' diagnostic arms", () => {
   });
 });
 
+/**
+ * THE ONE ENUMERATION of the shared wrapper's riders, read from
+ * `kernel.ts`'s `lifecycleOp(` call sites at RUN TIME — never from a
+ * count in a document, and never transcribed twice.
+ *
+ * Each call site sits inside a member or a function whose name is the
+ * rider's. The scan is LINE-BASED and walks BACKWARD from every call
+ * site to the nearest declaration — the two forms this file actually
+ * uses (`name: (…) =>` and `function name(`).
+ */
+async function liveRiders(): Promise<Set<string>> {
+  const source = await readFile(new URL("./kernel.ts", import.meta.url), "utf8");
+  const lines = source.split("\n");
+  const declAt = new Map<number, string>();
+  lines.forEach((line, i) => {
+    // A MEMBER is `name: (` — the trailing `(` is what keeps a parameter
+    // line (`ref: RuntimeContextRef,`) from being read as a declaration
+    // and shadowing its own enclosing function.
+    const member = /^ {4}([A-Za-z][A-Za-z0-9]*):\s*\(/.exec(line);
+    const fn = /^\s*(?:async\s+)?function\s+([A-Za-z][A-Za-z0-9]*)\s*\(/.exec(line);
+    const name = member?.[1] ?? fn?.[1];
+    if (name !== undefined) declAt.set(i, name);
+  });
+  const wrapped = new Set<string>();
+  lines.forEach((line, i) => {
+    if (!line.includes("lifecycleOp(")) return;
+    for (let j = i; j >= 0; j -= 1) {
+      const owner = declAt.get(j);
+      if (owner !== undefined) {
+        if (owner !== "lifecycleOp") wrapped.add(owner);
+        return;
+      }
+    }
+  });
+  return wrapped;
+}
+
 describe("family 16 — THE NO-MOVE CONTROL: the wrapper's FULL rider set, byte-unmoved", () => {
   /**
    * THE RIDER SET IS ENUMERATED FROM THE CALL SITES, never from a count
@@ -1038,36 +1075,7 @@ describe("family 16 — THE NO-MOVE CONTROL: the wrapper's FULL rider set, byte-
     // The enumeration is CHECKED against the source rather than trusted:
     // a rider added without extending this list reds here, which is what
     // keeps "full rider set" true rather than historical.
-    const source = await readFile(
-      new URL("./kernel.ts", import.meta.url),
-      "utf8",
-    );
-    // Each `lifecycleOp(` call site sits inside a member or a function
-    // whose name is the rider's. The enumeration is LINE-BASED and walks
-    // BACKWARD from every call site to the nearest declaration — the two
-    // forms this file actually uses (`name: (…) =>` and `function name(`).
-    const lines = source.split("\n");
-    const declAt = new Map<number, string>();
-    lines.forEach((line, i) => {
-      // A MEMBER is `name: (` — the trailing `(` is what keeps a
-      // parameter line (`ref: RuntimeContextRef,`) from being read as a
-      // declaration and shadowing its own enclosing function.
-      const member = /^ {4}([A-Za-z][A-Za-z0-9]*):\s*\(/.exec(line);
-      const fn = /^\s*(?:async\s+)?function\s+([A-Za-z][A-Za-z0-9]*)\s*\(/.exec(line);
-      const name = member?.[1] ?? fn?.[1];
-      if (name !== undefined) declAt.set(i, name);
-    });
-    const wrapped = new Set<string>();
-    lines.forEach((line, i) => {
-      if (!line.includes("lifecycleOp(")) return;
-      for (let j = i; j >= 0; j -= 1) {
-        const owner = declAt.get(j);
-        if (owner !== undefined) {
-          if (owner !== "lifecycleOp") wrapped.add(owner);
-          return;
-        }
-      }
-    });
+    const wrapped = await liveRiders();
     // Every enumerated rider is a LIVE call site…
     for (const rider of RIDERS) {
       expect(wrapped.has(rider), `missing rider: ${rider}`).toBe(true);
@@ -1105,4 +1113,470 @@ describe("family 16 — THE NO-MOVE CONTROL: the wrapper's FULL rider set, byte-
     expect(rec.events.filter((e) => e.kind === "stale")).toEqual([]);
     expect(rec.events.map((e) => e.kind)).toEqual(["duplicate", "rejected"]);
   });
+});
+
+// ─────────────────────────────────────────────────────────────────────
+// FAMILY 16 — THE NO-MOVE CONTROL, DRIVEN BEHAVIOURALLY OVER EVERY LIVE
+// RIDER (build-close aftermath, ch14-p2b).
+//
+// The control above proves the rider LIST is complete and that no
+// `stale` event appears — but it only ever DRIVES three of the riders
+// (create, start, cancel), so "every rider's emitted event set is
+// byte-identical" was a claim about a set the lane never visited. The
+// measured consequence: adding a spurious `stale` emit to the `kickoff`
+// rider leaves the whole suite green.
+//
+// So the set is driven, member by member, against its EXACT emitted
+// event SEQUENCE — including the empty-sequence controls, which are the
+// half a spurious emit actually breaks. The driver table's key set is
+// checked against the SAME live call-site enumeration the lane above
+// reads, so a rider added without a driver reds here rather than
+// silently sitting undriven.
+// ─────────────────────────────────────────────────────────────────────
+
+const riderTemplate: WorkflowTemplate = {
+  ref: { id: "diag-riders", version: 1 },
+  start: "implement",
+  steps: {
+    implement: {
+      role: "implementer",
+      instruction: "build it",
+      transitions: { PASS: "gate", TO_WAIT: "commit_wait" },
+      recommends: { PASS: "approve" },
+    },
+    gate: {
+      type: "human_gate",
+      role: "operator",
+      instruction: "decide",
+      decisions: { approve: { target: "done" } },
+    },
+    commit_wait: {
+      type: "wait",
+      wait: { kind: "commit_pending", resumeEvents: ["COMMIT"] },
+      onResume: { COMMIT: "done" },
+    },
+  },
+  terminal: ["done"],
+  roles: { implementer: { defaultActor: "codex" }, operator: { defaultActor: "human-1" } },
+};
+
+function riderRig(rec: { readonly sink: DiagnosticsSink }) {
+  const admittedRiders = admit(riderTemplate);
+  const handle = openStore(":memory:", createControlledClock(1_000));
+  const kernel = createKernel({
+    providerRegistry: createStaticProviderRegistry({}),
+    processRunner: createScriptedProcessGateRunner([]),
+    store: handle.store,
+    definitions: {
+      load: (ref) => Promise.resolve(ref.id === admittedRiders.ref.id ? admittedRiders : null),
+    },
+    time: createControlledClock(1_000),
+    digest: deriveEmitDigest,
+    diag: rec.sink,
+    gates: gateCatalog,
+  });
+  return { kernel, store: handle.store };
+}
+
+interface RiderCase {
+  readonly label: string;
+  /**
+   * Drives the rider. Whatever SETUP the case needs runs here too, and
+   * the case clears the recorder before the drive it means to measure —
+   * so `emits` is the rider's own sequence, not the fixture's.
+   */
+  readonly drive: (rec: ReturnType<typeof createRecordingDiagnosticsSink>) => Promise<void>;
+  /** The EXACT emitted sequence, whole values, in order. */
+  readonly emits: readonly unknown[];
+}
+
+/** Park a fresh run at the gate; returns the rig and the minted ref. */
+async function riderParked(rec: ReturnType<typeof createRecordingDiagnosticsSink>) {
+  const rig = riderRig(rec);
+  await rig.kernel.create({ instanceId: "rd-1", templateRef: riderTemplate.ref, task: "t" });
+  await rig.kernel.start({ instanceId: "rd-1", opId: "s0" });
+  await rig.kernel.handle({
+    instanceId: "rd-1",
+    opId: "a1",
+    type: "PASS",
+    actorId: "codex",
+    expectedVersion: 2,
+    expectedRole: "implementer",
+  });
+  const instance = await rig.store.loadInstance("rd-1");
+  const requestRef = instance?.wait?.requestRef;
+  if (requestRef === undefined) throw new Error("fixture wiring: no request ref");
+  return { ...rig, requestRef };
+}
+
+/** Park a fresh run at the BARE wait. */
+async function riderParkedAtWait(rec: ReturnType<typeof createRecordingDiagnosticsSink>) {
+  const rig = riderRig(rec);
+  await rig.kernel.create({ instanceId: "rw-1", templateRef: riderTemplate.ref, task: "t" });
+  await rig.kernel.start({ instanceId: "rw-1", opId: "s0" });
+  await rig.kernel.handle({
+    instanceId: "rw-1",
+    opId: "a1",
+    type: "TO_WAIT",
+    actorId: "codex",
+    expectedVersion: 2,
+    expectedRole: "implementer",
+  });
+  return rig;
+}
+
+/**
+ * ONE CASE LIST PER RIDER, keyed by the name the wrapper's call site
+ * sits under. EVERY rider carries at least one EMPTY-sequence control —
+ * a success (or an inert `ignored`) that must emit NOTHING — because a
+ * spurious emit is invisible to a lane that only ever asserts the
+ * classified arms.
+ */
+const RIDER_CASES: Readonly<Record<string, readonly RiderCase[]>> = {
+  create: [
+    {
+      label: "a successful create emits NOTHING",
+      drive: async (rec) => {
+        const rig = riderRig(rec);
+        rec.events.length = 0;
+        await rig.kernel.create({ instanceId: "c-1", templateRef: riderTemplate.ref, task: "t" });
+      },
+      emits: [],
+    },
+    {
+      label: "task_required is classified",
+      drive: async (rec) => {
+        const rig = riderRig(rec);
+        rec.events.length = 0;
+        await rig.kernel.create({ instanceId: "c-2", templateRef: riderTemplate.ref });
+      },
+      emits: [
+        { source: "kernel", kind: "rejected", reason: "task_required", instanceId: "c-2" },
+      ],
+    },
+  ],
+  start: [
+    {
+      label: "a successful start emits NOTHING",
+      drive: async (rec) => {
+        const rig = riderRig(rec);
+        await rig.kernel.create({ instanceId: "s-1", templateRef: riderTemplate.ref, task: "t" });
+        rec.events.length = 0;
+        await rig.kernel.start({ instanceId: "s-1", opId: "s0" });
+      },
+      emits: [],
+    },
+    {
+      label: "a replayed start is `duplicate`",
+      drive: async (rec) => {
+        const rig = riderRig(rec);
+        await rig.kernel.create({ instanceId: "s-2", templateRef: riderTemplate.ref, task: "t" });
+        await rig.kernel.start({ instanceId: "s-2", opId: "s0" });
+        rec.events.length = 0;
+        await rig.kernel.start({ instanceId: "s-2", opId: "s0" });
+      },
+      emits: [{ source: "kernel", kind: "duplicate", instanceId: "s-2", opId: "s0" }],
+    },
+    {
+      label: "an unknown instance is `rejected`",
+      drive: async (rec) => {
+        const rig = riderRig(rec);
+        rec.events.length = 0;
+        await rig.kernel.start({ instanceId: "ghost", opId: "s0" });
+      },
+      emits: [
+        {
+          source: "kernel",
+          kind: "rejected",
+          reason: "unknown_instance",
+          instanceId: "ghost",
+          opId: "s0",
+        },
+      ],
+    },
+  ],
+  kickoff: [
+    {
+      // THE CELL THE OLD CONTROL NEVER VISITED. A spurious emit added to
+      // this rider is invisible without exactly this assertion.
+      label: "a successful kickoff emits NOTHING",
+      drive: async (rec) => {
+        const rig = riderRig(rec);
+        await rig.kernel.create({
+          instanceId: "k-1",
+          templateRef: riderTemplate.ref,
+          mode: "deferred_kickoff",
+        });
+        await rig.kernel.start({ instanceId: "k-1", opId: "s0" });
+        rec.events.length = 0;
+        await rig.kernel.kickoff({ instanceId: "k-1", opId: "k0", task: "GO" });
+      },
+      emits: [],
+    },
+    {
+      label: "a replayed kickoff is `duplicate`",
+      drive: async (rec) => {
+        const rig = riderRig(rec);
+        await rig.kernel.create({
+          instanceId: "k-2",
+          templateRef: riderTemplate.ref,
+          mode: "deferred_kickoff",
+        });
+        await rig.kernel.start({ instanceId: "k-2", opId: "s0" });
+        await rig.kernel.kickoff({ instanceId: "k-2", opId: "k0", task: "GO" });
+        rec.events.length = 0;
+        await rig.kernel.kickoff({ instanceId: "k-2", opId: "k0", task: "GO" });
+      },
+      emits: [{ source: "kernel", kind: "duplicate", instanceId: "k-2", opId: "k0" }],
+    },
+    {
+      label: "an unknown instance is `rejected`",
+      drive: async (rec) => {
+        const rig = riderRig(rec);
+        rec.events.length = 0;
+        await rig.kernel.kickoff({ instanceId: "ghost", opId: "k0", task: "GO" });
+      },
+      emits: [
+        {
+          source: "kernel",
+          kind: "rejected",
+          reason: "unknown_instance",
+          instanceId: "ghost",
+          opId: "k0",
+        },
+      ],
+    },
+  ],
+  cancel: [
+    {
+      label: "a successful cancel emits NOTHING",
+      drive: async (rec) => {
+        const rig = riderRig(rec);
+        await rig.kernel.create({ instanceId: "x-1", templateRef: riderTemplate.ref, task: "t" });
+        await rig.kernel.start({ instanceId: "x-1", opId: "s0" });
+        rec.events.length = 0;
+        await rig.kernel.cancel({ instanceId: "x-1", opId: "c0" });
+      },
+      emits: [],
+    },
+    {
+      label: "an unknown instance is `rejected`",
+      drive: async (rec) => {
+        const rig = riderRig(rec);
+        rec.events.length = 0;
+        await rig.kernel.cancel({ instanceId: "ghost", opId: "c0" });
+      },
+      emits: [
+        {
+          source: "kernel",
+          kind: "rejected",
+          reason: "unknown_instance",
+          instanceId: "ghost",
+          opId: "c0",
+        },
+      ],
+    },
+  ],
+  fail: [
+    {
+      label: "a successful fail emits NOTHING",
+      drive: async (rec) => {
+        const rig = riderRig(rec);
+        await rig.kernel.create({ instanceId: "f-1", templateRef: riderTemplate.ref, task: "t" });
+        await rig.kernel.start({ instanceId: "f-1", opId: "s0" });
+        rec.events.length = 0;
+        await rig.kernel.fail("f-1", "sys:boom");
+      },
+      emits: [],
+    },
+    {
+      label: "an unknown instance is `rejected`",
+      drive: async (rec) => {
+        const rig = riderRig(rec);
+        rec.events.length = 0;
+        await rig.kernel.fail("ghost", "sys:boom");
+      },
+      emits: [
+        { source: "kernel", kind: "rejected", reason: "unknown_instance", instanceId: "ghost" },
+      ],
+    },
+  ],
+  readyOp: [
+    {
+      // The INERT arm — the wrapper classifies nothing on `ignored`.
+      label: "an uncorrelated READY is inert and emits NOTHING",
+      drive: async (rec) => {
+        const rig = riderRig(rec);
+        await rig.kernel.create({ instanceId: "y-1", templateRef: riderTemplate.ref, task: "t" });
+        await rig.kernel.start({ instanceId: "y-1", opId: "s0" });
+        rec.events.length = 0;
+        await rig.kernel.runtimeContextReady("y-1", "req-none", {
+          kind: "pairflow.worktree",
+          locator: "/tmp/x",
+        });
+      },
+      emits: [],
+    },
+    {
+      label: "an unknown instance is `rejected`",
+      drive: async (rec) => {
+        const rig = riderRig(rec);
+        rec.events.length = 0;
+        await rig.kernel.runtimeContextReady("ghost", "req-none", {
+          kind: "pairflow.worktree",
+          locator: "/tmp/x",
+        });
+      },
+      emits: [
+        { source: "kernel", kind: "rejected", reason: "unknown_instance", instanceId: "ghost" },
+      ],
+    },
+  ],
+  failedOp: [
+    {
+      label: "an uncorrelated FAILED is inert and emits NOTHING",
+      drive: async (rec) => {
+        const rig = riderRig(rec);
+        await rig.kernel.create({ instanceId: "z-1", templateRef: riderTemplate.ref, task: "t" });
+        await rig.kernel.start({ instanceId: "z-1", opId: "s0" });
+        rec.events.length = 0;
+        await rig.kernel.runtimeContextFailed("z-1", "req-none", "sys:provision_failed");
+      },
+      emits: [],
+    },
+    {
+      label: "an unknown instance is `rejected`",
+      drive: async (rec) => {
+        const rig = riderRig(rec);
+        rec.events.length = 0;
+        await rig.kernel.runtimeContextFailed("ghost", "req-none", "sys:provision_failed");
+      },
+      emits: [
+        { source: "kernel", kind: "rejected", reason: "unknown_instance", instanceId: "ghost" },
+      ],
+    },
+  ],
+  submitDecision: [
+    {
+      label: "a committed decision emits NOTHING",
+      drive: async (rec) => {
+        const rig = await riderParked(rec);
+        rec.events.length = 0;
+        await rig.kernel.submitDecision({
+          intent: "submit-decision",
+          instanceId: "rd-1",
+          opId: "d1",
+          expectedVersion: 3,
+          requestRef: rig.requestRef,
+          verdict: "approve",
+          by: "human-1",
+        });
+      },
+      emits: [],
+    },
+    {
+      label: "a rejected decision is classified with its reason",
+      drive: async (rec) => {
+        const rig = await riderParked(rec);
+        rec.events.length = 0;
+        await rig.kernel.submitDecision({
+          intent: "submit-decision",
+          instanceId: "rd-1",
+          opId: "d1",
+          expectedVersion: 3,
+          requestRef: rig.requestRef,
+          verdict: "nope",
+          by: "human-1",
+        });
+      },
+      emits: [
+        {
+          source: "kernel",
+          kind: "rejected",
+          reason: "unknown_decision",
+          instanceId: "rd-1",
+          opId: "d1",
+        },
+      ],
+    },
+  ],
+  resumeWait: [
+    {
+      label: "a committed resume emits NOTHING",
+      drive: async (rec) => {
+        const rig = await riderParkedAtWait(rec);
+        rec.events.length = 0;
+        await rig.kernel.resumeWait({
+          intent: "resume-wait",
+          instanceId: "rw-1",
+          opId: "r1",
+          expectedVersion: 3,
+          type: "COMMIT",
+        });
+      },
+      emits: [],
+    },
+    {
+      label: "a rejected resume is classified with its reason",
+      drive: async (rec) => {
+        const rig = await riderParkedAtWait(rec);
+        rec.events.length = 0;
+        await rig.kernel.resumeWait({
+          intent: "resume-wait",
+          instanceId: "rw-1",
+          opId: "r1",
+          expectedVersion: 3,
+          type: "NOT_DECLARED",
+        });
+      },
+      emits: [
+        {
+          source: "kernel",
+          kind: "rejected",
+          reason: "resume_event_mismatch",
+          instanceId: "rw-1",
+          opId: "r1",
+        },
+      ],
+    },
+  ],
+};
+
+describe("family 16 — the FULL rider set, DRIVEN: each rider's exact emitted sequence", () => {
+  it("every LIVE rider has a driver — the table is checked against the call sites, never against a count", async () => {
+    // The same enumeration the list lane reads. A rider added to
+    // `kernel.ts` without a driver here REDS, which is what keeps this
+    // grid full rather than historical.
+    const wrapped = await liveRiders();
+    const driven = new Set(Object.keys(RIDER_CASES));
+    for (const rider of wrapped) {
+      expect(driven.has(rider), `live rider with no driver: ${rider}`).toBe(true);
+    }
+    for (const rider of driven) {
+      expect(wrapped.has(rider), `driver for a rider that is no longer wrapped: ${rider}`).toBe(
+        true,
+      );
+    }
+    expect(driven.size).toBe(wrapped.size);
+    // …and EVERY rider carries at least one EMPTY-sequence control: the
+    // half a spurious emit actually breaks.
+    for (const [rider, cases] of Object.entries(RIDER_CASES)) {
+      expect(
+        cases.some((c) => c.emits.length === 0),
+        `rider without an empty-sequence control: ${rider}`,
+      ).toBe(true);
+    }
+  });
+
+  for (const [rider, cases] of Object.entries(RIDER_CASES)) {
+    for (const testCase of cases) {
+      it(`${rider}: ${testCase.label}`, async () => {
+        const rec = createRecordingDiagnosticsSink();
+        await testCase.drive(rec);
+        // THE EXACT SEQUENCE, whole values, in order — never a filter and
+        // never a `kind` projection: a spurious emit of ANY class reds.
+        expect(rec.events).toEqual(testCase.emits);
+      });
+    }
+  }
 });

@@ -357,12 +357,31 @@ describe("l3 golden trace — the two operator intents through the real skeleton
     if (dispatch === null || !("actor" in dispatch)) {
       throw new Error("leg B step 4 did not return a DispatchIntent");
     }
-    expect(dispatch.actor).toBe("codex");
-    expect(dispatch.packet.role).toBe("implementer");
-    // THE HANDOFF IS THE SUBMITTED PAYLOAD, whole — not the pre-gate
+    // THE WHOLE RETURNED OUTPUT, as ONE equality — the same grain Leg
+    // A's Ask is read at. Three selected members left the rest of the
+    // packet unasserted on the only leg that returns one, which is the
+    // shape a per-path divergence hides in.
+    //
+    // Inside it: THE HANDOFF IS THE SUBMITTED PAYLOAD — not the pre-gate
     // transition's value. A build threading the payload only into the
-    // arrival's `arriving` dispatches with an EMPTY handoff here.
-    expect(dispatch.packet.handoff).toEqual({ instruction: "I" });
+    // arrival's `arriving` dispatches with an EMPTY handoff here. And
+    // `expectedVersion` is the POST-commit version, off by one if a
+    // build projects the pre-arrival instance.
+    expect(dispatch).toEqual({
+      actor: "codex",
+      packet: {
+        instanceId: "inst-l3b",
+        expectedVersion: 4,
+        task: "ship it",
+        role: "implementer",
+        instruction: "build it",
+        handoff: { instruction: "I" },
+        availableOps: ["PASS"],
+        effectiveAgentConfig: {},
+        contextBlocks: [],
+        runtimeContext: "none",
+      },
+    });
 
     const rows = result.finalDetail.transcript;
     // As leg A but with NO `context_ref`: this leg's arriving envelope
