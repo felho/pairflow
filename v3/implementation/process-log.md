@@ -6174,3 +6174,54 @@ final CLEAN.
   fabricated baseline is no longer refused. THE OTHER TWO CANDIDATES
   REMAIN OPEN there — the per-trace receipt GRANULARITY and the erasure
   step's SEPARATE negative probes — and neither is touched by this.
+
+- 2026-08-27 · ch14-p2a aftermath · THE CLOSE SEQUENCE HAS NO GATE-POINT
+  FOR ITS OWN BUILD-CLOSE COLUMN — one boundary-review item carrying
+  THREE facts of one class, all measured at this fold. **(1)** The build
+  closed on `pnpm v3:check-docs`'s four greens and read them as the gate
+  set; `check_coverage.py` in its DEFAULT (build-close) mode was never
+  invoked, and it was RED — eleven of this packet's own unit-map rows
+  still `pending` nine days later. README §5.5's Build-close column names
+  that invocation, but nothing in the close SEQUENCE does, and the
+  composite runner's own "not covered here" line is advisory prose rather
+  than a gate. **(2)** The same close claimed "typecheck clean, all four
+  doc gates green" and is SILENT on `pnpm v3:lint` — a named AGENTS.md
+  bridge and a `ci:local` member — which was RED with nine errors. A
+  Build record that lists the bridges it ran reads as complete precisely
+  because it does not list the one it skipped. **(3)** Six of the seven
+  open obligations were caught by NO gate at all: an invariant
+  disposition (`checker`), a test family, a doc comment, five barrel
+  re-exports, and a type-table binding are prose obligations with no
+  lock. THE PROPOSAL, for the boundary review to rule on: make the
+  build-close gate column a MANDATORY NAMED STEP of the close sequence —
+  invoked and recorded per gate, the way the approve column already is —
+  so a skipped bridge is a red step rather than an unlisted one. The
+  deeper half is (3) and is a separate question: nothing today reads a
+  packet's DECLARED obligations back against the tree, which is why the
+  packet's own `learned` line ("a confinement asserted in prose with
+  nothing measuring it survives every review that reads the prose")
+  describes its own close as well as its subject.
+
+- 2026-08-27 · ch14-p2a aftermath · THE `instrument_manifest` AUDIT LEG
+  NECESSARILY FAILS ON EVERY AFTERMATH COMMIT, found by exercising it
+  rather than by reading it. Declaring the block binds the `--post-build`
+  audit to check the audited commit's FIRST PARENT against the manifest.
+  Exactly ONE commit in a packet's life has the instrument commit as its
+  first parent — the BUILD commit. This packet's aftermath commit audits
+  its parent (the preceding `docs(v3)` commit) and reports
+  `instrument commit … touches files OUTSIDE the declared
+  instrument_manifest: ['v3/implementation/process-log.md']`, which is
+  the leg measuring an unrelated commit rather than a real confinement
+  breach. MEASURED both ways at this fold: the BUILD commit `267c230b`
+  audits green (0 errors), the aftermath commit `f7c22339` audits red on
+  this leg ALONE — its boundary half is clean. It is a FALSE RED, not a
+  false green, so it blocks rather than hides; but the aftermath rules
+  (README §4) explicitly expect a `fix(v3)` commit audited at its own
+  sha, so the two ratified surfaces contradict each other. NOT FIXED
+  HERE: `check_packet.py` participates in the verification surface, so
+  §5.5's tooling rule puts an external-arm review before any change to
+  it. The candidate shapes, for the boundary review: scope the leg to the
+  commit whose first parent actually carries the manifest's paths, or
+  make it opt-in per invocation, or record the build commit's sha in the
+  packet so the leg binds to THAT commit rather than to whichever one is
+  being audited.
