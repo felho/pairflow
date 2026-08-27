@@ -6302,3 +6302,50 @@ final CLEAN.
   test family resolved to a boundary file) runs BEFORE the panel, so the
   panel's Opus-class attention lands on semantics rather than on
   bookkeeping the tree can answer.
+
+- 2026-08-27 · ch14-p2b approve · TWO ITEMS ADDED BY THE OWNER AT THE
+  FLAGGED APPROVE, both about where a rule LIVES rather than what it says.
+
+  **(1) DOES A FULLY RATIFIED STOP 4 SATISFY THE HUMAN GATE FOR THE
+  PRE-BUILD ARM RUN?** Today's letter is unambiguous and the loop followed
+  it: SKILL.md's hard boundaries say an *autonomous flag-free* approve
+  proceeds to build through the two external-arm gates, and that "the
+  authoring loop stops at every STOP and at every human-gated approve".
+  So a flag-bearing approve stops the loop even after every flag has been
+  ratified one at a time — which is what happened here, and the loop then
+  needed a second explicit go to move. THE QUESTION FOR THE REVIEW: once
+  a STOP 4 is FULLY ratified, may the loop proceed autonomously into the
+  PRE-BUILD ARM GATE, with the build itself still gated behind that arm's
+  result? The arm run is a measurement, not a decision; the ratification
+  that just happened is the human judgement the gate exists to collect.
+  The cost of today's reading is one extra round-trip per flagged approve,
+  spent on a step whose output is an external tool's verdict rather than
+  the loop's own. The cost of changing it is that "human-gated approve"
+  stops being a single crisp stopping rule. Either answer is defensible;
+  what the letter should not do is leave it to be inferred, which is what
+  nearly happened here — the loop read the ambiguous clause, then checked
+  the skill rather than acting on the reading, and the check is what
+  produced the correct behaviour.
+
+  **(2) OPERATIONALLY LOAD-BEARING FACTS MUST NOT LIVE ONLY IN SESSION
+  MEMORY — memory may ACCELERATE, never CARRY.** Two facts in this session
+  were reachable only because a personal memory file happened to hold
+  them, which means a fresh context would have met each one as a fresh
+  failure. Both have a repo home and belong in it:
+  - **The arm transport's behaviour on large packets** (the primary
+    transport does not carry them; `arm_run.sh` is what does) belongs in
+    ReviewPacket §6's mechanics, beside the preflight the letter already
+    requires — a packet's size is knowable before the run, so the
+    transport choice is a mechanical precondition, not lore.
+  - **The "measured the claim, not something near it" failure class**
+    belongs in the failure-class registry. Its eight instances in this
+    packet's rounds are the evidence: a count carried from a summary
+    rather than re-run; `grep -c` with an alternation read as a per-name
+    count; a symbol name never grepped; a loader declared un-forked
+    without searching for copies; a census keyed on one of two spellings
+    of the thing being counted; and — inside the sentence prescribing a
+    guard — a RUNTIME fact (`Function.length`) asserted from a TYPECHECKER
+    run. The class is not "did not verify"; the global rule already covers
+    that. It is "ran a command, and the command measured something
+    adjacent to the claim" — which reads as verified in prose and survives
+    review far longer than an ordinary error.
