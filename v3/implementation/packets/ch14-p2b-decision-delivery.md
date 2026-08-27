@@ -1383,7 +1383,7 @@ lane, which exists for exactly this mode).
 - Contract tests: no new `CT-*` ids — this packet realizes no IC item;
   its claim surface is the Q-row set plus the declared slice.
 - Checks in force: the drift suites (the whole directory, not a named
-  subset — two of them scan the source corpus, and a packet adding three
+  subset — two of them scan the source corpus, and a packet adding four
   files is exactly what perturbs those), `pnpm v3:typecheck` (the union
   growth's reader set and the harness widening), `pnpm v3:lint`,
   `pnpm v3:coverage` (the build-close mode, whose unit-map lock this
@@ -1593,10 +1593,19 @@ lane, which exists for exactly this mode).
     not one, named here because a lane living only in a Q row is never
     scheduled by the build-close sensitivity pass: ONE lane suffices only
     if the four refusal cells are EXTRACTED into a shared helper both
-    wires call, and the lane then asserts the shared call site
-    STRUCTURALLY — importing the exported helper and asserting that BOTH
-    wire modules reference it, the corpus-scan idiom family 17 already
-    uses — which is what makes one lane enough. A BEHAVIOURAL lane
+    wires call, and the lane then asserts the shared call SITES
+    STRUCTURALLY — importing the exported helper and corpus-scanning the
+    ONE ingress production module for BOTH of them — the idiom
+    `v3/src/drift/intentNarrow.test.ts` already uses (it is NOT family
+    17's, which is this packet's compile-negative family and scans
+    nothing; the live scanner is p2a's). **THE TWO WIRES ARE NOT TWO MODULES**, stated because
+    a lane written for two would be unauthorable: the envelope path
+    (`parseEnvelope`) and
+    the operator-intent path (`submitIntent`'s keyset branch) both live
+    in `v3/src/ingress/ingress.ts`, and `ingress/index.ts` is a barrel
+    that re-exports it. The lane therefore identifies TWO CALL SITES
+    inside one file rather than one reference in each of two files —
+    which is what makes a single lane enough. A BEHAVIOURAL lane
     driving one refusal cell through the new wire does NOT suffice, and
     is named as insufficient rather than left to look adequate: it cannot
     distinguish a shared helper from a faithful copy, which is the only
@@ -1810,4 +1819,55 @@ lane, which exists for exactly this mode).
 
 ## Build record
 
-<Filled at build close.>
+<Filled at build close. The gate-1 record below is written at the gate,
+not at close, so it survives a lost session — the loop's own
+`memory-may-accelerate-never-carry` rule applied to itself.>
+
+**ARM GATE 1 — the pre-build external arm on the approve-ready bytes
+(README §5.5, mandatory; no waiver). CLOSED `approve`.**
+
+Transport: the `gptsol` agent, the arm-pin's CURRENT primary (ch13
+boundary row); `arm_run.sh` not needed. TIER, recorded under the ch13
+tier-record rule rather than asserted: the pin REQUESTS
+`gpt-5.6-sol / high`, and each run's own header reported exactly that —
+but this transport self-reports rather than presenting a runner-validated
+header, so requested-vs-actual is not machine-confirmed here. Byte guard
+reproduced BY HAND on this transport (HEAD, target sha256, porcelain,
+`git diff --binary HEAD`, untracked path+content) before and after every
+run: CLEAN on all three, no divergence in any measurement.
+
+Three runs, each citing the basis it verified:
+
+1. `a871c4c3…` → REFINE, two findings, both folded. **P0:** the
+   drift-suite clause still said "a packet adding three files" after the
+   creations count moved to four — a stale neighbour the authoring loop's
+   own round-7 sweep missed. **P1:** family 10's structural lane required
+   asserting that "BOTH wire modules" reference the shared numeric-refusal
+   helper, but there is ONE ingress production module: `parseEnvelope` and
+   `submitIntent` both live in `v3/src/ingress/ingress.ts`, and
+   `ingress/index.ts` is a barrel. The lane was unauthorable as written;
+   it now identifies two CALL SITES inside one file.
+2. `beb15982…` → both LANDED; one NEW P2, folded: the same lane cited
+   "the idiom family 17 already uses", but THIS packet's family 17 is the
+   compile-negative class-separation family and scans nothing — the live
+   corpus scanner is `v3/src/drift/intentNarrow.test.ts`, which names
+   itself packet ch14-p2a's family 15.
+3. `2abca767…` → LANDED, NO new findings, **`approve`**.
+
+Evidence gaps: none. `v3:typecheck`, `v3:lint`, `v3:test` (79 files /
+2847 tests), `v3:packet-lint` and `v3:deferred` all completed in the
+arm's environment. `v3:coverage`'s STRICT mode fails on a pre-build tree
+by design — the six packet-owned unit-map rows are `pending` until the
+build flips them — and the correct pre-build gate point,
+`check_coverage.py --fold-time`, passed; the arm verified this itself
+rather than taking it from the prompt.
+
+WHAT THE GATE BOUGHT, recorded because it is the argument for its cost:
+three findings that seven internal panel rounds and a reconciliation pass
+did not reach, and all three of the same kind — claims about the SHAPE OF
+THE TREE rather than about the packet's internal coherence. The internal
+lenses were checking whether the packet agreed with itself; the arm
+checked whether it agreed with the repository. Two of the three named a
+structure that does not exist (two wire modules; a corpus-scanning family
+17), which is the failure mode that survives internal review most easily
+because a plausible name reads as a verified one.
