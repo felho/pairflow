@@ -329,16 +329,47 @@ describe("the ch14-p2a unit-map flips (packet row K13 — the aftermath fold)", 
     });
   });
 
-  it("leaves ch14-p2b's l3 rows pending — the delivery half is not this packet's", () => {
-    for (const id of [
-      "l3-pseudocode/SUBMIT_DECISION",
-      "l3-pseudocode/RESUME_WAIT",
-      "l3-pseudocode/admit_input",
-      "l3-pseudocode/choice_point",
-      "l3-pseudocode/COMPLETE",
-      "l3-pseudocode/RECEIVE",
-    ]) {
-      expect(unitMap[id], id).toEqual({ status: "pending" });
-    }
+  // ch14-p2b flips all six. The lane asserted they stay PENDING and is
+  // REPLACED rather than deleted — each row still needs a guard, and
+  // each is addressed FULLY QUALIFIED, because the bare names
+  // `COMPLETE` and `RECEIVE` exist in several other sections and a
+  // bare-name edit would flip the wrong row.
+  it("ch14-p2b flips its six l3 rows, each to the code that carries the unit", () => {
+    expect(unitMap["l3-pseudocode/admit_input"]).toEqual({
+      codeRef: "v3/src/kernel/operatorIntents.ts#admitInput",
+      disposition: "implement",
+      status: "realized",
+    });
+    expect(unitMap["l3-pseudocode/SUBMIT_DECISION"]).toEqual({
+      codeRef: "v3/src/kernel/operatorIntents.ts#submitDecision",
+      disposition: "implement",
+      status: "realized",
+    });
+    expect(unitMap["l3-pseudocode/RESUME_WAIT"]).toEqual({
+      codeRef: "v3/src/kernel/operatorIntents.ts#resumeWait",
+      disposition: "implement",
+      status: "realized",
+    });
+    // COMPLETE's widened precondition lives in the ARRIVAL's terminal
+    // branch: the unit did not change, its ADDRESS moved with the code
+    // that carries it (the ch14-p2a fold's own precedent).
+    expect(unitMap["l3-pseudocode/COMPLETE"]).toEqual({
+      codeRef: "v3/src/kernel/arrival.ts#applyTargetEntryEffects",
+      disposition: "implement",
+      status: "realized",
+    });
+    // RECEIVE IS the kernel entry object's source routing.
+    expect(unitMap["l3-pseudocode/RECEIVE"]).toEqual({
+      codeRef: "v3/src/kernel/kernel.ts#createKernel",
+      disposition: "implement",
+      status: "realized",
+    });
+    // The review-only unit keeps its declared disposition through the
+    // flip — a flip is not a promotion.
+    expect(unitMap["l3-pseudocode/choice_point"]).toEqual({
+      codeRef: "v3/src/kernel/operatorIntents.ts#submitDecision",
+      disposition: "review-only",
+      status: "realized",
+    });
   });
 });

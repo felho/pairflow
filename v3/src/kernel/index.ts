@@ -21,3 +21,13 @@ export { postCommitOutput } from "./postCommitOutput.js";
 // `decisionRequirements` and the submit path's required-payload guard
 // must read ONE function, which is why it was minted as its own export.
 export { humanDecisionRequest, requiredFields } from "./humanDecisionRequest.js";
+// ch14-p2b: the two operator intents — the third entry class. Their
+// kernel-side INPUT types carry the nominal `intent` discriminator that
+// realizes the class separation (Q9), so they are named here rather
+// than reached through a deep path.
+export { resumeWait, submitDecision } from "./operatorIntents.js";
+export type {
+  OperatorIntentDeps,
+  ResumeWaitInput,
+  SubmitDecisionInput,
+} from "./operatorIntents.js";

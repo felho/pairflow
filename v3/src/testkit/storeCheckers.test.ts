@@ -766,3 +766,232 @@ describe("checkOpUniqueness — the op-less class boundary (ch14-p2a, K12)", () 
     expect(violations[0]).toContain("a1");
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────
+// FAMILY 11 — the FOUR blind replay readers, CLOSED
+// (packet ch14-p2b, Q11). THE TWO AXES ARE DRIVEN SEPARATELY, because
+// one obligation cannot cover both: three readers are POSITION-blind,
+// the fourth is ROW-COUNT-blind.
+// ─────────────────────────────────────────────────────────────────────
+
+const gatedTemplate: WorkflowTemplate = {
+  ref: { id: "f11", version: 1 },
+  start: "implement",
+  steps: {
+    implement: {
+      role: "implementer",
+      instruction: "build it",
+      transitions: { PASS: "gate" },
+      recommends: { PASS: "approve" },
+    },
+    gate: {
+      type: "human_gate",
+      role: "operator",
+      instruction: "decide",
+      decisions: { approve: { target: "commit_wait" }, back: { target: "implement" } },
+    },
+    commit_wait: {
+      type: "wait",
+      wait: { kind: "commit_pending", resumeEvents: ["COMMIT"] },
+      onResume: { COMMIT: "done" },
+    },
+  },
+  terminal: ["done"],
+  roles: { implementer: { defaultActor: "codex" }, operator: { defaultActor: "human-1" } },
+  round: { advanceOnArrivalAt: ["implement"] },
+};
+const admittedF11 = admit(gatedTemplate);
+
+function parkRow(seq: number, requestRef: string): TranscriptEntry {
+  return {
+    entryKind: "DECISION_REQUEST",
+    seq,
+    requestRef,
+    recipient: "operator",
+    decisions: ["approve", "back"],
+    committedAt: 1_000 + seq,
+  };
+}
+
+function decisionRow(seq: number, opId: string, decision: string): TranscriptEntry {
+  return {
+    entryKind: "DECISION_MADE",
+    seq,
+    opId,
+    decision,
+    by: "human-1",
+    requestRef: "R-1",
+    committedAt: 1_000 + seq,
+  };
+}
+
+function resumeRow(seq: number, opId: string, event: string): TranscriptEntry {
+  return {
+    entryKind: "WAIT_RESUMED",
+    seq,
+    opId,
+    kind: "commit_pending",
+    event,
+    committedAt: 1_000 + seq,
+  };
+}
+
+/**
+ * A history containing a DECISION-routed AND a RESUME-routed arrival:
+ * start → PASS (park, TWO rows in ONE commit) → approve → COMMIT → done.
+ * FOUR commits, FIVE rows.
+ */
+const threeWayRows: readonly TranscriptEntry[] = [
+  startedFact("s0"),
+  row(2, "a1", "PASS"),
+  parkRow(3, "R-1"),
+  decisionRow(4, "d1", "approve"),
+  resumeRow(5, "r1", "COMMIT"),
+];
+
+function f11Detail(
+  rows: readonly TranscriptEntry[],
+  overrides: Partial<WorkflowInstance> = {},
+): InstanceDetail {
+  return {
+    instance: {
+      instanceId: "i1",
+      templateRef: gatedTemplate.ref,
+      task: "t",
+      binding: { implementer: "codex", operator: "human-1" },
+      currentStep: "done",
+      round: 1,
+      kernelStatus: "TERMINAL",
+      terminalDisposition: "done",
+      activationMode: "immediate",
+      wait: null,
+      runtimeContext: { state: "ready", ref: null },
+      failureReason: null,
+      runOverrides: {},
+      // COMMITS, not rows: the park's second row is the OP-LESS class.
+      version: 5,
+      ...overrides,
+    },
+    transcript: rows,
+  };
+}
+
+describe("family 11 — the THREE POSITION-blind readers, driven POSITIVELY", () => {
+  it("the terminal-sink walk advances on BOTH new row classes", () => {
+    expect(checkTerminalSink(f11Detail(threeWayRows), admittedF11)).toEqual([]);
+  });
+
+  it("the round reconstruction advances on BOTH new row classes", () => {
+    // The decision routes to `commit_wait` (no advance) and the resume to
+    // `done` (no advance), so the round stays 1 — reconstructed through
+    // the SAME per-step map ch14-P1 expanded all three edge classes into.
+    expect(checkRoundReconstruction(f11Detail(threeWayRows), admittedF11)).toEqual([]);
+  });
+
+  it("the round walk counts a DECISION edge that DOES advance", () => {
+    // `back` targets `implement`, which `advanceOnArrivalAt` names — so a
+    // reader keyed only on transition rows reconstructs 1 against a
+    // stored 2 and REDS. The lane proves the edge is really consumed.
+    const rows = [startedFact("s0"), row(2, "a1", "PASS"), parkRow(3, "R-1"), decisionRow(4, "d1", "back")];
+    expect(
+      checkRoundReconstruction(
+        f11Detail(rows, {
+          currentStep: "implement",
+          round: 2,
+          kernelStatus: "ACTIVE",
+          terminalDisposition: null,
+          version: 4,
+        }),
+        admittedF11,
+      ),
+    ).toEqual([]);
+  });
+
+  it("EACH POSITION READER REJECTS A CORRUPT HISTORY — so the fix is not a SKIP", () => {
+    // The non-resolving key is a PROTOTYPE MEMBER NAME rather than an
+    // arbitrary miss (→[own-property-indexes]): a fixture keyed on `zzz`
+    // satisfies the discipline sentence while leaving both replay indexes
+    // unguarded.
+    const hostile = [
+      startedFact("s0"),
+      row(2, "a1", "PASS"),
+      parkRow(3, "R-1"),
+      decisionRow(4, "d1", "constructor"),
+    ];
+    expect(checkTerminalSink(f11Detail(hostile), admittedF11).length).toBeGreaterThan(0);
+    expect(checkRoundReconstruction(f11Detail(hostile), admittedF11).length).toBeGreaterThan(0);
+
+    // …and the same on the RESUME index.
+    const hostileResume = [
+      startedFact("s0"),
+      row(2, "a1", "PASS"),
+      parkRow(3, "R-1"),
+      decisionRow(4, "d1", "approve"),
+      resumeRow(5, "r1", "constructor"),
+    ];
+    expect(checkTerminalSink(f11Detail(hostileResume), admittedF11).length).toBeGreaterThan(0);
+    expect(
+      checkRoundReconstruction(f11Detail(hostileResume), admittedF11).length,
+    ).toBeGreaterThan(0);
+  });
+});
+
+describe("family 11 — THE FOURTH READER's OWN NEGATIVE LANE (the row-count axis)", () => {
+  it("the version arithmetic is a count of COMMITS, not of ROWS", () => {
+    // FIVE rows, FOUR commits (the park wrote two in one), version 5.
+    // The pre-re-base reader computed 1 + 5 = 6 and REDS here.
+    expect(checkVersionArithmetic(f11Detail(threeWayRows))).toEqual([]);
+  });
+
+  it("A DEGENERATE SKIP IS REFUSED: an off-by-one park history REPORTS a violation", () => {
+    // THE ANTI-SKIP INSTRUMENT FOR THIS READER, written in ITS OWN
+    // vocabulary: the three position readers' corrupt-history lanes are
+    // meaningless for a checker that replays no positions. A build can
+    // discharge the re-base by DEGENERATING the check — reporting nothing
+    // whenever the transcript carries an op-less row — and the golden
+    // trace then goes GREEN, satisfying every other lane here while
+    // silently removing version arithmetic from every future trace.
+    //
+    // The transcript carries a PARK (TWO rows, ONE commit) and the
+    // version is deliberately off by one. A degenerate skip returns
+    // empty and REDS this lane; the correct commit-count re-base passes.
+    const offByOne = f11Detail(threeWayRows, { version: 6 });
+    const violations = checkVersionArithmetic(offByOne);
+    expect(violations.length).toBe(1);
+    expect(violations[0]).toContain("version arithmetic");
+  });
+
+  it("the reader still runs on histories with NO op-less row — the re-base is a NO-OP there", () => {
+    expect(checkVersionArithmetic(detail(greenRows))).toEqual([]);
+    expect(checkVersionArithmetic(detail(greenRows, { version: 99 })).length).toBe(1);
+  });
+});
+
+describe("family 11 — the op-uniqueness checker's SKIP SCOPING", () => {
+  it("BOTH new classes' op ids ARE seen — the skip stays scoped to the OP-LESS class", () => {
+    // The lane that reds if a build widens the skip to "non-transition":
+    // a duplicated op id across a transition and a DECISION_MADE row must
+    // still be caught.
+    const duplicated = [
+      startedFact("s0"),
+      row(2, "a1", "PASS"),
+      parkRow(3, "R-1"),
+      decisionRow(4, "a1", "approve"),
+    ];
+    expect(checkOpUniqueness(f11Detail(duplicated, { version: 4 })).length).toBe(1);
+
+    const duplicatedResume = [
+      startedFact("s0"),
+      row(2, "a1", "PASS"),
+      parkRow(3, "R-1"),
+      decisionRow(4, "d1", "approve"),
+      resumeRow(5, "d1", "COMMIT"),
+    ];
+    expect(checkOpUniqueness(f11Detail(duplicatedResume)).length).toBe(1);
+  });
+
+  it("TWO op-less rows do NOT report a false duplicate — the skip is still needed", () => {
+    const twoParks = [startedFact("s0"), row(2, "a1", "PASS"), parkRow(3, "R-1"), parkRow(4, "R-2")];
+    expect(checkOpUniqueness(f11Detail(twoParks, { version: 3 }))).toEqual([]);
+  });
+});

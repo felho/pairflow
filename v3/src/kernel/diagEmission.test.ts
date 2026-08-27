@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+
 import { createStaticProviderRegistry } from "../ports/index.js";
 import { createScriptedProcessGateRunner } from "../testkit/index.js";
 import { describe, expect, it } from "vitest";
@@ -800,5 +802,307 @@ describe("L1 rejection lanes — not_authorized (explicit profile, local wiring)
         payloadDigest: deriveEmitDigest(env),
       },
     ]);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────
+// FAMILY 16 — the diagnostic classification the two operator intents
+// need, and the NO-MOVE control over the shared wrapper's rider set
+// (packet ch14-p2b, Q18).
+// ─────────────────────────────────────────────────────────────────────
+
+const opTemplate: WorkflowTemplate = {
+  ref: { id: "diag-ops", version: 1 },
+  start: "implement",
+  steps: {
+    implement: {
+      role: "implementer",
+      instruction: "build it",
+      transitions: { PASS: "gate" },
+      recommends: { PASS: "approve" },
+    },
+    gate: {
+      type: "human_gate",
+      role: "operator",
+      instruction: "decide",
+      decisions: { approve: { target: "done" } },
+    },
+  },
+  terminal: ["done"],
+  roles: { implementer: { defaultActor: "codex" }, operator: { defaultActor: "human-1" } },
+};
+
+async function parkedForDiag(rec: { readonly sink: DiagnosticsSink }) {
+  const admittedOps = admit(opTemplate);
+  const handle = openStore(":memory:", createControlledClock(1_000));
+  const kernel = createKernel({
+    providerRegistry: createStaticProviderRegistry({}),
+    processRunner: createScriptedProcessGateRunner([]),
+    store: handle.store,
+    definitions: {
+      load: (ref) => Promise.resolve(ref.id === admittedOps.ref.id ? admittedOps : null),
+    },
+    time: createControlledClock(1_000),
+    digest: deriveEmitDigest,
+    diag: rec.sink,
+    gates: gateCatalog,
+  });
+  await kernel.create({ instanceId: "d-1", templateRef: opTemplate.ref, task: "t" });
+  await kernel.start({ instanceId: "d-1", opId: "s0" });
+  await kernel.handle({
+    instanceId: "d-1",
+    opId: "a1",
+    type: "PASS",
+    actorId: "codex",
+    expectedVersion: 2,
+    expectedRole: "implementer",
+  });
+  const instance = await handle.store.loadInstance("d-1");
+  const requestRef = instance?.wait?.requestRef;
+  if (requestRef === undefined) throw new Error("fixture wiring: no request ref");
+  return { kernel, store: handle.store, requestRef };
+}
+
+describe("family 16 — the two operator intents' diagnostic arms", () => {
+  it("a STALE operator intent emits `stale` carrying `currentVersion` from the OPENED wrapper", async () => {
+    // THESE ARE THE FIRST OPERATOR INTENTS WITH A VERSION RUNG. Before
+    // the wrapper's `stale` arm existed, a stale operator intent emitted
+    // NOTHING while the actor path emitted `stale` with its
+    // `currentVersion` — the generic bound accepted a stale-carrying
+    // union silently.
+    const rec = createRecordingDiagnosticsSink();
+    const rig = await parkedForDiag(rec);
+    rec.events.length = 0;
+    const outcome = await rig.kernel.submitDecision({
+      intent: "submit-decision",
+      instanceId: "d-1",
+      opId: "d1",
+      expectedVersion: 2,
+      requestRef: rig.requestRef,
+      verdict: "approve",
+      by: "human-1",
+    });
+    expect(outcome).toEqual({ kind: "stale", currentVersion: 3 });
+    // Asserted on the recorded event's FIELDS, never by message
+    // containment. Attribution follows the existing shape: instanceId +
+    // opId, and NO payload digest — an operator intent carries no digest
+    // even when it carries a payload.
+    expect(rec.events).toEqual([
+      {
+        source: "kernel",
+        kind: "stale",
+        instanceId: "d-1",
+        opId: "d1",
+        currentVersion: 3,
+      },
+    ]);
+  });
+
+  it("a stale RESUME intent emits the same arm", async () => {
+    const rec = createRecordingDiagnosticsSink();
+    const rig = await parkedForDiag(rec);
+    rec.events.length = 0;
+    await rig.kernel.resumeWait({
+      intent: "resume-wait",
+      instanceId: "d-1",
+      opId: "r1",
+      expectedVersion: 99,
+      type: "approve",
+    });
+    expect(rec.events).toEqual([
+      { source: "kernel", kind: "stale", instanceId: "d-1", opId: "r1", currentVersion: 3 },
+    ]);
+  });
+
+  it("a CAS-restarted operator intent emits `cas_restart` PER RESTART — from its OWN handler loop", async () => {
+    // THE TWO ARMS ARE DRIVEN SEPARATELY because they are produced by
+    // DIFFERENT MECHANISMS. `cas_restart` is not an outcome arm at all:
+    // the shared wrapper awaits ONE call and classifies the RESOLVED
+    // outcome, so it has no loop and no sentinel and could never fire
+    // this class. A build that tried to source it from the wrapper emits
+    // NOTHING — which is what this split lane catches.
+    const rec = createRecordingDiagnosticsSink();
+    const rig = await parkedForDiag(rec);
+    rec.events.length = 0;
+    let injected = false;
+    const flaky: StorePort = {
+      ...rig.store,
+      loadInstance: (id) => rig.store.loadInstance(id),
+      findOp: (id, opId) => rig.store.findOp(id, opId),
+      getTimeline: (id, after) => rig.store.getTimeline(id, after),
+      commitOperatorEntry: (input) => {
+        if (!injected) {
+          injected = true;
+          return Promise.resolve({ kind: "cas_conflict" });
+        }
+        return rig.store.commitOperatorEntry(input);
+      },
+    };
+    const admittedOps = admit(opTemplate);
+    const kernel = createKernel({
+      providerRegistry: createStaticProviderRegistry({}),
+      processRunner: createScriptedProcessGateRunner([]),
+      store: flaky,
+      definitions: { load: () => Promise.resolve(admittedOps) },
+      time: createControlledClock(1_000),
+      digest: deriveEmitDigest,
+      diag: rec.sink,
+      gates: gateCatalog,
+    });
+    const outcome = await kernel.submitDecision({
+      intent: "submit-decision",
+      instanceId: "d-1",
+      opId: "d1",
+      expectedVersion: 3,
+      requestRef: rig.requestRef,
+      verdict: "approve",
+      by: "human-1",
+    });
+    expect(outcome.kind).toBe("committed");
+    expect(rec.events).toEqual([
+      { source: "kernel", kind: "cas_restart", instanceId: "d-1", opId: "d1" },
+    ]);
+  });
+
+  it("a REJECTED operator intent emits `rejected` with its reason", async () => {
+    const rec = createRecordingDiagnosticsSink();
+    const rig = await parkedForDiag(rec);
+    rec.events.length = 0;
+    await rig.kernel.submitDecision({
+      intent: "submit-decision",
+      instanceId: "d-1",
+      opId: "d1",
+      expectedVersion: 3,
+      requestRef: rig.requestRef,
+      verdict: "nope",
+      by: "human-1",
+    });
+    expect(rec.events).toEqual([
+      {
+        source: "kernel",
+        kind: "rejected",
+        reason: "unknown_decision",
+        instanceId: "d-1",
+        opId: "d1",
+      },
+    ]);
+  });
+
+  it("a COMMITTED operator intent emits NOTHING (the separation negative holds for the new riders too)", async () => {
+    const rec = createRecordingDiagnosticsSink();
+    const rig = await parkedForDiag(rec);
+    rec.events.length = 0;
+    const outcome = await rig.kernel.submitDecision({
+      intent: "submit-decision",
+      instanceId: "d-1",
+      opId: "d1",
+      expectedVersion: 3,
+      requestRef: rig.requestRef,
+      verdict: "approve",
+      by: "human-1",
+    });
+    expect(outcome.kind).toBe("committed");
+    expect(rec.events).toEqual([]);
+  });
+});
+
+describe("family 16 — THE NO-MOVE CONTROL: the wrapper's FULL rider set, byte-unmoved", () => {
+  /**
+   * THE RIDER SET IS ENUMERATED FROM THE CALL SITES, never from a count
+   * in a document — a count goes stale the moment a rider is added, and
+   * the whole point of this control is to notice that.
+   *
+   * Read from `kernel.ts`'s `lifecycleOp(` call sites at this build, by
+   * the name each site actually sits under: `readyOp` and `failedOp`
+   * (the two runtime-context kernel-event handlers, wrapped through
+   * their own local functions rather than at the member), plus the
+   * members `create`, `start`, `kickoff`, `cancel` and `fail` — SEVEN,
+   * and MORE THAN THE OPERATOR INTENTS, which is exactly why the set is
+   * the wrapper's full rider list rather than "the lifecycle intents".
+   *
+   * Every one of their unions carries NO `stale` arm, so the arm added
+   * for the two operator intents is UNREACHABLE for all seven. This
+   * control asserts that as BEHAVIOUR rather than trusting the type.
+   */
+  const RIDERS = [
+    "readyOp",
+    "failedOp",
+    "create",
+    "start",
+    "kickoff",
+    "cancel",
+    "fail",
+  ] as const;
+
+  it("the enumerated rider set matches the wrapper's live call sites", async () => {
+    // The enumeration is CHECKED against the source rather than trusted:
+    // a rider added without extending this list reds here, which is what
+    // keeps "full rider set" true rather than historical.
+    const source = await readFile(
+      new URL("./kernel.ts", import.meta.url),
+      "utf8",
+    );
+    // Each `lifecycleOp(` call site sits inside a member or a function
+    // whose name is the rider's. The enumeration is LINE-BASED and walks
+    // BACKWARD from every call site to the nearest declaration — the two
+    // forms this file actually uses (`name: (…) =>` and `function name(`).
+    const lines = source.split("\n");
+    const declAt = new Map<number, string>();
+    lines.forEach((line, i) => {
+      // A MEMBER is `name: (` — the trailing `(` is what keeps a
+      // parameter line (`ref: RuntimeContextRef,`) from being read as a
+      // declaration and shadowing its own enclosing function.
+      const member = /^ {4}([A-Za-z][A-Za-z0-9]*):\s*\(/.exec(line);
+      const fn = /^\s*(?:async\s+)?function\s+([A-Za-z][A-Za-z0-9]*)\s*\(/.exec(line);
+      const name = member?.[1] ?? fn?.[1];
+      if (name !== undefined) declAt.set(i, name);
+    });
+    const wrapped = new Set<string>();
+    lines.forEach((line, i) => {
+      if (!line.includes("lifecycleOp(")) return;
+      for (let j = i; j >= 0; j -= 1) {
+        const owner = declAt.get(j);
+        if (owner !== undefined) {
+          if (owner !== "lifecycleOp") wrapped.add(owner);
+          return;
+        }
+      }
+    });
+    // Every enumerated rider is a LIVE call site…
+    for (const rider of RIDERS) {
+      expect(wrapped.has(rider), `missing rider: ${rider}`).toBe(true);
+    }
+    // …and no call site is outside the enumeration plus this packet's own
+    // two. A rider ADDED without extending the list REDS here, which is
+    // what keeps "full rider set" true rather than historical — the
+    // property a count in a document cannot carry.
+    const declared = new Set<string>([...RIDERS, "submitDecision", "resumeWait"]);
+    for (const found of wrapped) {
+      expect(declared.has(found), `unenumerated rider: ${found}`).toBe(true);
+    }
+    expect(wrapped.size).toBe(declared.size);
+  });
+
+  it("every rider's emitted event set is BYTE-IDENTICAL to its pre-opening behaviour", async () => {
+    // The riders' own outcome lanes above already pin their event sets;
+    // this lane re-asserts the property the OPENING could have broken —
+    // that no rider gained a `stale` event — over the whole set at once.
+    const rec = createRecordingDiagnosticsSink();
+    const kernel = await kernelWith({ diag: rec });
+    const input = {
+      instanceId: "nm-1",
+      templateRef: { id: "local-pair-v0", version: 1 },
+      task: "t",
+    };
+    await kernel.create(input);
+    await kernel.start({ instanceId: "nm-1", opId: "s0" });
+    // A DUPLICATE start — a rider outcome the wrapper classifies.
+    await kernel.start({ instanceId: "nm-1", opId: "s0" });
+    // A rejected cancel on an unknown instance.
+    await kernel.cancel({ instanceId: "nope", opId: "c1" });
+    // NOT ONE `stale` event: no rider's union carries that arm, so the
+    // added arm is unreachable for every one of them.
+    expect(rec.events.filter((e) => e.kind === "stale")).toEqual([]);
+    expect(rec.events.map((e) => e.kind)).toEqual(["duplicate", "rejected"]);
   });
 });

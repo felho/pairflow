@@ -105,6 +105,7 @@ function casOnceStore(real: StorePort): { readonly store: StorePort; count(): nu
     findOp: (id, opId) => real.findOp(id, opId),
     createInstance: (instance) => real.createInstance(instance),
     commitTransition: (input) => real.commitTransition(input),
+    commitOperatorEntry: (input) => real.commitOperatorEntry(input),
     commitLifecycle: (input) => {
       calls += 1;
       if (!injected) {
@@ -161,6 +162,7 @@ function instrumentedStore(
     findOp: (id, opId) => real.findOp(id, opId),
     createInstance: (instance) => real.createInstance(instance),
     commitTransition: (input) => real.commitTransition(input),
+    commitOperatorEntry: (input) => real.commitOperatorEntry(input),
     commitLifecycle: (input) => {
       if (opts.throwOnCommitLifecycle === true) {
         throw new Error("instrumentedStore: scripted commitLifecycle throw");
@@ -1053,6 +1055,7 @@ describe("RUNTIME_CONTEXT_FAILED (F/G family) + the FAILED completion seam (SM)"
       findOp: (id, opId) => real.findOp(id, opId),
       createInstance: (instance) => real.createInstance(instance),
       commitTransition: (input) => real.commitTransition(input),
+    commitOperatorEntry: (input) => real.commitOperatorEntry(input),
       commitLifecycle: async (input) => {
         if (input.newTerminalDisposition === "failed" && hits === 0) {
           hits += 1;

@@ -394,7 +394,9 @@
     "status": "realized"
   },
   "l3-pseudocode/COMPLETE": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/arrival.ts#applyTargetEntryEffects",
+    "disposition": "implement",
+    "status": "realized"
   },
   "l3-pseudocode/CREATE_INSTANCE": {
     "codeRef": "v3/src/kernel/lifecycle.ts#createInstance",
@@ -407,16 +409,24 @@
     "status": "realized"
   },
   "l3-pseudocode/RECEIVE": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/kernel.ts#createKernel",
+    "disposition": "implement",
+    "status": "realized"
   },
   "l3-pseudocode/RESUME_WAIT": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/operatorIntents.ts#resumeWait",
+    "disposition": "implement",
+    "status": "realized"
   },
   "l3-pseudocode/SUBMIT_DECISION": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/operatorIntents.ts#submitDecision",
+    "disposition": "implement",
+    "status": "realized"
   },
   "l3-pseudocode/admit_input": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/operatorIntents.ts#admitInput",
+    "disposition": "implement",
+    "status": "realized"
   },
   "l3-pseudocode/apply_target_entry_effects": {
     "codeRef": "v3/src/kernel/arrival.ts#applyTargetEntryEffects",
@@ -424,7 +434,9 @@
     "status": "realized"
   },
   "l3-pseudocode/choice_point": {
-    "status": "pending"
+    "codeRef": "v3/src/kernel/operatorIntents.ts#submitDecision",
+    "disposition": "review-only",
+    "status": "realized"
   },
   "l3-pseudocode/decision_keys": {
     "codeRef": "v3/src/kernel/arrival.ts#applyTargetEntryEffects",

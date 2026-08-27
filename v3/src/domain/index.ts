@@ -35,6 +35,7 @@ export type {
   ActivationMode,
   DecisionRecommendationSource,
   DecisionRequestEntry,
+  DecisionMadeEntry,
   KernelStatus,
   LifecycleFactEntry,
   LifecycleFactKind,
@@ -45,6 +46,7 @@ export type {
   TerminalDisposition,
   TranscriptEntry,
   TransitionEntry,
+  WaitResumedEntry,
   WaitReason,
   WorkflowInstance,
 } from "./instance.js";
@@ -71,6 +73,8 @@ export type {
   RuntimeContextCompletionOutcome,
   RuntimeContextFailedOutcome,
   RuntimeContextReadyOutcome,
+  ResumeWaitOutcome,
   StartOutcome,
+  SubmitDecisionOutcome,
   Terminated,
 } from "./outcome.js";

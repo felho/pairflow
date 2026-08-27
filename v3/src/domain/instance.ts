@@ -273,8 +273,79 @@ export interface DecisionRequestEntry {
   readonly committedAt: EpochMillis;
 }
 
+/**
+ * A DECISION_MADE transcript row (ch14-C22; packet ch14-p2b, Q2) — the
+ * operator's committed decision, appended in the SAME atomic move as
+ * the routed arrival's state write.
+ *
+ * A NEW UNION VARIANT beside the transition, lifecycle-fact and
+ * DECISION_REQUEST classes, never a `LifecycleFactKind` growth (Q2):
+ * a `LifecycleFactEntry` carries EXACTLY `{entryKind, seq, opId,
+ * committedAt}` because a lifecycle fact IS its op-consumption record,
+ * and this class carries five more fields. Growing the fact kind would
+ * widen every fact row with fields three of its members can never
+ * carry.
+ *
+ * OP-CARRYING: `opId` consumes the `(instance_id, op_id)` uniqueness,
+ * and the idempotency rung compares KIND over it (Q15).
+ *
+ * ABSENCE BY CLASS (C10's rule): the transition-only fields —
+ * `envelope`, `payloadDigest`, `gateDecisions`, `issuedAgentConfig` —
+ * are ABSENT here rather than known-empty (C22).
+ */
+export interface DecisionMadeEntry {
+  readonly entryKind: "DECISION_MADE";
+  readonly seq: number;
+  readonly opId: OpId;
+  /** The WIRE's `verdict` records as the entry's `decision` (Q5) — an
+   * admitted decision key, never interpreted by the kernel. */
+  readonly decision: string;
+  /** The decision's declared payload fields; absent when the verdict
+   * declares none. Operator-authored UNTRUSTED text (Q16). */
+  readonly payload?: unknown;
+  /** The deciding operator — operator-authored untrusted text (Q16). */
+  readonly by: ActorId;
+  /** Correlation to the DECISION_REQUEST row this decision answers. */
+  readonly requestRef: string;
+  /**
+   * Recorded `true` IFF the verdict went AGAINST a recorded
+   * recommendation, ABSENT otherwise — NEVER `false` (Q5, dimension 8):
+   * an explicit `false` would make the audit surface answer "declined
+   * to override" where the contract says there was nothing to override.
+   */
+  readonly override?: true;
+  readonly committedAt: EpochMillis;
+}
+
+/**
+ * A WAIT_RESUMED transcript row (ch14-C22; packet ch14-p2b, Q7) — the
+ * bare wait's resume record, appended in the SAME atomic move as the
+ * routed arrival's state write. A NEW UNION VARIANT on the same ground
+ * as DECISION_MADE above, and OP-CARRYING in the same sense.
+ */
+export interface WaitResumedEntry {
+  readonly entryKind: "WAIT_RESUMED";
+  readonly seq: number;
+  readonly opId: OpId;
+  /**
+   * The WAIT's kind read off the INSTANCE record, not the step's
+   * declaration (Q7) — they are equal by the correspondence checker and
+   * would diverge silently in a corrupt history.
+   */
+  readonly kind: string;
+  /** The resume event type that routed this resume. */
+  readonly event: string;
+  readonly committedAt: EpochMillis;
+}
+
 /** The discriminated transcript entry (S11's staged type face, landed
  * at P1b with the fact writers; the DECISION_REQUEST class joins at
- * ch14-p2a). Narrow on `entryKind` — exhaustive switch/discriminant,
- * never a cast (F4). */
-export type TranscriptEntry = TransitionEntry | LifecycleFactEntry | DecisionRequestEntry;
+ * ch14-p2a, and the two OP-CARRYING operator classes at ch14-p2b).
+ * Narrow on `entryKind` — exhaustive switch/discriminant, never a cast
+ * (F4). */
+export type TranscriptEntry =
+  | TransitionEntry
+  | LifecycleFactEntry
+  | DecisionRequestEntry
+  | DecisionMadeEntry
+  | WaitResumedEntry;

@@ -201,11 +201,17 @@ describe("CT-A1-DUP — op_id idempotency (IC-A1)", () => {
 describe("CAS restart — never re-commit a target computed from stale state", () => {
   function unusedStoreParts(): Pick<
     StorePort,
-    "createInstance" | "commitLifecycle" | "listInstances" | "getInstanceDetail" | "getTimeline"
+    | "createInstance"
+    | "commitLifecycle"
+    | "commitOperatorEntry"
+    | "listInstances"
+    | "getInstanceDetail"
+    | "getTimeline"
   > {
     return {
       createInstance: () => Promise.reject(new Error("unused")),
       commitLifecycle: () => Promise.reject(new Error("unused")),
+      commitOperatorEntry: () => Promise.reject(new Error("unused")),
       listInstances: () => Promise.reject(new Error("unused")),
       getInstanceDetail: () => Promise.reject(new Error("unused")),
       getTimeline: () => Promise.reject(new Error("unused")),
@@ -1452,6 +1458,7 @@ describe("gate rung — dimension 12: CAS-restart re-derives the projection per 
       findOp: () => Promise.resolve(null),
       createInstance: () => Promise.reject(new Error("unused")),
       commitLifecycle: () => Promise.reject(new Error("unused")),
+      commitOperatorEntry: () => Promise.reject(new Error("unused")),
       listInstances: () => Promise.reject(new Error("unused")),
       getInstanceDetail: () => Promise.reject(new Error("unused")),
       getTimeline: () => {
@@ -1495,6 +1502,7 @@ describe("gate rung — the grid hostile-store lanes (integrity throws, not reje
       findOp: () => Promise.resolve(null),
       createInstance: () => Promise.reject(new Error("unused")),
       commitLifecycle: () => Promise.reject(new Error("unused")),
+      commitOperatorEntry: () => Promise.reject(new Error("unused")),
       listInstances: () => Promise.reject(new Error("unused")),
       getInstanceDetail: () => Promise.reject(new Error("unused")),
       getTimeline: () => Promise.reject(new Error("unused")),

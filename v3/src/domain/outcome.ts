@@ -155,3 +155,62 @@ export type CancelOutcome =
 export type FailOutcome =
   | Terminated
   | { readonly kind: "rejected"; readonly reason: "unknown_instance" };
+
+/**
+ * SUBMIT_DECISION's return vocabulary (packet ch14-p2b, Q1/Q9): the
+ * committed arm is HANDLE's own — `Committed(version,
+ * post_commit_output(…))` (C12) — because the decision routes through
+ * the SAME arrival and its post-commit selection produces the same
+ * outbound effect class. The rejection names are the operator ladder's
+ * rungs (C15) plus the key-scoped guards that run after the
+ * ChoicePoint selection.
+ */
+export type SubmitDecisionOutcome =
+  | {
+      readonly kind: "committed";
+      readonly version: number;
+      readonly intent: DispatchIntent | HumanDecisionRequest | null;
+    }
+  | { readonly kind: "duplicate" }
+  | { readonly kind: "stale"; readonly currentVersion: number }
+  | {
+      readonly kind: "rejected";
+      readonly reason:
+        | "unknown_instance"
+        | "op_id_collision"
+        | "not_awaiting_decision"
+        | "decision_request_mismatch"
+        | "missing_version"
+        | "operator_not_authorized"
+        | "unknown_decision"
+        | "missing_required_field"
+        | "override_required"
+        | "override_not_applicable";
+    };
+
+/**
+ * RESUME_WAIT's return vocabulary (packet ch14-p2b, Q1/Q9): the
+ * committed arm as above; the rejection names are C18's rungs plus the
+ * post-admission wait-SHAPE guard and the routing refusal. NO authority
+ * rung on this path — the selection is kernel-classified (C18), which
+ * is why no `operator_not_authorized` appears here.
+ */
+export type ResumeWaitOutcome =
+  | {
+      readonly kind: "committed";
+      readonly version: number;
+      readonly intent: DispatchIntent | HumanDecisionRequest | null;
+    }
+  | { readonly kind: "duplicate" }
+  | { readonly kind: "stale"; readonly currentVersion: number }
+  | {
+      readonly kind: "rejected";
+      readonly reason:
+        | "unknown_instance"
+        | "op_id_collision"
+        | "not_waiting"
+        | "resume_event_mismatch"
+        | "missing_version"
+        | "not_bare_wait"
+        | "no_resume_transition";
+    };

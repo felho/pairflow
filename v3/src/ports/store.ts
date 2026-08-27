@@ -1,4 +1,5 @@
 import type {
+  ActorId,
   AgentConfig,
   DecisionRecommendationSource,
   EventEnvelope,
@@ -160,6 +161,69 @@ export interface CommitLifecycleInput {
   readonly newFailureReason?: string;
 }
 
+/**
+ * Q2 (packet ch14-p2b): the OPERATOR-ENTRY write member's input — ONE
+ * member for BOTH op-carrying operator classes, discriminated by
+ * `entry.kind`, rather than two members or a widened
+ * `commitTransition`. Two members would duplicate the CAS + arrival-
+ * write half twice over; widening `commitTransition` would make the
+ * envelope optional and hand every existing caller a shape that can be
+ * under-filled.
+ *
+ * THE MEMBER WRITES UP TO TWO ROWS: the arrival's effect record carries
+ * the human-gate park's OPTIONAL SECOND ROW, so a decision routing back
+ * to a gate commits its own op-carrying row AND a fresh
+ * DECISION_REQUEST in the SAME transaction — exactly as the transition
+ * member already does (REV-A1-TXN).
+ *
+ * The body rides `entry_body` as canonical JSON with the model's SNAKE
+ * keys — the same store casing seam the `wait` column and the
+ * DECISION_REQUEST body already follow. The in-transaction idempotency
+ * re-check is KIND-AWARE (Q15): an existing (instance_id, op_id) row of
+ * the entry's OWN kind → duplicate_op; any other kind → op_id_collision.
+ */
+export interface CommitOperatorEntryInput {
+  readonly instanceId: InstanceId;
+  readonly expectedVersion: number;
+  readonly entry: OperatorEntryWrite;
+  /** The arrival's branded effect — the SAME record `commitTransition` nests. */
+  readonly arrival: ArrivalEffect;
+}
+
+/**
+ * The written row, discriminated by `kind`. The body carries the class's
+ * own fields; the store serializes it into `entry_body` and writes the
+ * transition-only columns NULL (Q2's column iff).
+ */
+export type OperatorEntryWrite =
+  | {
+      readonly kind: "DECISION_MADE";
+      readonly opId: OpId;
+      readonly body: DecisionMadeBody;
+    }
+  | {
+      readonly kind: "WAIT_RESUMED";
+      readonly opId: OpId;
+      readonly body: WaitResumedBody;
+    };
+
+/** DECISION_MADE's closed field list (C22/Q5), less the store-stamped
+ * `committedAt` and the `seq` the store assigns. */
+export interface DecisionMadeBody {
+  readonly decision: string;
+  readonly payload?: unknown;
+  readonly by: ActorId;
+  readonly requestRef: string;
+  /** `true` IFF against a recorded recommendation — never `false`. */
+  readonly override?: true;
+}
+
+/** WAIT_RESUMED's closed field list (C22/Q7). */
+export interface WaitResumedBody {
+  readonly kind: string;
+  readonly event: string;
+}
+
 export interface InstanceDetail {
   readonly instance: WorkflowInstance;
   /** Ordered by seq; committed rows only. */
@@ -195,6 +259,13 @@ export interface StorePort {
   /** The lifecycle write member (F1) — result vocabulary shared with
    * commitTransition; every lifecycle commit advances version by one. */
   commitLifecycle(input: CommitLifecycleInput): Promise<CommitTransitionResult>;
+  /**
+   * Q2 (packet ch14-p2b): the OPERATOR-ENTRY write member — result
+   * vocabulary shared with the two members above. Writes the
+   * op-carrying row AND, when the arrival parked at a human gate, the
+   * DECISION_REQUEST second row, in ONE transaction.
+   */
+  commitOperatorEntry(input: CommitOperatorEntryInput): Promise<CommitTransitionResult>;
   /** Committed rows only (trivially: the store holds nothing else). */
   listInstances(): Promise<readonly WorkflowInstance[]>;
   getInstanceDetail(instanceId: InstanceId): Promise<InstanceDetail | null>;

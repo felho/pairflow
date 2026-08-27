@@ -3,6 +3,7 @@ import { DatabaseSync } from "node:sqlite";
 import type {
   ActivationMode,
   AgentConfig,
+  DecisionMadeEntry,
   DecisionRequestEntry,
   EventEnvelope,
   InstanceId,
@@ -13,13 +14,17 @@ import type {
   TerminalDisposition,
   TranscriptEntry,
   WaitReason,
+  WaitResumedEntry,
   WorkflowInstance,
 } from "../domain/index.js";
 import type {
   CommitLifecycleInput,
+  CommitOperatorEntryInput,
   CommitTransitionInput,
   CommitTransitionResult,
+  DecisionMadeBody,
   DecisionRequestBody,
+  WaitResumedBody,
   InstanceDetail,
   StorePort,
 } from "../ports/store.js";
@@ -262,6 +267,96 @@ function decodeDecisionRequestEntry(
   };
 }
 
+// ── The two OPERATOR-ENTRY bodies (C22/Q2, packet ch14-p2b) — the SAME
+// casing seam the wait column and the DECISION_REQUEST body follow: the
+// class's own fields ride `entry_body` as canonical JSON with the
+// model's SNAKE keys, the TS grain staying camelCase. A THIRD user of
+// one rule, never a new rule.
+
+function encodeDecisionMadeBody(body: DecisionMadeBody): string {
+  return canonicalJson({
+    by: body.by,
+    decision: body.decision,
+    // `override` is spread on PRESENCE and is `true` when present —
+    // NEVER written `false` (Q5/dimension 8): an explicit `false` would
+    // make the audit surface answer "declined to override" where the
+    // contract says there was nothing to override.
+    ...(body.override !== undefined ? { override: body.override } : {}),
+    // `payload` on PRESENCE, never truthiness — an authored `{}`, `null`,
+    // `""` or `0` records as faithfully as an object.
+    ...(body.payload !== undefined ? { payload: body.payload } : {}),
+    request_ref: body.requestRef,
+  });
+}
+
+function encodeWaitResumedBody(body: WaitResumedBody): string {
+  return canonicalJson({ event: body.event, kind: body.kind });
+}
+
+function decodeDecisionMadeEntry(
+  seq: number,
+  opId: string,
+  text: string,
+  committedAt: number,
+): DecisionMadeEntry {
+  const parsed = JSON.parse(text) as {
+    by?: unknown;
+    decision?: unknown;
+    override?: unknown;
+    payload?: unknown;
+    request_ref?: unknown;
+  };
+  if (
+    typeof parsed.by !== "string" ||
+    typeof parsed.decision !== "string" ||
+    typeof parsed.request_ref !== "string"
+  ) {
+    throw new Error(`store integrity: malformed decision_made body at seq ${String(seq)}`);
+  }
+  // The ABSENT-NOT-FALSE rule read back from the other side: the column
+  // may carry `true` or nothing at all. A stored `false` is drift, not a
+  // value to repair — it is exactly the shape the write side refuses.
+  if (parsed.override !== undefined && parsed.override !== true) {
+    throw new Error(
+      `store integrity: decision_made seq ${String(seq)} carries a non-true override ` +
+        `(recorded true IFF against a recommendation, ABSENT otherwise — never false)`,
+    );
+  }
+  return {
+    entryKind: "DECISION_MADE",
+    seq,
+    opId,
+    decision: parsed.decision,
+    // Presence on the read side too: `"payload" in parsed`, so a stored
+    // `null` decodes as PRESENT.
+    ...("payload" in parsed ? { payload: parsed.payload } : {}),
+    by: parsed.by,
+    requestRef: parsed.request_ref,
+    ...(parsed.override === true ? { override: true as const } : {}),
+    committedAt,
+  };
+}
+
+function decodeWaitResumedEntry(
+  seq: number,
+  opId: string,
+  text: string,
+  committedAt: number,
+): WaitResumedEntry {
+  const parsed = JSON.parse(text) as { event?: unknown; kind?: unknown };
+  if (typeof parsed.kind !== "string" || typeof parsed.event !== "string") {
+    throw new Error(`store integrity: malformed wait_resumed body at seq ${String(seq)}`);
+  }
+  return {
+    entryKind: "WAIT_RESUMED",
+    seq,
+    opId,
+    kind: parsed.kind,
+    event: parsed.event,
+    committedAt,
+  };
+}
+
 // ── The wait encoding (S5) — stored snake keys, TS camelCase (T4) ────
 
 function encodeWait(wait: WaitReason | null): string | null {
@@ -480,7 +575,18 @@ function toTranscriptEntry(row: TranscriptRow): TranscriptEntry {
   // disappearing, and it is CLASS-CONDITIONAL in both directions: the
   // two op-carrying classes require it PRESENT, the op-less class
   // requires it ABSENT. A row that has it backwards is integrity drift.
+  // Q2 (packet ch14-p2b): THE PREDICATE SPLITS IN TWO. Until this packet
+  // one `opLess` flag governed BOTH "carries no op id" and "carries a
+  // body", because the ONE op-less class was also the ONE body-bearing
+  // one. The two operator classes carry an op id AND a body, so the
+  // partitions come apart and the name `opLess` stops covering the body
+  // rule. Keeping one predicate for both would route a new class through
+  // the wrong branch and still read green on everything but `op_id`.
   const opLess = row.entry_kind === "DECISION_REQUEST";
+  const bodyBearing =
+    row.entry_kind === "DECISION_REQUEST" ||
+    row.entry_kind === "DECISION_MADE" ||
+    row.entry_kind === "WAIT_RESUMED";
   if (!opLess && row.op_id === null) {
     throw new Error(
       `store integrity: ${row.entry_kind} row seq ${String(row.seq)} has a NULL op_id ` +
@@ -497,16 +603,16 @@ function toTranscriptEntry(row: TranscriptRow): TranscriptEntry {
   // the op-less class REQUIRES it, the other two refuse it. Checking one
   // direction only would let a build route the new class through the
   // fact branch and still read green on everything but `op_id`.
-  if (opLess && row.entry_body === null) {
+  if (bodyBearing && row.entry_body === null) {
     throw new Error(
-      `store integrity: DECISION_REQUEST row seq ${String(row.seq)} has a NULL entry_body ` +
+      `store integrity: ${row.entry_kind} row seq ${String(row.seq)} has a NULL entry_body ` +
         `(the class's fields live there)`,
     );
   }
-  if (!opLess && row.entry_body !== null) {
+  if (!bodyBearing && row.entry_body !== null) {
     throw new Error(
       `store integrity: ${row.entry_kind} row seq ${String(row.seq)} carries a non-null entry_body ` +
-        `(op-less-class-only field)`,
+        `(body-bearing-class-only field)`,
     );
   }
   if (opLess) {
@@ -521,6 +627,34 @@ function toTranscriptEntry(row: TranscriptRow): TranscriptEntry {
       );
     }
     return decodeDecisionRequestEntry(row.seq, row.entry_body as string, row.committed_at);
+  }
+  // The two OPERATOR-ENTRY classes (Q2): op-carrying AND body-bearing,
+  // with all four transition-only columns NULL by class (C22's
+  // absence-by-class, the same iff refused in both directions above).
+  if (row.entry_kind === "DECISION_MADE" || row.entry_kind === "WAIT_RESUMED") {
+    if (
+      row.envelope !== null ||
+      row.payload_digest !== null ||
+      row.gate_decisions !== null ||
+      row.issued_agent_config !== null
+    ) {
+      throw new Error(
+        `store integrity: ${row.entry_kind} row seq ${String(row.seq)} carries a transition-only field (class iff)`,
+      );
+    }
+    return row.entry_kind === "DECISION_MADE"
+      ? decodeDecisionMadeEntry(
+          row.seq,
+          row.op_id as string,
+          row.entry_body as string,
+          row.committed_at,
+        )
+      : decodeWaitResumedEntry(
+          row.seq,
+          row.op_id as string,
+          row.entry_body as string,
+          row.committed_at,
+        );
   }
   if (row.entry_kind === "transition") {
     // S11/C3 class iff (packet ch12-p2): a transition row carries all
@@ -674,8 +808,23 @@ export function openStore(path: string, time: TimeSource): StoreHandle {
       if (row === undefined) {
         return Promise.resolve(null);
       }
+      // Q15 (packet ch14-p2b): THE WHITELIST OPENS BY TWO. Before this
+      // packet a row of either operator class would make this lookup
+      // THROW where the operator ladder's idempotency rung needs the row
+      // RETURNED — the compare is over a SQL `string`, so `tsc`
+      // enumerates nothing here and only opening it by hand works. Its
+      // reciprocal binds too: an ACTOR envelope reusing an op id
+      // consumed by a DECISION_MADE row must answer `op_id_collision`
+      // rather than throwing.
+      //
+      // The op-less class never appears: an `op_id = ?` lookup never
+      // matches a NULL row (measured on the live driver, receipt
+      // PROBE-CH14P2A-1), so DECISION_REQUEST is absent by construction
+      // rather than by exclusion here.
       if (
         row.entry_kind !== "transition" &&
+        row.entry_kind !== "DECISION_MADE" &&
+        row.entry_kind !== "WAIT_RESUMED" &&
         !(LIFECYCLE_FACT_KINDS as readonly string[]).includes(row.entry_kind)
       ) {
         return Promise.reject(
@@ -814,6 +963,94 @@ export function openStore(path: string, time: TimeSource): StoreHandle {
         // The row is OP-LESS by class: `op_id` NULL (it consumes no
         // uniqueness), the transition-only columns NULL, and the class's
         // own fields in `entry_body` as canonical JSON with snake keys.
+        if (arrival.decisionRequest !== undefined) {
+          db.prepare(
+            "INSERT INTO transcript (instance_id, seq, op_id, entry_kind, envelope, payload_digest, gate_decisions, issued_agent_config, entry_body, committed_at) VALUES (?, ?, NULL, 'DECISION_REQUEST', NULL, NULL, NULL, NULL, ?, ?)",
+          ).run(
+            input.instanceId,
+            next.seq + 1,
+            encodeDecisionRequestBody(arrival.decisionRequest),
+            time.now(),
+          );
+        }
+        db.exec("COMMIT");
+        return Promise.resolve({ kind: "committed", version: input.expectedVersion + 1 });
+      } catch (error) {
+        db.exec("ROLLBACK");
+        return Promise.reject(error instanceof Error ? error : new Error(String(error)));
+      }
+    },
+
+    // Q2 (packet ch14-p2b): the OPERATOR-ENTRY write member — ONE member
+    // for BOTH op-carrying operator classes, discriminated by
+    // `entry.kind`. It reproduces `commitTransition`'s shape exactly:
+    // the in-transaction idempotency re-check FIRST (the pre-check is a
+    // fast path, the transaction stays the correctness mechanism —
+    // REV-A1-TXN), then the CAS, then the row, then the human-gate
+    // park's OPTIONAL SECOND ROW in the SAME transaction.
+    commitOperatorEntry(input: CommitOperatorEntryInput): Promise<CommitTransitionResult> {
+      db.exec("BEGIN IMMEDIATE");
+      try {
+        // The in-transaction re-check is KIND-AWARE (Q15's compare, the
+        // sibling members' shape): a row of the entry's OWN kind under
+        // the key is a replay; ANY other kind is a visible collision.
+        // The digest half is deliberately absent — these classes carry
+        // no digest and the compare is an equality on the discriminant.
+        const existing = db
+          .prepare("SELECT entry_kind FROM transcript WHERE instance_id = ? AND op_id = ?")
+          .get(input.instanceId, input.entry.opId) as { entry_kind: string } | undefined;
+        if (existing !== undefined) {
+          db.exec("ROLLBACK");
+          return Promise.resolve(
+            existing.entry_kind === input.entry.kind
+              ? { kind: "duplicate_op" }
+              : { kind: "op_id_collision" },
+          );
+        }
+
+        const arrival = input.arrival;
+        const cas = db
+          .prepare(
+            `UPDATE instances
+               SET current_step = ?, round = ?, kernel_status = ?,
+                   terminal_disposition = ?, wait = ?, version = version + 1
+             WHERE instance_id = ? AND version = ?`,
+          )
+          .run(
+            arrival.newCurrentStep,
+            arrival.newRound,
+            arrival.newKernelStatus,
+            arrival.newTerminalDisposition,
+            encodeWait(arrival.newWait),
+            input.instanceId,
+            input.expectedVersion,
+          );
+        if (cas.changes === 0) {
+          db.exec("ROLLBACK");
+          return Promise.resolve({ kind: "cas_conflict" });
+        }
+
+        const next = db
+          .prepare("SELECT COALESCE(MAX(seq), 0) + 1 AS seq FROM transcript WHERE instance_id = ?")
+          .get(input.instanceId) as { seq: number };
+        // OP-CARRYING and BODY-BEARING (Q2's column iff): `op_id`
+        // PRESENT, `entry_body` NON-NULL, and all four transition-only
+        // columns NULL by class.
+        db.prepare(
+          "INSERT INTO transcript (instance_id, seq, op_id, entry_kind, envelope, payload_digest, gate_decisions, issued_agent_config, entry_body, committed_at) VALUES (?, ?, ?, ?, NULL, NULL, NULL, NULL, ?, ?)",
+        ).run(
+          input.instanceId,
+          next.seq,
+          input.entry.opId,
+          input.entry.kind,
+          input.entry.kind === "DECISION_MADE"
+            ? encodeDecisionMadeBody(input.entry.body)
+            : encodeWaitResumedBody(input.entry.body),
+          time.now(),
+        );
+        // The park's SECOND ROW — a decision routing back to a gate
+        // commits its own op-carrying row AND a fresh DECISION_REQUEST in
+        // ONE transaction, exactly as the transition member does.
         if (arrival.decisionRequest !== undefined) {
           db.prepare(
             "INSERT INTO transcript (instance_id, seq, op_id, entry_kind, envelope, payload_digest, gate_decisions, issued_agent_config, entry_body, committed_at) VALUES (?, ?, NULL, 'DECISION_REQUEST', NULL, NULL, NULL, NULL, ?, ?)",

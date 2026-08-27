@@ -10,6 +10,7 @@ import type {
   ContextPacket,
   DispatchIntent,
   EventEnvelope,
+  DecisionMadeEntry,
   HumanDecisionRequest,
   GateBinding,
   GateDecision,
@@ -29,6 +30,7 @@ import type {
   WaitReason,
   WorkflowInstance,
   WorkflowTemplate,
+  WaitResumedEntry,
 } from "../domain/index.js";
 // ch11-P2a: the registration descriptor lives in ports/ (the injected
 // EXTENSION contract). ADR-007 allows type imports from any source in a
@@ -169,6 +171,17 @@ interface RealizedTypeTable {
   // protects, so it is the thing a drift check can actually compare.
   readonly "l3/apply_target_entry_effects(...)": ArrivalEffect;
   readonly "l3/HumanDecisionRequest": HumanDecisionRequest;
+  // ch14-p2b Q12: the two rows this packet flips, each BOUND here as
+  // well as pinned verbatim in the registry — that binding is stated as
+  // a REQUIREMENT because the sibling packet's flip landed as a string
+  // with no binding and the aftermath had to add it. A renamed or
+  // vanished witness is now a COMPILE error rather than a stale string.
+  //
+  // The DECISION_REQUEST / DECISION_MADE row flips only NOW, when BOTH
+  // members have writers: half of it existed after p2a, and a flip on
+  // half a pair is the error this care exists to avoid.
+  readonly "l3/wait step + RESUME_WAIT": WaitResumedEntry;
+  readonly "l3/DECISION_REQUEST / DECISION_MADE": DecisionMadeEntry;
 }
 
 export type RegistryEntry =
@@ -381,7 +394,7 @@ export const DOMAIN_REGISTRY: Readonly<Record<string, RegistryEntry>> = {
   "l2b/ContextBlockRef": { kind: "realized", typeName: "BlockId" },
   "l2b/ContextBlock": { kind: "realized", typeName: "ContextBlock" },
   // ── l3 (5) ─────────────────────────────────────────────────────────
-  "l3/wait step + RESUME_WAIT": { kind: "pending" },
+  "l3/wait step + RESUME_WAIT": { kind: "realized", typeName: "WaitResumedEntry" },
   // ch14-p1: the definition side flips the `human_gate` row with the
   // FIELD-grain type witness ch14-C1 mints — the step-class discriminator
   // union, not the shared `Step` interface every agent step already
@@ -398,7 +411,7 @@ export const DOMAIN_REGISTRY: Readonly<Record<string, RegistryEntry>> = {
   // pinning it is what a drift check can actually compare.
   "l3/apply_target_entry_effects(...)": { kind: "realized", typeName: "ArrivalEffect" },
   "l3/HumanDecisionRequest": { kind: "realized", typeName: "HumanDecisionRequest" },
-  "l3/DECISION_REQUEST / DECISION_MADE": { kind: "pending" },
+  "l3/DECISION_REQUEST / DECISION_MADE": { kind: "realized", typeName: "DecisionMadeEntry" },
   // ── storage-scope (2) — the sealed-projection contract's rows ─────
   "storage-scope/shape": { kind: "contract-row" },
   "storage-scope/constraints": { kind: "contract-row" },
@@ -562,6 +575,8 @@ export const REALIZED_TYPE_TABLE_KEYS = [
   "l3/human_gate",
   "l3/apply_target_entry_effects(...)",
   "l3/HumanDecisionRequest",
+  "l3/wait step + RESUME_WAIT",
+  "l3/DECISION_REQUEST / DECISION_MADE",
 ] as const satisfies readonly (keyof RealizedTypeTable)[];
 
 type TypeTableFullyListed =

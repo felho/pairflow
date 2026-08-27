@@ -149,11 +149,34 @@ export function createDeliveryLoop(
     return false;
   }
 
+  /**
+   * The runner is the SECOND DISPATCH PRODUCER (packet ch14-p2b, Q6):
+   * the kernel returns a dispatch from the commit, and this loop
+   * RE-DERIVES one from committed state when it delivers later. Both
+   * must carry the SAME handoff, or a rework round is dispatched with
+   * the wrong instruction.
+   *
+   * THE SCAN OPENS TO THE DECISION CLASS. Before this packet it read
+   * the LAST TRANSITION row's payload; after a rework decision that
+   * returns the PRE-GATE transition's payload — the actor's own last
+   * emit — rather than the operator's instruction, which is exactly the
+   * stale value the round advance exists to drop.
+   *
+   * Both classes are read in ONE ordered pass, so the LATEST of either
+   * wins: a decision after a transition supersedes it, and a transition
+   * after a decision supersedes that. The two remaining classes are
+   * inert here — a WAIT_RESUMED carries no payload at this level
+   * (C18's named Absent), and the op-less park row carries a `context_ref`
+   * that is a RECORD of the arriving surface rather than a handoff to
+   * the next actor.
+   */
   function lastHandoff(transcript: readonly TranscriptEntry[]): unknown {
     let handoff: unknown;
     for (const entry of transcript) {
       if (entry.entryKind === "transition") {
         handoff = entry.envelope.payload;
+      } else if (entry.entryKind === "DECISION_MADE") {
+        handoff = entry.payload;
       }
     }
     return handoff;

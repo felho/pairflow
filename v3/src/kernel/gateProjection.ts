@@ -54,6 +54,18 @@ export function deriveGateProjection(
  * kernel-integrity throw (V4, the `loadTemplate` class), never a
  * rejection.
  */
+/**
+ * The replay's authored-key indexes go through this (Q1's own-property
+ * obligation): the id grammar admits prototype member names, and an
+ * unguarded index answers such a spelling with an INHERITED member
+ * rather than with the corrupt-history throw beside it.
+ */
+function ownEdge<T>(record: Readonly<Record<string, T>> | undefined, key: string): T | undefined {
+  return record !== undefined && Object.prototype.hasOwnProperty.call(record, key)
+    ? record[key]
+    : undefined;
+}
+
 function derivePolicyView(
   template: WorkflowTemplate,
   committed: readonly TranscriptEntry[],
@@ -61,10 +73,43 @@ function derivePolicyView(
   const history: GateProjectionEntry[] = [];
   let position = template.start;
   for (const entry of committed) {
-    // F4 (packet ch12-p1b): the projection walks TRANSITION rows only —
-    // fact rows carry no envelope and no gate decisions by class, so
-    // they are class-invisible to gate history (skipping IS the
-    // faithful semantics, not data loss).
+    // F4 (packet ch12-p1b): fact rows carry no envelope and no gate
+    // decisions by class, so they are class-invisible to gate history
+    // (skipping IS the faithful semantics, not data loss). The op-less
+    // DECISION_REQUEST class is position-inert for the same reason.
+    //
+    // Q11 (packet ch14-p2b): THE POSITION WALK IS NOW THREE-WAY, and
+    // THIS READER IS THE ONE THAT MATTERS — it is PRODUCTION. Before
+    // this fix, any gated workflow crossing a `humanGate` would resume
+    // its policy view from the PRE-GATE position and THROW on the next
+    // transition row. The two operator classes advance the position
+    // without contributing a gate-history ENTRY: a decision and a
+    // resume run no gates, so they move the walk and push nothing.
+    if (
+      entry.entryKind === "DECISION_MADE" ||
+      entry.entryKind === "WAIT_RESUMED"
+    ) {
+      const parked = template.steps[position];
+      if (parked === undefined) {
+        throw new Error(
+          `kernel integrity: gate projection replay reached position '${position}' with no step (corrupt committed history)`,
+        );
+      }
+      const edgeKey = entry.entryKind === "DECISION_MADE" ? entry.decision : entry.event;
+      // Own-property guarded exactly as the arrival's own indexes are:
+      // the id grammar admits prototype member names.
+      const routed =
+        entry.entryKind === "DECISION_MADE"
+          ? ownEdge(parked.decisions, edgeKey)?.target
+          : ownEdge(parked.onResume, edgeKey);
+      if (routed === undefined) {
+        throw new Error(
+          `kernel integrity: gate projection replay found no route for '${edgeKey}' at '${position}' (corrupt committed history)`,
+        );
+      }
+      position = routed;
+      continue;
+    }
     if (entry.entryKind !== "transition") {
       continue;
     }
@@ -75,13 +120,6 @@ function derivePolicyView(
       );
     }
     const eventType = entry.envelope.type;
-    // DEFERRED(ch14-p2b): this policy-view replay advances position on
-    // TRANSITION rows only — the SAME blindness as the two testkit
-    // replay checkers, with a PRODUCTION inhabitant. Unreachable at
-    // ch14-p2a (a park leaves WAITING, so no further transition row can
-    // commit); at p2b a decision-routed arrival makes it resume from the
-    // PRE-GATE position and throw on the next transition row for any
-    // gated workflow crossing a `humanGate`.
     // K11 (ch14-p2a): `transitions` and `role` are optional since the
     // class set opened. This replay walks COMMITTED TRANSITION rows, and
     // a transition can only have been committed FROM an agent step — so
@@ -94,7 +132,7 @@ function derivePolicyView(
           `(role/transitions absent) with a committed transition row (corrupt committed history)`,
       );
     }
-    const target = transitions[eventType];
+    const target = ownEdge(transitions, eventType);
     if (target === undefined) {
       throw new Error(
         `kernel integrity: gate projection replay found no transition for '${eventType}' at '${position}' (corrupt committed history)`,

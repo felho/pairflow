@@ -17,11 +17,13 @@ export type {
   // fact arm comes with them — a union export whose arm cannot be named
   // is not usable from outside, and its absence was a standing gap the
   // third arm made visible.
+  BundleDecisionMadeRow,
   BundleDecisionRequestRow,
   BundleDiagRow,
   BundleEnvelopeMeta,
   BundleFactRow,
   BundleRow,
+  BundleWaitResumedRow,
   BundleTranscriptRow,
   DebugBundle,
   DebugBundleExporter,

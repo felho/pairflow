@@ -210,6 +210,7 @@ function scriptedStore(
     createInstance: () => Promise.reject(new Error("unused")),
     commitTransition: () => Promise.reject(new Error("unused")),
     commitLifecycle: () => Promise.reject(new Error("unused")),
+    commitOperatorEntry: () => Promise.reject(new Error("unused")),
     listInstances: () => Promise.reject(new Error("unused")),
     getInstanceDetail: () => Promise.reject(new Error("unused")),
     getTimeline: () => {

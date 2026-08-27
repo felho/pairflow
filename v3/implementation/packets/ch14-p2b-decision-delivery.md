@@ -1854,6 +1854,123 @@ Three runs, each citing the basis it verified:
    itself packet ch14-p2a's family 15.
 3. `2abca767…` → LANDED, NO new findings, **`approve`**.
 
+THE CITED HASH IS OF THE SPEC SURFACE, NOT OF THIS FILE, and saying so is
+not pedantry: writing this record into the Build record necessarily moved
+the file's hash away from the one the record cites, so a later reader who
+hashes the packet and compares will find a mismatch and cannot tell
+whether the SPEC moved. It did not. `2abca767…` is the sha256 of
+everything above `## Build record` plus that heading and its original
+`<Filled at build close.>` placeholder — reproducible, and reproduced at
+build close before the build's bytes were accepted. The build agent hit
+this same wall from the other side and reconstructed it independently.
+
+---
+
+**EXECUTION CONTEXT — named because §4 says the choice is never silent.**
+FRESH-CONTEXT DELEGATED BUILD, the §4 default. The subagent executed
+steps 1–3 (read the spec, TDD, implement) against the packet alone; this
+context retained orchestration, the full verification chain, both §5.5
+arm gates, and the one-packet-one-commit boundary. THE AUTHOR/GATE
+CONTEXT HAD STARTED BUILDING AND ITS BYTES WERE REVERTED before
+delegation — about 156 lines of domain and port work, correct as far as
+it went — because §4's decorrelation ground says the context that
+authored and gated a packet does not build its own bytes, and because a
+clean fresh build is the live test of the packet's self-containment
+claim. Contaminating that test to save twenty minutes would have spent
+the thing the delegation exists to measure.
+
+GUIDANCE NOTES HANDED OVER, four, all recorded here: (1) the compiler's
+own work list, with the measured 13-literal / 7-file / one-union-site
+census and the warning to re-derive it by RUNNING the change; (2) a
+build order; (3) Q3's realization note restated, with the trap that
+collapsing the authority group's two absences turns HANDLE's
+`missing_role` into an `accepted`; (4) the loader duty's two refusals —
+no export from `kernel.ts` (import cycle), no third copy. The
+DELEGATION-PROMPT RULE was applied in full: the seventeen family
+disciplines went over VERBATIM, with the instruction to RAISE the
+existing tests to the declared level, and with the nine families that
+bear on already-existing tests named — preserve-don't-weaken is
+insufficient exactly where a packet's point is stronger proof.
+
+**THE SELF-CONTAINMENT CLAIM HELD.** The build ran from the packet with
+no access to this session's reasoning, and its two independent
+measurements reproduced the packet's predictions exactly: the census
+(13 literals across the 7 named files, one of them the
+`Pick<StorePort, …>` helper, plus the single union site at the debug
+bundle's row projection) and the four declared creations. Nothing was
+un-buildable.
+
+**TWO JUDGEMENT CALLS THE BUILD COULD NOT MAKE ALONE, ruled here.**
+
+*The harness seam is OPTIONAL, not required.* Q13 decided WHICH seam —
+the ingress's `submitIntent`, not the kernel handlers — and left its
+realized shape open. A REQUIRED seam would have forced five files
+outside the ratified 48-file boundary (four existing traces and the dev
+CLI). RULED: optional, on the tree's own `resolveEvidence?` precedent,
+with a loud throw when a fixture drives an operator step without wiring
+it. Q13's GROUND survives intact, which is the test that matters: the
+`l3` trace still drives through the ingress, so the chapter's one
+end-to-end proof still exercises the wire keysets. A ratified boundary
+outranks an unstated preference for a required field.
+
+*Family 17's home is INTO the existing scanner, not beside it.* The
+test-homes list reads "joins the drift directory beside the existing
+intent-narrow scanner", which admits a new file — but the boundary
+declares five drift entries, all existing, and the creation count is
+four with no drift file among them. Only the INTO reading keeps the
+packet's own machine block true, and the build took it. RULED CORRECT,
+with one correction made here rather than left: `intentNarrow.test.ts`'s
+header named only p2a's family 15 while the file had gained p2b's
+family 17 compile-negatives and family 10's shared-call-site lane. That
+is the same defect class this packet makes a NAMED DUTY for
+`admission.ts` — a comment describing an absent thing is how the next
+reader concludes it is still absent — so the header now names all three.
+
+**THREE REALIZATION DELTAS the build reports and this record keeps.**
+The store's `opLess` predicate SPLIT in two (`opLess` for the op-id
+partition, `bodyBearing` for `entry_body`) exactly as Q2 requires, since
+after this packet those are different partitions. The ladder's
+reject-name union became GENERIC — the compiler refused a flat union
+because each path's outcome carries only its own rungs' names — with
+`unknown_instance` riding `admitInput`'s own result; Q3 explicitly left
+that five-or-six shape to the build. And `lifecycle.ts`'s byte-identical
+loader copy was NOT consolidated: the file is outside the boundary, so
+the shared module plus the pre-existing copy leaves two, as before, and
+the consolidation stays available to whichever packet owns that file.
+
+**VERIFICATION, re-run in this context rather than taken from the
+build's report.** `v3:typecheck`, `v3:lint`, `v3:packet-lint`,
+`v3:deferred`, `v3:adr-check`, `v3:realized-map`, `v3:check-docs` all
+green; `v3:coverage` green in its STRICT mode now that the six unit-map
+rows are flipped. 81 test files / 2982 tests, from 79 / 2847. Boundary
+discipline measured: 41 files touched, ZERO outside the declared 48,
+exactly the four declared creations present. All three
+`DEFERRED(ch14-p2b)` markers removed; `SCHEMA_VERSION` byte-unchanged at
+`"6"`; the rejection registry still 54 names.
+
+**EXISTING TESTS RAISED TO THE DECLARED LEVEL**, the delegation rule's
+whole point, named one by one: `admission.test.ts` (helper and all
+eighteen lanes rewritten to the opened expectation shape with every
+outcome asserted byte-unmoved — family 2's no-move control now MEASURED
+outcome by outcome rather than resting on the old "HANDLE passes
+neither" claim; the A13 lane re-titled because its stated reason went
+false, and given a second type-level arity lane); `admission.ts`'s
+correlate doc-comment corrected, which was Q3's named duty and the
+test-side twin of that re-title; `domainRegistry.test.ts` and
+`unitMap.test.ts` (the "stay pending" lanes REPLACED by flip assertions
+plus a no-row-left-pending sweep, not merely extended); and
+`storeCheckers.test.ts`, `gateProjection.test.ts`, `sqliteStore.test.ts`,
+`deliveryLoop.test.ts`, `debugBundle.test.ts`, `cli.test.ts`,
+`ingress.test.ts` and `diagEmission.test.ts`, each gaining its family's
+lanes at the declared strength.
+
+Two guards caught the build mid-flight and were FIXED rather than
+weakened, which is the behaviour the delegation rule exists to produce:
+the drift corpus scanner rejected a bare `as HumanDecisionRequest` cast
+in the trace (narrowed on a discriminating field instead), and family
+16's rider enumeration initially mis-parsed parameter lines as
+declarations.
+
 Evidence gaps: none. `v3:typecheck`, `v3:lint`, `v3:test` (79 files /
 2847 tests), `v3:packet-lint` and `v3:deferred` all completed in the
 arm's environment. `v3:coverage`'s STRICT mode fails on a pre-build tree

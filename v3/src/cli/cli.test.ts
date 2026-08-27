@@ -1618,3 +1618,157 @@ describe("cli — kickoff / cancel lanes (packet ch12-P4, V3)", () => {
     expect(kinds).not.toContain("stale");
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────
+// FAMILY 13's DOCUMENT LANE (packet ch14-p2b, Q16)
+//
+// The shipped CLI's timeline/tail/detail documents reach the two new
+// classes by CONTENT REACHABILITY: those documents serialize the floor's
+// rows WHOLE, so the classes reach them with NO CLI code change. The
+// renderer rule requires naming them on that ground rather than on "this
+// packet edits no CLI file" — and requires DRIVING it rather than
+// asserting it, which is what this lane does.
+// ─────────────────────────────────────────────────────────────────────
+
+describe("cli — the two operator classes survive the shipped documents WHOLE (family 13)", () => {
+  /** Seed a store directly with both new classes, then read it through
+   * the CLI's own verbs. */
+  async function seedOperatorRows(db: string): Promise<string> {
+    const handle = openStore(db, createControlledClock(1_000));
+    const id = "inst-ops";
+    await handle.store.createInstance({
+      instanceId: id,
+      templateRef: { id: "local-pair-v0", version: 1 },
+      task: "t",
+      binding: { implementer: "codex", reviewer: "claude" },
+      currentStep: "gate",
+      round: 1,
+      kernelStatus: "WAITING",
+      terminalDisposition: null,
+      activationMode: "immediate",
+      wait: {
+        kind: "human_decision",
+        requestedBy: "gate",
+        resumeEvents: ["approve"],
+        requestRef: "R-1",
+      },
+      runtimeContext: { state: "ready", ref: null },
+      failureReason: null,
+      runOverrides: {},
+      version: 1,
+    });
+    const arrival = {
+      newCurrentStep: "commit_wait",
+      newRound: 1,
+      newKernelStatus: "WAITING",
+      newTerminalDisposition: null,
+      newWait: { kind: "commit_pending", requestedBy: "commit_wait", resumeEvents: ["COMMIT"] },
+      issuedAgentConfig: {},
+    } as unknown as Parameters<
+      ReturnType<typeof openStore>["store"]["commitOperatorEntry"]
+    >[0]["arrival"];
+    await handle.store.commitOperatorEntry({
+      instanceId: id,
+      expectedVersion: 1,
+      entry: {
+        kind: "DECISION_MADE",
+        opId: "d1",
+        body: {
+          decision: "request_rework",
+          payload: { instruction: "operator text" },
+          by: "human-1",
+          requestRef: "R-1",
+          override: true,
+        },
+      },
+      arrival,
+    });
+    await handle.store.commitOperatorEntry({
+      instanceId: id,
+      expectedVersion: 2,
+      entry: {
+        kind: "WAIT_RESUMED",
+        opId: "r1",
+        body: { kind: "commit_pending", event: "COMMIT" },
+      },
+      arrival,
+    });
+    handle.close();
+    return id;
+  }
+
+  it("timeline carries both classes with their kind VISIBLE and their fields whole", async () => {
+    const db = tempDbPath();
+    const deps = testDeps();
+    const id = await seedOperatorRows(db);
+    const timeline = await run(["timeline", id, "--db", db], deps);
+    expect(timeline.code).toBe(EXIT.ok);
+    const rows = JSON.parse(timeline.stdout[0] ?? "") as Record<string, unknown>[];
+    expect(rows.map((r) => r["entryKind"])).toEqual(["DECISION_MADE", "WAIT_RESUMED"]);
+    expect(rows[0]).toEqual({
+      entryKind: "DECISION_MADE",
+      seq: 1,
+      opId: "d1",
+      decision: "request_rework",
+      payload: { instruction: "operator text" },
+      by: "human-1",
+      requestRef: "R-1",
+      override: true,
+      committedAt: 1_000,
+    });
+    expect(rows[1]).toEqual({
+      entryKind: "WAIT_RESUMED",
+      seq: 2,
+      opId: "r1",
+      kind: "commit_pending",
+      event: "COMMIT",
+      committedAt: 1_000,
+    });
+  });
+
+  it("detail carries both classes too — the SAME rows through the other document", async () => {
+    const db = tempDbPath();
+    const deps = testDeps();
+    const id = await seedOperatorRows(db);
+    const detail = await run(["detail", id, "--db", db], deps);
+    expect(detail.code).toBe(EXIT.ok);
+    const doc = JSON.parse(detail.stdout[0] ?? "") as {
+      transcript: Record<string, unknown>[];
+    };
+    expect(doc.transcript.map((r) => r["entryKind"])).toEqual([
+      "DECISION_MADE",
+      "WAIT_RESUMED",
+    ]);
+    expect(doc.transcript[0]?.["decision"]).toBe("request_rework");
+    expect(doc.transcript[1]?.["event"]).toBe("COMMIT");
+  });
+
+  it("NO field is added, removed or re-keyed on any emitted document — the shape is unchanged", async () => {
+    // The CLI/human-payload half of the escalation walk, driven rather
+    // than asserted: the documents grow new ROWS, never new columns.
+    const db = tempDbPath();
+    const deps = testDeps();
+    const id = await startOne(db, deps);
+    await run(
+      ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "2", "--expected-role", "implementer"],
+      deps,
+    );
+    const timeline = await run(["timeline", id, "--db", db], deps);
+    const rows = JSON.parse(timeline.stdout[0] ?? "") as Record<string, unknown>[];
+    // The pre-existing classes' key sets are byte-unmoved.
+    expect(Object.keys(rows[0] ?? {}).sort()).toEqual(
+      ["committedAt", "entryKind", "opId", "seq"].sort(),
+    );
+    expect(Object.keys(rows[1] ?? {}).sort()).toEqual(
+      [
+        "committedAt",
+        "entryKind",
+        "envelope",
+        "gateDecisions",
+        "issuedAgentConfig",
+        "payloadDigest",
+        "seq",
+      ].sort(),
+    );
+  });
+});

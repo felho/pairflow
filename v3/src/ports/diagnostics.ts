@@ -137,7 +137,13 @@ export type IngressDetailToken =
   | "invalid_task"
   | "invalid_mode"
   | "invalid_overrides"
-  | "invalid_run_overrides";
+  | "invalid_run_overrides"
+  // ch14-p2b: the operator-intent wires' own gate block. The two new
+  // intents reuse every existing token their blocks need
+  // (`invalid_required_string`, `invalid_expected_version`,
+  // `payload_not_canonicalizable`); `override` is the ONE form the
+  // union could not already name.
+  | "invalid_override";
 
 /**
  * The emit-side face: NO timestamp, NO ordinal — the SINK stamps `at`

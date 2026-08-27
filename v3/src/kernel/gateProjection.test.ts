@@ -160,3 +160,188 @@ describe("deriveGateProjection — V4 non-resolving replay is a kernel-integrity
     ).toThrow(/kernel integrity/);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────
+// FAMILY 11 — THE PRODUCTION INHABITANT (packet ch14-p2b, Q11).
+//
+// This reader is the one that MATTERS: it is PRODUCTION. Before the fix,
+// ANY gated workflow crossing a `humanGate` would resume its policy view
+// from the PRE-GATE position and THROW on the next transition row.
+// ─────────────────────────────────────────────────────────────────────
+
+const gatedTemplate: WorkflowTemplate = {
+  ref: { id: "gated-l3", version: 1 },
+  start: "implement",
+  steps: {
+    implement: { role: "implementer", instruction: "build it", transitions: { PASS: "gate" } },
+    gate: {
+      type: "human_gate",
+      role: "operator",
+      instruction: "decide",
+      decisions: { approve: { target: "review" }, back: { target: "implement" } },
+    },
+    review: {
+      role: "reviewer",
+      instruction: "review it",
+      transitions: { CONVERGED: "done" },
+      gates: { CONVERGED: [] },
+    },
+  },
+  terminal: ["done"],
+  roles: {
+    implementer: { defaultActor: "codex" },
+    operator: { defaultActor: "human-1" },
+    reviewer: { defaultActor: "claude" },
+  },
+};
+
+function park(seq: number, requestRef: string): TranscriptEntry {
+  return {
+    entryKind: "DECISION_REQUEST",
+    seq,
+    requestRef,
+    recipient: "operator",
+    decisions: ["approve", "back"],
+    committedAt: seq,
+  };
+}
+
+function decision(seq: number, opId: string, key: string): TranscriptEntry {
+  return {
+    entryKind: "DECISION_MADE",
+    seq,
+    opId,
+    decision: key,
+    by: "human-1",
+    requestRef: "R-1",
+    committedAt: seq,
+  };
+}
+
+function resumed(seq: number, opId: string, event: string): TranscriptEntry {
+  return {
+    entryKind: "WAIT_RESUMED",
+    seq,
+    opId,
+    kind: "commit_pending",
+    event,
+    committedAt: seq,
+  };
+}
+
+describe("deriveGateProjection — the DECISION-routed arrival advances the replay (family 11)", () => {
+  it("THE SHAPE THAT REDS ON THE UN-FIXED READER: cross a gate, then commit a GATED transition", () => {
+    // The history: PASS → gate (park, two rows) → approve → review, then
+    // a gated CONVERGED at `review`. An un-fixed reader resumes from
+    // `implement` and throws looking for `CONVERGED` there.
+    const history: readonly TranscriptEntry[] = [
+      committed(1, "a1", "PASS"),
+      park(2, "R-1"),
+      decision(3, "d1", "approve"),
+    ];
+    const projection = deriveGateProjection(
+      instanceAt("review", 1),
+      gatedTemplate,
+      history,
+      "CONVERGED",
+    );
+    // The gate history carries the ACTOR transition only — a decision
+    // runs no gates, so it moves the walk and pushes NOTHING.
+    expect(projection.history).toEqual([
+      { stepId: "implement", eventType: "PASS", role: "implementer" },
+    ]);
+  });
+
+  it("the op-less park row stays POSITION-INERT — the park does not move the run", () => {
+    const history: readonly TranscriptEntry[] = [committed(1, "a1", "PASS"), park(2, "R-1")];
+    // Position after the park is still `gate`; a reader that advanced on
+    // the op-less row would land somewhere else and throw.
+    const projection = deriveGateProjection(
+      instanceAt("gate", 1),
+      gatedTemplate,
+      history,
+      "approve",
+    );
+    expect(projection.history).toEqual([
+      { stepId: "implement", eventType: "PASS", role: "implementer" },
+    ]);
+  });
+
+  it("a RESUME-routed arrival advances the replay too", () => {
+    const waitTemplate: WorkflowTemplate = {
+      ...gatedTemplate,
+      steps: {
+        ...gatedTemplate.steps,
+        gate: {
+          type: "human_gate",
+          role: "operator",
+          instruction: "decide",
+          decisions: { approve: { target: "commit_wait" } },
+        },
+        commit_wait: {
+          type: "wait",
+          wait: { kind: "commit_pending", resumeEvents: ["COMMIT"] },
+          onResume: { COMMIT: "review" },
+        },
+      },
+    };
+    const history: readonly TranscriptEntry[] = [
+      committed(1, "a1", "PASS"),
+      park(2, "R-1"),
+      decision(3, "d1", "approve"),
+      resumed(4, "r1", "COMMIT"),
+    ];
+    const projection = deriveGateProjection(
+      instanceAt("review", 1),
+      waitTemplate,
+      history,
+      "CONVERGED",
+    );
+    expect(projection.history).toEqual([
+      { stepId: "implement", eventType: "PASS", role: "implementer" },
+    ]);
+  });
+
+  it("A NON-RESOLVING DECISION KEY IS A KERNEL-INTEGRITY THROW, not a skip", () => {
+    // The anti-skip instrument in THIS reader's own register — and the
+    // key is a PROTOTYPE MEMBER NAME, so an unguarded index would answer
+    // with an inherited member instead of throwing.
+    const history: readonly TranscriptEntry[] = [
+      committed(1, "a1", "PASS"),
+      park(2, "R-1"),
+      decision(3, "d1", "constructor"),
+    ];
+    expect(() =>
+      deriveGateProjection(instanceAt("review", 1), gatedTemplate, history, "CONVERGED"),
+    ).toThrow(/kernel integrity: gate projection replay found no route/);
+  });
+
+  it("A NON-RESOLVING RESUME EVENT throws the same way", () => {
+    const waitTemplate: WorkflowTemplate = {
+      ...gatedTemplate,
+      steps: {
+        ...gatedTemplate.steps,
+        gate: {
+          type: "human_gate",
+          role: "operator",
+          instruction: "decide",
+          decisions: { approve: { target: "commit_wait" } },
+        },
+        commit_wait: {
+          type: "wait",
+          wait: { kind: "commit_pending", resumeEvents: ["COMMIT"] },
+          onResume: { COMMIT: "review" },
+        },
+      },
+    };
+    const history: readonly TranscriptEntry[] = [
+      committed(1, "a1", "PASS"),
+      park(2, "R-1"),
+      decision(3, "d1", "approve"),
+      resumed(4, "r1", "constructor"),
+    ];
+    expect(() =>
+      deriveGateProjection(instanceAt("review", 1), waitTemplate, history, "CONVERGED"),
+    ).toThrow(/kernel integrity: gate projection replay found no route/);
+  });
+});

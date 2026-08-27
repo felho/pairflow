@@ -5,7 +5,9 @@ import type {
   EventEnvelope,
   KickoffOutcome,
   Outcome,
+  ResumeWaitOutcome,
   StartOutcome,
+  SubmitDecisionOutcome,
   TemplateRef,
 } from "../domain/index.js";
 import { isCanonicalizable } from "../emit/index.js";
@@ -103,15 +105,7 @@ function parseEnvelope(raw: unknown): ParseResult {
   ) {
     return fail("invalid_required_string");
   }
-  if (
-    "expectedVersion" in record &&
-    (typeof expectedVersion !== "number" ||
-      !Number.isInteger(expectedVersion) ||
-      expectedVersion < 0 ||
-      // Number.isInteger(-0) is true and -0 < 0 is false, yet the
-      // round-trip flattens it to 0 — reject like the payload does.
-      Object.is(expectedVersion, -0))
-  ) {
+  if ("expectedVersion" in record && !isWireExpectedVersion(expectedVersion)) {
     return fail("invalid_expected_version");
   }
   // Form-when-present ONLY — absence passes: mandatory-ness is the
@@ -140,6 +134,45 @@ function parseEnvelope(raw: unknown): ParseResult {
   };
 }
 
+/**
+ * Q19 (packet ch14-p2b): the envelope's `expectedVersion` ladder,
+ * EXTRACTED so BOTH wires call ONE function.
+ *
+ * The intent wire already carries a DIFFERENT numeric ladder — the
+ * create intent's template-ref version, `Number.isSafeInteger` with a
+ * `>= 1` floor. This is the ENVELOPE's, and the operator intents take
+ * IT rather than that one, because the field IS `expectedVersion`: the
+ * same value, the same CAS semantics, checked against the same instance
+ * counter. Reusing the ladder that already governs it, with the token
+ * that already names its failure, is what keeps ONE rule where a second
+ * would drift.
+ *
+ * "VERBATIM" IS AN OBLIGATION WITH A COUNT: the ladder is FOUR refusal
+ * cells, and a copy that drops the last one passes a single-lane gate
+ * block while admitting the value the round-trip flattens. Extraction
+ * is what makes the reuse compile-visible and a single driving lane
+ * sufficient — a behavioural lane through one wire cannot distinguish a
+ * shared helper from a faithful copy, which is the only thing the
+ * extraction exists to prevent.
+ *
+ * THE RESIDUAL IS NAMED rather than inherited: this ladder omits the
+ * `Number.isSafeInteger` bound the create wire carries, so
+ * `Number.MAX_VALUE` passes ingress. It then lands at the version rung,
+ * compares unequal, and answers `Stale` — a correct-enough disposition,
+ * which is why the weaker ladder is accepted rather than strengthened
+ * (strengthening it would change the ACTOR wire, out of scope here).
+ */
+export function isWireExpectedVersion(value: unknown): value is number {
+  return (
+    typeof value === "number" &&
+    Number.isInteger(value) &&
+    value >= 0 &&
+    // Number.isInteger(-0) is true and -0 < 0 is false, yet the
+    // round-trip flattens it to 0 — reject like the payload does.
+    !Object.is(value, -0)
+  );
+}
+
 /** The operator-intent entry's return: the per-op unions plus the
  * `invalid_shape` rejected arm (packet ch12-p1b, I1/V1). */
 export type IntentOutcome =
@@ -147,6 +180,14 @@ export type IntentOutcome =
   | StartOutcome
   | KickoffOutcome
   | CancelOutcome
+  // ch14-p2b (Q13): the two operator intents' outcomes join the union.
+  // This is a PRODUCTION type and the widening reaches every caller —
+  // measured at authoring as the two TEST callers, both compile-silent
+  // (`ingress.test.ts` is `toEqual`-shaped throughout; `l0dJourney`
+  // narrows on `.kind`, and a discriminant narrow survives a widened
+  // union). The CLI binds this type nowhere.
+  | SubmitDecisionOutcome
+  | ResumeWaitOutcome
   | { readonly kind: "rejected"; readonly reason: "invalid_shape" };
 
 export interface Ingress {
@@ -174,7 +215,20 @@ export interface IngressDeps {
 // form-when-present (`invalid_task` — its ABSENCE is the kernel's
 // `task_required`, never an ingress lane).
 
-const INTENT_KINDS = new Set(["create", "start", "kickoff", "cancel"]);
+// ch14-p2b: the two operator intents join the kind set. Their TOKEN
+// spelling is this packet's build choice; the keysets below carry
+// `intent` for the same reason every existing one does — the ingress
+// reads the discriminator out of the record and then closes the keyset
+// over every own property, so a keyset authored without it would make
+// EVERY well-formed intent draw `unknown_key`.
+const INTENT_KINDS = new Set([
+  "create",
+  "start",
+  "kickoff",
+  "cancel",
+  "submit-decision",
+  "resume-wait",
+]);
 
 const INTENT_KEYS: Record<string, ReadonlySet<string>> = {
   create: new Set([
@@ -189,6 +243,24 @@ const INTENT_KEYS: Record<string, ReadonlySet<string>> = {
   start: new Set(["intent", "instanceId", "opId"]),
   kickoff: new Set(["intent", "instanceId", "opId", "task"]),
   cancel: new Set(["intent", "instanceId", "opId"]),
+  // C9's CLOSED keysets in the realized camel spelling. `expectedVersion`
+  // and `by` are MEMBERS, not required-presence lanes: an ABSENT
+  // `expectedVersion` must REACH the version rung's `missing_version`
+  // and an ABSENT `by` must REACH the authority rung's
+  // `operator_not_authorized` (Q9's presence boundary — the keyset
+  // governs MEMBERSHIP, never presence).
+  "submit-decision": new Set([
+    "intent",
+    "instanceId",
+    "opId",
+    "expectedVersion",
+    "requestRef",
+    "verdict",
+    "override",
+    "payload",
+    "by",
+  ]),
+  "resume-wait": new Set(["intent", "instanceId", "opId", "expectedVersion", "type"]),
 };
 
 /** The authored↔stored mode mapping (C1/C13) — the wire is camelCase,
@@ -424,6 +496,61 @@ export function createIngress(deps: IngressDeps): Ingress {
             return rejectIntent(intentFailure("invalid_required_string", record));
           }
           return kernel.kickoff({ instanceId, opId: opId as string, task });
+        }
+        case "submit-decision": {
+          if (!isNonEmptyString(record["requestRef"])) {
+            return rejectIntent(intentFailure("invalid_required_string", record));
+          }
+          if (!isNonEmptyString(record["verdict"])) {
+            return rejectIntent(intentFailure("invalid_required_string", record));
+          }
+          // Q19's ONE ladder, called — not copied.
+          if ("expectedVersion" in record && !isWireExpectedVersion(record["expectedVersion"])) {
+            return rejectIntent(intentFailure("invalid_expected_version", record));
+          }
+          // Form-when-present: `override` is a boolean or absent. Its
+          // ABSENCE is asserted as ABSENCE by the kernel, never as
+          // `false`.
+          if ("override" in record && typeof record["override"] !== "boolean") {
+            return rejectIntent(intentFailure("invalid_override", record));
+          }
+          if ("payload" in record && !isCanonicalizable(record["payload"])) {
+            return rejectIntent(intentFailure("payload_not_canonicalizable", record));
+          }
+          // `by` is form-when-present ONLY — its absence must reach the
+          // AUTHORITY rung, which is why there is no required-string
+          // lane for it here.
+          if ("by" in record && !isNonEmptyString(record["by"])) {
+            return rejectIntent(intentFailure("invalid_required_string", record));
+          }
+          return kernel.submitDecision({
+            intent: "submit-decision",
+            instanceId,
+            opId: opId as string,
+            expectedVersion:
+              "expectedVersion" in record ? (record["expectedVersion"] as number) : undefined,
+            requestRef: record["requestRef"],
+            verdict: record["verdict"],
+            ...("override" in record ? { override: record["override"] as boolean } : {}),
+            ...("payload" in record ? { payload: record["payload"] } : {}),
+            by: "by" in record ? (record["by"] as string) : undefined,
+          });
+        }
+        case "resume-wait": {
+          if (!isNonEmptyString(record["type"])) {
+            return rejectIntent(intentFailure("invalid_required_string", record));
+          }
+          if ("expectedVersion" in record && !isWireExpectedVersion(record["expectedVersion"])) {
+            return rejectIntent(intentFailure("invalid_expected_version", record));
+          }
+          return kernel.resumeWait({
+            intent: "resume-wait",
+            instanceId,
+            opId: opId as string,
+            expectedVersion:
+              "expectedVersion" in record ? (record["expectedVersion"] as number) : undefined,
+            type: record["type"],
+          });
         }
         default:
           return kernel.cancel({ instanceId, opId: opId as string });

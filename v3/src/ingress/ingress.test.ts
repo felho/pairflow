@@ -24,6 +24,8 @@ function capturingKernel(): { kernel: Kernel; seen: EventEnvelope[] } {
     start: unused,
     kickoff: unused,
     cancel: unused,
+    submitDecision: unused,
+    resumeWait: unused,
     fail: unused,
     runtimeContextReady: unused,
     runtimeContextFailed: unused,
@@ -379,7 +381,9 @@ import type {
   CancelInput,
   CreateInput,
   KickoffInput,
+  ResumeWaitInput,
   StartInput,
+  SubmitDecisionInput,
 } from "../kernel/index.js";
 
 interface IntentCapture {
@@ -388,6 +392,8 @@ interface IntentCapture {
   starts: StartInput[];
   kickoffs: KickoffInput[];
   cancels: CancelInput[];
+  decisions: SubmitDecisionInput[];
+  resumes: ResumeWaitInput[];
 }
 
 function intentKernel(): IntentCapture {
@@ -395,6 +401,12 @@ function intentKernel(): IntentCapture {
   const starts: StartInput[] = [];
   const kickoffs: KickoffInput[] = [];
   const cancels: CancelInput[] = [];
+  // ch14-p2b: the two operator intents are CAPTURED like their siblings,
+  // so a lane can assert the typed intent reaches the kernel VERBATIM —
+  // which is what makes the keyset's membership-not-presence rule
+  // observable at the seam rather than only at the far end.
+  const decisions: SubmitDecisionInput[] = [];
+  const resumes: ResumeWaitInput[] = [];
   const kernel: Kernel = {
     handle: () => Promise.reject(new Error("unused")),
     create: (input) => {
@@ -413,6 +425,14 @@ function intentKernel(): IntentCapture {
       cancels.push(input);
       return Promise.resolve({ kind: "terminated", disposition: "cancelled" });
     },
+    submitDecision: (input) => {
+      decisions.push(input);
+      return Promise.resolve({ kind: "committed", version: 4, intent: null });
+    },
+    resumeWait: (input) => {
+      resumes.push(input);
+      return Promise.resolve({ kind: "committed", version: 5, intent: null });
+    },
     fail: () => Promise.reject(new Error("kernel events have no ingress endpoint (C13)")),
     runtimeContextReady: () =>
       Promise.reject(new Error("kernel events have no ingress endpoint (C13)")),
@@ -423,7 +443,7 @@ function intentKernel(): IntentCapture {
     },
     settleRuntimeContextDeliveries: () => Promise.resolve([]),
   };
-  return { kernel, creates, starts, kickoffs, cancels };
+  return { kernel, creates, starts, kickoffs, cancels, decisions, resumes };
 }
 
 const REF_WIRE = { id: "local-pair-v0", version: 1 };
@@ -750,5 +770,207 @@ describe("submitIntent — hostile wire records (gate-2 aftermath, finding 1)", 
     (templateRef as { version: number }).version = 999;
     expect(cap.creates[0]?.runOverrides).toEqual({ review: { mode: "strict" } });
     expect(cap.creates[0]?.templateRef).toEqual({ id: "local-pair-v0", version: 1 });
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────
+// FAMILY 10 — the two operator wires (packet ch14-p2b, Q9/Q19)
+// ─────────────────────────────────────────────────────────────────────
+
+describe("family 10 — the two operator intents' CLOSED keysets", () => {
+  it("submit-decision: the full keyset reaches the kernel VERBATIM", async () => {
+    const cap = intentKernel();
+    const outcome = await ingressOf(cap.kernel).submitIntent({
+      intent: "submit-decision",
+      instanceId: "i1",
+      opId: "d1",
+      expectedVersion: 3,
+      requestRef: "R",
+      verdict: "approve",
+      override: true,
+      payload: { instruction: "go" },
+      by: "human-1",
+    });
+    expect(outcome).toEqual({ kind: "committed", version: 4, intent: null });
+    expect(cap.decisions).toEqual([
+      {
+        intent: "submit-decision",
+        instanceId: "i1",
+        opId: "d1",
+        expectedVersion: 3,
+        requestRef: "R",
+        verdict: "approve",
+        override: true,
+        payload: { instruction: "go" },
+        by: "human-1",
+      },
+    ]);
+  });
+
+  it("resume-wait: the full keyset reaches the kernel VERBATIM", async () => {
+    const cap = intentKernel();
+    const outcome = await ingressOf(cap.kernel).submitIntent({
+      intent: "resume-wait",
+      instanceId: "i1",
+      opId: "r1",
+      expectedVersion: 4,
+      type: "COMMIT",
+    });
+    expect(outcome).toEqual({ kind: "committed", version: 5, intent: null });
+    expect(cap.resumes).toEqual([
+      {
+        intent: "resume-wait",
+        instanceId: "i1",
+        opId: "r1",
+        expectedVersion: 4,
+        type: "COMMIT",
+      },
+    ]);
+  });
+
+  it("each keyset is CLOSED — an unknown key reds", async () => {
+    const cap = intentKernel();
+    const ingress = ingressOf(cap.kernel);
+    expect(
+      await ingress.submitIntent({
+        intent: "submit-decision",
+        instanceId: "i1",
+        opId: "d1",
+        expectedVersion: 3,
+        requestRef: "R",
+        verdict: "approve",
+        by: "human-1",
+        surprise: true,
+      }),
+    ).toEqual({ kind: "rejected", reason: "invalid_shape" });
+    expect(
+      await ingress.submitIntent({
+        intent: "resume-wait",
+        instanceId: "i1",
+        opId: "r1",
+        expectedVersion: 4,
+        type: "COMMIT",
+        surprise: true,
+      }),
+    ).toEqual({ kind: "rejected", reason: "invalid_shape" });
+    expect(cap.decisions).toEqual([]);
+    expect(cap.resumes).toEqual([]);
+  });
+});
+
+describe("family 10 — THE PRESENCE BOUNDARY: the keyset governs MEMBERSHIP, not presence", () => {
+  it("an ABSENT `expectedVersion` REACHES the version rung's `missing_version` — never an ingress refusal", async () => {
+    // The KERNEL's name is asserted at the far end, which is the only
+    // thing that can tell an ingress required-field lane from a keyset
+    // member. A capturing kernel proves the intent got THROUGH ingress;
+    // the rung's own name is driven in the handler suite.
+    const cap = intentKernel();
+    const outcome = await ingressOf(cap.kernel).submitIntent({
+      intent: "submit-decision",
+      instanceId: "i1",
+      opId: "d1",
+      requestRef: "R",
+      verdict: "approve",
+      by: "human-1",
+    });
+    expect(outcome).not.toEqual({ kind: "rejected", reason: "invalid_shape" });
+    expect(cap.decisions[0]?.expectedVersion).toBeUndefined();
+  });
+
+  it("an ABSENT `by` REACHES the authority rung — never an ingress refusal", async () => {
+    const cap = intentKernel();
+    const outcome = await ingressOf(cap.kernel).submitIntent({
+      intent: "submit-decision",
+      instanceId: "i1",
+      opId: "d1",
+      expectedVersion: 3,
+      requestRef: "R",
+      verdict: "approve",
+    });
+    expect(outcome).not.toEqual({ kind: "rejected", reason: "invalid_shape" });
+    expect(cap.decisions[0]?.by).toBeUndefined();
+  });
+
+  it("an ABSENT `expectedVersion` on the RESUME wire reaches the rung too", async () => {
+    const cap = intentKernel();
+    await ingressOf(cap.kernel).submitIntent({
+      intent: "resume-wait",
+      instanceId: "i1",
+      opId: "r1",
+      type: "COMMIT",
+    });
+    expect(cap.resumes[0]?.expectedVersion).toBeUndefined();
+  });
+});
+
+describe("family 10 — each new gate block's DETAIL TOKEN, asserted on the event's FIELD", () => {
+  async function detailOf(raw: unknown): Promise<IngressDetailToken | undefined> {
+    const rec = createRecordingDiagnosticsSink();
+    const cap = intentKernel();
+    await createIngress({ kernel: cap.kernel, diag: rec.sink }).submitIntent(raw);
+    return rec.events[0]?.detail;
+  }
+
+  const submitBase = {
+    intent: "submit-decision",
+    instanceId: "i1",
+    opId: "d1",
+    expectedVersion: 3,
+    requestRef: "R",
+    verdict: "approve",
+    by: "human-1",
+  };
+
+  it("a missing `requestRef` → invalid_required_string", async () => {
+    const rest = { ...submitBase } as Record<string, unknown>;
+    delete rest["requestRef"];
+    expect(await detailOf(rest)).toBe("invalid_required_string");
+  });
+
+  it("a missing `verdict` → invalid_required_string", async () => {
+    const rest = { ...submitBase } as Record<string, unknown>;
+    delete rest["verdict"];
+    expect(await detailOf(rest)).toBe("invalid_required_string");
+  });
+
+  it("a non-boolean `override` → invalid_override (the ONE form the token set could not already name)", async () => {
+    expect(await detailOf({ ...submitBase, override: "yes" })).toBe("invalid_override");
+  });
+
+  it("a non-canonicalizable `payload` → payload_not_canonicalizable", async () => {
+    expect(await detailOf({ ...submitBase, payload: { fn: () => 1 } })).toBe(
+      "payload_not_canonicalizable",
+    );
+  });
+
+  it("a present-but-empty `by` → invalid_required_string (form-when-present)", async () => {
+    expect(await detailOf({ ...submitBase, by: "" })).toBe("invalid_required_string");
+  });
+
+  it("a missing `type` on the resume wire → invalid_required_string", async () => {
+    expect(
+      await detailOf({ intent: "resume-wait", instanceId: "i1", opId: "r1", expectedVersion: 4 }),
+    ).toBe("invalid_required_string");
+  });
+
+  it("Q19'S NUMERIC BLOCK: all four refusal cells on BOTH new wires → invalid_expected_version", async () => {
+    // ONE lane suffices for the SHARING (the structural lane in
+    // `drift/operatorIntentClass.test.ts` proves the extraction); these
+    // are the behavioural cells at the two new blocks.
+    for (const bad of ["3", 1.5, -1, -0]) {
+      expect(await detailOf({ ...submitBase, expectedVersion: bad }), String(bad)).toBe(
+        "invalid_expected_version",
+      );
+      expect(
+        await detailOf({
+          intent: "resume-wait",
+          instanceId: "i1",
+          opId: "r1",
+          expectedVersion: bad,
+          type: "COMMIT",
+        }),
+        String(bad),
+      ).toBe("invalid_expected_version");
+    }
   });
 });

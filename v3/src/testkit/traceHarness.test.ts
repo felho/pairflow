@@ -59,6 +59,7 @@ function fakeStore(detail: InstanceDetail, created: WorkflowInstance): StorePort
     createInstance: () => Promise.reject(new Error("unused")),
     commitTransition: () => Promise.reject(new Error("unused")),
     commitLifecycle: () => Promise.reject(new Error("unused")),
+    commitOperatorEntry: () => Promise.reject(new Error("unused")),
     listInstances: () => Promise.reject(new Error("unused")),
     getInstanceDetail: () => Promise.resolve(detail),
     getTimeline: () => Promise.reject(new Error("unused")),

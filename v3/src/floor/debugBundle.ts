@@ -1,4 +1,5 @@
 import type {
+  ActorId,
   DecisionRecommendationSource,
   EpochMillis,
   EventEnvelope,
@@ -114,7 +115,60 @@ export interface BundleDecisionRequestRow {
   readonly committedAt: EpochMillis;
 }
 
-export type BundleRow = BundleTranscriptRow | BundleFactRow | BundleDecisionRequestRow;
+/**
+ * Q10 (packet ch14-p2b): the FOURTH row class. The fact row requires a
+ * `LifecycleFactKind`, which DECISION_MADE is not — so a shape is
+ * FORCED by the union growth, on the same ground as the third class
+ * above, and the CONTENT is the decision: TWO new discriminated shapes
+ * rather than one widened fact row.
+ *
+ * `payload` is NOT carried, and `hasPayload` stands in its place — the
+ * same rule the envelope row and the DECISION_REQUEST row already
+ * follow, and the omission follows K16 EXACTLY because the seam has not
+ * moved: the redaction seam's only DECIDING member takes an ENVELOPE,
+ * which an envelope-less row cannot supply, so no policy can be
+ * consulted and the value is omitted UNIFORMLY under both shipped
+ * policies. The presence bit is what separates "omitted by policy" from
+ * "never carried one".
+ *
+ * `by` and `decision` ARE carried: `decision` is an admitted decision
+ * key, and `by` is the same operator-authored actor-id class K19
+ * classified as untrusted-but-carried on the Ask — an audit surface
+ * that hides WHO decided answers the wrong question (Q16).
+ */
+export interface BundleDecisionMadeRow {
+  readonly seq: number;
+  readonly entryKind: "DECISION_MADE";
+  readonly opId: OpId;
+  readonly decision: string;
+  readonly by: ActorId;
+  readonly requestRef: string;
+  readonly override?: true;
+  /** Presence, never the value — see the class comment. */
+  readonly hasPayload: boolean;
+  readonly committedAt: EpochMillis;
+}
+
+/**
+ * Q10's second new shape. Carried WHOLE, unlike its sibling above,
+ * because every one of its fields is a kernel-minted or admitted
+ * id-grammar token — there is no free-text member to omit.
+ */
+export interface BundleWaitResumedRow {
+  readonly seq: number;
+  readonly entryKind: "WAIT_RESUMED";
+  readonly opId: OpId;
+  readonly kind: string;
+  readonly event: string;
+  readonly committedAt: EpochMillis;
+}
+
+export type BundleRow =
+  | BundleTranscriptRow
+  | BundleFactRow
+  | BundleDecisionRequestRow
+  | BundleDecisionMadeRow
+  | BundleWaitResumedRow;
 
 /**
  * The bundle diag-row projection (the ch7-P3 J matrix): a COPY of
@@ -289,6 +343,35 @@ function toBundleRow(entry: TranscriptEntry, policy: RedactionPolicy): BundleRow
       // is — `in`, not truthiness, so an authored `{}`/`null`/`""`/`0`
       // reports as present.
       hadContext: "contextRef" in entry,
+      committedAt: entry.committedAt,
+    };
+  }
+  // Q10 (packet ch14-p2b): the two OPERATOR-ENTRY classes, each to its
+  // own discriminated shape. They are placed BEFORE the fact arm
+  // because the fact arm's `entryKind` is a `LifecycleFactKind` and
+  // neither of these is one.
+  if (entry.entryKind === "DECISION_MADE") {
+    return {
+      seq: entry.seq,
+      entryKind: entry.entryKind,
+      opId: entry.opId,
+      decision: entry.decision,
+      by: entry.by,
+      requestRef: entry.requestRef,
+      ...(entry.override !== undefined ? { override: entry.override } : {}),
+      // PRESENCE, computed the way every sibling bit is — `in`, never
+      // truthiness, so an authored `{}`/`null`/`""`/`0` reports present.
+      hasPayload: "payload" in entry,
+      committedAt: entry.committedAt,
+    };
+  }
+  if (entry.entryKind === "WAIT_RESUMED") {
+    return {
+      seq: entry.seq,
+      entryKind: entry.entryKind,
+      opId: entry.opId,
+      kind: entry.kind,
+      event: entry.event,
       committedAt: entry.committedAt,
     };
   }

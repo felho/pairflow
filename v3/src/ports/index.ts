@@ -27,6 +27,12 @@ export type {
   DecisionRequestBody,
   InstanceDetail,
   StorePort,
+  // ch14-p2b (Q2): the operator-entry write member's input and the two
+  // op-carrying bodies it discriminates.
+  CommitOperatorEntryInput,
+  DecisionMadeBody,
+  OperatorEntryWrite,
+  WaitResumedBody,
 } from "./store.js";
 export type { DefinitionStore } from "./definition.js";
 export type {

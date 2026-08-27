@@ -1779,3 +1779,383 @@ describe("the park is ONE visible transition (packet ch14-p2a, K2 — the atomic
     handle.close();
   });
 });
+
+/**
+ * The row mapper's integrity errors surface SYNCHRONOUSLY out of
+ * `getInstanceDetail` (it returns `Promise.resolve(...)` rather than
+ * being `async`), so a bare `rejects.toThrow` would not see them. This
+ * normalizes both shapes so a lane asserts the REFUSAL rather than the
+ * throw's delivery mechanism.
+ */
+async function integrityError(read: () => Promise<unknown>): Promise<Error> {
+  try {
+    await read();
+  } catch (error) {
+    return error instanceof Error ? error : new Error(String(error));
+  }
+  throw new Error("expected a store-integrity refusal, got none");
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// FAMILY 5 — persistence of the two OPERATOR-ENTRY classes
+// (packet ch14-p2b, Q2; →[new-variants], →[no-second-bump])
+// ─────────────────────────────────────────────────────────────────────
+
+describe("family 5 — the two operator classes round-trip, body byte-asserted in canonical form", () => {
+  const parked: WorkflowInstance = {
+    ...instance,
+    instanceId: "op-1",
+    kernelStatus: "WAITING",
+    currentStep: "gate",
+    wait: {
+      kind: "human_decision",
+      requestedBy: "gate",
+      resumeEvents: ["approve"],
+      requestRef: "R-1",
+    },
+  };
+
+  const toWait = arrivalFixture({
+    newCurrentStep: "commit_wait",
+    newRound: 1,
+    newKernelStatus: "WAITING",
+    newTerminalDisposition: null,
+    newWait: { kind: "commit_pending", requestedBy: "commit_wait", resumeEvents: ["COMMIT"] },
+    issuedAgentConfig: {},
+  });
+
+  it("DECISION_MADE round-trips, and its stored body carries the model's SNAKE keys", async () => {
+    const path = tempDbPath();
+    const handle = openStore(path, createControlledClock(7));
+    await handle.store.createInstance(parked);
+    const result = await handle.store.commitOperatorEntry({
+      instanceId: "op-1",
+      expectedVersion: parked.version,
+      entry: {
+        kind: "DECISION_MADE",
+        opId: "d1",
+        body: {
+          decision: "request_rework",
+          payload: { instruction: "again" },
+          by: "human-1",
+          requestRef: "R-1",
+          override: true,
+        },
+      },
+      arrival: toWait,
+    });
+    expect(result).toEqual({ kind: "committed", version: parked.version + 1 });
+
+    const detail = await handle.store.getInstanceDetail("op-1");
+    expect(detail?.transcript[0]).toEqual({
+      entryKind: "DECISION_MADE",
+      seq: 1,
+      opId: "d1",
+      decision: "request_rework",
+      payload: { instruction: "again" },
+      by: "human-1",
+      requestRef: "R-1",
+      override: true,
+      committedAt: 7,
+    });
+    handle.close();
+
+    // THE STORED BODY, byte-asserted: canonical JSON, SNAKE keys — the
+    // SAME casing seam the `wait` column and the DECISION_REQUEST body
+    // already follow. A camel-keyed body would round-trip through the
+    // decoder's own spellings and never be seen from the TS side.
+    const raw = new DatabaseSync(path);
+    const row = raw
+      .prepare("SELECT entry_body, op_id, envelope, payload_digest, gate_decisions, issued_agent_config FROM transcript WHERE seq = 1")
+      .get() as {
+      entry_body: string;
+      op_id: string | null;
+      envelope: string | null;
+      payload_digest: string | null;
+      gate_decisions: string | null;
+      issued_agent_config: string | null;
+    };
+    expect(row.entry_body).toBe(
+      '{"by":"human-1","decision":"request_rework","override":true,"payload":{"instruction":"again"},"request_ref":"R-1"}',
+    );
+    // THE COLUMN IFF, forward direction: op-carrying AND body-bearing,
+    // with all four transition-only columns NULL by class.
+    expect(row.op_id).toBe("d1");
+    expect(row.envelope).toBeNull();
+    expect(row.payload_digest).toBeNull();
+    expect(row.gate_decisions).toBeNull();
+    expect(row.issued_agent_config).toBeNull();
+    raw.close();
+  });
+
+  it("WAIT_RESUMED round-trips with SNAKE keys and the same column iff", async () => {
+    const path = tempDbPath();
+    const handle = openStore(path, createControlledClock(7));
+    await handle.store.createInstance({
+      ...parked,
+      instanceId: "op-2",
+      currentStep: "commit_wait",
+      wait: { kind: "commit_pending", requestedBy: "commit_wait", resumeEvents: ["COMMIT"] },
+    });
+    await handle.store.commitOperatorEntry({
+      instanceId: "op-2",
+      expectedVersion: parked.version,
+      entry: { kind: "WAIT_RESUMED", opId: "r1", body: { kind: "commit_pending", event: "COMMIT" } },
+      arrival: arrivalFixture({
+        newCurrentStep: "done",
+        newRound: 1,
+        newKernelStatus: "TERMINAL",
+        newTerminalDisposition: "done",
+        newWait: null,
+        issuedAgentConfig: {},
+      }),
+    });
+    const detail = await handle.store.getInstanceDetail("op-2");
+    expect(detail?.transcript[0]).toEqual({
+      entryKind: "WAIT_RESUMED",
+      seq: 1,
+      opId: "r1",
+      kind: "commit_pending",
+      event: "COMMIT",
+      committedAt: 7,
+    });
+    handle.close();
+    const raw = new DatabaseSync(path);
+    const row = raw.prepare("SELECT entry_body, op_id FROM transcript WHERE seq = 1").get() as {
+      entry_body: string;
+      op_id: string | null;
+    };
+    expect(row.entry_body).toBe('{"event":"COMMIT","kind":"commit_pending"}');
+    expect(row.op_id).toBe("r1");
+    raw.close();
+  });
+
+  it("THE COLUMN IFF IS AN EQUIVALENCE — the REVERSE direction reds for both classes", async () => {
+    // Driving one direction only would let a build route a new class
+    // through the fact branch and still read green on everything but
+    // `op_id`. Both directions, both classes.
+    for (const kind of ["DECISION_MADE", "WAIT_RESUMED"] as const) {
+      const body =
+        kind === "DECISION_MADE"
+          ? '{"by":"h","decision":"approve","request_ref":"R"}'
+          : '{"event":"COMMIT","kind":"commit_pending"}';
+
+      // (a) op-carrying: a NULL op_id on an op-carrying class reds.
+      const noOp = tempDbPath();
+      let handle = openStore(noOp, createControlledClock(0));
+      await handle.store.createInstance({ ...parked, instanceId: "x" });
+      handle.close();
+      let raw = new DatabaseSync(noOp);
+      raw
+        .prepare(
+          "INSERT INTO transcript (instance_id, seq, op_id, entry_kind, envelope, payload_digest, gate_decisions, issued_agent_config, entry_body, committed_at) VALUES ('x', 1, NULL, ?, NULL, NULL, NULL, NULL, ?, 0)",
+        )
+        .run(kind, body);
+      raw.close();
+      handle = openStore(noOp, createControlledClock(0));
+      expect((await integrityError(() => handle.store.getInstanceDetail("x"))).message).toMatch(
+        /NULL op_id/,
+      );
+      handle.close();
+
+      // (b) body-bearing: a NULL entry_body on a body-bearing class reds.
+      const noBody = tempDbPath();
+      handle = openStore(noBody, createControlledClock(0));
+      await handle.store.createInstance({ ...parked, instanceId: "x" });
+      handle.close();
+      raw = new DatabaseSync(noBody);
+      raw
+        .prepare(
+          "INSERT INTO transcript (instance_id, seq, op_id, entry_kind, envelope, payload_digest, gate_decisions, issued_agent_config, entry_body, committed_at) VALUES ('x', 1, 'o1', ?, NULL, NULL, NULL, NULL, NULL, 0)",
+        )
+        .run(kind);
+      raw.close();
+      handle = openStore(noBody, createControlledClock(0));
+      expect((await integrityError(() => handle.store.getInstanceDetail("x"))).message).toMatch(
+        /NULL entry_body/,
+      );
+      handle.close();
+
+      // (c) transition-only columns: a non-null one on these classes reds.
+      const withEnvelope = tempDbPath();
+      handle = openStore(withEnvelope, createControlledClock(0));
+      await handle.store.createInstance({ ...parked, instanceId: "x" });
+      handle.close();
+      raw = new DatabaseSync(withEnvelope);
+      raw
+        .prepare(
+          "INSERT INTO transcript (instance_id, seq, op_id, entry_kind, envelope, payload_digest, gate_decisions, issued_agent_config, entry_body, committed_at) VALUES ('x', 1, 'o1', ?, '{}', NULL, NULL, NULL, ?, 0)",
+        )
+        .run(kind, body);
+      raw.close();
+      handle = openStore(withEnvelope, createControlledClock(0));
+      expect((await integrityError(() => handle.store.getInstanceDetail("x"))).message).toMatch(
+        /transition-only field/,
+      );
+      handle.close();
+    }
+  });
+
+  it("THE PREDICATE SPLIT: a TRANSITION row still refuses an entry_body, and a fact row still refuses one", async () => {
+    // The half that proves `opLess` no longer serves the body rule: the
+    // two OTHER op-carrying classes must still refuse a body.
+    const path = tempDbPath();
+    let handle = openStore(path, createControlledClock(0));
+    await handle.store.createInstance({ ...parked, instanceId: "x" });
+    handle.close();
+    const raw = new DatabaseSync(path);
+    raw
+      .prepare(
+        "INSERT INTO transcript (instance_id, seq, op_id, entry_kind, envelope, payload_digest, gate_decisions, issued_agent_config, entry_body, committed_at) VALUES ('x', 1, 'o1', 'STARTED', NULL, NULL, NULL, NULL, '{}', 0)",
+      )
+      .run();
+    raw.close();
+    handle = openStore(path, createControlledClock(0));
+    expect((await integrityError(() => handle.store.getInstanceDetail("x"))).message).toMatch(
+      /non-null entry_body/,
+    );
+    handle.close();
+  });
+
+  it("→[no-second-bump]: SCHEMA_VERSION is BYTE-UNCHANGED at '6'", async () => {
+    // The lane that reds if a build reaches for a second bump: p2a's was
+    // ONE fence for the whole chapter, and its own row commits to
+    // serving these two classes.
+    const path = tempDbPath();
+    const handle = openStore(path, createControlledClock(0));
+    await handle.store.createInstance({ ...parked, instanceId: "x" });
+    handle.close();
+    const raw = new DatabaseSync(path);
+    const marker = raw
+      .prepare("SELECT value FROM meta WHERE key = 'schema_version'")
+      .get() as { value: string };
+    expect(marker.value).toBe("6");
+    raw.close();
+  });
+});
+
+describe("family 5 — the commit member's OWN three results and the two-row rollback", () => {
+  const parked: WorkflowInstance = {
+    ...instance,
+    instanceId: "res-1",
+    kernelStatus: "WAITING",
+    currentStep: "gate",
+    wait: {
+      kind: "human_decision",
+      requestedBy: "gate",
+      resumeEvents: ["approve"],
+      requestRef: "R-1",
+    },
+  };
+  const toWait = arrivalFixture({
+    newCurrentStep: "commit_wait",
+    newRound: 1,
+    newKernelStatus: "WAITING",
+    newTerminalDisposition: null,
+    newWait: { kind: "commit_pending", requestedBy: "commit_wait", resumeEvents: ["COMMIT"] },
+    issuedAgentConfig: {},
+  });
+  const body = { decision: "approve", by: "human-1", requestRef: "R-1" } as const;
+
+  it("duplicate_op — the IN-TRANSACTION re-check on the entry's OWN kind", async () => {
+    const handle = openStore(":memory:", createControlledClock(0));
+    await handle.store.createInstance(parked);
+    await handle.store.commitOperatorEntry({
+      instanceId: "res-1",
+      expectedVersion: parked.version,
+      entry: { kind: "DECISION_MADE", opId: "d1", body },
+      arrival: toWait,
+    });
+    expect(
+      await handle.store.commitOperatorEntry({
+        instanceId: "res-1",
+        expectedVersion: parked.version + 1,
+        entry: { kind: "DECISION_MADE", opId: "d1", body },
+        arrival: toWait,
+      }),
+    ).toEqual({ kind: "duplicate_op" });
+    handle.close();
+  });
+
+  it("op_id_collision — the same key under ANY other kind", async () => {
+    const handle = openStore(":memory:", createControlledClock(0));
+    await handle.store.createInstance(parked);
+    await handle.store.commitOperatorEntry({
+      instanceId: "res-1",
+      expectedVersion: parked.version,
+      entry: { kind: "DECISION_MADE", opId: "d1", body },
+      arrival: toWait,
+    });
+    expect(
+      await handle.store.commitOperatorEntry({
+        instanceId: "res-1",
+        expectedVersion: parked.version + 1,
+        entry: {
+          kind: "WAIT_RESUMED",
+          opId: "d1",
+          body: { kind: "commit_pending", event: "COMMIT" },
+        },
+        arrival: toWait,
+      }),
+    ).toEqual({ kind: "op_id_collision" });
+    handle.close();
+  });
+
+  it("cas_conflict — from the CAS, on a stale expected version", async () => {
+    const handle = openStore(":memory:", createControlledClock(0));
+    await handle.store.createInstance(parked);
+    expect(
+      await handle.store.commitOperatorEntry({
+        instanceId: "res-1",
+        expectedVersion: parked.version + 99,
+        entry: { kind: "DECISION_MADE", opId: "d1", body },
+        arrival: toWait,
+      }),
+    ).toEqual({ kind: "cas_conflict" });
+    handle.close();
+  });
+
+  it("THE ROLLBACK leaves NOTHING of a failed TWO-ROW commit", async () => {
+    // The member writes up to TWO rows in ONE transaction (the re-park's
+    // fresh DECISION_REQUEST beside its own row). A failure inside must
+    // leave NEITHER — two commits would BE the half-entered gate the
+    // atomicity rule forbids.
+    const handle = openStore(":memory:", createControlledClock(0));
+    await handle.store.createInstance(parked);
+    const before = await handle.store.getInstanceDetail("res-1");
+    const rePark = arrivalFixture({
+      newCurrentStep: "gate",
+      newRound: 1,
+      newKernelStatus: "WAITING",
+      newTerminalDisposition: null,
+      newWait: {
+        kind: "human_decision",
+        requestedBy: "gate",
+        resumeEvents: ["approve"],
+        requestRef: "R-2",
+      },
+      // A body the canonical-JSON encoder REFUSES — the failure lands
+      // between the two INSERTs.
+      decisionRequest: {
+        requestRef: "R-2",
+        recipient: "operator",
+        decisions: ["approve"],
+        contextRef: { bad: () => 1 },
+      },
+      issuedAgentConfig: {},
+    });
+    await expect(
+      handle.store.commitOperatorEntry({
+        instanceId: "res-1",
+        expectedVersion: parked.version,
+        entry: { kind: "DECISION_MADE", opId: "d1", body },
+        arrival: rePark,
+      }),
+    ).rejects.toThrow();
+    // NEITHER row landed, and the CAS's version bump rolled back with them.
+    const after = await handle.store.getInstanceDetail("res-1");
+    expect(after?.transcript).toEqual(before?.transcript ?? []);
+    expect(after?.instance.version).toBe(parked.version);
+    handle.close();
+  });
+});

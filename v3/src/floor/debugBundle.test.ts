@@ -557,6 +557,7 @@ describe("bundle section-state matrix (S) — packet ch7-P3", () => {
       createInstance: () => Promise.reject(new Error("unused")),
       commitTransition: () => Promise.reject(new Error("unused")),
       commitLifecycle: () => Promise.reject(new Error("unused")),
+      commitOperatorEntry: () => Promise.reject(new Error("unused")),
       listInstances: () => Promise.reject(new Error("unused")),
       getInstanceDetail: () => Promise.reject(new Error("detail-boom")),
       getTimeline: () => Promise.reject(new Error("unused")),
@@ -1025,6 +1026,7 @@ function detailStore(detail: InstanceDetail | null): StorePort {
     createInstance: unused,
     commitTransition: unused,
     commitLifecycle: unused,
+    commitOperatorEntry: unused,
     listInstances: unused,
     getInstanceDetail: () => Promise.resolve(detail),
     getTimeline: unused,
@@ -1214,5 +1216,189 @@ describe("the DECISION_REQUEST row class (packet ch14-p2a, K16)", () => {
     expect(JSON.stringify(bundle)).not.toContain(MARKER_A);
     seed.close();
     diag.close();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────
+// FAMILY 13 — the CONFINEMENT, in its TWO OWNED DIRECTIONS
+// (packet ch14-p2b, Q16/Q10; →[confinement-set], →[payload-presence-bit])
+// ─────────────────────────────────────────────────────────────────────
+
+describe("family 13 — the decision payload's store/bundle ASYMMETRY, under BOTH shipped policies", () => {
+  /** A store carrying one DECISION_MADE row (with a payload) and one
+   * WAIT_RESUMED row, seeded through the real write member. */
+  async function seededOperatorRows(): Promise<{
+    readonly store: StorePort;
+    readonly close: () => void;
+  }> {
+    const handle = openStore(":memory:", createControlledClock(1_000));
+    await handle.store.createInstance({
+      instanceId: "inst-1",
+      templateRef: { id: "local-pair-v0", version: 1 },
+      task: "t",
+      binding: { implementer: "codex", reviewer: "claude" },
+      currentStep: "gate",
+      round: 1,
+      kernelStatus: "WAITING",
+      terminalDisposition: null,
+      activationMode: "immediate",
+      wait: {
+        kind: "human_decision",
+        requestedBy: "gate",
+        resumeEvents: ["approve"],
+        requestRef: "R-1",
+      },
+      runtimeContext: { state: "ready", ref: null },
+      failureReason: null,
+      runOverrides: {},
+      version: 1,
+    });
+    const toWait = {
+      newCurrentStep: "commit_wait",
+      newRound: 1,
+      newKernelStatus: "WAITING" as const,
+      newTerminalDisposition: null,
+      newWait: {
+        kind: "commit_pending",
+        requestedBy: "commit_wait",
+        resumeEvents: ["COMMIT"],
+      },
+      issuedAgentConfig: {},
+    } as unknown as Parameters<StorePort["commitOperatorEntry"]>[0]["arrival"];
+    await handle.store.commitOperatorEntry({
+      instanceId: "inst-1",
+      expectedVersion: 1,
+      entry: {
+        kind: "DECISION_MADE",
+        opId: "d1",
+        body: {
+          decision: "request_rework",
+          payload: { instruction: "operator free text" },
+          by: "human-1",
+          requestRef: "R-1",
+          override: true,
+        },
+      },
+      arrival: toWait,
+    });
+    await handle.store.commitOperatorEntry({
+      instanceId: "inst-1",
+      expectedVersion: 2,
+      entry: {
+        kind: "WAIT_RESUMED",
+        opId: "r1",
+        body: { kind: "commit_pending", event: "COMMIT" },
+      },
+      arrival: toWait,
+    });
+    return { store: handle.store, close: () => handle.close() };
+  }
+
+  it("the payload is PRESENT on the STORE row and ABSENT from the BUNDLE row, under BOTH policies", async () => {
+    const { store, close } = await seededOperatorRows();
+    const diag = openDiagStore(":memory:", createControlledClock(0));
+
+    // The STORE side carries the untrusted operator text verbatim.
+    const detail = await store.getInstanceDetail("inst-1");
+    const stored = detail?.transcript.find((e) => e.entryKind === "DECISION_MADE");
+    expect(stored).toMatchObject({ payload: { instruction: "operator free text" } });
+
+    // THE BUNDLE SIDE OMITS IT — UNIFORMLY, under both shipped policies.
+    // The omission follows K16 exactly because the seam has not moved:
+    // the redaction seam's only DECIDING member takes an ENVELOPE, which
+    // an envelope-less row cannot supply, so no policy can be consulted.
+    for (const policy of [redactPayloadsPolicy, devPassthroughRedactionPolicy]) {
+      const bundle = await exportWith(store, diag.reader, policy);
+      const row = bundle?.transcript.find((r) => "entryKind" in r && r.entryKind === "DECISION_MADE");
+      expect(row).toBeDefined();
+      expect("payload" in (row as object)).toBe(false);
+      // `hasPayload` asserted BESIDE it — a silent omission and a
+      // declared one are the two things the bit exists to keep apart.
+      expect(row).toMatchObject({ hasPayload: true });
+      // `by` and `decision` ARE carried: an audit surface that hides WHO
+      // decided answers the wrong question.
+      expect(row).toMatchObject({
+        entryKind: "DECISION_MADE",
+        opId: "d1",
+        decision: "request_rework",
+        by: "human-1",
+        requestRef: "R-1",
+        override: true,
+      });
+    }
+    diag.close();
+    close();
+  });
+
+  it("`hasPayload` is asserted in BOTH states — a payload-LESS decision reports false", async () => {
+    const handle = openStore(":memory:", createControlledClock(1_000));
+    await handle.store.createInstance({
+      instanceId: "inst-1",
+      templateRef: { id: "local-pair-v0", version: 1 },
+      task: "t",
+      binding: { implementer: "codex", reviewer: "claude" },
+      currentStep: "gate",
+      round: 1,
+      kernelStatus: "WAITING",
+      terminalDisposition: null,
+      activationMode: "immediate",
+      wait: {
+        kind: "human_decision",
+        requestedBy: "gate",
+        resumeEvents: ["approve"],
+        requestRef: "R-1",
+      },
+      runtimeContext: { state: "ready", ref: null },
+      failureReason: null,
+      runOverrides: {},
+      version: 1,
+    });
+    await handle.store.commitOperatorEntry({
+      instanceId: "inst-1",
+      expectedVersion: 1,
+      entry: {
+        kind: "DECISION_MADE",
+        opId: "d1",
+        body: { decision: "approve", by: "human-1", requestRef: "R-1" },
+      },
+      arrival: {
+        newCurrentStep: "commit_wait",
+        newRound: 1,
+        newKernelStatus: "WAITING",
+        newTerminalDisposition: null,
+        newWait: {
+          kind: "commit_pending",
+          requestedBy: "commit_wait",
+          resumeEvents: ["COMMIT"],
+        },
+        issuedAgentConfig: {},
+      } as unknown as Parameters<StorePort["commitOperatorEntry"]>[0]["arrival"],
+    });
+    const diag = openDiagStore(":memory:", createControlledClock(0));
+    const bundle = await exportWith(handle.store, diag.reader);
+    const row = bundle?.transcript.find((r) => "entryKind" in r && r.entryKind === "DECISION_MADE");
+    // NEVER CARRIED ONE — distinguished from "omitted by policy" by
+    // exactly this bit.
+    expect(row).toMatchObject({ hasPayload: false });
+    expect("override" in (row as object)).toBe(false);
+    diag.close();
+    handle.close();
+  });
+
+  it("WAIT_RESUMED is carried WHOLE — every field is kernel-minted or an admitted id-grammar token", async () => {
+    const { store, close } = await seededOperatorRows();
+    const diag = openDiagStore(":memory:", createControlledClock(0));
+    const bundle = await exportWith(store, diag.reader);
+    const row = bundle?.transcript.find((r) => "entryKind" in r && r.entryKind === "WAIT_RESUMED");
+    expect(row).toEqual({
+      seq: 2,
+      entryKind: "WAIT_RESUMED",
+      opId: "r1",
+      kind: "commit_pending",
+      event: "COMMIT",
+      committedAt: 1_000,
+    });
+    diag.close();
+    close();
   });
 });

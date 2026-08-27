@@ -36,10 +36,34 @@ export function checkSeqContinuity(detail: InstanceDetail): string[] {
  * stays decidable over floor reads. */
 export function checkVersionArithmetic(detail: InstanceDetail): string[] {
   const failCommits = detail.instance.terminalDisposition === "failed" ? 1 : 0;
-  const expected = 1 + detail.transcript.length + failCommits;
+  // Q11's FOURTH READER, RE-BASED (packet ch14-p2b). This checker was
+  // blind on a DIFFERENT AXIS from the three position readers: it
+  // counted ROWS, corrected upward for the row-LESS commits it already
+  // knew about, which holds only while every commit writes exactly ONE
+  // row. The human-gate park writes TWO in ONE commit, and the `l3`
+  // fixture is its FIRST inhabitant — so the expectation becomes a
+  // count of COMMITS rather than of rows.
+  //
+  // It is DERIVABLE from the committed sequence because the park's
+  // second row is the OP-LESS class, which carries no version of its
+  // own: every other class is committed one row per commit.
+  //
+  // THE RE-BASE IS A NO-OP wherever rows and commits are equal — which
+  // is every history predating this packet — so it moves no existing
+  // trace. That is the ground the "no instrument_manifest" decision
+  // rests on, and it is a property of the histories rather than a hope.
+  //
+  // IT MUST NOT DEGENERATE: reporting nothing whenever the transcript
+  // carries an op-less row would make the golden trace go green while
+  // silently removing version arithmetic from every future trace. The
+  // count below still runs on every history; only the DIVISOR changed.
+  const commits = detail.transcript.filter(
+    (entry) => entry.entryKind !== "DECISION_REQUEST",
+  ).length;
+  const expected = 1 + commits + failCommits;
   if (detail.instance.version !== expected) {
     return [
-      `version arithmetic: version ${String(detail.instance.version)} ≠ 1 + ${String(detail.transcript.length)} committed rows + ${String(failCommits)} fail commits`,
+      `version arithmetic: version ${String(detail.instance.version)} ≠ 1 + ${String(commits)} commits + ${String(failCommits)} fail commits`,
     ];
   }
   return [];
@@ -60,6 +84,14 @@ export function checkOpUniqueness(detail: InstanceDetail): string[] {
     // a seen key would make a SECOND op-less row report a FALSE
     // duplicate. The rule is one line long and general: an op-less row
     // is not an op.
+    //
+    // C22/Q11 (packet ch14-p2b): the two OPERATOR classes are
+    // OP-CARRYING, so the read below is correct for them BY
+    // CONSTRUCTION and they are NOT skipped. The delta this packet owns
+    // is that the skip stays SCOPED TO THE OP-LESS CLASS rather than
+    // growing to "non-transition" — a widened skip would stop seeing
+    // two whole classes of op consumption, which is the lane family 11
+    // drives.
     if (entry.entryKind === "DECISION_REQUEST") {
       continue;
     }
@@ -107,6 +139,19 @@ export function checkEndStateConsistency(
 }
 
 /**
+ * Q11's TWO REPLAY LOOKUPS go through this (Q1's own-property
+ * obligation). A decision key or resume event is an ordinary id-grammar
+ * token, which admits prototype member names — an unguarded index
+ * answers `constructor` with an INHERITED member instead of failing the
+ * reconstruction, which is exactly what these checkers exist to catch.
+ */
+function ownEdge<T>(record: Readonly<Record<string, T>> | undefined, key: string): T | undefined {
+  return record !== undefined && Object.prototype.hasOwnProperty.call(record, key)
+    ? record[key]
+    : undefined;
+}
+
+/**
  * l0d/terminal-is-a-sink (re-based and EXTENDED, packet ch12-p1a T2):
  * pure over floor reads like every checker. Lanes:
  *  (c) the HISTORICAL sink claim: after terminal entry there is no
@@ -147,7 +192,15 @@ export function checkTerminalSink(
       terminalRowSeq = entry.seq;
       continue;
     }
-    if (entry.entryKind !== "transition") {
+    // Q11 (packet ch14-p2b): POSITION is now THREE-WAY. The op-less
+    // DECISION_REQUEST class stays position-inert (the park does not
+    // move the run); the two OPERATOR classes advance it through their
+    // own edge maps, which is what closes this reader's blindness.
+    if (
+      entry.entryKind !== "transition" &&
+      entry.entryKind !== "DECISION_MADE" &&
+      entry.entryKind !== "WAIT_RESUMED"
+    ) {
       continue;
     }
     if (template.terminal.includes(position)) {
@@ -161,15 +214,25 @@ export function checkTerminalSink(
         `terminal sink: reconstructed position '${position}' has no step entry (corrupt history)`,
       ];
     }
-    // DEFERRED(ch14-p2b): this replay advances position on TRANSITION
-    // rows only, so a decision- or resume-routed arrival is INVISIBLE
-    // to it. Unreachable at ch14-p2a (a park leaves WAITING, so no
-    // further transition row can commit), and p2b owns closing this
-    // WITH the arrivals that create it.
-    const target = step.transitions?.[entry.envelope.type];
+    // The edge the row rode, by ROW CLASS: an actor transition through
+    // `transitions[type]`, a decision through `decisions[key].target`,
+    // a resume through `onResume[event]`. Each own-property guarded
+    // exactly as the arrival's own indexes are.
+    const edgeKey =
+      entry.entryKind === "transition"
+        ? entry.envelope.type
+        : entry.entryKind === "DECISION_MADE"
+          ? entry.decision
+          : entry.event;
+    const target =
+      entry.entryKind === "transition"
+        ? ownEdge(step.transitions, edgeKey)
+        : entry.entryKind === "DECISION_MADE"
+          ? ownEdge(step.decisions, edgeKey)?.target
+          : ownEdge(step.onResume, edgeKey);
     if (target === undefined) {
       return [
-        `terminal sink: no transition for '${entry.envelope.type}' at '${position}' — reconstruction failed (corrupt history)`,
+        `terminal sink: no transition for '${edgeKey}' at '${position}' — reconstruction failed (corrupt history)`,
       ];
     }
     position = target;
@@ -317,7 +380,12 @@ export function checkRoundReconstruction(
   let position = template.start;
   let round = activated ? 1 : 0;
   for (const entry of detail.transcript) {
-    if (entry.entryKind !== "transition") {
+    // Q11: the same three-way position walk as the terminal sink above.
+    if (
+      entry.entryKind !== "transition" &&
+      entry.entryKind !== "DECISION_MADE" &&
+      entry.entryKind !== "WAIT_RESUMED"
+    ) {
       continue;
     }
     const step = template.steps[position];
@@ -326,18 +394,28 @@ export function checkRoundReconstruction(
         `round reconstruction: reconstructed position '${position}' has no step entry (corrupt history)`,
       ];
     }
-    // DEFERRED(ch14-p2b): this replay advances position on TRANSITION
-    // rows only, so a decision- or resume-routed arrival is INVISIBLE
-    // to it. Unreachable at ch14-p2a (a park leaves WAITING, so no
-    // further transition row can commit), and p2b owns closing this
-    // WITH the arrivals that create it.
-    const target = step.transitions?.[entry.envelope.type];
+    const edgeKey =
+      entry.entryKind === "transition"
+        ? entry.envelope.type
+        : entry.entryKind === "DECISION_MADE"
+          ? entry.decision
+          : entry.event;
+    const target =
+      entry.entryKind === "transition"
+        ? ownEdge(step.transitions, edgeKey)
+        : entry.entryKind === "DECISION_MADE"
+          ? ownEdge(step.decisions, edgeKey)?.target
+          : ownEdge(step.onResume, edgeKey);
     if (target === undefined) {
       return [
-        `round reconstruction: no transition for '${entry.envelope.type}' at '${position}' — reconstruction failed (corrupt history)`,
+        `round reconstruction: no transition for '${edgeKey}' at '${position}' — reconstruction failed (corrupt history)`,
       ];
     }
-    if (step.advancesRound?.[entry.envelope.type] === true) {
+    // THE ROUND WALK GAINS THE SAME EDGES: `advancesRound` is the
+    // SINGLE per-step map ch14-P1 expanded all three edge classes into,
+    // so it is keyed by the DECISION KEY and the EVENT TYPE here
+    // exactly as by the event type on a transition.
+    if (ownEdge(step.advancesRound, edgeKey) === true) {
       round += 1;
     }
     position = target;

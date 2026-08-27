@@ -1356,3 +1356,96 @@ describe("H1 — the provider-contract cwd resolution (flag F5)", () => {
     h.close();
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────
+// FAMILY 7's RUNNER LEG (packet ch14-p2b, Q6; →[second-producer])
+//
+// THE KERNEL IS NOT THE ONLY DISPATCH PRODUCER. The decision handler is
+// the SECOND site that produces a dispatch handoff, and this loop's
+// delivery is the consumer that must see it: the loop RE-DERIVES a
+// dispatch from committed state and takes its handoff from the
+// transcript scan. After a rework decision, a transition-only scan
+// returns the PRE-GATE transition's payload — the actor's own last emit
+// — rather than the operator's instruction.
+//
+// This lane drives the handoff from the DECISION path through the runner
+// to the actor adapter, which is the ONLY place the two producers'
+// outputs can be compared for shape.
+// ─────────────────────────────────────────────────────────────────────
+
+function mkDecision(seq: number, decision: string, payload: unknown): TranscriptEntry {
+  return {
+    entryKind: "DECISION_MADE",
+    seq,
+    opId: `d-${String(seq)}`,
+    decision,
+    payload,
+    by: "human-1",
+    requestRef: "R-1",
+    committedAt: 1_000 + seq,
+  };
+}
+
+describe("family 7 — the runner's delivery loop carries the DECISION's handoff", () => {
+  it("after a rework decision, the re-derived dispatch carries the OPERATOR's payload, not the pre-gate transition's", async () => {
+    const h = wire({ script: [submitted(committed)] });
+    h.seam.set(mkInstance({ version: 4 }), [
+      // The actor's own last emit — the STALE value a transition-only
+      // scan would return.
+      mkTransition(1, "codex", 2),
+      // The operator's decision, committed AFTER it.
+      mkDecision(2, "request_rework", { instruction: "the operator's instruction" }),
+    ]);
+    // `tick` is what hands the errand to the executor — the point at
+    // which the RE-DERIVED dispatch is observable.
+    await h.loop.tick();
+    const delivered = h.executor.calls[0]?.input.intent;
+    expect(delivered).toBeDefined();
+    expect(delivered?.packet.handoff).toEqual({ instruction: "the operator's instruction" });
+    h.close();
+  });
+
+  it("ORDER decides: a transition committed AFTER a decision supersedes it", async () => {
+    const h = wire({ script: [submitted(committed)] });
+    h.seam.set(mkInstance({ version: 5 }), [
+      mkTransition(1, "codex", 2),
+      mkDecision(2, "request_rework", { instruction: "operator" }),
+      mkTransition(3, "codex", 4),
+    ]);
+    await h.loop.tick();
+    // The LATEST of either class wins — one ordered pass, not two.
+    expect(h.executor.calls[0]?.input.intent.packet.handoff).toEqual({ note: "codex@4" });
+    h.close();
+  });
+
+  it("the two remaining classes are INERT to the handoff scan", async () => {
+    const h = wire({ script: [submitted(committed)] });
+    h.seam.set(mkInstance({ version: 5 }), [
+      mkTransition(1, "codex", 2),
+      mkDecision(2, "request_rework", { instruction: "operator" }),
+      // A resume carries no payload at this level (C18's named Absent);
+      // the op-less park row carries a `context_ref` that RECORDS the
+      // arriving surface rather than handing anything to the next actor.
+      {
+        entryKind: "WAIT_RESUMED",
+        seq: 3,
+        opId: "r1",
+        kind: "commit_pending",
+        event: "COMMIT",
+        committedAt: 1_003,
+      },
+      {
+        entryKind: "DECISION_REQUEST",
+        seq: 4,
+        requestRef: "R-2",
+        recipient: "operator",
+        decisions: ["approve"],
+        contextRef: { not: "a handoff" },
+        committedAt: 1_004,
+      },
+    ]);
+    await h.loop.tick();
+    expect(h.executor.calls[0]?.input.intent.packet.handoff).toEqual({ instruction: "operator" });
+    h.close();
+  });
+});

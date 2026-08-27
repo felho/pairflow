@@ -115,9 +115,24 @@ export function applyTargetEntryEffects(
   const base = { newCurrentStep: target, newRound, issuedAgentConfig } as const;
 
   // The terminal branch is the target SET's membership, not a class
-  // discriminator — and it is UNCHANGED at this packet (its precondition
-  // widening and the resumed-arrival reachability are p2b's).
+  // discriminator. l0d/COMPLETE's precondition WIDENS here (packet
+  // ch14-p2b, Q8): it was ACTIVE-only, and a resumed decision or wait
+  // arrival may now complete too — only DOUBLE-completion is barred.
+  //
+  // THE GUARD IS A DEFENSIVE INTEGRITY BAR, not a driven entry-path
+  // lane, and that is stated rather than dressed up: every entry path's
+  // STATE rung refuses a TERMINAL instance before the arrival runs —
+  // HANDLE requires ACTIVE, the submit requires WAITING(human_decision),
+  // the resume requires WAITING — so no routed entry can present an
+  // already-TERMINAL instance here. It is fail-loud and never a registry
+  // rejection (C19's surface is closed), and its only reachable driver
+  // is a DIRECT unit call.
   if (template.terminal.includes(target)) {
+    if (instance.kernelStatus === "TERMINAL") {
+      throw new Error(
+        `kernel integrity: double completion — instance '${instance.instanceId}' is already TERMINAL`,
+      );
+    }
     return seal({
       ...base,
       newKernelStatus: "TERMINAL",
