@@ -6382,3 +6382,105 @@ final CLEAN.
   pointer to §4 rather than reading as its definition — a facility
   described only inside one mode's clause will keep being read as that
   mode's.
+
+## 2026-08-28 — ch14-p3a authoring: two error classes, neither caught by the internal panel
+
+The packet reached approve after five internal panel rounds, two
+external-arm passes and a ratified contract reopen. The findings
+cluster into two classes, and the clustering is the point: neither was
+content ignorance, and neither was caught by the packet lint or the
+five-lens panel. Both were caught by a reader who traced something.
+
+**CLASS 1 — unclosed quantifiers.** Three times the packet asserted a
+totality the code refutes: "the remaining rejections are post-load"
+(`unknown_instance` and the ladder's own reasons are pre-load);
+"the wait-shape rejections answer before any load" (they read the
+LOADED template); "the four write-class shapes" (four submit shapes
+plus a resume lane). All three were caught by the RATIFIER at source,
+not by the panel — and R-CLAIM-GRAMMAR already forbids exactly this
+("bare wholesale rhetoric with none of the three closures is a
+finding"). The rule exists and the panel's lens-3 owns it; it did not
+fire on any of the three. WATCH: whether the lens's claim-grammar duty
+needs the CODE-side probe the substrate lens has, since all three
+claims read as well-formed prose and only a source check falsifies
+them.
+
+**CLASS 2 — stated outcome, untraced mechanism.** Twice the packet
+stated a correct OUTCOME while the described mechanism produced the
+opposite: the read verb's recovery path (the floor's rejecting load
+would have destroyed the document the row promised to emit), and
+`resume`'s freedom from an early block (the floor's load would still
+have thrown on its resolution read, which is what C27 forbids). Both
+were caught by a verification pass that WALKED the call chain, not by
+one that read the text. The fix in both cases was structural — pass
+`null` where no derivation is needed — rather than textual.
+
+**WHAT THE TWO SHARE:** the packet reads as coherent in both cases. The
+lint cannot see either, and a lens that checks the text against itself
+cannot either. The cheap detector for both is a source trace of the
+specific claim, which is what the ratifier and the arm did.
+
+Also recorded: the reopen payload omitted the template-§5 metrics
+increment and the reopen record; `reopen_runner` does not require
+them, and both were added by hand after the fact. WATCH: whether the
+runner should refuse a payload that carries neither.
+
+## 2026-08-28 — ch14-p3a build entry: a gate that had never closed, and a fold that regenerated its own next round
+
+The build entry found ARM GATE 1 OPEN on a packet already marked
+APPROVED. Passes 1–2 had ended on a `not ready` whose five findings were
+folded, and no hash-citing re-check ran on the folded bytes — the second
+half of §5.5's `find → fold → ONE hash-citing re-check per fold` simply
+did not happen. Five further passes were the cost of finding that out
+late.
+
+**THE STATE WAS NOT ON A REPO SURFACE.** The packet header attested the
+two passes in prose, but the Build record held only its placeholder, so
+the entering session reconstructed the gate's position from `/tmp`
+artifacts. ch14-p2b had already solved this — its gate-1 record is
+written AT THE GATE, "so it survives a lost session" — and that practice
+was applied here rather than re-derived. PROPOSED: promote it from a
+p2b habit to the letter. A gate whose verdict lives only in a session is
+a gate that reopens silently.
+
+**THE RISING COUNT IS THE FINDING, not the total.** The five closing
+passes returned 2 → 3 → 4 → 4 → 0 substantive findings, thirteen in all,
+every one of them ONE class: the C27 reopen SPLIT THE TWO WRITE VERBS
+APART — `resume`'s floor is built with a `null` definition store, so it
+performs no floor load, no Ask derivation, no correlation join and
+carries none of the derivation's eight integrity throws, while
+`submit-decision` does all four — and the packet, written before that
+split existed, kept saying "the write verbs" as if they were one.
+Passes 3–5 folded the INSTANCES each pass named, and the count ROSE:
+an instance-wise fold of a class defect regenerates its own next round,
+because every fold leaves the untouched carriers of the same claim in
+place and makes the surviving ones easier to see. Pass 6 followed a
+SWEEP AGAINST THE CAUSE — the cause stated in the charter, every carrier
+of it checked at once — and that is the pass where the remainder became
+BOUNDED and the reviewer would assert completeness. Pass 7 closed it.
+THE CHEAP DETECTOR IS THEREFORE NOT ANOTHER LENS: it is naming the cause
+and sweeping its carriers, and the charter that ASKS for a complete list
+rather than a sample is what turns a reviewer into that sweep.
+
+**THE CLASS WAS BORN AT THE REOPEN AND NOTHING SWEPT FOR IT.** C27
+arrived at this packet's own contract reopen, mid-authoring, and it did
+not merely add an answer — it introduced an ASYMMETRY between two things
+the packet had treated as one. WATCH, and a candidate rule: a
+contract reopen that DISCRIMINATES two previously-equivalent subjects
+owes a sweep of every sentence that spoke about them together, and the
+reopen payload is where that obligation could be carried. This is the
+sibling of the same session's earlier `reopen_runner` note (the payload
+that omitted its metrics increment and reopen record) — both say the
+reopen's propagation is under-instrumented.
+
+**DETECTOR MISS, recorded for the boundary review:** five internal panel
+rounds and two external-arm passes marked this packet approved with the
+entire class alive. The packet lint cannot see it (it does not read
+prose) and neither can a lens that checks the text against itself — all
+thirteen sentences were well-formed, and only a reader tracing a claim
+against the code, or against a sibling sentence, falsifies them. That is
+the same closing sentence the ch14-p3a authoring entry above reached
+from two different defect classes on the same day, which makes this the
+third data point for one conclusion: THE PACKET'S PROSE IS THE SURFACE
+NOTHING MEASURES, and it is the surface a delegated build treats as its
+only authority.
