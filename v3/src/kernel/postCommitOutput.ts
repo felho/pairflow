@@ -1,4 +1,5 @@
 import type {
+  DecisionRequestBody,
   DispatchIntent,
   HumanDecisionRequest,
   StepId,
@@ -6,10 +7,9 @@ import type {
   WorkflowTemplate,
 } from "../domain/index.js";
 import type { ProviderRegistry } from "../ports/runtimeContextProvider.js";
-import type { DecisionRequestBody } from "../ports/store.js";
 
 import { deriveDispatchIntent } from "./dispatchIntent.js";
-import { humanDecisionRequest } from "./humanDecisionRequest.js";
+import { humanDecisionRequest } from "../domain/index.js";
 
 /**
  * l3/post_commit_output (packet ch14-p2a, K5) — the outbound effect a

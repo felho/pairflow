@@ -17,10 +17,9 @@ export type { CancelInput, CreateInput, KickoffInput, StartInput } from "./lifec
 export { applyTargetEntryEffects } from "./arrival.js";
 export type { ArrivalDeps, ArrivalFrom, ArrivingEntry } from "./arrival.js";
 export { postCommitOutput } from "./postCommitOutput.js";
-// `requiredFields` travels WITH the Ask deliberately: the Ask's
-// `decisionRequirements` and the submit path's required-payload guard
-// must read ONE function, which is why it was minted as its own export.
-export { humanDecisionRequest, requiredFields } from "./humanDecisionRequest.js";
+// ch14-p3a (F4): the Ask derivation MOVED to `domain/`; the barrel keeps
+// naming it, because the kernel's consumers reach it here.
+export { humanDecisionRequest, requiredFields } from "../domain/index.js";
 // ch14-p2b: the two operator intents — the third entry class. Their
 // kernel-side INPUT types carry the nominal `intent` discriminator that
 // realizes the class separation (Q9), so they are named here rather

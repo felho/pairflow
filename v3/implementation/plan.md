@@ -3582,8 +3582,8 @@ materialized ONCE, in `packets/ch14-p2a-arrival-spine.md`'s
 summary — so the two cannot drift. Shape: `foundation → delivery`,
 depth 1, coverage union preserved and declared.
 
-**The prose line above is HISTORY from this point:** its `ch14-P2` row
-never acquires a packet file, and its `Order:` sentence is superseded by
+**The prose line above is HISTORY from this point:** its `ch14-P2` and
+`ch14-P3` rows never acquire packet files, and its `Order:` sentence is superseded by
 the Order line below. **This is ch14's LIVE Packets-and-flow-mode
 table**, and the mechanical next-packet derivation reads it.
 
@@ -3591,12 +3591,26 @@ table**, and the mechanical next-packet derivation reads it.
 |---|---|---|
 | ch14-p2a | the arrival half: `apply_target_entry_effects` factored out of HANDLE with its golden-trace parity obligation and the machine gate that distinguishes a compiler-forced narrow from a re-pin, `park_for_human_decision` / `park_for_wait`, `post_commit_output` and the `HumanDecisionRequest` value, the DECISION_REQUEST transcript class with the chapter's one fenced schema bump, the debug bundle's third row class, the wait record's opened kind seam, the binding-coverage role-less skip with the activation guard it makes necessary, the `Step` type relaxation ch14-P1 deferred, and the registry flips it owns | inherited from the `ch14-P2` row (flag-free approve → autonomous build, measurement; the §5.5 fallbacks stand); predicted: projection (basis: the ratified `ch14-human-decision` contract). The inherited letter REACHES this packet and its §5.5 condition then fails at authoring: the packet carries six new-decision rows and six `approve-ratified` routes — each enumerated ONCE, in the packet's own header and flags — so the MODE resolves to **human approve** (STOP `4:flagged-approve`), recorded in place at ch14-p2a pre-approval, 2026-08-16, on the ch14-P1 / ch13-p1a precedent. ONE of those routes is the RATIFIER's own binding condition at that approve, recorded here because it originated outside the packet: the compiler-forced-vs-re-pin distinction must be machine-checkable in both halves rather than narrative; its realization is the packet's K17 |
 | ch14-p2b | the delivery half — its content is enumerated ONCE, in `packets/ch14-p2a-arrival-spine.md`'s out-of-scope row, and deliberately not repeated here, so the two cannot drift | inherited from the `ch14-P2` row; predicted: projection. The inherited letter REACHES this packet and its §5.5 condition then fails at authoring: the packet carries seven new-decision rows and nine pre-approval flags, seven of them `approve-ratified` and two `fold-now` — each enumerated ONCE, in the packet's own header and flags — so the MODE resolves to **human approve** (STOP `4:flagged-approve`), recorded in place at ch14-p2b pre-approval, 2026-08-27, on the ch14-p2a / ch14-P1 precedent. The seven are admitted against the test the ch14-p2a approve RATIFIED — a shared forcing origin plus a per-row risk statement, never a count: all seven follow from ONE fact, that the two operator intents are a THIRD ENTRY CLASS, sibling to neither the actor envelope nor the lifecycle intent — from which follow the op-carrying row that is neither a transition nor a lifecycle fact, a guard that must consult a record an earlier commit wrote, an admission that needs rungs no existing ladder parameterizes, the version rung no existing lifecycle intent carries, and a driver no existing harness step can supply. TWO of the seven OPEN A SHARED PRODUCTION SURFACE the actor path also rides (the admission ladder, the diagnostic wrapper), and that pair is the substance of two of the flags. They RAISED NO AXIS, stated here because the obvious reading of the equal Σ is false and this row is what a later derivation reads: two of the three axis inputs FELL against ch14-p2a and the third held EXACTLY EQUAL (rows 20 → 19, boundary 61 → 48 frozen-to-frozen, derived+new-decision 13 → 13 with the mix inverted), and Σ=7 is EQUAL because the two that fell fell WITHIN their bands rather than across a threshold. The shared-surface reach is what keeps the boundary axis over its edge, never what pushed the index up; the packet's difficulty-index paragraph carries the arithmetic. A FURTHER cut would be depth 2 and therefore NOT the loop's; the packet's `## Sizing/risk` records the eleven-stop walk (seven trip), the six consume families, and the closure proof WITH its falsifier (the proof fails if the replay closures are deferred, because the golden trace runs the checker kit) |
-| ch14-P3 | the activation: the two operator CLI verbs + the floor's pending-Ask read, the shipped template wiring (`operator` role + `human_approval` + `commit_pending`), the golden-trace re-pins the template change reaches, the journey smoke through the shipped entrypoint | flag-free approve → autonomous build (measurement); predicted: projection (basis: the ratified `ch14-human-decision` contract) — carried UNCHANGED from the prose line's row, which the split does not touch |
+| ch14-p3a | the operator surface: the floor's pending-Ask read with the definition-store dependency C21 names, kept at C21's two values with no unavailability member elected anywhere, the two operator CLI verbs with their one-read resolution, `submit-decision`'s `--by` default and per-flag absence class, and an activation journey over a STAGED gate template | inherited from the `ch14-P3` row (flag-free approve → autonomous build, measurement; the §5.5 fallbacks stand); predicted: projection (basis: the ratified `ch14-human-decision` contract). The inherited letter REACHES this packet and its §5.5 condition then fails at authoring: the packet carries TWO new-decision rows and FOUR `approve-ratified` routes — each enumerated ONCE, in the packet's own header and flags — so the MODE resolves to **human approve** (STOP `4:flagged-approve`), recorded in place at ch14-p3a pre-approval, 2026-08-28, on the ch14-p2b / ch14-p2a / ch14-P1 precedent. The two are a MEASURING-INSTRUMENT decision (a checker's erasure list) and a MODULE HOME. The packet walks the Case-B signal on both limbs: the mass limb does not fire at two rows, and the SEMANTIC limb DOES — the module home is separation — closed not by a classification but by the ratifier's explicit resolution of it at a STOP, twice, the second time after the pre-build arm refused the first home. The chapter's third undecided surface, the disposition of a non-yielded pinned template, was ratified OUT of the packet at this packet's own contract reopen (C27, 2026-08-28) |
+| ch14-p3b | the activation half — its content is enumerated ONCE, in `packets/ch14-p3a-operator-surface.md`'s out-of-scope row (X1), and deliberately not repeated here, so the two cannot drift | inherited from the `ch14-P3` row; predicted: projection. Its mode resolves at ITS authoring, in place, per the same letter |
 
-Order: ch14-p2a → ch14-p2b → ch14-P3 (the arrival precedes the intents
-that route through it, and the activation wires what the kernel
-realizes — the same producer-precedes-consumer reading the
-P1 → P2 → P3 order already carried).
+Order: ch14-p2a → ch14-p2b → ch14-p3a → ch14-p3b (the arrival precedes
+the intents that route through it, the operator's tooling precedes the
+shipped workflow that is driven through it, and the activation wires
+what the kernel realizes — the same producer-precedes-consumer reading
+the P1 → P2 → P3 order already carried).
+
+**The ch14-P3 split, EXECUTED (aligned at ch14-p3a pre-approval,
+2026-08-28):** the in-chapter split pre-authorization — §5.5's, kept by
+the ORDER paragraph above the two exception classes — was taken a second
+time in this chapter. The combined `ch14-P3` scope trips the risk gate
+and the implementation-closure proof fails. WHICH stops, the per-part
+re-evaluation, the closure proof, the two declined alternative cuts and
+the coverage-union partition are materialized ONCE, in
+`packets/ch14-p3a-operator-surface.md`'s `## Sizing/risk`, and are
+deliberately not restated here — not even in summary — so the two cannot
+drift. Shape: `delivery → activation`, depth 1, coverage union preserved
+and declared.
 
 ### 14.5 Deliverables and DoD
 

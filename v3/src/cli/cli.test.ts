@@ -12,12 +12,22 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { loadTemplate } from "../definition/index.js";
 import type { DiagStoreHandle } from "../diag/index.js";
 import { DiagUnavailableError, openDiagStore } from "../diag/index.js";
+import type {
+  ResumeWaitOutcome,
+  SubmitDecisionOutcome,
+  WorkflowInstance,
+} from "../domain/index.js";
 import type { DiagnosticEvent, DiagnosticEventBody } from "../ports/diagnostics.js";
+import type { DefinitionStore } from "../ports/definition.js";
+// The mock factory returns the real module's own shape; naming the type
+// here keeps it out of an inline `import()` annotation (lint).
+import type * as DefinitionModuleShape from "../definition/index.js";
+import type { GateCatalog } from "../ports/gate.js";
 import { openStore } from "../store/index.js";
 import { createControlledClock, createScriptedTailWait } from "../testkit/index.js";
 import type { CliErrorDoc } from "./contract.js";
@@ -27,6 +37,44 @@ import { runCli } from "./main.js";
 import type { CliDeps } from "./runtime.js";
 
 const execFileAsync = promisify(execFile);
+
+/**
+ * V8's store-destination observer (packet ch14-p3a, family 5). The rule
+ * V8 states is OBJECT IDENTITY — a build constructing two stores over the
+ * SAME dir and catalog satisfies every functional, matrix and journey
+ * obligation, because the file store caches nothing — so identity is the
+ * only form of the claim that can FAIL, and nothing but a seam can see it.
+ *
+ * The mock DELEGATES in full: every returned store is the real one behind
+ * a recording wrapper, so no behaviour anywhere in this file changes.
+ */
+type DefinitionModule = typeof DefinitionModuleShape;
+
+const definitionStoreBuilds: DefinitionStore[] = [];
+const definitionLoads: DefinitionStore[] = [];
+
+vi.mock("../definition/index.js", async (importOriginal) => {
+  const actual = await importOriginal<DefinitionModule>();
+  return {
+    ...actual,
+    createFileDefinitionStore: (dir: string, catalog: GateCatalog): DefinitionStore => {
+      const real = actual.createFileDefinitionStore(dir, catalog);
+      const wrapper: DefinitionStore = {
+        load: (ref) => {
+          definitionLoads.push(wrapper);
+          return real.load(ref);
+        },
+      };
+      definitionStoreBuilds.push(wrapper);
+      return wrapper;
+    },
+  };
+});
+
+function resetDefinitionSeam(): void {
+  definitionStoreBuilds.length = 0;
+  definitionLoads.length = 0;
+}
 
 const dirs: string[] = [];
 
@@ -53,12 +101,14 @@ interface TestDepsOptions {
   tailSteps?: ReadonlyArray<() => void | Promise<void>>;
   env?: Readonly<Record<string, string | undefined>>;
   openDiagStore?: CliDeps["openDiagStore"];
+  /** ch14-p3a: the store seam the read-count and race lanes bind. */
+  openStore?: CliDeps["openStore"];
 }
 
 function testDeps(options: TestDepsOptions = {}): CliDeps {
   let ids = 0;
   return {
-    openStore: (path, time) => openStore(path, time),
+    openStore: options.openStore ?? ((path, time) => openStore(path, time)),
     openDiagStore: options.openDiagStore ?? ((path, time) => openDiagStore(path, time)),
     time: createControlledClock(1_000),
     instanceIdSource: () => {
@@ -1770,5 +1820,1020 @@ describe("cli — the two operator classes survive the shipped documents WHOLE (
         "seq",
       ].sort(),
     );
+  });
+});
+
+// ── packet ch14-p3a: the operator's two verbs and the read that feeds them ──
+
+/**
+ * The STAGED gate template (J1): a `humanGate` reachable from an agent
+ * step whose PASS edge RECOMMENDS `approve`, plus a bare `wait` whose
+ * declared resume events cover all three post-admission answers — a
+ * routed one (`COMMIT`), a re-parking one (`REPARK`, which keeps the
+ * non-collision lane drivable), and a DECLARED-but-UNROUTED one
+ * (`ABANDON`), which is what keeps `no_resume_transition` reachable.
+ *
+ * Staged rather than shipped: `local-pair-v0` declares no gate until
+ * ch14-p3b, and this packet's boundary carries neither that file nor the
+ * shared fixture.
+ */
+const GATED_TEMPLATE_YAML = `ref:
+  id: gated-v0
+  version: 1
+start: implement
+steps:
+  implement:
+    role: implementer
+    instruction: |-
+      build it
+    transitions:
+      PASS: gate
+    recommends:
+      PASS: approve
+  gate:
+    type: humanGate
+    role: operator
+    instruction: |-
+      approve it?
+    decisions:
+      approve:
+        target: hold
+      again:
+        target: gate
+      finish:
+        target: done
+      rework:
+        target: implement
+        payload:
+          instruction:
+            required: true
+          refs:
+            required: false
+  hold:
+    type: wait
+    wait:
+      kind: commit_pending
+      resumeEvents:
+        - COMMIT
+        - REPARK
+        - ABANDON
+    onResume:
+      COMMIT: done
+      REPARK: hold
+terminal:
+  - done
+roles:
+  implementer:
+    defaultActor: codex
+  operator:
+    defaultActor: human-1
+`;
+
+function stagedTemplatesDir(body: string = GATED_TEMPLATE_YAML): string {
+  const dir = mkdtempSync(join(tmpdir(), "v3-p3a-tpl-"));
+  dirs.push(dir);
+  writeFileSync(join(dir, "gated-v0@1.yaml"), body);
+  return dir;
+}
+
+/** A dir that LISTS but yields no matching file — C27's `null` shape. */
+function emptyTemplatesDir(): string {
+  const dir = mkdtempSync(join(tmpdir(), "v3-p3a-empty-"));
+  dirs.push(dir);
+  return dir;
+}
+
+/**
+ * Nonces are GLOBALLY unique across these lanes by default: two deps
+ * objects over the same store would otherwise mint the same `op_id` and
+ * every second write would answer `op_id_collision`. The collision lanes
+ * PIN the source deliberately, which is exactly the distinction family 8
+ * says the two idempotency halves must keep apart.
+ */
+let p3aNonce = 0;
+
+function gatedDeps(templatesDir: string, options: TestDepsOptions = {}): CliDeps {
+  return testDeps({
+    nonce: () => `p3a-${String((p3aNonce += 1))}`,
+    ...options,
+    env: { PAIRFLOW_V3_TEMPLATES: templatesDir },
+  });
+}
+
+/** A nonce source that is unique UNTIL pinned — the collision and replay
+ * lanes pin it for exactly the invocations whose op id must repeat. */
+function pinnableNonce(): { source: () => string; pin: (value: string | null) => void } {
+  let pinned: string | null = null;
+  return {
+    source: () => pinned ?? `p3a-${String((p3aNonce += 1))}`,
+    pin: (value) => {
+      pinned = value;
+    },
+  };
+}
+
+/**
+ * THE RACE V2 DESCRIBES, made stageable: the FLOOR read sees committed
+ * state and the KERNEL's own `loadInstance` — a strictly later read —
+ * sees the instance as a concurrent move left it. This is the ONLY way
+ * the three race-reachable answers (`stale`, `not_awaiting_decision`,
+ * `decision_request_mismatch`) are drivable from this surface at all;
+ * the non-raced cases are answered by V4 before the kernel is reached.
+ */
+function racedStore(map: (instance: WorkflowInstance) => WorkflowInstance): CliDeps["openStore"] {
+  return (path, time) => {
+    const handle = openStore(path, time);
+    return {
+      ...handle,
+      store: {
+        ...handle.store,
+        loadInstance: async (id) => {
+          const loaded = await handle.store.loadInstance(id);
+          return loaded === null ? null : map(loaded);
+        },
+      },
+    };
+  };
+}
+
+/** Counts the FLOOR/store detail reads an invocation performs (V2/V9). */
+function countingStore(counter: { reads: number }): CliDeps["openStore"] {
+  return (path, time) => {
+    const handle = openStore(path, time);
+    return {
+      ...handle,
+      store: {
+        ...handle.store,
+        getInstanceDetail: (id) => {
+          counter.reads += 1;
+          return handle.store.getInstanceDetail(id);
+        },
+      },
+    };
+  };
+}
+
+/** create → start → PASS: the run lands PARKED at the human gate. */
+async function parkedRun(db: string, deps: CliDeps, templatesDir: string): Promise<string> {
+  const created = await run(
+    ["create", "--db", db, "--task", "decide it", "--template", "gated-v0@1",
+     "--override", "operator=decider-7", "--templates-dir", templatesDir],
+    deps,
+  );
+  expect(created.code).toBe(EXIT.ok);
+  const id = (JSON.parse(created.stdout[0] ?? "") as { instanceId: string }).instanceId;
+  expect((await run(["start", id, "--db", db, "--templates-dir", templatesDir], deps)).code)
+    .toBe(EXIT.ok);
+  const passed = await run(
+    ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "2",
+     "--expected-role", "implementer", "--templates-dir", templatesDir],
+    deps,
+  );
+  expect(passed.code).toBe(EXIT.ok);
+  expect(JSON.parse(passed.stdout[0] ?? "")).toMatchObject({ kind: "committed", version: 3 });
+  return id;
+}
+
+/** A verb's DATA answer: exactly one stdout document, nothing on stderr. */
+function dataDoc(result: Run): Record<string, unknown> {
+  expect(result.stderr).toEqual([]);
+  expect(result.stdout).toHaveLength(1);
+  return JSON.parse(result.stdout[0] ?? "") as Record<string, unknown>;
+}
+
+type SubmitReason = Extract<SubmitDecisionOutcome, { kind: "rejected" }>["reason"];
+type ResumeReason = Extract<ResumeWaitOutcome, { kind: "rejected" }>["reason"];
+
+/**
+ * Family 4's membership owner is the UNION ITSELF, not a hand-copied
+ * list: `Record<Reason, …>` is total, so a token added to
+ * `domain/outcome.ts` later arrives here WITHOUT a lane and the
+ * derivation is what notices — a compile error, not a silent gap.
+ *
+ * `gated-out` is V6's exclusion set, and each of its members carries the
+ * reason it cannot surface. Every other token is DRIVEN end-to-end.
+ */
+const SUBMIT_REASONS: Record<SubmitReason, "driven" | "gated-out"> = {
+  unknown_instance: "gated-out", // V4 (i) answers it before the kernel
+  missing_version: "gated-out", // no --expected-version flag exists (V2)
+  op_id_collision: "driven",
+  not_awaiting_decision: "driven", // race-only, and the race is staged
+  decision_request_mismatch: "driven", // race-only, and the race is staged
+  operator_not_authorized: "driven",
+  unknown_decision: "driven",
+  missing_required_field: "driven",
+  override_required: "driven",
+  override_not_applicable: "driven",
+};
+
+const RESUME_REASONS: Record<ResumeReason, "driven" | "gated-out"> = {
+  unknown_instance: "gated-out",
+  missing_version: "gated-out",
+  op_id_collision: "driven",
+  not_waiting: "driven",
+  resume_event_mismatch: "driven",
+  not_bare_wait: "driven",
+  no_resume_transition: "driven",
+};
+
+function drivenReasons(table: Record<string, "driven" | "gated-out">): string[] {
+  return Object.keys(table).filter((k) => table[k] === "driven").sort();
+}
+
+describe("cli — ch14-p3a family 1/3/10: the detail document under every derivability state", () => {
+  it("carries pendingDecision for a parked run, and grows by EXACTLY that one key", async () => {
+    const db = tempDbPath();
+    const dir = stagedTemplatesDir();
+    const deps = gatedDeps(dir);
+    const id = await parkedRun(db, deps, dir);
+
+    const parked = await run(["detail", id, "--db", db, "--templates-dir", dir], deps);
+    const doc = dataDoc(parked);
+    expect(parked.code).toBe(EXIT.ok);
+    // PER SURFACE, PER STATE, against a CLOSED literal keyset (F7).
+    expect(Object.keys(doc).sort()).toEqual([
+      "instance",
+      "pendingDecision",
+      "runner",
+      "transcript",
+    ]);
+    const ask = doc["pendingDecision"] as Record<string, unknown>;
+    expect(Object.keys(ask).sort()).toEqual([
+      "allowedDecisions",
+      "context",
+      "decisionRequirements",
+      "expectedVersion",
+      "instanceId",
+      "operator",
+      "question",
+      "recommendation",
+      "requestRef",
+    ]);
+    expect(ask["operator"]).toBe("decider-7");
+    expect(ask["recommendation"]).toBe("approve");
+    expect(ask["allowedDecisions"]).toEqual(["approve", "again", "finish", "rework"]);
+  });
+
+  it("emits the WHOLE document with the member ABSENT for all THREE underivable conditions — and adds NO key", async () => {
+    const db = tempDbPath();
+    const dir = stagedTemplatesDir();
+    const deps = gatedDeps(dir);
+    const id = await parkedRun(db, deps, dir);
+    const malformed = stagedTemplatesDir("ref:\n  id: gated-v0\n  version: 1\nstart: nope\n");
+
+    const lanes: readonly (readonly [string, readonly string[], CliDeps])[] = [
+      // (1) the dependency is NULL — no dir configured anywhere
+      ["dependency-null", ["detail", id, "--db", db], testDeps({ env: {} })],
+      // (2) the dependency is WIRED and the load returns null
+      ["wired-and-null", ["detail", id, "--db", db, "--templates-dir", emptyTemplatesDir()], deps],
+      // (3) the dependency is WIRED and the load REJECTS — V9's recovery read
+      ["wired-and-throws", ["detail", id, "--db", db, "--templates-dir", malformed], deps],
+    ];
+    for (const [lane, argv, laneDeps] of lanes) {
+      const result = await run(argv, laneDeps);
+      expect(result.code, lane).toBe(EXIT.ok);
+      const doc = dataDoc(result);
+      // ONE whole document, its existing members intact…
+      expect(Object.keys(doc).sort(), lane).toEqual(["instance", "runner", "transcript"]);
+      // …the member ABSENT rather than valued…
+      expect("pendingDecision" in doc, lane).toBe(false);
+      // …and `wait.kind` STILL READABLE beside it: the pair of fields is
+      // what separates "not parked" from "parked but unyielded" (C27).
+      expect((doc["instance"] as { wait: { kind: string } }).wait.kind, lane).toBe(
+        "human_decision",
+      );
+    }
+  });
+
+  it("the read verb's ORDERING: a NOT-parked run with a REJECTING template takes ZERO loads and exactly ONE detail read", async () => {
+    const db = tempDbPath();
+    const dir = stagedTemplatesDir();
+    const setup = gatedDeps(dir);
+    const created = await run(
+      ["create", "--db", db, "--task", "t", "--template", "gated-v0@1", "--templates-dir", dir],
+      setup,
+    );
+    const id = (JSON.parse(created.stdout[0] ?? "") as { instanceId: string }).instanceId;
+    expect((await run(["start", id, "--db", db, "--templates-dir", dir], setup)).code).toBe(EXIT.ok);
+
+    // The DOCUMENT is identical either way on this cell — so the lane
+    // rests on the read COUNT: an eager-load build would throw at the
+    // floor and take V9's recovery read, making it two.
+    const counter = { reads: 0 };
+    const malformed = stagedTemplatesDir("ref:\n  id: gated-v0\n  version: 1\nstart: nope\n");
+    const result = await run(
+      ["detail", id, "--db", db, "--templates-dir", malformed],
+      gatedDeps(malformed, { openStore: countingStore(counter) }),
+    );
+    expect(result.code).toBe(EXIT.ok);
+    expect(counter.reads).toBe(1);
+    // …and the SAME rejecting dir on a PARKED run DOES take the recovery
+    // read, which is what keeps the 1 above from being vacuous.
+    const parkedCounter = { reads: 0 };
+    const db2 = tempDbPath();
+    const id2 = await parkedRun(db2, setup, dir);
+    const recovered = await run(
+      ["detail", id2, "--db", db2, "--templates-dir", malformed],
+      gatedDeps(malformed, { openStore: countingStore(parkedCounter) }),
+    );
+    expect(recovered.code).toBe(EXIT.ok);
+    expect(parkedCounter.reads).toBe(2);
+  });
+
+  it("family 2b: an INTEGRITY throw is NEVER degraded — the read verb's narrowed catch RE-THROWS it", async () => {
+    const db = tempDbPath();
+    const dir = stagedTemplatesDir();
+    const deps = gatedDeps(dir);
+    const id = await parkedRun(db, deps, dir);
+    // The staged precondition: a parked run whose committed request row
+    // the wait no longer names — F3's join condition, an impossible
+    // committed state. The lane asserts the CLASS, never the document
+    // `name`: the derivation's throws are bare `Error`s and `name` cannot
+    // discriminate them.
+    const doctored: CliDeps["openStore"] = (path, time) => {
+      const handle = openStore(path, time);
+      return {
+        ...handle,
+        store: {
+          ...handle.store,
+          getInstanceDetail: async (target) => {
+            const detail = await handle.store.getInstanceDetail(target);
+            return detail === null
+              ? null
+              : {
+                  ...detail,
+                  instance: {
+                    ...detail.instance,
+                    wait: { ...detail.instance.wait!, requestRef: "req-never-committed" },
+                  },
+                };
+          },
+        },
+      };
+    };
+    const readVerb = await run(
+      ["detail", id, "--db", db, "--templates-dir", dir],
+      gatedDeps(dir, { openStore: doctored }),
+    );
+    // A BARE catch here would have emitted a silently member-less
+    // document at exit 0 — this is the lane that falsifies it.
+    assertErrorContract(readVerb, "internal", EXIT.internal);
+
+    const writeVerb = await run(
+      ["submit-decision", id, "--db", db, "--decision", "approve", "--templates-dir", dir],
+      gatedDeps(dir, { openStore: doctored }),
+    );
+    assertErrorContract(writeVerb, "internal", EXIT.internal);
+  });
+});
+
+describe("cli — ch14-p3a family 6: resolution failure and its ZERO side effects", () => {
+  it("the SUBMIT path's four lanes: two classes, four names, and nothing committed", async () => {
+    const db = tempDbPath();
+    const dir = stagedTemplatesDir();
+    const deps = gatedDeps(dir);
+    const parkedId = await parkedRun(db, deps, dir);
+    const activeDb = tempDbPath();
+    const created = await run(
+      ["create", "--db", activeDb, "--task", "t", "--template", "gated-v0@1",
+       "--templates-dir", dir],
+      deps,
+    );
+    const activeId = (JSON.parse(created.stdout[0] ?? "") as { instanceId: string }).instanceId;
+    expect((await run(["start", activeId, "--db", activeDb, "--templates-dir", dir], deps)).code)
+      .toBe(EXIT.ok);
+    const malformed = stagedTemplatesDir("ref:\n  id: gated-v0\n  version: 1\nstart: nope\n");
+
+    const before = dataDoc(await run(["detail", parkedId, "--db", db, "--templates-dir", dir], deps));
+
+    const lanes: readonly (readonly [string, readonly string[], string, string, number])[] = [
+      // (i) UNKNOWN INSTANCE — the standing read-side not-found document
+      ["(i)", ["submit-decision", "ghost", "--db", db, "--decision", "approve",
+               "--templates-dir", dir], "not_found", "UnknownInstance", EXIT.notFound],
+      // (ii) NO PENDING DECISION — keyed on the PARK STATE, never on the
+      //      member's absence (C27's own reason)
+      ["(ii)", ["submit-decision", activeId, "--db", activeDb, "--decision", "approve",
+                "--templates-dir", dir], "not_found", "NoPendingDecision", EXIT.notFound],
+      // (iii) the pinned template is NOT YIELDED — TWO shapes, two names
+      ["(iii)-rejects", ["submit-decision", parkedId, "--db", db, "--decision", "approve",
+                         "--templates-dir", malformed], "internal", "TemplateInvalid",
+       EXIT.internal],
+      ["(iii)-null", ["submit-decision", parkedId, "--db", db, "--decision", "approve",
+                      "--templates-dir", emptyTemplatesDir()], "internal", "TemplateUnavailable",
+       EXIT.internal],
+    ];
+    for (const [lane, argv, cls, name, code] of lanes) {
+      const result = await run(argv, deps);
+      assertErrorContract(result, cls, code);
+      // On the document's FIELDS, never on a token in its message.
+      expect(errorDoc(result).name, lane).toBe(name);
+    }
+
+    // …and NOTHING was committed by any of them: no transcript row, no
+    // version move, no op consumed.
+    const after = dataDoc(await run(["detail", parkedId, "--db", db, "--templates-dir", dir], deps));
+    expect(after["instance"]).toStrictEqual(before["instance"]);
+    expect(after["transcript"]).toStrictEqual(before["transcript"]);
+  });
+
+  it("the ORDERING member, submit-only: NOT parked + an unreadable pinned file answers (ii) at exit 3", async () => {
+    const db = tempDbPath();
+    const dir = stagedTemplatesDir();
+    const deps = gatedDeps(dir);
+    const created = await run(
+      ["create", "--db", db, "--task", "t", "--template", "gated-v0@1", "--templates-dir", dir],
+      deps,
+    );
+    const id = (JSON.parse(created.stdout[0] ?? "") as { instanceId: string }).instanceId;
+    expect((await run(["start", id, "--db", db, "--templates-dir", dir], deps)).code).toBe(EXIT.ok);
+    const malformed = stagedTemplatesDir("ref:\n  id: gated-v0\n  version: 1\nstart: nope\n");
+    // An EAGER-LOAD build answers V4 (iii) at exit 1 here; the
+    // short-circuit owes V4 (ii) at exit 3.
+    const result = await run(
+      ["submit-decision", id, "--db", db, "--decision", "approve", "--templates-dir", malformed],
+      deps,
+    );
+    assertErrorContract(result, "not_found", EXIT.notFound);
+    expect(errorDoc(result).name).toBe("NoPendingDecision");
+  });
+
+  it("C27's MANDATORY resume lane: on an UNYIELDED template resume reaches the KERNEL, never an early integrity document", async () => {
+    const db = tempDbPath();
+    const dir = stagedTemplatesDir();
+    const deps = gatedDeps(dir);
+    const id = await parkedRun(db, deps, dir);
+    // A REJECTING dir on a GATE-parked run, deliberately: this is the ONE
+    // shape that separates a `null` floor from one carrying a store. Under
+    // an empty dir both answer the same document, so the lane would be
+    // blind; under a rejecting one a floor WITH a store throws before
+    // admission and the verb answers `TemplateInvalid` at exit 1 — which
+    // is exactly the build C27 forbids and a build copying the submit
+    // block would produce.
+    const malformed = stagedTemplatesDir("ref:\n  id: gated-v0\n  version: 1\nstart: nope\n");
+    const result = await run(
+      ["resume", id, "--db", db, "--event", "WRONG", "--templates-dir", malformed],
+      gatedDeps(malformed),
+    );
+    expect(result.code).toBe(EXIT.notFound);
+    expect(dataDoc(result)).toEqual({ kind: "rejected", reason: "resume_event_mismatch" });
+  });
+
+  it("the PRE-LOAD guarantee, driven POSITIVELY: with an unyielded template every pre-load answer still arrives as DATA", async () => {
+    const dir = stagedTemplatesDir();
+    const empty = emptyTemplatesDir();
+    const malformed = stagedTemplatesDir("ref:\n  id: gated-v0\n  version: 1\nstart: nope\n");
+
+    // duplicate — a replayed op id, under a pinned nonce
+    const dupDb = tempDbPath();
+    const dupNonce = pinnableNonce();
+    const dupDeps = gatedDeps(dir, { nonce: dupNonce.source });
+    const dupId = await parkedRun(dupDb, dupDeps, dir);
+    expect(
+      (await run(["submit-decision", dupId, "--db", dupDb, "--decision", "approve",
+                  "--templates-dir", dir], dupDeps)).code,
+    ).toBe(EXIT.ok);
+    dupNonce.pin("resume-1");
+    expect(
+      dataDoc(await run(["resume", dupId, "--db", dupDb, "--event", "REPARK",
+                         "--templates-dir", dir], dupDeps)),
+    ).toMatchObject({ kind: "committed" });
+    // …and the REPLAY under an UNYIELDED template still answers duplicate.
+    const replay = await run(
+      ["resume", dupId, "--db", dupDb, "--event", "REPARK", "--templates-dir", empty],
+      gatedDeps(empty, { nonce: () => "resume-1" }),
+    );
+    expect(replay.code).toBe(EXIT.ok);
+    expect(dataDoc(replay)).toEqual({ kind: "duplicate" });
+
+    // stale — the version moved between the floor read and the kernel's load
+    const staleDb = tempDbPath();
+    const staleId = await parkedRun(staleDb, gatedDeps(dir), dir);
+    expect(
+      (await run(["submit-decision", staleId, "--db", staleDb, "--decision", "approve",
+                  "--templates-dir", dir], gatedDeps(dir))).code,
+    ).toBe(EXIT.ok);
+    const staleResult = await run(
+      ["resume", staleId, "--db", staleDb, "--event", "REPARK", "--templates-dir", malformed],
+      gatedDeps(malformed, {
+        openStore: racedStore((i) => ({ ...i, version: i.version + 1 })),
+      }),
+    );
+    expect(staleResult.code).toBe(EXIT.notFound);
+    expect(dataDoc(staleResult)).toMatchObject({ kind: "stale" });
+
+    // not_waiting — an ACTIVE run, under an unyielded template
+    const activeDb = tempDbPath();
+    const setup = gatedDeps(dir);
+    const created = await run(
+      ["create", "--db", activeDb, "--task", "t", "--template", "gated-v0@1",
+       "--templates-dir", dir],
+      setup,
+    );
+    const activeId = (JSON.parse(created.stdout[0] ?? "") as { instanceId: string }).instanceId;
+    expect((await run(["start", activeId, "--db", activeDb, "--templates-dir", dir], setup)).code)
+      .toBe(EXIT.ok);
+    const notWaiting = await run(
+      ["resume", activeId, "--db", activeDb, "--event", "COMMIT", "--templates-dir", malformed],
+      gatedDeps(malformed),
+    );
+    expect(notWaiting.code).toBe(EXIT.notFound);
+    expect(dataDoc(notWaiting)).toEqual({ kind: "rejected", reason: "not_waiting" });
+  });
+
+  it("the KERNEL's OWN load stays reachable POST-admission on resume — BOTH shapes are its integrity error", async () => {
+    const dir = stagedTemplatesDir();
+    const malformed = stagedTemplatesDir("ref:\n  id: gated-v0\n  version: 1\nstart: nope\n");
+    for (const [shape, badDir] of [
+      ["rejecting", malformed],
+      ["null", emptyTemplatesDir()],
+    ] as const) {
+      const db = tempDbPath();
+      const id = await parkedRun(db, gatedDeps(dir), dir);
+      expect(
+        (await run(["submit-decision", id, "--db", db, "--decision", "approve",
+                    "--templates-dir", dir], gatedDeps(dir))).code,
+      ).toBe(EXIT.ok);
+      // Admission PASSES (a bare wait, a routed event, a fresh op, the
+      // right version) and the load lands after it — resume avoids the
+      // FLOOR load, never EVERY load.
+      const result = await run(
+        ["resume", id, "--db", db, "--event", "COMMIT", "--templates-dir", badDir],
+        gatedDeps(badDir),
+      );
+      assertErrorContract(result, "internal", EXIT.internal);
+      expect(result.stdout, shape).toEqual([]);
+    }
+  });
+
+  it("V4 (i) on the RESUME path — an unknown instance is the same standing not-found document", async () => {
+    const dir = stagedTemplatesDir();
+    const result = await run(
+      ["resume", "ghost", "--db", tempDbPath(), "--event", "COMMIT", "--templates-dir", dir],
+      gatedDeps(dir),
+    );
+    assertErrorContract(result, "not_found", EXIT.notFound);
+    expect(errorDoc(result).name).toBe("UnknownInstance");
+  });
+});
+
+describe("cli — ch14-p3a family 4: the exit and channel matrix, TOTAL over BOTH unions", () => {
+  it("submit-decision: every DRIVEN reason token reaches exit 3 as a stdout DATA document", async () => {
+    const dir = stagedTemplatesDir();
+    const observed = new Map<string, number>();
+
+    const park = async (): Promise<{ db: string; id: string; deps: CliDeps }> => {
+      const db = tempDbPath();
+      const deps = gatedDeps(dir);
+      return { db, id: await parkedRun(db, deps, dir), deps };
+    };
+    const decide = async (
+      argv: readonly string[],
+      db: string,
+      id: string,
+      deps: CliDeps,
+    ): Promise<void> => {
+      const result = await run(
+        ["submit-decision", id, "--db", db, "--templates-dir", dir, ...argv],
+        deps,
+      );
+      const doc = dataDoc(result);
+      expect(doc["kind"]).toBe("rejected");
+      observed.set(doc["reason"] as string, result.code);
+    };
+
+    // the key-scoped guards and the authority rung
+    let ctx = await park();
+    await decide(["--decision", "nope"], ctx.db, ctx.id, ctx.deps);
+    ctx = await park();
+    await decide(["--decision", "rework"], ctx.db, ctx.id, ctx.deps);
+    ctx = await park();
+    await decide(["--decision", "finish"], ctx.db, ctx.id, ctx.deps);
+    ctx = await park();
+    await decide(["--decision", "approve", "--override"], ctx.db, ctx.id, ctx.deps);
+    ctx = await park();
+    await decide(["--decision", "approve", "--by", "somebody-else"], ctx.db, ctx.id, ctx.deps);
+
+    // op_id_collision — the nonce the STARTED fact already consumed
+    {
+      const db = tempDbPath();
+      const control = pinnableNonce();
+      const deps = gatedDeps(dir, { nonce: control.source });
+      control.pin("start-op");
+      const created = await run(
+        ["create", "--db", db, "--task", "t", "--template", "gated-v0@1", "--templates-dir", dir],
+        deps,
+      );
+      const id = (JSON.parse(created.stdout[0] ?? "") as { instanceId: string }).instanceId;
+      expect((await run(["start", id, "--db", db, "--templates-dir", dir], deps)).code).toBe(EXIT.ok);
+      control.pin(null);
+      expect(
+        (await run(["submit", "--db", db, "--instance", id, "--type", "PASS",
+                    "--expected-version", "2", "--expected-role", "implementer",
+                    "--templates-dir", dir], deps)).code,
+      ).toBe(EXIT.ok);
+      // The nonce the STARTED fact already consumed — a DIFFERENT entry
+      // kind under the same (instance, op_id) key.
+      control.pin("start-op");
+      await decide(["--decision", "approve"], db, id, deps);
+    }
+
+    // the two RACE-reachable rungs, each staged as the race it is
+    {
+      const db = tempDbPath();
+      const id = await parkedRun(db, gatedDeps(dir), dir);
+      await decide(
+        ["--decision", "approve"], db, id,
+        gatedDeps(dir, {
+          openStore: racedStore((i) => ({ ...i, kernelStatus: "ACTIVE", wait: null })),
+        }),
+      );
+    }
+    {
+      const db = tempDbPath();
+      const id = await parkedRun(db, gatedDeps(dir), dir);
+      await decide(
+        ["--decision", "approve"], db, id,
+        gatedDeps(dir, {
+          openStore: racedStore((i) => ({
+            ...i,
+            wait: { ...i.wait!, requestRef: "moved-on" },
+          })),
+        }),
+      );
+    }
+
+    // TOTALITY: the observed set IS the declared driven set — a token
+    // declared driven but never reached fails here, and a token added to
+    // the union without an entry fails at COMPILE time.
+    expect([...observed.keys()].sort()).toEqual(drivenReasons(SUBMIT_REASONS));
+    for (const [reason, code] of observed) {
+      expect(code, reason).toBe(EXIT.notFound);
+    }
+  });
+
+  it("resume: every DRIVEN reason token reaches exit 3 as a stdout DATA document", async () => {
+    const dir = stagedTemplatesDir();
+    const observed = new Map<string, number>();
+    const record = async (argv: readonly string[], deps: CliDeps): Promise<void> => {
+      const result = await run(argv, deps);
+      const doc = dataDoc(result);
+      expect(doc["kind"]).toBe("rejected");
+      observed.set(doc["reason"] as string, result.code);
+    };
+
+    // not_bare_wait — a run parked on a DECISION wait, resumed with one of
+    // the gate's own decision keys (the correlation rung passes, and the
+    // POST-admission shape guard is what refuses).
+    {
+      const db = tempDbPath();
+      const id = await parkedRun(db, gatedDeps(dir), dir);
+      await record(["resume", id, "--db", db, "--event", "approve", "--templates-dir", dir],
+                   gatedDeps(dir));
+      await record(["resume", id, "--db", db, "--event", "NOPE", "--templates-dir", dir],
+                   gatedDeps(dir));
+    }
+    // not_waiting — an ACTIVE run
+    {
+      const db = tempDbPath();
+      const deps = gatedDeps(dir);
+      const created = await run(
+        ["create", "--db", db, "--task", "t", "--template", "gated-v0@1", "--templates-dir", dir],
+        deps,
+      );
+      const id = (JSON.parse(created.stdout[0] ?? "") as { instanceId: string }).instanceId;
+      expect((await run(["start", id, "--db", db, "--templates-dir", dir], deps)).code).toBe(EXIT.ok);
+      await record(["resume", id, "--db", db, "--event", "COMMIT", "--templates-dir", dir], deps);
+    }
+    // no_resume_transition — a DECLARED resume event with no route
+    // …and op_id_collision — the nonce a DECISION_MADE row already consumed
+    {
+      const db = tempDbPath();
+      const control = pinnableNonce();
+      const deps = gatedDeps(dir, { nonce: control.source });
+      const id = await parkedRun(db, deps, dir);
+      control.pin("decide-op");
+      expect(
+        (await run(["submit-decision", id, "--db", db, "--decision", "approve",
+                    "--templates-dir", dir], deps)).code,
+      ).toBe(EXIT.ok);
+      control.pin(null);
+      await record(["resume", id, "--db", db, "--event", "ABANDON", "--templates-dir", dir], deps);
+      // The nonce the DECISION_MADE row already consumed.
+      control.pin("decide-op");
+      await record(["resume", id, "--db", db, "--event", "COMMIT", "--templates-dir", dir], deps);
+    }
+
+    expect([...observed.keys()].sort()).toEqual(drivenReasons(RESUME_REASONS));
+    for (const [reason, code] of observed) {
+      expect(code, reason).toBe(EXIT.notFound);
+    }
+  });
+
+  it("the SUCCESS kinds: committed and duplicate are stdout DATA at exit 0, stale is DATA at exit 3", async () => {
+    const dir = stagedTemplatesDir();
+    const db = tempDbPath();
+    const control = pinnableNonce();
+    const deps = gatedDeps(dir, { nonce: control.source });
+    const id = await parkedRun(db, deps, dir);
+
+    control.pin("decide-1");
+    const committed = await run(
+      ["submit-decision", id, "--db", db, "--decision", "again", "--override",
+       "--templates-dir", dir],
+      deps,
+    );
+    expect(committed.code).toBe(EXIT.ok);
+    expect(dataDoc(committed)).toMatchObject({ kind: "committed", version: 4 });
+
+    // `again` RE-ARRIVES at the gate, so the run is STILL parked on a
+    // decision wait and the replay reaches the kernel's idempotency rung
+    // rather than the CLI's V4 (ii).
+    const duplicate = await run(
+      ["submit-decision", id, "--db", db, "--decision", "again", "--override",
+       "--templates-dir", dir],
+      gatedDeps(dir, { nonce: () => "decide-1" }),
+    );
+    // A duplicate is IDEMPOTENT SUCCESS — exit 0, never a failure class.
+    expect(duplicate.code).toBe(EXIT.ok);
+    expect(dataDoc(duplicate)).toEqual({ kind: "duplicate" });
+
+    const stale = await run(
+      ["submit-decision", id, "--db", db, "--decision", "again", "--override",
+       "--templates-dir", dir],
+      gatedDeps(dir, {
+        nonce: () => "fresh-op",
+        openStore: racedStore((i) => ({ ...i, version: i.version + 1 })),
+      }),
+    );
+    expect(stale.code).toBe(EXIT.notFound);
+    expect(dataDoc(stale)).toMatchObject({ kind: "stale" });
+  });
+
+  it("V5's route: `invalid_shape` is ABSENT from BOTH verbs' outcome surfaces", () => {
+    // Reachable ONLY through the ingress's operator-intent leg, which
+    // these verbs do not take — a build routing through `submitIntent`
+    // would put it in reach.
+    const submitHasInvalidShape: "invalid_shape" extends SubmitReason ? true : false = false;
+    const resumeHasInvalidShape: "invalid_shape" extends ResumeReason ? true : false = false;
+    expect(submitHasInvalidShape).toBe(false);
+    expect(resumeHasInvalidShape).toBe(false);
+    expect(Object.keys(SUBMIT_REASONS)).not.toContain("invalid_shape");
+    expect(Object.keys(RESUME_REASONS)).not.toContain("invalid_shape");
+  });
+
+  it("V6's TWO gated-out tokens cannot surface: unknown_instance is answered first, missing_version has no flag", async () => {
+    const dir = stagedTemplatesDir();
+    const db = tempDbPath();
+    const deps = gatedDeps(dir);
+    const id = await parkedRun(db, deps, dir);
+    // `unknown_instance` — the pre-read answers it as an ERROR document,
+    // never as a kernel-negative data row.
+    for (const argv of [
+      ["submit-decision", "ghost", "--db", db, "--decision", "approve", "--templates-dir", dir],
+      ["resume", "ghost", "--db", db, "--event", "COMMIT", "--templates-dir", dir],
+    ]) {
+      assertErrorContract(await run(argv, deps), "not_found", EXIT.notFound);
+    }
+    // `missing_version` — the operator addresses the INSTANCE, not a
+    // version: neither verb accepts `--expected-version` at all.
+    for (const argv of [
+      ["submit-decision", id, "--db", db, "--decision", "approve", "--expected-version", "3",
+       "--templates-dir", dir],
+      ["resume", id, "--db", db, "--event", "COMMIT", "--expected-version", "3",
+       "--templates-dir", dir],
+    ]) {
+      assertErrorContract(await run(argv, deps), "usage", EXIT.usage);
+    }
+  });
+});
+
+describe("cli — ch14-p3a family 5: argument shape and the absence boundary", () => {
+  it("the required flags and the POSITIONAL instance id (never `submit`'s --instance)", async () => {
+    const dir = stagedTemplatesDir();
+    const db = tempDbPath();
+    const deps = gatedDeps(dir);
+    const id = await parkedRun(db, deps, dir);
+    const cases: readonly (readonly [string, readonly string[]])[] = [
+      ["submit-decision without the positional",
+       ["submit-decision", "--db", db, "--decision", "approve", "--templates-dir", dir]],
+      ["submit-decision without --decision",
+       ["submit-decision", id, "--db", db, "--templates-dir", dir]],
+      ["resume without the positional", ["resume", "--db", db, "--event", "COMMIT",
+                                         "--templates-dir", dir]],
+      ["resume without --event", ["resume", id, "--db", db, "--templates-dir", dir]],
+      // the older verb's flag is NOT this surface's
+      ["submit-decision with --instance", ["submit-decision", "--instance", id, "--db", db,
+                                           "--decision", "approve", "--templates-dir", dir]],
+      // `resume` carries NEITHER --by, --payload NOR --override
+      ["resume with --by", ["resume", id, "--db", db, "--event", "COMMIT", "--by", "x",
+                            "--templates-dir", dir]],
+      ["resume with --payload", ["resume", id, "--db", db, "--event", "COMMIT", "--payload", "{}",
+                                 "--templates-dir", dir]],
+      ["resume with --override", ["resume", id, "--db", db, "--event", "COMMIT", "--override",
+                                  "--templates-dir", dir]],
+      // the MALFORMED column, scoped to the ONE flag with a CLI-side parse
+      ["malformed --payload", ["submit-decision", id, "--db", db, "--decision", "approve",
+                               "--payload", "{oops", "--templates-dir", dir]],
+    ];
+    for (const [label, argv] of cases) {
+      const result = await run(argv, deps);
+      expect(result.code, label).toBe(EXIT.usage);
+      expect(result.stdout, label).toEqual([]);
+    }
+  });
+
+  it("BOTH write verbs DEMAND --templates-dir: missing and unlistable are usage/2, eagerly", async () => {
+    const dir = stagedTemplatesDir();
+    const db = tempDbPath();
+    const id = await parkedRun(db, gatedDeps(dir), dir);
+    const noEnv = testDeps({ env: {} });
+    for (const argv of [
+      ["submit-decision", id, "--db", db, "--decision", "approve"],
+      ["resume", id, "--db", db, "--event", "COMMIT"],
+    ]) {
+      assertErrorContract(await run(argv, noEnv), "usage", EXIT.usage);
+    }
+    const gone = join(emptyTemplatesDir(), "not-a-dir");
+    for (const argv of [
+      ["submit-decision", id, "--db", db, "--decision", "approve", "--templates-dir", gone],
+      ["resume", id, "--db", db, "--event", "COMMIT", "--templates-dir", gone],
+    ]) {
+      assertErrorContract(await run(argv, noEnv), "usage", EXIT.usage);
+    }
+  });
+
+  it("the ABSENT column is NOT uniform: --by DEFAULTS, --payload and --override reach the kernel as ABSENCES", async () => {
+    const dir = stagedTemplatesDir();
+    const deps = gatedDeps(dir);
+
+    // --by ABSENT defaults to the SAME read's bound operator, and the
+    // decision commits. The DEFAULTING lane is sensitive because an
+    // EXPLICIT wrong principal reaches the authority rung instead.
+    const db = tempDbPath();
+    const id = await parkedRun(db, deps, dir);
+    expect(
+      dataDoc(await run(["submit-decision", id, "--db", db, "--decision", "approve",
+                         "--templates-dir", dir], deps)),
+    ).toMatchObject({ kind: "committed" });
+    const wrongDb = tempDbPath();
+    const wrongId = await parkedRun(wrongDb, deps, dir);
+    expect(
+      dataDoc(await run(["submit-decision", wrongId, "--db", wrongDb, "--decision", "approve",
+                         "--by", "not-the-operator", "--templates-dir", dir], deps)),
+    ).toEqual({ kind: "rejected", reason: "operator_not_authorized" });
+
+    // --payload ABSENT is an OMITTED KEY, not `{}`: the committed row
+    // carries NO payload key. A CLI defaulting it would fail this.
+    const timeline = await run(["timeline", id, "--db", db], deps);
+    const rows = JSON.parse(timeline.stdout[0] ?? "[]") as Record<string, unknown>[];
+    const decided = rows.find((r) => r["entryKind"] === "DECISION_MADE");
+    expect(decided).toBeDefined();
+    expect(decided && "payload" in decided).toBe(false);
+    // …and a SUPPLIED payload does land, which keeps the absence honest.
+    const withDb = tempDbPath();
+    const withId = await parkedRun(withDb, deps, dir);
+    expect(
+      dataDoc(await run(["submit-decision", withId, "--db", withDb, "--decision", "approve",
+                         "--payload", '{"instruction":"redo it"}', "--templates-dir", dir], deps)),
+    ).toMatchObject({ kind: "committed" });
+    const withRows = JSON.parse(
+      (await run(["timeline", withId, "--db", withDb], deps)).stdout[0] ?? "[]",
+    ) as Record<string, unknown>[];
+    expect(withRows.find((r) => r["entryKind"] === "DECISION_MADE")?.["payload"]).toEqual({
+      instruction: "redo it",
+    });
+
+    // --override ABSENT reaches C16's rung as a GENUINE absence: against
+    // the recommendation without it is `override_required`, and PRESENT
+    // where nothing is to be overridden is `override_not_applicable`.
+    // (Omitted and an explicit `false` are indistinguishable AT the rung,
+    // so this PAIR is the falsifier a single lane cannot be.)
+    const againstDb = tempDbPath();
+    const againstId = await parkedRun(againstDb, deps, dir);
+    expect(
+      dataDoc(await run(["submit-decision", againstId, "--db", againstDb, "--decision", "finish",
+                         "--templates-dir", dir], deps)),
+    ).toEqual({ kind: "rejected", reason: "override_required" });
+    expect(
+      dataDoc(await run(["submit-decision", againstId, "--db", againstDb, "--decision", "finish",
+                         "--override", "--templates-dir", dir], deps)),
+    ).toMatchObject({ kind: "committed" });
+  });
+});
+
+describe("cli — ch14-p3a family 5/V8: ONE definition store per invocation, and WHERE it goes", () => {
+  beforeEach(() => {
+    resetDefinitionSeam();
+  });
+
+  it("submit-decision: ONE store is built, and the SAME instance serves the floor AND the kernel", async () => {
+    const dir = stagedTemplatesDir();
+    const db = tempDbPath();
+    const id = await parkedRun(db, gatedDeps(dir), dir);
+    resetDefinitionSeam();
+    expect(
+      (await run(["submit-decision", id, "--db", db, "--decision", "approve",
+                  "--templates-dir", dir], gatedDeps(dir))).code,
+    ).toBe(EXIT.ok);
+    // ONE store for the invocation…
+    expect(definitionStoreBuilds).toHaveLength(1);
+    // …and it is loaded TWICE — once by the floor's Ask derivation, once
+    // by the kernel's own pinned-template load (V8's two-read clause) —
+    // by the SAME object.
+    expect(definitionLoads).toHaveLength(2);
+    expect(new Set(definitionLoads).size).toBe(1);
+    expect(definitionLoads[0]).toBe(definitionStoreBuilds[0]);
+  });
+
+  it("resume: ONE store is built, the KERNEL gets it, and the FLOOR gets `null` with a dir configured", async () => {
+    const dir = stagedTemplatesDir();
+    const db = tempDbPath();
+    // Driven on a run parked at the HUMAN GATE, where a floor CARRYING a
+    // store would derive and load. On a bare wait the park test
+    // short-circuits either way, so that shape could not fail.
+    const id = await parkedRun(db, gatedDeps(dir), dir);
+    resetDefinitionSeam();
+    expect(
+      dataDoc(await run(["resume", id, "--db", db, "--event", "approve", "--templates-dir", dir],
+                        gatedDeps(dir))),
+    ).toEqual({ kind: "rejected", reason: "not_bare_wait" });
+    // The mirror image of the lane above: the store exists and the KERNEL
+    // used it (its POST-admission load), but it was loaded EXACTLY ONCE —
+    // the floor never had it.
+    expect(definitionStoreBuilds).toHaveLength(1);
+    expect(definitionLoads).toHaveLength(1);
+    expect(definitionLoads[0]).toBe(definitionStoreBuilds[0]);
+  });
+
+  it("resume's admission REJECTIONS reach the operator with ZERO loads — the pre-load guarantee, measured", async () => {
+    const dir = stagedTemplatesDir();
+    const db = tempDbPath();
+    const id = await parkedRun(db, gatedDeps(dir), dir);
+    resetDefinitionSeam();
+    // A decision wait is not a bare wait, but `WRONG` mismatches at the
+    // CORRELATION rung, which sits BEFORE the kernel's own load.
+    expect(
+      dataDoc(await run(["resume", id, "--db", db, "--event", "WRONG", "--templates-dir", dir],
+                        gatedDeps(dir))),
+    ).toEqual({ kind: "rejected", reason: "resume_event_mismatch" });
+    expect(definitionStoreBuilds).toHaveLength(1);
+    expect(definitionLoads).toHaveLength(0);
+  });
+});
+
+describe("cli — ch14-p3a family 7/8: one read, no retry, and idempotency in both directions", () => {
+  it("each WRITE verb performs EXACTLY ONE floor detail read per invocation", async () => {
+    const dir = stagedTemplatesDir();
+    const db = tempDbPath();
+    const id = await parkedRun(db, gatedDeps(dir), dir);
+
+    const submitCounter = { reads: 0 };
+    expect(
+      (await run(["submit-decision", id, "--db", db, "--decision", "approve",
+                  "--templates-dir", dir],
+                 gatedDeps(dir, { openStore: countingStore(submitCounter) }))).code,
+    ).toBe(EXIT.ok);
+    expect(submitCounter.reads).toBe(1);
+
+    const resumeCounter = { reads: 0 };
+    expect(
+      (await run(["resume", id, "--db", db, "--event", "REPARK", "--templates-dir", dir],
+                 gatedDeps(dir, { openStore: countingStore(resumeCounter) }))).code,
+    ).toBe(EXIT.ok);
+    expect(resumeCounter.reads).toBe(1);
+  });
+
+  it("a REPLAYED op_id reaches `duplicate` at exit 0, and two invocations do NOT collide", async () => {
+    const dir = stagedTemplatesDir();
+    const db = tempDbPath();
+    const id = await parkedRun(db, gatedDeps(dir), dir);
+    expect(
+      (await run(["submit-decision", id, "--db", db, "--decision", "approve",
+                  "--templates-dir", dir], gatedDeps(dir))).code,
+    ).toBe(EXIT.ok);
+
+    // The REPLAY half PINS the nonce source…
+    const pinned = gatedDeps(dir, { nonce: () => "one-shot" });
+    expect(
+      dataDoc(await run(["resume", id, "--db", db, "--event", "REPARK", "--templates-dir", dir],
+                        pinned)),
+    ).toMatchObject({ kind: "committed" });
+    expect(
+      dataDoc(await run(["resume", id, "--db", db, "--event", "REPARK", "--templates-dir", dir],
+                        pinned)),
+    ).toEqual({ kind: "duplicate" });
+
+    // …and the NON-COLLISION half uses the PRODUCTION source, because one
+    // lane can otherwise pass by defeating the other.
+    const production = gatedDeps(dir);
+    const first = dataDoc(
+      await run(["resume", id, "--db", db, "--event", "REPARK", "--templates-dir", dir], production),
+    );
+    const second = dataDoc(
+      await run(["resume", id, "--db", db, "--event", "REPARK", "--templates-dir", dir], production),
+    );
+    expect(first).toMatchObject({ kind: "committed" });
+    expect(second).toMatchObject({ kind: "committed" });
+    expect(second["version"]).not.toBe(first["version"]);
   });
 });

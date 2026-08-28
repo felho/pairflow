@@ -1,10 +1,44 @@
-import type {
-  DecisionPayloadFieldSpec,
-  HumanDecisionRequest,
-  WorkflowInstance,
-  WorkflowTemplate,
-} from "../domain/index.js";
-import type { DecisionRequestBody } from "../ports/store.js";
+import type { HumanDecisionRequest } from "./dispatch.js";
+import type { RoleName } from "./ids.js";
+import type { DecisionRecommendationSource, WorkflowInstance } from "./instance.js";
+import type { DecisionPayloadFieldSpec, WorkflowTemplate } from "./template.js";
+
+/**
+ * The Ask's derivation and the park record it reads (packet ch14-p3a,
+ * F4 — MOVED here from `kernel/`, body unchanged).
+ *
+ * THE HOME IS THE FUNCTION'S OWN ALTITUDE: it imports domain types
+ * ONLY, so `floor/` and `kernel/` may both reach it and it opens no
+ * module-graph edge of its own. The floor is its second caller and a
+ * `floor → kernel` import would have been the floor's first kernel
+ * edge (ch9-p4b's DT1 ground); `domain/` is the one home the tree
+ * admits, because the kernel's ADR-001 lint entry is an ALLOWLIST that
+ * already names it.
+ *
+ * The sibling imports above are LEAF modules on purpose — reaching
+ * them through `./index.js` would buy a barrel cycle inside `domain/`.
+ */
+
+/**
+ * The park's committed record (K2's closed field list). `recommendation`
+ * and `recommendationSource` travel TOGETHER in both directions —
+ * present together, absent together — because the audit question is
+ * where a recommendation came from and not only what it was.
+ *
+ * DECLARED HERE rather than in `ports/store.ts` (F4): the derivation
+ * reads it, so leaving it behind would make `domain/` import `ports/` —
+ * a direction no domain file takes, and a type-only cycle against
+ * `ports/store.ts`'s own domain import.
+ */
+export interface DecisionRequestBody {
+  readonly requestRef: string;
+  readonly recipient: RoleName;
+  readonly decisions: readonly string[];
+  readonly recommendation?: string;
+  readonly recommendationSource?: DecisionRecommendationSource;
+  /** Present IFF the arriving entry carried a payload — presence, not truth. */
+  readonly contextRef?: unknown;
+}
 
 /**
  * The ONE function `decision_requirements` and p2b's submit guard both

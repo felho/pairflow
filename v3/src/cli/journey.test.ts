@@ -627,4 +627,199 @@ round:
       expect(row?.terminalDisposition).toBe("cancelled");
     },
   );
+
+  it(
+    "ch14-p3a J1: park → decide → resume through the SHIPPED verbs, on a STAGED gate template",
+    { timeout: 30_000 },
+    async () => {
+      // R-ACTIVATION-JOURNEY's discharge for this packet: the two new
+      // operator verbs drive the human's side of a real run as SUBPROCESSES
+      // through the shipped entrypoint, against PRODUCTION bindings, with a
+      // DETERMINISTIC actor bound through the shipped actor-configuration
+      // surface (the template file's `roles.operator.defaultActor`). No
+      // injected seam anywhere in this lane.
+      //
+      // The template is STAGED into a temp templates dir: the shipped
+      // `local-pair-v0` declares no gate until ch14-p3b, and this packet's
+      // boundary carries neither that file nor the shared fixture.
+      const tsxBin = join(process.cwd(), "..", "node_modules", ".bin", "tsx");
+      const mainPath = join(process.cwd(), "src", "cli", "main.ts");
+      const templatesDir = mkdtempSync(join(tmpdir(), "v3-journey-gate-tpl-"));
+      dirs.push(templatesDir);
+      writeFileSync(
+        join(templatesDir, "human-pair-v0@1.yaml"),
+        `ref:
+  id: human-pair-v0
+  version: 1
+start: implement
+steps:
+  implement:
+    role: implementer
+    instruction: |-
+      build it
+    transitions:
+      PASS: gate
+    recommends:
+      PASS: approve
+  gate:
+    type: humanGate
+    role: operator
+    instruction: |-
+      approve it?
+    decisions:
+      approve:
+        target: commit_pending
+      request_rework:
+        target: implement
+        payload:
+          instruction:
+            required: true
+  commit_pending:
+    type: wait
+    wait:
+      kind: commit_pending
+      resumeEvents:
+        - COMMIT
+    onResume:
+      COMMIT: done
+terminal:
+  - done
+roles:
+  implementer:
+    defaultActor: codex
+  operator:
+    defaultActor: human-1
+`,
+      );
+      const dir = mkdtempSync(join(tmpdir(), "v3-journey-gate-"));
+      dirs.push(dir);
+      const db = join(dir, "store.db");
+      const cli = (...argv: string[]): Promise<{ stdout: string; stderr: string }> =>
+        execFileAsync(tsxBin, [mainPath, ...argv]); // rejects on nonzero exit
+      const failing = (
+        ...argv: string[]
+      ): Promise<{ code?: number; stdout?: string; stderr?: string }> =>
+        cli(...argv).then(
+          () => {
+            throw new Error(`expected a NONZERO exit from: ${argv.join(" ")}`);
+          },
+          (error: { code?: number; stdout?: string; stderr?: string }) => error,
+        );
+
+      const created = await cli(
+        "create", "--db", db, "--task", "decide it", "--template", "human-pair-v0@1",
+        "--templates-dir", templatesDir,
+      );
+      const id = (JSON.parse(created.stdout.trim()) as { instanceId: string }).instanceId;
+      await cli("start", id, "--db", db, "--templates-dir", templatesDir);
+
+      // NAMED NEGATIVE 1: a submit-decision against a run with NO pending
+      // decision reaches V4 (ii) — exit 3, ONE error document on stderr.
+      const notParked = await failing(
+        "submit-decision", id, "--db", db, "--decision", "approve",
+        "--templates-dir", templatesDir,
+      );
+      expect(notParked.code).toBe(3);
+      expect(notParked.stdout?.trim()).toBe("");
+      expect(JSON.parse((notParked.stderr ?? "").trim())).toMatchObject({
+        error: { class: "not_found", name: "NoPendingDecision" },
+      });
+
+      // PARK: the agent's PASS routes into the gate.
+      await cli(
+        "submit", "--db", db, "--instance", id, "--type", "PASS",
+        "--expected-version", "2", "--expected-role", "implementer",
+        "--templates-dir", templatesDir,
+      );
+
+      // The operator DISCOVERS the Ask through the shipped read verb —
+      // everything the decision needs is in ONE committed-state read.
+      const parked = await cli("detail", id, "--db", db, "--templates-dir", templatesDir);
+      const parkedDoc = JSON.parse(parked.stdout.trim()) as {
+        instance: { wait: { kind: string } };
+        pendingDecision: {
+          instanceId: string;
+          expectedVersion: number;
+          requestRef: string;
+          operator: string;
+          question: string;
+          recommendation: string;
+          context: { task: string };
+          allowedDecisions: string[];
+          decisionRequirements: Record<string, string[]>;
+        };
+      };
+      expect(parkedDoc.instance.wait.kind).toBe("human_decision");
+      expect(parkedDoc.pendingDecision).toMatchObject({
+        instanceId: id,
+        expectedVersion: 3,
+        operator: "human-1",
+        question: "approve it?",
+        recommendation: "approve",
+        allowedDecisions: ["approve", "request_rework"],
+        decisionRequirements: { approve: [], request_rework: ["instruction"] },
+      });
+      expect(parkedDoc.pendingDecision.context.task).toBe("decide it");
+      expect(parkedDoc.pendingDecision.requestRef).not.toBe("");
+
+      // NAMED NEGATIVE 2: an EXPLICIT wrong `--by` reaches the kernel's
+      // authority rung and comes back as a DATA outcome — exit 3, stdout.
+      const wrongBy = await failing(
+        "submit-decision", id, "--db", db, "--decision", "approve",
+        "--by", "not-the-operator", "--templates-dir", templatesDir,
+      );
+      expect(wrongBy.code).toBe(3);
+      expect(wrongBy.stderr?.trim()).toBe("");
+      expect(JSON.parse((wrongBy.stdout ?? "").trim())).toEqual({
+        kind: "rejected",
+        reason: "operator_not_authorized",
+      });
+
+      // DECIDE: `--by` ABSENT defaults to the SAME read's bound operator.
+      const decided = await cli(
+        "submit-decision", id, "--db", db, "--decision", "approve",
+        "--templates-dir", templatesDir,
+      );
+      expect(JSON.parse(decided.stdout.trim())).toMatchObject({
+        kind: "committed",
+        version: 4,
+      });
+
+      const waiting = await cli("detail", id, "--db", db, "--templates-dir", templatesDir);
+      const waitingDoc = JSON.parse(waiting.stdout.trim()) as {
+        instance: { currentStep: string; wait: { kind: string } };
+      };
+      expect(waitingDoc.instance.currentStep).toBe("commit_pending");
+      expect(waitingDoc.instance.wait.kind).toBe("commit_pending");
+      // The gate is closed and the Ask is GONE — the member is absent again.
+      expect(waitingDoc).not.toHaveProperty("pendingDecision");
+
+      // RESUME: the bare wait's declared event routes to the terminal.
+      const resumed = await cli(
+        "resume", id, "--db", db, "--event", "COMMIT", "--templates-dir", templatesDir,
+      );
+      expect(JSON.parse(resumed.stdout.trim())).toMatchObject({
+        kind: "committed",
+        version: 5,
+      });
+
+      // OBSERVED through the shipped read verbs.
+      const final = await cli("detail", id, "--db", db, "--templates-dir", templatesDir);
+      const finalDoc = JSON.parse(final.stdout.trim()) as {
+        instance: { kernelStatus: string; terminalDisposition: string | null };
+      };
+      expect(finalDoc.instance.kernelStatus).toBe("TERMINAL");
+      expect(finalDoc.instance.terminalDisposition).toBe("done");
+
+      const timeline = await cli("timeline", id, "--db", db);
+      const rows = JSON.parse(timeline.stdout.trim()) as TimelineRow[];
+      expect(rows.map((r) => r.entryKind)).toEqual([
+        "STARTED",
+        "transition",
+        "DECISION_REQUEST",
+        "DECISION_MADE",
+        "WAIT_RESUMED",
+      ]);
+    },
+  );
 });

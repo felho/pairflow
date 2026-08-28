@@ -83,6 +83,19 @@ ERASURES: list[tuple[str, str]] = [
     ),
     # a type-only import added for the narrow
     (r'\nimport type \{ DispatchIntent, HumanDecisionRequest \} from "[^"]*";', ""),
+    # packet ch14-p3a (F2), a REVIEWED CHECKER EDIT taken by the route this
+    # list declares above: `createFloor` gained a REQUIRED nullable second
+    # parameter, so every call site takes a purely type-level argument
+    # addition, which is not a narrowing construct and normalizes under none
+    # of the three entries above.
+    #
+    # THE FORM IS PINNED TO THE EXACT ADDED TEXT, never to the SHAPE of an
+    # argument addition: only the literal `, null` erases, so a second
+    # argument carrying ANY OTHER value stays visible to the text half. A
+    # value-agnostic rule would erase every second argument at every call
+    # site in every future trace — a gate that has learned to pass rather
+    # than to classify.
+    (r"createFloor\(([^,()]*), null\)", r"createFloor(\1)"),
 ]
 
 # The REFUSAL list — constructs that are NOT compiler-forced however
@@ -233,6 +246,17 @@ expect(asDispatch(committed[0]?.intent)?.packet).toMatchObject({ v: 3 });
 
 GOOD_DIGESTS = {"transcript": "aa", "instance": "bb"}
 
+# packet ch14-p3a (F2): the fixtures for the `createFloor` entry. The FIVE
+# existing text-half dims run on fixtures carrying NO `createFloor` text at
+# all, so a `createFloor`-pinned entry cannot green them and they are NOT
+# the guard here — this fixture carries the call itself.
+FLOOR_BEFORE = """const floor = createFloor(handle.store);
+expect(await floor.listInstances()).toHaveLength(1);
+"""
+FLOOR_AFTER_CLEAN = """const floor = createFloor(handle.store, null);
+expect(await floor.listInstances()).toHaveLength(1);
+"""
+
 
 def selftest() -> int:
     failures: list[str] = []
@@ -278,6 +302,33 @@ def selftest() -> int:
     bare = BEFORE.replace("o.intent?.actor", "(o.intent as DispatchIntent).actor")
     check_text_half("n5", BEFORE, bare, checker)
     assert_red("bare-assertion", checker.errors, "BARE TYPE ASSERTION")
+
+    # packet ch14-p3a (F2) — the new entry's own three lanes.
+    # GREEN: the required-parameter addition erases back to the pre-edit
+    # bytes. This is the entry's whole reason to exist and is otherwise
+    # driven only implicitly by the live leg.
+    checker = Checker()
+    check_text_half("floor-green", FLOOR_BEFORE, FLOOR_AFTER_CLEAN, checker)
+    if checker.errors:
+        failures.append(
+            f"green NOT green: the createFloor argument addition was refused ({checker.errors})"
+        )
+
+    # 7. the SAME call site with a DIFFERENT second argument — the entry is
+    #    pinned to the literal `null`, so any other value stays a RE-PIN.
+    checker = Checker()
+    check_text_half(
+        "n10", FLOOR_BEFORE, FLOOR_AFTER_CLEAN.replace(", null)", ", definitions)"), checker
+    )
+    assert_red("createFloor-second-argument-not-null", checker.errors, "RE-PIN")
+
+    # 8. the SAME file with an expected literal changed BESIDE the argument
+    #    addition — the erasure must not carry a re-pin through with it.
+    checker = Checker()
+    check_text_half(
+        "n11", FLOOR_BEFORE, FLOOR_AFTER_CLEAN.replace("toHaveLength(1)", "toHaveLength(2)"), checker
+    )
+    assert_red("createFloor-addition-beside-a-repin", checker.errors, "RE-PIN")
 
     # 6. a receipt CLAIMING the dropped provenance. The leg is gone, so
     #    the sixth negative guards the honesty of the claim instead of

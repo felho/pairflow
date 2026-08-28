@@ -51,6 +51,13 @@ export type {
   WorkflowInstance,
 } from "./instance.js";
 export type { EventEnvelope } from "./envelope.js";
+// ch14-p3a (F4): the Ask derivation and the park record it reads, MOVED
+// here from `kernel/` so the floor reaches it without a kernel edge.
+// `requiredFields` travels WITH the Ask deliberately: the Ask's
+// `decisionRequirements` and the submit path's required-payload guard
+// must read ONE function.
+export { humanDecisionRequest, requiredFields } from "./humanDecisionRequest.js";
+export type { DecisionRequestBody } from "./humanDecisionRequest.js";
 export type {
   ContextBlock,
   ContextBlockProvenance,

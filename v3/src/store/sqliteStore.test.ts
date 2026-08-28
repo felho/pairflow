@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import type {
   EventEnvelope,
+  DecisionRequestBody,
   TranscriptEntry,
   TransitionEntry,
   WorkflowInstance,
@@ -15,11 +16,7 @@ import { deriveEmitDigest } from "../emit/index.js";
 import { createControlledClock } from "../testkit/index.js";
 import { openStore } from "./sqliteStore.js";
 import type { StoreHandle } from "./sqliteStore.js";
-import type {
-  ArrivalEffect,
-  ArrivalEffectFields,
-  DecisionRequestBody,
-} from "../ports/store.js";
+import type { ArrivalEffect, ArrivalEffectFields } from "../ports/store.js";
 
 /**
  * K1 (packet ch14-p2a): the arrival effect is BRANDED, and its only

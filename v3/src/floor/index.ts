@@ -3,7 +3,10 @@
 // bundle foundation (P3), the CLI-activated surfaces (P4); ch 7-P3
 // adds the diag consumers (tail diag layer + bundle three-state flip).
 export { createFloor } from "./floor.js";
-export type { Floor } from "./floor.js";
+// ch14-p3a (F5): the floor-owned detail type the pending-decision
+// member rides. The module exported NO detail type before — the read
+// returned the store's verbatim — so this is an addition, not a widening.
+export type { CreateFloorArity, Floor, FloorInstanceDetail } from "./floor.js";
 export {
   createDiagTail,
   createTail,

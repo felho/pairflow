@@ -1,7 +1,19 @@
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { describe, expect, it } from "vitest";
 
-import type { WorkflowInstance, WorkflowTemplate } from "./../domain/index.js";
-import type { DecisionRequestBody } from "./../ports/store.js";
+import {
+  humanDecisionRequest as kernelHumanDecisionRequest,
+  requiredFields as kernelRequiredFields,
+} from "../kernel/index.js";
+
+import type {
+  DecisionRequestBody,
+  WorkflowInstance,
+  WorkflowTemplate,
+} from "./index.js";
 import { humanDecisionRequest, requiredFields } from "./humanDecisionRequest.js";
 
 /**
@@ -172,5 +184,53 @@ describe("required_fields — the ONE function p2b's submit guard reads", () => 
   it("does not answer a prototype-named field with an inherited member", () => {
     expect(requiredFields({ toString: { required: true } })).toEqual(["toString"]);
     expect(requiredFields({ a: {} })).toEqual([]);
+  });
+});
+
+/**
+ * F4's THREE ASSERTED PROPERTIES OF THE MOVE (packet ch14-p3a). Each has
+ * a plausible wrong form that EVERY behavioural lane above would pass —
+ * a barrel import inside `domain/`, a forwarding shim left behind at the
+ * old home, a consumer still resolving to a second definition — so each
+ * is asserted rather than left to a mechanical copy.
+ */
+describe("F4 — the move's own properties", () => {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const source = readFileSync(join(here, "humanDecisionRequest.ts"), "utf8");
+
+  it("imports its domain siblings as LEAF modules, never through ./index.js", () => {
+    // A barrel import here would buy a cycle INSIDE `domain/`.
+    const imports = [...source.matchAll(/from "([^"]+)"/g)].map((m) => m[1]);
+    expect(imports.length).toBeGreaterThan(0);
+    for (const specifier of imports) {
+      expect(specifier, specifier).not.toContain("index.js");
+      // …and nothing outside `domain/` is reached at all: the function's
+      // altitude is what makes `floor/` and `kernel/` both able to see it.
+      expect(specifier, specifier).toMatch(/^\.\/[A-Za-z]+\.js$/);
+    }
+  });
+
+  it("leaves NO forwarding shim and NO second definition at the old kernel home", () => {
+    // A boundary check admits a superset and would not notice one.
+    const kernelDir = join(here, "..", "kernel");
+    expect(existsSync(join(kernelDir, "humanDecisionRequest.ts"))).toBe(false);
+    expect(existsSync(join(kernelDir, "humanDecisionRequest.test.ts"))).toBe(false);
+  });
+
+  it("every declared consumer resolves its import to the NEW origin", () => {
+    // Object identity through the kernel barrel: a second definition
+    // anywhere would give a different function value here.
+    expect(kernelHumanDecisionRequest).toBe(humanDecisionRequest);
+    expect(kernelRequiredFields).toBe(requiredFields);
+    // …and the source consumers name `domain/`, never a kernel sibling.
+    const consumers = [
+      ["../kernel/index.ts", /export \{ humanDecisionRequest, requiredFields \} from "\.\.\/domain\/index\.js"/],
+      ["../kernel/postCommitOutput.ts", /import \{ humanDecisionRequest \} from "\.\.\/domain\/index\.js"/],
+      ["../kernel/operatorIntents.ts", /import \{ requiredFields \} from "\.\.\/domain\/index\.js"/],
+      ["../floor/floor.ts", /import \{ humanDecisionRequest \} from "\.\.\/domain\/index\.js"/],
+    ] as const;
+    for (const [file, pattern] of consumers) {
+      expect(readFileSync(join(here, file), "utf8"), file).toMatch(pattern);
+    }
   });
 });

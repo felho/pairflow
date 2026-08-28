@@ -102,7 +102,7 @@ describe("l0b golden trace — the walking skeleton end-to-end (on the harness)"
       diag: noopDiagnosticsSink,
     });
     const ingress = createIngress({ kernel, diag: noopDiagnosticsSink });
-    const floor = createFloor(handle.store);
+    const floor = createFloor(handle.store, null);
 
     const result = await replayTrace(l0bFixture, {
       submit: (raw) => ingress.submit(raw),

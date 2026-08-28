@@ -8,6 +8,7 @@ import type {
   WorkflowTemplate,
 } from "../domain/index.js";
 import { deriveEmitDigest, deriveOperatorOpId, isCanonicalizable } from "../emit/index.js";
+import type { FloorInstanceDetail } from "../floor/index.js";
 import {
   createDebugBundleExporter,
   createDiagTail,
@@ -49,13 +50,14 @@ import { CliError, EXIT } from "./contract.js";
 import { deriveProcessEvidenceDbPath } from "./failClosedProcessGateRunner.js";
 import type { CliDeps } from "./runtime.js";
 import { productionDeps } from "./runtime.js";
-import { createFileDefinitionStore } from "../definition/index.js";
+import { createFileDefinitionStore, TemplateLoadError } from "../definition/index.js";
 import { createGateRegistry } from "../gates/index.js";
 import { createStaticProviderRegistry } from "../ports/index.js";
 import { createProcessGateRunner } from "../runner/index.js";
 import {
   ATTACH_VERB_OPTIONS,
   enrichDetailRunner,
+  optionalTemplatesDir,
   RUNNER_VERB_OPTIONS,
   verbAttach,
   verbRunner,
@@ -133,7 +135,19 @@ function parsePayload(raw: string | undefined): { present: boolean; value?: unkn
   }
 }
 
-function outcomeExitCode(outcome: Outcome): number {
+/**
+ * V6 (contract:ch14-human-decision#C23): the ch6-P4a exit classification,
+ * reused UNCHANGED. Its declared input is the actor-envelope `Outcome`
+ * and BOTH operator-intent unions are ASSIGNABLE to it — identical
+ * `committed`/`duplicate`/`stale` arms, and every reason token of both is
+ * a `RejectionName` other than `gate_blocked`, which is exactly what the
+ * rejected arm admits. So no shared production helper is edited and no
+ * classifier is duplicated. THE TRAP IS NAMED: `lifecycleExitCode` below
+ * has no `stale` arm and its `default` would route one silently to exit
+ * 1 — reaching for it because these verbs sit beside the lifecycle verbs
+ * is the plausible wrong move.
+ */
+export function outcomeExitCode(outcome: Outcome): number {
   switch (outcome.kind) {
     case "committed":
     case "duplicate":
@@ -366,7 +380,9 @@ async function withKernel<T>(
 
 async function verbList(ctx: VerbContext): Promise<number> {
   return withStore(ctx, async (handle) => {
-    const rows = await createFloor(handle.store).listInstances();
+    // F1: every composition root ANSWERS the required parameter. `list`
+    // derives no Ask, so its answer is the explicit `null`.
+    const rows = await createFloor(handle.store, null).listInstances();
     ctx.sinks.out(JSON.stringify(rows));
     return EXIT.ok;
   });
@@ -380,8 +396,34 @@ async function verbDetail(ctx: VerbContext): Promise<number> {
   // reader facade rides the NOOP diag sink, so a committed-only detail read
   // still NEVER opens the diag file (C3); the CF3 flip's write is to the
   // errand ledger alone.
+  // V9 (packet ch9-p4b DT2): the DEGRADE election, unchanged — `detail`
+  // resolves the dir flag-first and answers "none configured" with `null`
+  // rather than demanding it. The seam is NAMED here because `verbDetail`
+  // needs the dir BEFORE `createFloor` and the member is produced BY the
+  // read rather than composed after it.
+  const dir = optionalTemplatesDir(ctx);
   return withStore(ctx, async (handle) => {
-    const detail = await createFloor(handle.store).getInstanceDetail(id);
+    const definitions =
+      dir === null ? null : createFileDefinitionStore(dir, createGateRegistry());
+    let detail;
+    try {
+      detail = await createFloor(handle.store, definitions).getInstanceDetail(id);
+    } catch (error) {
+      // THE CATCH IS NARROWED, and that is the whole difference between
+      // reuse and damage (F6): a bare `catch` here would swallow the
+      // derivation's six kernel-integrity throws and F3's two into a
+      // silently member-less document. An integrity throw reaches the
+      // `internal` class on this verb exactly as it does on
+      // `submit-decision`; only "I cannot reach the template" degrades.
+      if (!(error instanceof TemplateLoadError)) {
+        throw error;
+      }
+      // V9's ONE recovery read: the SAME detail read with a `null`
+      // dependency, which cannot load and therefore cannot throw. It
+      // composes NOTHING EXTRA — no key, no token — so the emitted
+      // document is byte-identical to the `null`-load arm's.
+      detail = await createFloor(handle.store, null).getInstanceDetail(id);
+    }
     if (detail === null) {
       throw notFound("UnknownInstance", `no such run: '${id}'`);
     }
@@ -395,7 +437,8 @@ async function verbTimeline(ctx: VerbContext): Promise<number> {
   const id = requireInstanceId(ctx);
   const after = parseNonNegativeSafeInt(flagString(ctx, "after") ?? "0", "--after");
   return withStore(ctx, async (handle) => {
-    const rows = await createFloor(handle.store).getTimeline(id, after);
+    // F1: `timeline` derives no Ask either — the explicit `null`.
+    const rows = await createFloor(handle.store, null).getTimeline(id, after);
     if (rows === null) {
       throw notFound("UnknownInstance", `no such run: '${id}'`);
     }
@@ -748,6 +791,189 @@ async function verbSubmit(ctx: VerbContext): Promise<number> {
   }
 }
 
+/**
+ * THE ONE FLOOR DETAIL READ both write verbs perform before constructing
+ * their kernel input (V2; contract:ch14-human-decision#C23(a)).
+ *
+ * It runs in its OWN store scope, BEFORE any kernel exists, so each of
+ * V4's three resolution answers returns having committed NOTHING — no
+ * transcript row, no version change, no op consumption. There is no
+ * re-read, no retry and no loop: a value that moved between this read
+ * and the write lands as the kernel's own `Stale` /
+ * `decision_request_mismatch` DATA outcome.
+ *
+ * `definitions` is the verb's answer to F1's REQUIRED dependency:
+ * `submit-decision` hands over its store (it needs the derived Ask),
+ * `resume` hands over `null` BY CONSTRUCTION — which is the mechanism
+ * behind contract:ch14-human-decision#C27's no-early-block rule rather
+ * than a saving of work.
+ */
+async function readForWrite<T>(
+  ctx: VerbContext,
+  instanceId: string,
+  definitions: DefinitionStore | null,
+  resolve: (detail: FloorInstanceDetail) => T,
+): Promise<T> {
+  return withStore(ctx, async (handle) => {
+    const detail = await createFloor(handle.store, definitions).getInstanceDetail(instanceId);
+    if (detail === null) {
+      // V4 (i): the standing read-side not-found document the read verbs
+      // already emit. `unknown_instance` therefore cannot surface from
+      // either verb's outcome union (V6).
+      throw notFound("UnknownInstance", `no such run: '${instanceId}'`);
+    }
+    return resolve(detail);
+  });
+}
+
+/**
+ * V1/V2/V3/V4 (contract:ch14-human-decision#C23, #C16, #C15, #C27):
+ * `submit-decision <instance-id> --decision <key> [--override]
+ * [--payload <json>] [--by <operator>]` — the operator's decision on a
+ * parked human gate.
+ *
+ * DELIBERATELY NOT the older `submit` verb's shape: the instance id is
+ * POSITIONAL, and neither `--expected-version` nor `--expected-role`
+ * exists — the CAS input and the bound operator come from V2's ONE read,
+ * so `missing_version` has no way to reach the kernel from this surface.
+ *
+ * V5: the route is `kernel.submitDecision` DIRECTLY, never
+ * `ingress.submitIntent` — the ingress's operator-intent leg validates an
+ * UNTRUSTED wire record off a transport, and this verb has none.
+ */
+async function verbSubmitDecision(ctx: VerbContext): Promise<number> {
+  const instanceId = requireInstanceId(ctx);
+  const verdict = flagString(ctx, "decision");
+  if (verdict === undefined || verdict === "") {
+    throw usage("MissingDecision", "--decision <key> is required");
+  }
+  // THE ABSENCE BOUNDARY IS PER-FLAG (V3): `--payload` and `--override`
+  // are passed as GENUINE ABSENCES — omitted keys — so C15's
+  // `missing_required_field` and C16's `override_required` are the rungs
+  // that decide them. Defaulting either here would silently answer a
+  // question the contract gives the kernel.
+  const payload = parsePayload(flagString(ctx, "payload"));
+  const override = ctx.values["override"] === true;
+  const by = flagString(ctx, "by");
+  // V8: ONE gate catalog and ONE definition store per invocation — the
+  // SAME instance reaches the floor AND the kernel.
+  const gates = createGateRegistry();
+  const definitions = createFileDefinitionStore(
+    resolveTemplatesDir(flagString(ctx, "templates-dir"), ctx.deps),
+    gates,
+  );
+  try {
+    const resolved = await readForWrite(ctx, instanceId, definitions, (detail) => {
+      const instance = detail.instance;
+      // V4 (ii) is keyed on the PARK STATE, read off `wait.kind` DIRECTLY
+      // and never off the member's absence — otherwise a parked run whose
+      // pinned file is missing would be told it has no pending decision
+      // (contract:ch14-human-decision#C27's own reason).
+      if (instance.kernelStatus !== "WAITING" || instance.wait?.kind !== "human_decision") {
+        throw notFound(
+          "NoPendingDecision",
+          `run '${instanceId}' is not awaiting a human decision`,
+        );
+      }
+      const ask = detail.pendingDecision;
+      if (ask === undefined) {
+        // V4 (iii)'s NULL shape. The REJECTING shape never reaches here —
+        // it throws out of the floor and the outer catch maps it through
+        // the tree's live `toTemplateInvalid`. The null arm has no error
+        // to map, so the name is minted HERE, in `cli/main.ts`, never in
+        // the barred shared helpers.
+        throw new CliError(
+          "internal",
+          "TemplateUnavailable",
+          `the pinned template for run '${instanceId}' could not be loaded`,
+        );
+      }
+      return {
+        requestRef: ask.requestRef,
+        // The instance record's own non-optional `version`. The Ask's
+        // `expectedVersion` is the same number by C20's definition; the
+        // build reads ONE of them rather than comparing two.
+        expectedVersion: instance.version,
+        // V3(b): `--by` defaults to the SAME read's bound operator — no
+        // second load. An EXPLICIT wrong principal still reaches the
+        // kernel's authority rung.
+        by: by ?? ask.operator,
+      };
+    });
+    return await withKernel(ctx, definitions, gates, async (kernel) => {
+      const outcome = await kernel.submitDecision({
+        intent: "submit-decision",
+        instanceId,
+        opId: deriveOperatorOpId(ctx.deps.nonceSource()),
+        expectedVersion: resolved.expectedVersion,
+        requestRef: resolved.requestRef,
+        verdict,
+        ...(override ? { override: true } : {}),
+        ...(payload.present ? { payload: payload.value } : {}),
+        by: resolved.by,
+      });
+      // The outcome IS the surface's answer — DATA on stdout, always;
+      // the exit code classifies it (V6's inherited ch6-P4a matrix).
+      ctx.sinks.out(JSON.stringify(outcome));
+      return outcomeExitCode(outcome);
+    });
+  } catch (error) {
+    throw toTemplateInvalid(error);
+  }
+}
+
+/**
+ * V1/V2/V4 (contract:ch14-human-decision#C23, #C9, #C27): `resume
+ * <instance-id> --event <type>` — the bare wait's resume.
+ *
+ * ITS FLOOR IS BUILT WITH `null` BY CONSTRUCTION (F1), and that is what
+ * makes C27's rule STRUCTURAL rather than asserted: the verb performs NO
+ * floor template load, NO Ask derivation and NO correlation join, so it
+ * cannot be blocked EARLY — before admission — on an unyielded template.
+ * Its pre-load answers (`duplicate`, `stale`, `not_waiting`,
+ * `resume_event_mismatch`) reach the operator as DATA. The KERNEL's own
+ * post-admission load stays reachable and may still fail there, which is
+ * exactly what C27 preserves rather than removes.
+ *
+ * `resume` is the verb name and `resume-wait` the intent discriminant —
+ * C23's asymmetry, kept rather than tidied.
+ */
+async function verbResume(ctx: VerbContext): Promise<number> {
+  const instanceId = requireInstanceId(ctx);
+  const type = flagString(ctx, "event");
+  if (type === undefined || type === "") {
+    throw usage("MissingEvent", "--event <type> is required");
+  }
+  const gates = createGateRegistry();
+  const definitions = createFileDefinitionStore(
+    resolveTemplatesDir(flagString(ctx, "templates-dir"), ctx.deps),
+    gates,
+  );
+  // V2: `resume` takes `expected_version` ALONE — its wire carries no
+  // `request_ref`, so it has no use for the Ask.
+  const expectedVersion = await readForWrite(
+    ctx,
+    instanceId,
+    null,
+    (detail) => detail.instance.version,
+  );
+  try {
+    return await withKernel(ctx, definitions, gates, async (kernel) => {
+      const outcome = await kernel.resumeWait({
+        intent: "resume-wait",
+        instanceId,
+        opId: deriveOperatorOpId(ctx.deps.nonceSource()),
+        expectedVersion,
+        type,
+      });
+      ctx.sinks.out(JSON.stringify(outcome));
+      return outcomeExitCode(outcome);
+    });
+  } catch (error) {
+    throw toTemplateInvalid(error);
+  }
+}
+
 const VERB_OPTIONS: Record<string, VerbOptions> = {
   list: { db: { type: "string" } },
   // DT2 (packet ch9-p4b): `detail` gains `--templates-dir` — the
@@ -786,6 +1012,22 @@ const VERB_OPTIONS: Record<string, VerbOptions> = {
     db: { type: "string" },
     "templates-dir": { type: "string" },
   },
+  // ch14-p3a (V1/V8): the two operator verbs. Both DEMAND
+  // `--templates-dir` (the write-verb election) and take a POSITIONAL
+  // instance id — deliberately NOT `submit`'s `--instance` shape.
+  "submit-decision": {
+    db: { type: "string" },
+    "templates-dir": { type: "string" },
+    decision: { type: "string" },
+    override: { type: "boolean" },
+    payload: { type: "string" },
+    by: { type: "string" },
+  },
+  resume: {
+    db: { type: "string" },
+    "templates-dir": { type: "string" },
+    event: { type: "string" },
+  },
   submit: {
     db: { type: "string" },
     instance: { type: "string" },
@@ -814,6 +1056,10 @@ const VERBS: Record<string, VerbHandler> = {
   kickoff: verbKickoff,
   cancel: verbCancel,
   submit: verbSubmit,
+  // ch14-p3a: the operator's two verbs — the first path by which a human
+  // being can move a v3 workflow from the shipped command line.
+  "submit-decision": verbSubmitDecision,
+  resume: verbResume,
   // ch9-p4b: the operator runner plane — `runner run` / `runner respawn`
   // (subverb dispatch) and top-level `attach`. Production seams are bound by
   // default; the unit suite drives the handlers directly with scripted seams.

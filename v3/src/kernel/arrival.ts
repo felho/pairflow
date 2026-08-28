@@ -2,11 +2,12 @@ import type {
   WorkflowTemplate,
   AgentConfig,
   DecisionRecommendationSource,
+  DecisionRequestBody,
   StepId,
   WaitReason,
   WorkflowInstance,
 } from "../domain/index.js";
-import type { ArrivalEffect, ArrivalEffectFields, DecisionRequestBody } from "../ports/store.js";
+import type { ArrivalEffect, ArrivalEffectFields } from "../ports/store.js";
 
 /**
  * l3/apply_target_entry_effects (packet ch14-p2a, K1) — the ONE target-

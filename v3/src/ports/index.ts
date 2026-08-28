@@ -24,7 +24,6 @@ export type {
   ArrivalEffectFields,
   CommitTransitionInput,
   CommitTransitionResult,
-  DecisionRequestBody,
   InstanceDetail,
   StorePort,
   // ch14-p2b (Q2): the operator-entry write member's input and the two

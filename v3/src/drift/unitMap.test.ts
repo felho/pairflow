@@ -297,14 +297,14 @@ describe("the ch14-p2a unit-map flips (packet row K13 — the aftermath fold)", 
       status: "realized",
     });
     expect(unitMap["l3-pseudocode/human_decision_request"]).toEqual({
-      codeRef: "v3/src/kernel/humanDecisionRequest.ts#humanDecisionRequest",
+      codeRef: "v3/src/domain/humanDecisionRequest.ts#humanDecisionRequest",
       disposition: "implement",
       status: "realized",
     });
     // Its own export, because the Ask and p2b's submit guard read ONE
     // function — the reason it was minted at p2a at all.
     expect(unitMap["l3-pseudocode/required_fields"]).toEqual({
-      codeRef: "v3/src/kernel/humanDecisionRequest.ts#requiredFields",
+      codeRef: "v3/src/domain/humanDecisionRequest.ts#requiredFields",
       disposition: "implement",
       status: "realized",
     });

@@ -1,14 +1,13 @@
 import type {
   ActorId,
   AgentConfig,
-  DecisionRecommendationSource,
+  DecisionRequestBody,
   EventEnvelope,
   InstanceId,
   KernelStatus,
   LifecycleFactKind,
   OpId,
   RetainedGateDecision,
-  RoleName,
   RuntimeContext,
   StepId,
   TerminalDisposition,
@@ -75,21 +74,9 @@ export interface ArrivalEffectFields {
 
 export type ArrivalEffect = ArrivalEffectFields & { readonly [arrivalEffectBrand]: true };
 
-/**
- * The park's committed record (K2's closed field list). `recommendation`
- * and `recommendationSource` travel TOGETHER in both directions —
- * present together, absent together — because the audit question is
- * where a recommendation came from and not only what it was.
- */
-export interface DecisionRequestBody {
-  readonly requestRef: string;
-  readonly recipient: RoleName;
-  readonly decisions: readonly string[];
-  readonly recommendation?: string;
-  readonly recommendationSource?: DecisionRecommendationSource;
-  /** Present IFF the arriving entry carried a payload — presence, not truth. */
-  readonly contextRef?: unknown;
-}
+/* ch14-p3a (F4): `DecisionRequestBody` is DECLARED in `domain/` now — the
+ * Ask derivation reads it and lives there, and re-declaring it here would
+ * make `domain/` import `ports/`. This port consumes the domain type. */
 
 export interface CommitTransitionInput {
   readonly instanceId: InstanceId;

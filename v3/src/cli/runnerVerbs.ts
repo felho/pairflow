@@ -675,8 +675,12 @@ export interface RunnerSection {
 /** DT2: the templates dir if configured (flag-first, env second) — WITHOUT the
  * write verbs' usage-lane demand. `null` iff no dir is configured (the
  * `templates-unavailable` degrade); a configured-but-bad dir surfaces later as
- * `template-unavailable` at load. */
-function optionalTemplatesDir(ctx: VerbContext): string | null {
+ * `template-unavailable` at load.
+ *
+ * V9 (packet ch14-p3a): EXPORTED — module-private until now. `verbDetail`
+ * calls it before `createFloor` to answer F1's required dependency
+ * parameter. No behaviour in this file changes; the export is the seam. */
+export function optionalTemplatesDir(ctx: VerbContext): string | null {
   const dir = flagString(ctx, "templates-dir") ?? ctx.deps.env["PAIRFLOW_V3_TEMPLATES"];
   return dir === undefined || dir === "" ? null : dir;
 }

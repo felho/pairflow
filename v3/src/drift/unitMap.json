@@ -449,7 +449,7 @@
     "status": "realized"
   },
   "l3-pseudocode/human_decision_request": {
-    "codeRef": "v3/src/kernel/humanDecisionRequest.ts#humanDecisionRequest",
+    "codeRef": "v3/src/domain/humanDecisionRequest.ts#humanDecisionRequest",
     "disposition": "implement",
     "status": "realized"
   },
@@ -474,7 +474,7 @@
     "status": "realized"
   },
   "l3-pseudocode/required_fields": {
-    "codeRef": "v3/src/kernel/humanDecisionRequest.ts#requiredFields",
+    "codeRef": "v3/src/domain/humanDecisionRequest.ts#requiredFields",
     "disposition": "implement",
     "status": "realized"
   },

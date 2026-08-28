@@ -1,6 +1,7 @@
 import type {
   ActorId,
   AgentConfig,
+  DecisionRequestBody,
   InstanceId,
   OpId,
   ResumeWaitOutcome,
@@ -11,9 +12,11 @@ import type {
   WorkflowInstance,
   WorkflowTemplate,
 } from "../domain/index.js";
+// ch14-p3a (F4): the Ask's sibling now lives in `domain/`.
+import { requiredFields } from "../domain/index.js";
 import type { DefinitionStore } from "../ports/definition.js";
 import type { ProviderRegistry } from "../ports/runtimeContextProvider.js";
-import type { DecisionRequestBody, StorePort } from "../ports/store.js";
+import type { StorePort } from "../ports/store.js";
 
 import { admitLoaded } from "./admission.js";
 import type {
@@ -24,7 +27,6 @@ import type {
 } from "./admission.js";
 import { resolveAgentConfig } from "./agentConfig.js";
 import { applyTargetEntryEffects } from "./arrival.js";
-import { requiredFields } from "./humanDecisionRequest.js";
 import { loadPinnedTemplate } from "./pinnedTemplate.js";
 import { postCommitOutput } from "./postCommitOutput.js";
 

@@ -2,7 +2,7 @@
   {
     "id": "R-NARROW-1",
     "file": "v3/src/l0bTrace.test.ts",
-    "baseline_ref": "21aedbe3",
+    "baseline_ref": "61de122d",
     "digests": {
       "baseline": {
         "transcript": "391c3983d3b04af648a2e141e7e078fa76e190b6189e5b7b9485f5f7e9803b9a",
