@@ -1350,9 +1350,12 @@ which is the part with a life beyond this fold. `sub_in_code` was
 re-mechanised: it matches the ORIGINAL text, and every entry must name,
 via a `(?P<code>…)` group, the span that has to be real source; a match
 whose anchor holds one mask character is dropped, and an entry with no
-`code` group RAISES — an anchorless entry cannot be added silently,
-which is the structural version of the discipline flag 1 argued for in
-prose. The anchors differ because the entries differ: the `asDispatch`
+`code` group RAISES. **THAT LAST CLAIM WAS OVERSTATED WHEN THIS RECORD
+FIRST MADE IT, and the correction is the third aftermath below:** the
+guard sat INSIDE the match loop, so it fired only for an entry that
+matched something, and a non-matching anchorless entry was accepted in
+silence. It is now validated before the loop and the claim is true as
+written. The anchors differ because the entries differ: the `asDispatch`
 call site anchors its CALL HEAD (an argument may legitimately hold a
 string); the declaration entry anchors its DECLARATION HEAD (its body is
 `"packet" in intent` — the statement carries a string); the import entry
@@ -1371,16 +1374,21 @@ passing.
 
 TWELVE NEW LANES (string / line-comment / block-comment RED plus a
 real-code GREEN control per entry, plus an import green): selftest
-13 → 22 red dims. THREE RECEIPTS: the new lanes run against HEAD's
+13 → 22 red dims (24 after the third aftermath below). THREE RECEIPTS: the new lanes run against HEAD's
 pre-fix checker report SIX FALSE GREENS now RED; neutering the anchor
 check greens EIGHT lanes including the previously-driven
 `createFloor-inside-a-block-comment`; and removing the line anchor while
 keeping the code anchor keeps red the two lanes that do not falsify HEAD.
 TWO LANES ARE HONESTLY NON-FALSIFYING AGAINST HEAD and the code says so
 — `declaration-` and `import-inside-a-line-comment` were already out of
-reach because both entries are line-anchored — but neither is idle: each
-stays red if EITHER anchor is dropped, so the pair is the standing guard
-on the two-anchor design. NO RECEIPT MOVED: `erase()` output was
+reach because both entries are line-anchored. **THE ARGUMENT THIS RECORD
+FIRST MADE FOR THEM WAS WRONG AND IS WITHDRAWN**, on the reviewer's
+challenge at gate 2 pass 3, which is stronger than what it replaced: a
+lane that stays red when EITHER anchor is dropped is by that very fact
+INSENSITIVE to each removal taken alone — it can only witness the
+SIMULTANEOUS loss of both. That is a redundancy control, not sensitivity
+evidence, and calling it the latter was the same overclaim this packet
+kept catching elsewhere. NO RECEIPT MOVED: `erase()` output was
 captured for all four receipt files on both sides and re-diffed
 byte-identical, which is the check that separates "the instrument
 learned to classify better" from "the instrument now classifies
@@ -1410,13 +1418,90 @@ production file touched:** `tools/v3-plan/check_trace_narrow.py`,
 both folds; this context for the independent re-probe of all three
 legacy cases and the `createFloor` regression check, and for this record.
 
+---
+
+**ARM GATE 2, PASS 3 on `77e6118d`: `not ready`, FOUR findings, NO
+blocker — the severity curve across the gate's three passes is
+11 (one blocker) → 2 (one blocker) → 4 (none). All four folded in a
+third aftermath commit. THE PASS DID WHAT IT WAS ASKED TO DO: it tested
+four claims this record had made rather than accepting them, upheld
+three and FALSIFIED TWO** (the two corrections are folded into the
+paragraphs above, at the sentences that carried them, rather than
+appended here — a correction filed away from the claim it corrects is
+how the original survives).
+
+**WHAT HELD:** all four erasure entries inert in string literals, line
+comments, block comments AND template literals; the optional-doc-comment
+widening lets no real re-pin through; no receipt's erased result moved
+(captured on both sides, re-diffed byte-identical, 8/8).
+
+**WHAT WAS FALSIFIED — both were claims OF MINE, and both were absolute
+sentences that were true only in a sub-case.** (1) "An anchorless entry
+cannot be added silently" held only for an entry that MATCHED something,
+because the guard was reached inside the match loop. (2) The
+two-non-falsifying-lanes argument, above. There is a pattern across this
+packet's whole history worth naming once: EVERY defect this session
+caught, in the prose and in the record alike, was a well-formed sentence
+whose quantifier was wider than its evidence — and each was falsified by
+a reader who traced the claim rather than read it.
+
+**THE TWO SUBSTANTIVE CODE FINDINGS, and one correction the fold made TO
+the reviewer.** The observers watched only the BARREL specifiers, so a
+kernel built through the leaf (`../kernel/kernel.js`, lint-clean) left
+every counter empty and silently disarmed families 4, 6 and 7. BOTH
+routes were taken, with the division stated: the mocks moved onto the
+IMPLEMENTATION ORIGINS, so one mock is seen through both specifiers and
+the observer is total; and a lexical PIN scans the production files under
+`cli/` requiring barrel specifiers, with a negative lane proving the
+scanner is not vacuous. Neither alone suffices — a mock leaves leaf drift
+lint- and test-clean, a pin cannot see a dynamic import or a third-module
+re-export. THE FOLD CORRECTED THE REVIEWER'S ACCEPTANCE CRITERION, and
+the correction is the sharper measurement: "switching `main.ts` to a leaf
+import must go RED" was ALREADY TRUE at HEAD (three control lanes catch
+it). The genuine hole is the SELECTIVE bypass — barrel kept on the
+resolving path, a leaf-built kernel added on the V4 path — which HEAD
+passed 89/89 and which now reds four lanes.
+
+Family 2b asserted only that the eight integrity conditions throw SOME
+`Error`, so a floor that CAUGHT each and re-threw a fresh one passed
+every lane while doing exactly what F6 forbids ("propagate out of the
+floor UNALTERED", "THE FLOOR CATCHES NOTHING"). Now an identity seam on
+the derivation's own LEAF module records what the real derivation threw
+and asserts `thrown === caught` per site, plus a sentinel lane that
+refuses a re-wrap keyed on a message token, plus object identity on the
+rejecting load. COUNTERFACTUAL MEASURED: the re-wrapping floor is
+23/23 GREEN against HEAD's `floor.test.ts` and reds four lanes now.
+
+**WHAT THE FIXES DO NOT CATCH, recorded because the fold stated it
+rather than being asked.** F3's two FLOOR-MINTED throws get MESSAGE
+identity only — the floor mints them, so no seam exists between mint and
+caller without editing production; a re-wrap copying the message passes,
+and object identity reaches them only indirectly (a catch around the
+whole body reds, a catch scoped narrowly around `pendingRequest(detail)`
+alone would not). The injected sentinel must be an `Error` (the
+`only-throw-error` lint rule), so a re-wrap keyed on the CLASS alone is
+invisible. The import pin is lexical and scoped to `v3/src/cli/**`. And
+the `code`-group guard cannot see an anchor that is PRESENT BUT
+MISPLACED — that stays a reviewed-judgement question carried by the
+per-entry negatives. Each of these is a live limit, not a defect, and
+naming them is what keeps the next reader from mistaking the armor for
+a proof.
+
+**THIRD AFTERMATH COMMIT — three files, all inside the boundary, no
+production file touched:** `tools/v3-plan/check_trace_narrow.py`,
+`v3/src/cli/cli.test.ts`, `v3/src/floor/floor.test.ts`. Suite
+3089 → 3092; selftest 22 → 24 red dims. Author: a fresh-context
+delegated agent for the three code folds; this context for the two
+record corrections above and for the independent re-probe of the
+anchorless guard and the four entries.
+
 ```json
 {
   "packet_metrics": {
     "class": "operability",
     "prediction": { "predicted": "projection", "reasoning": "the ratified ch14-human-decision contract legislates both surfaces (C21, C23); the split leaves this part reading them", "discovered": "projection" },
     "provenance": { "anchored": 5, "derived": 11, "new_decision": 2 },
-    "rounds": { "review": 5, "doc_refinement": 0, "implementation": 3 },
+    "rounds": { "review": 5, "doc_refinement": 0, "implementation": 4 },
     "stops": [{"type": "1:late-b-signal", "what": "the disposition of a NON-YIELDED pinned template is undecided by C21 (read side) and C23 (write side), and V4 reads C23(c) down to avoid it; raised at the pre-build arm gate on the third occurrence of the same signal", "resolution": "ratifier chose a narrow ch14 contract reopen over re-anchoring in the packet, 2026-08-28 — the packet anchors to the new row instead of deciding"}],
     "detector_misses": [{"found_at": "arm-approve", "what": "the C27 reopen split the two write verbs apart and thirteen sentences kept speaking of them as one; the packet was marked APPROVED with the whole class alive", "why_missed": "five internal panel lenses and two arm passes read the text against itself, and every one of the thirteen was well-formed prose — only a trace against the code or against a sibling sentence falsifies them; the packet lint does not read prose at all"}, {"found_at": "arm-build-close", "what": "nine of gate 2's eleven findings were one class — a lane asserting what the code does, or standing on a fixture where right and wrong behave identically; and the F2 checker entry was text-level, so it erased inside string literals and comments", "why_missed": "the CLI families' tests were written AFTER the verbs and their RED receipts produced post-hoc by mutation probes, which proves sensitivity to the mutations chosen and not fail-first independence from the implementation the tests were read from; the F2 negatives guarded the VALUE axis while the CONTEXT axis went unprobed"}, {"found_at": "arm-approve", "what": "arm gate 1 was left open — the folded bytes never got their hash-citing re-check, and the gate record was not on a repo surface", "why_missed": "the discipline's two halves are one sentence in README §5.5 and the second half has no machine carrier; the packet header attested the passes in prose while the Build record held its placeholder"}],
     "learned": "an instance-wise fold of a class defect regenerates its own next round — 2/3/4/4/0 across five closing arm passes; the pass that bounded it swept against the stated cause",

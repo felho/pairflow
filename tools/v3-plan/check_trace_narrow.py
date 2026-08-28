@@ -260,15 +260,36 @@ def sub_in_code(pattern: str, replacement: str, text: str) -> str:
     occurrence inside a string literal or a comment therefore never
     fires; a real site does.
 
-    A pattern with NO `code` group raises here rather than defaulting to
-    the whole match, and that is deliberate: an anchorless entry is
-    exactly the context-blind rule this function exists to refuse, so it
-    must fail loudly at its first use instead of quietly overmatching.
+    A pattern with NO `code` group RAISES, and the check is made on the
+    COMPILED pattern BEFORE the match loop rather than from inside it.
+    The placement is the whole guarantee, and it is a correction: the
+    earlier form read `span("code")` only for a match it had already
+    found, so an anchorless entry that happened to match NOTHING in a
+    given text was accepted in silence and only a MATCHING one failed.
+    Checked up front, an anchorless entry fails on its first call over
+    any text, matching or not — which is what makes "an anchorless entry
+    cannot be added silently" true rather than true only in the matching
+    case.
+
+    WHAT THE GUARD DOES NOT COVER, stated so the claim stays the size of
+    the code: it refuses an entry with no `code` group at all. An entry
+    whose `code` group is present but MISPLACED — anchoring a span that
+    is not the part making the construct real — is a reviewed-judgement
+    question the per-entry selftest negatives carry, not this guard.
     """
+    compiled = re.compile(pattern)
+    if "code" not in compiled.groupindex:
+        raise ValueError(
+            "erasure entry has NO (?P<code>...) anchor and would apply "
+            f"context-blind: {pattern!r}"
+        )
     masked = mask_noncode(text)
     pieces: list[str] = []
     last = 0
-    for match in re.finditer(pattern, text):
+    for match in compiled.finditer(text):
+        # A `code` group that exists but did not PARTICIPATE (an optional
+        # branch) names no span to vet, so the match is dropped rather
+        # than waved through.
         start, end = match.span("code")
         if start < 0 or _MASK in masked[start:end]:
             continue
@@ -684,6 +705,34 @@ def selftest() -> int:
         failures.append(
             f"green NOT green: the type-only import addition was refused ({checker.errors})"
         )
+
+    # 24-25. the ANCHOR-VALIDATION lanes. `sub_in_code` refuses an entry
+    #        with no `(?P<code>...)` group, and the refusal must not
+    #        depend on the entry MATCHING anything. The check used to sit
+    #        INSIDE the match loop, so a nonmatching anchorless entry was
+    #        accepted in silence and only a matching one failed — which
+    #        made "an anchorless entry cannot be added silently" true in
+    #        the matching case alone. BOTH shapes are driven here, and the
+    #        nonmatching one is the lane that falsifies the old form.
+    def assert_anchorless_refused(label: str, pattern: str) -> None:
+        dims.append(label)
+        try:
+            sub_in_code(pattern, "x", BEFORE)
+        except ValueError:
+            return
+        except Exception as exc:  # noqa: BLE001 - the type is the assertion
+            failures.append(f"dim NOT red: {label} (refused, but as {exc!r})")
+            return
+        failures.append(f"dim NOT red: {label} (an anchorless entry was ACCEPTED)")
+
+    assert_anchorless_refused("anchorless-entry-that-MATCHES", r"const x = 1;")
+    assert_anchorless_refused("anchorless-entry-that-does-NOT-match", r"no-such-text-anywhere")
+
+    # GREEN: an entry that DOES carry the anchor still applies. Without
+    # it the two lanes above are satisfied by a `sub_in_code` that raised
+    # on every pattern.
+    if sub_in_code(r"(?P<code>const x) = 1;", r"\g<code>;", BEFORE) == BEFORE:
+        failures.append("green NOT green: an ANCHORED entry did not apply")
 
     # 6. a receipt CLAIMING the dropped provenance. The leg is gone, so
     #    the sixth negative guards the honesty of the claim instead of

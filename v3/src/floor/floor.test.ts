@@ -1,6 +1,6 @@
 import { createStaticProviderRegistry } from "../ports/index.js";
 import { createScriptedProcessGateRunner } from "../testkit/index.js";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type {
   EventEnvelope,
@@ -10,6 +10,9 @@ import type {
   WorkflowTemplate,
 } from "../domain/index.js";
 import { humanDecisionRequest } from "../domain/index.js";
+// The mock factory returns the real module's own shape; naming the type
+// here keeps it out of an inline `import()` annotation (lint).
+import type * as HumanDecisionRequestModuleShape from "../domain/humanDecisionRequest.js";
 import type { InstanceDetail, StorePort } from "../ports/store.js";
 import { deriveEmitDigest } from "../emit/index.js";
 import { createKernel } from "../kernel/index.js";
@@ -27,6 +30,64 @@ function admit(template: WorkflowTemplate): AdmittedTemplate {
   }
   return result.template;
 }
+/**
+ * F6's IDENTITY seam (packet ch14-p3a, family 2b). F6 does not only say
+ * the integrity conditions FAIL — it says they "propagate out of the
+ * floor UNALTERED" and that "THE FLOOR CATCHES NOTHING". A
+ * `rejects.toThrow(Error)` lane cannot tell those apart from a floor
+ * that CAUGHT each one and threw a new generic `Error` in its place, so
+ * the assertion has to be OBJECT IDENTITY, and identity needs a seam.
+ *
+ * The mock sits on the DERIVATION'S OWN MODULE, not on the `domain/`
+ * barrel the floor imports it through, so the barrel's re-export carries
+ * the wrapper and no other member of `domain/` is touched. It DELEGATES
+ * in full and is inert unless a lane arms it:
+ *
+ *  - `derivationCaught` RECORDS the object the real derivation threw, so
+ *    the six integrity sites can each assert the caller received THAT
+ *    OBJECT rather than one of the same class;
+ *  - `derivationThrow`, when armed, INJECTS a sentinel, so a lane can
+ *    prove the propagation without depending on any particular site.
+ */
+type HumanDecisionRequestModule = typeof HumanDecisionRequestModuleShape;
+
+let derivationThrow: Error | null = null;
+let derivationCaught: unknown = null;
+
+vi.mock("../domain/humanDecisionRequest.js", async (importOriginal) => {
+  const actual = await importOriginal<HumanDecisionRequestModule>();
+  return {
+    ...actual,
+    humanDecisionRequest: (
+      ...args: Parameters<HumanDecisionRequestModule["humanDecisionRequest"]>
+    ): ReturnType<HumanDecisionRequestModule["humanDecisionRequest"]> => {
+      if (derivationThrow !== null) {
+        throw derivationThrow;
+      }
+      try {
+        return actual.humanDecisionRequest(...args);
+      } catch (error: unknown) {
+        derivationCaught = error;
+        throw error;
+      }
+    },
+  };
+});
+
+/**
+ * Await a promise that MUST reject and hand back the rejection VALUE —
+ * `rejects.toThrow` compares a class or a message and cannot compare an
+ * object, which is the whole point of the lanes below.
+ */
+async function rejection(promise: Promise<unknown>): Promise<unknown> {
+  try {
+    await promise;
+  } catch (error: unknown) {
+    return error;
+  }
+  throw new Error("expected a rejection, got a resolved value");
+}
+
 import { createFloor } from "./floor.js";
 import type { CreateFloorArity } from "./floor.js";
 import { noopDiagnosticsSink } from "../diag/index.js";
@@ -664,9 +725,18 @@ describe("floor — F3 the correlation JOIN, and F6's no-catch rule", () => {
         wait: { ...detail.instance.wait!, requestRef: "req-that-never-committed" },
       },
     }));
+    // ON THE FLOOR'S OWN MESSAGE, not on `Error`. These two throws are
+    // MINTED BY THE FLOOR, so there is no seam between the mint and the
+    // caller and OBJECT identity is unreachable for them (the two lanes
+    // that DO assert identity — the derivation seam and the rejecting
+    // load — sit on either side of this call inside the same
+    // `withPendingDecision` body, so a catch around the body reds
+    // there). What this assertion adds over `toThrow(Error)` is that a
+    // re-wrap into a generic error fails; a re-wrap that COPIED the
+    // message would still pass, and that is the residue.
     await expect(
       createFloor(unmatched, gatedDefinitions).getInstanceDetail("inst-gate"),
-    ).rejects.toThrow(Error);
+    ).rejects.toThrow(/floor integrity: .*with no committed DECISION_REQUEST row/);
     const absent = doctoredStore(handle.store, (detail) => ({
       ...detail,
       instance: {
@@ -680,7 +750,7 @@ describe("floor — F3 the correlation JOIN, and F6's no-catch rule", () => {
     }));
     await expect(
       createFloor(absent, gatedDefinitions).getInstanceDetail("inst-gate"),
-    ).rejects.toThrow(Error);
+    ).rejects.toThrow(/floor integrity: .*with NO request_ref on its wait record/);
     handle.close();
   });
 
@@ -698,9 +768,12 @@ describe("floor — F3 the correlation JOIN, and F6's no-catch rule", () => {
     const noRole = gateWithout("role");
     const noInstruction = gateWithout("instruction");
     // The six sites, each staged at its OWN precondition. The lane
-    // asserts the PRECONDITION and that the floor did not convert the
-    // throw into an absence — never a message token: all six are bare
-    // `Error`s and `name` cannot discriminate them.
+    // asserts the PRECONDITION and — through the derivation seam — that
+    // the object the DERIVATION threw is the object the caller
+    // receives. IDENTITY, not class: all six are bare `Error`s, so a
+    // floor that caught each one and threw a new generic `Error` in its
+    // place satisfies `rejects.toThrow(Error)` while doing exactly what
+    // F6's "propagates unaltered / catches nothing" forbids.
     const sites: readonly {
       readonly site: string;
       readonly definitions: DefinitionStore;
@@ -718,8 +791,38 @@ describe("floor — F3 the correlation JOIN, and F6's no-catch rule", () => {
         doctor: (d) => ({ ...d, instance: { ...d.instance, task: null } }) },
     ];
     for (const { site, definitions, doctor } of sites) {
+      derivationCaught = null;
       const floor = createFloor(doctoredStore(handle.store, doctor), definitions);
-      await expect(floor.getInstanceDetail("inst-gate"), site).rejects.toThrow(Error);
+      const thrown = await rejection(floor.getInstanceDetail("inst-gate"));
+      // The precondition really fired INSIDE the derivation — without
+      // this the identity below could be satisfied by a site whose throw
+      // came from somewhere else entirely.
+      expect(derivationCaught, site).toBeInstanceOf(Error);
+      expect(thrown, site).toBe(derivationCaught);
+    }
+    handle.close();
+  });
+
+  it("an INJECTED sentinel from the derivation reaches the caller AS ITSELF", async () => {
+    const handle = openStore(":memory:", createControlledClock(0));
+    await parkAtGate(handle.store);
+    // The six lanes above assert identity on the derivation's OWN
+    // errors, which all carry a `kernel integrity:` message. This one
+    // does not, so it also refuses the narrower wrong build: a floor
+    // that re-wraps on a MESSAGE TOKEN and lets the recognized shapes
+    // through. (It is still an `Error` — the lint rule forbids throwing
+    // anything else — so a re-wrap keyed on the CLASS alone would be
+    // invisible to every lane in this file.)
+    const sentinel = new Error("sentinel: no integrity token in this message");
+    derivationThrow = sentinel;
+    try {
+      expect(
+        await rejection(
+          createFloor(handle.store, gatedDefinitions).getInstanceDetail("inst-gate"),
+        ),
+      ).toBe(sentinel);
+    } finally {
+      derivationThrow = null;
     }
     handle.close();
   });
@@ -727,13 +830,14 @@ describe("floor — F3 the correlation JOIN, and F6's no-catch rule", () => {
   it("a REJECTING load propagates unaltered — the floor does not degrade it to an absence", async () => {
     const handle = openStore(":memory:", createControlledClock(0));
     await parkAtGate(handle.store);
-    const rejecting: DefinitionStore = {
-      load: () =>
-        Promise.reject(new TemplateLoadError({ stage: "read", findings: [] })),
-    };
-    await expect(
-      createFloor(handle.store, rejecting).getInstanceDetail("inst-gate"),
-    ).rejects.toBeInstanceOf(TemplateLoadError);
+    // A SENTINEL, and the assertion is OBJECT IDENTITY: a floor that
+    // caught the rejection and re-threw a fresh `TemplateLoadError` of
+    // its own passes `rejects.toBeInstanceOf` and fails this.
+    const sentinel = new TemplateLoadError({ stage: "read", findings: [] });
+    const rejecting: DefinitionStore = { load: () => Promise.reject(sentinel) };
+    expect(
+      await rejection(createFloor(handle.store, rejecting).getInstanceDetail("inst-gate")),
+    ).toBe(sentinel);
     handle.close();
   });
 });

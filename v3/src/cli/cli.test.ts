@@ -4,6 +4,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
@@ -29,8 +30,8 @@ import type { DefinitionStore } from "../ports/definition.js";
 // The mock factory returns the real module's own shape; naming the type
 // here keeps it out of an inline `import()` annotation (lint).
 import type * as DefinitionModuleShape from "../definition/index.js";
-import type * as IngressModuleShape from "../ingress/index.js";
-import type * as KernelModuleShape from "../kernel/index.js";
+import type * as IngressModuleShape from "../ingress/ingress.js";
+import type * as KernelModuleShape from "../kernel/kernel.js";
 import type { GateCatalog } from "../ports/gate.js";
 import { openStore } from "../store/index.js";
 import { createControlledClock, createScriptedTailWait } from "../testkit/index.js";
@@ -103,6 +104,23 @@ function resetDefinitionSeam(): void {
  * Both mocks DELEGATE in full — every returned object is the real one
  * behind a recording wrapper — so no behaviour anywhere in this file
  * changes.
+ *
+ * THEY SIT ON THE IMPLEMENTATION ORIGIN (`kernel/kernel.js`,
+ * `ingress/ingress.js`), NOT ON THE BARRELS the CLI imports through, and
+ * that placement is load-bearing rather than stylistic. `createKernel`
+ * is reachable by TWO specifiers — the barrel and the leaf — and the
+ * barrel re-exports the leaf, so a mock on the BARREL observes one of
+ * them: a build that constructed or called a kernel through
+ * `../kernel/kernel.js` would leave every array below empty and pass
+ * families 4, 6 and 7 while doing exactly what those rows forbid. A mock
+ * on the LEAF is observed through BOTH specifiers, because the barrel's
+ * own `export { createKernel } from "./kernel.js"` resolves to the very
+ * module id mocked here. The observer is therefore TOTAL over the
+ * construction site rather than pinned to one import path — which is
+ * what makes the empty-array assertions in families 4/6/7 mean what they
+ * say. The import-origin pin further down is the SEPARATE, structural
+ * half: it keeps the barrel convention from drifting silently, and it is
+ * not what these arrays depend on.
  */
 type KernelModule = typeof KernelModuleShape;
 type IngressModule = typeof IngressModuleShape;
@@ -144,7 +162,7 @@ const ingressCalls: string[] = [];
 const kernelBuilds: string[] = [];
 const kernelCalls: string[] = [];
 
-vi.mock("../kernel/index.js", async (importOriginal) => {
+vi.mock("../kernel/kernel.js", async (importOriginal) => {
   const actual = await importOriginal<KernelModule>();
   return {
     ...actual,
@@ -169,7 +187,7 @@ vi.mock("../kernel/index.js", async (importOriginal) => {
   };
 });
 
-vi.mock("../ingress/index.js", async (importOriginal) => {
+vi.mock("../ingress/ingress.js", async (importOriginal) => {
   const actual = await importOriginal<IngressModule>();
   return {
     ...actual,
@@ -188,6 +206,86 @@ vi.mock("../ingress/index.js", async (importOriginal) => {
       };
     },
   };
+});
+
+/**
+ * THE IMPORT-ORIGIN PIN (packet ch14-p3a, families 4/6/7 — the observers'
+ * structural half).
+ *
+ * The seams above observe the implementation ORIGIN, so they see a
+ * kernel or an ingress built through EITHER specifier and the empty-array
+ * assertions in families 4, 6 and 7 do not rest on a convention. This
+ * lane guards the convention itself: the CLI's production files reach
+ * both modules through their BARRELS, which is what `kernel/index.ts`'s
+ * own header declares ("named here rather than reached through a deep
+ * path"). A deep import is not a correctness failure any more — it is a
+ * silent drift away from the one import surface the barrels exist to be,
+ * and drift in the layer the observers watch is worth failing on.
+ *
+ * WHAT THIS LANE DOES NOT CATCH, stated so the pin is not read wider
+ * than it is: it is LEXICAL, and it scans the production files under
+ * `v3/src/cli` (recursively — `cli/dev/main.ts` builds both and is
+ * inside the scan). A dynamic `await import("../kernel/kernel.js")`, a
+ * re-export through some third module, and every build outside `cli/`
+ * are all invisible to it. Each of those is caught by the SEAMS
+ * instead, which is the division of labour: the seams carry the
+ * guarantee, the pin carries the convention.
+ */
+describe("cli — ch14-p3a: the kernel and ingress import origins are PINNED", () => {
+  const BARRELS = ["kernel/index.js", "ingress/index.js"];
+  /**
+   * Every `from "…"` specifier naming the kernel or the ingress tree,
+   * with the leading `../` run dropped so a nested file's `../../` reads
+   * the same as a top-level file's `../`.
+   */
+  const moduleSpecifiers = (source: string): readonly string[] =>
+    [...source.matchAll(/from\s+"(?:\.\.\/)+((?:kernel|ingress)\/[^"]+)"/g)].map(
+      (match) => match[1] ?? "",
+    );
+
+  const productionFiles = (dir: string): readonly string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) return productionFiles(full);
+      return entry.name.endsWith(".ts") && !entry.name.includes(".test.") ? [full] : [];
+    });
+
+  it("every production file under `cli/` names the BARREL, never the leaf", () => {
+    const dir = new URL(".", import.meta.url).pathname;
+    const files = productionFiles(dir);
+    // The scan is not vacuous: these three are the files that build a
+    // kernel or an ingress, and a walk that found nothing would pass.
+    expect(files.map((file) => file.slice(dir.length)).sort()).toEqual(
+      expect.arrayContaining(["dev/main.ts", "main.ts", "runnerVerbs.ts"]),
+    );
+    const offenders: string[] = [];
+    let seen = 0;
+    for (const file of files) {
+      for (const specifier of moduleSpecifiers(readFileSync(file, "utf8"))) {
+        seen += 1;
+        if (!BARRELS.includes(specifier)) {
+          offenders.push(`${file.slice(dir.length)}: ${specifier}`);
+        }
+      }
+    }
+    expect(seen).toBeGreaterThan(0);
+    expect(offenders).toEqual([]);
+  });
+
+  it("…and the scanner itself REDS on a leaf specifier — the pin's own negative", () => {
+    // Without this, a scanner whose regex had stopped matching would pass
+    // the lane above for the wrong reason — and the `../../` case is the
+    // one a top-level-only regex silently drops.
+    expect(moduleSpecifiers('import { createKernel } from "../kernel/kernel.js";')).toEqual([
+      "kernel/kernel.js",
+    ]);
+    expect(
+      moduleSpecifiers('import { createIngress } from "../../ingress/ingress.js";'),
+    ).toEqual(["ingress/ingress.js"]);
+    expect(moduleSpecifiers('import { createKernel } from "../../kernel/index.js";')).toEqual([
+      "kernel/index.js",
+    ]);
+  });
 });
 
 function resetRouteSeam(): void {
