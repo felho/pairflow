@@ -123,17 +123,44 @@ const kernelWrites: string[] = [];
 const ingressBuilds: string[] = [];
 const ingressCalls: string[] = [];
 
+/**
+ * V4's PRE-KERNEL observers (packet ch14-p3a, family 6). V4 does not
+ * only claim that the three resolution answers COMMIT nothing — it
+ * claims each of them "RETURNS BEFORE ANY KERNEL IS BUILT". The two are
+ * different claims and only one of them is visible to a store snapshot:
+ * a build that constructed a kernel, called it, took `unknown_instance`
+ * or `not_awaiting_decision` back and REMAPPED that to the very
+ * document the CLI emits today would commit nothing, pass every
+ * document assertion and every before/after equality in this file — and
+ * still violate the row. Only a counter on the CONSTRUCTOR and on the
+ * CALL can fail on it.
+ *
+ * `kernelBuilds` counts constructions; `kernelCalls` counts EVERY method
+ * a caller reaches through, not just the write family, because a build
+ * that consulted the kernel and then answered on its own would be a
+ * kernel it was not supposed to have. `kernelWrites` stays exactly what
+ * V5's route lane reads it as — the write-family subset.
+ */
+const kernelBuilds: string[] = [];
+const kernelCalls: string[] = [];
+
 vi.mock("../kernel/index.js", async (importOriginal) => {
   const actual = await importOriginal<KernelModule>();
   return {
     ...actual,
     createKernel: (deps: Parameters<KernelModule["createKernel"]>[0]) => {
       const real = actual.createKernel(deps);
+      kernelBuilds.push("createKernel");
       const recorded = { ...real } as unknown as Record<string, unknown>;
       const methods = real as unknown as Record<string, (...args: unknown[]) => unknown>;
-      for (const name of KERNEL_WRITE_METHODS) {
+      const writes = KERNEL_WRITE_METHODS as readonly string[];
+      for (const name of Object.keys(recorded)) {
+        if (typeof methods[name] !== "function") continue;
         recorded[name] = (...args: unknown[]): unknown => {
-          kernelWrites.push(name);
+          kernelCalls.push(name);
+          if (writes.includes(name)) {
+            kernelWrites.push(name);
+          }
           return methods[name]!(...args);
         };
       }
@@ -165,6 +192,8 @@ vi.mock("../ingress/index.js", async (importOriginal) => {
 
 function resetRouteSeam(): void {
   kernelWrites.length = 0;
+  kernelBuilds.length = 0;
+  kernelCalls.length = 0;
   ingressBuilds.length = 0;
   ingressCalls.length = 0;
 }
@@ -2461,38 +2490,86 @@ describe("cli — ch14-p3a family 6: resolution failure and its ZERO side effect
       return { instance: doc["instance"], transcript: doc["transcript"] };
     };
 
+    /**
+     * …AND (i)'S OWN TARGET IS `ghost`, WHICH IS NOT AN INSTANCE. A
+     * snapshot of some OTHER instance is not this lane's target at all:
+     * it would stay green through a build that CREATED `ghost` on the
+     * way to reporting it unknown. What (i) can assert about its target
+     * is the absence itself — the read verb answers the standing
+     * not-found document on both sides — carried together with the FULL
+     * instance list, which is what `ghost` is absent FROM and which
+     * moves if any instance was touched.
+     */
+    const observeGhost = async (snapDb: string): Promise<unknown> => {
+      const missing = await run(["detail", "ghost", "--db", snapDb, "--templates-dir", dir], deps);
+      expect(missing.code).toBe(EXIT.notFound);
+      expect(errorDoc(missing).name).toBe("UnknownInstance");
+      // `list` takes no `--templates-dir` — it derives nothing.
+      const listed = await run(["list", "--db", snapDb], deps);
+      expect(listed.stderr).toEqual([]);
+      expect(listed.code).toBe(EXIT.ok);
+      return JSON.parse(listed.stdout[0] ?? "") as unknown;
+    };
+
     const lanes: readonly (readonly [
-      string, readonly string[], string, string, number, string, string,
+      string, readonly string[], string, string, number, () => Promise<unknown>,
     ])[] = [
-      // (i) UNKNOWN INSTANCE — the standing read-side not-found document
+      // (i) UNKNOWN INSTANCE — the standing read-side not-found document,
+      //     snapshotted on ITS OWN target: `ghost`'s absence and the list
+      //     it is absent from.
       ["(i)", ["submit-decision", "ghost", "--db", db, "--decision", "approve",
                "--templates-dir", dir], "not_found", "UnknownInstance", EXIT.notFound,
-       db, parkedId],
+       (): Promise<unknown> => observeGhost(db)],
       // (ii) NO PENDING DECISION — keyed on the PARK STATE, never on the
       //      member's absence (C27's own reason). Its target is the
       //      ACTIVE instance, in its OWN database.
       ["(ii)", ["submit-decision", activeId, "--db", activeDb, "--decision", "approve",
                 "--templates-dir", dir], "not_found", "NoPendingDecision", EXIT.notFound,
-       activeDb, activeId],
+       (): Promise<unknown> => observe(activeDb, activeId)],
       // (iii) the pinned template is NOT YIELDED — TWO shapes, two names
       ["(iii)-rejects", ["submit-decision", parkedId, "--db", db, "--decision", "approve",
                          "--templates-dir", malformed], "internal", "TemplateInvalid",
-       EXIT.internal, db, parkedId],
+       EXIT.internal, (): Promise<unknown> => observe(db, parkedId)],
       ["(iii)-null", ["submit-decision", parkedId, "--db", db, "--decision", "approve",
                       "--templates-dir", emptyTemplatesDir()], "internal", "TemplateUnavailable",
-       EXIT.internal, db, parkedId],
+       EXIT.internal, (): Promise<unknown> => observe(db, parkedId)],
     ];
-    for (const [lane, argv, cls, name, code, snapDb, snapId] of lanes) {
+    for (const [lane, argv, cls, name, code, observeLane] of lanes) {
       // NOTHING is committed by any of them: no transcript row, no
       // version move — measured on the lane's OWN target, immediately
       // around the lane's OWN invocation.
-      const before = await observe(snapDb, snapId);
+      const before = await observeLane();
+      // The seam is reset AFTER the snapshot, so the read verbs the
+      // snapshot itself runs cannot be mistaken for the lane's own work.
+      resetRouteSeam();
       const result = await run(argv, deps);
       assertErrorContract(result, cls, code);
       // On the document's FIELDS, never on a token in its message.
       expect(errorDoc(result).name, lane).toBe(name);
-      expect(await observe(snapDb, snapId), lane).toStrictEqual(before);
+      // V4's OTHER half, and the one no snapshot can see: the lane
+      // returned BEFORE ANY KERNEL WAS BUILT. Asserted here, before the
+      // after-snapshot runs anything else through the CLI.
+      expect(kernelBuilds, lane).toEqual([]);
+      expect(kernelCalls, lane).toEqual([]);
+      expect(await observeLane(), lane).toStrictEqual(before);
     }
+
+    // THE CONTROL for the two counters, because `[]` is worthless
+    // without a lane that makes it non-empty: the SAME seam, on a
+    // submit that DOES resolve, records the build and the call.
+    const controlDb = tempDbPath();
+    const controlDeps = gatedDeps(dir);
+    const controlId = await parkedRun(controlDb, controlDeps, dir);
+    resetRouteSeam();
+    expect(
+      (await run(["submit-decision", controlId, "--db", controlDb, "--decision", "approve",
+                  "--templates-dir", dir], controlDeps)).code,
+    ).toBe(EXIT.ok);
+    expect(kernelBuilds).toEqual(["createKernel"]);
+    // The write and the post-commit settle — `kernelCalls` is TOTAL over
+    // the kernel's surface, not the write family, which is exactly why an
+    // empty one above is the row's claim rather than a weaker cousin.
+    expect(kernelCalls).toEqual(["submitDecision", "settleRuntimeContextDeliveries"]);
 
     // …and the two instances are still in the states the lanes assumed,
     // which keeps every equality above from being satisfiable by a run
@@ -2518,12 +2595,17 @@ describe("cli — ch14-p3a family 6: resolution failure and its ZERO side effect
     const malformed = stagedTemplatesDir("ref:\n  id: gated-v0\n  version: 1\nstart: nope\n");
     // An EAGER-LOAD build answers V4 (iii) at exit 1 here; the
     // short-circuit owes V4 (ii) at exit 3.
+    resetRouteSeam();
     const result = await run(
       ["submit-decision", id, "--db", db, "--decision", "approve", "--templates-dir", malformed],
       deps,
     );
     assertErrorContract(result, "not_found", EXIT.notFound);
     expect(errorDoc(result).name).toBe("NoPendingDecision");
+    // …and this ordering member is a V4 (ii) lane like any other, so it
+    // owes the row's pre-kernel half too.
+    expect(kernelBuilds).toEqual([]);
+    expect(kernelCalls).toEqual([]);
   });
 
   it("C27's MANDATORY resume lane: on an UNYIELDED template resume reaches the KERNEL, never an early integrity document", async () => {
@@ -2636,12 +2718,28 @@ describe("cli — ch14-p3a family 6: resolution failure and its ZERO side effect
 
   it("V4 (i) on the RESUME path — an unknown instance is the same standing not-found document", async () => {
     const dir = stagedTemplatesDir();
+    const db = tempDbPath();
+    const deps = gatedDeps(dir);
+    // The lane's OWN target, on both sides: `ghost` is not there, and the
+    // list it is absent from is empty and stays empty.
+    const listed = async (): Promise<unknown> => {
+      const result = await run(["list", "--db", db], deps);
+      expect(result.code).toBe(EXIT.ok);
+      return JSON.parse(result.stdout[0] ?? "") as unknown;
+    };
+    expect(await listed()).toEqual([]);
+    resetRouteSeam();
     const result = await run(
-      ["resume", "ghost", "--db", tempDbPath(), "--event", "COMMIT", "--templates-dir", dir],
-      gatedDeps(dir),
+      ["resume", "ghost", "--db", db, "--event", "COMMIT", "--templates-dir", dir],
+      deps,
     );
     assertErrorContract(result, "not_found", EXIT.notFound);
     expect(errorDoc(result).name).toBe("UnknownInstance");
+    // V4's pre-kernel half on the resume path: no kernel was built and
+    // none was called.
+    expect(kernelBuilds).toEqual([]);
+    expect(kernelCalls).toEqual([]);
+    expect(await listed()).toEqual([]);
   });
 });
 

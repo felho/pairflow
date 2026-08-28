@@ -1309,13 +1309,114 @@ recorded per §4's aftermath rule: a fresh-context delegated agent for all
 eleven code-side folds; this orchestrating context for the Build-record
 correction above and for the independent verification. Suite 3085 → 3089.
 
+---
+
+**ARM GATE 2, PASS 2 on the aftermath commit `66a21ba1`: `not ready`,
+nine of eleven CLOSED, TWO remaining — both folded in the second
+aftermath commit. The pass also TESTED two claims this record had made
+rather than accepting them, and both held:** the masking pass produces
+no false GREEN (probed with string, line-comment, block-comment,
+template-literal, changed-first-argument, non-null-second-argument and
+multiline counter-cases), and the family-2b doctor seam ruling was
+AGREED with its own grounds — default-off, restored in `finally`,
+carrying a no-doctor positive control, absent from the subprocess
+journey, and bypassing none of the propagation path under test.
+
+**THE REMAINING BLOCKER WAS NOT THIS PACKET'S, and that is the finding
+worth carrying past this chapter.** F2's own entry was CLOSED. But the
+code-aware machinery built to close it made VISIBLE that the THREE
+PRE-EXISTING entries — authored at ch14-p2a — run through the same
+unmasked `re.sub` and carry the identical context-overmatch: reproduced
+independently here, `expect(label).toBe("asDispatch(x)")` erased GREEN
+in a string literal and in both comment forms. THE INSTRUMENT HAD
+LOOKED SOUND ONLY BECAUSE NOBODY HAD PROBED IT FROM THIS DIRECTION.
+This packet's edit did not introduce the class; it introduced a fourth
+instance of it, and the negatives written for the fourth are what
+exposed the other three.
+
+FIXED HERE RATHER THAN ROUTED ONWARD, on three grounds, and recorded
+loudly per the process-log's own standing rule for edits that move
+another packet's ratified surface: `check_trace_narrow.py` is inside
+this packet's declared boundary; the machinery already exists, so the
+fix is an application rather than an invention; and a measuring
+instrument with a DEMONSTRATED false-green path is a live hole in a
+gate that every later chapter's traces ride. The code's own header
+states the provenance — the first three entries are ch14-p2a's and the
+defect is INHERITED — so a later reader does not conclude this packet
+minted them.
+
+**THE FIX'S SHAPE WAS DECIDED PER ENTRY RATHER THAN FORCED INTO ONE**,
+which is the part with a life beyond this fold. `sub_in_code` was
+re-mechanised: it matches the ORIGINAL text, and every entry must name,
+via a `(?P<code>…)` group, the span that has to be real source; a match
+whose anchor holds one mask character is dropped, and an entry with no
+`code` group RAISES — an anchorless entry cannot be added silently,
+which is the structural version of the discipline flag 1 argued for in
+prose. The anchors differ because the entries differ: the `asDispatch`
+call site anchors its CALL HEAD (an argument may legitimately hold a
+string); the declaration entry anchors its DECLARATION HEAD (its body is
+`"packet" in intent` — the statement carries a string); the import entry
+anchors its IMPORT HEAD (the specifier is a string by construction); and
+`createFloor` keeps its WHOLE-STATEMENT anchor, carrying no string at
+all. The four entries are now ONE closed set, and the two lists that
+briefly existed are collapsed back into one.
+
+ONE DELIBERATE WIDENING, declared: the declaration entry's doc comment
+became OPTIONAL, because JS block comments do not nest — a wrapper ends
+at the doc comment's own `*/` — so with the comment REQUIRED the
+block-comment negative had nothing to falsify. The widening is in the
+SHAPE; the code anchor is a strict narrowing in the false-green
+direction, so the pair moves the entry toward classifying, not toward
+passing.
+
+TWELVE NEW LANES (string / line-comment / block-comment RED plus a
+real-code GREEN control per entry, plus an import green): selftest
+13 → 22 red dims. THREE RECEIPTS: the new lanes run against HEAD's
+pre-fix checker report SIX FALSE GREENS now RED; neutering the anchor
+check greens EIGHT lanes including the previously-driven
+`createFloor-inside-a-block-comment`; and removing the line anchor while
+keeping the code anchor keeps red the two lanes that do not falsify HEAD.
+TWO LANES ARE HONESTLY NON-FALSIFYING AGAINST HEAD and the code says so
+— `declaration-` and `import-inside-a-line-comment` were already out of
+reach because both entries are line-anchored — but neither is idle: each
+stays red if EITHER anchor is dropped, so the pair is the standing guard
+on the two-anchor design. NO RECEIPT MOVED: `erase()` output was
+captured for all four receipt files on both sides and re-diffed
+byte-identical, which is the check that separates "the instrument
+learned to classify better" from "the instrument now classifies
+something else".
+
+**THE SECOND FINDING WAS SQUARELY OURS.** Family 6 asserted V4's
+documents and the absence of commits but never observed V4's actual
+claim — that each answer returns BEFORE ANY KERNEL IS BUILT. An
+implementation that built a kernel, called it, took `unknown_instance`
+back and remapped it to the same CLI document without committing passed
+every lane. The existing route seam gained `kernelBuilds` and
+`kernelCalls` — TOTAL over the kernel surface rather than write-only,
+since a kernel merely CONSULTED is still a kernel V4 forbids — asserted
+empty on all six V4 lanes, with a resolving-submit CONTROL that records
+`["createKernel"]` and two calls, which is what proves the counters are
+total rather than dead. The unknown-instance lane now snapshots its OWN
+target: `ghost` absent on both sides, carrying the full instance list.
+RECEIPT: the named wrong implementation reds two lanes and is FULLY
+GREEN at HEAD. A second probe — registering the unknown id on the way to
+reporting it unknown — reds the lane too, with the honest caveat the
+fold recorded: a neighbouring family-4 lane caught that one incidentally,
+so the family-6 lane was not its only guard.
+
+**SECOND AFTERMATH COMMIT — two files, both inside the boundary, no
+production file touched:** `tools/v3-plan/check_trace_narrow.py`,
+`v3/src/cli/cli.test.ts`. Author: a fresh-context delegated agent for
+both folds; this context for the independent re-probe of all three
+legacy cases and the `createFloor` regression check, and for this record.
+
 ```json
 {
   "packet_metrics": {
     "class": "operability",
     "prediction": { "predicted": "projection", "reasoning": "the ratified ch14-human-decision contract legislates both surfaces (C21, C23); the split leaves this part reading them", "discovered": "projection" },
     "provenance": { "anchored": 5, "derived": 11, "new_decision": 2 },
-    "rounds": { "review": 5, "doc_refinement": 0, "implementation": 2 },
+    "rounds": { "review": 5, "doc_refinement": 0, "implementation": 3 },
     "stops": [{"type": "1:late-b-signal", "what": "the disposition of a NON-YIELDED pinned template is undecided by C21 (read side) and C23 (write side), and V4 reads C23(c) down to avoid it; raised at the pre-build arm gate on the third occurrence of the same signal", "resolution": "ratifier chose a narrow ch14 contract reopen over re-anchoring in the packet, 2026-08-28 — the packet anchors to the new row instead of deciding"}],
     "detector_misses": [{"found_at": "arm-approve", "what": "the C27 reopen split the two write verbs apart and thirteen sentences kept speaking of them as one; the packet was marked APPROVED with the whole class alive", "why_missed": "five internal panel lenses and two arm passes read the text against itself, and every one of the thirteen was well-formed prose — only a trace against the code or against a sibling sentence falsifies them; the packet lint does not read prose at all"}, {"found_at": "arm-build-close", "what": "nine of gate 2's eleven findings were one class — a lane asserting what the code does, or standing on a fixture where right and wrong behave identically; and the F2 checker entry was text-level, so it erased inside string literals and comments", "why_missed": "the CLI families' tests were written AFTER the verbs and their RED receipts produced post-hoc by mutation probes, which proves sensitivity to the mutations chosen and not fail-first independence from the implementation the tests were read from; the F2 negatives guarded the VALUE axis while the CONTEXT axis went unprobed"}, {"found_at": "arm-approve", "what": "arm gate 1 was left open — the folded bytes never got their hash-citing re-check, and the gate record was not on a repo surface", "why_missed": "the discipline's two halves are one sentence in README §5.5 and the second half has no machine carrier; the packet header attested the passes in prose while the Build record held its placeholder"}],
     "learned": "an instance-wise fold of a class defect regenerates its own next round — 2/3/4/4/0 across five closing arm passes; the pass that bounded it swept against the stated cause",

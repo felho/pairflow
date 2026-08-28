@@ -73,51 +73,97 @@ from pathlib import Path
 # Each entry rewrites a NARROWING construct back to the expression it
 # narrows, so a purely type-level edit normalizes to the pre-edit bytes.
 # CLOSED means: adding a member is a checker edit, reviewed as one.
-ERASURES: list[tuple[str, str]] = [
-    # the discriminating-narrow helper's call sites
-    (r"asDispatch\(([^()]*(?:\([^()]*\)[^()]*)*)\)", r"\1"),
-    # the helper's own declaration (a type-level addition, not behaviour)
-    (
-        r"\n/\*\*(?:[^*]|\*(?!/))*?\*/\nconst asDispatch = [^;]*;\n",
-        "\n",
-    ),
-    # a type-only import added for the narrow
-    (r'\nimport type \{ DispatchIntent, HumanDecisionRequest \} from "[^"]*";', ""),
-]
-
-# ── the CODE-ONLY erasure set ────────────────────────────────────────
-# Entries applied ONLY where the match lies in CODE — never inside a
-# string literal and never inside a comment. Same closed-list discipline
-# as `ERASURES` above; the separate list exists because these entries
-# need the masking pass below and the three above do not.
 #
-# WHY A SECOND MECHANISM AT ALL. A pinned VALUE is not a pinned CONTEXT.
-# `createFloor(<expr>, null)` as a bare text rule matches the same bytes
-# wherever they occur — inside an EXPECTED STRING LITERAL and inside a
-# COMMENT included — so a re-pin that changed an expectation to
+# EVERY ENTRY IS CODE-ANCHORED, and that is the whole second half of
+# what "closed" has to mean. A pinned VALUE is not a pinned CONTEXT: a
+# bare text rule matches the same bytes wherever they occur — inside an
+# EXPECTED STRING LITERAL and inside a COMMENT included — so a re-pin
+# that changed an expectation to `"asDispatch(x)"` or to
 # `"createFloor(v, null)"` would be erased on BOTH sides of the diff and
 # ride through green. Widening a gate's closed list is the one move that
-# can WEAKEN the gate, and the negatives are what keep that from being
-# "the instrument learned to pass this build".
+# can WEAKEN the gate, and the per-entry negatives in the selftest are
+# what keep that from being "the instrument learned to pass this build".
 #
-# THE FORM IS PINNED TWICE OVER. (1) By VALUE: only the literal `, null`
-# erases, so a second argument carrying any other value stays visible to
-# the text half. (2) By CONTEXT: the match must be a WHOLE STATEMENT LINE
-# of the form `const <name> = createFloor(<simple-expr>, null);`, in code.
-# A call spanning several lines, a call in an argument position, or a
-# second argument that is itself a call all stay visible — each is a
-# further reviewed checker edit if a trace ever takes one, which is the
-# route this list declares rather than a shape it pre-authorizes.
-CODE_ERASURES: list[tuple[str, str]] = [
+# HOW THE ANCHOR WORKS. Every pattern names, with a `code` group, the
+# span that must be REAL SOURCE CODE; `sub_in_code` DROPS any match
+# whose anchor carries one masked character. The anchor is deliberately
+# NOT always the whole match, because two entries legitimately SPAN a
+# non-code region: the helper's declaration is introduced by a doc
+# COMMENT, and the type-only import ends in a module-specifier STRING.
+# What each entry needs is that the part which makes the construct REAL
+# — the call head, the declaration head, the import head — is code; the
+# rest of the span then belongs to a construct that provably exists.
+#
+# PROVENANCE, because a reader would otherwise mis-attribute the fix and
+# the defect alike: the first three entries were AUTHORED BY PACKET
+# ch14-p2a and ran through an UNMASKED `re.sub` from that packet until
+# this one. The context-overmatch defect below is INHERITED, not minted
+# here — packet ch14-p3a closed it because the file is inside its
+# mutation boundary, because the masking machinery it built for the
+# fourth entry made the fix cheap, and because a measuring instrument
+# with a demonstrated false-green path is a live hole whoever dug it.
+# Only the FOURTH entry is this packet's own.
+ERASURES: list[tuple[str, str]] = [
+    # the discriminating-narrow helper's CALL SITES (packet ch14-p2a).
+    # The anchor is the CALL HEAD, not the whole call: an argument may
+    # legitimately contain a string literal, and anchoring on the whole
+    # call would then RED a clean narrow. A call head sitting in code is
+    # a real call site; one inside a literal or a comment is not.
+    (
+        r"(?P<code>asDispatch\()(?P<narrowed>[^()]*(?:\([^()]*\)[^()]*)*)\)",
+        r"\g<narrowed>",
+    ),
+    # the helper's own DECLARATION (packet ch14-p2a) — a type-level
+    # addition, not behaviour — together with the doc comment that
+    # introduces it.
+    #
+    # The anchor is the DECLARATION HEAD. It cannot be the whole
+    # statement: the body reads `"packet" in intent`, so the statement
+    # carries a string literal and a whole-statement anchor would red
+    # every real narrow. A `const asDispatch =` in code IS the helper's
+    # declaration; the doc comment above it is a comment by construction
+    # and can never be anchored at all.
+    #
+    # The doc comment is OPTIONAL here where packet ch14-p2a required it.
+    # Requiring it made the entry UNREACHABLE from inside a block comment
+    # — JS block comments do not nest, so a `/* ... */` wrapper ends at
+    # the doc comment's own `*/` and everything after it is real code
+    # again — which left the block-comment negative with nothing to
+    # falsify. Optional, the entry also erases an undocumented
+    # declaration of the same helper, which is the same type-level
+    # addition; the widening is in the SHAPE, while the code anchor is a
+    # strict narrowing in the direction that can produce a false green.
+    (
+        r"(?:\n/\*\*(?:[^*]|\*(?!/))*?\*/)?\n(?P<code>const asDispatch = )[^;]*;\n",
+        "\n",
+    ),
+    # a type-only IMPORT added for the narrow (packet ch14-p2a). The
+    # anchor stops before the module specifier, which is a string literal
+    # by construction; the import head is what proves the statement real.
+    (
+        r'\n(?P<code>import type \{ DispatchIntent, HumanDecisionRequest \} from )"[^"]*";',
+        "",
+    ),
     # packet ch14-p3a (F2), a REVIEWED CHECKER EDIT taken by the route this
     # list declares above: `createFloor` gained a REQUIRED nullable second
     # parameter, so every call site takes a purely type-level argument
     # addition, which is not a narrowing construct and normalizes under none
     # of the three entries above.
+    #
+    # THE FORM IS PINNED TWICE OVER. (1) By VALUE: only the literal `, null`
+    # erases, so a second argument carrying any other value stays visible to
+    # the text half. (2) By CONTEXT: the match must be a WHOLE STATEMENT LINE
+    # of the form `const <name> = createFloor(<simple-expr>, null);`, in code
+    # — the anchor here IS the whole statement, which carries no string by
+    # construction. A call spanning several lines, a call in an argument
+    # position, or a second argument that is itself a call all stay visible
+    # — each is a further reviewed checker edit if a trace ever takes one,
+    # which is the route this list declares rather than a shape it
+    # pre-authorizes.
     (
-        r"(?m)^([ \t]*(?:const|let|var)[ \t]+[A-Za-z_$][A-Za-z0-9_$]*[ \t]*=[ \t]*"
-        r"createFloor\([^,()\n]*), null\);[ \t]*$",
-        r"\1);",
+        r"(?m)^(?P<code>(?P<head>[ \t]*(?:const|let|var)[ \t]+[A-Za-z_$][A-Za-z0-9_$]*[ \t]*=[ \t]*"
+        r"createFloor\([^,()\n]*), null\);)[ \t]*$",
+        r"\g<head>);",
     ),
 ]
 
@@ -202,28 +248,39 @@ def mask_noncode(text: str) -> str:
 
 
 def sub_in_code(pattern: str, replacement: str, text: str) -> str:
-    """Apply `pattern` ONLY at spans that lie in code.
+    """Apply `pattern` ONLY where its `code` ANCHOR lies in code.
 
-    Match positions are found on the MASKED text and spliced back into
-    the ORIGINAL, so an occurrence inside a string literal or a comment
-    is invisible to the rule while a real call site is not.
+    The pattern is matched against the ORIGINAL text, because an entry
+    may legitimately SPAN a non-code region — a doc comment above a
+    declaration, a module specifier at the end of an import — and a
+    match found on the masked copy could not then be spliced back. What
+    makes the application code-aware is the ANCHOR: every entry names,
+    with a `code` group, the span that must be REAL SOURCE CODE, and a
+    match whose anchor carries a single masked character is DROPPED. An
+    occurrence inside a string literal or a comment therefore never
+    fires; a real site does.
+
+    A pattern with NO `code` group raises here rather than defaulting to
+    the whole match, and that is deliberate: an anchorless entry is
+    exactly the context-blind rule this function exists to refuse, so it
+    must fail loudly at its first use instead of quietly overmatching.
     """
     masked = mask_noncode(text)
     pieces: list[str] = []
     last = 0
-    for match in re.finditer(pattern, masked):
-        start, end = match.span()
-        pieces.append(text[last:start])
-        pieces.append(re.sub(pattern, replacement, text[start:end]))
-        last = end
+    for match in re.finditer(pattern, text):
+        start, end = match.span("code")
+        if start < 0 or _MASK in masked[start:end]:
+            continue
+        pieces.append(text[last : match.start()])
+        pieces.append(match.expand(replacement))
+        last = match.end()
     pieces.append(text[last:])
     return "".join(pieces)
 
 
 def erase(text: str) -> str:
     for pattern, replacement in ERASURES:
-        text = re.sub(pattern, replacement, text)
-    for pattern, replacement in CODE_ERASURES:
         text = sub_in_code(pattern, replacement, text)
     # NORMALIZATION, declared as part of the closed set rather than left
     # implicit: trailing whitespace per line, and runs of blank lines
@@ -397,6 +454,88 @@ FLOOR_CONTEXT_AFTER = (
 )
 
 
+# packet ch14-p3a (F1), the INHERITED entries' overmatch negatives. The
+# three entries above the `createFloor` one were authored by packet
+# ch14-p2a and applied context-blind until this packet; each of them
+# carried the SAME defect the `createFloor` fixtures below were written
+# for, and each now gets the same four lanes: the construct planted in a
+# STRING LITERAL, in a LINE COMMENT, and in a BLOCK COMMENT — where it
+# must NOT erase — plus a GREEN control where those very contexts are
+# present and UNCHANGED while the real construct takes the narrow, so
+# the negatives cannot be satisfied by an entry that erases nothing.
+#
+# WHICH LANES FALSIFY WHAT, stated because two of the twelve do not
+# falsify the pre-fix implementation and a reader deserves to know
+# which. The declaration and import entries are LINE-ANCHORED — their
+# match begins at a newline — so a `//` prefix, which occupies the line
+# start, already put them out of reach of a line comment before the code
+# anchor existed. Their line-comment lanes are therefore red under BOTH
+# implementations. They are kept, and they are not idle: each stays red
+# if the LINE anchor is dropped (the code anchor reds it) and if the
+# CODE anchor is dropped (the line anchor reds it), so they are the
+# standing guard on the pair. Every other lane below is green under the
+# pre-fix rule and red under this one.
+
+# ── the CALL-SITE entry ──────────────────────────────────────────────
+# The executed counterexample from the ch14-p3a build-close review:
+# `toBe("x")` re-pinned to `toBe("asDispatch(x)")` erases on both sides.
+CALL_LITERAL_BEFORE = BEFORE + 'expect(label).toBe("x");\n'
+CALL_LITERAL_AFTER = AFTER_CLEAN + 'expect(label).toBe("asDispatch(x)");\n'
+
+CALL_COMMENT_BEFORE = BEFORE + "// the narrowed site: o.intent\n"
+CALL_COMMENT_AFTER = AFTER_CLEAN + "// the narrowed site: asDispatch(o.intent)\n"
+
+CALL_BLOCK_BEFORE = BEFORE + "/*\nconst legacy = o.intent;\n*/\n"
+CALL_BLOCK_AFTER = AFTER_CLEAN + "/*\nconst legacy = asDispatch(o.intent);\n*/\n"
+
+CALL_CONTEXT_BEFORE = BEFORE + 'expect(label).toBe("asDispatch(x)");\n// see asDispatch(x)\n'
+CALL_CONTEXT_AFTER = AFTER_CLEAN + 'expect(label).toBe("asDispatch(x)");\n// see asDispatch(x)\n'
+
+# ── the DECLARATION entry ────────────────────────────────────────────
+# The erased construct spans lines, so its string-literal lane needs a
+# TEMPLATE literal — the only string form that legitimately does.
+DECL_DOC = "/**\n * doc\n */\n"
+DECL_LITERAL_BEFORE = BEFORE + "const sample = `\n`;\n"
+DECL_LITERAL_AFTER = (
+    AFTER_CLEAN + "const sample = `\n" + DECL_DOC + "const asDispatch = (i: T) => i;\n`;\n"
+)
+
+# Line-anchored out of reach of a `//` prefix; see the note above.
+DECL_COMMENT_BEFORE = BEFORE + "// const asDispatch = (i: T) => i;\n"
+DECL_COMMENT_AFTER = AFTER_CLEAN + "// const asDispatch = (i: T) => null;\n"
+
+# The block-comment lane carries the DOC-FREE shape on purpose: a doc
+# comment planted inside a block comment ENDS it at its own `*/`, so the
+# declaration after it would be real code and the lane would be green
+# for the right reason. Only the optional-doc form is reachable here.
+DECL_BLOCK_BEFORE = BEFORE + "/*\n*/\n"
+DECL_BLOCK_AFTER = AFTER_CLEAN + "/*\nconst asDispatch = (i: T) => i;\n*/\n"
+
+DECL_SAMPLE = "const sample = `\n" + DECL_DOC + "const asDispatch = (i: T) => i;\n`;\n"
+DECL_CONTEXT_BEFORE = BEFORE + DECL_SAMPLE
+DECL_CONTEXT_AFTER = AFTER_CLEAN + DECL_SAMPLE
+
+# ── the TYPE-ONLY IMPORT entry ───────────────────────────────────────
+# The entry's match begins at the newline BEFORE the statement, so the
+# fixture needs a line above it for the narrow to be clean.
+IMPORT_LINE = 'import type { DispatchIntent, HumanDecisionRequest } from "./domain/index.js";'
+IMPORT_BEFORE = 'import { helper } from "./helper.js";\n' + BEFORE
+IMPORT_AFTER_CLEAN = 'import { helper } from "./helper.js";\n' + IMPORT_LINE + "\n" + AFTER_CLEAN
+
+IMPORT_LITERAL_BEFORE = IMPORT_BEFORE + "const sample = `\n`;\n"
+IMPORT_LITERAL_AFTER = IMPORT_AFTER_CLEAN + "const sample = `\n" + IMPORT_LINE + "\n`;\n"
+
+# Line-anchored out of reach of a `//` prefix; see the note above.
+IMPORT_COMMENT_BEFORE = IMPORT_BEFORE + "// " + IMPORT_LINE + "\n"
+IMPORT_COMMENT_AFTER = IMPORT_AFTER_CLEAN + "// " + IMPORT_LINE.replace("./domain", "./other") + "\n"
+
+IMPORT_BLOCK_BEFORE = IMPORT_BEFORE + "/*\n*/\n"
+IMPORT_BLOCK_AFTER = IMPORT_AFTER_CLEAN + "/*\n" + IMPORT_LINE + "\n*/\n"
+
+IMPORT_CONTEXT_BEFORE = IMPORT_BEFORE + "// " + IMPORT_LINE + "\n"
+IMPORT_CONTEXT_AFTER = IMPORT_AFTER_CLEAN + "// " + IMPORT_LINE + "\n"
+
+
 def selftest() -> int:
     failures: list[str] = []
     dims: list[str] = []
@@ -498,6 +637,52 @@ def selftest() -> int:
         failures.append(
             f"green NOT green: the createFloor addition was refused beside unchanged "
             f"string/comment contexts ({checker.errors})"
+        )
+
+    # packet ch14-p3a (F1) — the three INHERITED entries' context lanes.
+    # A helper, because twelve lanes written out longhand hide the one
+    # thing worth reading: each triple is (entry, context, fixture pair),
+    # and every one of them must RE-PIN.
+    def assert_context_red(label: str, before: str, after: str) -> None:
+        checker = Checker()
+        check_text_half(label, before, after, checker)
+        assert_red(label, checker.errors, "RE-PIN")
+
+    def assert_context_green(label: str, before: str, after: str) -> None:
+        checker = Checker()
+        check_text_half(label, before, after, checker)
+        if checker.errors:
+            failures.append(
+                f"green NOT green: {label} — the real construct was refused beside "
+                f"unchanged string/comment contexts ({checker.errors})"
+            )
+
+    # 15-17. the CALL-SITE entry in each non-code context. 15 is the
+    #        executed counterexample the review reproduced.
+    assert_context_red("asDispatch-inside-a-string-literal", CALL_LITERAL_BEFORE, CALL_LITERAL_AFTER)
+    assert_context_red("asDispatch-inside-a-line-comment", CALL_COMMENT_BEFORE, CALL_COMMENT_AFTER)
+    assert_context_red("asDispatch-inside-a-block-comment", CALL_BLOCK_BEFORE, CALL_BLOCK_AFTER)
+    assert_context_green("asDispatch-context-green", CALL_CONTEXT_BEFORE, CALL_CONTEXT_AFTER)
+
+    # 18-20. the DECLARATION entry in each non-code context.
+    assert_context_red("declaration-inside-a-string-literal", DECL_LITERAL_BEFORE, DECL_LITERAL_AFTER)
+    assert_context_red("declaration-inside-a-line-comment", DECL_COMMENT_BEFORE, DECL_COMMENT_AFTER)
+    assert_context_red("declaration-inside-a-block-comment", DECL_BLOCK_BEFORE, DECL_BLOCK_AFTER)
+    assert_context_green("declaration-context-green", DECL_CONTEXT_BEFORE, DECL_CONTEXT_AFTER)
+
+    # 21-23. the TYPE-ONLY IMPORT entry in each non-code context.
+    assert_context_red("import-inside-a-string-literal", IMPORT_LITERAL_BEFORE, IMPORT_LITERAL_AFTER)
+    assert_context_red("import-inside-a-line-comment", IMPORT_COMMENT_BEFORE, IMPORT_COMMENT_AFTER)
+    assert_context_red("import-inside-a-block-comment", IMPORT_BLOCK_BEFORE, IMPORT_BLOCK_AFTER)
+    assert_context_green("import-context-green", IMPORT_CONTEXT_BEFORE, IMPORT_CONTEXT_AFTER)
+
+    # GREEN: the type-only import erases on its own, which is what the
+    # three lanes above are the context half of.
+    checker = Checker()
+    check_text_half("import-green", IMPORT_BEFORE, IMPORT_AFTER_CLEAN, checker)
+    if checker.errors:
+        failures.append(
+            f"green NOT green: the type-only import addition was refused ({checker.errors})"
         )
 
     # 6. a receipt CLAIMING the dropped provenance. The leg is gone, so
