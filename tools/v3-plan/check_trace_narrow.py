@@ -83,19 +83,42 @@ ERASURES: list[tuple[str, str]] = [
     ),
     # a type-only import added for the narrow
     (r'\nimport type \{ DispatchIntent, HumanDecisionRequest \} from "[^"]*";', ""),
+]
+
+# ── the CODE-ONLY erasure set ────────────────────────────────────────
+# Entries applied ONLY where the match lies in CODE — never inside a
+# string literal and never inside a comment. Same closed-list discipline
+# as `ERASURES` above; the separate list exists because these entries
+# need the masking pass below and the three above do not.
+#
+# WHY A SECOND MECHANISM AT ALL. A pinned VALUE is not a pinned CONTEXT.
+# `createFloor(<expr>, null)` as a bare text rule matches the same bytes
+# wherever they occur — inside an EXPECTED STRING LITERAL and inside a
+# COMMENT included — so a re-pin that changed an expectation to
+# `"createFloor(v, null)"` would be erased on BOTH sides of the diff and
+# ride through green. Widening a gate's closed list is the one move that
+# can WEAKEN the gate, and the negatives are what keep that from being
+# "the instrument learned to pass this build".
+#
+# THE FORM IS PINNED TWICE OVER. (1) By VALUE: only the literal `, null`
+# erases, so a second argument carrying any other value stays visible to
+# the text half. (2) By CONTEXT: the match must be a WHOLE STATEMENT LINE
+# of the form `const <name> = createFloor(<simple-expr>, null);`, in code.
+# A call spanning several lines, a call in an argument position, or a
+# second argument that is itself a call all stay visible — each is a
+# further reviewed checker edit if a trace ever takes one, which is the
+# route this list declares rather than a shape it pre-authorizes.
+CODE_ERASURES: list[tuple[str, str]] = [
     # packet ch14-p3a (F2), a REVIEWED CHECKER EDIT taken by the route this
     # list declares above: `createFloor` gained a REQUIRED nullable second
     # parameter, so every call site takes a purely type-level argument
     # addition, which is not a narrowing construct and normalizes under none
     # of the three entries above.
-    #
-    # THE FORM IS PINNED TO THE EXACT ADDED TEXT, never to the SHAPE of an
-    # argument addition: only the literal `, null` erases, so a second
-    # argument carrying ANY OTHER value stays visible to the text half. A
-    # value-agnostic rule would erase every second argument at every call
-    # site in every future trace — a gate that has learned to pass rather
-    # than to classify.
-    (r"createFloor\(([^,()]*), null\)", r"createFloor(\1)"),
+    (
+        r"(?m)^([ \t]*(?:const|let|var)[ \t]+[A-Za-z_$][A-Za-z0-9_$]*[ \t]*=[ \t]*"
+        r"createFloor\([^,()\n]*), null\);[ \t]*$",
+        r"\1);",
+    ),
 ]
 
 # The REFUSAL list — constructs that are NOT compiler-forced however
@@ -112,9 +135,96 @@ class Checker:
         self.errors.append(message)
 
 
+# The filler a masked (non-code) character becomes. It cannot occur in a
+# TypeScript source file, so a masked region can never be matched by an
+# erasure pattern written over source text.
+_MASK = "\x00"
+
+
+def mask_noncode(text: str) -> str:
+    """Return `text` with every COMMENT and STRING-LITERAL character
+    replaced by a filler, positions and newlines preserved.
+
+    The lexer is deliberately crude, and the direction of its error is
+    the point: masking TOO MUCH can only make an erasure fail to apply,
+    which turns a clean edit into a RE-PIN verdict — a false RED. It can
+    never make an erasure apply where it should not, which is the false
+    GREEN this gate exists to refuse. So an ambiguous byte (a `/` that
+    opens a regex literal, a quote inside one) is allowed to over-mask.
+    """
+    out = list(text)
+    i = 0
+    n = len(text)
+    while i < n:
+        char = text[i]
+        if char == "/" and text.startswith("//", i):
+            while i < n and text[i] != "\n":
+                out[i] = _MASK
+                i += 1
+        elif char == "/" and text.startswith("/*", i):
+            while i < n and not text.startswith("*/", i):
+                if text[i] != "\n":
+                    out[i] = _MASK
+                i += 1
+            for _ in range(2):
+                if i < n:
+                    out[i] = _MASK
+                    i += 1
+        elif char in "\"'`":
+            quote = char
+            out[i] = _MASK
+            i += 1
+            while i < n:
+                current = text[i]
+                if current == "\\":
+                    out[i] = _MASK
+                    if i + 1 < n and text[i + 1] != "\n":
+                        out[i + 1] = _MASK
+                    i += 2
+                    continue
+                if current == quote:
+                    out[i] = _MASK
+                    i += 1
+                    break
+                # An unterminated single-quoted string does not swallow the
+                # rest of the file; a template literal legitimately spans
+                # lines and does.
+                if current == "\n":
+                    if quote != "`":
+                        break
+                    i += 1
+                    continue
+                out[i] = _MASK
+                i += 1
+        else:
+            i += 1
+    return "".join(out)
+
+
+def sub_in_code(pattern: str, replacement: str, text: str) -> str:
+    """Apply `pattern` ONLY at spans that lie in code.
+
+    Match positions are found on the MASKED text and spliced back into
+    the ORIGINAL, so an occurrence inside a string literal or a comment
+    is invisible to the rule while a real call site is not.
+    """
+    masked = mask_noncode(text)
+    pieces: list[str] = []
+    last = 0
+    for match in re.finditer(pattern, masked):
+        start, end = match.span()
+        pieces.append(text[last:start])
+        pieces.append(re.sub(pattern, replacement, text[start:end]))
+        last = end
+    pieces.append(text[last:])
+    return "".join(pieces)
+
+
 def erase(text: str) -> str:
     for pattern, replacement in ERASURES:
         text = re.sub(pattern, replacement, text)
+    for pattern, replacement in CODE_ERASURES:
+        text = sub_in_code(pattern, replacement, text)
     # NORMALIZATION, declared as part of the closed set rather than left
     # implicit: trailing whitespace per line, and runs of blank lines
     # collapsed to one. Neither is behaviour, and the blank-line rule is
@@ -257,6 +367,35 @@ FLOOR_AFTER_CLEAN = """const floor = createFloor(handle.store, null);
 expect(await floor.listInstances()).toHaveLength(1);
 """
 
+# packet ch14-p3a (F2), the OVERMATCH negatives. A pinned VALUE is not a
+# pinned CONTEXT: the same bytes occur inside an EXPECTED STRING LITERAL
+# and inside a COMMENT, and a rule that erased them THERE would carry a
+# re-pin through green on exactly the file it was minted for. Each
+# fixture pairs the LEGITIMATE argument addition with a change in a
+# non-code context, so the lane can only go red on the context rule.
+FLOOR_LITERAL_BEFORE = FLOOR_BEFORE + 'expect(label).toBe("createFloor(v)");\n'
+FLOOR_LITERAL_AFTER = FLOOR_AFTER_CLEAN + 'expect(label).toBe("createFloor(v, null)");\n'
+
+FLOOR_COMMENT_BEFORE = FLOOR_BEFORE + "// the site under test: createFloor(v)\n"
+FLOOR_COMMENT_AFTER = FLOOR_AFTER_CLEAN + "// the site under test: createFloor(v, null)\n"
+
+# A COMMENTED-OUT STATEMENT — the one shape a line-anchored rule alone
+# would still erase, because the commented text IS a whole statement
+# line. It is the masking pass, not the anchor, that reds this.
+FLOOR_BLOCK_BEFORE = FLOOR_BEFORE + "/*\nconst legacy = createFloor(other);\n*/\n"
+FLOOR_BLOCK_AFTER = FLOOR_AFTER_CLEAN + "/*\nconst legacy = createFloor(other, null);\n*/\n"
+
+# The GREEN control for the three above: the same non-code contexts
+# present and UNCHANGED, with the real call site taking the addition.
+# Without it the three negatives could be satisfied by a rule that had
+# simply stopped erasing anything at all.
+FLOOR_CONTEXT_BEFORE = (
+    FLOOR_BEFORE + 'expect(label).toBe("createFloor(v)");\n// see createFloor(v)\n'
+)
+FLOOR_CONTEXT_AFTER = (
+    FLOOR_AFTER_CLEAN + 'expect(label).toBe("createFloor(v)");\n// see createFloor(v)\n'
+)
+
 
 def selftest() -> int:
     failures: list[str] = []
@@ -329,6 +468,37 @@ def selftest() -> int:
         "n11", FLOOR_BEFORE, FLOOR_AFTER_CLEAN.replace("toHaveLength(1)", "toHaveLength(2)"), checker
     )
     assert_red("createFloor-addition-beside-a-repin", checker.errors, "RE-PIN")
+
+    # 12. the SAME text inside an EXPECTED STRING LITERAL. The erasure is
+    #     pinned by VALUE and by CONTEXT; without the context half a
+    #     changed-expected-literal re-pin whose literal happens to contain
+    #     the added text is erased on BOTH sides of the diff and rides
+    #     through green.
+    checker = Checker()
+    check_text_half("n12", FLOOR_LITERAL_BEFORE, FLOOR_LITERAL_AFTER, checker)
+    assert_red("createFloor-inside-a-string-literal", checker.errors, "RE-PIN")
+
+    # 13. the SAME text inside a LINE COMMENT.
+    checker = Checker()
+    check_text_half("n13", FLOOR_COMMENT_BEFORE, FLOOR_COMMENT_AFTER, checker)
+    assert_red("createFloor-inside-a-line-comment", checker.errors, "RE-PIN")
+
+    # 14. a COMMENTED-OUT STATEMENT inside a BLOCK COMMENT — the shape a
+    #     line-anchored rule alone still erases.
+    checker = Checker()
+    check_text_half("n14", FLOOR_BLOCK_BEFORE, FLOOR_BLOCK_AFTER, checker)
+    assert_red("createFloor-inside-a-block-comment", checker.errors, "RE-PIN")
+
+    # GREEN: the real call site still erases with those very contexts
+    # present and unchanged — the control that keeps the three negatives
+    # from being satisfied by an entry that erases nothing.
+    checker = Checker()
+    check_text_half("floor-context-green", FLOOR_CONTEXT_BEFORE, FLOOR_CONTEXT_AFTER, checker)
+    if checker.errors:
+        failures.append(
+            f"green NOT green: the createFloor addition was refused beside unchanged "
+            f"string/comment contexts ({checker.errors})"
+        )
 
     # 6. a receipt CLAIMING the dropped provenance. The leg is gone, so
     #    the sixth negative guards the honesty of the claim instead of

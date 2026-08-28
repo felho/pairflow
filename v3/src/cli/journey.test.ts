@@ -749,6 +749,14 @@ roles:
           decisionRequirements: Record<string, string[]>;
         };
       };
+      // The WHOLE top-level keyset, against a closed literal: a second
+      // explanatory key would pass every field assert below.
+      expect(Object.keys(parkedDoc).sort()).toEqual([
+        "instance",
+        "pendingDecision",
+        "runner",
+        "transcript",
+      ]);
       expect(parkedDoc.instance.wait.kind).toBe("human_decision");
       expect(parkedDoc.pendingDecision).toMatchObject({
         instanceId: id,
@@ -791,8 +799,15 @@ roles:
       };
       expect(waitingDoc.instance.currentStep).toBe("commit_pending");
       expect(waitingDoc.instance.wait.kind).toBe("commit_pending");
-      // The gate is closed and the Ask is GONE — the member is absent again.
+      // The gate is closed and the Ask is GONE — the member is absent
+      // again, and NO key takes its place: the CLOSED keyset is what says
+      // so, where `not.toHaveProperty` would pass a second key.
       expect(waitingDoc).not.toHaveProperty("pendingDecision");
+      expect(Object.keys(waitingDoc as Record<string, unknown>).sort()).toEqual([
+        "instance",
+        "runner",
+        "transcript",
+      ]);
 
       // RESUME: the bare wait's declared event routes to the terminal.
       const resumed = await cli(
@@ -810,6 +825,11 @@ roles:
       };
       expect(finalDoc.instance.kernelStatus).toBe("TERMINAL");
       expect(finalDoc.instance.terminalDisposition).toBe("done");
+      expect(Object.keys(finalDoc as Record<string, unknown>).sort()).toEqual([
+        "instance",
+        "runner",
+        "transcript",
+      ]);
 
       const timeline = await cli("timeline", id, "--db", db);
       const rows = JSON.parse(timeline.stdout.trim()) as TimelineRow[];

@@ -18,15 +18,19 @@ import { loadTemplate } from "../definition/index.js";
 import type { DiagStoreHandle } from "../diag/index.js";
 import { DiagUnavailableError, openDiagStore } from "../diag/index.js";
 import type {
+  AdmittedTemplate,
   ResumeWaitOutcome,
   SubmitDecisionOutcome,
   WorkflowInstance,
 } from "../domain/index.js";
+import type { InstanceDetail } from "../ports/store.js";
 import type { DiagnosticEvent, DiagnosticEventBody } from "../ports/diagnostics.js";
 import type { DefinitionStore } from "../ports/definition.js";
 // The mock factory returns the real module's own shape; naming the type
 // here keeps it out of an inline `import()` annotation (lint).
 import type * as DefinitionModuleShape from "../definition/index.js";
+import type * as IngressModuleShape from "../ingress/index.js";
+import type * as KernelModuleShape from "../kernel/index.js";
 import type { GateCatalog } from "../ports/gate.js";
 import { openStore } from "../store/index.js";
 import { createControlledClock, createScriptedTailWait } from "../testkit/index.js";
@@ -52,6 +56,7 @@ type DefinitionModule = typeof DefinitionModuleShape;
 
 const definitionStoreBuilds: DefinitionStore[] = [];
 const definitionLoads: DefinitionStore[] = [];
+let definitionTemplateDoctor: ((template: AdmittedTemplate) => AdmittedTemplate) | null = null;
 
 vi.mock("../definition/index.js", async (importOriginal) => {
   const actual = await importOriginal<DefinitionModule>();
@@ -60,9 +65,18 @@ vi.mock("../definition/index.js", async (importOriginal) => {
     createFileDefinitionStore: (dir: string, catalog: GateCatalog): DefinitionStore => {
       const real = actual.createFileDefinitionStore(dir, catalog);
       const wrapper: DefinitionStore = {
-        load: (ref) => {
+        load: async (ref) => {
           definitionLoads.push(wrapper);
-          return real.load(ref);
+          const loaded = await real.load(ref);
+          // Family 2b needs the derivation's `no role` / `no instruction`
+          // sites at the CLI grain, and neither is reachable through a
+          // FILE: admission refuses such a template, so it would answer
+          // `TemplateInvalid` instead of ever reaching the derivation.
+          // The doctor is the only seam that can stage them, and it is
+          // OFF (null) everywhere else.
+          return loaded === null || definitionTemplateDoctor === null
+            ? loaded
+            : definitionTemplateDoctor(loaded);
         },
       };
       definitionStoreBuilds.push(wrapper);
@@ -74,6 +88,85 @@ vi.mock("../definition/index.js", async (importOriginal) => {
 function resetDefinitionSeam(): void {
   definitionStoreBuilds.length = 0;
   definitionLoads.length = 0;
+  definitionTemplateDoctor = null;
+}
+
+/**
+ * V5's ROUTE observer (packet ch14-p3a, family 4). The route claim is
+ * "the kernel handlers DIRECTLY, never `ingress.submitIntent`", and the
+ * TYPE-level lane below cannot see it: a verb that serialized its own
+ * VALID record and pushed it through `submitIntent` would reach the very
+ * same `kernel.submitDecision` with the very same outcome, and every
+ * runtime lane in this file would stay green. Only a seam that watches
+ * WHICH object was called can fail on it.
+ *
+ * Both mocks DELEGATE in full — every returned object is the real one
+ * behind a recording wrapper — so no behaviour anywhere in this file
+ * changes.
+ */
+type KernelModule = typeof KernelModuleShape;
+type IngressModule = typeof IngressModuleShape;
+
+/** The kernel's WRITE family — the methods a verb can route a write through. */
+const KERNEL_WRITE_METHODS = [
+  "handle",
+  "create",
+  "start",
+  "kickoff",
+  "cancel",
+  "submitDecision",
+  "resumeWait",
+  "fail",
+] as const;
+
+const kernelWrites: string[] = [];
+const ingressBuilds: string[] = [];
+const ingressCalls: string[] = [];
+
+vi.mock("../kernel/index.js", async (importOriginal) => {
+  const actual = await importOriginal<KernelModule>();
+  return {
+    ...actual,
+    createKernel: (deps: Parameters<KernelModule["createKernel"]>[0]) => {
+      const real = actual.createKernel(deps);
+      const recorded = { ...real } as unknown as Record<string, unknown>;
+      const methods = real as unknown as Record<string, (...args: unknown[]) => unknown>;
+      for (const name of KERNEL_WRITE_METHODS) {
+        recorded[name] = (...args: unknown[]): unknown => {
+          kernelWrites.push(name);
+          return methods[name]!(...args);
+        };
+      }
+      return recorded as unknown as ReturnType<KernelModule["createKernel"]>;
+    },
+  };
+});
+
+vi.mock("../ingress/index.js", async (importOriginal) => {
+  const actual = await importOriginal<IngressModule>();
+  return {
+    ...actual,
+    createIngress: (deps: Parameters<IngressModule["createIngress"]>[0]) => {
+      const real = actual.createIngress(deps);
+      ingressBuilds.push("createIngress");
+      return {
+        submit: (raw: unknown) => {
+          ingressCalls.push("submit");
+          return real.submit(raw);
+        },
+        submitIntent: (raw: unknown) => {
+          ingressCalls.push("submitIntent");
+          return real.submitIntent(raw);
+        },
+      };
+    },
+  };
+});
+
+function resetRouteSeam(): void {
+  kernelWrites.length = 0;
+  ingressBuilds.length = 0;
+  ingressCalls.length = 0;
 }
 
 const dirs: string[] = [];
@@ -2089,6 +2182,15 @@ describe("cli — ch14-p3a family 1/3/10: the detail document under every deriva
       // (3) the dependency is WIRED and the load REJECTS — V9's recovery read
       ["wired-and-throws", ["detail", id, "--db", db, "--templates-dir", malformed], deps],
     ];
+    // THE BASELINE the "existing members intact" half is measured
+    // against: the SAME committed state read where the member IS
+    // derivable. A keyset pin does not see a CHANGED VALUE under an
+    // unchanged key, so without this a recovery path that rewrote the
+    // transcript, the runner section or any other instance field would
+    // stay green.
+    const derivable = dataDoc(await run(["detail", id, "--db", db, "--templates-dir", dir], deps));
+
+    let firstDoc: Record<string, unknown> | null = null;
     for (const [lane, argv, laneDeps] of lanes) {
       const result = await run(argv, laneDeps);
       expect(result.code, lane).toBe(EXIT.ok);
@@ -2102,7 +2204,88 @@ describe("cli — ch14-p3a family 1/3/10: the detail document under every deriva
       expect((doc["instance"] as { wait: { kind: string } }).wait.kind, lane).toBe(
         "human_decision",
       );
+      // WHOLE-VALUE, member by member, against the derivable baseline —
+      // the half the keyset pin cannot carry.
+      expect(doc["instance"], lane).toStrictEqual(derivable["instance"]);
+      expect(doc["transcript"], lane).toStrictEqual(derivable["transcript"]);
+      expect(doc["runner"], lane).toStrictEqual(derivable["runner"]);
+      // …and the three arms are ONE AND THE SAME document: V9's recovery
+      // read "composes NOTHING EXTRA", which is a claim about the whole
+      // value and not about a keyset.
+      if (firstDoc === null) {
+        firstDoc = doc;
+      } else {
+        expect(doc, lane).toStrictEqual(firstDoc);
+      }
     }
+    // …and the derivable document differs from them by EXACTLY the one
+    // member, which keeps the equalities above from being satisfiable by
+    // a build that emitted the same degraded document everywhere.
+    expect(Object.keys(derivable).sort()).toEqual([
+      "instance",
+      "pendingDecision",
+      "runner",
+      "transcript",
+    ]);
+  });
+
+  it("family 10: the emitted `detail` keyset is CLOSED in EVERY state — ACTIVE, parked-derivable, parked-underivable, a NON-decision WAIT, and TERMINAL", async () => {
+    const dir = stagedTemplatesDir();
+    const db = tempDbPath();
+    const deps = gatedDeps(dir);
+    // The CLOSED literal, PER STATE. A whole-keyset pin run only on the
+    // derivable and parked-underivable states cannot see a SECOND
+    // explanatory key that appears only in a non-decision WAITING or a
+    // TERMINAL document — the states no lane read at all.
+    const CLOSED = ["instance", "runner", "transcript"];
+    const keysetOf = async (target: string, templatesDir = dir): Promise<string[]> =>
+      Object.keys(
+        dataDoc(await run(["detail", target, "--db", db, "--templates-dir", templatesDir], deps)),
+      ).sort();
+
+    // ACTIVE — created and started, never parked.
+    const created = await run(
+      ["create", "--db", db, "--task", "t", "--template", "gated-v0@1", "--templates-dir", dir],
+      deps,
+    );
+    const activeId = (JSON.parse(created.stdout[0] ?? "") as { instanceId: string }).instanceId;
+    expect((await run(["start", activeId, "--db", db, "--templates-dir", dir], deps)).code)
+      .toBe(EXIT.ok);
+    expect(await keysetOf(activeId), "ACTIVE").toEqual(CLOSED);
+
+    // PARKED on a human decision, template YIELDED — the ONE state whose
+    // keyset grows, and by exactly the one member.
+    const id = await parkedRun(db, deps, dir);
+    expect(await keysetOf(id), "parked-and-derivable").toEqual([
+      "instance",
+      "pendingDecision",
+      "runner",
+      "transcript",
+    ]);
+    // …the SAME state with the template UNYIELDED adds nothing.
+    expect(await keysetOf(id, emptyTemplatesDir()), "parked-and-underivable").toEqual(CLOSED);
+
+    // A NON-DECISION WAIT: `approve` routes into the `commit_pending`
+    // bare wait, so the run is WAITING on a kind that is not a decision.
+    expect(
+      (await run(["submit-decision", id, "--db", db, "--decision", "approve",
+                  "--templates-dir", dir], deps)).code,
+    ).toBe(EXIT.ok);
+    const waitingDoc = dataDoc(
+      await run(["detail", id, "--db", db, "--templates-dir", dir], deps),
+    );
+    expect((waitingDoc["instance"] as { wait: { kind: string } }).wait.kind).toBe("commit_pending");
+    expect(Object.keys(waitingDoc).sort(), "non-decision WAITING").toEqual(CLOSED);
+
+    // TERMINAL: the declared resume event routes to the terminal step.
+    expect(
+      (await run(["resume", id, "--db", db, "--event", "COMMIT", "--templates-dir", dir], deps)).code,
+    ).toBe(EXIT.ok);
+    const terminalDoc = dataDoc(
+      await run(["detail", id, "--db", db, "--templates-dir", dir], deps),
+    );
+    expect((terminalDoc["instance"] as { kernelStatus: string }).kernelStatus).toBe("TERMINAL");
+    expect(Object.keys(terminalDoc).sort(), "TERMINAL").toEqual(CLOSED);
   });
 
   it("the read verb's ORDERING: a NOT-parked run with a REJECTING template takes ZERO loads and exactly ONE detail read", async () => {
@@ -2140,50 +2323,109 @@ describe("cli — ch14-p3a family 1/3/10: the detail document under every deriva
     expect(parkedCounter.reads).toBe(2);
   });
 
-  it("family 2b: an INTEGRITY throw is NEVER degraded — the read verb's narrowed catch RE-THROWS it", async () => {
+  it("family 2b: ALL EIGHT integrity conditions reach the `internal` class on BOTH verb classes that derive", async () => {
     const db = tempDbPath();
     const dir = stagedTemplatesDir();
     const deps = gatedDeps(dir);
     const id = await parkedRun(db, deps, dir);
-    // The staged precondition: a parked run whose committed request row
-    // the wait no longer names — F3's join condition, an impossible
-    // committed state. The lane asserts the CLASS, never the document
-    // `name`: the derivation's throws are bare `Error`s and `name` cannot
-    // discriminate them.
-    const doctored: CliDeps["openStore"] = (path, time) => {
-      const handle = openStore(path, time);
-      return {
-        ...handle,
-        store: {
-          ...handle.store,
-          getInstanceDetail: async (target) => {
-            const detail = await handle.store.getInstanceDetail(target);
-            return detail === null
-              ? null
-              : {
-                  ...detail,
-                  instance: {
-                    ...detail.instance,
-                    wait: { ...detail.instance.wait!, requestRef: "req-never-committed" },
-                  },
-                };
-          },
-        },
-      };
-    };
-    const readVerb = await run(
-      ["detail", id, "--db", db, "--templates-dir", dir],
-      gatedDeps(dir, { openStore: doctored }),
-    );
-    // A BARE catch here would have emitted a silently member-less
-    // document at exit 0 — this is the lane that falsifies it.
-    assertErrorContract(readVerb, "internal", EXIT.internal);
 
-    const writeVerb = await run(
-      ["submit-decision", id, "--db", db, "--decision", "approve", "--templates-dir", dir],
-      gatedDeps(dir, { openStore: doctored }),
-    );
-    assertErrorContract(writeVerb, "internal", EXIT.internal);
+    // A BARE catch on the read verb would have emitted a silently
+    // member-less document at exit 0 for every one of these; a caller
+    // degrading only SOME of them would pass a lane that drove only one.
+    // The lane asserts the STAGED PRECONDITION and the CLASS, never the
+    // document `name`: all six derivation throws are bare `Error`s and
+    // `name` cannot discriminate them.
+    const instanceDoctor =
+      (map: (detail: InstanceDetail) => InstanceDetail): CliDeps["openStore"] =>
+      (path, time) => {
+        const handle = openStore(path, time);
+        return {
+          ...handle,
+          store: {
+            ...handle.store,
+            getInstanceDetail: async (target) => {
+              const detail = await handle.store.getInstanceDetail(target);
+              return detail === null ? null : map(detail);
+            },
+          },
+        };
+      };
+    /** Drops a key from the GATE step of the loaded template. Dropped, not
+     * authored `undefined`: under exactOptionalPropertyTypes a key authored
+     * `undefined` is PRESENT, a different state from the missing one. */
+    const gateWithout = (key: "role" | "instruction") => (template: AdmittedTemplate) => {
+      const gate: Record<string, unknown> = { ...template.steps["gate"] };
+      delete gate[key];
+      // The `never` route, not `as AdmittedTemplate`: the brand's only
+      // sanctioned producer is `admitTemplate`, and admission is exactly
+      // what this fixture must bypass — the derivation's integrity
+      // throws describe committed state an admitted value cannot express.
+      return { ...template, steps: { ...template.steps, gate } } as never;
+    };
+
+    const members: readonly (readonly [
+      string,
+      CliDeps["openStore"] | null,
+      ((template: AdmittedTemplate) => AdmittedTemplate) | null,
+    ])[] = [
+      // F3's TWO integrity conditions
+      ["join: the wait handle names NO committed row",
+       instanceDoctor((d) => ({
+         ...d,
+         instance: { ...d.instance, wait: { ...d.instance.wait!, requestRef: "req-never" } },
+       })), null],
+      ["join: the wait handle is ABSENT",
+       instanceDoctor((d) => ({
+         ...d,
+         instance: {
+           ...d.instance,
+           wait: {
+             kind: d.instance.wait!.kind,
+             requestedBy: d.instance.wait!.requestedBy,
+             resumeEvents: d.instance.wait!.resumeEvents,
+           },
+         },
+       })), null],
+      // the derivation's SIX throw sites, each at its OWN precondition
+      ["derivation: a parked gate with a NULL currentStep",
+       instanceDoctor((d) => ({ ...d, instance: { ...d.instance, currentStep: null } })), null],
+      ["derivation: a currentStep with NO step definition",
+       instanceDoctor((d) => ({ ...d, instance: { ...d.instance, currentStep: "ghost" } })), null],
+      ["derivation: the step declares NO role", null, gateWithout("role")],
+      ["derivation: the role is UNBOUND in instance.binding",
+       instanceDoctor((d) => ({ ...d, instance: { ...d.instance, binding: {} } })), null],
+      ["derivation: the step declares NO instruction", null, gateWithout("instruction")],
+      ["derivation: a NULL task",
+       instanceDoctor((d) => ({ ...d, instance: { ...d.instance, task: null } })), null],
+    ];
+
+    const verbs: readonly (readonly [string, readonly string[]])[] = [
+      ["detail", ["detail", id, "--db", db, "--templates-dir", dir]],
+      ["submit-decision",
+       ["submit-decision", id, "--db", db, "--decision", "approve", "--templates-dir", dir]],
+    ];
+
+    for (const [member, storeDoctor, templateDoctor] of members) {
+      for (const [verb, argv] of verbs) {
+        definitionTemplateDoctor = templateDoctor;
+        try {
+          const result = await run(
+            argv,
+            gatedDeps(dir, storeDoctor === null ? {} : { openStore: storeDoctor }),
+          );
+          assertErrorContract(result, "internal", EXIT.internal);
+          expect(result.stdout, `${verb} / ${member}`).toEqual([]);
+        } finally {
+          definitionTemplateDoctor = null;
+        }
+      }
+    }
+
+    // …and the CONTROL that keeps the eight from being vacuous: with NO
+    // doctor at all the very same argv pair is a clean success on both
+    // verbs, so an implementation that failed everything could not pass.
+    expect((await run(verbs[0]![1], deps)).code).toBe(EXIT.ok);
+    expect((await run(verbs[1]![1], deps)).code).toBe(EXIT.ok);
   });
 });
 
@@ -2204,36 +2446,63 @@ describe("cli — ch14-p3a family 6: resolution failure and its ZERO side effect
       .toBe(EXIT.ok);
     const malformed = stagedTemplatesDir("ref:\n  id: gated-v0\n  version: 1\nstart: nope\n");
 
-    const before = dataDoc(await run(["detail", parkedId, "--db", db, "--templates-dir", dir], deps));
+    /**
+     * THE SNAPSHOT IS PER LANE AND OVER THE LANE'S OWN TARGET. A single
+     * before/after around the whole block, taken on the PARKED instance
+     * alone, cannot see a write on the V4 (ii) instance — which lives in
+     * a DIFFERENT database — so a `(ii)` path that WROTE and then
+     * answered `NoPendingDecision` would stay green.
+     */
+    const observe = async (
+      snapDb: string,
+      snapId: string,
+    ): Promise<{ instance: unknown; transcript: unknown }> => {
+      const doc = dataDoc(await run(["detail", snapId, "--db", snapDb, "--templates-dir", dir], deps));
+      return { instance: doc["instance"], transcript: doc["transcript"] };
+    };
 
-    const lanes: readonly (readonly [string, readonly string[], string, string, number])[] = [
+    const lanes: readonly (readonly [
+      string, readonly string[], string, string, number, string, string,
+    ])[] = [
       // (i) UNKNOWN INSTANCE — the standing read-side not-found document
       ["(i)", ["submit-decision", "ghost", "--db", db, "--decision", "approve",
-               "--templates-dir", dir], "not_found", "UnknownInstance", EXIT.notFound],
+               "--templates-dir", dir], "not_found", "UnknownInstance", EXIT.notFound,
+       db, parkedId],
       // (ii) NO PENDING DECISION — keyed on the PARK STATE, never on the
-      //      member's absence (C27's own reason)
+      //      member's absence (C27's own reason). Its target is the
+      //      ACTIVE instance, in its OWN database.
       ["(ii)", ["submit-decision", activeId, "--db", activeDb, "--decision", "approve",
-                "--templates-dir", dir], "not_found", "NoPendingDecision", EXIT.notFound],
+                "--templates-dir", dir], "not_found", "NoPendingDecision", EXIT.notFound,
+       activeDb, activeId],
       // (iii) the pinned template is NOT YIELDED — TWO shapes, two names
       ["(iii)-rejects", ["submit-decision", parkedId, "--db", db, "--decision", "approve",
                          "--templates-dir", malformed], "internal", "TemplateInvalid",
-       EXIT.internal],
+       EXIT.internal, db, parkedId],
       ["(iii)-null", ["submit-decision", parkedId, "--db", db, "--decision", "approve",
                       "--templates-dir", emptyTemplatesDir()], "internal", "TemplateUnavailable",
-       EXIT.internal],
+       EXIT.internal, db, parkedId],
     ];
-    for (const [lane, argv, cls, name, code] of lanes) {
+    for (const [lane, argv, cls, name, code, snapDb, snapId] of lanes) {
+      // NOTHING is committed by any of them: no transcript row, no
+      // version move — measured on the lane's OWN target, immediately
+      // around the lane's OWN invocation.
+      const before = await observe(snapDb, snapId);
       const result = await run(argv, deps);
       assertErrorContract(result, cls, code);
       // On the document's FIELDS, never on a token in its message.
       expect(errorDoc(result).name, lane).toBe(name);
+      expect(await observe(snapDb, snapId), lane).toStrictEqual(before);
     }
 
-    // …and NOTHING was committed by any of them: no transcript row, no
-    // version move, no op consumed.
-    const after = dataDoc(await run(["detail", parkedId, "--db", db, "--templates-dir", dir], deps));
-    expect(after["instance"]).toStrictEqual(before["instance"]);
-    expect(after["transcript"]).toStrictEqual(before["transcript"]);
+    // …and the two instances are still in the states the lanes assumed,
+    // which keeps every equality above from being satisfiable by a run
+    // that had already moved on.
+    expect(
+      ((await observe(db, parkedId)).instance as { wait: { kind: string } }).wait.kind,
+    ).toBe("human_decision");
+    expect(
+      ((await observe(activeDb, activeId)).instance as { kernelStatus: string }).kernelStatus,
+    ).toBe("ACTIVE");
   });
 
   it("the ORDERING member, submit-only: NOT parked + an unreadable pinned file answers (ii) at exit 3", async () => {
@@ -2386,7 +2655,17 @@ describe("cli — ch14-p3a family 4: the exit and channel matrix, TOTAL over BOT
       const deps = gatedDeps(dir);
       return { db, id: await parkedRun(db, deps, dir), deps };
     };
+    /**
+     * SCENARIO → EXACT REASON, never scenario → "some reason in the set".
+     * The observed SET alone is blind to a permutation: swapping which
+     * scenario answers `unknown_decision` and which answers
+     * `missing_required_field` yields the same set and the same exit
+     * codes, so the set-level totality assert at the end can only be the
+     * SECOND half of this family.
+     */
     const decide = async (
+      scenario: string,
+      expected: SubmitReason,
       argv: readonly string[],
       db: string,
       id: string,
@@ -2397,21 +2676,27 @@ describe("cli — ch14-p3a family 4: the exit and channel matrix, TOTAL over BOT
         deps,
       );
       const doc = dataDoc(result);
-      expect(doc["kind"]).toBe("rejected");
+      expect(doc["kind"], scenario).toBe("rejected");
+      expect(doc["reason"], scenario).toBe(expected);
       observed.set(doc["reason"] as string, result.code);
     };
 
     // the key-scoped guards and the authority rung
     let ctx = await park();
-    await decide(["--decision", "nope"], ctx.db, ctx.id, ctx.deps);
+    await decide("an UNDECLARED decision key", "unknown_decision",
+                 ["--decision", "nope"], ctx.db, ctx.id, ctx.deps);
     ctx = await park();
-    await decide(["--decision", "rework"], ctx.db, ctx.id, ctx.deps);
+    await decide("a declared key whose payload spec is unmet", "missing_required_field",
+                 ["--decision", "rework"], ctx.db, ctx.id, ctx.deps);
     ctx = await park();
-    await decide(["--decision", "finish"], ctx.db, ctx.id, ctx.deps);
+    await decide("a key AGAINST the recommendation, no --override", "override_required",
+                 ["--decision", "finish"], ctx.db, ctx.id, ctx.deps);
     ctx = await park();
-    await decide(["--decision", "approve", "--override"], ctx.db, ctx.id, ctx.deps);
+    await decide("--override where nothing is to be overridden", "override_not_applicable",
+                 ["--decision", "approve", "--override"], ctx.db, ctx.id, ctx.deps);
     ctx = await park();
-    await decide(["--decision", "approve", "--by", "somebody-else"], ctx.db, ctx.id, ctx.deps);
+    await decide("an EXPLICIT wrong principal", "operator_not_authorized",
+                 ["--decision", "approve", "--by", "somebody-else"], ctx.db, ctx.id, ctx.deps);
 
     // op_id_collision — the nonce the STARTED fact already consumed
     {
@@ -2434,7 +2719,8 @@ describe("cli — ch14-p3a family 4: the exit and channel matrix, TOTAL over BOT
       // The nonce the STARTED fact already consumed — a DIFFERENT entry
       // kind under the same (instance, op_id) key.
       control.pin("start-op");
-      await decide(["--decision", "approve"], db, id, deps);
+      await decide("a nonce a DIFFERENT entry kind already consumed", "op_id_collision",
+                   ["--decision", "approve"], db, id, deps);
     }
 
     // the two RACE-reachable rungs, each staged as the race it is
@@ -2442,6 +2728,8 @@ describe("cli — ch14-p3a family 4: the exit and channel matrix, TOTAL over BOT
       const db = tempDbPath();
       const id = await parkedRun(db, gatedDeps(dir), dir);
       await decide(
+        "a run that LEFT the gate between the read and the write",
+        "not_awaiting_decision",
         ["--decision", "approve"], db, id,
         gatedDeps(dir, {
           openStore: racedStore((i) => ({ ...i, kernelStatus: "ACTIVE", wait: null })),
@@ -2452,6 +2740,8 @@ describe("cli — ch14-p3a family 4: the exit and channel matrix, TOTAL over BOT
       const db = tempDbPath();
       const id = await parkedRun(db, gatedDeps(dir), dir);
       await decide(
+        "a request handle that MOVED between the read and the write",
+        "decision_request_mismatch",
         ["--decision", "approve"], db, id,
         gatedDeps(dir, {
           openStore: racedStore((i) => ({
@@ -2474,10 +2764,18 @@ describe("cli — ch14-p3a family 4: the exit and channel matrix, TOTAL over BOT
   it("resume: every DRIVEN reason token reaches exit 3 as a stdout DATA document", async () => {
     const dir = stagedTemplatesDir();
     const observed = new Map<string, number>();
-    const record = async (argv: readonly string[], deps: CliDeps): Promise<void> => {
+    // SCENARIO → EXACT REASON (see the submit matrix above for why the
+    // observed SET cannot be the whole of this family).
+    const record = async (
+      scenario: string,
+      expected: ResumeReason,
+      argv: readonly string[],
+      deps: CliDeps,
+    ): Promise<void> => {
       const result = await run(argv, deps);
       const doc = dataDoc(result);
-      expect(doc["kind"]).toBe("rejected");
+      expect(doc["kind"], scenario).toBe("rejected");
+      expect(doc["reason"], scenario).toBe(expected);
       observed.set(doc["reason"] as string, result.code);
     };
 
@@ -2487,9 +2785,11 @@ describe("cli — ch14-p3a family 4: the exit and channel matrix, TOTAL over BOT
     {
       const db = tempDbPath();
       const id = await parkedRun(db, gatedDeps(dir), dir);
-      await record(["resume", id, "--db", db, "--event", "approve", "--templates-dir", dir],
+      await record("a DECISION wait resumed with one of the gate's OWN keys", "not_bare_wait",
+                   ["resume", id, "--db", db, "--event", "approve", "--templates-dir", dir],
                    gatedDeps(dir));
-      await record(["resume", id, "--db", db, "--event", "NOPE", "--templates-dir", dir],
+      await record("an event the wait does not declare", "resume_event_mismatch",
+                   ["resume", id, "--db", db, "--event", "NOPE", "--templates-dir", dir],
                    gatedDeps(dir));
     }
     // not_waiting — an ACTIVE run
@@ -2502,7 +2802,8 @@ describe("cli — ch14-p3a family 4: the exit and channel matrix, TOTAL over BOT
       );
       const id = (JSON.parse(created.stdout[0] ?? "") as { instanceId: string }).instanceId;
       expect((await run(["start", id, "--db", db, "--templates-dir", dir], deps)).code).toBe(EXIT.ok);
-      await record(["resume", id, "--db", db, "--event", "COMMIT", "--templates-dir", dir], deps);
+      await record("an ACTIVE run", "not_waiting",
+                   ["resume", id, "--db", db, "--event", "COMMIT", "--templates-dir", dir], deps);
     }
     // no_resume_transition — a DECLARED resume event with no route
     // …and op_id_collision — the nonce a DECISION_MADE row already consumed
@@ -2517,10 +2818,12 @@ describe("cli — ch14-p3a family 4: the exit and channel matrix, TOTAL over BOT
                     "--templates-dir", dir], deps)).code,
       ).toBe(EXIT.ok);
       control.pin(null);
-      await record(["resume", id, "--db", db, "--event", "ABANDON", "--templates-dir", dir], deps);
+      await record("a DECLARED resume event with no route", "no_resume_transition",
+                   ["resume", id, "--db", db, "--event", "ABANDON", "--templates-dir", dir], deps);
       // The nonce the DECISION_MADE row already consumed.
       control.pin("decide-op");
-      await record(["resume", id, "--db", db, "--event", "COMMIT", "--templates-dir", dir], deps);
+      await record("a nonce the DECISION_MADE row already consumed", "op_id_collision",
+                   ["resume", id, "--db", db, "--event", "COMMIT", "--templates-dir", dir], deps);
     }
 
     expect([...observed.keys()].sort()).toEqual(drivenReasons(RESUME_REASONS));
@@ -2569,6 +2872,58 @@ describe("cli — ch14-p3a family 4: the exit and channel matrix, TOTAL over BOT
     expect(dataDoc(stale)).toMatchObject({ kind: "stale" });
   });
 
+  it("V5's route, OBSERVED: both verbs call their kernel handler directly and NO ingress is built", async () => {
+    const dir = stagedTemplatesDir();
+    const db = tempDbPath();
+    const id = await parkedRun(db, gatedDeps(dir), dir);
+
+    // The CONTROL first, because `ingressBuilds === []` is worthless
+    // without a lane that makes it non-empty: the OLDER `submit` verb is
+    // an ingress writer, and the SAME seam sees it.
+    resetRouteSeam();
+    expect(
+      (await run(["resume", id, "--db", db, "--event", "WRONG", "--templates-dir", dir],
+                 gatedDeps(dir))).code,
+    ).toBe(EXIT.notFound);
+    expect(ingressBuilds).toEqual([]);
+    expect(ingressCalls).toEqual([]);
+    expect(kernelWrites).toEqual(["resumeWait"]);
+
+    resetRouteSeam();
+    expect(
+      (await run(["submit-decision", id, "--db", db, "--decision", "approve",
+                  "--templates-dir", dir], gatedDeps(dir))).code,
+    ).toBe(EXIT.ok);
+    // EXACTLY the one direct handler — not a second write, and not one
+    // reached through a wire record the verb serialized to itself.
+    expect(kernelWrites).toEqual(["submitDecision"]);
+    expect(ingressBuilds).toEqual([]);
+    expect(ingressCalls).toEqual([]);
+
+    // …and the CONTROL: the ingress writer the tree already ships DOES
+    // light the same counters, so an empty `ingressCalls` above is a
+    // measured absence rather than a seam that never fires.
+    const controlDb = tempDbPath();
+    const controlDeps = gatedDeps(dir);
+    const created = await run(
+      ["create", "--db", controlDb, "--task", "t", "--template", "gated-v0@1",
+       "--templates-dir", dir],
+      controlDeps,
+    );
+    const controlId = (JSON.parse(created.stdout[0] ?? "") as { instanceId: string }).instanceId;
+    expect(
+      (await run(["start", controlId, "--db", controlDb, "--templates-dir", dir], controlDeps)).code,
+    ).toBe(EXIT.ok);
+    resetRouteSeam();
+    expect(
+      (await run(["submit", "--db", controlDb, "--instance", controlId, "--type", "PASS",
+                  "--expected-version", "2", "--expected-role", "implementer",
+                  "--templates-dir", dir], controlDeps)).code,
+    ).toBe(EXIT.ok);
+    expect(ingressBuilds).toEqual(["createIngress"]);
+    expect(ingressCalls).toEqual(["submit"]);
+  });
+
   it("V5's route: `invalid_shape` is ABSENT from BOTH verbs' outcome surfaces", () => {
     // Reachable ONLY through the ingress's operator-intent leg, which
     // these verbs do not take — a build routing through `submitIntent`
@@ -2592,7 +2947,9 @@ describe("cli — ch14-p3a family 4: the exit and channel matrix, TOTAL over BOT
       ["submit-decision", "ghost", "--db", db, "--decision", "approve", "--templates-dir", dir],
       ["resume", "ghost", "--db", db, "--event", "COMMIT", "--templates-dir", dir],
     ]) {
-      assertErrorContract(await run(argv, deps), "not_found", EXIT.notFound);
+      const result = await run(argv, deps);
+      assertErrorContract(result, "not_found", EXIT.notFound);
+      expect(errorDoc(result).name, argv[0]).toBe("UnknownInstance");
     }
     // `missing_version` — the operator addresses the INSTANCE, not a
     // version: neither verb accepts `--expected-version` at all.
@@ -2602,7 +2959,9 @@ describe("cli — ch14-p3a family 4: the exit and channel matrix, TOTAL over BOT
       ["resume", id, "--db", db, "--event", "COMMIT", "--expected-version", "3",
        "--templates-dir", dir],
     ]) {
-      assertErrorContract(await run(argv, deps), "usage", EXIT.usage);
+      const result = await run(argv, deps);
+      assertErrorContract(result, "usage", EXIT.usage);
+      expect(errorDoc(result).name, argv[0]).toBe("InvalidArguments");
     }
   });
 });
@@ -2613,32 +2972,42 @@ describe("cli — ch14-p3a family 5: argument shape and the absence boundary", (
     const db = tempDbPath();
     const deps = gatedDeps(dir);
     const id = await parkedRun(db, deps, dir);
-    const cases: readonly (readonly [string, readonly string[]])[] = [
+    // EVERY member carries its EXPECTED ERROR-DOCUMENT NAME. Exit 2 plus
+    // an empty stdout is satisfied by an implementation that emits NO
+    // stderr document at all — the operator would be told nothing — so
+    // the WHOLE inherited contract is asserted here (one document, its
+    // closed keyset, its class) and the name pins WHICH usage failure it
+    // is.
+    const cases: readonly (readonly [string, readonly string[], string])[] = [
       ["submit-decision without the positional",
-       ["submit-decision", "--db", db, "--decision", "approve", "--templates-dir", dir]],
+       ["submit-decision", "--db", db, "--decision", "approve", "--templates-dir", dir],
+       "MissingInstanceId"],
       ["submit-decision without --decision",
-       ["submit-decision", id, "--db", db, "--templates-dir", dir]],
+       ["submit-decision", id, "--db", db, "--templates-dir", dir], "MissingDecision"],
       ["resume without the positional", ["resume", "--db", db, "--event", "COMMIT",
-                                         "--templates-dir", dir]],
-      ["resume without --event", ["resume", id, "--db", db, "--templates-dir", dir]],
+                                         "--templates-dir", dir], "MissingInstanceId"],
+      ["resume without --event", ["resume", id, "--db", db, "--templates-dir", dir],
+       "MissingEvent"],
       // the older verb's flag is NOT this surface's
       ["submit-decision with --instance", ["submit-decision", "--instance", id, "--db", db,
-                                           "--decision", "approve", "--templates-dir", dir]],
+                                           "--decision", "approve", "--templates-dir", dir],
+       "InvalidArguments"],
       // `resume` carries NEITHER --by, --payload NOR --override
       ["resume with --by", ["resume", id, "--db", db, "--event", "COMMIT", "--by", "x",
-                            "--templates-dir", dir]],
+                            "--templates-dir", dir], "InvalidArguments"],
       ["resume with --payload", ["resume", id, "--db", db, "--event", "COMMIT", "--payload", "{}",
-                                 "--templates-dir", dir]],
+                                 "--templates-dir", dir], "InvalidArguments"],
       ["resume with --override", ["resume", id, "--db", db, "--event", "COMMIT", "--override",
-                                  "--templates-dir", dir]],
+                                  "--templates-dir", dir], "InvalidArguments"],
       // the MALFORMED column, scoped to the ONE flag with a CLI-side parse
       ["malformed --payload", ["submit-decision", id, "--db", db, "--decision", "approve",
-                               "--payload", "{oops", "--templates-dir", dir]],
+                               "--payload", "{oops", "--templates-dir", dir],
+       "InvalidPayloadJson"],
     ];
-    for (const [label, argv] of cases) {
+    for (const [label, argv, name] of cases) {
       const result = await run(argv, deps);
-      expect(result.code, label).toBe(EXIT.usage);
-      expect(result.stdout, label).toEqual([]);
+      assertErrorContract(result, "usage", EXIT.usage);
+      expect(errorDoc(result).name, label).toBe(name);
     }
   });
 
@@ -2651,14 +3020,18 @@ describe("cli — ch14-p3a family 5: argument shape and the absence boundary", (
       ["submit-decision", id, "--db", db, "--decision", "approve"],
       ["resume", id, "--db", db, "--event", "COMMIT"],
     ]) {
-      assertErrorContract(await run(argv, noEnv), "usage", EXIT.usage);
+      const result = await run(argv, noEnv);
+      assertErrorContract(result, "usage", EXIT.usage);
+      expect(errorDoc(result).name, argv[0]).toBe("MissingTemplatesDir");
     }
     const gone = join(emptyTemplatesDir(), "not-a-dir");
     for (const argv of [
       ["submit-decision", id, "--db", db, "--decision", "approve", "--templates-dir", gone],
       ["resume", id, "--db", db, "--event", "COMMIT", "--templates-dir", gone],
     ]) {
-      assertErrorContract(await run(argv, noEnv), "usage", EXIT.usage);
+      const result = await run(argv, noEnv);
+      assertErrorContract(result, "usage", EXIT.usage);
+      expect(errorDoc(result).name, argv[0]).toBe("InvalidTemplatesDir");
     }
   });
 
@@ -2803,6 +3176,64 @@ describe("cli — ch14-p3a family 7/8: one read, no retry, and idempotency in bo
     expect(resumeCounter.reads).toBe(1);
   });
 
+  it("no RETRY on a moved version: ONE floor read, ONE kernel attempt, and a `stale` DATA document", async () => {
+    const dir = stagedTemplatesDir();
+    /**
+     * The read COUNT alone cannot carry the no-retry claim: a verb that
+     * met `stale`, called the kernel ONCE MORE with the version the
+     * kernel just reported, and then returned `stale` anyway performs
+     * exactly ONE floor read and emits exactly the same document. Only a
+     * KERNEL-ATTEMPT counter can fail on it.
+     */
+    const staleStore =
+      (counter: { reads: number }): CliDeps["openStore"] =>
+      (path, time) => {
+        const handle = openStore(path, time);
+        return {
+          ...handle,
+          store: {
+            ...handle.store,
+            getInstanceDetail: (target) => {
+              counter.reads += 1;
+              return handle.store.getInstanceDetail(target);
+            },
+            loadInstance: async (target) => {
+              const loaded = await handle.store.loadInstance(target);
+              return loaded === null ? null : { ...loaded, version: loaded.version + 1 };
+            },
+          },
+        };
+      };
+
+    for (const [verb, argv, expectedCall, needsBareWait] of [
+      ["submit-decision", ["--decision", "approve"], "submitDecision", false],
+      // `resume` needs a BARE wait to reach the version rung at all, so
+      // the gate is closed first — with a NORMAL store, outside the
+      // measurement.
+      ["resume", ["--event", "REPARK"], "resumeWait", true],
+    ] as const) {
+      const db = tempDbPath();
+      const id = await parkedRun(db, gatedDeps(dir), dir);
+      if (needsBareWait) {
+        expect(
+          (await run(["submit-decision", id, "--db", db, "--decision", "approve",
+                      "--templates-dir", dir], gatedDeps(dir))).code,
+        ).toBe(EXIT.ok);
+      }
+      const counter = { reads: 0 };
+      resetRouteSeam();
+      const result = await run(
+        [verb, id, "--db", db, ...argv, "--templates-dir", dir],
+        gatedDeps(dir, { openStore: staleStore(counter) }),
+      );
+      expect(result.code, verb).toBe(EXIT.notFound);
+      expect(dataDoc(result), verb).toMatchObject({ kind: "stale" });
+      expect(counter.reads, verb).toBe(1);
+      // EXACTLY ONE kernel attempt — no second call, and no other handler.
+      expect(kernelWrites, verb).toEqual([expectedCall]);
+    }
+  });
+
   it("a REPLAYED op_id reaches `duplicate` at exit 0, and two invocations do NOT collide", async () => {
     const dir = stagedTemplatesDir();
     const db = tempDbPath();
@@ -2824,7 +3255,11 @@ describe("cli — ch14-p3a family 7/8: one read, no retry, and idempotency in bo
     ).toEqual({ kind: "duplicate" });
 
     // …and the NON-COLLISION half uses the PRODUCTION source, because one
-    // lane can otherwise pass by defeating the other.
+    // lane can otherwise pass by defeating the other. IT IS DRIVEN ON
+    // BOTH WRITE VERBS: a `submit-decision` minting a CONSTANT nonce
+    // while `resume` minted correctly would pass a resume-only lane, and
+    // the submit REPLAY lane above would even confirm the bug as a
+    // well-behaved `duplicate`.
     const production = gatedDeps(dir);
     const first = dataDoc(
       await run(["resume", id, "--db", db, "--event", "REPARK", "--templates-dir", dir], production),
@@ -2835,5 +3270,19 @@ describe("cli — ch14-p3a family 7/8: one read, no retry, and idempotency in bo
     expect(first).toMatchObject({ kind: "committed" });
     expect(second).toMatchObject({ kind: "committed" });
     expect(second["version"]).not.toBe(first["version"]);
+
+    // `again --override` RE-ARRIVES at the gate, so two consecutive
+    // submits are both legal writes on the SAME parked run — the shape a
+    // constant nonce turns into a `duplicate` at the second.
+    const submitDb = tempDbPath();
+    const submitDeps = gatedDeps(dir);
+    const submitId = await parkedRun(submitDb, submitDeps, dir);
+    const submitArgv = ["submit-decision", submitId, "--db", submitDb, "--decision", "again",
+                        "--override", "--templates-dir", dir];
+    const firstSubmit = dataDoc(await run(submitArgv, submitDeps));
+    const secondSubmit = dataDoc(await run(submitArgv, submitDeps));
+    expect(firstSubmit).toMatchObject({ kind: "committed" });
+    expect(secondSubmit).toMatchObject({ kind: "committed" });
+    expect(secondSubmit["version"]).not.toBe(firstSubmit["version"]);
   });
 });

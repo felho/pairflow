@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -217,20 +217,62 @@ describe("F4 — the move's own properties", () => {
     expect(existsSync(join(kernelDir, "humanDecisionRequest.test.ts"))).toBe(false);
   });
 
-  it("every declared consumer resolves its import to the NEW origin", () => {
+  it("every declared consumer resolves its import to the NEW origin — the WHOLE inventory, function AND type", () => {
     // Object identity through the kernel barrel: a second definition
     // anywhere would give a different function value here.
     expect(kernelHumanDecisionRequest).toBe(humanDecisionRequest);
     expect(kernelRequiredFields).toBe(requiredFields);
-    // …and the source consumers name `domain/`, never a kernel sibling.
+    // …and EVERY declared consumer names `domain/`, never a kernel
+    // sibling and never a local re-declaration. The inventory is F4's
+    // OWN enumeration and includes the TYPE consumers — a source list
+    // that named only the function consumers would leave
+    // `DecisionRequestBody`'s home unmeasured, and a structurally
+    // identical second declaration in `ports/store.ts` with the old
+    // imports still pointing at it would pass every behavioural lane.
     const consumers = [
+      // the function's consumers
       ["../kernel/index.ts", /export \{ humanDecisionRequest, requiredFields \} from "\.\.\/domain\/index\.js"/],
+      ["../kernel/postCommitOutput.ts", /import type \{[^}]*\bDecisionRequestBody\b[^}]*\} from "\.\.\/domain\/index\.js"/],
       ["../kernel/postCommitOutput.ts", /import \{ humanDecisionRequest \} from "\.\.\/domain\/index\.js"/],
       ["../kernel/operatorIntents.ts", /import \{ requiredFields \} from "\.\.\/domain\/index\.js"/],
       ["../floor/floor.ts", /import \{ humanDecisionRequest \} from "\.\.\/domain\/index\.js"/],
+      // the TYPE's consumers — the half the earlier list omitted
+      ["../kernel/arrival.ts", /import type \{[^}]*\bDecisionRequestBody\b[^}]*\} from "\.\.\/domain\/index\.js"/],
+      ["../kernel/operatorIntents.ts", /import type \{[^}]*\bDecisionRequestBody\b[^}]*\} from "\.\.\/domain\/index\.js"/],
+      ["../ports/store.ts", /import type \{[^}]*\bDecisionRequestBody\b[^}]*\} from "\.\.\/domain\/index\.js"/],
+      ["../store/sqliteStore.ts", /import type \{[^}]*\bDecisionRequestBody\b[^}]*\} from "\.\.\/domain\/index\.js"/],
+      // …and the test files of those consumers follow their subject
+      ["../kernel/postCommitOutput.test.ts", /import type \{[^}]*\bDecisionRequestBody\b[^}]*\} from "\.[^"]*domain\/index\.js"/],
+      ["../store/sqliteStore.test.ts", /import type \{[^}]*\bDecisionRequestBody\b[^}]*\} from "\.[^"]*domain\/index\.js"/],
+      ["../floor/floor.test.ts", /import \{ humanDecisionRequest \} from "\.\.\/domain\/index\.js"/],
     ] as const;
     for (const [file, pattern] of consumers) {
       expect(readFileSync(join(here, file), "utf8"), file).toMatch(pattern);
+    }
+  });
+
+  it("the tree carries EXACTLY ONE declaration of each moved name", () => {
+    // The consumer list above is an inventory of IMPORTS, and an
+    // inventory can only ever say that the files it names are right. A
+    // structurally identical SECOND declaration elsewhere — the shape
+    // `ports/store.ts` carried before the move — is invisible to it and
+    // to every behavioural lane, so the tree itself is swept.
+    const root = join(here, "..");
+    const files = readdirSync(root, { recursive: true, encoding: "utf8" })
+      .filter((entry) => entry.endsWith(".ts"))
+      .map((entry) => join(root, entry));
+    expect(files.length).toBeGreaterThan(50);
+
+    const declarations = [
+      ["DecisionRequestBody", /^export interface DecisionRequestBody\b/m],
+      ["humanDecisionRequest", /^export function humanDecisionRequest\b/m],
+      ["requiredFields", /^export function requiredFields\b/m],
+    ] as const;
+    for (const [name, pattern] of declarations) {
+      const homes = files.filter((file) => pattern.test(readFileSync(file, "utf8")));
+      expect(homes.map((file) => file.slice(root.length + 1)), name).toEqual([
+        join("domain", "humanDecisionRequest.ts"),
+      ]);
     }
   });
 });

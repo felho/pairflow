@@ -399,6 +399,45 @@ const gatedDefinitions: DefinitionStore = {
 const nullDefinitions: DefinitionStore = { load: () => Promise.resolve(null) };
 
 /**
+ * A dependency that YIELDS FOR EVERY FIXTURE REF — `gated-v0` AND the
+ * shared `local-pair-v0` the non-parked fixtures carry.
+ *
+ * Family 1's non-parked members are staged on `local-pair-v0`, so a
+ * store yielding `gated-v0` ALONE would answer a WRONG park predicate
+ * with `null` and let it stay green: the absence would be bought by the
+ * ref mismatch rather than by the predicate under test. Ref-matching is
+ * what makes those members able to fail.
+ */
+const yieldingDefinitions: DefinitionStore = {
+  load: (ref) => {
+    if (ref.id === "gated-v0" && ref.version === 1) {
+      return Promise.resolve(admit(gatedTemplate));
+    }
+    if (ref.id === "local-pair-v0" && ref.version === 1) {
+      return Promise.resolve(admit(template));
+    }
+    return Promise.resolve(null);
+  },
+};
+
+/** Wraps a dependency so a lane can assert how many times it was reached. */
+function countingDefinitions(base: DefinitionStore): {
+  readonly store: DefinitionStore;
+  loads: () => number;
+} {
+  let loads = 0;
+  return {
+    store: {
+      load: (ref) => {
+        loads += 1;
+        return base.load(ref);
+      },
+    },
+    loads: () => loads,
+  };
+}
+
+/**
  * A dependency yielding a template ADMISSION WOULD REFUSE. The
  * derivation's integrity throws describe COMMITTED STATE that cannot
  * exist, so the fixture must author what an admitted value cannot
@@ -478,11 +517,12 @@ describe("floor — F5 the pendingDecision member's presence rule (C21's binary)
     handle.close();
   });
 
-  it("ABSENT for every non-parked member of dimension 1 — ACTIVE, a NON-decision wait, TERMINAL", async () => {
+  it("ABSENT for every non-parked member of dimension 1 — ACTIVE, a NON-decision wait, TERMINAL — each with a dependency that WOULD yield ITS OWN template, and ZERO loads per member", async () => {
     const handle = openStore(":memory:", createControlledClock(0));
     // ACTIVE (the shared fixture's own instance), a kickoff_pending wait,
     // and a terminal run — each staged directly, each read with a WIRED
-    // dependency so absence cannot be bought by an unwired floor.
+    // and REF-MATCHING dependency so absence cannot be bought by an
+    // unwired floor NOR by a store that had nothing to hand back.
     await handle.store.createInstance(instance);
     await handle.store.createInstance(heldInstance);
     await handle.store.createInstance({
@@ -493,11 +533,17 @@ describe("floor — F5 the pendingDecision member's presence rule (C21's binary)
       currentStep: "done",
       wait: null,
     });
-    const floor = createFloor(handle.store, gatedDefinitions);
     for (const id of ["inst-1", "inst-held", "inst-terminal"]) {
-      const detail = await floor.getInstanceDetail(id);
+      // PER MEMBER, because a shared counter cannot say WHICH member a
+      // wrong predicate loaded for.
+      const counting = countingDefinitions(yieldingDefinitions);
+      const detail = await createFloor(handle.store, counting.store).getInstanceDetail(id);
       expect(detail, id).not.toBeNull();
       expect(detail && "pendingDecision" in detail, id).toBe(false);
+      // The park test SHORT-CIRCUITS: a predicate that admitted any
+      // WAITING or any TERMINAL state would reach the dependency here,
+      // and the dependency WOULD answer.
+      expect(counting.loads(), id).toBe(0);
     }
     handle.close();
   });
@@ -727,10 +773,24 @@ describe("floor — F7/F1 non-movement, MEASURED, and the required-not-optional 
       "pendingDecision",
       "transcript",
     ]);
+    // The NON-decision WAITING and TERMINAL states join the sweep: a
+    // second explanatory key appearing ONLY there would pass a pin run
+    // on the derivable and parked-underivable states alone.
+    await handle.store.createInstance(heldInstance);
+    await handle.store.createInstance({
+      ...instance,
+      instanceId: "inst-terminal",
+      kernelStatus: "TERMINAL",
+      terminalDisposition: "done",
+      currentStep: "done",
+      wait: null,
+    });
     for (const [state, floor, id] of [
       ["parked-and-underivable", createFloor(handle.store, nullDefinitions), "inst-gate"],
-      ["not-parked", createFloor(handle.store, gatedDefinitions), "inst-1"],
+      ["not-parked", createFloor(handle.store, yieldingDefinitions), "inst-1"],
       ["no-dependency", createFloor(handle.store, null), "inst-gate"],
+      ["non-decision WAITING", createFloor(handle.store, yieldingDefinitions), "inst-held"],
+      ["TERMINAL", createFloor(handle.store, yieldingDefinitions), "inst-terminal"],
     ] as const) {
       const detail = await floor.getInstanceDetail(id);
       expect(Object.keys(detail ?? {}).sort(), state).toEqual(["instance", "transcript"]);

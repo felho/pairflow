@@ -1196,15 +1196,128 @@ invocation (4 receipts, 0 errors), the distinction the Acceptance section
 insists on · mechanical boundary audit: 29 changed paths, all inside the
 declared boundary.
 
+---
+
+**ARM GATE 2 — the build-close implementation review on `4632ee1d`
+(README §5.5; the MANDATORY SENSITIVITY PASS). Verdict: `not ready`,
+SENSITIVITY PASS FAILS — one blocker, nine substantive, one bookkeeping.
+All eleven FOLDED; aftermath commit below.**
+
+Transport and guards as at gate 1. THE GATE PAID FOR ITSELF, and the
+shape of the yield is the record worth keeping: NINE OF THE ELEVEN
+FINDINGS WERE ONE THING — a lane asserting what the code does rather
+than what the packet requires, or standing on a fixture where the right
+and the wrong implementation behave identically. That is the predicted
+consequence of the fail-first deviation recorded above, arriving
+exactly where it was predicted to arrive: in the CLI families, the ones
+whose tests were written after the verbs.
+
+**THE BLOCKER WAS THE ONE MOVE THIS PACKET SAID COULD WEAKEN A GATE.**
+F2's erasure entry was TEXT-level — `createFloor\(([^,()]*), null\)`
+with a plain `re.sub` — so it matched inside expected string literals
+and inside comments, not only at call sites. The arm's executed probe
+showed `"createFloor(v)" → "createFloor(v, null)"` as an expected
+LITERAL erasing GREEN, which is the changed-expected-literal re-pin the
+checker's five text-half dims exist to catch. Flag 1 named this risk in
+advance — *"the negatives are what stand between 'the instrument learned
+a form' and 'the instrument learned to pass this build'"* — and the
+three negatives shipped with the entry guarded the VALUE axis while
+leaving the CONTEXT axis open. The comment above the entry asserted the
+form was "pinned to the EXACT ADDED TEXT": true of the value, false of
+the context, and the gap between those two readings is the whole defect.
+
+THE FIX CLOSED THE CAUSE RATHER THAN THE TWO NAMED SYMPTOMS, which is
+the part that outlived the finding: a line anchor alone kills the
+string-literal and line-comment cases but NOT a commented-out statement
+inside a block comment, which is itself a whole statement line. So the
+entry moved to a separate `CODE_ERASURES` list applied through
+`sub_in_code()`, which matches on a copy of the source with every
+comment and string/template-literal character masked, then splices the
+replacement into the original — over-masking can only produce a false
+RED, never a false GREEN. The entry is now pinned TWICE: by value
+(`, null` alone) and by context (a whole `const|let|var … = createFloor(…)`
+statement, in code). Four new selftest lanes — string literal, line
+comment, block comment, plus a GREEN CONTROL that stops the three
+negatives from being satisfied by an entry that erases nothing. The
+selftest went 10 → 13 red dims. Two receipts stand behind it: restoring
+the original entry reds three dims, and the INTERMEDIATE wrong fix
+(anchored but unmasked) reds one — the block-comment dim — which is the
+measurement proving the masking pass rather than the anchor is
+load-bearing. VERIFIED INDEPENDENTLY IN THE ORCHESTRATING CONTEXT
+against the checker's own `erase()`: the real call site still erases;
+the string literal, both comment forms, and a second argument carrying
+any other value all DIFFER and are flagged as re-pins.
+
+`traceNarrowReceipts.json` is untouched and needs no re-measure: the
+change is text-half only and the erased result for the real call site is
+byte-identical to before.
+
+**THE OTHER NINE, folded with a receipt each** — every fix was proved by
+APPLYING the wrong implementation the finding named, observing RED, and
+reverting. V5's route is now pinned by kernel/ingress call seams (a verb
+routing through `submitIntent` reds it); family 1's non-parked members
+got ref-matching yielding templates and per-member `loads === 0` (a
+`WAITING || TERMINAL` park predicate reds it); family 2b now drives all
+EIGHT integrity members across BOTH reaching verb classes; family 3
+compares the underivable document's existing members WHOLE-VALUE against
+the derivable baseline; family 4's matrices assert scenario → EXACT
+reason rather than the final reason SET, and every usage member asserts
+its full stderr document including its `name`; family 6 snapshots each
+lane's OWN target, since the V4 (ii) instance lives in a different
+database; family 7 gained a no-RETRY lane counting kernel attempts, and
+family 8's non-collision half is now driven on `submit-decision` too;
+family 10's closed keyset pins now cover ACTIVE, non-decision WAITING
+and TERMINAL at all three grains. Family 10's gap is the one worth
+naming twice: a second explanatory key appearing ONLY in a non-decision
+state would have passed the pins as first built, which is precisely the
+placement error F7 exists to catch.
+
+**A SEAM RULED, because the fold raised it rather than deciding it
+silently.** Family 2b's two TEMPLATE-side throw sites (`no role`, `no
+instruction`) are not reachable at CLI grain from a file — admission
+refuses such a template and answers `TemplateInvalid` first — so the
+fold added a test-only doctor to the PRE-EXISTING `../definition/index.js`
+mock in `cli.test.ts` (default `null`, reset per test, set only inside
+that lane). RULED CORRECT: the seam is in `cli.test.ts`, not in the
+journey, where J1's no-injected-seam clause binds; V8's identity lane
+already rides the same mock; and the alternative — leaving two of the
+eight members floor-grain-only — closes the finding only partly. The
+DISCIPLINE is what family 2b declares, and it declares all eight on both
+reaching classes.
+
+**A BUILD-RECORD CLAIM OF MINE WAS WRONG, corrected here by citing the
+measured lines rather than by asserting a replacement sentence.** The
+build-close section above said the two previously-blind lanes "both now
+use a REJECTING dir on a GATE-PARKED run". The GATE-PARKED half is right
+and is the load-bearing half; the REJECTING half is right for C27's
+mandatory resume lane and WRONG for V8's, which uses `stagedTemplatesDir()`
+— a YIELDING dir — and separates the two implementations by COUNTING
+loads instead (`v3/src/cli/cli.test.ts`, the lane commented *"Driven on a
+run parked at the HUMAN GATE, where a floor CARRYING a store would derive
+and load. On a bare wait the park test short-circuits either way, so that
+shape could not fail"*, asserting `definitionLoads` length and object
+identity). The lane is sensitive; my description of its fixture was not
+accurate, and it was inaccurate because I wrote it from the build's
+report rather than from the lane.
+
+**AFTERMATH COMMIT — five files, all inside the declared boundary, no
+boundary extension needed and no production file touched:**
+`tools/v3-plan/check_trace_narrow.py`, `v3/src/cli/cli.test.ts`,
+`v3/src/cli/journey.test.ts`, `v3/src/floor/floor.test.ts`,
+`v3/src/domain/humanDecisionRequest.test.ts`. AUTHOR OF THE FIXES,
+recorded per §4's aftermath rule: a fresh-context delegated agent for all
+eleven code-side folds; this orchestrating context for the Build-record
+correction above and for the independent verification. Suite 3085 → 3089.
+
 ```json
 {
   "packet_metrics": {
     "class": "operability",
     "prediction": { "predicted": "projection", "reasoning": "the ratified ch14-human-decision contract legislates both surfaces (C21, C23); the split leaves this part reading them", "discovered": "projection" },
     "provenance": { "anchored": 5, "derived": 11, "new_decision": 2 },
-    "rounds": { "review": 5, "doc_refinement": 0, "implementation": 1 },
+    "rounds": { "review": 5, "doc_refinement": 0, "implementation": 2 },
     "stops": [{"type": "1:late-b-signal", "what": "the disposition of a NON-YIELDED pinned template is undecided by C21 (read side) and C23 (write side), and V4 reads C23(c) down to avoid it; raised at the pre-build arm gate on the third occurrence of the same signal", "resolution": "ratifier chose a narrow ch14 contract reopen over re-anchoring in the packet, 2026-08-28 — the packet anchors to the new row instead of deciding"}],
-    "detector_misses": [{"found_at": "arm-approve", "what": "the C27 reopen split the two write verbs apart and thirteen sentences kept speaking of them as one; the packet was marked APPROVED with the whole class alive", "why_missed": "five internal panel lenses and two arm passes read the text against itself, and every one of the thirteen was well-formed prose — only a trace against the code or against a sibling sentence falsifies them; the packet lint does not read prose at all"}, {"found_at": "arm-approve", "what": "arm gate 1 was left open — the folded bytes never got their hash-citing re-check, and the gate record was not on a repo surface", "why_missed": "the discipline's two halves are one sentence in README §5.5 and the second half has no machine carrier; the packet header attested the passes in prose while the Build record held its placeholder"}],
+    "detector_misses": [{"found_at": "arm-approve", "what": "the C27 reopen split the two write verbs apart and thirteen sentences kept speaking of them as one; the packet was marked APPROVED with the whole class alive", "why_missed": "five internal panel lenses and two arm passes read the text against itself, and every one of the thirteen was well-formed prose — only a trace against the code or against a sibling sentence falsifies them; the packet lint does not read prose at all"}, {"found_at": "arm-build-close", "what": "nine of gate 2's eleven findings were one class — a lane asserting what the code does, or standing on a fixture where right and wrong behave identically; and the F2 checker entry was text-level, so it erased inside string literals and comments", "why_missed": "the CLI families' tests were written AFTER the verbs and their RED receipts produced post-hoc by mutation probes, which proves sensitivity to the mutations chosen and not fail-first independence from the implementation the tests were read from; the F2 negatives guarded the VALUE axis while the CONTEXT axis went unprobed"}, {"found_at": "arm-approve", "what": "arm gate 1 was left open — the folded bytes never got their hash-citing re-check, and the gate record was not on a repo surface", "why_missed": "the discipline's two halves are one sentence in README §5.5 and the second half has no machine carrier; the packet header attested the passes in prose while the Build record held its placeholder"}],
     "learned": "an instance-wise fold of a class defect regenerates its own next round — 2/3/4/4/0 across five closing arm passes; the pass that bounded it swept against the stated cause",
     "main_thread_model": "claude-opus-5[1m]"
   }
