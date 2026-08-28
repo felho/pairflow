@@ -1,7 +1,7 @@
 # ch14 — human-decision contract
 
 ```json
-{"contract_draft": {"chapter": "ch14", "surface": "human-decision", "status": "reopened"}}
+{"contract_draft": {"chapter": "ch14", "surface": "human-decision", "status": "ratified"}}
 ```
 
 ## Context (non-normative by declaration)
@@ -259,7 +259,28 @@ here, not re-decided.
 panel rounds + 1 targeted reconciliation round + the external arm
 round and its re-check (CLEAN) · new-decision rows: 10 DECIDED-HERE
 markers across 8 rows (C1, C2, C3, C4 ×2, C5, C6, C8 ×2, C23) ·
-post-ratification reopenings: 0 (at first ratification).
+post-ratification reopenings: 1 (the 2026-08-28 non-yield reopen —
+C27 added, no existing row's text edited, one cycle closed by
+re-ratification within the same act).
+
+**Reopen record (2026-08-28, the ch14-p3a pre-build arm gate).**
+Reopened from `ratified`, ONE cycle, ADD-ONLY: C27 lands and no
+existing row's text changes. TRIGGER: the pre-build external arm on
+`ch14-p3a`'s approve-ready bytes raised, as a blocker, that the packet
+was deciding what happens when the pinned template is NOT YIELDED —
+a state C21's read side and C23's write side both leave open. It was
+the THIRD appearance of the same signal in one packet's review: twice
+the loop answered it by removing the visible vocabulary (a third floor
+value, then a CLI-layer member) and the underlying silence survived
+both. The ratifier chose to legislate it rather than let a fourth
+packet re-decide it — `ch14-p3b` wires the shipped template, where the
+class arrives live. Reopen-delta new-decision rows: 1 (C27 itself).
+THE ROW'S TWO CORRECTIONS BEFORE THE ACT ARE PART OF THIS RECORD,
+because both were caught by reading the code rather than the draft:
+its first form called the resume path's wait-shape guard a pre-load
+answer (it reads the LOADED template), and its second carried a
+pre-load TOTALITY that `unknown_instance` and the admission ladder's
+own reasons refute. The ratified text names only what it measured.
 
 ## Contract rows (every normative statement is a C-row)
 
@@ -301,6 +322,10 @@ post-ratification reopenings: 0 (at first ratification).
 
 ```json
 {"ratification": {"date": "2026-08-16", "arms": ["the SCHEMA RE-LOCK act itself (§4): a transition that moves no C-row has nothing for a review arm to read. The declaration bytes it binds were produced by ch14-P1's build commit 889909ee and reviewed at that build's own gate-2 arm rounds — three of them on the built bodies (8 findings, then 5, then 1, zero product defects), closed by the ratifier on a convergence judgement 2026-08-16 with its one residual routed boundary-review", "the coexistence half, recorded because this is its first instance: these bytes are bound by TWO contracts, so the same digest is recorded here and appended to ch13-context-block-v2 in this same act — one block per bound contract, the cost this draft's ratification accepted rather than weakening either lock"], "commit": "889909eedfaf54be19bdb51345eb17c2e2607eea", "schema": {"path": "v3/src/definition/schema/templateFormat.ts", "sha256": "d9a58122f2c83d20e8ef07e18a0a69d4d57146bbf7c0a6066bf16c0ba23f5164"}}}
+```
+
+```json
+{"ratification": {"date": "2026-08-28", "arms": ["the pre-build external arm on ch14-p3a's approve-ready bytes (pin gpt-5.6-sol/high, arm_run.sh transport \u2014 the primary agent transport is not used at this packet size): it raised the undecided-availability signal as a blocker, which is what routed this reopen", "a draft-scoped review pass on the proposed row: it refuted the row's first form on the resume path (the wait-shape guard reads the LOADED template, so it is not a pre-load answer) and scoped two neighbouring failure shapes out of the condition", "the ratifier's own source verification, which produced the row's two remaining corrections: the post-load pair (`not_bare_wait`, `no_resume_transition`) against the packet's and the reviewer's shared error, and the removal of a pre-load totality claim that `unknown_instance` and the ladder's own reasons refute"], "commit": "866e7a57b2228f15b7dab406828153962b774a17"}}
 ```
 
 ## Realized map (empty until chapter close)
