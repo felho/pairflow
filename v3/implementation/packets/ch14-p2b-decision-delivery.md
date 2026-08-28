@@ -2047,6 +2047,56 @@ been stale before the build finished.
 Final: 81 test files / 3045 tests (from 2982); typecheck, lint, coverage,
 packet-lint, deferred, adr-check, realized-map and check-docs all green.
 
+```json
+{
+  "packet_metrics": {
+    "class": "kernel-semantic",
+    "prediction": {
+      "predicted": "projection",
+      "reasoning": "inherited from plan §14.4's ch14-P2 row through the split; basis the ratified ch14-human-decision contract",
+      "discovered": "projection"
+    },
+    "provenance": {
+      "anchored": 6,
+      "derived": 6,
+      "new_decision": 7
+    },
+    "rounds": {
+      "review": 8,
+      "doc_refinement": 0,
+      "implementation": 2
+    },
+    "stops": [
+      {
+        "type": "4:flagged-approve",
+        "what": "nine pre-approval flags, seven approve-ratified, resolved one at a time",
+        "resolution": "approved, with flag 2 AMENDED by the ratifier: the idempotency compare's kind parameter became Exclude<TranscriptEntry[\"entryKind\"], \"transition\"> — the auto-extension the bare discriminant was chosen for, kept, with the dangerous value made unrepresentable instead of guarded by one lane"
+      }
+    ],
+    "detector_misses": [
+      {
+        "found_at": "arm-approve",
+        "what": "family 10's structural lane required proving that BOTH wire modules call a shared helper, but both wire paths live in one module (ingress.ts holds parseEnvelope and submitIntent; ingress/index.ts is a barrel) — the lane was unauthorable as written",
+        "why_missed": "seven internal panel rounds and a reconciliation pass all checked the packet against ITSELF; a packet can be perfectly consistent about a module it invented"
+      },
+      {
+        "found_at": "arm-approve",
+        "what": "the same lane cited 'the idiom family 17 already uses' for a corpus scan, but this packet's family 17 is the compile-negative family and scans nothing — the live scanner names itself ch14-p2a's family 15",
+        "why_missed": "a plausible name reads as a verified one; the number and the family both existed, only the pairing was invented"
+      },
+      {
+        "found_at": "implementation",
+        "what": "the packet_metrics block was absent at build close and the build commit landed without it — caught only by the post-build audit's own check, after the build and its aftermath had both been committed",
+        "why_missed": "the close sequence ran the full gate chain but not the post-build audit, which is a SEPARATE invocation taking a commit sha; the block is the one obligation that cannot be satisfied before the commit it must appear in"
+      }
+    ],
+    "learned": "a command that measures something adjacent to the claim reads as verification and survives review far longer than an ordinary error — ten instances in this packet's rounds, from a test count carried out of a summary to a runtime property asserted from a typechecker run",
+    "main_thread_model": "claude-opus-5[1m]"
+  }
+}
+```
+
+
 Evidence gaps: none. `v3:typecheck`, `v3:lint`, `v3:test` (79 files /
 2847 tests), `v3:packet-lint` and `v3:deferred` all completed in the
 arm's environment. `v3:coverage`'s STRICT mode fails on a pre-build tree
