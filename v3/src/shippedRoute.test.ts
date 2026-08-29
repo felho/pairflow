@@ -7,6 +7,9 @@ import type {
   DispatchIntent,
   HumanDecisionRequest,
   InstanceId,
+  Step,
+  StepId,
+  WorkflowTemplate,
 } from "./domain/index.js";
 import { deriveEmitDigest } from "./emit/index.js";
 import { createGateRegistry } from "./gates/index.js";
@@ -62,19 +65,41 @@ function admittedShipped(): AdmittedTemplate {
 
 const shipped = admittedShipped();
 
+/**
+ * A DERIVED variant of the shipped declaration — the only form the
+ * decorrelation lanes below may take. A third inline copy of the
+ * declaration is what T6's single-source anchor forbids, so `mutate`
+ * receives the shipped value and returns it with EXACTLY the fields one
+ * lane needs overridden; everything else is the shipped template's own.
+ */
+function admitDerived(mutate: (base: WorkflowTemplate) => WorkflowTemplate): AdmittedTemplate {
+  const result = admitTemplate(mutate(fixtureTemplate()), catalog);
+  if (result.ok) return result.template;
+  throw new Error(`the derived template did not admit: ${JSON.stringify(result.findings)}`);
+}
+
+/** The shipped fixture's own step, fetched loudly — a derivation that
+ * silently spread `undefined` would author a NEW step rather than
+ * override one. */
+function stepOf(base: WorkflowTemplate, id: StepId): Step {
+  const step = base.steps[id];
+  if (step === undefined) throw new Error(`the shipped fixture carries no \`${id}\` step`);
+  return step;
+}
+
 interface Rig {
   readonly kernel: Kernel;
   readonly store: StorePort;
   readonly close: () => void;
 }
 
-function rig(): Rig {
+function rig(template: AdmittedTemplate = shipped): Rig {
   const handle = openStore(":memory:", createControlledClock(1_000));
   const kernel = createKernel({
     providerRegistry: createStaticProviderRegistry({}),
     processRunner: createScriptedProcessGateRunner([]),
     store: handle.store,
-    definitions: fixtureDefinitionStore(shipped),
+    definitions: fixtureDefinitionStore(template),
     time: createControlledClock(1_000),
     digest: deriveEmitDigest,
     diag: noopDiagnosticsSink,
@@ -114,8 +139,8 @@ async function atKickoffHold(id: InstanceId): Promise<Phase> {
 }
 
 /** ACTIVE at `implement` — the start step. */
-async function atImplement(id: InstanceId): Promise<Phase> {
-  const r = rig();
+async function atImplement(id: InstanceId, template: AdmittedTemplate = shipped): Promise<Phase> {
+  const r = rig(template);
   await r.kernel.create({ instanceId: id, templateRef: REF, task: "ship it" });
   const started = await r.kernel.start({ instanceId: id, opId: "s0" });
   if (started.kind !== "activated") throw new Error(`start: ${started.kind}`);
@@ -123,8 +148,8 @@ async function atImplement(id: InstanceId): Promise<Phase> {
 }
 
 /** ACTIVE at `review` — one PASS on. */
-async function atReview(id: InstanceId): Promise<Phase> {
-  const at = await atImplement(id);
+async function atReview(id: InstanceId, template: AdmittedTemplate = shipped): Promise<Phase> {
+  const at = await atImplement(id, template);
   const outcome = await at.kernel.handle({
     instanceId: id,
     opId: "a1",
@@ -142,8 +167,9 @@ async function atReview(id: InstanceId): Promise<Phase> {
  * reaches on the shipped template. */
 async function atGate(
   id: InstanceId,
+  template: AdmittedTemplate = shipped,
 ): Promise<Phase & { readonly ask: DispatchIntent | HumanDecisionRequest | null }> {
-  const at = await atReview(id);
+  const at = await atReview(id, template);
   const outcome = await at.kernel.handle({
     instanceId: id,
     opId: "b2",
@@ -404,6 +430,104 @@ describe("family 2 — both decision keys, and the round effect in BOTH directio
 });
 
 // ─────────────────────────────────────────────────────────────────────
+// The DECORRELATION lane — the same rule, driven where the shipped
+// declaration cannot drive it. On the SHIPPED wiring the decision-key
+// NAMES and the round EFFECTS correlate perfectly (`request_rework`
+// advances, `approve` does not), so every lane above is satisfied by a
+// runtime that hard-wires `edgeKey === "request_rework"` and never
+// reads the admitted flag. THE ADMISSION-ONLY COUNTEREXAMPLE ABOVE DOES
+// NOT CLOSE THAT: it never traverses the runtime path. This lane pulls
+// name and effect APART on a DERIVED declaration and asserts BOTH
+// directions THROUGH the kernel.
+// ─────────────────────────────────────────────────────────────────────
+
+/**
+ * The shipped declaration with the gate's two decision TARGETS SWAPPED
+ * and the rework key RENAMED — derived, never transcribed. The flag is
+ * producer-owned, so the inversion is expressed the only way an author
+ * can express it: `approve` now arrives at `implement`, which
+ * `round.advanceOnArrivalAt` names, and the rework-shaped key — spelled
+ * `send_back`, so no name/effect correlation survives — arrives at
+ * `commit_pending`, which it does not. `review.recommends` still names
+ * `approve`, which stays a declared key, so the derivation admits.
+ */
+const decorrelatedRound = admitDerived((base) => ({
+  ...base,
+  steps: {
+    ...base.steps,
+    human_approval: {
+      ...stepOf(base, "human_approval"),
+      decisions: {
+        approve: { target: "implement" },
+        send_back: { target: "commit_pending" },
+      },
+    },
+  },
+}));
+
+describe("family 2 — the round effect follows the ADMITTED FLAG, not the decision key's NAME", () => {
+  it("the derived gate's produced flags are INVERTED against the shipped ones", () => {
+    const steps = decorrelatedRound.steps as unknown as Record<string, Record<string, unknown>>;
+    // The decorrelation itself, measured: an `approve`-named edge whose
+    // flag is TRUE and a rework-shaped edge whose flag is FALSE — the
+    // exact opposite of the shipped pairing asserted above.
+    expect(steps["human_approval"]?.["advancesRound"]).toStrictEqual({
+      approve: true,
+      send_back: false,
+    });
+  });
+
+  it("RUNTIME: the `approve`-named edge carrying `advancesRound: true` ADVANCES the round", async () => {
+    const at = await atGate("dc-approve", decorrelatedRound);
+    const outcome = await at.kernel.submitDecision({
+      intent: "submit-decision",
+      instanceId: at.id,
+      opId: "d1",
+      expectedVersion: at.version,
+      requestRef: R,
+      verdict: "approve",
+      by: "human",
+    });
+    expect(outcome).toMatchObject({ kind: "committed" });
+    // THE DISCRIMINATING ASSERTION: a runtime keyed on the NAME
+    // `request_rework` leaves the round at 1 here. Only a runtime that
+    // reads the per-edge flag off the source step reaches 2.
+    expect(await stateOf(at.store, at.id)).toMatchObject({
+      currentStep: "implement",
+      kernelStatus: "ACTIVE",
+      round: 2,
+    });
+    at.close();
+  });
+
+  it("RUNTIME: the rework-shaped edge carrying `advancesRound: false` does NOT advance the round", async () => {
+    // The other direction, and it is not the mirror of the first by
+    // construction: a runtime keyed on `edgeKey !== "approve"` — the
+    // dual hard-wiring — advances here and reds.
+    const at = await atGate("dc-sendback", decorrelatedRound);
+    const outcome = await at.kernel.submitDecision({
+      intent: "submit-decision",
+      instanceId: at.id,
+      opId: "d1",
+      expectedVersion: at.version,
+      requestRef: R,
+      // AGAINST the recorded `approve` recommendation, so the flag is
+      // the override rung's due, not a round-lane convenience.
+      verdict: "send_back",
+      override: true,
+      by: "human",
+    });
+    expect(outcome).toMatchObject({ kind: "committed" });
+    expect(await stateOf(at.store, at.id)).toMatchObject({
+      currentStep: "commit_pending",
+      kernelStatus: "WAITING",
+      round: 1,
+    });
+    at.close();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────
 // The RECOMMENDATION axis, driven as a COMBINATION lane over ONE
 // recorded recommendation: an isolated lane cannot falsify an
 // implementation that ignores the recommendation entirely.
@@ -467,6 +591,108 @@ describe("family 2 — the recommendation axis, THREE cells over ONE recorded re
         by: "human",
       }),
     ).toStrictEqual({ kind: "rejected", reason: "override_not_applicable" });
+    c.close();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────
+// The SAME three cells over a NON-`approve` recommendation. The lane
+// above records `approve` at every cell, so it is satisfied by a
+// runtime that compares the verdict to the literal `"approve"` and
+// never reads the RECORDED VALUE at all. Moving the recorded value is
+// the only thing that separates the two, and it moves on a DERIVED
+// declaration because the shipped edge declares exactly one.
+// ─────────────────────────────────────────────────────────────────────
+
+/** The shipped declaration with the CONVERGED edge recommending
+ * `request_rework` instead of `approve` — one authored key overridden,
+ * derived from the shipped fixture. Both are declared decision keys of
+ * the same gate, so C6's membership rule is satisfied either way. */
+const reworkRecommended = admitDerived((base) => ({
+  ...base,
+  steps: {
+    ...base.steps,
+    review: { ...stepOf(base, "review"), recommends: { CONVERGED: "request_rework" } },
+  },
+}));
+
+describe("family 2 — the recommendation's VALUE is consulted: the same three cells, recommending `request_rework`", () => {
+  it("the park RECORDS the moved recommendation, and the three cells INVERT with it", async () => {
+    // (0) the recorded value itself — the Ask is where the operator
+    // reads it, and every cell below is scoped by it.
+    const zero = await atGate("nrec-0", reworkRecommended);
+    const ask = zero.ask;
+    if (ask === null || !("allowedDecisions" in ask)) {
+      throw new Error("the park did not return the Ask");
+    }
+    expect(ask.recommendation).toBe("request_rework");
+    zero.close();
+
+    // (1) MATCHING the recorded recommendation with NO flag COMMITS.
+    // THE DISCRIMINATING CELL: a runtime comparing the verdict to the
+    // literal `"approve"` calls this against-recommendation and answers
+    // `override_required` here.
+    const a = await atGate("nrec-1", reworkRecommended);
+    expect(
+      await a.kernel.submitDecision({
+        intent: "submit-decision",
+        instanceId: a.id,
+        opId: "d1",
+        expectedVersion: a.version,
+        requestRef: R,
+        verdict: "request_rework",
+        payload: { instruction: "again" },
+        by: "human",
+      }),
+    ).toMatchObject({ kind: "committed" });
+    expect(await stateOf(a.store, a.id)).toMatchObject({
+      currentStep: "implement",
+      round: 2,
+    });
+    a.close();
+
+    // (2) AGAINST it — `approve` this time — with no flag is REFUSED.
+    // The mirror of the shipped lane's cell (1), and the pair is what
+    // proves the rung reads the value rather than the key.
+    const b = await atGate("nrec-2", reworkRecommended);
+    expect(
+      await b.kernel.submitDecision({
+        intent: "submit-decision",
+        instanceId: b.id,
+        opId: "d1",
+        expectedVersion: b.version,
+        requestRef: R,
+        verdict: "approve",
+        by: "human",
+      }),
+    ).toStrictEqual({ kind: "rejected", reason: "override_required" });
+    // ZERO side effects: the refusal left the run on the gate.
+    expect(await stateOf(b.store, b.id)).toMatchObject({
+      currentStep: "human_approval",
+      version: 4,
+    });
+    b.close();
+
+    // (3) the SAME `approve` one flag later commits — and reaches the
+    // wait, so the override rung's answer is a route and not just a
+    // verdict.
+    const c = await atGate("nrec-3", reworkRecommended);
+    expect(
+      await c.kernel.submitDecision({
+        intent: "submit-decision",
+        instanceId: c.id,
+        opId: "d1",
+        expectedVersion: c.version,
+        requestRef: R,
+        verdict: "approve",
+        override: true,
+        by: "human",
+      }),
+    ).toMatchObject({ kind: "committed" });
+    expect(await stateOf(c.store, c.id)).toMatchObject({
+      currentStep: "commit_pending",
+      round: 1,
+    });
     c.close();
   });
 });

@@ -1,0 +1,12 @@
+{
+  "probe_id": "p3b-f2-recommendation-value-ignored",
+  "file": "v3/src/kernel/operatorIntents.ts",
+  "original_sha256": "1be4103eb81c6a8f487586a0bdb40b87fb38b02635fe52d54b30c0a1a3a5aaba",
+  "mutated_sha256": "aa5183c9002c3ff4495419ae834d818fd12d67528f7541e6147efe2dfda37d1c",
+  "test_command": "pnpm --dir v3 exec vitest run src/shippedRoute.test.ts -t \"the recommendation's VALUE is consulted\"",
+  "exit_code": 1,
+  "suite_red": true,
+  "baseline": "green",
+  "output_file": "v3/implementation/probes/ch14-p3b/p3b-f2-recommendation-value-ignored.out",
+  "restore_verified": true
+}

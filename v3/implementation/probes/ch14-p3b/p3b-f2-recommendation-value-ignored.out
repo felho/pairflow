@@ -1,0 +1,36 @@
+
+ RUN  v4.1.10 /Users/felho/dev/pairflow/v3
+
+ ❯ src/shippedRoute.test.ts (35 tests | 1 failed | 34 skipped) 7ms
+     × the park RECORDS the moved recommendation, and the three cells INVERT with it 6ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/shippedRoute.test.ts > family 2 — the recommendation's VALUE is consulted: the same three cells, recommending `request_rework` > the park RECORDS the moved recommendation, and the three cells INVERT with it
+AssertionError: expected { kind: 'rejected', …(1) } to match object { kind: 'committed' }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "kind": "committed",
++   "kind": "rejected",
+  }
+
+ ❯ src/shippedRoute.test.ts:647:7
+    645|         by: "human",
+    646|       }),
+    647|     ).toMatchObject({ kind: "committed" });
+       |       ^
+    648|     expect(await stateOf(a.store, a.id)).toMatchObject({
+    649|       currentStep: "implement",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 34 skipped (35)
+   Start at  23:52:11
+   Duration  229ms (transform 127ms, setup 0ms, import 167ms, tests 7ms, environment 0ms)
+

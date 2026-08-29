@@ -1,0 +1,12 @@
+{
+  "probe_id": "p3b-f1-round-effect-keyed-on-name",
+  "file": "v3/src/kernel/arrival.ts",
+  "original_sha256": "710ff3ff0b7dc4efdecaac45a60bba20d638162a84a09c981f24f4bb7c8003df",
+  "mutated_sha256": "a5fea105339fe0b41ea6f07ff70d9d9e9277ed7c7319666acef1b5683fdd4b16",
+  "test_command": "pnpm --dir v3 exec vitest run src/shippedRoute.test.ts -t \"the round effect follows the ADMITTED FLAG\"",
+  "exit_code": 1,
+  "suite_red": true,
+  "baseline": "green",
+  "output_file": "v3/implementation/probes/ch14-p3b/p3b-f1-round-effect-keyed-on-name.out",
+  "restore_verified": true
+}

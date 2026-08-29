@@ -1,0 +1,38 @@
+
+ RUN  v4.1.10 /Users/felho/dev/pairflow/v3
+
+ ❯ src/shippedRoute.test.ts (35 tests | 1 failed | 32 skipped) 7ms
+     × RUNTIME: the `approve`-named edge carrying `advancesRound: true` ADVANCES the round 6ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/shippedRoute.test.ts > family 2 — the round effect follows the ADMITTED FLAG, not the decision key's NAME > RUNTIME: the `approve`-named edge carrying `advancesRound: true` ADVANCES the round
+AssertionError: expected { currentStep: 'implement', …(5) } to match object { currentStep: 'implement', …(2) }
+(3 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "currentStep": "implement",
+    "kernelStatus": "ACTIVE",
+-   "round": 2,
++   "round": 1,
+  }
+
+ ❯ src/shippedRoute.test.ts:495:44
+    493|     // `request_rework` leaves the round at 1 here. Only a runtime that
+    494|     // reads the per-edge flag off the source step reaches 2.
+    495|     expect(await stateOf(at.store, at.id)).toMatchObject({
+       |                                            ^
+    496|       currentStep: "implement",
+    497|       kernelStatus: "ACTIVE",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 2 passed | 32 skipped (35)
+   Start at  23:52:06
+   Duration  225ms (transform 126ms, setup 0ms, import 165ms, tests 7ms, environment 0ms)
+

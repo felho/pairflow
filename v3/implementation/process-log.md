@@ -6595,3 +6595,61 @@ first. In both cases the packet's own use of a neighbour's tool, probed
 harder than the tool had been probed before, is what exposed it. That is
 an argument for probing instruments on their own terms rather than only
 through the packets that consume them.
+
+## 2026-08-29 — ROUTED TO THE BOUNDARY REVIEW: three ch14-p3b items, and one of them says a discharged rule was only half discharged
+
+Three subjects, one entry, because all three land at ch14-p3b's first
+aftermath commit and all three are routes rather than folds.
+
+**1. THE STALE FRAMINGS B1 DELIBERATELY DID NOT EDIT (ch14-p3a flag 4's
+carrier (b)).** ch14-p3a's flag 4 split its bookkeeping into two
+carriers, and the split is the point rather than a hedge: a reference
+that no longer RESOLVES is a different defect from a reference that is
+merely OLD. Carrier (a) — the dangling ones — was executed in
+`ch14-p3b`'s build commit at three sites (p2b's Q17 anchor, p2a's K15
+manifest ref, p2b's `REV-*` block). Carrier (b) is this line: the sibling
+packets' Order lines and their `ch14-P3` scope-label framings are TRUE AS
+HISTORY — the `ch14-P3` row existed and was split — so they are left as
+written. The boundary review decides whether a historically-true framing
+that no longer names a live row is worth a sweep at all, or whether the
+resolve-or-rot distinction is the whole rule.
+
+**2. K17's DROPPED RECOMPUTATION LEG, AND THE LIVE LEG'S MISSING CI
+WIRING (ch14-p3b flag 6, routed by the owner 2026-08-29 as ONE item).**
+The gate-time recomputation leg was dropped at ch14-p2a because its
+measurement point could not ride the add-only instrument-landing commit.
+That constraint has LAPSED: the digest hook lives in `traceHarness.ts`'s
+shared `replayTrace` and is present at every ref from p2a's instrument
+commit onward, so a baseline digest IS recomputable at the ref a receipt
+cites. Restoring it would put K17(b) — and therefore ch14-p3b's G1(b) —
+on a MEASURED baseline instead of a self-reported one. Beside it sits the
+adjacent fact flag 1 named: `pnpm v3:trace-narrow` wires the SELFTEST leg
+only, so the live leg runs when a human invokes it and nothing schedules
+it. Neither was taken in the packet: the first turns a text-and-JSON
+checker into one that checks out a ref and runs a suite, and the second
+is a CI-surface decision with its own blast radius. Both change an
+instrument's SHAPE rather than its readings, which is why they are here
+rather than in a packet.
+
+**3. A DISCHARGED RULE WAS DISCHARGED ON ONE SIDE ONLY — the item worth
+the review's time.** ch14-p3b's W1 closes `REV-NO-KEY-MEANING` by showing
+that no PRODUCTION branch keys on a decision-key or event-type literal.
+The build-close arm then found that the TESTS could not tell the
+difference: in `v3/src/shippedRoute.test.ts` — and, it noted, at
+`v3/src/kernel/operatorIntents.test.ts:785` — every tested
+`request_rework` edge advanced the round and every tested `approve` edge
+did not, so a runtime keyed on `edgeKey === "request_rework"` would have
+satisfied every assertion. The shipped-route half was FOLDED at
+ch14-p3b's first aftermath commit with two decorrelated runtime lanes and
+two executed mutation-probe receipts. The `operatorIntents.test.ts` half
+is ROUTED, not folded: that file is ch14-p2b's host, it drives its own
+`op-intents` template, and it sits outside ch14-p3b's enumerated mutation
+boundary — editing it would have been a silent reach past a declared
+scope, which is the class ch14-p3b's own flag 8 exists to refuse. **THE
+GENERAL QUESTION FOR THE REVIEW:** a `REV-*` rule discharged by reading
+the production code is discharged against the implementation that exists,
+not against the one a later change might write — and the suite is what
+carries the rule forward. Should a `REV-NO-KEY-MEANING`-class discharge
+REQUIRE a decorrelation lane as its evidence, the way a claim requires
+its measurement? No measurement of the `operatorIntents` suite was made
+here, and this entry takes no position on how far the pattern runs.
