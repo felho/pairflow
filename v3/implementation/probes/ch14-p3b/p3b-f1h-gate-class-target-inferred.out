@@ -1,0 +1,63 @@
+
+ RUN  v4.1.10 /Users/felho/dev/pairflow/v3
+
+ ❯ src/shippedRoute.test.ts (44 tests | 2 failed) 21ms
+     × RUNTIME: the edge INTO `implement` carrying `advancesRound: false` does NOT advance the round 4ms
+     × RUNTIME: the edge into the WAIT carrying `advancesRound: true` ADVANCES the round 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/shippedRoute.test.ts > family 2 — the round effect follows the ADMITTED FLAG, not the TARGET's name > RUNTIME: the edge INTO `implement` carrying `advancesRound: false` does NOT advance the round
+AssertionError: expected { currentStep: 'implement', …(5) } to match object { currentStep: 'implement', …(2) }
+(3 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "currentStep": "implement",
+    "kernelStatus": "ACTIVE",
+-   "round": 1,
++   "round": 2,
+  }
+
+ ❯ src/shippedRoute.test.ts:620:44
+    618|     // the round must stay 1. A build answering `target === "implement…
+    619|     // for the gate class reaches 2 here and reds.
+    620|     expect(await stateOf(at.store, at.id)).toMatchObject({
+       |                                            ^
+    621|       currentStep: "implement",
+    622|       kernelStatus: "ACTIVE",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/shippedRoute.test.ts > family 2 — the round effect follows the ADMITTED FLAG, not the TARGET's name > RUNTIME: the edge into the WAIT carrying `advancesRound: true` ADVANCES the round
+AssertionError: expected { currentStep: 'commit_pending', …(5) } to match object { currentStep: 'commit_pending', …(2) }
+(6 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "currentStep": "commit_pending",
+    "kernelStatus": "WAITING",
+-   "round": 2,
++   "round": 1,
+  }
+
+ ❯ src/shippedRoute.test.ts:643:44
+    641|     });
+    642|     expect(outcome).toMatchObject({ kind: "committed" });
+    643|     expect(await stateOf(at.store, at.id)).toMatchObject({
+       |                                            ^
+    644|       currentStep: "commit_pending",
+    645|       kernelStatus: "WAITING",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 42 passed (44)
+   Start at  00:44:46
+   Duration  248ms (transform 128ms, setup 0ms, import 169ms, tests 21ms, environment 0ms)
+

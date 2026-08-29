@@ -671,19 +671,95 @@ describe("family 2 — the round effect follows the ADMITTED FLAG, not the TARGE
 // and `p3b-f1d-wait-source-round-effect-suppressed` the second, each
 // under exactly that mutant.
 //
-// The FALSE direction is already driven for both classes and is not
-// duplicated: the PHASE-axis lane drives `implement` --PASS--> `review`
-// (an AGENT source whose target is undeclared) and the terminal lane
-// drives `commit_pending` --COMMIT--> `done` (a WAIT source, likewise),
-// both asserting the round stays 1. The wait lane below adds the pair
-// on ONE step anyway, which those two cannot show.
+// The FALSE direction is driven for all three classes too — but a
+// `false` edge only PAIRS with a class's `true` edge when the two agree
+// on everything a build could key on instead of the flag, and the ones
+// lying around do not: the PHASE-axis lane's `implement` --PASS-->
+// `review` and the terminal lane's `commit_pending` --COMMIT--> `done`
+// are `false` edges of the agent and wait classes whose TARGETS differ
+// from those classes' `true` edges. So the agent lane below drives
+// `review` --PASS--> `implement` a SECOND time on `advanceAtTheWait`,
+// where source, edge key and target are all held and only the admitted
+// flag moves; the gate row's pair is the shipped and derived `approve`
+// edge; and the WAIT row's pair is driven on a FOURTH derivation
+// (`resumeBackToImplementRoundAtTheWait`, below the wait describe) that
+// re-runs `commit_pending` --RETRY--> `implement` under a round
+// declaration naming `commit_pending` instead of `implement`. Every row
+// therefore holds source, key AND target across its two flag values.
 //
-// RESIDUAL, at the width these lanes prove: a `true` round effect is
-// driven at RUNTIME from each of the THREE step classes ch14-C1 admits
-// — agent, `human_gate` and `wait` — so no build keyed on the SOURCE
-// step's class passes, and with the two lanes above no build keyed on
-// the decision key's NAME or the target's NAME passes either. C1's
-// class set grows ADDITIVELY, so a step type a later chapter mints
+// THE MATRIX THIS FILE NOW DRIVES — ch14-C1's THREE step classes by
+// both admitted flag values, every cell traversed at RUNTIME and never
+// admission-only:
+//
+//   agent       true : shipped               `review` --PASS--> `implement`      1→2
+//               false: advanceAtTheWait      `review` --PASS--> `implement`      1→1
+//   human_gate  true : advanceAtTheWait      `approve` --> `commit_pending`      1→2
+//               false: shipped               `approve` --> `commit_pending`      1→1
+//   wait        true : resumeBackToImplement `RETRY` --> `implement`             1→2
+//               false: resumeBackToImplement `COMMIT` --> `done`                 1→1
+//               false: resumeBackToImplement `RETRY` --> `implement`             2→2
+//                        RoundAtTheWait
+//
+// THE PAIR EACH ROW HOLDS — the SAME source step, the SAME edge key and
+// the SAME target on both flag values, which is what makes the row a
+// pair rather than two unrelated cells:
+//
+//   agent       `review` --PASS--> `implement`          shipped / advanceAtTheWait
+//   human_gate  `approve` --> `commit_pending`          advanceAtTheWait / shipped
+//   wait        `commit_pending` --RETRY--> `implement` resumeBackToImplement /
+//                                                       …RoundAtTheWait
+//
+// The wait row keeps its `COMMIT` --> `done` cell beside the pair: it
+// is not part of the held pair, and it is what reds a build that
+// advances on ANY wait-sourced resume.
+//
+// THE CLOSURE RULE, now for ALL THREE rows: on every row the paired
+// edges agree on the SOURCE step (its id, hence its class), on the EDGE
+// KEY's name and on the TARGET's name, and disagree ONLY in the
+// admitted flag. No predicate over those fields can answer both sides
+// of any row — in any combination, and even applied PER CLASS, which is
+// the form the earlier lanes each let through and the form the accepted
+// near-miss took. Every per-class substitution is MEASURED rather than
+// argued, each one run over the WHOLE file:
+// `p3b-f1e-agent-source-target-inferred` reds the agent one,
+// `p3b-f1h-gate-class-target-inferred` the gate one, and for the wait
+// class `p3b-f1i-wait-class-target-inferred-closed`,
+// `p3b-f1j-wait-class-key-inferred-closed` and
+// `p3b-f1k-wait-class-key-and-target-inferred-closed` red the
+// target-inferring, key-inferring and CONJUNCTION forms — the strongest
+// predicate the three fields admit. On every class the flag must be
+// READ.
+//
+// THE SUBSTITUTION SPACE IS FINER THAN THE CLASS, and that is measured
+// too rather than left as a class-grain claim: the two wait-row edges
+// leave the SAME source STEP, so even a build keyed on the source step
+// ID instead of its class has nowhere to hide —
+// `p3b-f1l-wait-source-step-target-inferred-closed` reds
+// `from.stepId === "commit_pending" ? target === "implement" : flag`.
+//
+// TWO EARLIER PROBES ARE SUPERSEDED BY THIS ROW AND ARE KEPT, not
+// deleted, because they are the evidence the hole was REAL:
+// `p3b-f1f-wait-class-target-inferred-survives` and
+// `p3b-f1g-wait-class-key-inferred-survives` recorded those exact two
+// substitutions surviving the whole file (`suite_red: false`) when the
+// wait row had no target-held pair. They describe a CLOSED hole, not an
+// open one: `p3b-f1i-…` and `p3b-f1j-…` are the same two substitutions
+// re-run against this file and RED. WHAT "SAME" MEANS HERE IS THE
+// PREDICATE, NOT THE BYTES, and the distinction is stated rather than
+// glossed: the f1f/f1g mutant VARIANTS were not kept as artifacts (the
+// runner keeps only the receipt, the log and the baseline log), so the
+// f1i/f1j mutants carry reconstructed mutant text and their
+// `mutated_sha256` differs from f1f/f1g's. The link is measured rather
+// than asserted — `p3b-f1m-wait-class-target-inferred-blind-to-the-OLD-
+// wait-lanes` runs f1i's OWN mutant, byte-identical by
+// `mutated_sha256`, against the PRE-EXISTING wait describe alone and
+// records it still GREEN, so the FOURTH derivation below is
+// demonstrably what closes it and nothing else in this file is.
+//
+// The matrix is closed on CELLS and on TARGET-HELD PAIRS for ALL THREE
+// classes, and that is the width this file claims.
+//
+// C1's class set grows ADDITIVELY, so a step type a later chapter mints
 // arrives here LANE-LESS: that is the derivation noticing, not a gap
 // closed. The recompute residual above is untouched by any of this —
 // it is a code-shape rule, not a behaviour, and no lane can move it.
@@ -720,6 +796,44 @@ describe("family 2 — the round effect follows the ADMITTED FLAG from an AGENT 
       currentStep: "implement",
       kernelStatus: "ACTIVE",
       round: 2,
+    });
+    at.close();
+  });
+
+  it("RUNTIME: the SAME agent edge carrying `advancesRound: false` does NOT advance the round", async () => {
+    // THE PAIR OF THE LANE ABOVE, at the only width that makes it one:
+    // the SOURCE step (`review`, agent class), the EDGE KEY (`PASS`)
+    // and the TARGET (`implement`) are all held exactly as they are
+    // there, and the ONLY thing that moves is the admitted flag —
+    // `advanceAtTheWait` pulls the round declaration off `implement`
+    // and onto `commit_pending` while leaving every step's
+    // `transitions` map the shipped one, which is why the same triple
+    // can carry the opposite flag at all. The admitted value itself is
+    // asserted in that derivation's own describe above
+    // (`review` → `{ PASS: false, CONVERGED: false }`); here it is
+    // TRAVERSED.
+    const at = await atReview("src-agent-false", advanceAtTheWait);
+    const outcome = await at.kernel.handle({
+      instanceId: at.id,
+      opId: "a2",
+      type: "PASS",
+      actorId: "claude",
+      expectedVersion: at.version,
+      expectedRole: "reviewer",
+      payload: { note: "back" },
+    });
+    expect(outcome).toMatchObject({ kind: "committed" });
+    // THE DISCRIMINATING ASSERTION: the run arrives AT `implement` from
+    // an AGENT source and the round must stay 1. A build that reads the
+    // admitted flag for the gate and wait classes but answers
+    // `target === "implement"` for the AGENT class alone passes every
+    // other lane in this file and reaches 2 here — MEASURED, not
+    // argued: probe `p3b-f1e-agent-source-target-inferred` runs this
+    // describe under exactly that mutant and it goes RED.
+    expect(await stateOf(at.store, at.id)).toMatchObject({
+      currentStep: "implement",
+      kernelStatus: "ACTIVE",
+      round: 1,
     });
     at.close();
   });
@@ -812,6 +926,117 @@ describe("family 2 — the round effect follows the ADMITTED FLAG from a WAIT so
       currentStep: "done",
       kernelStatus: "TERMINAL",
       round: 1,
+    });
+    at.close();
+  });
+});
+
+/**
+ * THE FOURTH DERIVATION — the wait derivation above with the round
+ * declaration ADDITIONALLY pulled off `implement`, which is the exact
+ * composition of the two moves already made separately in this file:
+ * `resumeBackToImplement`'s second resume route and `advanceAtTheWait`'s
+ * round declaration. Derived, never transcribed; every other position
+ * the shipped fixture's own.
+ *
+ * WHAT IT EXISTS FOR: the wait row's `true` cell is
+ * `commit_pending` --RETRY--> `implement`, and until this derivation
+ * existed the only wait-sourced `false` cell in the file was
+ * `commit_pending` --COMMIT--> `done` — a different key AND a different
+ * target, so the wait row had no TARGET-HELD pair and a wait-class-only
+ * substitution of `target === "implement"` or `edgeKey === "RETRY"` for
+ * the flag passed the whole file. Here the SAME source step, the SAME
+ * edge key `RETRY` and the SAME target `implement` carry the OPPOSITE
+ * admitted flag, so that substitution has nowhere left to hide.
+ *
+ * THE ROWS SAY THIS IS AUTHORABLE, and the deciding row is ch11-C37:
+ * `advanceOnArrivalAt` is a NONEMPTY list whose every member must be a
+ * member of `keys(steps)`, with TERMINAL ids the ONLY exclusion and no
+ * step-CLASS restriction and no requirement that the start step be
+ * named — so `["commit_pending"]` is a legal declaration and
+ * `implement`'s absence from it is an ordinary authoring choice, not a
+ * hole in the grammar. ch11-C39 then FIXES the flag as
+ * `target ∈ advanceOnArrivalAt` with no source-class term, which is
+ * what turns that absence into `RETRY: false` on an edge that is
+ * otherwise identical to the `true` one above; ch14-C3 admits the
+ * second resume event and its `onResume` route (the same clause the
+ * derivation above cites); and ch14-C11 puts `onResume` in the
+ * expansion basis, which is why the resume edge carries a flag at all.
+ * No row is silent on any part of this, so nothing here is decided by
+ * judgement.
+ */
+const resumeBackToImplementRoundAtTheWait = admitDerived((base) => ({
+  ...base,
+  steps: {
+    ...base.steps,
+    commit_pending: {
+      ...stepOf(base, "commit_pending"),
+      wait: { kind: "commit_pending", resumeEvents: ["COMMIT", "RETRY"] },
+      onResume: { COMMIT: "done", RETRY: "implement" },
+    },
+  },
+  round: { advanceOnArrivalAt: ["commit_pending"] },
+}));
+
+describe("family 2 — the WAIT row's pair, with the TARGET and the KEY held", () => {
+  it("the SAME `RETRY` edge that carries `true` above carries `false` here", () => {
+    const steps = resumeBackToImplementRoundAtTheWait.steps as unknown as Record<
+      string,
+      Record<string, unknown>
+    >;
+    // `RETRY` still targets `implement`; what moved is the round
+    // declaration, so `implement` is no longer a member and ch11-C39's
+    // membership computation answers `false` for it. `COMMIT` → `done`
+    // is unchanged at `false` — a terminal id can never be a member
+    // (ch11-C37), so that cell cannot move at all.
+    expect(steps["commit_pending"]?.["advancesRound"]).toStrictEqual({
+      COMMIT: false,
+      RETRY: false,
+    });
+    // Where the park's round 2 below comes from: the gate's `approve`
+    // edge now arrives at the declared step. Asserted here so the
+    // runtime lane's starting number is derived rather than observed.
+    expect(steps["human_approval"]?.["advancesRound"]).toStrictEqual({
+      approve: true,
+      request_rework: false,
+    });
+  });
+
+  it("RUNTIME: the SAME wait edge — source, key and target all held — does NOT advance", async () => {
+    const at = await atCommitWait("src-wait-held", resumeBackToImplementRoundAtTheWait);
+    // The park's own arrival is the advancing one under this
+    // declaration, so the resume starts from 2 rather than 1. Stated as
+    // an assertion, not as a comment: the lane below claims the round
+    // did not MOVE, and a claim about movement needs both endpoints.
+    expect(await stateOf(at.store, at.id)).toMatchObject({
+      currentStep: "commit_pending",
+      kernelStatus: "WAITING",
+      round: 2,
+    });
+    const outcome = await at.kernel.resumeWait({
+      intent: "resume-wait",
+      instanceId: at.id,
+      opId: "r1",
+      expectedVersion: at.version,
+      type: "RETRY",
+    });
+    expect(outcome).toMatchObject({ kind: "committed" });
+    // THE DISCRIMINATING ASSERTION, and the one this whole derivation
+    // was built for: the source step is `commit_pending` (wait class),
+    // the edge key is `RETRY` and the target is `implement` — exactly
+    // the triple the `true` lane above drives — and the round must stay
+    // at 2. A build that reads the admitted flag for the agent and gate
+    // classes but substitutes `target === "implement"`, or
+    // `edgeKey === "RETRY"`, or their conjunction, for the WAIT class
+    // alone reaches 3 here. MEASURED, not argued: probes
+    // `p3b-f1i-wait-class-target-inferred-closed`,
+    // `p3b-f1j-wait-class-key-inferred-closed` and
+    // `p3b-f1k-wait-class-key-and-target-inferred-closed` run this
+    // whole file under exactly those three mutants and it goes RED.
+    expect(await stateOf(at.store, at.id)).toMatchObject({
+      currentStep: "implement",
+      kernelStatus: "ACTIVE",
+      round: 2,
     });
     at.close();
   });

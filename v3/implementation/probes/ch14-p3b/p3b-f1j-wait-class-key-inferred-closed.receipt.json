@@ -1,0 +1,12 @@
+{
+  "probe_id": "p3b-f1j-wait-class-key-inferred-closed",
+  "file": "v3/src/kernel/arrival.ts",
+  "original_sha256": "710ff3ff0b7dc4efdecaac45a60bba20d638162a84a09c981f24f4bb7c8003df",
+  "mutated_sha256": "a07669391ec2f11f5beca3ad418062939e457125328dcc40cd21edd5832af67c",
+  "test_command": "pnpm --dir v3 exec vitest run src/shippedRoute.test.ts",
+  "exit_code": 1,
+  "suite_red": true,
+  "baseline": "green",
+  "output_file": "v3/implementation/probes/ch14-p3b/p3b-f1j-wait-class-key-inferred-closed.out",
+  "restore_verified": true
+}

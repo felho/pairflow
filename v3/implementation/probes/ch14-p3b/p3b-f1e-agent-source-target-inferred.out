@@ -1,0 +1,38 @@
+
+ RUN  v4.1.10 /Users/felho/dev/pairflow/v3
+
+ ❯ src/shippedRoute.test.ts (44 tests | 1 failed | 41 skipped) 7ms
+     × RUNTIME: the SAME agent edge carrying `advancesRound: false` does NOT advance the round 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/shippedRoute.test.ts > family 2 — the round effect follows the ADMITTED FLAG from an AGENT source too > RUNTIME: the SAME agent edge carrying `advancesRound: false` does NOT advance the round
+AssertionError: expected { currentStep: 'implement', …(5) } to match object { currentStep: 'implement', …(2) }
+(3 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "currentStep": "implement",
+    "kernelStatus": "ACTIVE",
+-   "round": 1,
++   "round": 2,
+  }
+
+ ❯ src/shippedRoute.test.ts:791:44
+    789|     // argued: probe `p3b-f1e-agent-source-target-inferred` runs this
+    790|     // describe under exactly that mutant and it goes RED.
+    791|     expect(await stateOf(at.store, at.id)).toMatchObject({
+       |                                            ^
+    792|       currentStep: "implement",
+    793|       kernelStatus: "ACTIVE",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 2 passed | 41 skipped (44)
+   Start at  00:42:56
+   Duration  229ms (transform 128ms, setup 0ms, import 168ms, tests 7ms, environment 0ms)
+

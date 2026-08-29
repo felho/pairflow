@@ -1,0 +1,12 @@
+{
+  "probe_id": "p3b-f1f-wait-class-target-inferred-survives",
+  "file": "v3/src/kernel/arrival.ts",
+  "original_sha256": "710ff3ff0b7dc4efdecaac45a60bba20d638162a84a09c981f24f4bb7c8003df",
+  "mutated_sha256": "878c0d20f467bdbdf9431c44de0c7d532dabefc1c9570ea52871ca409809f8f3",
+  "test_command": "pnpm --dir v3 exec vitest run src/shippedRoute.test.ts",
+  "exit_code": 0,
+  "suite_red": false,
+  "baseline": "green",
+  "output_file": "v3/implementation/probes/ch14-p3b/p3b-f1f-wait-class-target-inferred-survives.out",
+  "restore_verified": true
+}

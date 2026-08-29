@@ -1,0 +1,38 @@
+
+ RUN  v4.1.10 /Users/felho/dev/pairflow/v3
+
+ ❯ src/shippedRoute.test.ts (46 tests | 1 failed) 26ms
+     × RUNTIME: the SAME wait edge — source, key and target all held — does NOT advance 5ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/shippedRoute.test.ts > family 2 — the WAIT row's pair, with the TARGET and the KEY held > RUNTIME: the SAME wait edge — source, key and target all held — does NOT advance
+AssertionError: expected { currentStep: 'implement', …(5) } to match object { currentStep: 'implement', …(2) }
+(3 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "currentStep": "implement",
+    "kernelStatus": "ACTIVE",
+-   "round": 2,
++   "round": 3,
+  }
+
+ ❯ src/shippedRoute.test.ts:1036:44
+    1034|     // `p3b-f1k-wait-class-key-and-target-inferred-closed` run this
+    1035|     // whole file under exactly those three mutants and it goes RED.
+    1036|     expect(await stateOf(at.store, at.id)).toMatchObject({
+       |                                            ^
+    1037|       currentStep: "implement",
+    1038|       kernelStatus: "ACTIVE",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 45 passed (46)
+   Start at  00:57:30
+   Duration  281ms (transform 148ms, setup 0ms, import 197ms, tests 26ms, environment 0ms)
+
