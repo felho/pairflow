@@ -6542,3 +6542,56 @@ The three rounds above were all arguably the second kind, and nobody could
 tell, because the declaration did not exist. The aftermath adds that
 declaration to `mask_noncode` as a stopgap; making it a form requirement is
 the review's call.
+
+## 2026-08-29 — ROUTED, and this one is URGENT rather than open-ended: `probe_runner.py` can certify a restore it did not perform
+
+Found by the external arm at the ch14-p3a build-close gate, pass 6, and
+REPRODUCED BY THAT REVIEWER in an isolated temporary directory. Routed
+here rather than folded because `tools/v3-plan/probe_runner.py` is
+chapter-12 infrastructure, sits outside ch14-p3a's mutation boundary, and
+the defect is not ch14-p3a's to own. THE ROUTING IS NOT A DEFERRAL OF
+IMPORTANCE — the opposite. Every packet's probe evidence from ch12 onward
+rests on this tool.
+
+**THE DEFECT.** If the mutated run leaves the target replaced by a
+SYMLINK, the runner returns 0, records `restore_verified: true`, LEAVES
+THE TARGET AS A SYMLINK, and writes the backup bytes THROUGH the link —
+overwriting whatever the link points at. Two failures in one: a receipt
+certifies a restore that did not happen, and the restore itself corrupts
+an unrelated file. The verification compares CONTENT and never asks what
+kind of filesystem object it is comparing.
+
+**WHY IT MATTERS MORE THAN ITS TRIGGER.** The tool exists precisely so
+probe evidence is machine-checked instead of self-reported — its own
+docstring calls the receipt *"the machine evidence the arm's spot-check
+audits — never the builder's prose"*, and it carries a green-baseline gate
+because a historical batch of eleven probes ran against an already-red
+baseline and produced vacuous receipts. This defect is the same class one
+level down: a receipt that says `restore_verified: true` when the target
+is not the file that was backed up is a VACUOUS RESTORE CERTIFICATE. An
+instrument whose whole purpose is to stop self-report from standing in for
+proof must not itself self-report.
+
+**THE PROPOSED FIX, as the reviewer stated it:** before restoring, remove
+symlink / directory / path replacements; recreate a REGULAR FILE from the
+backup; and verify `is_file && !is_symlink && digest matches`. Add a
+mutation-phase symlink selftest. The verification predicate is the real
+lesson — content equality is not identity, and a checker that compares
+bytes without checking WHAT it is comparing is the same shape as a text
+matcher that erases inside a string literal (this session's other running
+defect).
+
+**FOR THE REVIEW, one question beyond the fix:** how many committed
+receipts across ch12–ch14 were produced by runs this predicate would now
+reject? Probably none — a mutation replacing a file with a symlink is not
+a shape any builder wrote on purpose. But "probably none" is what the
+green-baseline hole also looked like before someone counted, and the count
+is cheap.
+
+**PROVENANCE NOTE, the second instance of one pattern this week:** this
+is the SECOND ratified instrument a ch14-p3a gate has found defective
+while using it — `check_trace_narrow.py`'s three legacy entries were the
+first. In both cases the packet's own use of a neighbour's tool, probed
+harder than the tool had been probed before, is what exposed it. That is
+an argument for probing instruments on their own terms rather than only
+through the packets that consume them.
