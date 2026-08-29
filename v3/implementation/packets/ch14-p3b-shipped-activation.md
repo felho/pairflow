@@ -2122,16 +2122,72 @@ coverage OK, adr-check OK, trace-digests green, K17's live leg
 `4 receipt(s), 0 error(s)`. `arrival.ts` sha256 verified
 `710ff3ff…`, unmodified.
 
+**ARM GATE 2, PASS 5 — the closing re-check on `c79e33a7`:
+`VERDICT: ready`, `SENSITIVITY PASS: passes`, findings: "nothing new".
+THE GATE IS CLOSED and the packet is DONE per README §5.5's build-close
+condition — a clean, sha-citing verdict.**
+
+Transport and guards as throughout, pin validated, 345 s. The pass
+verified rather than accepted every load-bearing claim: the three pairs
+are real and each pair's two templates differ ONLY in the `round`
+declaration; the `2 → 2` reasoning is correct and the two-endpoint
+assertion excludes a compensating hidden movement; all six current
+substitution receipts are RED on the expected discriminating lane; the
+four GREEN receipts match their documented blind spots, with `f1m`'s
+mutant hash identical to `f1i`'s and the `f1f`/`f1g` → `f1i`/`f1j` link
+correctly stated as same-PREDICATE rather than same-bytes; no assertion
+vanished or loosened; the widened helper parameters still default to the
+shipped template so derived values enter only by explicit argument; the
+C1/C3/C11/C37/C39 citations are accurate; and **the accounting is
+correct** — 15 receipts as 11 RED + 4 GREEN, the fold's 29 paths as two
+modified files plus 27 probe artifacts, 82 test files / 3162 tests with
+46 in this file. It re-ran the full bridge set plus the probe-runner
+selftest and K17's live leg, all green, worktree clean, no evidence gap.
+
+**THE LEG, AS A WHOLE, AND WHY THE FINDING COUNT IS THE WRONG SUMMARY.**
+Five passes, seven accepted findings (2 → 2 → 3 → 1 → 0), and **not one
+byte of production code moved after the build commit.** Every finding was
+about the WIDTH OF THE EVIDENCE. The four P1s were one question asked in
+four layers — what does a green lane actually exclude? — and each layer
+was invisible from inside the fold that closed the one above it: the
+decision key's NAME, then the target's NAME, then the source step's
+CLASS, then source-class × target-name. None was hypothetical: each
+mutant was EXECUTED and each stayed GREEN until the lane that reds it
+existed.
+
+**TWO STRUCTURAL LESSONS, both routed rather than owned by this packet.**
+(1) THE LOOP ANSWERED THE NAMED MUTANT, round after round — and a lane
+built against one named mutant excludes exactly that mutant. The regress
+ended when the ASK changed from a mutant to a MATRIX, and the best
+moment in the leg was the fold measuring its own brief false and
+narrowing the claim from inside. Nothing in the loop asks "what OTHER
+implementation does this new evidence admit?", which is why the answer
+arrived four times and always from outside. (2) THREE PROSE
+TRANSCRIPTION ERRORS reached an external reader in this record — a test
+count, a pairing, a commit shape — because no machine surface reads a
+number written in a sentence: `packet-lint` validates declared blocks
+and the post-build audit compares path lists. Both are boundary-review
+candidates; the second is cheap to mechanize and the first is not.
+
+**WHAT REMAINS FOR THE CHAPTER CLOSE, unchanged by this leg:** X1's
+enumeration — the draft's `realized` flip with its `realized_map`, the
+ch-14 row of the §1.3 map, `pnpm v3:deferred --closed ch14`, all v3
+bridges plus full `pnpm ci:local`, and the boundary review, which now
+carries five routed items: flag 6's pair (K17's recomputation leg on a
+measured baseline, and the live leg's missing CI wiring), B1's carrier
+(b), the `operatorIntents.test.ts` key-meaning correlation, the receipt
+schema's missing `superseded_by` link, and the two lessons above.
+
 ```json
 {
   "packet_metrics": {
     "class": "operability",
     "prediction": { "predicted": "projection", "reasoning": "the ratified ch14-human-decision contract legislates the whole surface at C24 with C1-C7 for the authored forms; the split leaves this part AUTHORING the two declaration files against rows already decided, so only the slots C24 delegates and the instrument's own edit class are open", "discovered": "projection" },
     "provenance": { "anchored": 4, "derived": 7, "new_decision": 5 },
-    "rounds": { "review": 11, "doc_refinement": 0, "implementation": 5 },
+    "rounds": { "review": 12, "doc_refinement": 0, "implementation": 5 },
     "stops": [{"type": "4:flagged-approve", "what": "five new-decision rows and eight pre-approval flags — seven approve-ratified, one boundary-review — so the inherited flag-free-implies-autonomous letter REACHED this packet and its condition failed at authoring", "resolution": "the owner ratified all seven and routed flag 6's pair (K17's recomputation leg on a MEASURED baseline, and wiring the live leg to an automated gate) to the boundary review as ONE item, 2026-08-29; the build then ran on the per-packet entry mode"}],
     "detector_misses": [{"found_at": "arm-build-close", "what": "a FOURTH correlation, compound: a build inferring from the target name for AGENT sources only passed every lane, because the one agent-source true edge the family drove was the shipped review.PASS edge; closing it completed a matrix of three step classes by two flag values with source, key and target held per pair", "why_missed": "the loop kept answering the mutant each round NAMED, so each fold proved exactly that mutant and no more; what finally ended the regress was asking for the MATRIX rather than the mutant — and the fold that built it then measured its own frame false (the wait pair did not hold its target) and narrowed the claim from inside, the first such correction in the leg not made by the arm"}, {"found_at": "arm-build-close", "what": "a THIRD correlation survived two folds — every true round effect the family drove left a human_gate step, so a runtime reading the admitted flag only for gate sources passed every lane while breaking the shipped review.PASS edge; and in the same round two more prose transcription errors in the Build record (a pairing and a commit shape) were caught by the same external reader", "why_missed": "each fold was written against the mutant the previous round NAMED, and a lane built against one named mutant excludes exactly that mutant — the loop had no step that asks what OTHER implementation the new evidence admits, which is why the answer arrived three times; and the prose errors sat where no machine surface reads: packet-lint validates declared blocks and the post-build audit compares path lists, neither reads a number in a sentence"}, {"found_at": "arm-build-close", "what": "gate 2's pass 2 found the PASS-1 FOLD overclaiming: the decorrelated lane removed the key-name correlation and left a target one, so a runtime keyed on target === \"implement\" passed every new assertion while the lane's comment claimed only a flag-reading runtime could", "why_missed": "the fold was written to answer the mutant the reviewer NAMED, and a lane built against one named mutant proves exactly that mutant; nothing in the loop asks what OTHER implementation the new evidence admits — the second probe now measures that question instead of arguing it"}, {"found_at": "arm-build-close", "what": "both of gate 2's findings were one shape — family 2's test data correlated the decision-key NAME with the expected effect perfectly, so a runtime keyed on edgeKey === \"request_rework\", or one comparing the verdict to the literal \"approve\" instead of to the recorded recommendation, would have satisfied every assertion; W1 had just declared REV-NO-KEY-MEANING discharged on the production side", "why_missed": "the discharge was argued by reading the PRODUCTION code, which branches on nothing, while the suite that carries the rule forward was never asked to distinguish a key-meaning implementation; and the shipped template is the one artifact where key names and effects agree by construction, so a lane built only on it cannot decorrelate them"}, {"found_at": "arm-approve", "what": "G1(g) did not prove the declaration had not outlived its commit — it compared the working tree to HEAD and left baseline_ref unconstrained, so an uncommitted touch after the build commit would make (a), (b) and (g) green again", "why_missed": "the internal lenses read the check against the row's PROSE, which stated the property correctly; only a reader simulating the post-commit tree falsifies it, and no lens simulates a future commit"}, {"found_at": "arm-approve", "what": "R1 widened C24's suites-only re-pin family to production source while the manifest still classed the row derived — an unratified scope decision booked as a derivation, which the classification detector (it scans new-decision rows) could not see", "why_missed": "an internal close pass had CLEARED the same widening by reading C24's delegated enumeration as delegating the REACH; the arm read the membership sentence as normative — the disagreement is recorded at flag 8 rather than resolved silently"}, {"found_at": "implementation", "what": "the build self-reported a packet-vs-tree divergence in T6's two named near-misses, having found only one of the two sentences; the orchestrator's re-measurement found both present and untouched — the second is WRAPPED across two lines, so the single-line pattern could not see it", "why_missed": "a completeness claim was checked with a pattern the target's own line-wrapping defeats — the R-INSTRUMENT-PROBE class met in a build's self-report rather than in a tool; nothing in the loop re-measures a build's negative finding before it is believed"}],
-    "learned": "an instrument asked to classify an edit it predates can be taught a DECLARED class only if the declaration cannot survive its own commit; and a build's self-reported divergence is a claim like any other — two of the three items this build raised as findings dissolved on re-measurement, one because the grep could not see a wrapped sentence and one because it read a per-member disposition rule as a prediction",
+    "learned": "the build-close gate ran five passes and moved ZERO bytes of production code — all seven findings were about the WIDTH OF THE EVIDENCE, and the four P1s were one question in four layers (the decision key name, the target name, the source step class, source-class x target-name), each invisible from inside the fold that closed the one above it; what ended the regress was asking for a MATRIX instead of answering a named mutant. Also: an instrument asked to classify an edit it predates can be taught a DECLARED class only if the declaration cannot survive its own commit; and a build's self-reported divergence is a claim like any other — two of the three items this build raised as findings dissolved on re-measurement, one because the grep could not see a wrapped sentence and one because it read a per-member disposition rule as a prediction",
     "baseline_note": "rounds.review = 7 is an EVIDENCED LOWER BOUND reconstructed from the packet's own bytes at build close — four arm-gate-1 passes, one internal close pass (named in gate 1's pass-1 record), and the two lens-4 reconciliation passes the two-hash close model records — because the authoring session's own round count reached no repo surface and this build ran in a fresh context. The earlier full and targeted panel rounds are therefore NOT included in the figure; the gap itself is a boundary-review candidate, adjacent to ch14-p3a's third detector miss (a gate record that was not on a repo surface). rounds.implementation counts the build only; aftermath fix rounds increment it.",
     "main_thread_model": "claude-opus-5[1m]"
   }
