@@ -1713,9 +1713,10 @@ substitute for the record carrying them:
 | F4 move | `DecisionRequestBody` re-declared in `ports/store.ts` | `p3a-f4-redeclare-in-ports` |
 
 Receipts: `v3/implementation/probes/ch14-p3a/<probe-id>.receipt.json`, each
-with its `.out` and `.baseline.out` log. **ALL 32: `baseline: green`,
-`suite_red: true`, `restore_verified: true` — no probe returned the
-runner's exit 3 (suite stayed green), so no receipt here is vacuous.**
+with its `.out` and `.baseline.out` log. **ALL 34 (the two added at the sixth aftermath included):
+`baseline: green`, `suite_red: true`, `restore_verified: true` — no probe
+returned the runner's exit 3 (suite stayed green), so no receipt here is
+vacuous.**
 
 **THREE QUALIFICATIONS, because a table that hides them is the prose it
 replaced.** ⚠ `p3a-f2-line-anchor-dropped` is receipt-backed RED but NOT
@@ -1922,7 +1923,7 @@ lowercase global, a fixture built inside `selftest`, or one in another
 file does NOT join, and nothing notices.
 
 **SIXTH AFTERMATH COMMIT — one boundary file plus six probe artifacts:**
-`tools/v3-plan/check_trace_narrow.py` (+250/−6), and the receipts for
+`tools/v3-plan/check_trace_narrow.py` (+269/−10), and the receipts for
 `p3a-6-ghost-created-before-unknown` and
 `p3a-3-underivable-strips-document`. `cli.test.ts` and `floor.test.ts`
 needed NO change — the existing lanes already caught both mutations, which
@@ -1930,16 +1931,66 @@ is exactly what findings 3 and 4 predicted and is the strongest thing in
 this round. Boundary extended aftermath-scoped, 125 → 131, BEFORE the
 commit this time. Suite 3094 unchanged; selftest 28 → 30.
 
+---
+
+**ARM GATE 2 — CLOSED. Pass 7 on `56d58aa1`: SENSITIVITY PASS **PASSES**,
+no P0–P2 finding, two P3 record-accuracy items — a bookkeeping-only round,
+which is §5.5's stated end of the leg. Both folded above at the sentences
+that carried them: the receipt count (32 → 34) and the diffstat
+(+250/−6 → +269/−10), each re-measured here before the edit.**
+
+**THE PASS DID THE ONE THING THE RECORD SAID NOTHING WAS DOING.** The
+sixth aftermath declared that the oracle's twelve labels had been
+validated against `ts.createScanner` ONCE, BY HAND, and that the
+cross-check is NOT a leg of this gate — so a mislabelled case would have
+stood between a wrong belief and a false guarantee with nothing in the way.
+This pass RAN THAT CROSS-CHECK ITSELF: all twelve match TypeScript's token
+spans exactly. The shared-AUTHOR risk is therefore discharged FOR THESE
+TWELVE CASES by an independent party, which is a different and stronger
+thing than the record could claim on its own — and it stays a limit for any
+case added later, because the check still is not a gate leg.
+
+**AND IT ATTACKED THE ORACLE AS ASKED, with a result worth keeping:** the
+oracle ALONE passes a regex-blind masker known to be broken. The full gate
+does not — the regex-literal lane reds it. That is the documented layering
+working as designed rather than a hole: the oracle bounds the
+shared-algorithm mode, the fixture lanes bound the forms someone wrote
+down, and neither alone is the gate.
+
+**THE GATE-2 LEG IN FULL — seven passes, and the shape of the yield is the
+record worth carrying to the boundary review.** Findings per pass:
+11 (one blocker) → 2 (one blocker) → 4 → 6 (one P1) → 5 (two P1) →
+5 (two P1) → 2 (P3 only). The COUNT never converged; the SUBJECT moved,
+and that is the honest summary: passes 1–2 found defects in the PRODUCT's
+test sensitivity, passes 3–4 in the ARMOR built to prove it, and passes
+5–7 almost entirely in the EVIDENCE SYSTEM ITSELF — a property test that
+could not fail, a receipt attributed to the wrong family, a corpus figure
+transcribed rather than emitted, a limit stated too pessimistically, a
+"could not be probed" whose reason was never checked. THE PRODUCT CODE WAS
+UNCHANGED FROM THE FOURTH AFTERMATH ONWARD. The strongest single datum is
+from the sixth: `cli.test.ts` and `floor.test.ts` needed NO edit, because
+the lanes already there caught both new mutations unaided.
+
+TWO INSTRUMENTS BELONGING TO OTHER PACKETS WERE FOUND DEFECTIVE WHILE
+BEING USED — `check_trace_narrow.py`'s three legacy entries (fixed here,
+inherited) and `probe_runner.py`'s symlink restore certificate (routed,
+urgent). Neither was reachable from its own packet's claim surface; both
+surfaced because a consumer probed them harder than their authors had.
+That, and not the finding count, is what the boundary review should read
+this leg for.
+
+**PACKET DONE at `56d58aa1` plus this record's closing commit.**
+
 ```json
 {
   "packet_metrics": {
     "class": "operability",
     "prediction": { "predicted": "projection", "reasoning": "the ratified ch14-human-decision contract legislates both surfaces (C21, C23); the split leaves this part reading them", "discovered": "projection" },
     "provenance": { "anchored": 5, "derived": 11, "new_decision": 2 },
-    "rounds": { "review": 5, "doc_refinement": 0, "implementation": 7 },
+    "rounds": { "review": 5, "doc_refinement": 0, "implementation": 8 },
     "stops": [{"type": "1:late-b-signal", "what": "the disposition of a NON-YIELDED pinned template is undecided by C21 (read side) and C23 (write side), and V4 reads C23(c) down to avoid it; raised at the pre-build arm gate on the third occurrence of the same signal", "resolution": "ratifier chose a narrow ch14 contract reopen over re-anchoring in the packet, 2026-08-28 — the packet anchors to the new row instead of deciding"}],
     "detector_misses": [{"found_at": "arm-approve", "what": "the C27 reopen split the two write verbs apart and thirteen sentences kept speaking of them as one; the packet was marked APPROVED with the whole class alive", "why_missed": "five internal panel lenses and two arm passes read the text against itself, and every one of the thirteen was well-formed prose — only a trace against the code or against a sibling sentence falsifies them; the packet lint does not read prose at all"}, {"found_at": "arm-build-close", "what": "nine of gate 2's eleven findings were one class — a lane asserting what the code does, or standing on a fixture where right and wrong behave identically; and the F2 checker entry was text-level, so it erased inside string literals and comments", "why_missed": "the CLI families' tests were written AFTER the verbs and their RED receipts produced post-hoc by mutation probes, which proves sensitivity to the mutations chosen and not fail-first independence from the implementation the tests were read from; the F2 negatives guarded the VALUE axis while the CONTEXT axis went unprobed"}, {"found_at": "arm-approve", "what": "arm gate 1 was left open — the folded bytes never got their hash-citing re-check, and the gate record was not on a repo surface", "why_missed": "the discipline's two halves are one sentence in README §5.5 and the second half has no machine carrier; the packet header attested the passes in prose while the Build record held its placeholder"}],
-    "learned": "an instance-wise fold of a class defect regenerates its own next round — 2/3/4/4/0 across five closing arm passes; the pass that bounded it swept against the stated cause",
+    "learned": "the gate-2 finding count never converged (11/2/4/6/5/5/2) but the SUBJECT moved — product sensitivity, then the armor, then the evidence system itself; and two instruments belonging to other packets were found defective only because a consumer probed them harder than their authors had",
     "main_thread_model": "claude-opus-5[1m]"
   }
 }
