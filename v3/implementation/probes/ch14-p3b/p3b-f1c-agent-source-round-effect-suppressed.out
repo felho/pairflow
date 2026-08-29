@@ -1,0 +1,38 @@
+
+ RUN  v4.1.10 /Users/felho/dev/pairflow/v3
+
+ ❯ src/shippedRoute.test.ts (43 tests | 1 failed | 41 skipped) 6ms
+     × RUNTIME: `review` --PASS--> `implement`, an AGENT-sourced advancing edge, ADVANCES the round 5ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/shippedRoute.test.ts > family 2 — the round effect follows the ADMITTED FLAG from an AGENT source too > RUNTIME: `review` --PASS--> `implement`, an AGENT-sourced advancing edge, ADVANCES the round
+AssertionError: expected { currentStep: 'implement', …(5) } to match object { currentStep: 'implement', …(2) }
+(3 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "currentStep": "implement",
+    "kernelStatus": "ACTIVE",
+-   "round": 2,
++   "round": 1,
+  }
+
+ ❯ src/shippedRoute.test.ts:719:44
+    717|     // the admitted flag only when the source is a `human_gate` — and
+    718|     // answers `false` for every other class — leaves it at 1 here.
+    719|     expect(await stateOf(at.store, at.id)).toMatchObject({
+       |                                            ^
+    720|       currentStep: "implement",
+    721|       kernelStatus: "ACTIVE",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 passed | 41 skipped (43)
+   Start at  00:27:54
+   Duration  225ms (transform 125ms, setup 0ms, import 164ms, tests 6ms, environment 0ms)
+

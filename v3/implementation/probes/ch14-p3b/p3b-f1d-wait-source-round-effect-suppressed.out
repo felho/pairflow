@@ -1,0 +1,38 @@
+
+ RUN  v4.1.10 /Users/felho/dev/pairflow/v3
+
+ ❯ src/shippedRoute.test.ts (43 tests | 1 failed | 40 skipped) 8ms
+     × RUNTIME: resuming a WAIT onto `implement` on a `true` edge ADVANCES the round 6ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/shippedRoute.test.ts > family 2 — the round effect follows the ADMITTED FLAG from a WAIT source too > RUNTIME: resuming a WAIT onto `implement` on a `true` edge ADVANCES the round
+AssertionError: expected { currentStep: 'implement', …(5) } to match object { currentStep: 'implement', …(2) }
+(3 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "currentStep": "implement",
+    "kernelStatus": "ACTIVE",
+-   "round": 2,
++   "round": 1,
+  }
+
+ ❯ src/shippedRoute.test.ts:789:44
+    787|     // lane above — two independent classes, so a build answering only
+    788|     // one of them still reds.
+    789|     expect(await stateOf(at.store, at.id)).toMatchObject({
+       |                                            ^
+    790|       currentStep: "implement",
+    791|       kernelStatus: "ACTIVE",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 2 passed | 40 skipped (43)
+   Start at  00:27:58
+   Duration  239ms (transform 137ms, setup 0ms, import 179ms, tests 8ms, environment 0ms)
+

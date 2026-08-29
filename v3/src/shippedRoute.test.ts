@@ -184,8 +184,8 @@ async function atGate(
 }
 
 /** WAITING(commit_pending) — the approve route's own park. */
-async function atCommitWait(id: InstanceId): Promise<Phase> {
-  const at = await atGate(id);
+async function atCommitWait(id: InstanceId, template: AdmittedTemplate = shipped): Promise<Phase> {
+  const at = await atGate(id, template);
   const outcome = await at.kernel.submitDecision({
     intent: "submit-decision",
     instanceId: id,
@@ -555,11 +555,16 @@ describe("family 2 — the round effect follows the ADMITTED FLAG, not the decis
 // — is behaviourally IDENTICAL to the correct one on every admissible
 // template, since that membership is exactly what the expansion
 // computes and admission rebuilds any hand-forged `advancesRound` from
-// it. No suite can separate those two, this one included. What these
-// lanes prove is that the round effect is not keyed on the decision
-// key's NAME and not keyed on the target's NAME; that it is READ rather
-// than recomputed is a code-shape rule (C39's ban, discharged by
-// reading `arrival.ts`), not a testable behaviour.
+// it. No suite can separate those two, this one included. That it is
+// READ rather than recomputed is a code-shape rule (C39's ban,
+// discharged by reading `arrival.ts`), not a testable behaviour.
+//
+// AND THE LANES TO HERE ARE STILL NARROWER THAN THE RULE, which is the
+// third correlation and is stated rather than left to a reader: every
+// `true` round effect driven above leaves a `human_gate` step, so the
+// runtime `fromStep.type === "human_gate" ? admittedFlag : false`
+// satisfies all of them. The SOURCE-CLASS section below closes that,
+// and the width this file finally claims is stated there.
 // ─────────────────────────────────────────────────────────────────────
 
 /**
@@ -639,6 +644,174 @@ describe("family 2 — the round effect follows the ADMITTED FLAG, not the TARGE
       currentStep: "commit_pending",
       kernelStatus: "WAITING",
       round: 2,
+    });
+    at.close();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────
+// The SOURCE-STEP CLASS lane — the THIRD decorrelation, and the one
+// neither lane above reaches. Both of those move the GATE's own edges,
+// so every `true` they drive originates at a `human_gate` source and
+// the runtime `fromStep.type === "human_gate" ? admittedFlag : false`
+// passes them while mishandling the SHIPPED `review` --PASS-->
+// `implement` edge. ch11-C39 keys the flag on the TRANSITION —
+// `advancesRound = (target ∈ advanceOnArrivalAt)`, with no source-class
+// term — and ch14-C11 widens the expansion basis to all THREE edge
+// classes (`transitions`, `decisions`, `onResume`), so the rule spans
+// the whole of ch14-C1's step-class partition and the evidence must
+// too.
+//
+// Both remaining classes are driven with a `true` edge here: the AGENT
+// class off the SHIPPED template, needing no derivation at all because
+// `review`'s PASS edge already targets `implement`, the shipped round
+// declaration's own member; and the WAIT class off a derivation giving
+// `commit_pending` a SECOND resume event routed back to `implement`.
+// Probe `p3b-f1c-agent-source-round-effect-suppressed` reds the first
+// and `p3b-f1d-wait-source-round-effect-suppressed` the second, each
+// under exactly that mutant.
+//
+// The FALSE direction is already driven for both classes and is not
+// duplicated: the PHASE-axis lane drives `implement` --PASS--> `review`
+// (an AGENT source whose target is undeclared) and the terminal lane
+// drives `commit_pending` --COMMIT--> `done` (a WAIT source, likewise),
+// both asserting the round stays 1. The wait lane below adds the pair
+// on ONE step anyway, which those two cannot show.
+//
+// RESIDUAL, at the width these lanes prove: a `true` round effect is
+// driven at RUNTIME from each of the THREE step classes ch14-C1 admits
+// — agent, `human_gate` and `wait` — so no build keyed on the SOURCE
+// step's class passes, and with the two lanes above no build keyed on
+// the decision key's NAME or the target's NAME passes either. C1's
+// class set grows ADDITIVELY, so a step type a later chapter mints
+// arrives here LANE-LESS: that is the derivation noticing, not a gap
+// closed. The recompute residual above is untouched by any of this —
+// it is a code-shape rule, not a behaviour, and no lane can move it.
+// ─────────────────────────────────────────────────────────────────────
+
+describe("family 2 — the round effect follows the ADMITTED FLAG from an AGENT source too", () => {
+  it("the shipped `review` step's own edges DISAGREE, and the advancing one is AGENT-sourced", () => {
+    const steps = shipped.steps as unknown as Record<string, Record<string, unknown>>;
+    // No derivation is involved: `review` is an ordinary agent step —
+    // its `type` is ABSENT, which IS the agent class — and its PASS edge
+    // targets `implement`, which the shipped `round.advanceOnArrivalAt`
+    // names. Restated here rather than borrowed from `admit.test.ts`
+    // because the runtime lane below is what makes it observable.
+    expect(steps["review"]?.["advancesRound"]).toStrictEqual({ PASS: true, CONVERGED: false });
+  });
+
+  it("RUNTIME: `review` --PASS--> `implement`, an AGENT-sourced advancing edge, ADVANCES the round", async () => {
+    const at = await atReview("src-agent");
+    const outcome = await at.kernel.handle({
+      instanceId: at.id,
+      opId: "a2",
+      type: "PASS",
+      actorId: "claude",
+      expectedVersion: at.version,
+      expectedRole: "reviewer",
+      payload: { note: "back" },
+    });
+    expect(outcome).toMatchObject({ kind: "committed" });
+    // THE DISCRIMINATING ASSERTION: the SOURCE step is `review`, whose
+    // class is agent, and the round must reach 2. A build that consults
+    // the admitted flag only when the source is a `human_gate` — and
+    // answers `false` for every other class — leaves it at 1 here.
+    expect(await stateOf(at.store, at.id)).toMatchObject({
+      currentStep: "implement",
+      kernelStatus: "ACTIVE",
+      round: 2,
+    });
+    at.close();
+  });
+});
+
+/**
+ * The shipped declaration with the `commit_pending` WAIT step given a
+ * SECOND resume event routed back to `implement` — derived, never
+ * transcribed, and every other position the shipped fixture's own, the
+ * `round` declaration included.
+ *
+ * THE ROWS SAY THIS IS AUTHORABLE, not the code: ch14-C3 closes the wait
+ * keyset at `{ type, wait, onResume }` with `resumeEvents` a NONEMPTY
+ * list of UNIQUE event-type ids and `onResume` an open map whose keys
+ * are members of that list and whose values name a step or a terminal
+ * id — so a second event routed to `implement` is an ordinary
+ * declaration. ch14-C11 puts `onResume` in the `advancesRound`
+ * expansion basis EXPLICITLY ("all three edge classes — `transitions`,
+ * `decisions`, `onResume`"), which is why a wait step's resume edge
+ * carries a flag at all; ch11-C39 computes it as
+ * `target ∈ advanceOnArrivalAt` with no source-class term; and
+ * ch11-C37 excludes only TERMINAL ids from that declaration, so
+ * `implement` stays a legal member of it. The shipped `COMMIT` route to
+ * `done` is left in place, so the terminal stays reachable.
+ */
+const resumeBackToImplement = admitDerived((base) => ({
+  ...base,
+  steps: {
+    ...base.steps,
+    commit_pending: {
+      ...stepOf(base, "commit_pending"),
+      wait: { kind: "commit_pending", resumeEvents: ["COMMIT", "RETRY"] },
+      onResume: { COMMIT: "done", RETRY: "implement" },
+    },
+  },
+}));
+
+describe("family 2 — the round effect follows the ADMITTED FLAG from a WAIT source too", () => {
+  it("the derived wait's two resume edges carry OPPOSITE flags", () => {
+    const steps = resumeBackToImplement.steps as unknown as Record<string, Record<string, unknown>>;
+    // `RETRY` targets `implement`, which the shipped round declaration
+    // names; `COMMIT` targets the terminal `done`, which ch11-C37
+    // forbids that declaration to name at all. The expansion producing
+    // both is the one that produced the gate's flags — ch14-C11's THIRD
+    // edge class, reached here for the first time at runtime.
+    expect(steps["commit_pending"]?.["advancesRound"]).toStrictEqual({
+      COMMIT: false,
+      RETRY: true,
+    });
+  });
+
+  it("RUNTIME: resuming a WAIT onto `implement` on a `true` edge ADVANCES the round", async () => {
+    const at = await atCommitWait("src-wait", resumeBackToImplement);
+    const outcome = await at.kernel.resumeWait({
+      intent: "resume-wait",
+      instanceId: at.id,
+      opId: "r1",
+      expectedVersion: at.version,
+      type: "RETRY",
+    });
+    expect(outcome).toMatchObject({ kind: "committed" });
+    // THE DISCRIMINATING ASSERTION: the SOURCE step's `type` is `wait`,
+    // the third and last of ch14-C1's classes, and the round must reach
+    // 2. The same gate-only build reds here as well as on the agent
+    // lane above — two independent classes, so a build answering only
+    // one of them still reds.
+    expect(await stateOf(at.store, at.id)).toMatchObject({
+      currentStep: "implement",
+      kernelStatus: "ACTIVE",
+      round: 2,
+    });
+    at.close();
+  });
+
+  it("RUNTIME: the SAME wait's `false` edge still does NOT advance — both directions on ONE step", async () => {
+    // Not the mirror of the lane above and not a duplicate of the
+    // shipped terminal lane: here the two edges leave the SAME source
+    // step under the SAME declaration, so a build that advanced on any
+    // wait-sourced resume reds on this lane alone.
+    const at = await atCommitWait("src-wait-commit", resumeBackToImplement);
+    const outcome = await at.kernel.resumeWait({
+      intent: "resume-wait",
+      instanceId: at.id,
+      opId: "r1",
+      expectedVersion: at.version,
+      type: "COMMIT",
+    });
+    expect(outcome).toMatchObject({ kind: "committed" });
+    expect(await stateOf(at.store, at.id)).toMatchObject({
+      currentStep: "done",
+      kernelStatus: "TERMINAL",
+      round: 1,
     });
     at.close();
   });

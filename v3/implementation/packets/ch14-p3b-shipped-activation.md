@@ -824,7 +824,13 @@ pinned to its own bytes, where the block is the unextended list.**
       "v3/implementation/probes/ch14-p3b/p3b-f1b-round-effect-keyed-on-target.receipt.json",
       "v3/implementation/probes/ch14-p3b/p3b-f1-decorrelated-lane-blind-to-target-mutant.baseline.out",
       "v3/implementation/probes/ch14-p3b/p3b-f1-decorrelated-lane-blind-to-target-mutant.out",
-      "v3/implementation/probes/ch14-p3b/p3b-f1-decorrelated-lane-blind-to-target-mutant.receipt.json"
+      "v3/implementation/probes/ch14-p3b/p3b-f1-decorrelated-lane-blind-to-target-mutant.receipt.json",
+      "v3/implementation/probes/ch14-p3b/p3b-f1c-agent-source-round-effect-suppressed.baseline.out",
+      "v3/implementation/probes/ch14-p3b/p3b-f1c-agent-source-round-effect-suppressed.out",
+      "v3/implementation/probes/ch14-p3b/p3b-f1c-agent-source-round-effect-suppressed.receipt.json",
+      "v3/implementation/probes/ch14-p3b/p3b-f1d-wait-source-round-effect-suppressed.baseline.out",
+      "v3/implementation/probes/ch14-p3b/p3b-f1d-wait-source-round-effect-suppressed.out",
+      "v3/implementation/probes/ch14-p3b/p3b-f1d-wait-source-round-effect-suppressed.receipt.json"
     ]
   }
 }
@@ -1867,7 +1873,7 @@ restriction; `templateFormat.ts`'s `memberOf` relation targets
 `keysOf: $.steps`, the whole map; and `ch14-C1`/`C2`/`C3` partition the
 step space without narrowing `keys(steps)`. So a derivation that moves
 the round declaration to the `commit_pending` WAIT step is admissible,
-and it produces the pairing `{approve: false, request_rework: true}` —
+and it produces the pairing `{approve: true, request_rework: false}` —
 an edge INTO `implement` that must not advance and an edge away from it
 that must, which is exactly what a `target === "implement"` build cannot
 reproduce in either direction. Both directions are driven at runtime and
@@ -1905,13 +1911,91 @@ and a measured claim.
 **THE P3** was a wrong number in this record — `30 to 35` where the
 measured delta is four — corrected in place above with its own note.
 
-**SECOND AFTERMATH COMMIT — three files plus three probe artifacts, no
-escape.** `v3/src/shippedRoute.test.ts` (+120/−3, the only deletions
+**SECOND AFTERMATH COMMIT — EIGHT paths: two files plus six probe
+artifacts, no escape.** `v3/src/shippedRoute.test.ts` (+120/−3, the only deletions
 being the three false-claim comment lines), the two new probe receipts
 with their outputs, and this record. `v3/src/kernel/arrival.ts` is
 byte-restored and verified so. Chain re-run in the orchestrator's
 context: typecheck clean, lint clean, **82 files / 3154 tests passed**;
 the file itself now runs 38.
+
+**ARM GATE 2, PASS 3 — the re-check on `8ca5502c`: `not ready`, THREE
+findings — ONE P1 `test-evidence` and TWO P3 `packet-docs`, both of the
+P3s being errors in THIS record. All three folded.**
+
+Transport and guards as before, pin validated, 380 s.
+
+**THE P1 WAS THE THIRD CORRELATION, and by now the sequence is the
+finding.** Round 1: the suite could not tell a runtime keyed on the
+decision key's NAME. Round 2: the fix left the TARGET's name correlated.
+Round 3: every `true` round effect the family drove left a `human_gate`
+step, so `fromStep.type === "human_gate" ? admittedFlag : false` passed
+every lane while breaking the shipped `review.PASS → implement` edge.
+Three rounds, three layers of ONE question — what does a green lane
+actually exclude? — and each layer was invisible from inside the fix
+that closed the one above it.
+
+**BOTH HALVES WERE BUILDABLE, and the second half is the one that
+required a contract reading rather than a test-writing decision.** The
+AGENT-source half needed no derivation at all: the shipped `review` step
+is an ordinary agent step whose `PASS` edge targets `implement`, which
+the shipped `round.advanceOnArrivalAt` names, so
+`review.advancesRound === {PASS: true, CONVERGED: false}` was already
+there to be driven — the lane drives it and asserts round 2, and the
+named mutant reds it (`p3b-f1c-agent-source-round-effect-suppressed`).
+The WAIT-source half turned on whether a wait step's resume edge carries
+an `advancesRound` entry at all, and
+`contract:ch14-human-decision#C11` decides it: the expansion basis
+covers ALL THREE edge classes — `transitions`, `decisions` and
+`onResume` — realized as the normalizer's three-edge list, with the
+shipped `commit_pending.advancesRound === {COMMIT: false}` already
+pinned in this file as the proof. So the derivation is admissible:
+`commit_pending` gains `resumeEvents: ["COMMIT", "RETRY"]` and
+`onResume: {COMMIT: done, RETRY: implement}`, keeping the terminal
+reachable, and produces `{COMMIT: false, RETRY: true}` — BOTH DIRECTIONS
+OFF ONE SOURCE STEP, which no earlier lane could show. Its probe is
+`p3b-f1d-wait-source-round-effect-suppressed`. Both receipts:
+`baseline: green`, `suite_red: true`, `restore_verified: true`;
+`arrival.ts` byte-restored and verified against the earlier receipts'
+`original_sha256`.
+
+**THE FILE'S CLAIM NOW ENDS AT ITS PROVEN WIDTH, and the width is worth
+stating because it is finally a rule rather than a list:** a `true`
+round effect is driven at RUNTIME from each of the THREE step classes
+`ch14-C1` admits — agent, `humanGate` and `wait` — so no build keyed on
+the SOURCE step's class passes, and with the two earlier lanes no build
+keyed on the decision key's NAME or the target's NAME passes either.
+`C1`'s class set grows ADDITIVELY, so a step type a later chapter mints
+arrives here LANE-LESS — the derivation noticing, not a gap closed. The
+recompute residual is untouched and untouchable by any of this: a
+runtime that rebuilds `target ∈ advanceOnArrivalAt` is behaviourally
+identical on every admissible template, and C39's ban on it is a
+code-shape rule discharged by reading `arrival.ts`, never a behaviour a
+suite can reach.
+
+**THE TWO P3s WERE BOTH MINE, and they are the same defect twice.** The
+record stated the derived pairing as `{approve: false,
+request_rework: true}` when the template and the test assert
+`{approve: true, request_rework: false}` — the values carried over from
+the EARLIER derivation, where the targets were swapped; and it described
+the second aftermath commit as "three files plus three probe artifacts"
+when the commit carries eight paths, two files and six artifacts. Both
+corrected in place. **THE PATTERN IS THE ITEM, not either instance:
+three transcription errors have now been caught in this record by an
+external reader (a test count, a pairing, a commit shape), and every one
+of them sat in PROSE that no machine surface reads — `packet-lint`
+validates declared blocks, the post-build audit compares path lists, and
+neither looks at a number written in a sentence. This is a
+boundary-review candidate in its own right.**
+
+**THIRD AFTERMATH COMMIT — EIGHT paths: two files plus six probe
+artifacts.** `v3/src/shippedRoute.test.ts` (+180/−7; the deletions are
+five replaced comment lines and two widened signature lines), the two
+new probes with their outputs, and this record. `atCommitWait` gained
+the same optional `template` parameter the four earlier helpers carry,
+so every pre-existing caller is behaviourally byte-equivalent. Chain
+re-run in the orchestrator's context: typecheck clean, lint clean,
+**82 files / 3159 tests passed**; the file itself now runs 43.
 
 ```json
 {
@@ -1919,9 +2003,9 @@ the file itself now runs 38.
     "class": "operability",
     "prediction": { "predicted": "projection", "reasoning": "the ratified ch14-human-decision contract legislates the whole surface at C24 with C1-C7 for the authored forms; the split leaves this part AUTHORING the two declaration files against rows already decided, so only the slots C24 delegates and the instrument's own edit class are open", "discovered": "projection" },
     "provenance": { "anchored": 4, "derived": 7, "new_decision": 5 },
-    "rounds": { "review": 9, "doc_refinement": 0, "implementation": 3 },
+    "rounds": { "review": 10, "doc_refinement": 0, "implementation": 4 },
     "stops": [{"type": "4:flagged-approve", "what": "five new-decision rows and eight pre-approval flags — seven approve-ratified, one boundary-review — so the inherited flag-free-implies-autonomous letter REACHED this packet and its condition failed at authoring", "resolution": "the owner ratified all seven and routed flag 6's pair (K17's recomputation leg on a MEASURED baseline, and wiring the live leg to an automated gate) to the boundary review as ONE item, 2026-08-29; the build then ran on the per-packet entry mode"}],
-    "detector_misses": [{"found_at": "arm-build-close", "what": "gate 2's pass 2 found the PASS-1 FOLD overclaiming: the decorrelated lane removed the key-name correlation and left a target one, so a runtime keyed on target === \"implement\" passed every new assertion while the lane's comment claimed only a flag-reading runtime could", "why_missed": "the fold was written to answer the mutant the reviewer NAMED, and a lane built against one named mutant proves exactly that mutant; nothing in the loop asks what OTHER implementation the new evidence admits — the second probe now measures that question instead of arguing it"}, {"found_at": "arm-build-close", "what": "both of gate 2's findings were one shape — family 2's test data correlated the decision-key NAME with the expected effect perfectly, so a runtime keyed on edgeKey === \"request_rework\", or one comparing the verdict to the literal \"approve\" instead of to the recorded recommendation, would have satisfied every assertion; W1 had just declared REV-NO-KEY-MEANING discharged on the production side", "why_missed": "the discharge was argued by reading the PRODUCTION code, which branches on nothing, while the suite that carries the rule forward was never asked to distinguish a key-meaning implementation; and the shipped template is the one artifact where key names and effects agree by construction, so a lane built only on it cannot decorrelate them"}, {"found_at": "arm-approve", "what": "G1(g) did not prove the declaration had not outlived its commit — it compared the working tree to HEAD and left baseline_ref unconstrained, so an uncommitted touch after the build commit would make (a), (b) and (g) green again", "why_missed": "the internal lenses read the check against the row's PROSE, which stated the property correctly; only a reader simulating the post-commit tree falsifies it, and no lens simulates a future commit"}, {"found_at": "arm-approve", "what": "R1 widened C24's suites-only re-pin family to production source while the manifest still classed the row derived — an unratified scope decision booked as a derivation, which the classification detector (it scans new-decision rows) could not see", "why_missed": "an internal close pass had CLEARED the same widening by reading C24's delegated enumeration as delegating the REACH; the arm read the membership sentence as normative — the disagreement is recorded at flag 8 rather than resolved silently"}, {"found_at": "implementation", "what": "the build self-reported a packet-vs-tree divergence in T6's two named near-misses, having found only one of the two sentences; the orchestrator's re-measurement found both present and untouched — the second is WRAPPED across two lines, so the single-line pattern could not see it", "why_missed": "a completeness claim was checked with a pattern the target's own line-wrapping defeats — the R-INSTRUMENT-PROBE class met in a build's self-report rather than in a tool; nothing in the loop re-measures a build's negative finding before it is believed"}],
+    "detector_misses": [{"found_at": "arm-build-close", "what": "a THIRD correlation survived two folds — every true round effect the family drove left a human_gate step, so a runtime reading the admitted flag only for gate sources passed every lane while breaking the shipped review.PASS edge; and in the same round two more prose transcription errors in the Build record (a pairing and a commit shape) were caught by the same external reader", "why_missed": "each fold was written against the mutant the previous round NAMED, and a lane built against one named mutant excludes exactly that mutant — the loop had no step that asks what OTHER implementation the new evidence admits, which is why the answer arrived three times; and the prose errors sat where no machine surface reads: packet-lint validates declared blocks and the post-build audit compares path lists, neither reads a number in a sentence"}, {"found_at": "arm-build-close", "what": "gate 2's pass 2 found the PASS-1 FOLD overclaiming: the decorrelated lane removed the key-name correlation and left a target one, so a runtime keyed on target === \"implement\" passed every new assertion while the lane's comment claimed only a flag-reading runtime could", "why_missed": "the fold was written to answer the mutant the reviewer NAMED, and a lane built against one named mutant proves exactly that mutant; nothing in the loop asks what OTHER implementation the new evidence admits — the second probe now measures that question instead of arguing it"}, {"found_at": "arm-build-close", "what": "both of gate 2's findings were one shape — family 2's test data correlated the decision-key NAME with the expected effect perfectly, so a runtime keyed on edgeKey === \"request_rework\", or one comparing the verdict to the literal \"approve\" instead of to the recorded recommendation, would have satisfied every assertion; W1 had just declared REV-NO-KEY-MEANING discharged on the production side", "why_missed": "the discharge was argued by reading the PRODUCTION code, which branches on nothing, while the suite that carries the rule forward was never asked to distinguish a key-meaning implementation; and the shipped template is the one artifact where key names and effects agree by construction, so a lane built only on it cannot decorrelate them"}, {"found_at": "arm-approve", "what": "G1(g) did not prove the declaration had not outlived its commit — it compared the working tree to HEAD and left baseline_ref unconstrained, so an uncommitted touch after the build commit would make (a), (b) and (g) green again", "why_missed": "the internal lenses read the check against the row's PROSE, which stated the property correctly; only a reader simulating the post-commit tree falsifies it, and no lens simulates a future commit"}, {"found_at": "arm-approve", "what": "R1 widened C24's suites-only re-pin family to production source while the manifest still classed the row derived — an unratified scope decision booked as a derivation, which the classification detector (it scans new-decision rows) could not see", "why_missed": "an internal close pass had CLEARED the same widening by reading C24's delegated enumeration as delegating the REACH; the arm read the membership sentence as normative — the disagreement is recorded at flag 8 rather than resolved silently"}, {"found_at": "implementation", "what": "the build self-reported a packet-vs-tree divergence in T6's two named near-misses, having found only one of the two sentences; the orchestrator's re-measurement found both present and untouched — the second is WRAPPED across two lines, so the single-line pattern could not see it", "why_missed": "a completeness claim was checked with a pattern the target's own line-wrapping defeats — the R-INSTRUMENT-PROBE class met in a build's self-report rather than in a tool; nothing in the loop re-measures a build's negative finding before it is believed"}],
     "learned": "an instrument asked to classify an edit it predates can be taught a DECLARED class only if the declaration cannot survive its own commit; and a build's self-reported divergence is a claim like any other — two of the three items this build raised as findings dissolved on re-measurement, one because the grep could not see a wrapped sentence and one because it read a per-member disposition rule as a prediction",
     "baseline_note": "rounds.review = 7 is an EVIDENCED LOWER BOUND reconstructed from the packet's own bytes at build close — four arm-gate-1 passes, one internal close pass (named in gate 1's pass-1 record), and the two lens-4 reconciliation passes the two-hash close model records — because the authoring session's own round count reached no repo surface and this build ran in a fresh context. The earlier full and targeted panel rounds are therefore NOT included in the figure; the gap itself is a boundary-review candidate, adjacent to ch14-p3a's third detector miss (a gate record that was not on a repo surface). rounds.implementation counts the build only; aftermath fix rounds increment it.",
     "main_thread_model": "claude-opus-5[1m]"

@@ -1,0 +1,12 @@
+{
+  "probe_id": "p3b-f1d-wait-source-round-effect-suppressed",
+  "file": "v3/src/kernel/arrival.ts",
+  "original_sha256": "710ff3ff0b7dc4efdecaac45a60bba20d638162a84a09c981f24f4bb7c8003df",
+  "mutated_sha256": "4a25eb4bda0f70a467fbfa8d04825798117ad10319f7e6dc96eacddc4c155df7",
+  "test_command": "pnpm --dir v3 exec vitest run src/shippedRoute.test.ts -t \"from a WAIT source too\"",
+  "exit_code": 1,
+  "suite_red": true,
+  "baseline": "green",
+  "output_file": "v3/implementation/probes/ch14-p3b/p3b-f1d-wait-source-round-effect-suppressed.out",
+  "restore_verified": true
+}
