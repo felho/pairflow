@@ -38,6 +38,15 @@ V3 design memos (open questions, design syntheses) live in
   model. Parks three cheap deterministic stop signals (done-predicate vs
   quality-judge split, progress-stagnation budget, identical-action
   repetition) for the L9 liveness/recovery contracts (2026-08-16).
+- **`harness-situated-agents-capture.md`** — a small article capture (not a
+  codebase study): Drew Breunig's *Harnesses are Situated Agents*, read against
+  the v3 ladder. Records the external eight-layer harness vocabulary (Session ·
+  Environment · Repo · Memory · Skills · Team · Organization · Model), maps each
+  layer onto its nearest v3 surface, and flags the "session" collision (v3
+  ratified sessions as *non*-kernel; instance + transcript carry that role).
+  **Carries an open research task** — the vocabulary-sync review (what to
+  disambiguate, what to gloss, what to leave alone) has NOT been run
+  (2026-08-29).
 - **`bitsafe-ai-os-capture.md`** — a raw information capture (not analysis) of
   BitSafe's "How BitSafe Runs on AI" public writing. Internal links inside the
   captured material point at the *source* repo and intentionally do not
