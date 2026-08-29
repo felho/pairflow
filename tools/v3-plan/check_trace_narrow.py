@@ -246,6 +246,15 @@ def _scan_noncode(text: str, *, regex_literals: bool) -> list[bool]:
                 masked[i] = True
                 i += 1
         elif char == "/" and text.startswith("/*", i):
+            # The OPENER IS CONSUMED BEFORE THE CLOSER IS SEARCHED FOR.
+            # Written the other way — searching from the `/` — the
+            # opener's own `*` doubles as the closer's, so `/*/ x */`
+            # masked three characters and left the rest as code, a
+            # deterministic false GREEN (build-close review, gate 2f).
+            # No character may serve in both roles.
+            masked[i] = True
+            masked[i + 1] = True
+            i += 2
             while i < n and not text.startswith("*/", i):
                 if text[i] != "\n":
                     masked[i] = True
@@ -333,10 +342,25 @@ def mask_noncode(text: str) -> str:
     No division-versus-regex token-context heuristic is used to choose
     between the passes — such a heuristic's failure direction is toward
     false GREEN. The property is DRIVEN, not asserted: the selftest
-    checks the superset relation against an INDEPENDENT reference
-    scanner over a corpus that includes the counterexample above, its
-    line-comment twin, every fixture in this file, and the real contents
-    of the four live golden-trace files.
+    checks the superset relation against a reference scanner over a
+    corpus that includes the counterexample above, its line-comment
+    twin, every fixture in this file, and the real contents of the four
+    live golden-trace files.
+
+    AND THE REFERENCE'S OWN LIMIT, because calling it "independent" is
+    what let the next false green through. It is CODE-independent — no
+    shared helper, so the two sides cannot move together — but it is not
+    FAILURE-independent: it re-implements the SAME IDEA, so a wrong idea
+    about where a construct ends is duplicated into it and the property
+    holds between two wrong scanners. That is not a hypothesis; `/*/ x
+    */` was exactly that (build-close review, gate 2f). A SECOND
+    property therefore runs beside the superset one: the CONSTRUCTED
+    ORACLE, a corpus of labelled segments carrying no scanning algorithm
+    at all, whose labels were checked against the TypeScript compiler's
+    own scanner. It covers the shared-algorithm mode and NOT the
+    shared-author mode — a mislabelled case is still just a wrong
+    expectation — and it is finite and hand-picked, so it says nothing
+    about a construct nobody wrote down.
 
     WHAT IT RECOGNIZES AS NON-CODE, listed so the next reader meets the
     limit as KNOWN rather than discovering it a fourth time (no masking
@@ -689,6 +713,31 @@ SLASH_CONTEXT = SLASH_STRING_LINE % "x" + SLASH_COMMENT_LINE % "x"
 SLASH_CONTEXT_BEFORE = BEFORE + SLASH_CONTEXT
 SLASH_CONTEXT_AFTER = AFTER_CLEAN + SLASH_CONTEXT
 
+# packet ch14-p3a AFTERMATH (build-close review, gate 2f): THE OPENER'S
+# OWN STAR. `/*/ x */` is ONE block comment to TypeScript — verified
+# against the compiler's scanner, which reports a single
+# MultiLineCommentTrivia over the whole span. Both the shipped masker
+# AND the reference scanner it was checked against searched for `*/`
+# starting AT the `/`, so the opener's `*` served as the closer's too:
+# three characters masked, the rest read as code, and a re-pin planted
+# there erased on both sides and rode through green.
+#
+# This lane is the reason the CONSTRUCTED ORACLE below exists. The
+# monotonicity reference could not catch this one, because it made the
+# SAME mistake — a duplicated implementation catches a transcription
+# slip and is blind to a shared misunderstanding.
+BLOCK_SLASH_LINE = "/*/ the site: %s */\n"
+BLOCK_SLASH_BEFORE = BEFORE + BLOCK_SLASH_LINE % "x"
+BLOCK_SLASH_AFTER = AFTER_CLEAN + BLOCK_SLASH_LINE % "asDispatch(x)"
+
+# The GREEN control: the same comment form present and UNCHANGED while
+# the real call site takes the narrow. Without it the lane above is
+# satisfied by a masker that had simply started swallowing every `/*`
+# it met to the end of the file.
+BLOCK_SLASH_CONTEXT = BLOCK_SLASH_LINE % "asDispatch(x)"
+BLOCK_SLASH_CONTEXT_BEFORE = BEFORE + BLOCK_SLASH_CONTEXT
+BLOCK_SLASH_CONTEXT_AFTER = AFTER_CLEAN + BLOCK_SLASH_CONTEXT
+
 # ── the DECLARATION entry ────────────────────────────────────────────
 # The erased construct spans lines, so its string-literal lane needs a
 # TEMPLATE literal — the only string form that legitimately does.
@@ -766,6 +815,12 @@ def _reference_noncode_positions(text: str) -> set[int]:
                 found.add(i)
                 i += 1
         elif text.startswith("/*", i):
+            # Opener consumed first — see the note on the production
+            # branch. The SHARED version of this error is why the
+            # oracle below exists.
+            found.add(i)
+            found.add(i + 1)
+            i += 2
             while i < n and not text.startswith("*/", i):
                 if text[i] != "\n":
                     found.add(i)
@@ -799,6 +854,130 @@ def _reference_noncode_positions(text: str) -> set[int]:
             i += 1
     return found
 
+
+# ── the CONSTRUCTED ORACLE ───────────────────────────────────────────
+# THE REFERENCE ABOVE IS CODE-INDEPENDENT BUT NOT FAILURE-INDEPENDENT,
+# and gate 2f of the build-close review measured the difference. `/*/ x
+# */` was mis-tokenized IDENTICALLY by the masker and by the reference,
+# because both were written from the same sentence — "a block comment
+# runs from `/*` to the next `*/`" — and both read that sentence as
+# permitting the opener's own `*` to close it. The superset property
+# held perfectly between two implementations that were both wrong. A
+# duplicate catches a TRANSCRIPTION slip; it is structurally blind to a
+# SHARED MISUNDERSTANDING.
+#
+# So this corpus is not a third scanner. It carries no scanning
+# algorithm at all: each case is a SEQUENCE OF LABELLED SEGMENTS, and
+# the expected mask is read off the labels by concatenation. Nothing
+# here decides where a comment ends — the author already did, segment by
+# segment — so a wrong rule about where a comment ends cannot be
+# duplicated into it.
+#
+# HOW THE LABELS WERE ESTABLISHED, because an authored oracle is only
+# worth its authority: every case below was run through the TypeScript
+# compiler's own scanner (`ts.createScanner`, `skipTrivia=false`) at
+# authoring time and the labelled non-code segments match its
+# comment/string token spans EXACTLY. That validation was a ONE-TIME
+# act, not a gate leg — see the residual note on the selftest lane.
+#
+# The assertion is ONE-DIRECTIONAL, matching the masker's declared safe
+# direction: every labelled non-code position MUST be masked. A code
+# position that gets masked anyway is over-masking, which this module
+# permits by design, so the oracle says nothing about it.
+_ORACLE_CASES: tuple[tuple[str, tuple[tuple[str, bool], ...]], ...] = (
+    # THE GATE-2f FINDING: the opener's `*` reused as the closer's.
+    (
+        "block-opener-star-reused",
+        (
+            ("const a = 1;\n", False),
+            ("/*/ asDispatch(x) */", True),
+            ("\nconst b = 2;\n", False),
+        ),
+    ),
+    # An opener immediately followed by its own closer character.
+    (
+        "block-empty",
+        (("const a = 1;\n", False), ("/**/", True), ("\nconst b = 2;\n", False)),
+    ),
+    # The same, with nothing but slashes and stars between them.
+    (
+        "block-nested-looking-tight",
+        (("const a = 1;\n", False), ("/*/*/", True), ("\nconst b = 2;\n", False)),
+    ),
+    # A NESTED-LOOKING opener. Block comments do not nest, so the inner
+    # `/*` is comment text and the first `*/` ends the whole span.
+    (
+        "block-nested-looking-spaced",
+        (
+            ("const a = 1;\n", False),
+            ("/* /* asDispatch(x) */", True),
+            ("\nconst b = 2;\n", False),
+        ),
+    ),
+    # Stars immediately before the closer — the `**/` tail.
+    (
+        "block-stars-before-closer",
+        (
+            ("const a = 1;\n", False),
+            ("/* asDispatch(x) **/", True),
+            ("\nconst b = 2;\n", False),
+        ),
+    ),
+    # A COMMENT MARKER INSIDE A QUOTE: no comment starts here.
+    (
+        "block-marker-inside-string",
+        (("const u = ", False), ('"a /* asDispatch(x) */ b"', True), (";\n", False)),
+    ),
+    (
+        "line-marker-inside-string",
+        (("const u = ", False), ('"http://asDispatch(x)"', True), (";\n", False)),
+    ),
+    # A QUOTE INSIDE A COMMENT: no string starts here, and neither quote
+    # form ends the comment.
+    (
+        "quote-inside-block-comment",
+        (("/* a \"asDispatch(x)\" and 'b' */", True), ("\nconst c = 3;\n", False)),
+    ),
+    # A block opener inside a LINE comment: the line comment owns it.
+    (
+        "block-opener-inside-line-comment",
+        (("// /* asDispatch(x)", True), ("\nconst d = 4;\n", False)),
+    ),
+    # A line marker inside a BLOCK comment: the block comment owns it.
+    (
+        "line-marker-inside-block-comment",
+        (("/* // asDispatch(x) */", True), ("\nconst e = 5;\n", False)),
+    ),
+    # An ESCAPED QUOTE does not end its string.
+    (
+        "escaped-quote-inside-string",
+        (("const s = ", False), ("'it\\'s asDispatch(x)'", True), (";\n", False)),
+    ),
+    # An escaped quote AT END OF LINE — a LINE CONTINUATION, so this
+    # single-quoted-family string legitimately spans two lines.
+    (
+        "string-line-continuation",
+        (("const s = ", False), ('"a\\\nb asDispatch(x)"', True), (";\n", False)),
+    ),
+)
+
+
+def _oracle_case_text(segments: tuple[tuple[str, bool], ...]) -> tuple[str, set[int]]:
+    """The case's SOURCE TEXT and the positions its labels call non-code.
+
+    Newlines are excluded from the expectation because the masker
+    preserves line structure by contract; every other character of a
+    segment labelled non-code must come back masked.
+    """
+    parts: list[str] = []
+    expected: set[int] = set()
+    offset = 0
+    for piece, noncode in segments:
+        if noncode:
+            expected.update(offset + k for k, char in enumerate(piece) if char != "\n")
+        parts.append(piece)
+        offset += len(piece)
+    return "".join(parts), expected
 
 def _live_trace_sources() -> list[tuple[str, str]]:
     """The four LIVE golden-trace files, by their receipt entries.
@@ -969,6 +1148,19 @@ def selftest() -> int:
     assert_context_red("division-then-line-comment", SLASH_COMMENT_BEFORE, SLASH_COMMENT_AFTER)
     assert_context_green("division-slash-context-green", SLASH_CONTEXT_BEFORE, SLASH_CONTEXT_AFTER)
 
+    # 15e. the AFTERMATH-3 lane: `/*/ x */`. The masker consumed the
+    #      opener's `*` twice — once opening, once closing — masked
+    #      three characters, and read the rest of a real block comment
+    #      as code. GREEN at `5e100e48`, red here.
+    assert_context_red(
+        "block-comment-opener-star-reused", BLOCK_SLASH_BEFORE, BLOCK_SLASH_AFTER
+    )
+    assert_context_green(
+        "block-comment-opener-star-context-green",
+        BLOCK_SLASH_CONTEXT_BEFORE,
+        BLOCK_SLASH_CONTEXT_AFTER,
+    )
+
     # 18-20. the DECLARATION entry in each non-code context.
     assert_context_red("declaration-inside-a-string-literal", DECL_LITERAL_BEFORE, DECL_LITERAL_AFTER)
     assert_context_red("declaration-inside-a-line-comment", DECL_COMMENT_BEFORE, DECL_COMMENT_AFTER)
@@ -1086,19 +1278,39 @@ def selftest() -> int:
     # speculative scanner is not. A property asserted in prose and not
     # checked is precisely what produced that finding.
     #
-    # The corpus is EVERY fixture in this module — so a fixture added
-    # later joins it without anyone remembering to — plus the two
-    # counterexample lines and the real contents of the four live
-    # golden-trace files.
+    # THE COLLECTION RULE, stated as the CONVENTION it actually is. A
+    # module-level global joins the corpus when its name is UPPERCASE,
+    # its value is a `str`, and its name does NOT begin with `_`. The
+    # last clause is a correction (build-close review, gate 2f): without
+    # it the `_MASK` sentinel — one NUL character, no code, no non-code
+    # — joined as a 56th "fixture" and the claimed count was one too
+    # high. Private module constants are excluded by that same clause,
+    # which is what makes the rule statable rather than accidental.
+    #
+    # A fixture that FOLLOWS the convention joins without anyone
+    # remembering to; a fixture that does not — a lowercase local, a
+    # string built inside `selftest`, a file added elsewhere — does NOT
+    # join, and no mechanism here notices. The convention is the whole
+    # contract, and it is the reason to keep authoring fixtures as
+    # UPPERCASE module globals.
     corpus: list[tuple[str, str]] = [
         (name, value)
         for name, value in sorted(globals().items())
-        if name.isupper() and isinstance(value, str)
+        if name.isupper() and not name.startswith("_") and isinstance(value, str)
     ]
+    fixture_count = len(corpus)
+    # The oracle cases join too: they are the smallest inputs that
+    # exercise the tokenizer edges, and the reference must survive them.
+    corpus.extend(
+        (f"oracle:{name}", _oracle_case_text(segments)[0])
+        for name, segments in _ORACLE_CASES
+    )
     try:
         corpus.extend(_live_trace_sources())
     except (OSError, ValueError, KeyError) as exc:  # noqa: BLE001 - reported, never skipped
         failures.append(f"monotonicity corpus: the LIVE trace sources could not be read ({exc!r})")
+    if _MASK in dict(corpus).values():
+        failures.append("monotonicity corpus: the _MASK sentinel is being counted as a fixture")
     dims.append("mask-monotonicity-over-corpus")
     lost: list[str] = []
     for name, text in corpus:
@@ -1120,9 +1332,56 @@ def selftest() -> int:
     if len(corpus) < 5:
         failures.append(f"monotonicity corpus is implausibly small ({len(corpus)} input(s))")
 
+    # ── THE CONSTRUCTED-ORACLE PROPERTY ──────────────────────────────
+    # Every position a LABEL calls non-code must be masked. The labels
+    # were authored and validated against the TypeScript compiler's own
+    # scanner; nothing here re-derives them, which is the only reason
+    # this lane can see what the monotonicity reference cannot.
+    #
+    # MEASURED, not argued: against the masker shipped at `5e100e48`
+    # this lane reds on `block-opener-star-reused` (17 positions) and
+    # `block-nested-looking-tight` (2). The monotonicity reference at
+    # that same commit got BOTH cases wrong in exactly the same way, so
+    # the superset property stayed green over them — which is the
+    # common-mode blindness this lane exists to remove.
+    #
+    # THE RESIDUAL, stated because the record must not claim more than
+    # it holds. This lane removes the SHARED-ALGORITHM mode: no scanning
+    # rule is duplicated, so a wrong rule cannot pass by being wrong
+    # twice. It does NOT remove the SHARED-AUTHOR mode: a case whose
+    # label encodes a wrong belief about TypeScript is simply a wrong
+    # expectation, and the compiler cross-check that would catch it ran
+    # ONCE, by hand, at authoring time — it is not a leg of this gate.
+    # And the oracle is a FINITE, HAND-PICKED corpus: it says nothing
+    # about any construct nobody thought to write down. Both scanners
+    # remain crude lexers, and the coverage of this lane is exactly its
+    # twelve cases and no more.
+    dims.append("mask-covers-constructed-oracle")
+    uncovered: list[str] = []
+    for name, segments in _ORACLE_CASES:
+        text, expected = _oracle_case_text(segments)
+        masked = mask_noncode(text)
+        missing = sorted(i for i in expected if masked[i] != _MASK)
+        if missing:
+            uncovered.append(
+                f"{name}: {len(missing)} LABELLED non-code position(s) left as code, "
+                f"first at {missing[0]} ({text!r})"
+            )
+    if uncovered:
+        failures.append(
+            "ORACLE COVERAGE VIOLATED — the masker read authored non-code as code: "
+            + "; ".join(uncovered)
+        )
+
     for failure in failures:
         print(f"selftest FAIL: {failure}", file=sys.stderr)
-    print(f"check-trace-narrow selftest: {len(dims)} red dims exercised, {len(failures)} failure(s)")
+    print(
+        f"check-trace-narrow selftest: {len(dims)} red dims exercised, "
+        f"{len(failures)} failure(s); monotonicity corpus = {len(corpus)} input(s) "
+        f"({fixture_count} module fixtures by naming convention, "
+        f"{len(_ORACLE_CASES)} oracle cases, {len(corpus) - fixture_count - len(_ORACLE_CASES)} "
+        f"live trace file(s))"
+    )
     return 1 if failures else 0
 
 

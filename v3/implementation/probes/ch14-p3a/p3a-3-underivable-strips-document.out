@@ -1,0 +1,59 @@
+
+ RUN  v4.1.10 /Users/felho/dev/pairflow/v3
+
+ ❯ src/cli/cli.test.ts (91 tests | 2 failed) 2499ms
+     × emits the WHOLE document with the member ABSENT for all THREE underivable conditions — and adds NO key 22ms
+     × family 10: the emitted `detail` keyset is CLOSED in EVERY state — ACTIVE, parked-derivable, parked-underivable, a NON-decision WAIT, and TERMINAL 24ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/cli/cli.test.ts > cli — ch14-p3a family 1/3/10: the detail document under every derivability state > emits the WHOLE document with the member ABSENT for all THREE underivable conditions — and adds NO key
+AssertionError: dependency-null: expected [ 'instance', 'runner' ] to deeply equal [ 'instance', 'runner', 'transcript' ]
+
+- Expected
++ Received
+
+  [
+    "instance",
+    "runner",
+-   "transcript",
+  ]
+
+ ❯ src/cli/cli.test.ts:2345:45
+    2343|       const doc = dataDoc(result);
+    2344|       // ONE whole document, its existing members intact…
+    2345|       expect(Object.keys(doc).sort(), lane).toEqual(["instance", "runn…
+       |                                             ^
+    2346|       // …the member ABSENT rather than valued…
+    2347|       expect("pendingDecision" in doc, lane).toBe(false);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/cli/cli.test.ts > cli — ch14-p3a family 1/3/10: the detail document under every derivability state > family 10: the emitted `detail` keyset is CLOSED in EVERY state — ACTIVE, parked-derivable, parked-underivable, a NON-decision WAIT, and TERMINAL
+AssertionError: parked-and-underivable: expected [ 'instance', 'runner' ] to deeply equal [ 'instance', 'runner', 'transcript' ]
+
+- Expected
++ Received
+
+  [
+    "instance",
+    "runner",
+-   "transcript",
+  ]
+
+ ❯ src/cli/cli.test.ts:2412:79
+    2410|     ]);
+    2411|     // …the SAME state with the template UNYIELDED adds nothing.
+    2412|     expect(await keysetOf(id, emptyTemplatesDir()), "parked-and-underi…
+       |                                                                               ^
+    2413|
+    2414|     // A NON-DECISION WAIT: `approve` routes into the `commit_pending`
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed | 80 passed (81)
+      Tests  2 failed | 3092 passed (3094)
+   Start at  12:57:53
+   Duration  23.75s (transform 4.25s, setup 0ms, import 8.06s, tests 84.18s, environment 4ms)
+

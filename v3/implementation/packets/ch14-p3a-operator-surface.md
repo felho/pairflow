@@ -654,7 +654,13 @@ packet's other defects, and the post-build audit caught it in one run.
       "v3/implementation/probes/ch14-p3a/p3a-observer-origin-selective.receipt.json",
       "v3/implementation/probes/ch14-p3a/p3a-observer-origin-v4-path.baseline.out",
       "v3/implementation/probes/ch14-p3a/p3a-observer-origin-v4-path.out",
-      "v3/implementation/probes/ch14-p3a/p3a-observer-origin-v4-path.receipt.json"
+      "v3/implementation/probes/ch14-p3a/p3a-observer-origin-v4-path.receipt.json",
+      "v3/implementation/probes/ch14-p3a/p3a-3-underivable-strips-document.baseline.out",
+      "v3/implementation/probes/ch14-p3a/p3a-3-underivable-strips-document.out",
+      "v3/implementation/probes/ch14-p3a/p3a-3-underivable-strips-document.receipt.json",
+      "v3/implementation/probes/ch14-p3a/p3a-6-ghost-created-before-unknown.baseline.out",
+      "v3/implementation/probes/ch14-p3a/p3a-6-ghost-created-before-unknown.out",
+      "v3/implementation/probes/ch14-p3a/p3a-6-ghost-created-before-unknown.receipt.json"
     ]
   }
 }
@@ -1691,15 +1697,15 @@ substitute for the record carrying them:
 | F2 mask monotonicity | the union dropped (pass 5's own fix) | `p3a-f2-mask-union-dropped` |
 | 1 member presence | park predicate `WAITING \|\| TERMINAL`; eager load | `p3a-1-park-predicate`, `p3a-1-eager-load` |
 | 2 member content | floor left a pass-through | `p3a-2-floor-passthrough` |
-| 2b integrity + join | recency read; bare `catch`; degrade one condition; re-wrap `new Error(msg)` | `p3a-2b-recency-read`, `-bare-catch`, `-degrade-one-condition`, `-rewrap-new-error` |
+| 2b integrity + join | recency read; bare `catch`; degrade one condition; re-wrap `new Error(msg)`; an integrity throw swallowed into an emitted document | `p3a-2b-recency-read`, `-bare-catch`, `-degrade-one-condition`, `-rewrap-new-error`, `p3a-3-member-less-document` ★ |
 | 2b F6 no-catch | `try/catch` around `pendingRequest` | `p3a-2b-f6-trycatch` |
-| 3 read verb underivable | member-less document; recovery composes extra | `p3a-3-member-less-document`, `p3a-3-recovery-composes-extra` |
+| 3 read verb underivable | underivable state strips the document; recovery composes extra | `p3a-3-underivable-strips-document` ◆, `p3a-3-recovery-composes-extra` |
 | 4 exit/channel matrix | `lifecycleExitCode`; reason-token swap | `p3a-4-lifecycle-exit-code`, `p3a-4-reason-token-swap` |
 | 4/6/7 observer origin | SELECTIVE leaf-built kernel on the V4 path | `p3a-observer-origin-v4-path` † |
 | 4/6/7 import pin | `main.ts`, then `runnerVerbs.ts` single-quoted, to leaf | `p3a-import-pin-main`, `p3a-import-pin-runnerverbs` ‡ |
 | 5 argument shape | `--decision` defaulted; `--payload` → `{}`; `--by` constant | `p3a-5-decision-defaulted`, `-payload-defaulted`, `-by-constant` |
 | 6 resolution failure | V4 (ii) keyed on member absence; kernel built+called then remapped | `p3a-6-v4ii-keyed-on-member-absence`, `p3a-observer-origin-v4-path` † |
-| 6 resolution failure | register the unknown id on the way to reporting it | **NO RECEIPT — see below** |
+| 6 resolution failure | register the unknown id on the way to reporting it | `p3a-6-ghost-created-before-unknown` |
 | 7 one read no retry | extra `resumeWait` after a stale | `p3a-7-one-read-no-retry` |
 | 8 idempotency | constant nonce on `submit-decision` only | `p3a-8-idempotency-constant-nonce` |
 | 9 journey | floor left a pass-through | `p3a-2-floor-passthrough` (journey lane reds in its log) |
@@ -1722,12 +1728,25 @@ rows are conflated in that one receipt. ‡ the import-pin rows cite "eslint
 clean before"; the probe command was the vitest suite alone, so the eslint
 half is not re-measured by these receipts.
 
-**ONE ROW HAS NO RECEIPT AND WAS NOT FABRICATED:** "register the unknown id
-on the way to reporting it unknown". The lane guards a build that CREATED
-`ghost` while answering not-found — but the CLI layer has no `StorePort`
-write path at all, so any reconstruction would have to invent a write
-surface that is not the one originally probed. Left un-probed and named
-here.
+**THE ROW THAT SAID IT COULD NOT BE PROBED IS NOW PROBED, AND ITS STATED
+REASON WAS FALSE.** This record claimed "register the unknown id" was
+unreconstructible because *"the CLI layer has no `StorePort` write path at
+all"*. It has one: `readForWrite` receives `handle.store` and `StorePort`
+exposes `createInstance`. The claim came from the fold's report and was
+written down WITHOUT being checked — the third time in this packet that an
+unverified sentence of this record was falsified by a reader who traced
+it, and the one that stings most, because an honest-sounding "we could not
+measure this" borrows the credibility of the measurements around it. The
+probe now exists (`p3a-6-ghost-created-before-unknown`, runner exit 0,
+3 of 3094 red) and the FIRST failure is the family-6 lane itself.
+
+★ `p3a-3-member-less-document` was MISATTRIBUTED to family 3 by this
+record's first table. Its log's only failure is family 2b's — an integrity
+throw swallowed into an emitted document — so it is re-attributed here.
+It is not a duplicate of `-bare-catch`: different mutation digest,
+different reds. ◆ its faithful family-3 replacement necessarily reds
+family 10 too, since a member-less document IS a keyset change — the same
+conflation the † note already records.
 
 **A MISRECONSTRUCTION WORTH KEEPING, because it measures something the
 faithful probe cannot.** The first observer-origin attempt put the
@@ -1772,14 +1791,18 @@ two unioned, so no position it masks can ever be lost. No
 division-vs-regex heuristic anywhere, its failure direction being the
 wrong one.
 
-**AND THE INVARIANT IS NOW CHECKED RATHER THAN ARGUED**, which is the
-whole lesson of this finding. A duplicated, deliberately NOT-shared
-regex-blind reference scanner drives a 60-input corpus: all 56 module
-fixtures (auto-collected, so a fixture added later joins without anyone
-remembering), the two counterexamples, and THE REAL CONTENTS OF THE FOUR
-LIVE GOLDEN-TRACE FILES — 17,234 reference positions from the live files
-alone. Falsification measured by grafting `c201b23f`'s masker into the new
-selftest: three failures, naming nine corpus inputs and byte offsets.
+**AND THE INVARIANT IS NOW CHECKED RATHER THAN ARGUED** — but the FIRST
+form of that check was itself defective, which gate 2 pass 6 proved and
+the sixth aftermath below fixes. As first built it was a DUPLICATED
+regex-blind reference scanner over a corpus of module fixtures, the two
+counterexamples and the real contents of the four live golden-trace files.
+Falsification against `c201b23f`'s masker: three failures over nine
+inputs. **THE DUPLICATION WAS THE FLAW**, and the record's word for it
+("deliberately NOT-shared") was wrong: a re-implementation of ONE IDEA
+catches a transcription error and never a shared MISUNDERSTANDING. The
+corpus figures this paragraph first carried were also inaccurate; the gate
+now PRINTS its own composition, so the record cites a number the tool
+emits rather than one a human transcribed.
 Selftest 25 → 28 red dims.
 
 **THE MEASUREMENT THAT EXPLAINS WHY THE GATE STAYED GREEN THROUGH IT:**
@@ -1829,13 +1852,91 @@ artifact ruling, the path normalization, the table rewrite and the
 independent re-verification of both regressions and the monotonicity
 superset on the live trace file.
 
+---
+
+**ARM GATE 2, PASS 6 on `5e100e48`: `not ready`, FIVE findings — two P1,
+two P2, one P3. FOUR folded; the fifth ROUTED, urgently.**
+
+**THE FIRST P1 WAS A FALSE GREEN IN BOTH SCANNERS, AND THE PROPERTY TEST
+COULD NOT SEE IT.** `/*/ asDispatch(x) */` masked only positions 0–2 while
+TypeScript reads the whole 0–19 span as one comment: both scanners began
+the `*/` search at the opener's `/`, so the opener's own `*` matched as
+the closer's. Reproduced independently here before any fix. Both now
+consume the two opener bytes first, and the form is a selftest lane —
+measured discrimination on the SAME fixture: no errors at `5e100e48`,
+RE-PIN now.
+
+**THE SECOND HALF OF THAT FINDING IS THE ONE WITH A LIFE BEYOND THIS
+PACKET, and it indicts a design this record asked for.** The reviewer:
+*"the reference is code-independent but not failure-independent — it
+duplicates the same parsing error, so the property test passes the broken
+masker."* A DUPLICATED reference catches a TRANSCRIPTION error and never a
+shared MISUNDERSTANDING: both implementations encode the same wrong idea
+of where a comment ends, so the invariant holds between them while both
+are wrong. This record had called that reference "deliberately NOT-shared"
+and meant it as a strength.
+
+THE ANSWER IS A CONSTRUCTED ORACLE, and its shape is the point: twelve
+cases carrying NO SCANNING ALGORITHM AT ALL — each is a sequence of
+labelled `(text, is_noncode)` segments and the expected mask is read off
+the labels by concatenation, so nothing in it re-derives where a comment
+ends and no wrong rule can be duplicated into it. The labels were
+validated against TYPESCRIPT'S OWN SCANNER (`ts.createScanner`,
+`skipTrivia=false`), all twelve matching its token spans. Measured teeth:
+against the `5e100e48` masker the oracle reds on `block-opener-star-reused`
+(17 positions) and `block-nested-looking-tight` (2) — and the `5e100e48`
+REFERENCE got both wrong the same way, which demonstrates the common-mode
+blindness rather than arguing it. Selftest 28 → 30 red dims.
+
+**THE RESIDUAL LIMIT, STATED PRECISELY BECAUSE THIS PACKET HAS NOW GOT TWO
+LIMITS WRONG IN OPPOSITE DIRECTIONS.** The oracle removes the
+shared-ALGORITHM mode only. It does NOT remove the shared-AUTHOR mode: a
+case whose label encodes a wrong belief about TypeScript is simply a wrong
+expectation, and the compiler cross-check that would catch it RAN ONCE, BY
+HAND, AT AUTHORING TIME — it is not a leg of this gate, because making it
+one would put a node dependency inside a pure-Python gate. The oracle is
+also finite and hand-picked: it says nothing about a construct nobody
+wrote down. Both scanners remain crude lexers.
+
+**THE SECOND P1 IS NOT THIS PACKET'S AND WAS ROUTED — URGENTLY, not as a
+deferral.** `probe_runner.py` returns 0 and records `restore_verified:
+true` when the mutated run left the target as a SYMLINK, leaving the
+symlink in place and writing the backup bytes THROUGH it, over whatever it
+points at. Its verification compares CONTENT and never asks what kind of
+object it is comparing. That is a VACUOUS RESTORE CERTIFICATE in the very
+tool that exists so probe evidence is machine-checked instead of
+self-reported — the same class as the green-baseline hole, one level down.
+Carried to the boundary review (process log, 2026-08-29) with one question
+past the fix: how many committed ch12–ch14 receipts would the corrected
+predicate now reject?
+
+**TWO CORRECTIONS TO THIS RECORD, both folded at the sentences that
+carried them.** The "un-probed" row's REASON was false and is struck — see
+the table's own note; the probe exists now. And the corpus claim was
+inaccurate, so the gate PRINTS ITS OWN COMPOSITION and the record cites
+what the tool emits: `monotonicity corpus = 77 input(s) (61 module
+fixtures by naming convention, 12 oracle cases, 4 live trace file(s))`.
+The auto-join convention is now explicit — UPPERCASE, not `_`-prefixed,
+`str` — with the honest limit written where the collection happens: a
+lowercase global, a fixture built inside `selftest`, or one in another
+file does NOT join, and nothing notices.
+
+**SIXTH AFTERMATH COMMIT — one boundary file plus six probe artifacts:**
+`tools/v3-plan/check_trace_narrow.py` (+250/−6), and the receipts for
+`p3a-6-ghost-created-before-unknown` and
+`p3a-3-underivable-strips-document`. `cli.test.ts` and `floor.test.ts`
+needed NO change — the existing lanes already caught both mutations, which
+is exactly what findings 3 and 4 predicted and is the strongest thing in
+this round. Boundary extended aftermath-scoped, 125 → 131, BEFORE the
+commit this time. Suite 3094 unchanged; selftest 28 → 30.
+
 ```json
 {
   "packet_metrics": {
     "class": "operability",
     "prediction": { "predicted": "projection", "reasoning": "the ratified ch14-human-decision contract legislates both surfaces (C21, C23); the split leaves this part reading them", "discovered": "projection" },
     "provenance": { "anchored": 5, "derived": 11, "new_decision": 2 },
-    "rounds": { "review": 5, "doc_refinement": 0, "implementation": 6 },
+    "rounds": { "review": 5, "doc_refinement": 0, "implementation": 7 },
     "stops": [{"type": "1:late-b-signal", "what": "the disposition of a NON-YIELDED pinned template is undecided by C21 (read side) and C23 (write side), and V4 reads C23(c) down to avoid it; raised at the pre-build arm gate on the third occurrence of the same signal", "resolution": "ratifier chose a narrow ch14 contract reopen over re-anchoring in the packet, 2026-08-28 — the packet anchors to the new row instead of deciding"}],
     "detector_misses": [{"found_at": "arm-approve", "what": "the C27 reopen split the two write verbs apart and thirteen sentences kept speaking of them as one; the packet was marked APPROVED with the whole class alive", "why_missed": "five internal panel lenses and two arm passes read the text against itself, and every one of the thirteen was well-formed prose — only a trace against the code or against a sibling sentence falsifies them; the packet lint does not read prose at all"}, {"found_at": "arm-build-close", "what": "nine of gate 2's eleven findings were one class — a lane asserting what the code does, or standing on a fixture where right and wrong behave identically; and the F2 checker entry was text-level, so it erased inside string literals and comments", "why_missed": "the CLI families' tests were written AFTER the verbs and their RED receipts produced post-hoc by mutation probes, which proves sensitivity to the mutations chosen and not fail-first independence from the implementation the tests were read from; the F2 negatives guarded the VALUE axis while the CONTEXT axis went unprobed"}, {"found_at": "arm-approve", "what": "arm gate 1 was left open — the folded bytes never got their hash-citing re-check, and the gate record was not on a repo surface", "why_missed": "the discipline's two halves are one sentence in README §5.5 and the second half has no machine carrier; the packet header attested the passes in prose while the Build record held its placeholder"}],
     "learned": "an instance-wise fold of a class defect regenerates its own next round — 2/3/4/4/0 across five closing arm passes; the pass that bounded it swept against the stated cause",
