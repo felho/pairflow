@@ -187,9 +187,45 @@ class Checker:
 _MASK = "\x00"
 
 
+def _regex_literal_end(text: str, start: int) -> int | None:
+    """Index just past a REGEX LITERAL opening at `start`, or None.
+
+    Only the same-line form is recognized, which is the whole form the
+    language has: a regex literal cannot contain a raw newline, so a `/`
+    with no unescaped partner before the line ends is NOT one and is
+    left alone. Inside, `\\` escapes the next character and `[...]` is a
+    character class in which `/` does not close; the trailing flag
+    letters are taken with the literal.
+    """
+    i = start + 1
+    n = len(text)
+    in_class = False
+    while i < n:
+        char = text[i]
+        if char == "\n":
+            return None
+        if char == "\\":
+            if i + 1 >= n or text[i + 1] == "\n":
+                return None
+            i += 2
+            continue
+        if in_class:
+            if char == "]":
+                in_class = False
+        elif char == "[":
+            in_class = True
+        elif char == "/":
+            i += 1
+            while i < n and text[i].isalpha():
+                i += 1
+            return i
+        i += 1
+    return None
+
+
 def mask_noncode(text: str) -> str:
-    """Return `text` with every COMMENT and STRING-LITERAL character
-    replaced by a filler, positions and newlines preserved.
+    """Return `text` with every COMMENT, STRING-LITERAL and REGEX-LITERAL
+    character replaced by a filler, positions and newlines preserved.
 
     The lexer is deliberately crude, and the direction of its error is
     the point: masking TOO MUCH can only make an erasure fail to apply,
@@ -197,6 +233,36 @@ def mask_noncode(text: str) -> str:
     never make an erasure apply where it should not, which is the false
     GREEN this gate exists to refuse. So an ambiguous byte (a `/` that
     opens a regex literal, a quote inside one) is allowed to over-mask.
+    The direction holds MECHANICALLY and not by care: masking never
+    removes a byte from the compared text — `sub_in_code` matches and
+    splices the ORIGINAL — it only VETOES erasures, so more masking can
+    only leave more difference visible.
+
+    WHAT IT RECOGNIZES AS NON-CODE, listed so the next reader meets the
+    limit as KNOWN rather than discovering it a fourth time (no masking
+    at all, then the inherited entries bypassing it, then regex
+    literals):
+
+      - `//` line comments, to end of line;
+      - `/* … */` block comments, which do NOT nest;
+      - `'…'` and `"…"` strings, ended by the quote or by the line end;
+      - `` `…` `` template literals, which DO span lines — including any
+        `${ … }` substitution, masked WHOLE, so real code inside an
+        interpolation counts as non-code (over-mask, safe direction);
+      - `/…/flags` regex literals, same-line only, honouring `\\`
+        escapes and `[...]` character classes.
+
+    WHAT IT DOES NOT RECOGNIZE, and each is a live limit rather than a
+    defect: it makes NO division-versus-regex token-context judgement at
+    all, so `a / b / c` on one line over-masks the span between the two
+    slashes (a false RED) while a `/` with no partner on its line is
+    never masked at all; a TAGGED template's body is masked exactly like
+    a plain template literal's, its tag staying code; JSX text and
+    attribute values are plain code to it; and it is NOT a TypeScript
+    lexer — the next construct nobody has named yet will also be treated
+    as code. Whether this gate should be
+    parser-based, or should instead shrink its scope, is a routed
+    boundary question and is deliberately not answered here.
     """
     out = list(text)
     i = 0
@@ -214,6 +280,17 @@ def mask_noncode(text: str) -> str:
                 i += 1
             for _ in range(2):
                 if i < n:
+                    out[i] = _MASK
+                    i += 1
+        elif char == "/":
+            # A REGEX LITERAL. It is tried LAST among the `/` forms —
+            # `//` and `/*` are decided above — because an empty regex
+            # is not expressible, so `//` is always the comment.
+            end = _regex_literal_end(text, i)
+            if end is None:
+                i += 1
+            else:
+                while i < end:
                     out[i] = _MASK
                     i += 1
         elif char in "\"'`":
@@ -491,11 +568,14 @@ FLOOR_CONTEXT_AFTER = (
 # match begins at a newline — so a `//` prefix, which occupies the line
 # start, already put them out of reach of a line comment before the code
 # anchor existed. Their line-comment lanes are therefore red under BOTH
-# implementations. They are kept, and they are not idle: each stays red
-# if the LINE anchor is dropped (the code anchor reds it) and if the
-# CODE anchor is dropped (the line anchor reds it), so they are the
-# standing guard on the pair. Every other lane below is green under the
-# pre-fix rule and red under this one.
+# implementations. They are kept as REDUNDANCY CONTROLS — and that is a
+# CORRECTION of the claim this comment used to make for them, which
+# called them the standing guard on the anchor pair. A lane that stays
+# red when EITHER anchor is dropped is by that very fact INSENSITIVE to
+# each removal taken alone: it can witness only the SIMULTANEOUS loss of
+# both, which is redundancy evidence and not sensitivity evidence.
+# Every other lane below is green under the pre-fix rule and red under
+# this one.
 
 # ── the CALL-SITE entry ──────────────────────────────────────────────
 # The executed counterexample from the ch14-p3a build-close review:
@@ -511,6 +591,24 @@ CALL_BLOCK_AFTER = AFTER_CLEAN + "/*\nconst legacy = asDispatch(o.intent);\n*/\n
 
 CALL_CONTEXT_BEFORE = BEFORE + 'expect(label).toBe("asDispatch(x)");\n// see asDispatch(x)\n'
 CALL_CONTEXT_AFTER = AFTER_CLEAN + 'expect(label).toBe("asDispatch(x)");\n// see asDispatch(x)\n'
+
+# packet ch14-p3a AFTERMATH (build-close review, gate 2 pass 4): the
+# FOURTH non-code context, and the third round in which this masker's
+# notion of "non-code" turned out to be incomplete. A REGEX LITERAL is
+# an expected value like any string is — `toMatch(/x/)` re-pinned to
+# `toMatch(/asDispatch(x)/)` erased on BOTH sides and rode through
+# green, which is a real re-pin passing as a compile fix.
+CALL_REGEX_BEFORE = BEFORE + "expect(label).toMatch(/x/);\n"
+CALL_REGEX_AFTER = AFTER_CLEAN + "expect(label).toMatch(/asDispatch(x)/);\n"
+
+# The GREEN control for it, on REAL CODE: the regex literal is present
+# and UNCHANGED while the real call site takes the narrow, and a
+# DIVISION rides along so the lane also refuses a masker that had simply
+# started swallowing every `/` it met. Without this control the red lane
+# above is satisfied by a rule that stopped erasing anything.
+CALL_REGEX_CONTEXT = 'expect(label).toMatch(/asDispatch(x)/);\nconst half = total / 2;\n'
+CALL_REGEX_CONTEXT_BEFORE = BEFORE + CALL_REGEX_CONTEXT
+CALL_REGEX_CONTEXT_AFTER = AFTER_CLEAN + CALL_REGEX_CONTEXT
 
 # ── the DECLARATION entry ────────────────────────────────────────────
 # The erased construct spans lines, so its string-literal lane needs a
@@ -684,6 +782,14 @@ def selftest() -> int:
     assert_context_red("asDispatch-inside-a-line-comment", CALL_COMMENT_BEFORE, CALL_COMMENT_AFTER)
     assert_context_red("asDispatch-inside-a-block-comment", CALL_BLOCK_BEFORE, CALL_BLOCK_AFTER)
     assert_context_green("asDispatch-context-green", CALL_CONTEXT_BEFORE, CALL_CONTEXT_AFTER)
+
+    # 15b. the AFTERMATH lane: the same construct inside a REGEX
+    #      LITERAL, which the masker did not recognize as non-code and
+    #      which therefore carried a real re-pin through green.
+    assert_context_red("asDispatch-inside-a-regex-literal", CALL_REGEX_BEFORE, CALL_REGEX_AFTER)
+    assert_context_green(
+        "asDispatch-regex-context-green", CALL_REGEX_CONTEXT_BEFORE, CALL_REGEX_CONTEXT_AFTER
+    )
 
     # 18-20. the DECLARATION entry in each non-code context.
     assert_context_red("declaration-inside-a-string-literal", DECL_LITERAL_BEFORE, DECL_LITERAL_AFTER)

@@ -225,22 +225,33 @@ vi.mock("../ingress/ingress.js", async (importOriginal) => {
  * WHAT THIS LANE DOES NOT CATCH, stated so the pin is not read wider
  * than it is: it is LEXICAL, and it scans the production files under
  * `v3/src/cli` (recursively — `cli/dev/main.ts` builds both and is
- * inside the scan). A dynamic `await import("../kernel/kernel.js")`, a
- * re-export through some third module, and every build outside `cli/`
- * are all invisible to it. Each of those is caught by the SEAMS
+ * inside the scan). It reads a `from` keyword followed by a QUOTED
+ * literal — both quote forms since the gate-2d fold, neither backticks
+ * nor a specifier assembled any other way. A dynamic
+ * `await import("../kernel/kernel.js")`, a re-export through some third
+ * module, and every build outside `cli/` are all invisible to it. Each of those is caught by the SEAMS
  * instead, which is the division of labour: the seams carry the
  * guarantee, the pin carries the convention.
  */
 describe("cli — ch14-p3a: the kernel and ingress import origins are PINNED", () => {
   const BARRELS = ["kernel/index.js", "ingress/index.js"];
   /**
-   * Every `from "…"` specifier naming the kernel or the ingress tree,
-   * with the leading `../` run dropped so a nested file's `../../` reads
-   * the same as a top-level file's `../`.
+   * Every `from "…"` or `from '…'` specifier naming the kernel or the
+   * ingress tree, with the leading `../` run dropped so a nested file's
+   * `../../` reads the same as a top-level file's `../`.
+   *
+   * BOTH QUOTE FORMS, and the reason is a measured false green rather
+   * than symmetry for its own sake: the scanner read double quotes
+   * only, and `from '../kernel/kernel.js'` in a production file passed
+   * this lane 91/91 AND passed `eslint .` — nothing in the lint config
+   * settles the quote style, so the pin was resting on a convention it
+   * did not itself check. The opening quote is captured and the closing
+   * one is a BACKREFERENCE, so a specifier is never read across a
+   * mismatched pair.
    */
   const moduleSpecifiers = (source: string): readonly string[] =>
-    [...source.matchAll(/from\s+"(?:\.\.\/)+((?:kernel|ingress)\/[^"]+)"/g)].map(
-      (match) => match[1] ?? "",
+    [...source.matchAll(/from\s+(["'])(?:\.\.\/)+((?:kernel|ingress)\/[^"']+)\1/g)].map(
+      (match) => match[2] ?? "",
     );
 
   const productionFiles = (dir: string): readonly string[] =>
@@ -284,6 +295,14 @@ describe("cli — ch14-p3a: the kernel and ingress import origins are PINNED", (
     ).toEqual(["ingress/ingress.js"]);
     expect(moduleSpecifiers('import { createKernel } from "../../kernel/index.js";')).toEqual([
       "kernel/index.js",
+    ]);
+    // The SINGLE-QUOTED leaf, which the double-quote-only scanner read
+    // as no specifier at all and therefore reported as no offender.
+    expect(moduleSpecifiers("import { createKernel } from '../kernel/kernel.js';")).toEqual([
+      "kernel/kernel.js",
+    ]);
+    expect(moduleSpecifiers("import { createIngress } from '../../ingress/index.js';")).toEqual([
+      "ingress/index.js",
     ]);
   });
 });

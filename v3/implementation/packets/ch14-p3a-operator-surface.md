@@ -1478,9 +1478,15 @@ identity only — the floor mints them, so no seam exists between mint and
 caller without editing production; a re-wrap copying the message passes,
 and object identity reaches them only indirectly (a catch around the
 whole body reds, a catch scoped narrowly around `pendingRequest(detail)`
-alone would not). The injected sentinel must be an `Error` (the
-`only-throw-error` lint rule), so a re-wrap keyed on the CLASS alone is
-invisible. The import pin is lexical and scoped to `v3/src/cli/**`. And
+alone would not). **THE `only-throw-error` CLAIM THIS RECORD MADE WAS WRONG IN THE OTHER
+DIRECTION and is corrected here:** it said that because the sentinel must
+be an `Error`, a re-wrap keyed on the CLASS alone would be invisible.
+Probed at gate 2 pass 4: a re-wrap keyed on `error.constructor === Error`
+REDS the six-site identity loop and the sentinel lane. The lanes assert
+OBJECT identity, which no re-wrap survives whatever it keys on; what the
+sentinel adds is discrimination on the MESSAGE axis. An understated limit
+is the same defect as an overstated one — it teaches the next reader to
+build armor that already exists. The import pin is lexical and scoped to `v3/src/cli/**`. And
 the `code`-group guard cannot see an anchor that is PRESENT BUT
 MISPLACED — that stays a reviewed-judgement question carried by the
 per-entry negatives. Each of these is a live limit, not a defect, and
@@ -1495,13 +1501,112 @@ delegated agent for the three code folds; this context for the two
 record corrections above and for the independent re-probe of the
 anchorless guard and the four entries.
 
+---
+
+**ARM GATE 2, PASS 4 on `6fc41fb3`: `not ready`, SIX findings — one P1,
+three P2, two P3. FOUR OF THE TEN FAMILIES THAT HAD FAILED NOW PASS
+(4, 6, 7 flipped; only 2b still failed). Five folded; the sixth was
+ROUTED by the owner's decision, 2026-08-29.**
+
+**THE P1 WAS THE THIRD INSTANCE OF ONE SHAPE, AND THAT IS WHY IT WAS
+ROUTED RATHER THAN ONLY FIXED.** `mask_noncode` recognized strings,
+comments and template literals — but not REGEX LITERALS, so
+`/asDispatch(x)/` erased and a real re-pin rode through green. Round 1
+was no masking at all; round 2 was the legacy entries bypassing the
+masking just built; round 3 is this. Every fix worked and the class kept
+regenerating, because a hand-written lexer for a real language has no
+closure condition. THE DEMONSTRATED HOLE IS FIXED HERE — regex literals
+masked conservatively, same-line, honouring escapes and character
+classes, with NO division-vs-regex token-context heuristic, since that
+heuristic's failure direction is toward false GREEN. THE QUESTION IS NOT
+ANSWERED HERE and is deliberately left open in the process log
+(2026-08-29): parser-based, or a scope a regex can be sound about, or the
+current shape WITH the argument for why a residual false green is
+tolerable — the current implicit answer being the third WITHOUT the
+argument.
+
+THE DIRECTION IS NOW MECHANICAL RATHER THAN CAREFUL, which is the part
+worth keeping: masking never removes a byte from the compared text —
+`sub_in_code` matches and splices the ORIGINAL — so more masking can only
+leave more difference VISIBLE. Over-masking yields a false RED by
+construction, never a false green. Measured both ways: two divisions
+spanning a narrow (`a / o.intent / c`) now RED, which is the safe
+direction, and a regex literal left unchanged beside a real narrow and a
+real division still erases.
+
+**A LIVE FALSE GREEN IS NAMED RATHER THAN LEFT TO BE DISCOVERED:** a JSX
+text node (`<div>asDispatch(x)</div>`) erases. Reproduced independently in
+this context. It was NOT chased, per the routing decision, and it is
+recorded in `mask_noncode`'s own docstring beside the explicit
+recognized / not-recognized lists — the stopgap version of the general
+rule the routed entry proposes, that an instrument deciding a question
+about source code should declare the grammar it assumes.
+
+**FINDING 2 IS PARTLY CLOSED, AND THE FOLD SAID SO RATHER THAN
+CLAIMING OTHERWISE.** F6's "the floor catches nothing" is now pinned by a
+source-level scanner over `floor.ts` asserting no `try`/`catch` token,
+with a scanner negative and a non-firing control; the reviewer's exact
+re-wrap goes from 115/115 GREEN to RED. But THE PIN GUARDS THE MECHANISM,
+NEVER THE PROPERTY, and the fold measured the gap instead of asserting
+it: a keyword-free re-wrap of the same two throws —
+`.then(undefined, handler)` — passes 117/117 INCLUDING the new pin. The
+scan is `floor.ts` alone because `debugBundle.ts` carries a legitimate
+try/catch a module-wide scan would red. THE CLOSING MOVE IS A PRODUCTION
+EDIT THIS AFTERMATH'S BOUNDARY FORBIDS — hoist F3's two mints into a leaf
+module a test can mock the way `domain/humanDecisionRequest.js` is mocked
+today, converting both from message-identity to OBJECT identity and
+retiring the lexical pin — and it is named here as a later packet's work
+rather than folded silently.
+
+**THE IMPORT PIN RESTED ON A CONVENTION IT DID NOT CHECK.** It read only
+double-quoted specifiers; `from '../kernel/kernel.js'` passed the pin AND
+`eslint .`, because nothing in the lint config settles quote style. Both
+forms now, with the opening quote captured and the closing one a
+backreference so a specifier is never read across a mismatched pair.
+
+**THE RECEIPT-BACKED MUTATION TABLE, MATERIALIZED** — finding 4 was
+right that "a receipt each" was a narrative claim with no durable
+artifact behind it, and that a review re-running the probes does not
+substitute for the record carrying them:
+
+| Family / target | Wrong implementation applied | RED observed |
+|---|---|---|
+| F2 instrument, legacy entries | original context-blind entry restored | 3 dims red (string / line- / block-comment) |
+| F2 instrument, anchor design | anchor check neutered | 8 dims red, incl. `createFloor-inside-a-block-comment` |
+| F2 instrument, two-anchor pair | line anchor dropped, code anchor kept | the 2 lanes that do not falsify HEAD stay red |
+| F2 instrument, anchorless guard | pre-loop guard removed | both anchorless lanes red; non-matching one is HEAD's actual defect |
+| F2 instrument, regex masking | regex branch deleted | 1 dim red (`asDispatch-inside-a-regex-literal`) |
+| 1 member presence | park predicate `WAITING \|\| TERMINAL`; eager load | `no request_ref`; `expected 1 to be +0` |
+| 2 member content | floor left a pass-through | `pendingDecision` undefined vs computed Ask |
+| 2b integrity + join | recency read; bare `catch`; degrade one condition; re-wrap `new Error(msg)` | 2 floor lanes; read-verb lane; `expected [Array(1)] to deeply equal []`; 4 identity lanes (115/115 GREEN before) |
+| 2b, F6 no-catch | `try/catch` around `pendingRequest` | `expected ['try','catch'] to deeply equal []` |
+| 3 read verb underivable | member-less document; `{...recovered, transcript: []}` | absent-member lane; `expected [] to strictly equal [Array(3)]` |
+| 4 exit/channel matrix | `lifecycleExitCode`; swap `unknown_decision`↔`missing_required_field` | 4 lanes incl. `stale`; `expected 'missing_required_field' to be 'unknown_decision'` |
+| 4/6/7 observer origin | SELECTIVE leaf-built kernel on the V4 path | 4 lanes (89/89 GREEN before) |
+| 4/6/7 import pin | `main.ts`, then `runnerVerbs.ts` single-quoted, to leaf | pin red (91/91 + eslint clean before) |
+| 5 argument shape | `--decision` defaulted; `--payload` → `{}`; `--by` constant | arg-shape lane; both absence lanes |
+| 6 resolution failure | V4 (ii) keyed on member absence; kernel built+called then remapped; register the unknown id | 4-lane test; 2 lanes (3089 GREEN before); `observeGhost` |
+| 7 one read no retry | extra `resumeWait` after a stale | `['resumeWait','resumeWait']` vs `['resumeWait']` |
+| 8 idempotency | constant nonce on `submit-decision` only | `{kind:'duplicate'}` vs `{kind:'committed'}` |
+| 9 journey | floor left a pass-through | `pendingDecision` missing from the subprocess doc |
+| 10 non-movement | optional 2nd parameter; a second floor member; a key only in non-decision states | `tsc` arity pin; both keyset pins; 3 failures across floor/CLI/journey |
+| F4 move | `DecisionRequestBody` re-declared in `ports/store.ts` | inventory row + single-definition sweep |
+
+**FOURTH AFTERMATH COMMIT — three files, all inside the boundary, no
+production file touched:** `tools/v3-plan/check_trace_narrow.py`,
+`v3/src/cli/cli.test.ts`, `v3/src/floor/floor.test.ts`. Suite
+3092 → 3094; selftest 24 → 25 red dims. Author: a fresh-context delegated
+agent for the four code folds; this context for the routed process-log
+entry, the two record corrections and the table above, and for the
+independent re-probe of the regex fix and the declared JSX hole.
+
 ```json
 {
   "packet_metrics": {
     "class": "operability",
     "prediction": { "predicted": "projection", "reasoning": "the ratified ch14-human-decision contract legislates both surfaces (C21, C23); the split leaves this part reading them", "discovered": "projection" },
     "provenance": { "anchored": 5, "derived": 11, "new_decision": 2 },
-    "rounds": { "review": 5, "doc_refinement": 0, "implementation": 4 },
+    "rounds": { "review": 5, "doc_refinement": 0, "implementation": 5 },
     "stops": [{"type": "1:late-b-signal", "what": "the disposition of a NON-YIELDED pinned template is undecided by C21 (read side) and C23 (write side), and V4 reads C23(c) down to avoid it; raised at the pre-build arm gate on the third occurrence of the same signal", "resolution": "ratifier chose a narrow ch14 contract reopen over re-anchoring in the packet, 2026-08-28 — the packet anchors to the new row instead of deciding"}],
     "detector_misses": [{"found_at": "arm-approve", "what": "the C27 reopen split the two write verbs apart and thirteen sentences kept speaking of them as one; the packet was marked APPROVED with the whole class alive", "why_missed": "five internal panel lenses and two arm passes read the text against itself, and every one of the thirteen was well-formed prose — only a trace against the code or against a sibling sentence falsifies them; the packet lint does not read prose at all"}, {"found_at": "arm-build-close", "what": "nine of gate 2's eleven findings were one class — a lane asserting what the code does, or standing on a fixture where right and wrong behave identically; and the F2 checker entry was text-level, so it erased inside string literals and comments", "why_missed": "the CLI families' tests were written AFTER the verbs and their RED receipts produced post-hoc by mutation probes, which proves sensitivity to the mutations chosen and not fail-first independence from the implementation the tests were read from; the F2 negatives guarded the VALUE axis while the CONTEXT axis went unprobed"}, {"found_at": "arm-approve", "what": "arm gate 1 was left open — the folded bytes never got their hash-citing re-check, and the gate record was not on a repo surface", "why_missed": "the discipline's two halves are one sentence in README §5.5 and the second half has no machine carrier; the packet header attested the passes in prose while the Build record held its placeholder"}],
     "learned": "an instance-wise fold of a class defect regenerates its own next round — 2/3/4/4/0 across five closing arm passes; the pass that bounded it swept against the stated cause",

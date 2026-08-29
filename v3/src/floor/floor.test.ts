@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { createStaticProviderRegistry } from "../ports/index.js";
 import { createScriptedProcessGateRunner } from "../testkit/index.js";
 import { describe, expect, it, vi } from "vitest";
@@ -733,7 +734,9 @@ describe("floor — F3 the correlation JOIN, and F6's no-catch rule", () => {
     // `withPendingDecision` body, so a catch around the body reds
     // there). What this assertion adds over `toThrow(Error)` is that a
     // re-wrap into a generic error fails; a re-wrap that COPIED the
-    // message would still pass, and that is the residue.
+    // message would still pass. THAT RESIDUE IS NOW CARRIED BY THE
+    // SOURCE-LEVEL NO-CATCH PIN BELOW — at the mechanism, since the
+    // property itself is unreachable without a production seam.
     await expect(
       createFloor(unmatched, gatedDefinitions).getInstanceDetail("inst-gate"),
     ).rejects.toThrow(/floor integrity: .*with no committed DECISION_REQUEST row/);
@@ -752,6 +755,77 @@ describe("floor — F3 the correlation JOIN, and F6's no-catch rule", () => {
       createFloor(absent, gatedDefinitions).getInstanceDetail("inst-gate"),
     ).rejects.toThrow(/floor integrity: .*with NO request_ref on its wait record/);
     handle.close();
+  });
+
+  /**
+   * F6's NO-CATCH RULE, PINNED AT THE SOURCE because F3's two throws
+   * cannot be pinned at a seam (packet ch14-p3a aftermath, gate-2d
+   * finding 2).
+   *
+   * WHAT IS UNREACHABLE, and it is why this lane is lexical rather than
+   * behavioural. The six derivation throws and the rejecting load are
+   * IDENTITY-observable because a seam exists between the mint and the
+   * caller — the derivation's own module, which the mock at the head of
+   * this file wraps. F3's two throws have NO such seam: `createFloor`
+   * mints them inside its own closure. The reviewer's counterexample is
+   * a catch scoped NARROWLY around `pendingRequest(detail)` alone,
+   * re-throwing `new Error(error.message)`. It does exactly what F6
+   * forbids ("propagate out of the floor UNALTERED", "THE FLOOR CATCHES
+   * NOTHING") and it is 115/115 GREEN across every CLI and floor lane:
+   * the message assertions above copy through it, and the identity
+   * lanes sit outside its reach on either side.
+   *
+   * WHY THIS ROUTE AND NOT THE OTHER TWO. An identity-observable MINT
+   * SEAM — an injectable error factory, or the two mints moved to a
+   * mockable module — would make the property DIRECTLY observable and is
+   * the better fix; it is a PRODUCTION edit, and this aftermath's
+   * boundary admits none. Narrowing F6 is not available either: F6 is
+   * ratified text and an aftermath does not amend a contract. What is
+   * left is a pin on the MECHANISM — the floor's own source carries no
+   * exception handling at all, so the one shape that could alter a
+   * floor-minted throw on its way out cannot be present in it.
+   *
+   * WHAT IT DOES NOT CATCH, stated at the honest size of the claim. It
+   * pins the ABSENCE OF A MECHANISM, never the property: F3's two
+   * throws remain MESSAGE-identical only, and a build that altered them
+   * WITHOUT the word is invisible here — a `.then(undefined, handler)`
+   * rejection handler, a re-wrapping helper IMPORTED from another
+   * module, or a caller that wraps the floor this function returns. It
+   * is LEXICAL over the WHOLE file and cannot tell a `catch` in prose
+   * from one in code, so a doc comment using the bare lowercase word
+   * `catch` or `try` reds this lane — a false RED, which is the safe
+   * direction, and the remedy is to reword or to re-scope, never to
+   * relax. And it scans `floor.ts` ALONE: `debugBundle.ts` carries a
+   * DELIBERATE catch (the diag-side failure that must not fail the
+   * bundle), so a module-wide scan would be red on a legitimate site.
+   */
+  const exceptionHandling = (source: string): readonly string[] =>
+    source.match(/\b(?:try|catch)\b/g) ?? [];
+
+  it("`floor.ts` carries NO exception handling — F6's rule pinned at the source", () => {
+    expect(exceptionHandling(readFileSync(new URL("./floor.ts", import.meta.url), "utf8"))).toEqual(
+      [],
+    );
+  });
+
+  it("…and the scanner SEES the reviewer's counterexample — the pin's own negative", () => {
+    // Without this, a scanner whose regex had stopped matching would
+    // pass the lane above for the wrong reason. Both shapes: the narrow
+    // `try`/`catch` the finding names, and the promise-method form,
+    // which `\bcatch\b` reaches through the `.` boundary.
+    expect(
+      exceptionHandling(
+        "const p = (d) => {\n  try {\n    return pendingRequest(d);\n" +
+          "  } catch (error) {\n    throw new Error(error.message);\n  }\n};\n",
+      ),
+    ).toEqual(["try", "catch"]);
+    expect(exceptionHandling("return definitions.load(ref).catch(rewrap);\n")).toEqual(["catch"]);
+    // …and it does NOT fire on the words this tree actually uses: the
+    // `try` inside `entry`/`TranscriptEntry` has no word boundary before
+    // it, and `catches` is not the token `catch`.
+    expect(
+      exceptionHandling("const entry: TranscriptEntry = detail.transcript[0];\n// catches nothing\n"),
+    ).toEqual([]);
   });
 
   it("propagates ALL SIX of the derivation's integrity throws — the floor catches NOTHING", async () => {
