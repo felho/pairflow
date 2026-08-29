@@ -489,9 +489,17 @@ describe("family 2 — the round effect follows the ADMITTED FLAG, not the decis
       by: "human",
     });
     expect(outcome).toMatchObject({ kind: "committed" });
-    // THE DISCRIMINATING ASSERTION: a runtime keyed on the NAME
-    // `request_rework` leaves the round at 1 here. Only a runtime that
-    // reads the per-edge flag off the source step reaches 2.
+    // THE DISCRIMINATING ASSERTION, at exactly its proven width: a
+    // runtime keyed on the NAME `request_rework` leaves the round at 1
+    // here, so this lane closes the KEY-NAME mutant. It does NOT close
+    // a TARGET-inferring one — the derivation moved the targets and
+    // left the round declaration on `implement`, so `approve` here
+    // both targets `implement` AND carries `true`, and a build reading
+    // `target === "implement"` passes every assertion of this
+    // describe — MEASURED, not argued: probe
+    // `p3b-f1-decorrelated-lane-blind-to-target-mutant` runs this
+    // describe under exactly that mutant and it stays GREEN. The
+    // round-DECLARATION lane below is what reds it.
     expect(await stateOf(at.store, at.id)).toMatchObject({
       currentStep: "implement",
       kernelStatus: "ACTIVE",
@@ -522,6 +530,115 @@ describe("family 2 — the round effect follows the ADMITTED FLAG, not the decis
       currentStep: "commit_pending",
       kernelStatus: "WAITING",
       round: 1,
+    });
+    at.close();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────
+// The ROUND-DECLARATION lane — the SECOND decorrelation, and the one
+// the first cannot reach. Above, the gate's TARGETS moved while the
+// round declaration stayed on `implement`, so every produced flag still
+// AGREED with the predicate `target === "implement"`: a build that
+// ignored the admitted flag and inferred the round off the target's
+// name passed every lane there. Here the gate's `decisions` map is the
+// SHIPPED one, untouched, and the ROUND DECLARATION moves instead —
+// `advanceOnArrivalAt` names `commit_pending` — which produces the
+// pairing that predicate cannot reproduce: an edge INTO `implement`
+// that must NOT advance, and an edge away from it that must. Probe
+// `p3b-f1b-round-effect-keyed-on-target` reds BOTH runtime lanes below
+// under that mutant.
+//
+// RESIDUAL, stated because this lane's reach ends short of the claim it
+// invites: a runtime that RECOMPUTES `target ∈ round.advanceOnArrivalAt`
+// at arrival — rather than reading the per-edge flag admission produced
+// — is behaviourally IDENTICAL to the correct one on every admissible
+// template, since that membership is exactly what the expansion
+// computes and admission rebuilds any hand-forged `advancesRound` from
+// it. No suite can separate those two, this one included. What these
+// lanes prove is that the round effect is not keyed on the decision
+// key's NAME and not keyed on the target's NAME; that it is READ rather
+// than recomputed is a code-shape rule (C39's ban, discharged by
+// reading `arrival.ts`), not a testable behaviour.
+// ─────────────────────────────────────────────────────────────────────
+
+/**
+ * The shipped declaration with ONLY `round` overridden — derived, and
+ * the gate's own `decisions` map left exactly as shipped. This is
+ * authorable because `advanceOnArrivalAt` is a list of STEP ids with no
+ * step-CLASS restriction (ch11-C37: every member of `keys(steps)` is
+ * legal, terminal ids alone excluded; ch14-C1/C2/C3 partition the step
+ * space without narrowing that membership), so the `commit_pending`
+ * wait is a legal arrival point and the advancing target can be pulled
+ * off `implement` entirely.
+ */
+const advanceAtTheWait = admitDerived((base) => ({
+  ...base,
+  round: { advanceOnArrivalAt: ["commit_pending"] },
+}));
+
+describe("family 2 — the round effect follows the ADMITTED FLAG, not the TARGET's name", () => {
+  it("the derived gate's flags DISAGREE with `target === implement` on BOTH edges", () => {
+    const steps = advanceAtTheWait.steps as unknown as Record<string, Record<string, unknown>>;
+    // The decorrelation, measured: the `implement`-targeting edge is
+    // FALSE and the `commit_pending`-targeting edge is TRUE — the exact
+    // inversion of what the target's name would predict.
+    expect(steps["human_approval"]?.["advancesRound"]).toStrictEqual({
+      approve: true,
+      request_rework: false,
+    });
+    // The agent edges move with the declaration, which is what keeps
+    // the run below arriving at the gate on round 1.
+    expect(steps["review"]?.["advancesRound"]).toStrictEqual({ PASS: false, CONVERGED: false });
+    expect(steps["implement"]?.["advancesRound"]).toStrictEqual({ PASS: false });
+  });
+
+  it("RUNTIME: the edge INTO `implement` carrying `advancesRound: false` does NOT advance the round", async () => {
+    const at = await atGate("ra-rework", advanceAtTheWait);
+    const outcome = await at.kernel.submitDecision({
+      intent: "submit-decision",
+      instanceId: at.id,
+      opId: "d1",
+      expectedVersion: at.version,
+      requestRef: R,
+      // AGAINST the recorded `approve` recommendation, so the override
+      // flag is the rung's due rather than a round-lane convenience.
+      verdict: "request_rework",
+      payload: { instruction: "tighten the error path" },
+      override: true,
+      by: "human",
+    });
+    expect(outcome).toMatchObject({ kind: "committed" });
+    // THE DISCRIMINATING ASSERTION: the run arrives AT `implement` and
+    // the round must stay 1. A build answering `target === "implement"`
+    // for the gate class reaches 2 here and reds.
+    expect(await stateOf(at.store, at.id)).toMatchObject({
+      currentStep: "implement",
+      kernelStatus: "ACTIVE",
+      round: 1,
+    });
+    at.close();
+  });
+
+  it("RUNTIME: the edge into the WAIT carrying `advancesRound: true` ADVANCES the round", async () => {
+    // The other direction, and not the mirror of the first: it reds a
+    // build that answers `target !== "implement"` — the dual
+    // hard-wiring — and it reds one keyed on the name `approve` too.
+    const at = await atGate("ra-approve", advanceAtTheWait);
+    const outcome = await at.kernel.submitDecision({
+      intent: "submit-decision",
+      instanceId: at.id,
+      opId: "d1",
+      expectedVersion: at.version,
+      requestRef: R,
+      verdict: "approve",
+      by: "human",
+    });
+    expect(outcome).toMatchObject({ kind: "committed" });
+    expect(await stateOf(at.store, at.id)).toMatchObject({
+      currentStep: "commit_pending",
+      kernelStatus: "WAITING",
+      round: 2,
     });
     at.close();
   });

@@ -818,7 +818,13 @@ pinned to its own bytes, where the block is the unextended list.**
       "v3/implementation/probes/ch14-p3b/p3b-f1-round-effect-keyed-on-name.receipt.json",
       "v3/implementation/probes/ch14-p3b/p3b-f2-recommendation-value-ignored.baseline.out",
       "v3/implementation/probes/ch14-p3b/p3b-f2-recommendation-value-ignored.out",
-      "v3/implementation/probes/ch14-p3b/p3b-f2-recommendation-value-ignored.receipt.json"
+      "v3/implementation/probes/ch14-p3b/p3b-f2-recommendation-value-ignored.receipt.json",
+      "v3/implementation/probes/ch14-p3b/p3b-f1b-round-effect-keyed-on-target.baseline.out",
+      "v3/implementation/probes/ch14-p3b/p3b-f1b-round-effect-keyed-on-target.out",
+      "v3/implementation/probes/ch14-p3b/p3b-f1b-round-effect-keyed-on-target.receipt.json",
+      "v3/implementation/probes/ch14-p3b/p3b-f1-decorrelated-lane-blind-to-target-mutant.baseline.out",
+      "v3/implementation/probes/ch14-p3b/p3b-f1-decorrelated-lane-blind-to-target-mutant.out",
+      "v3/implementation/probes/ch14-p3b/p3b-f1-decorrelated-lane-blind-to-target-mutant.receipt.json"
     ]
   }
 }
@@ -1798,8 +1804,12 @@ probe directory.
 parameter defaulting to the shipped value, so every pre-existing lane is
 behaviourally byte-equivalent; the alternative was duplicating the
 create → start → PASS → CONVERGED drive path, which is the duplication
-family 2's own rationale rejects. The file went from 30 to 35 tests and
-no assertion was deleted or weakened.
+family 2's own rationale rejects. The file went from 31 to 35 tests and
+no assertion was deleted or weakened. (The figure read `30 to 35` until
+gate 2's pass 2 caught it: the suite total moved 3147 → 3151, so the
+delta is FOUR and the pre-fold file count was 31. Corrected here rather
+than silently, because a wrong count in a record is how a later
+derivation inherits one.)
 
 **ONE HALF OF FINDING 1 IS ROUTED, NOT FOLDED, and the ground is this
 packet's own flag 8.** The arm noted the same correlation at
@@ -1832,15 +1842,86 @@ tree: typecheck clean, lint clean, **82 files / 3151 tests passed**
 (+4), coverage OK, packet-lint 0 errors, adr-check OK, trace-digests
 green, K17 live leg EXIT 0.
 
+**ARM GATE 2, PASS 2 — the hash-citing re-check on `8f375fca`:
+`not ready`, TWO findings — ONE P1 `test-evidence` and one P3
+`packet-docs`. Both folded; the P1 is the one worth the record.**
+
+Transport and guards as before, pin validated, 415 s.
+
+**THE P1 WAS THE FOLD'S OWN OVERCLAIM, one level down from the finding
+it answered.** The decorrelated lane removed the KEY-NAME correlation
+and left a TARGET one: in the derived template `approve` both targets
+`implement` and carries `true`, while `send_back` both targets
+`commit_pending` and carries `false` — so the near-miss runtime
+`fromStep.type === "human_gate" ? target === "implement" : admittedFlag`
+passed every new assertion, while the lane's own comment claimed *"Only
+a runtime that reads the per-edge flag off the source step reaches 2."*
+That claim was false, and the gate caught a defect in the EVIDENCE the
+gate's previous round had just produced.
+
+**THE STRONGER FIX WAS BUILDABLE, and the fold was required to decide
+that against the CONTRACT rather than by judgement.** `ch11-C37` governs
+`round.advanceOnArrivalAt` and excludes only TERMINAL ids — it widens
+the class explicitly to sink steps and imposes NO step-CLASS
+restriction; `templateFormat.ts`'s `memberOf` relation targets
+`keysOf: $.steps`, the whole map; and `ch14-C1`/`C2`/`C3` partition the
+step space without narrowing `keys(steps)`. So a derivation that moves
+the round declaration to the `commit_pending` WAIT step is admissible,
+and it produces the pairing `{approve: false, request_rework: true}` —
+an edge INTO `implement` that must not advance and an edge away from it
+that must, which is exactly what a `target === "implement"` build cannot
+reproduce in either direction. Both directions are driven at runtime and
+the reviewer's own mutant reds them:
+`p3b-f1b-round-effect-keyed-on-target`, `baseline: green`,
+`suite_red: true`, `restore_verified: true`.
+
+**AND THE FALSE COMMENT WAS NARROWED ANYWAY, because a buildable fix
+does not excuse a standing false claim.** The lane now states its
+proven width — it closes the KEY-NAME mutant and NOT a target-inferring
+one — and the statement is MEASURED rather than argued: a second probe,
+`p3b-f1-decorrelated-lane-blind-to-target-mutant`, runs that describe
+block under exactly the target mutant and records it GREEN
+(`suite_red: false`, runner exit 3). **THAT GREEN RECEIPT IS KEPT ON
+PURPOSE and the ground is stated because the runner's own exit code
+says "finding":** it is not an open defect but the evidence behind a
+narrowed claim, and the lane that closes the hole it measures sits
+beside it. Nothing gates on receipt exit codes — `probe_runner.py` is
+the only reader — so the pair costs nothing and buys the one thing a
+prose narrowing cannot: proof that the narrowing was necessary.
+
+**THE RESIDUAL IS NOW WRITTEN WHERE THE CLAIM LIVES, and it is the
+honest end of this line.** A runtime that RECOMPUTES
+`target ∈ round.advanceOnArrivalAt` at arrival, instead of reading the
+flag admission produced, is behaviourally IDENTICAL to the correct one
+on every admissible template — admission rebuilds any hand-forged
+`advancesRound` from that same membership (pinned at
+`admit.test.ts`). No suite can separate those two, this one included.
+What the lanes prove is that the round effect is keyed on neither the
+decision key's NAME nor the target's NAME; that it is READ rather than
+recomputed is a code-shape rule discharged by reading `arrival.ts`, not
+a testable behaviour. Stating this is the difference between a guarantee
+and a measured claim.
+
+**THE P3** was a wrong number in this record — `30 to 35` where the
+measured delta is four — corrected in place above with its own note.
+
+**SECOND AFTERMATH COMMIT — three files plus three probe artifacts, no
+escape.** `v3/src/shippedRoute.test.ts` (+120/−3, the only deletions
+being the three false-claim comment lines), the two new probe receipts
+with their outputs, and this record. `v3/src/kernel/arrival.ts` is
+byte-restored and verified so. Chain re-run in the orchestrator's
+context: typecheck clean, lint clean, **82 files / 3154 tests passed**;
+the file itself now runs 38.
+
 ```json
 {
   "packet_metrics": {
     "class": "operability",
     "prediction": { "predicted": "projection", "reasoning": "the ratified ch14-human-decision contract legislates the whole surface at C24 with C1-C7 for the authored forms; the split leaves this part AUTHORING the two declaration files against rows already decided, so only the slots C24 delegates and the instrument's own edit class are open", "discovered": "projection" },
     "provenance": { "anchored": 4, "derived": 7, "new_decision": 5 },
-    "rounds": { "review": 8, "doc_refinement": 0, "implementation": 2 },
+    "rounds": { "review": 9, "doc_refinement": 0, "implementation": 3 },
     "stops": [{"type": "4:flagged-approve", "what": "five new-decision rows and eight pre-approval flags — seven approve-ratified, one boundary-review — so the inherited flag-free-implies-autonomous letter REACHED this packet and its condition failed at authoring", "resolution": "the owner ratified all seven and routed flag 6's pair (K17's recomputation leg on a MEASURED baseline, and wiring the live leg to an automated gate) to the boundary review as ONE item, 2026-08-29; the build then ran on the per-packet entry mode"}],
-    "detector_misses": [{"found_at": "arm-build-close", "what": "both of gate 2's findings were one shape — family 2's test data correlated the decision-key NAME with the expected effect perfectly, so a runtime keyed on edgeKey === \"request_rework\", or one comparing the verdict to the literal \"approve\" instead of to the recorded recommendation, would have satisfied every assertion; W1 had just declared REV-NO-KEY-MEANING discharged on the production side", "why_missed": "the discharge was argued by reading the PRODUCTION code, which branches on nothing, while the suite that carries the rule forward was never asked to distinguish a key-meaning implementation; and the shipped template is the one artifact where key names and effects agree by construction, so a lane built only on it cannot decorrelate them"}, {"found_at": "arm-approve", "what": "G1(g) did not prove the declaration had not outlived its commit — it compared the working tree to HEAD and left baseline_ref unconstrained, so an uncommitted touch after the build commit would make (a), (b) and (g) green again", "why_missed": "the internal lenses read the check against the row's PROSE, which stated the property correctly; only a reader simulating the post-commit tree falsifies it, and no lens simulates a future commit"}, {"found_at": "arm-approve", "what": "R1 widened C24's suites-only re-pin family to production source while the manifest still classed the row derived — an unratified scope decision booked as a derivation, which the classification detector (it scans new-decision rows) could not see", "why_missed": "an internal close pass had CLEARED the same widening by reading C24's delegated enumeration as delegating the REACH; the arm read the membership sentence as normative — the disagreement is recorded at flag 8 rather than resolved silently"}, {"found_at": "implementation", "what": "the build self-reported a packet-vs-tree divergence in T6's two named near-misses, having found only one of the two sentences; the orchestrator's re-measurement found both present and untouched — the second is WRAPPED across two lines, so the single-line pattern could not see it", "why_missed": "a completeness claim was checked with a pattern the target's own line-wrapping defeats — the R-INSTRUMENT-PROBE class met in a build's self-report rather than in a tool; nothing in the loop re-measures a build's negative finding before it is believed"}],
+    "detector_misses": [{"found_at": "arm-build-close", "what": "gate 2's pass 2 found the PASS-1 FOLD overclaiming: the decorrelated lane removed the key-name correlation and left a target one, so a runtime keyed on target === \"implement\" passed every new assertion while the lane's comment claimed only a flag-reading runtime could", "why_missed": "the fold was written to answer the mutant the reviewer NAMED, and a lane built against one named mutant proves exactly that mutant; nothing in the loop asks what OTHER implementation the new evidence admits — the second probe now measures that question instead of arguing it"}, {"found_at": "arm-build-close", "what": "both of gate 2's findings were one shape — family 2's test data correlated the decision-key NAME with the expected effect perfectly, so a runtime keyed on edgeKey === \"request_rework\", or one comparing the verdict to the literal \"approve\" instead of to the recorded recommendation, would have satisfied every assertion; W1 had just declared REV-NO-KEY-MEANING discharged on the production side", "why_missed": "the discharge was argued by reading the PRODUCTION code, which branches on nothing, while the suite that carries the rule forward was never asked to distinguish a key-meaning implementation; and the shipped template is the one artifact where key names and effects agree by construction, so a lane built only on it cannot decorrelate them"}, {"found_at": "arm-approve", "what": "G1(g) did not prove the declaration had not outlived its commit — it compared the working tree to HEAD and left baseline_ref unconstrained, so an uncommitted touch after the build commit would make (a), (b) and (g) green again", "why_missed": "the internal lenses read the check against the row's PROSE, which stated the property correctly; only a reader simulating the post-commit tree falsifies it, and no lens simulates a future commit"}, {"found_at": "arm-approve", "what": "R1 widened C24's suites-only re-pin family to production source while the manifest still classed the row derived — an unratified scope decision booked as a derivation, which the classification detector (it scans new-decision rows) could not see", "why_missed": "an internal close pass had CLEARED the same widening by reading C24's delegated enumeration as delegating the REACH; the arm read the membership sentence as normative — the disagreement is recorded at flag 8 rather than resolved silently"}, {"found_at": "implementation", "what": "the build self-reported a packet-vs-tree divergence in T6's two named near-misses, having found only one of the two sentences; the orchestrator's re-measurement found both present and untouched — the second is WRAPPED across two lines, so the single-line pattern could not see it", "why_missed": "a completeness claim was checked with a pattern the target's own line-wrapping defeats — the R-INSTRUMENT-PROBE class met in a build's self-report rather than in a tool; nothing in the loop re-measures a build's negative finding before it is believed"}],
     "learned": "an instrument asked to classify an edit it predates can be taught a DECLARED class only if the declaration cannot survive its own commit; and a build's self-reported divergence is a claim like any other — two of the three items this build raised as findings dissolved on re-measurement, one because the grep could not see a wrapped sentence and one because it read a per-member disposition rule as a prediction",
     "baseline_note": "rounds.review = 7 is an EVIDENCED LOWER BOUND reconstructed from the packet's own bytes at build close — four arm-gate-1 passes, one internal close pass (named in gate 1's pass-1 record), and the two lens-4 reconciliation passes the two-hash close model records — because the authoring session's own round count reached no repo surface and this build ran in a fresh context. The earlier full and targeted panel rounds are therefore NOT included in the figure; the gap itself is a boundary-review candidate, adjacent to ch14-p3a's third detector miss (a gate record that was not on a repo surface). rounds.implementation counts the build only; aftermath fix rounds increment it.",
     "main_thread_model": "claude-opus-5[1m]"
