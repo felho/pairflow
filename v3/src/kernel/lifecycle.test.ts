@@ -225,7 +225,12 @@ describe("CREATE (L1/G1)", () => {
       instanceId: "i1",
       templateRef: REF,
       task: "T",
-      binding: { implementer: "codex", reviewer: "claude" },
+      // ch14-p3b: `resolveBinding` seeds the binding from EVERY declared
+      // role's `defaultActor`, so the shipped template's third role
+      // widens this closed literal — here and at every other full-shape
+      // equality in this file. Re-pinned to the new closed set, never
+      // relaxed to a containment.
+      binding: { implementer: "codex", reviewer: "claude", operator: "human" },
       currentStep: null,
       round: 0,
       kernelStatus: "CREATED",
@@ -325,6 +330,12 @@ describe("CREATE (L1/G1)", () => {
           defaultAgentConfig: { promptConcernRefs: ["emit-envelope"] },
         },
         reviewer: { defaultAgentConfig: { promptConcernRefs: ["emit-envelope"] } },
+        // ch14-p3b: the shipped `human_approval` step references
+        // `operator`, so the role STAYS declared — dropping it would
+        // fail the role-set equality at admission and the fixture would
+        // never reach the claim under test. Its `defaultActor` is kept
+        // too: what this case removes is the reviewer's, and only that.
+        operator: { defaultActor: "human" },
       },
     }));
     await expect(
@@ -374,7 +385,7 @@ describe("START (L2/L3) — the fork and the window lanes", () => {
       instanceId: "i1",
       templateRef: REF,
       task: "T",
-      binding: { implementer: "codex", reviewer: "claude" },
+      binding: { implementer: "codex", reviewer: "claude", operator: "human" },
       currentStep: "implement",
       round: 1,
       kernelStatus: "ACTIVE",
@@ -402,7 +413,7 @@ describe("START (L2/L3) — the fork and the window lanes", () => {
       instanceId: "i1",
       templateRef: REF,
       task: null,
-      binding: { implementer: "codex", reviewer: "claude" },
+      binding: { implementer: "codex", reviewer: "claude", operator: "human" },
       currentStep: null,
       round: 0,
       kernelStatus: "WAITING",
@@ -712,7 +723,7 @@ describe("START (L2/L3) — the fork and the window lanes", () => {
         instanceId: "drift",
         templateRef: REF,
         task: "T",
-        binding: { implementer: "codex", reviewer: "claude" },
+        binding: { implementer: "codex", reviewer: "claude", operator: "human" },
         currentStep: null,
         round: 0,
         kernelStatus: "CREATED",
@@ -1100,7 +1111,7 @@ describe("RUNTIME_CONTEXT_FAILED (F/G family) + the FAILED completion seam (SM)"
       instanceId: "i1",
       templateRef: REF,
       task: "T",
-      binding: { implementer: "codex", reviewer: "claude" },
+      binding: { implementer: "codex", reviewer: "claude", operator: "human" },
       currentStep: null,
       round: 0,
       kernelStatus: "TERMINAL",
@@ -1572,7 +1583,7 @@ describe("KICKOFF (L4)", () => {
       instanceId: "i1",
       templateRef: REF,
       task: "GO",
-      binding: { implementer: "codex", reviewer: "claude" },
+      binding: { implementer: "codex", reviewer: "claude", operator: "human" },
       currentStep: "implement",
       round: 1,
       kernelStatus: "ACTIVE",
@@ -1635,7 +1646,7 @@ describe("CANCEL (L5) — any non-terminal state", () => {
       instanceId: "i1",
       templateRef: REF,
       task: null,
-      binding: { implementer: "codex", reviewer: "claude" },
+      binding: { implementer: "codex", reviewer: "claude", operator: "human" },
       currentStep: null,
       round: 0,
       kernelStatus: "TERMINAL",
@@ -1661,7 +1672,7 @@ describe("CANCEL (L5) — any non-terminal state", () => {
       instanceId: "i1",
       templateRef: REF,
       task: null,
-      binding: { implementer: "codex", reviewer: "claude" },
+      binding: { implementer: "codex", reviewer: "claude", operator: "human" },
       currentStep: null,
       round: 0,
       kernelStatus: "TERMINAL",
@@ -1687,7 +1698,7 @@ describe("CANCEL (L5) — any non-terminal state", () => {
       instanceId: "i1",
       templateRef: REF,
       task: "T",
-      binding: { implementer: "codex", reviewer: "claude" },
+      binding: { implementer: "codex", reviewer: "claude", operator: "human" },
       currentStep: "implement",
       round: 1,
       kernelStatus: "TERMINAL",
@@ -1730,7 +1741,7 @@ describe("FAIL (L6) — in-process kernel event, fact-less", () => {
       instanceId: "i1",
       templateRef: REF,
       task: null,
-      binding: { implementer: "codex", reviewer: "claude" },
+      binding: { implementer: "codex", reviewer: "claude", operator: "human" },
       currentStep: null,
       round: 0,
       kernelStatus: "TERMINAL",

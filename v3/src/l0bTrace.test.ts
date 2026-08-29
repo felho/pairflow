@@ -38,6 +38,14 @@ import type { DispatchIntent, HumanDecisionRequest } from "./domain/index.js";
 const asDispatch = (intent: DispatchIntent | HumanDecisionRequest | null | undefined) =>
   intent !== null && intent !== undefined && "packet" in intent ? intent : null;
 
+/**
+ * The request ref the shipped gate park mints under the controlled clock
+ * at 1_000: the mint composes the injected clock with a kernel-local
+ * counter, and this run's park is its FIRST request — so the ref is a
+ * COMPUTABLE literal, not a wildcard.
+ */
+const R = "req-1000-1";
+
 
 /**
  * The l0b chapter trace as a golden test (packet ch4-P4; refactored
@@ -66,7 +74,17 @@ const l0bFixture: TraceFixture = {
     // OLD packet, NEW op: actor-supplied stale intent → Stale(4), no row.
     { kind: "emit", opId: "c3", type: "PASS", actorId: "codex", payload: { note: "codex:c3" }, expectedVersion: 3, expect: { kind: "stale", currentVersion: 4 } },
     { kind: "emit", opId: "c4", type: "PASS", actorId: "codex", payload: { note: "codex:c4" }, expectedVersion: 4, expect: { kind: "committed", version: 5 } },
+    // ch14-p3b (R2's DECLARED re-pin): CONVERGED no longer terminates —
+    // it PARKS at the shipped `human_approval` gate, committing the
+    // transition and the park's DECISION_REQUEST in ONE visible commit.
     { kind: "emit", opId: "d5", type: "CONVERGED", actorId: "claude", payload: { note: "claude:d5" }, expectedVersion: 5, expect: { kind: "committed", version: 6 } },
+    // The trace's terminal arrival is RESTATED against the new route
+    // rather than dropped: the bound operator approves (the shipped
+    // CONVERGED edge's own recommendation, so no override applies) and
+    // the run parks at `commit_pending`…
+    { kind: "submit-decision", opId: "d6", expectedVersion: 6, requestRef: R, verdict: "approve", by: "human", expect: { kind: "committed", version: 7 } },
+    // …and the COMMIT resume reaches `done`.
+    { kind: "resume-wait", opId: "r7", expectedVersion: 7, type: "COMMIT", expect: { kind: "committed", version: 8 } },
   ],
   finalTranscript: [
     [1, "op-start"],
@@ -74,13 +92,18 @@ const l0bFixture: TraceFixture = {
     [3, "b2"],
     [4, "c4"],
     [5, "d5"],
+    // The DECISION_REQUEST row is OP-LESS, so its pair carries its
+    // `request_ref` where the other rows carry an op id.
+    [6, R],
+    [7, "d6"],
+    [8, "r7"],
   ],
   finalState: {
     currentStep: "done",
     round: 2,
     kernelStatus: "TERMINAL",
     terminalDisposition: "done",
-    version: 6,
+    version: 8,
   },
 };
 
@@ -108,6 +131,9 @@ describe("l0b golden trace — the walking skeleton end-to-end (on the harness)"
       submit: (raw) => ingress.submit(raw),
       create: (input) => kernel.create(input),
       start: (input) => kernel.start(input),
+      // ch14-p3b: the operator legs ride the INGRESS's `submitIntent`,
+      // the same wire the shipped verbs use.
+      submitIntent: (raw) => ingress.submitIntent(raw),
       store: handle.store,
       template: admitted,
     });
@@ -135,11 +161,16 @@ describe("l0b golden trace — the walking skeleton end-to-end (on the harness)"
       .filter(
         (o): o is Extract<Outcome, { kind: "committed" }> => o.kind === "committed",
       );
-    expect(committed.map((o) => o.version)).toEqual([3, 4, 5, 6]);
+    expect(committed.map((o) => o.version)).toEqual([3, 4, 5, 6, 7, 8]);
+    // The last THREE commits derive no dispatch: the park returns the
+    // Ask (which carries no `packet`), the approve routes to a BARE wait
+    // that awaits an inbound event, and the resume is terminal.
     expect(committed.map((o) => asDispatch(o.intent)?.actor ?? null)).toEqual([
       "claude",
       "codex",
       "claude",
+      null,
+      null,
       null,
     ]);
     expect(asDispatch(committed[0]?.intent)?.packet).toMatchObject({

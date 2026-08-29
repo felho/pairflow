@@ -65,8 +65,10 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 # ── (a) the CLOSED erasure set ───────────────────────────────────────
@@ -463,8 +465,15 @@ def erase(text: str) -> str:
     return re.sub(r"\n{2,}", "\n", text)
 
 
-def check_text_half(name: str, before: str, after: str, checker: Checker) -> None:
-    """(a): identical after erasure, and no refused construct."""
+def check_refused(name: str, after: str, checker: Checker) -> bool:
+    """The REFUSED bare-type-assertion scan, shared by BOTH paths.
+
+    It is a SEPARATE function because the declared-repin edit class
+    (ch14-p3b, G1(e)) inverts the byte comparison but keeps this guard
+    unchanged: an edit that asserts its way past the widening is not
+    laundered by declaring itself a re-pin. Returns True when it fired,
+    so the caller can stop rather than report a second, derived fault.
+    """
     refused = REFUSED.findall(after)
     if refused:
         checker.error(
@@ -472,6 +481,13 @@ def check_text_half(name: str, before: str, after: str, checker: Checker) -> Non
             f"compiler-forced narrow (found {len(refused)}) — the closed erasure "
             f"set admits the discriminating narrow and nothing else"
         )
+        return True
+    return False
+
+
+def check_text_half(name: str, before: str, after: str, checker: Checker) -> None:
+    """(a): identical after erasure, and no refused construct."""
+    if check_refused(name, after, checker):
         return
     if erase(before) != erase(after):
         checker.error(
@@ -479,6 +495,42 @@ def check_text_half(name: str, before: str, after: str, checker: Checker) -> Non
             f"RE-PIN, not a compile fix (a deleted assertion, a changed expected "
             f"literal, or a re-ordered expectation)"
         )
+
+
+def digest_pair(name: str, receipt: dict, checker: Checker) -> tuple[dict, dict] | None:
+    """The recorded (baseline, current) pair, with the TWO SHAPE GUARDS
+    that live beside the equality but are not part of it.
+
+    Factored out because the declared-repin edit class (ch14-p3b, G1(e))
+    inverts the equality and keeps BOTH guards unchanged: a build that
+    implements only the new branch would otherwise drop them. Returns
+    None when a guard fired.
+    """
+    digests = receipt.get("digests")
+    if not isinstance(digests, dict):
+        checker.error(f"{name}: receipt carries no digests block")
+        return None
+    baseline = digests.get("baseline")
+    current = digests.get("current")
+    for label, value in (("baseline", baseline), ("current", current)):
+        if not isinstance(value, dict) or set(value) != {"transcript", "instance"}:
+            checker.error(
+                f"{name}: {label} digests must carry EXACTLY the two grains "
+                f"K14 names (transcript, instance)"
+            )
+            return None
+    # The receipt must not claim MORE than the gate now checks: a
+    # `recomputation` block would read as provenance this gate no longer
+    # verifies, and an unverified claim beside a verified one is how a
+    # reader takes the wrong thing from a green.
+    if "recomputation" in receipt:
+        checker.error(
+            f"{name}: receipt carries a 'recomputation' block, but the gate-time "
+            f"recomputation leg is DROPPED — the claim would be unverified "
+            f"provenance sitting beside a verified equality"
+        )
+        return None
+    return baseline, current
 
 
 def check_behaviour_half(name: str, receipt: dict, checker: Checker, source: str = "") -> None:
@@ -508,35 +560,191 @@ def check_behaviour_half(name: str, receipt: dict, checker: Checker, source: str
         if "digests" in receipt:
             checker.error(f"{name}: declares the behaviour half unreachable AND carries digests")
         return
-    digests = receipt.get("digests")
-    if not isinstance(digests, dict):
-        checker.error(f"{name}: receipt carries no digests block")
+    pair = digest_pair(name, receipt, checker)
+    if pair is None:
         return
-    baseline = digests.get("baseline")
-    current = digests.get("current")
-    for label, value in (("baseline", baseline), ("current", current)):
-        if not isinstance(value, dict) or set(value) != {"transcript", "instance"}:
-            checker.error(
-                f"{name}: {label} digests must carry EXACTLY the two grains "
-                f"K14 names (transcript, instance)"
-            )
-            return
+    baseline, current = pair
     if baseline != current:
         moved = [g for g in ("transcript", "instance") if baseline[g] != current[g]]
         checker.error(
             f"{name}: the replay digest MOVED at {moved} — the edit changed "
             f"behaviour, so it is not type-level"
         )
-    # The receipt must not claim MORE than the gate now checks: a
-    # `recomputation` block would read as provenance this gate no longer
-    # verifies, and an unverified claim beside a verified one is how a
-    # reader takes the wrong thing from a green.
-    if "recomputation" in receipt:
+
+
+# ── the DECLARED RE-PIN edit class (packet ch14-p3b, G1) ─────────────
+#
+# K14's letter says any edit this gate does not clear is a re-pin and a
+# build STOP. It is RIGHT about `l0bTrace.test.ts` at ch14-p3b: the
+# shipped template's CONVERGED edge retargets at a human gate, so the
+# expected literals move AND the replay digests move. What the letter has
+# no vocabulary for is a re-pin the packet DECLARED IN ADVANCE against a
+# ratified delta.
+#
+# TWO DISPOSITIONS ARE REFUSED BY NAME. Advancing `baseline_ref` to the
+# packet's own build commit would compare the post-edit bytes with
+# themselves and issue a green that evidences nothing. Dropping the file
+# from the corpus would surrender the gate on it forever rather than for
+# this edit — the same defect this checker's own docstring names.
+#
+# ELECTED: a declared `edit_class`, in the idiom `behaviour_half:
+# "unreachable"` already uses — a declaration the gate refuses to take on
+# trust and CHECKS against the bytes and the digests.
+#
+# THE CLASS CANNOT STAY GREEN ACROSS A COMMIT. That is check (g), and it
+# is what answers the disposition it refuses: without it, a
+# `baseline_ref` pinned at the pre-change parent would satisfy (a) and
+# (b) FOREVER, so a later packet DELETING an assertion from that file
+# would pass every check and the gate would report GREEN on exactly the
+# defect it exists to catch.
+#
+# WHAT (g) BOUNDS, AND WHAT IT DOES NOT: it bounds DURATION — the entry
+# cannot stay green across a commit — and it does NOT bound CONTENT.
+# While the tree is dirty and the entry declares, any real re-pin
+# satisfies (a), (b) and (g) together, deleted assertions included. The
+# class is single-use by CONSTRUCTION over commits, not over edits.
+#
+# THE RESIDUAL, in the same voice this file used for its own dropped leg:
+# the class proves the declaration is CONSISTENT with the bytes and the
+# digests, and that it is not stale. It does NOT prove the new
+# expectations are the ones the declared delta entails.
+
+DECLARED_REPIN = "declared-repin"
+
+#: The strict contract-ref form an anchor must take — the same shape the
+#: packet linter accepts, so an anchor that resolves here resolves there.
+CONTRACT_REF = re.compile(r"^contract:(ch\d+-[a-z0-9-]+)#(C[1-9]\d*)$")
+
+#: A C-row is a TABLE ROW whose first cell is the row id.
+def _contract_row(text: str, row: str) -> bool:
+    return re.search(rf"(?m)^\|\s*{re.escape(row)}\s*\|", text) is not None
+
+
+def anchor_fault(anchor: object, repo: Path) -> str | None:
+    """(c): the anchor must PARSE as the strict contract-ref form AND
+    RESOLVE — the named contract file exists and defines that C-row as a
+    table row. Returns the fault, or None when it resolves.
+
+    A form check alone would admit an anchor pointing at a row nobody
+    wrote, which is a declaration against nothing."""
+    if anchor is None:
+        return "no 'anchor' field"
+    if not isinstance(anchor, str) or not anchor:
+        return "the anchor must be a nonempty string"
+    match = CONTRACT_REF.fullmatch(anchor)
+    if match is None:
+        return f"{anchor!r} is not the strict contract-ref form contract:chN-<surface>#Cn"
+    surface, row = match.group(1), match.group(2)
+    path = repo / "v3" / "implementation" / "contracts" / f"{surface}-contract.md"
+    if not path.is_file():
+        return f"no contract file for surface '{surface}'"
+    if not _contract_row(path.read_text(encoding="utf-8"), row):
+        return f"contract '{surface}' defines no table row {row}"
+    return None
+
+
+def _resolve_commit(repo: Path, rev: str) -> str | None:
+    """The commit OBJECT a rev names, or None.
+
+    BY RESOLVED OBJECT, NEVER BY STRING, and the distinction is
+    load-bearing: `baseline_ref` is an ABBREVIATED sha (the shape rule
+    admits 7 to 40 hex characters), so a literal comparison against
+    `git rev-parse HEAD`'s full forty would refuse the legitimate
+    build-time state on every run."""
+    result = subprocess.run(
+        ["git", "-C", str(repo), "rev-parse", "--verify", f"{rev}^{{commit}}"],
+        capture_output=True,
+        text=True,
+    )
+    return result.stdout.strip() if result.returncode == 0 else None
+
+
+def check_pending_edit(name: str, ref: str, source: str, repo: Path, checker: Checker) -> None:
+    """(g): a CONJUNCTION of two conditions, and one alone does not carry
+    it.
+
+    (g1) the file's WORKING-TREE bytes DIFFER from its bytes at `HEAD` —
+    the edit is pending rather than landed; and (g2) `baseline_ref`
+    RESOLVES TO THE SAME COMMIT OBJECT as `HEAD` — the declaration is
+    being read against the very state it was declared against.
+
+    WHY (g1) ALONE IS NOT ENOUGH: after the build commit and before the
+    retirement, any uncommitted touch to the file makes the working tree
+    differ from `HEAD` again, so (g1) goes green while the declaration
+    HAS survived its commit. (g2) closes that — at build time
+    `baseline_ref` is the parent, which IS `HEAD` before the commit;
+    from the build commit onward the parent is no longer `HEAD`."""
+    at_head = subprocess.run(
+        ["git", "-C", str(repo), "show", f"HEAD:{name}"],
+        capture_output=True,
+        text=True,
+    )
+    if at_head.returncode == 0 and at_head.stdout == source:
         checker.error(
-            f"{name}: receipt carries a 'recomputation' block, but the gate-time "
-            f"recomputation leg is DROPPED — the claim would be unverified "
-            f"provenance sitting beside a verified equality"
+            f"{name}: a declared re-pin describes a PENDING edit, but the working-tree "
+            f"bytes are IDENTICAL to the bytes at HEAD — the edit has landed, so the "
+            f"declaration has outlived the commit it describes (g1)"
         )
+    head = _resolve_commit(repo, "HEAD")
+    baseline = _resolve_commit(repo, ref)
+    if head is None or baseline is None or head != baseline:
+        checker.error(
+            f"{name}: a declared re-pin is read against the state it was declared "
+            f"against, but baseline_ref '{ref}' does not resolve to the SAME commit "
+            f"object as HEAD — the declaration has outlived its commit and must be "
+            f"RETIRED, never re-pointed under the declaration (g2)"
+        )
+
+
+def check_declared_repin(
+    name: str, receipt: dict, before: str, after: str, repo: Path, checker: Checker
+) -> None:
+    """The declared-repin entry's checks, per ENTRY: no other receipt's
+    checks change, and an entry without the key is scanned exactly as
+    today."""
+    # (d) a trace with NO measurement point can evidence no moved digest.
+    if receipt.get("behaviour_half") == "unreachable":
+        checker.error(
+            f"{name}: behaviour_half 'unreachable' and edit_class "
+            f"'{DECLARED_REPIN}' TOGETHER are refused — a trace with no measurement "
+            f"point can evidence no MOVED digest"
+        )
+        return
+    # (c) the anchor must parse AND resolve.
+    fault = anchor_fault(receipt.get("anchor"), repo)
+    if fault is not None:
+        checker.error(
+            f"{name}: a declared re-pin needs a RESOLVING contract anchor ({fault}) — "
+            f"a re-pin cannot be declared against a row nobody wrote"
+        )
+        return
+    # (e) the PRE-EXISTING shape guards still run, unchanged.
+    if check_refused(name, after, checker):
+        return
+    pair = digest_pair(name, receipt, checker)
+    # (a) INVERTED: the bytes must DIFFER after erasure — a declared
+    #     re-pin whose bytes normalize to identical is a
+    #     mis-declaration, so the label cannot be worn for free.
+    if erase(before) == erase(after):
+        checker.error(
+            f"{name}: declared '{DECLARED_REPIN}', but the bytes are IDENTICAL after "
+            f"erasure — the label cannot be worn for free"
+        )
+    # (b) INVERTED: at least one grain must have moved — a re-pin that
+    #     changed an expectation while the replayed behaviour did not is
+    #     the WEAKENED-ASSERTION class in its simplest form.
+    if pair is not None:
+        baseline, current = pair
+        if baseline == current:
+            checker.error(
+                f"{name}: declared '{DECLARED_REPIN}', but the recorded digests are "
+                f"EQUAL on both grains — an expectation moved while the replayed "
+                f"behaviour did not"
+            )
+    # (g) the declaration cannot survive a commit boundary.
+    ref = receipt.get("baseline_ref")
+    if isinstance(ref, str):
+        check_pending_edit(name, ref, after, repo, checker)
 
 
 def check_receipt(receipt: dict, repo: Path, checker: Checker) -> None:
@@ -561,6 +769,18 @@ def check_receipt(receipt: dict, repo: Path, checker: Checker) -> None:
         checker.error(f"{name}: not present in the working tree")
         return
     source = current_path.read_text(encoding="utf-8")
+    # (f) the class is per ENTRY: an entry without the key is scanned
+    #     exactly as it was before this class existed.
+    edit_class = receipt.get("edit_class")
+    if edit_class == DECLARED_REPIN:
+        check_declared_repin(name, receipt, shown.stdout, source, repo, checker)
+        return
+    if edit_class is not None:
+        checker.error(
+            f"{name}: unknown edit_class {edit_class!r} (the only declared class is "
+            f"'{DECLARED_REPIN}')"
+        )
+        return
     check_text_half(name, shown.stdout, source, checker)
     check_behaviour_half(name, receipt, checker, source)
 
@@ -1311,6 +1531,200 @@ def selftest() -> int:
         failures.append(f"monotonicity corpus: the LIVE trace sources could not be read ({exc!r})")
     if _MASK in dict(corpus).values():
         failures.append("monotonicity corpus: the _MASK sentinel is being counted as a fixture")
+    # ── packet ch14-p3b (G1) — the DECLARED RE-PIN edit class, FOURTEEN
+    # lanes: one GREEN, one RED per FALSIFIER, plus the abbreviated-ref
+    # green and the UNCHANGED-PATH control. The falsifiers, not the
+    # checks, are the membership — check (c) alone carries three of them,
+    # and (e) and (f) name lanes no single falsifier does.
+    #
+    # Each lane runs the WHOLE `check_receipt`, against a REAL temporary
+    # git repository: checks (c) and (g) read the filesystem and git, so
+    # a lane that stubbed either would measure something adjacent to the
+    # thing under test. The repo carries the trace file (committed =
+    # BEFORE, working tree = AFTER) and a minimal contract file the
+    # anchor resolves against.
+    REPIN_BEFORE = "const v = 1;\nexpect(state.currentStep).toBe(\"done\");\n"
+    REPIN_AFTER = "const v = 1;\nexpect(state.currentStep).toBe(\"human_approval\");\n"
+    TRACE = "v3/src/l0bTrace.test.ts"
+    ANCHOR = "contract:ch14-human-decision#C24"
+    MOVED = {
+        "baseline": {"transcript": "aa", "instance": "bb"},
+        "current": {"transcript": "cc", "instance": "dd"},
+    }
+
+    def repin_repo(
+        tmp: Path, *, committed: str, working: str, extra_commit: bool = False
+    ) -> tuple[Path, str]:
+        """A git repo with the trace committed and the working tree
+        holding `working`. Returns (repo, the sha of the FIRST commit)."""
+        repo = tmp
+        (repo / "v3" / "src").mkdir(parents=True, exist_ok=True)
+        (repo / "v3" / "implementation" / "contracts").mkdir(parents=True, exist_ok=True)
+        (repo / "v3" / "implementation" / "contracts" / "ch14-human-decision-contract.md").write_text(
+            "# ch14 — human-decision contract\n\n| ID | Rule |\n|---|---|\n"
+            "| C24 | The shipped wiring |\n",
+            encoding="utf-8",
+        )
+        git = ["git", "-C", str(repo)]
+        subprocess.run([*git[:1], "init", "-q", str(repo)], check=True, capture_output=True)
+        subprocess.run([*git, "config", "user.email", "t@t"], check=True, capture_output=True)
+        subprocess.run([*git, "config", "user.name", "t"], check=True, capture_output=True)
+        (repo / TRACE).write_text(committed, encoding="utf-8")
+        subprocess.run([*git, "add", "-A"], check=True, capture_output=True)
+        subprocess.run([*git, "commit", "-qm", "before"], check=True, capture_output=True)
+        first = subprocess.run(
+            [*git, "rev-parse", "HEAD"], check=True, capture_output=True, text=True
+        ).stdout.strip()
+        if extra_commit:
+            (repo / "unrelated.txt").write_text("x\n", encoding="utf-8")
+            subprocess.run([*git, "add", "-A"], check=True, capture_output=True)
+            subprocess.run([*git, "commit", "-qm", "after"], check=True, capture_output=True)
+        (repo / TRACE).write_text(working, encoding="utf-8")
+        return repo, first
+
+    def run_repin(
+        overrides: dict,
+        *,
+        committed: str = REPIN_BEFORE,
+        working: str = REPIN_AFTER,
+        extra_commit: bool = False,
+        ref: str | None = None,
+        abbreviate: bool = False,
+    ) -> list[str]:
+        tmp = Path(tempfile.mkdtemp(prefix="v3-repin-"))
+        try:
+            repo, first = repin_repo(
+                tmp, committed=committed, working=working, extra_commit=extra_commit
+            )
+            head = _resolve_commit(repo, "HEAD") or ""
+            baseline = ref if ref is not None else (first if extra_commit else head)
+            if abbreviate:
+                baseline = baseline[:8]
+            entry = {
+                "id": "R-NARROW-1",
+                "file": TRACE,
+                "baseline_ref": baseline,
+                "edit_class": DECLARED_REPIN,
+                "anchor": ANCHOR,
+                "digests": MOVED,
+            }
+            entry.update(overrides)
+            for key, value in list(entry.items()):
+                if value is None:
+                    del entry[key]
+            local = Checker()
+            check_receipt(entry, repo, local)
+            return local.errors
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    # 1. GREEN — differing bytes, differing digests, a resolving anchor,
+    #    an uncommitted edit.
+    dims.append("declared-repin-green")
+    green_errors = run_repin({})
+    if green_errors:
+        failures.append(f"green NOT green: a well-formed declared re-pin was refused ({green_errors})")
+
+    # 2. identical erased bytes — the label cannot be worn for free.
+    assert_red(
+        "declared-repin-identical-bytes",
+        run_repin({}, working=REPIN_BEFORE + "\n\n"),
+        "IDENTICAL after erasure",
+    )
+
+    # 3. equal digests — an expectation moved while the behaviour did not.
+    assert_red(
+        "declared-repin-equal-digests",
+        run_repin({"digests": {"baseline": GOOD_DIGESTS, "current": GOOD_DIGESTS}}),
+        "EQUAL on both grains",
+    )
+
+    # 4-6. check (c)'s THREE falsifiers.
+    assert_red("declared-repin-anchor-missing", run_repin({"anchor": None}), "no 'anchor' field")
+    assert_red(
+        "declared-repin-anchor-malformed",
+        run_repin({"anchor": "ch14-human-decision C24"}),
+        "not the strict contract-ref form",
+    )
+    assert_red(
+        "declared-repin-anchor-row-absent",
+        run_repin({"anchor": "contract:ch14-human-decision#C999"}),
+        "defines no table row C999",
+    )
+
+    # 7. `unreachable` + `declared-repin` together.
+    assert_red(
+        "declared-repin-with-unreachable",
+        run_repin({"behaviour_half": "unreachable", "reason": "no_shared_replay_seam"}),
+        "can evidence no MOVED digest",
+    )
+
+    # 8. a bare type assertion UNDER the class — check (e) keeps the
+    #    REFUSED scan, so the class cannot launder one through.
+    assert_red(
+        "declared-repin-bare-assertion",
+        run_repin({}, working=REPIN_AFTER + "const i = (o.intent as DispatchIntent).actor;\n"),
+        "BARE TYPE ASSERTION",
+    )
+
+    # 9. check (g1) — the working tree EQUALS the bytes at HEAD.
+    assert_red(
+        "declared-repin-edit-already-landed",
+        run_repin({}, committed=REPIN_AFTER, working=REPIN_AFTER, ref=None),
+        "(g1)",
+    )
+
+    # 9b. check (g2) — `baseline_ref` resolves to a DIFFERENT commit
+    #     object than HEAD. The lane that fails a declaration read after
+    #     its own commit, and the one an uncommitted touch would hide:
+    #     here the working tree DOES differ from HEAD, so (g1) is green.
+    assert_red(
+        "declared-repin-outlived-its-commit",
+        run_repin({}, extra_commit=True),
+        "(g2)",
+    )
+
+    # 9c. GREEN — the ABBREVIATED form. `baseline_ref` is a 7-to-40
+    #     character prefix; a string comparison against `rev-parse HEAD`'s
+    #     full forty would wrongly refuse the legitimate build-time state.
+    dims.append("declared-repin-abbreviated-ref-green")
+    abbreviated = run_repin({}, abbreviate=True)
+    if abbreviated:
+        failures.append(
+            f"green NOT green: an ABBREVIATED baseline_ref resolving to HEAD was "
+            f"refused ({abbreviated})"
+        )
+
+    # 10-11. check (e)'s two PRE-EXISTING shape guards, named separately
+    #        because a build implementing only the new branch is exactly
+    #        what (e) exists to catch.
+    assert_red(
+        "declared-repin-one-grain-digest-block",
+        run_repin({"digests": {"baseline": {"transcript": "aa"}, "current": {"transcript": "cc"}}}),
+        "EXACTLY the two grains",
+    )
+    assert_red(
+        "declared-repin-recomputation-block",
+        run_repin({"recomputation": {"at": "deadbeef"}}),
+        "'recomputation' block",
+    )
+
+    # 12. the UNCHANGED PATH for (f): a NON-declaring entry still reds on
+    #     the ORDINARY text-half and digest-equality rules. Both are
+    #     asserted, because the class is per entry and an entry without
+    #     the key must be scanned exactly as it was before.
+    assert_red(
+        "non-declaring-entry-still-reds-on-text",
+        run_repin({"edit_class": None, "anchor": None,
+                   "digests": {"baseline": GOOD_DIGESTS, "current": GOOD_DIGESTS}}),
+        "RE-PIN, not a compile fix",
+    )
+    assert_red(
+        "non-declaring-entry-still-reds-on-digests",
+        run_repin({"edit_class": None, "anchor": None}, working=REPIN_BEFORE),
+        "the replay digest MOVED",
+    )
+
     dims.append("mask-monotonicity-over-corpus")
     lost: list[str] = []
     for name, text in corpus:

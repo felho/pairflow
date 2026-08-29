@@ -36,6 +36,10 @@ import type { TraceFixture } from "./testkit/index.js";
  * (A11 as trace-level execution); `runAllCheckers` green at the end
  * is the consistency belt, never the equality proof.
  */
+/** The park's request ref under the controlled clock at 1_000 — the
+ * run's FIRST minted request, so a computable literal. */
+const R = "req-1000-1";
+
 const l1Fixture: TraceFixture = {
   name: "l1 golden trace (at-level: explicit roles, no lift)",
   steps: [
@@ -70,8 +74,10 @@ const l1Fixture: TraceFixture = {
       expectedRole: "implementer",
       expect: { kind: "rejected", reason: "role_not_authorized" },
     },
-    // 3 · claude emits CONVERGED as reviewer → commit review → done;
-    //     terminal — no dispatch.
+    // 3 · claude emits CONVERGED as reviewer → commit review → the
+    //     shipped `human_approval` gate (ch14-p3b): the run PARKS rather
+    //     than terminating, and the park's DECISION_REQUEST rides the
+    //     same commit.
     {
       kind: "emit",
       opId: "op-3",
@@ -82,18 +88,43 @@ const l1Fixture: TraceFixture = {
       expectedRole: "reviewer",
       expect: { kind: "committed", version: 4 },
     },
+    // 4 · the bound operator approves — the verdict AGREES with the
+    //     shipped edge's recommendation, so no override applies — and
+    //     the run parks at the `commit_pending` wait.
+    {
+      kind: "submit-decision",
+      opId: "op-4",
+      expectedVersion: 4,
+      requestRef: R,
+      verdict: "approve",
+      by: "human",
+      expect: { kind: "committed", version: 5 },
+    },
+    // 5 · COMMIT resumes the bare wait → done. The trace's terminal
+    //     arrival is RESTATED here, never dropped.
+    {
+      kind: "resume-wait",
+      opId: "op-5",
+      expectedVersion: 5,
+      type: "COMMIT",
+      expect: { kind: "committed", version: 6 },
+    },
   ],
   finalTranscript: [
     [1, "op-start"],
     [2, "op-1"],
     [3, "op-3"],
+    // The DECISION_REQUEST row is OP-LESS and correlates by request ref.
+    [4, R],
+    [5, "op-4"],
+    [6, "op-5"],
   ],
   finalState: {
     currentStep: "done",
     round: 1,
     kernelStatus: "TERMINAL",
     terminalDisposition: "done",
-    version: 4,
+    version: 6,
   },
 };
 
@@ -120,6 +151,7 @@ describe("l1 golden trace — role authority end-to-end (07-l1 Runtime)", () => 
       submit: (raw) => ingress.submit(raw),
       create: (input) => kernel.create(input),
       start: (input) => kernel.start(input),
+      submitIntent: (raw) => ingress.submitIntent(raw),
       store: handle.store,
       template: admitted,
     });
@@ -138,7 +170,18 @@ describe("l1 golden trace — role authority end-to-end (07-l1 Runtime)", () => 
       version: 3,
       intent: { actor: "claude", packet: { role: "reviewer", expectedVersion: 3 } },
     });
-    const terminalCommit = result.outcomes[3];
-    expect(terminalCommit).toMatchObject({ kind: "committed", version: 4, intent: null });
+    // The CONVERGED commit no longer terminates: it returns the ASK, so
+    // the role echo the terminal-commit assertion used to carry moves to
+    // the RESUME commit, which is where the run now reaches `done`.
+    const parkCommit = result.outcomes[3];
+    expect(parkCommit).toMatchObject({
+      kind: "committed",
+      version: 4,
+      intent: { operator: "human", question: "The reviewer has converged. Decide how this run continues." },
+    });
+    const decisionCommit = result.outcomes[4];
+    expect(decisionCommit).toMatchObject({ kind: "committed", version: 5, intent: null });
+    const terminalCommit = result.outcomes[5];
+    expect(terminalCommit).toMatchObject({ kind: "committed", version: 6, intent: null });
   });
 });

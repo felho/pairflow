@@ -61,7 +61,7 @@ function detail(
     instanceId: "i1",
     templateRef: template.ref,
     task: "fixture task",
-    binding: { implementer: "codex", reviewer: "claude" },
+    binding: { implementer: "codex", reviewer: "claude", operator: "human" },
     currentStep: "done",
     round: 1,
     kernelStatus: "TERMINAL",
@@ -80,11 +80,27 @@ function detail(
 // The STARTED activation fact (seq 1) heads every green history so the
 // round reconstructs to 1 (the C11 activation basis); the transitions
 // follow at seq 2+.
-const greenRows = [startedFact("s0"), row(2, "a1", "PASS"), row(3, "b2", "CONVERGED")];
+//
+// ch14-p3b: the shipped CONVERGED edge no longer sinks at `done` — it
+// PARKS at `human_approval`, committing the transition and the OP-LESS
+// DECISION_REQUEST together. The green history is RESTATED through the
+// new route rather than truncated: approve routes to `commit_pending`
+// and a COMMIT resume reaches the terminal. FIVE commits, SIX rows —
+// which is why the fixture's version is stated explicitly here rather
+// than left to `detail()`'s row-count default.
+const greenRows = [
+  startedFact("s0"),
+  row(2, "a1", "PASS"),
+  row(3, "b2", "CONVERGED"),
+  parkRow(4, "R-1"),
+  decisionRow(5, "d1", "approve"),
+  resumeRow(6, "r1", "COMMIT"),
+];
+const GREEN_VERSION = 6;
 
 describe("post-condition checker kit (packet ch5-P2)", () => {
   it("green fixture: every checker passes and the aggregator is empty", () => {
-    const green = detail(greenRows);
+    const green = detail(greenRows, { version: GREEN_VERSION });
     expect(checkSeqContinuity(green)).toEqual([]);
     expect(checkVersionArithmetic(green)).toEqual([]);
     expect(checkOpUniqueness(green)).toEqual([]);
@@ -156,7 +172,7 @@ describe("post-condition checker kit (packet ch5-P2)", () => {
 
 describe("checkTerminalSink — the axis extension (packet ch12-p1a, T2)", () => {
   it("(a) TERMINAL without a disposition is a violation (single-write rule)", () => {
-    const bare = detail(greenRows, { terminalDisposition: null });
+    const bare = detail(greenRows, { version: GREEN_VERSION, terminalDisposition: null });
     const violations = checkTerminalSink(bare, template);
     expect(violations.some((v) => v.includes("without a terminal_disposition"))).toBe(true);
   });
@@ -182,6 +198,7 @@ describe("checkTerminalSink — the axis extension (packet ch12-p1a, T2)", () =>
 
   it("(b) a terminal replayed position whose disposition is not 'done' is a violation (P1a inventory)", () => {
     const wrongToken = detail(greenRows, {
+      version: GREEN_VERSION,
       kernelStatus: "TERMINAL",
       terminalDisposition: "cancelled",
     });
@@ -191,6 +208,7 @@ describe("checkTerminalSink — the axis extension (packet ch12-p1a, T2)", () =>
 
   it("(d) a non-null wait at TERMINAL is a violation (S5's iff at the terminal cell)", () => {
     const waiting = detail(greenRows, {
+      version: GREEN_VERSION,
       wait: { kind: "kickoff_pending", requestedBy: "activation", resumeEvents: ["KICKOFF"] },
     });
     const violations = checkTerminalSink(waiting, template);
@@ -198,7 +216,7 @@ describe("checkTerminalSink — the axis extension (packet ch12-p1a, T2)", () =>
   });
 
   it("the aggregator carries the extension: a TERMINAL-without-disposition detail fails through runAllCheckers", () => {
-    const bare = detail(greenRows, { terminalDisposition: null });
+    const bare = detail(greenRows, { version: GREEN_VERSION, terminalDisposition: null });
     expect(runAllCheckers(bare, template).some((v) => v.includes("terminal_disposition"))).toBe(
       true,
     );
@@ -249,8 +267,17 @@ const multiLoopRows = [
   row(4, "c3", "PASS"), // implement → review        round 2
   row(5, "d4", "PASS"), // review → implement (+1)   round 3
   row(6, "e5", "PASS"), // implement → review        round 3
-  row(7, "f6", "CONVERGED"), // review → done        round 3
+  // ch14-p3b: CONVERGED reaches the GATE, not the terminal — so the
+  // history is RESTATED through the human route it now takes. Neither
+  // operator edge is named by `advanceOnArrivalAt`, so the round stays 3
+  // and this lane keeps its subject.
+  row(7, "f6", "CONVERGED"), // review → human_approval  round 3
+  parkRow(8, "R-1"), //        the park's OP-LESS row     round 3
+  decisionRow(9, "d1", "approve"), // gate → commit_pending  round 3
+  resumeRow(10, "r1", "COMMIT"), //   commit_pending → done  round 3
 ];
+/** NINE commits over TEN rows — the park's second row is op-less. */
+const MULTI_LOOP_VERSION = 10;
 
 describe("checkRoundReconstruction — replay = stored (dimension 5, packet ch11-P2c)", () => {
   it("a multi-loop-back committed history over a DECLARED-ADVANCING template reconstructs the stored round (green)", () => {
@@ -313,7 +340,7 @@ describe("checkRoundReconstruction — replay = stored (dimension 5, packet ch11
   });
 
   it("the aggregate carries the checker: a tampered round fails through runAllCheckers", () => {
-    const tampered = detail(multiLoopRows, { round: 2 });
+    const tampered = detail(multiLoopRows, { round: 2, version: MULTI_LOOP_VERSION });
     const violations = runAllCheckers(tampered, admittedDeclared);
     expect(violations).toHaveLength(1);
     expect(violations[0]).toContain("round reconstruction");
@@ -538,14 +565,13 @@ describe("checkTerminalSink — the wait iff both directions + fact-after-termin
   }
 
   it("a FACT row committed AFTER the terminal TRANSITION row → sink violation (complements the after-CANCELLED lane)", () => {
-    // greenRows reach `done` at seq 3; a STARTED fact fabricated at seq 4
-    // lands after the terminal transition row — the sink walk reds on the
-    // OTHER row-bearing writer (a fact after `done`, not after CANCELLED).
+    // ch14-p3b: the green history reaches `done` on the RESUME row at
+    // seq 6, so the fabricated fact lands at seq 7 — after the terminal
+    // row, which is the lane's subject. The sink walk reds on the OTHER
+    // row-bearing writer (a fact after `done`, not after CANCELLED).
     const afterDone = detail([
-      startedFact("s0"),
-      row(2, "a1", "PASS"),
-      row(3, "b2", "CONVERGED"),
-      lateFact("STARTED", 4, "late"),
+      ...greenRows,
+      lateFact("STARTED", 7, "late"),
     ]);
     expect(checkTerminalSink(afterDone, template).join("\n")).toMatch(
       /committed AFTER the terminal row/,
@@ -593,10 +619,14 @@ describe("checkTerminalSink — the wait iff both directions + fact-after-termin
 // names — a rule asserted in prose with nothing measuring it. ───────────
 
 /**
- * A gate- and wait-bearing template. `fixtureTemplate()` cannot serve
- * here: it is equality-pinned to the shipped `local-pair-v0@1.yaml`,
- * whose gate wiring is ch14-P3's, so the correspondence's fixtures are
- * LOCAL by necessity rather than by preference.
+ * A gate- and wait-bearing template. Since ch14-p3b the shipped
+ * `local-pair-v0` carries a gate and a wait of its own, so the old
+ * ground for a LOCAL fixture — that no shipped wiring existed yet — has
+ * expired. The fixture stays local for a DIFFERENT and standing reason:
+ * the correspondence needs edges the shipped template does not declare
+ * (a HOLD route out of the start step, a decision reaching a terminal),
+ * and driving it off the shipped value would tie this lane's inventory
+ * to a product declaration it does not own.
  */
 const CORRESPONDENCE_TEMPLATE: WorkflowTemplate = {
   ref: { id: "t-corr", version: 1 },
@@ -962,8 +992,12 @@ describe("family 11 — THE FOURTH READER's OWN NEGATIVE LANE (the row-count axi
   });
 
   it("the reader still runs on histories with NO op-less row — the re-base is a NO-OP there", () => {
-    expect(checkVersionArithmetic(detail(greenRows))).toEqual([]);
-    expect(checkVersionArithmetic(detail(greenRows, { version: 99 })).length).toBe(1);
+    // ch14-p3b: the green history now CARRIES an op-less row, so this
+    // lane states its own no-op-less history rather than borrowing one —
+    // otherwise the claim's subject would have quietly moved.
+    const noOpLess = [startedFact("s0"), row(2, "a1", "PASS")];
+    expect(checkVersionArithmetic(detail(noOpLess))).toEqual([]);
+    expect(checkVersionArithmetic(detail(noOpLess, { version: 99 })).length).toBe(1);
   });
 });
 

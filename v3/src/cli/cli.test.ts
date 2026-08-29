@@ -457,6 +457,24 @@ const EMIT_ENVELOPE_BODY = [
   "rejection says which.",
 ].join("\n");
 
+/** ch14-p3b: the shipped CONVERGED edge PARKS at `human_approval`, so a
+ * run reaches its terminal only THROUGH the human. Every lane below that
+ * needed a terminal run RESTATES its route with these two shipped verbs
+ * rather than dropping the terminal expectation. `--by` is omitted so
+ * the default resolves to the bound operator the same read supplies. */
+async function throughTheHuman(db: string, id: string): Promise<void> {
+  // Its OWN nonce namespace: both verbs MINT their op id from the deps'
+  // nonce source, and every other lane's ids come from the same
+  // restart-at-1 counter — so a shared source would collide rather than
+  // commit, and the collision would read as a route defect.
+  let minted = 0;
+  const deps = testDeps({ nonce: () => `human-nonce-${String((minted += 1))}` });
+  expect((await run(["submit-decision", id, "--db", db, "--decision", "approve"], deps)).code).toBe(
+    EXIT.ok,
+  );
+  expect((await run(["resume", id, "--db", db, "--event", "COMMIT"], deps)).code).toBe(EXIT.ok);
+}
+
 /** ch12-P4: the create→start sequence replaces the retired C25 bridge —
  * `create` is genesis (the Created doc carries the minted instance id),
  * `start` is the real single-op START (the `activated` doc). */
@@ -608,7 +626,12 @@ describe("cli — start / submit (write verbs through the sanctioned entrypoints
     );
     const error = errorDoc(unknownRole);
     expect(unknownRole.code).toBe(EXIT.usage);
-    expect(error.details).toEqual({ validRoles: ["implementer", "reviewer"] });
+    // ch14-p3b (R3's VALUE half): `parseOverrides` derives `validRoles`
+    // from `Object.keys(template.roles)`, so T1's third role widens this
+    // closed literal — and the assertion is an ORDERED array, which is
+    // why T6 fixes the key order rather than leaving it to two hands.
+    // Re-pinned to the new closed set, never relaxed to a containment.
+    expect(error.details).toEqual({ validRoles: ["implementer", "reviewer", "operator"] });
   });
 
   it("submit → outcome is DATA on stdout for ALL protocol answers; exit classifies", async () => {
@@ -837,20 +860,26 @@ describe("cli — read verbs (the floor activated)", () => {
     const tailDeps = testDeps({
       tailSteps: [
         async () => {
+          // ONE deps across this step's three committing calls: the
+          // nonce source restarts per deps object, so a fresh one per
+          // call would mint the same op id twice and collide.
+          const stepDeps = testDeps();
           const converge = await run(
             ["submit", "--db", db, "--instance", id, "--type", "CONVERGED", "--expected-version", "3", "--expected-role", "reviewer"],
-            testDeps(),
+            stepDeps,
           );
           expect(converge.code).toBe(EXIT.ok);
+          await throughTheHuman(db, id);
         },
       ],
     });
     const tail = await run(["tail", id, "--db", db], tailDeps);
     expect(tail.code).toBe(EXIT.ok);
     expect(tail.stderr).toEqual([]);
-    // seq 1 STARTED, seq 2 PASS, seq 3 CONVERGED.
+    // seq 1 STARTED, 2 PASS, 3 CONVERGED, 4 DECISION_REQUEST (the park's
+    // second row, same commit), 5 DECISION_MADE, 6 WAIT_RESUMED.
     const seqs = tail.stdout.map((line) => (JSON.parse(line) as { seq: number }).seq);
-    expect(seqs).toEqual([1, 2, 3]);
+    expect(seqs).toEqual([1, 2, 3, 4, 5, 6]);
 
     assertErrorContract(await run(["tail", "ghost", "--db", db], testDeps()), "not_found", EXIT.notFound);
     assertErrorContract(
@@ -930,7 +959,9 @@ describe("cli — P4a aftermath (post-commit review, 2026-07-08)", () => {
 });
 
 describe("cli — tail --diag (packet ch7-P4: V1/M1–M8/F1–F2)", () => {
-  /** Drives the builtin template to its terminal: PASS@1 → CONVERGED@2. */
+  /** Drives the builtin template to its terminal: PASS → CONVERGED (the
+   * park) → approve → COMMIT. Since ch14-p3b the last two legs are what
+   * make the run terminal at all. */
   async function startAndConverge(db: string, deps: CliDeps): Promise<string> {
     const id = await startOne(db, deps);
     expect(
@@ -939,6 +970,7 @@ describe("cli — tail --diag (packet ch7-P4: V1/M1–M8/F1–F2)", () => {
     expect(
       (await run(["submit", "--db", db, "--instance", id, "--type", "CONVERGED", "--expected-version", "3", "--expected-role", "reviewer"], deps)).code,
     ).toBe(EXIT.ok);
+    await throughTheHuman(db, id);
     return id;
   }
 
@@ -968,9 +1000,13 @@ describe("cli — tail --diag (packet ch7-P4: V1/M1–M8/F1–F2)", () => {
           expect(midReject.code).toBe(EXIT.notFound);
         },
         async () => {
+          // ONE deps across this step's three committing calls (see the
+          // plain-tail lane: the nonce source restarts per deps object).
+          const stepDeps = testDeps();
           expect(
-            (await run(["submit", "--db", db, "--instance", id, "--type", "CONVERGED", "--expected-version", "3", "--expected-role", "reviewer"], testDeps())).code,
+            (await run(["submit", "--db", db, "--instance", id, "--type", "CONVERGED", "--expected-version", "3", "--expected-role", "reviewer"], stepDeps)).code,
           ).toBe(EXIT.ok);
+          await throughTheHuman(db, id);
         },
       ],
     });
@@ -982,8 +1018,9 @@ describe("cli — tail --diag (packet ch7-P4: V1/M1–M8/F1–F2)", () => {
     expect(lines.every((l) => l.lane === "committed" || l.lane === "diag")).toBe(true);
     const committed = lines.filter((l) => l.lane === "committed");
     const diag = lines.filter((l) => l.lane === "diag");
-    // seq 1 STARTED, seq 2 PASS, seq 3 CONVERGED.
-    expect(committed.map((l) => (l as { row: { seq: number } }).row.seq)).toEqual([1, 2, 3]);
+    // seq 1 STARTED, 2 PASS, 3 CONVERGED, 4 the park's DECISION_REQUEST,
+    // 5 DECISION_MADE, 6 WAIT_RESUMED.
+    expect(committed.map((l) => (l as { row: { seq: number } }).row.seq)).toEqual([1, 2, 3, 4, 5, 6]);
     expect(diag).toHaveLength(2);
     for (const line of diag) {
       const event = (line as { event: DiagnosticEvent }).event;
@@ -1127,7 +1164,7 @@ describe("cli — tail --diag (packet ch7-P4: V1/M1–M8/F1–F2)", () => {
   it("dimension 3 RESUME COMBINATION (aftermath): --from + --from-ordinal together — each lane honors ITS cursor", async () => {
     const db = tempDbPath();
     const deps = testDeps();
-    const id = await startAndConverge(db, deps); // committed seq 1 STARTED, 2 PASS, 3 CONVERGED
+    const id = await startAndConverge(db, deps); // committed seq 1..6 (see the helper)
     stageDiagEvents(db, [
       { source: "kernel", kind: "internal_failure", instanceId: id, error: { name: "E1", message: "first" } },
       { source: "kernel", kind: "internal_failure", instanceId: id, error: { name: "E2", message: "second" } },
@@ -1144,8 +1181,8 @@ describe("cli — tail --diag (packet ch7-P4: V1/M1–M8/F1–F2)", () => {
     const lines = tailLines(resumed);
     const committed = lines.filter((l) => l.lane === "committed");
     const diag = lines.filter((l) => l.lane === "diag");
-    // --from 1 skips the STARTED fact (seq 1); the PASS/CONVERGED rows follow.
-    expect(committed.map((l) => (l as { row: { seq: number } }).row.seq)).toEqual([2, 3]);
+    // --from 1 skips the STARTED fact (seq 1); the rest of the run follows.
+    expect(committed.map((l) => (l as { row: { seq: number } }).row.seq)).toEqual([2, 3, 4, 5, 6]);
     expect(diag).toHaveLength(1);
     expect((diag[0] as { event: DiagnosticEvent }).event.error?.name).toBe("E2");
   });
@@ -1204,6 +1241,7 @@ describe("cli — write-path wiring + separation (packet ch7-P4: V5/M11/C3/dimen
       deps,
     );
     await run(["submit", "--db", db, "--instance", id, "--type", "CONVERGED", "--expected-version", "3", "--expected-role", "reviewer"], deps);
+    await throughTheHuman(db, id);
     // The write verbs ARE diag verbs — remove their sibling so the
     // committed-only reads run against a diag-free path.
     rmSync(diagPathOf(db), { force: true });
@@ -1225,6 +1263,7 @@ describe("cli — write-path wiring + separation (packet ch7-P4: V5/M11/C3/dimen
         deps,
       );
       await run(["submit", "--db", db, "--instance", id, "--type", "CONVERGED", "--expected-version", "3", "--expected-role", "reviewer"], deps);
+      await throughTheHuman(db, id);
       return id;
     };
     const healthyDb = tempDbPath();
@@ -1652,10 +1691,14 @@ describe("cli — ch12-P4 V6: the spec-declaring-template unstartable lane + the
 });
 
 describe("cli — the gate-defective write-lane drive (packet ch11-P4 → ch12-P4)", () => {
+  // ch14-p3b: the review step's CONVERGED edge retargets at the gate, so
+  // the anchor this defect is spliced onto is RE-PINNED to the shipped
+  // bytes. A stale anchor would silently splice nothing and leave the
+  // lane asserting against a VALID template.
   const gateDefective = `${CANONICAL_BYTES()}`
     .replace(
-      "    transitions:\n      PASS: implement\n      CONVERGED: done\n",
-      "    transitions:\n      PASS: implement\n      CONVERGED: done\n" +
+      "    transitions:\n      PASS: implement\n      CONVERGED: human_approval\n",
+      "    transitions:\n      PASS: implement\n      CONVERGED: human_approval\n" +
         "    gates:\n      CONVERGED:\n        - uses: no.such.gate\n",
     );
 

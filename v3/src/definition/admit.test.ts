@@ -3141,15 +3141,40 @@ describe("ch14-P1 family 7 — the admitted-VALUE re-pin set, measured and expec
     expect(steps["implement"]?.["advancesRound"]).toStrictEqual({ PASS: false });
   });
 
-  it("and the CANONICAL template — the one every production caller loads — carries no such edge either", async () => {
+  // ch14-p3b (R3, the KEY half of the absence sweep): this lane was
+  // written to expire HERE — it consumed the ABSENCE of exactly the two
+  // classes T3 and T4 end, and no token search could have found it. It is
+  // RE-PINNED to the new basis, never relaxed to a containment: the two
+  // AGENT steps still carry none of the three keys, and the two ch14
+  // steps carry exactly their own class's.
+  it("and the CANONICAL template — the one every production caller loads — states the ch14-p3b basis", async () => {
     const row = (await (PARITY_CALLERS[0]?.row() ?? Promise.resolve(undefined))) as
       | { steps: Record<string, Record<string, unknown>> }
       | undefined;
-    for (const [id, step] of Object.entries(row?.steps ?? {})) {
-      expect(step["type"], `steps.${id}.type — no ch14 class is authored at this basis`).toBeUndefined();
-      expect(step["decisions"], `steps.${id}.decisions`).toBeUndefined();
-      expect(step["wait"], `steps.${id}.wait`).toBeUndefined();
+    const steps = row?.steps ?? {};
+    for (const id of ["implement", "review"] as const) {
+      const step = steps[id];
+      expect(step?.["type"], `steps.${id}.type — the agent class authors none`).toBeUndefined();
+      expect(step?.["decisions"], `steps.${id}.decisions`).toBeUndefined();
+      expect(step?.["wait"], `steps.${id}.wait`).toBeUndefined();
     }
+    const gate = steps["human_approval"];
+    expect(gate?.["type"], "steps.human_approval.type").toBe("human_gate");
+    expect(gate?.["decisions"], "steps.human_approval.decisions").toStrictEqual({
+      approve: { target: "commit_pending" },
+      request_rework: {
+        target: "implement",
+        payload: { instruction: { required: true }, refs: { required: false } },
+      },
+    });
+    expect(gate?.["wait"], "steps.human_approval.wait — the OTHER class's key stays absent").toBeUndefined();
+    const wait = steps["commit_pending"];
+    expect(wait?.["type"], "steps.commit_pending.type").toBe("wait");
+    expect(wait?.["wait"], "steps.commit_pending.wait").toStrictEqual({
+      kind: "commit_pending",
+      resumeEvents: ["COMMIT"],
+    });
+    expect(wait?.["decisions"], "steps.commit_pending.decisions — the OTHER class's key stays absent").toBeUndefined();
   });
 });
 
@@ -3256,7 +3281,87 @@ const HAND_LANES: readonly HandLaneRow[] = [
         message: "unknown key role on a wait step (a wait step's keys are type, wait, onResume)" },
     ],
   },
+  // ch14-p3b family 1 — the register is EXTENDED, never forked: the
+  // shipped wiring relies on the FULL C2/C3 keyset rules, and the three
+  // refusals below were the members no lane drove. A second
+  // parameterized table over the same rules would destroy the property
+  // that a rule added later arrives LANE-LESS.
+  {
+    member: "the three class keysets",
+    claim: "the humanGate class refuses `gates` — a WELL-FORMED pipeline, so only the class refusal can fire",
+    direct: () => ch14({ gate: { gates: { PASS: [{ uses: "declarative.threshold", config: THRESHOLD }] } } }),
+    directFindings: [
+      { path: "steps.gate.gates",
+        message: "unknown key gates on a human_gate step " +
+          "(a human_gate step's keys are type, role, instruction, decisions)" },
+    ],
+    file: () => handFile({
+      gate: HAND_GATE +
+        "    gates:\n      PASS:\n        - uses: declarative.threshold\n" +
+        "          config:\n            metric: round\n            op: \">=\"\n            value: 2\n",
+    }),
+    fileFindings: [
+      { path: "steps.gate.gates",
+        message: "unknown key gates on a humanGate step " +
+          "(a humanGate step's keys are type, role, instruction, decisions)" },
+    ],
+  },
+  {
+    member: "the three class keysets",
+    claim: "the humanGate class refuses `agentConfig` — a gate dispatches no actor, so it configures none",
+    direct: () => ch14({ gate: { agentConfig: {} } }),
+    directFindings: [
+      { path: "steps.gate.agentConfig",
+        message: "unknown key agentConfig on a human_gate step " +
+          "(a human_gate step's keys are type, role, instruction, decisions)" },
+    ],
+    file: () => handFile({ gate: HAND_GATE + "    agentConfig: {}\n" }),
+    fileFindings: [
+      { path: "steps.gate.agentConfig",
+        message: "unknown key agentConfig on a humanGate step " +
+          "(a humanGate step's keys are type, role, instruction, decisions)" },
+    ],
+  },
+  {
+    member: "the three class keysets",
+    claim: "the wait class refuses `instruction` — nothing asks, so there is nothing to say",
+    direct: () => ch14({ hold: { instruction: "q" } }),
+    directFindings: [
+      { path: "steps.hold.instruction",
+        message: "unknown key instruction on a wait step (a wait step's keys are type, wait, onResume)" },
+    ],
+    file: () => handFile({ wait: HAND_WAIT + "    instruction: q\n" }),
+    fileFindings: [
+      { path: "steps.hold.instruction",
+        message: "unknown key instruction on a wait step (a wait step's keys are type, wait, onResume)" },
+    ],
+  },
+  {
+    member: "the three class keysets",
+    claim: "the wait class refuses `recommends` — the sibling map is the AGENT class's alone",
+    direct: () => ch14({ hold: { recommends: { COMMIT: "approve" } } }),
+    directFindings: [
+      { path: "steps.hold.recommends",
+        message: "unknown key recommends on a wait step (a wait step's keys are type, wait, onResume)" },
+    ],
+    file: () => handFile({ wait: HAND_WAIT + "    recommends:\n      COMMIT: approve\n" }),
+    fileFindings: [
+      { path: "steps.hold.recommends",
+        message: "unknown key recommends on a wait step (a wait step's keys are type, wait, onResume)" },
+    ],
+  },
   // ── member 2: the per-class presence re-imposition ─────────────────
+  {
+    member: "the per-class presence re-imposition",
+    claim: "the humanGate class demands `instruction` — it IS the Ask's question (ch14-p3b family 1)",
+    direct: () => dropStepKey(ch14(), "gate", "instruction"),
+    directFindings: [{ path: "steps.gate", message: "missing required key \"instruction\"" }],
+    file: () => handFile({
+      gate: "  gate:\n    type: humanGate\n    role: operator\n" +
+        "    decisions:\n      approve:\n        target: done\n",
+    }),
+    fileFindings: [{ path: "steps.gate", message: "missing required key \"instruction\"" }],
+  },
   {
     member: "the per-class presence re-imposition",
     claim: "the AGENT class demands `instruction`",
@@ -3419,6 +3524,27 @@ describe("ch14-P1 family 8 — the hand-lane inventory, GENERATED on both channe
     expect(admitTemplate(ch14({ hold: { wait: { kind: "commit_pending", resumeEvents: ["COMMIT"] } } }), catalog).ok).toBe(true);
     expect(loadTemplate(new TextEncoder().encode(handFile()), { catalog: createGateRegistry() }).ok).toBe(true);
   });
+
+  // ch14-p3b family 1: C5's own rule that `required` is OPTIONAL with
+  // absent = not-required, which is the rule T3's `refs: { required:
+  // false }` rests on — the two forms must agree on what the guard does.
+  it("an EMPTY payload spec `{}` is LEGAL on both channels, and agrees with an explicit `required: false`", () => {
+    const both = (spec: Record<string, unknown>): WorkflowTemplate =>
+      ch14({ gate: { decisions: { approve: { target: "done", payload: { refs: spec } } } } });
+    expect(admitTemplate(both({}), catalog).ok).toBe(true);
+    expect(admitTemplate(both({ required: false }), catalog).ok).toBe(true);
+    expect(
+      loadTemplate(
+        new TextEncoder().encode(
+          handFile({
+            gate: "  gate:\n    type: humanGate\n    role: operator\n    instruction: q\n" +
+              "    decisions:\n      approve:\n        target: done\n        payload:\n          refs: {}\n",
+          }),
+        ),
+        { catalog: createGateRegistry() },
+      ).ok,
+    ).toBe(true);
+  });
 });
 
 describe("ch14-P1 family 8 — the role-set equality's remaining crossings (dimension 10)", () => {
@@ -3496,3 +3622,201 @@ describe("ch14-P1 family 10 — the widened hook's admitted `advancesRound` map"
   });
 });
 
+
+// ── ch14-p3b FAMILY 8: NON-MOVEMENT AND KEY ORDER (T6, T7; dimensions
+// 1 and 3). The ADMITTED canonical template is pinned against CLOSED
+// LITERALS that are INDEPENDENT OF THE FIXTURE: the ch8-P2 pin already
+// asserts whole-value equality of the two channels, so a region
+// "asserted equal to the fixture" is entailed by a guard that is
+// already green — and a delta authored into BOTH files, which is the
+// stated method, would satisfy it while falsifying the claim. THE
+// CHANNEL IS NAMED because the host offers two: the literals are read
+// against the CANONICAL-FILE caller of the parity corpus, never against
+// its direct-channel caller, which IS the fixture.
+//
+// A union over surfaces, an enumeration of watched parts, or a
+// comparison to the delta's other copy are the three blind forms this
+// family refuses. The closure rule: every node of the admitted value is
+// pinned by a literal here, pinned by the ordered keyset literals, or a
+// NAMED residual with its own owner — `contextBlocks`' BODY (guarded by
+// `cli/journey.test.ts`'s transcribed third copy) and the two new
+// steps' `advancesRound` (family 2's, asserted there in both
+// directions).
+//
+// THE BYTE GRAIN IS EXPLICITLY NOT DRIVEN: a value-grade comparison
+// cannot see a YAML comment, a quoting style or a block-scalar form, so
+// no byte-identity claim is made about the untouched regions; the byte
+// grain's only guard is the post-build audit's changed-file list.
+
+/** The ADMITTED canonical value, through the FILE channel. */
+function admittedCanonical(): Record<string, unknown> {
+  const result = loadTemplate(canonicalBytes(), {
+    path: join(CANONICAL_DIR, CANONICAL_FILE),
+    catalog: createGateRegistry(),
+  });
+  if (result.ok) return result.template as unknown as Record<string, unknown>;
+  throw new Error(`the canonical file did not ADMIT: ${JSON.stringify(result.error)}`);
+}
+
+/** The ADMITTED fixture value, through the DIRECT channel — used ONLY
+ * for the cross-channel KEY-ORDER assertion, which the ch8-P2 pin's
+ * value-grade `toEqual` cannot see. Never as a source of literals. */
+function admittedFixture(): Record<string, unknown> {
+  const result = admitTemplate(fixtureTemplate(), createGateRegistry());
+  if (result.ok) return result.template as unknown as Record<string, unknown>;
+  throw new Error(`the fixture did not ADMIT: ${JSON.stringify(result.findings)}`);
+}
+
+const stepsOf = (t: Record<string, unknown>): Record<string, Record<string, unknown>> =>
+  t["steps"] as Record<string, Record<string, unknown>>;
+const rolesOf = (t: Record<string, unknown>): Record<string, unknown> =>
+  t["roles"] as Record<string, unknown>;
+
+describe("ch14-p3b family 8 — the admitted canonical template, pinned to fixture-INDEPENDENT literals", () => {
+  it("the top-level keyset is exactly the NINE admitted keys — seven authored plus two admission-filled", () => {
+    expect(Object.keys(admittedCanonical()).sort()).toStrictEqual([
+      "activation",
+      "contextBlocks",
+      "ref",
+      "roles",
+      "round",
+      "runtimeContext",
+      "start",
+      "steps",
+      "terminal",
+    ]);
+  });
+
+  it("the untouched top-level values, each by LITERAL", () => {
+    const t = admittedCanonical();
+    expect(t["ref"]).toStrictEqual({ id: "local-pair-v0", version: 1 });
+    expect(t["start"]).toBe("implement");
+    expect(t["terminal"]).toStrictEqual(["done"]);
+    expect(t["round"]).toStrictEqual({ advanceOnArrivalAt: ["implement"] });
+    expect(t["runtimeContext"]).toBe("none");
+    expect(t["activation"]).toStrictEqual({ mode: "immediate" });
+  });
+
+  it("`implement` is UNTOUCHED, whole — keyset, values, and its OWN advancesRound", () => {
+    const step = stepsOf(admittedCanonical())["implement"];
+    expect(Object.keys(step ?? {}).sort()).toStrictEqual([
+      "advancesRound",
+      "instruction",
+      "promptConcernRefs",
+      "role",
+      "transitions",
+    ]);
+    expect(step).toStrictEqual({
+      role: "implementer",
+      instruction: "build it",
+      transitions: { PASS: "review" },
+      // Per EDGE, and DIFFERENT from `review`'s: the flag is true iff the
+      // edge's TARGET is named in `round.advanceOnArrivalAt`. A literal
+      // copied from the other agent step is wrong.
+      advancesRound: { PASS: false },
+      promptConcernRefs: [],
+    });
+  });
+
+  it("`review` keeps its untouched keys and carries BOTH touched values at value grade", () => {
+    const step = stepsOf(admittedCanonical())["review"];
+    expect(Object.keys(step ?? {}).sort()).toStrictEqual([
+      "advancesRound",
+      "instruction",
+      "promptConcernRefs",
+      "recommends",
+      "role",
+      "transitions",
+    ]);
+    expect(step).toStrictEqual({
+      role: "reviewer",
+      instruction: "review it",
+      // THE DELTA'S OWN TWO VALUES, pinned precisely because they are the
+      // delta's: the retargeted CONVERGED edge and the new recommendation.
+      transitions: { PASS: "implement", CONVERGED: "human_approval" },
+      recommends: { CONVERGED: "approve" },
+      advancesRound: { PASS: true, CONVERGED: false },
+      promptConcernRefs: [],
+    });
+  });
+
+  it("every `roles` entry's ADMITTED value — `operator` as ADMISSION produces it, not as T1 declares it", () => {
+    const roles = rolesOf(admittedCanonical());
+    expect(roles["implementer"]).toStrictEqual({
+      defaultActor: "codex",
+      defaultAgentConfig: { promptConcernRefs: ["emit-envelope"] },
+      promptConcernRefs: ["emit-envelope"],
+    });
+    expect(roles["reviewer"]).toStrictEqual({
+      defaultActor: "claude",
+      defaultAgentConfig: { promptConcernRefs: ["emit-envelope"] },
+      promptConcernRefs: ["emit-envelope"],
+    });
+    // The role-refs lift runs over EVERY entry and writes `[]` where
+    // nothing is authored — which is exactly the new entry's case, and
+    // the reason T1's declaration alone is not what admission produces.
+    expect(roles["operator"]).toStrictEqual({ defaultActor: "human", promptConcernRefs: [] });
+  });
+
+  it("the two ORDERED keyset literals carry the delta — dimension 3 DRIVEN, not assumed", () => {
+    const t = admittedCanonical();
+    expect(Object.keys(rolesOf(t))).toStrictEqual(["implementer", "reviewer", "operator"]);
+    expect(Object.keys(stepsOf(t))).toStrictEqual([
+      "implement",
+      "review",
+      "human_approval",
+      "commit_pending",
+    ]);
+  });
+
+  it("the gate step: keyset, its authored fields in STORED form, and its produced refs", () => {
+    const step = stepsOf(admittedCanonical())["human_approval"];
+    expect(Object.keys(step ?? {}).sort()).toStrictEqual([
+      "advancesRound",
+      "decisions",
+      "instruction",
+      "promptConcernRefs",
+      "role",
+      "type",
+    ]);
+    // The step-class token is STORED, never the file-channel `humanGate`.
+    expect(step?.["type"]).toBe("human_gate");
+    expect(step?.["role"]).toBe("operator");
+    expect(step?.["instruction"]).toBe("The reviewer has converged. Decide how this run continues.");
+    expect(step?.["decisions"]).toStrictEqual({
+      approve: { target: "commit_pending" },
+      request_rework: {
+        target: "implement",
+        payload: { instruction: { required: true }, refs: { required: false } },
+      },
+    });
+    expect(step?.["promptConcernRefs"]).toStrictEqual([]);
+  });
+
+  it("the wait step: keyset, its authored fields in STORED form, and its produced refs", () => {
+    const step = stepsOf(admittedCanonical())["commit_pending"];
+    expect(Object.keys(step ?? {}).sort()).toStrictEqual([
+      "advancesRound",
+      "onResume",
+      "promptConcernRefs",
+      "type",
+      "wait",
+    ]);
+    expect(step?.["type"]).toBe("wait");
+    expect(step?.["wait"]).toStrictEqual({ kind: "commit_pending", resumeEvents: ["COMMIT"] });
+    expect(step?.["onResume"]).toStrictEqual({ COMMIT: "done" });
+    expect(step?.["promptConcernRefs"]).toStrictEqual([]);
+  });
+
+  it("`contextBlocks` is pinned at KEYSET grain only — its BODY's guard is the transcribed third copy", () => {
+    expect(Object.keys(admittedCanonical()["contextBlocks"] as object)).toStrictEqual(["emit-envelope"]);
+  });
+
+  it("the two channels agree on KEY ORDER — the assertion the value-grade ch8-P2 pin cannot make", () => {
+    const file = admittedCanonical();
+    const direct = admittedFixture();
+    expect(Object.keys(rolesOf(direct))).toStrictEqual(Object.keys(rolesOf(file)));
+    expect(Object.keys(stepsOf(direct))).toStrictEqual(Object.keys(stepsOf(file)));
+    expect(Object.keys(direct)).toStrictEqual(Object.keys(file));
+  });
+});

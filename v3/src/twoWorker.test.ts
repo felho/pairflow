@@ -58,6 +58,10 @@ afterEach(() => {
 interface Worker {
   readonly handle: StoreHandle;
   readonly submit: (raw: unknown) => Promise<Outcome>;
+  /** ch14-p3b: the two OPERATOR intents ride their own ingress door, and
+   * they join the schedule for the same reason the emits are on it —
+   * the shipped run now reaches its terminal THROUGH them. */
+  readonly submitIntent: (raw: unknown) => Promise<Outcome>;
   readonly start: () => Promise<unknown>;
 }
 
@@ -80,6 +84,7 @@ function wireWorker(path: string): Worker {
   return {
     handle,
     submit: (raw) => ingress.submit(raw),
+    submitIntent: (raw) => ingress.submitIntent(raw) as Promise<Outcome>,
     start: async () => {
       const created = await kernel.create({
         instanceId: "inst-1",
@@ -126,6 +131,28 @@ const OPS = [
   raw("d5", "CONVERGED", "claude", 5, "reviewer"),
 ];
 
+/** ch14-p3b: CONVERGED PARKS at the shipped gate, so the run reaches
+ * `done` only through the two OPERATOR intents. They are appended to
+ * the scheduled ops rather than driven off to one fixed worker, because
+ * the claim is that the run is winner-independent and the operator legs
+ * carry the same CAS/uniqueness authority the emits do. The request ref
+ * is `req-1000-1` on EITHER kernel — each mints from its own counter
+ * under the same controlled clock, and the run has exactly one park, so
+ * winner-independence covers the ref too. */
+const R = "req-1000-1";
+const OPERATOR_OPS = [
+  {
+    intent: "submit-decision",
+    instanceId: "inst-1",
+    opId: "e6",
+    expectedVersion: 6,
+    requestRef: R,
+    verdict: "approve",
+    by: "human",
+  },
+  { intent: "resume-wait", instanceId: "inst-1", opId: "f7", expectedVersion: 7, type: "COMMIT" },
+];
+
 describe("CT-B-TWOWORKER — two workers, one instance stream, winner-independent (IC-B)", () => {
   it("racing deliveries of the SAME op across the two handles: exactly one commit, one Duplicate, one row", async () => {
     const path = tempDbPath();
@@ -148,8 +175,8 @@ describe("CT-B-TWOWORKER — two workers, one instance stream, winner-independen
     w2.handle.close();
   });
 
-  it("every worker-assignment schedule (2^4) commits the same run: identical final state and transcript", async () => {
-    for (let mask = 0; mask < 16; mask += 1) {
+  it("every worker-assignment schedule (2^6) commits the same run: identical final state and transcript", async () => {
+    for (let mask = 0; mask < 64; mask += 1) {
       const path = tempDbPath();
       const workers = [wireWorker(path), wireWorker(path)] as const;
       await workers[0].start();
@@ -159,6 +186,15 @@ describe("CT-B-TWOWORKER — two workers, one instance stream, winner-independen
         expect((await worker.submit(op)).kind, `mask ${String(mask)} op ${op.opId}`).toBe(
           "committed",
         );
+      }
+      // The two operator legs ride the SAME schedule mask, two bits
+      // further along — the terminal arrival is winner-independent too.
+      for (const [index, op] of OPERATOR_OPS.entries()) {
+        const worker = (mask >> (OPS.length + index)) & 1 ? workers[1] : workers[0];
+        expect(
+          (await worker.submitIntent(op)).kind,
+          `mask ${String(mask)} intent ${op.opId}`,
+        ).toBe("committed");
       }
 
       const detail = await workers[1].handle.store.getInstanceDetail("inst-1");
@@ -177,12 +213,15 @@ describe("CT-B-TWOWORKER — two workers, one instance stream, winner-independen
         [3, "b2"],
         [4, "c4"],
         [5, "d5"],
+        [6, R],
+        [7, "e6"],
+        [8, "f7"],
       ]);
       expect(detail?.instance).toMatchObject({
         currentStep: "done",
         kernelStatus: "TERMINAL",
         terminalDisposition: "done",
-        version: 6,
+        version: 8,
         round: 2,
       });
       workers[0].handle.close();

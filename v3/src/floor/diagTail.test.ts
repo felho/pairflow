@@ -47,7 +47,11 @@ const instance: WorkflowInstance = {
   instanceId: "inst-1",
   templateRef: { id: "local-pair-v0", version: 1 },
   task: "t",
-  binding: { implementer: "codex", reviewer: "claude" },
+  // ch14-p3b: the shipped template declares a third role, and a run
+  // that reaches the gate needs its binding — the real `create` path
+  // seeds it from `roles.operator.defaultActor`, which this hand-built
+  // instance record restates rather than inherits.
+  binding: { implementer: "codex", reviewer: "claude", operator: "human" },
   currentStep: "implement",
   round: 1,
   kernelStatus: "ACTIVE",
@@ -94,6 +98,39 @@ function makeKernel(store: StorePort, diag: DiagnosticsSink): Kernel {
 async function committed(kernel: Kernel, envelope: EventEnvelope): Promise<void> {
   const outcome = await kernel.handle(envelope);
   expect(outcome.kind).toBe("committed");
+}
+
+/** The shipped request-ref mint under the controlled clock at 0: each
+ * lane's gate park is its FIRST minted request, so the ref is a
+ * COMPUTABLE literal rather than a wildcard. */
+const R = "req-0-1";
+
+/** ch14-p3b (R2's re-pin discipline): the shipped CONVERGED edge no
+ * longer terminates — it PARKS at `human_approval`. The terminal
+ * arrival these lanes stop on is RESTATED against the new route, never
+ * dropped: the bound operator approves (routing to the `commit_pending`
+ * wait) and a COMMIT resume reaches `done`. Both legs commit, so each
+ * lane's committed-row expectations GROW by the park's DECISION_REQUEST
+ * row and the two operator rows. */
+async function throughTheHuman(kernel: Kernel, parkedVersion: number): Promise<void> {
+  const decided = await kernel.submitDecision({
+    intent: "submit-decision",
+    instanceId: "inst-1",
+    opId: "d1",
+    expectedVersion: parkedVersion,
+    requestRef: R,
+    verdict: "approve",
+    by: "human",
+  });
+  expect(decided.kind).toBe("committed");
+  const resumed = await kernel.resumeWait({
+    intent: "resume-wait",
+    instanceId: "inst-1",
+    opId: "r1",
+    expectedVersion: parkedVersion + 1,
+    type: "COMMIT",
+  });
+  expect(resumed.kind).toBe("committed");
 }
 
 async function collectAll(rows: AsyncIterable<DiagTailRow>): Promise<DiagTailRow[]> {
@@ -289,13 +326,26 @@ describe("tailWithDiagnostics — committed-lane parity (dimension 1)", () => {
     const r = await rig();
     await committed(r.kernel, env("a1", "PASS", 1, { ref: "diff-1" }));
     await committed(r.kernel, env("b2", "CONVERGED", 2, undefined, "reviewer"));
+    // The CONVERGED commit now PARKS; the terminal this lane stops on
+    // is reached THROUGH the human (approve → commit_pending → COMMIT).
+    await throughTheHuman(r.kernel, 3);
 
     const scripted = createScriptedTailWait([]);
     const tail = createDiagTail(r.store, r.diag.reader, scripted.wait);
     const rows = await collectAll(tail.tailWithDiagnostics("inst-1", 0, 0));
 
-    expect(committedRows(rows).map((row) => row.seq)).toEqual([1, 2]);
-    expect(committedRows(rows).map(opIdOf)).toEqual(["a1", "b2"]);
+    // The CONVERGED commit writes TWO rows — the transition and the
+    // park's op-less DECISION_REQUEST — and the run reaches `done` on a
+    // WAIT_RESUMED two operator steps later.
+    expect(committedRows(rows).map((row) => row.seq)).toEqual([1, 2, 3, 4, 5]);
+    expect(committedRows(rows).map(opIdOf)).toEqual(["a1", "b2", R, "d1", "r1"]);
+    expect(committedRows(rows).map((row) => row.entryKind)).toEqual([
+      "transition",
+      "transition",
+      "DECISION_REQUEST",
+      "DECISION_MADE",
+      "WAIT_RESUMED",
+    ]);
     expect(diagEvents(rows)).toEqual([]);
     expect(scripted.calls()).toBe(0);
     r.close();
@@ -308,7 +358,12 @@ describe("tailWithDiagnostics — committed-lane parity (dimension 1)", () => {
     const scripted = createScriptedTailWait([
       () => committed(r.kernel, env("b2", "PASS", 2, { ref: "diff-2" }, "reviewer")),
       () => committed(r.kernel, env("c3", "PASS", 3, { ref: "diff-3" })),
-      () => committed(r.kernel, env("d4", "CONVERGED", 4, undefined, "reviewer")),
+      async () => {
+        await committed(r.kernel, env("d4", "CONVERGED", 4, undefined, "reviewer"));
+        // ch14-p3b: the CONVERGED commit parks; the terminal commit this
+        // lane completes on is the RESUME, two operator steps later.
+        await throughTheHuman(r.kernel, 5);
+      },
     ]);
     const tail = createDiagTail(r.store, r.diag.reader, scripted.wait);
     const rows = await collectAll(tail.tailWithDiagnostics("inst-1", 0, 0));
@@ -316,8 +371,8 @@ describe("tailWithDiagnostics — committed-lane parity (dimension 1)", () => {
     // Replay + every mid-tail commit, each exactly once, in seq order,
     // completion after the terminal commit — the ch6-P2 expectations,
     // unchanged by the diag lane's presence (which stays empty here).
-    expect(committedRows(rows).map((row) => row.seq)).toEqual([1, 2, 3, 4]);
-    expect(committedRows(rows).map(opIdOf)).toEqual(["a1", "b2", "c3", "d4"]);
+    expect(committedRows(rows).map((row) => row.seq)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(committedRows(rows).map(opIdOf)).toEqual(["a1", "b2", "c3", "d4", R, "d1", "r1"]);
     expect(diagEvents(rows)).toEqual([]);
     expect(scripted.calls()).toBe(3);
     r.close();
@@ -344,6 +399,9 @@ describe("diag-lane delivery (dimension 2)", () => {
     const r = await rig();
     await committed(r.kernel, env("a1", "PASS", 1, { ref: "diff-1" }));
     await committed(r.kernel, env("b2", "CONVERGED", 2, undefined, "reviewer"));
+    // The CONVERGED commit now PARKS; the terminal this lane stops on
+    // is reached THROUGH the human (approve → commit_pending → COMMIT).
+    await throughTheHuman(r.kernel, 3);
     r.diag.sink.emit(diagBody("e1"));
     r.diag.sink.emit(diagBody("e2"));
     r.diag.sink.emit(diagBody("e3"));
@@ -370,6 +428,9 @@ describe("diag-lane delivery (dimension 2)", () => {
       async () => {
         r.diag.sink.emit(diagBody("e3"));
         await committed(r.kernel, env("b2", "CONVERGED", 2, undefined, "reviewer"));
+        // The CONVERGED commit now PARKS; the terminal this lane stops
+        // on is reached THROUGH the human.
+        await throughTheHuman(r.kernel, 3);
       },
     ]);
     const tail = createDiagTail(r.store, r.diag.reader, scripted.wait);
@@ -377,7 +438,7 @@ describe("diag-lane delivery (dimension 2)", () => {
 
     expect(diagEvents(rows).map((event) => event.opId)).toEqual(["e1", "e2", "e3"]);
     expect(diagEvents(rows).map((event) => event.ordinal)).toEqual([1, 2, 3]);
-    expect(committedRows(rows).map(opIdOf)).toEqual(["a1", "b2"]);
+    expect(committedRows(rows).map(opIdOf)).toEqual(["a1", "b2", R, "d1", "r1"]);
     expect(scripted.calls()).toBe(2);
     r.close();
   });
@@ -386,6 +447,9 @@ describe("diag-lane delivery (dimension 2)", () => {
     const r = await rig();
     await committed(r.kernel, env("a1", "PASS", 1, { ref: "diff-1" }));
     await committed(r.kernel, env("b2", "CONVERGED", 2, undefined, "reviewer"));
+    // The CONVERGED commit now PARKS; the terminal this lane stops on
+    // is reached THROUGH the human (approve → commit_pending → COMMIT).
+    await throughTheHuman(r.kernel, 3);
     r.diag.sink.emit(diagBody("e1"));
     r.diag.sink.emit(diagBody("e2"));
     r.diag.sink.emit(diagBody("e3"));
@@ -403,6 +467,9 @@ describe("attribution scope + separation at the consumer (dimension 3)", () => {
     const r = await rig();
     await committed(r.kernel, env("a1", "PASS", 1, { ref: "diff-1" }));
     await committed(r.kernel, env("b2", "CONVERGED", 2, undefined, "reviewer"));
+    // The CONVERGED commit now PARKS; the terminal this lane stops on
+    // is reached THROUGH the human (approve → commit_pending → COMMIT).
+    await throughTheHuman(r.kernel, 3);
     r.diag.sink.emit(diagBody("own-1"));
     r.diag.sink.emit(diagBody("foreign-1", "other-1"));
     r.diag.sink.emit(UNATTRIBUTED);
@@ -431,12 +498,15 @@ describe("attribution scope + separation at the consumer (dimension 3)", () => {
         const outcome = await r.kernel.handle(env("z9", "PASS", 1, { ref: "x" }));
         expect(outcome.kind).toBe("stale");
       },
-      () => committed(r.kernel, env("b2", "CONVERGED", 2, undefined, "reviewer")),
+      async () => {
+        await committed(r.kernel, env("b2", "CONVERGED", 2, undefined, "reviewer"));
+        await throughTheHuman(r.kernel, 3);
+      },
     ]);
     const tail = createDiagTail(r.store, r.diag.reader, scripted.wait);
     const rows = await collectAll(tail.tailWithDiagnostics("inst-1", 0, 0));
 
-    expect(committedRows(rows).map(opIdOf)).toEqual(["a1", "b2"]);
+    expect(committedRows(rows).map(opIdOf)).toEqual(["a1", "b2", R, "d1", "r1"]);
     const events = diagEvents(rows);
     expect(events).toHaveLength(1);
     expect(events[0]?.kind).toBe("stale");
@@ -450,6 +520,9 @@ describe("union row shape (dimension 4 / T1)", () => {
     const r = await rig();
     await committed(r.kernel, env("a1", "PASS", 1, { ref: "diff-1" }));
     await committed(r.kernel, env("b2", "CONVERGED", 2, undefined, "reviewer"));
+    // The CONVERGED commit now PARKS; the terminal this lane stops on
+    // is reached THROUGH the human (approve → commit_pending → COMMIT).
+    await throughTheHuman(r.kernel, 3);
     const hostileMessage = "went wrong at /private/path with PAYLOAD_FRAGMENT_x1";
     r.diag.sink.emit({
       source: "kernel",
@@ -485,6 +558,9 @@ describe("stop semantics (dimension 5 / T5)", () => {
     const r = await rig();
     await committed(r.kernel, env("a1", "PASS", 1, { ref: "diff-1" }));
     await committed(r.kernel, env("b2", "CONVERGED", 2, undefined, "reviewer"));
+    // The CONVERGED commit now PARKS; the terminal this lane stops on
+    // is reached THROUGH the human (approve → commit_pending → COMMIT).
+    await throughTheHuman(r.kernel, 3);
 
     // Scripted reader over the REAL terminal store: the round read is
     // empty, the ONE final read carries the window event — a third
@@ -505,13 +581,18 @@ describe("stop semantics (dimension 5 / T5)", () => {
     const r = await rig();
     await committed(r.kernel, env("a1", "PASS", 1, { ref: "diff-1" }));
     await committed(r.kernel, env("b2", "CONVERGED", 2, undefined, "reviewer"));
+    // The CONVERGED commit now PARKS; the terminal this lane stops on
+    // is reached THROUGH the human (approve → commit_pending → COMMIT).
+    await throughTheHuman(r.kernel, 3);
 
     const tail = createDiagTail(r.store, r.diag.reader, createScriptedTailWait([]).wait);
     const rows = await collectAll(tail.tailWithDiagnostics("inst-1", 0, 0));
     expect(diagEvents(rows)).toEqual([]);
 
     // A rejected submit against the TERMINAL instance, AFTER completion.
-    const outcome = await r.kernel.handle(env("p9", "PASS", 3));
+    // The version the late submit carries follows the run: the terminal
+    // is now version 5, so the state rung is still what answers it.
+    const outcome = await r.kernel.handle(env("p9", "PASS", 5));
     expect(outcome).toEqual({ kind: "rejected", reason: "not_active" });
 
     const late = await r.diag.reader.getDiagnostics("inst-1", 0);
@@ -662,6 +743,9 @@ describe("tail error contract (dimension 6 / the E matrix)", () => {
     const r = await rig();
     await committed(r.kernel, env("a1", "PASS", 1, { ref: "diff-1" }));
     await committed(r.kernel, env("b2", "CONVERGED", 2, undefined, "reviewer"));
+    // The CONVERGED commit now PARKS; the terminal this lane stops on
+    // is reached THROUGH the human (approve → commit_pending → COMMIT).
+    await throughTheHuman(r.kernel, 3);
 
     const reader = scriptedReader([
       ok([]),
@@ -670,8 +754,12 @@ describe("tail error contract (dimension 6 / the E matrix)", () => {
     const tail = createDiagTail(r.store, reader.reader, createScriptedTailWait([]).wait);
     const iterator = tail.tailWithDiagnostics("inst-1", 0, 0)[Symbol.asyncIterator]();
 
-    expect((await nextRow(iterator)).lane).toBe("committed");
-    expect((await nextRow(iterator)).lane).toBe("committed");
+    // ch14-p3b: the committed lane is FIVE rows now — the two
+    // transitions, the park's DECISION_REQUEST, and the two operator
+    // rows — and the whole lane drains before the final diag read.
+    for (let i = 0; i < 5; i += 1) {
+      expect((await nextRow(iterator)).lane, `committed row ${String(i + 1)}`).toBe("committed");
+    }
     await expect(iterator.next()).rejects.toMatchObject({
       name: "DiagUnavailableError",
       reason: "read_failed",
@@ -711,13 +799,20 @@ describe("tail error contract (dimension 6 / the E matrix)", () => {
     const r = await rig();
     await committed(r.kernel, env("a1", "PASS", 1, { ref: "diff-1" }));
     await committed(r.kernel, env("b2", "CONVERGED", 2, undefined, "reviewer"));
+    // The CONVERGED commit now PARKS; the terminal this lane stops on
+    // is reached THROUGH the human (approve → commit_pending → COMMIT).
+    await throughTheHuman(r.kernel, 3);
 
     const reader = scriptedReader([ok([]), failWith(new Error("untyped final-read failure"))]);
     const tail = createDiagTail(r.store, reader.reader, createScriptedTailWait([]).wait);
     const iterator = tail.tailWithDiagnostics("inst-1", 0, 0)[Symbol.asyncIterator]();
 
-    expect((await nextRow(iterator)).lane).toBe("committed");
-    expect((await nextRow(iterator)).lane).toBe("committed");
+    // ch14-p3b: the committed lane is FIVE rows now — the two
+    // transitions, the park's DECISION_REQUEST, and the two operator
+    // rows — and the whole lane drains before the final diag read.
+    for (let i = 0; i < 5; i += 1) {
+      expect((await nextRow(iterator)).lane, `committed row ${String(i + 1)}`).toBe("committed");
+    }
     await expect(iterator.next()).rejects.toThrow("untyped final-read failure");
     expect((await iterator.next()).done).toBe(true);
     r.close();
@@ -780,6 +875,9 @@ describe("tail error contract (dimension 6 / the E matrix)", () => {
     const scripted = createScriptedTailWait([
       async () => {
         await committed(r.kernel, env("b2", "CONVERGED", 2, undefined, "reviewer"));
+        // The CONVERGED commit now PARKS; the terminal this lane stops
+        // on is reached THROUGH the human.
+        await throughTheHuman(r.kernel, 3);
         r.diag.sink.emit(diagBody("e2"));
       },
     ]);
@@ -804,7 +902,7 @@ describe("tail error contract (dimension 6 / the E matrix)", () => {
     const lastOrdinal = diagEvents(yielded).at(-1)?.ordinal ?? 0;
     const tail2 = createDiagTail(r.store, r.diag.reader, createScriptedTailWait([]).wait);
     const resumed = await collectAll(tail2.tailWithDiagnostics("inst-1", lastSeq, lastOrdinal));
-    expect(committedRows(resumed).map(opIdOf)).toEqual(["b2"]);
+    expect(committedRows(resumed).map(opIdOf)).toEqual(["b2", R, "d1", "r1"]);
     expect(diagEvents(resumed).map((event) => event.opId)).toEqual(["e2"]);
     r.close();
   });

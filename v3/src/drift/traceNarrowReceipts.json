@@ -2,15 +2,17 @@
   {
     "id": "R-NARROW-1",
     "file": "v3/src/l0bTrace.test.ts",
-    "baseline_ref": "61de122d",
+    "baseline_ref": "fcbee0d8",
+    "edit_class": "declared-repin",
+    "anchor": "contract:ch14-human-decision#C24",
     "digests": {
       "baseline": {
         "transcript": "391c3983d3b04af648a2e141e7e078fa76e190b6189e5b7b9485f5f7e9803b9a",
         "instance": "086cb6d012c9bf8fb66a5e09c323e6a2144a5609005e43f2c65285f8de3fcf56"
       },
       "current": {
-        "transcript": "391c3983d3b04af648a2e141e7e078fa76e190b6189e5b7b9485f5f7e9803b9a",
-        "instance": "086cb6d012c9bf8fb66a5e09c323e6a2144a5609005e43f2c65285f8de3fcf56"
+        "transcript": "b63c82ca4f7adc11140bf5c74ce95d12682c45723ae7989d4d69a8d694cb422c",
+        "instance": "5fa3bf67ae35667495fb40beb781af97397a9162bb0b0e4d6d9ce3498111d6ab"
       }
     }
   },

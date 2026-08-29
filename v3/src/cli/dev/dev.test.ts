@@ -894,6 +894,16 @@ describe("dev cli — the diag verb: the global cursor dump (packet ch7-P4: V3/F
       ),
     ).toBe(EXIT.ok);
 
+    // ch14-p3b: CONVERGED PARKS at the shipped gate, so the terminal
+    // this lane's tail closes on is reached THROUGH the two operator
+    // verbs — the same shipped entrypoint, no seam.
+    expect(
+      await runCli(["submit-decision", id, "--db", db, "--decision", "approve"], deps, sink),
+    ).toBe(EXIT.ok);
+    expect(await runCli(["resume", id, "--db", db, "--event", "COMMIT"], deps, sink)).toBe(
+      EXIT.ok,
+    );
+
     // The tail closes at the committed terminal (already-terminal run).
     const tailOut: string[] = [];
     expect(
@@ -907,10 +917,11 @@ describe("dev cli — the diag verb: the global cursor dump (packet ch7-P4: V3/F
     );
     expect(closedDiagRows).toEqual([]);
 
-    // Post-close: a rejected submit against the DONE instance (terminal at v4).
+    // Post-close: a rejected submit against the DONE instance (terminal
+    // at v6 — the park, the decision and the resume each committed).
     expect(
       await runCli(
-        ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "4", "--expected-role", "implementer"],
+        ["submit", "--db", db, "--instance", id, "--type", "PASS", "--expected-version", "6", "--expected-role", "implementer"],
         testDeps(),
         { out: () => undefined, err: () => undefined },
       ),

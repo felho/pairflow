@@ -303,13 +303,32 @@ describe("ch13-p0 family 7 (E12) — the production bindings deliver today's byt
         ]),
       );
 
+      // ch14-p3b: CONVERGED PARKS at the shipped gate, so the tail's
+      // completion-on-terminal is reached THROUGH the two operator verbs
+      // — driven here as SUBPROCESSES through the same shipped
+      // entrypoint, which is what keeps this lane's framing claim on the
+      // production bindings.
+      const decided = await run([
+        MAIN, "submit-decision", id, "--db", db, "--decision", "approve",
+        "--templates-dir", TEMPLATES,
+      ]);
+      expect(decided.code).toBe(0);
+      const resumed = await run([
+        MAIN, "resume", id, "--db", db, "--event", "COMMIT", "--templates-dir", TEMPLATES,
+      ]);
+      expect(resumed.code).toBe(0);
+
       const tail = await run([MAIN, "tail", id, "--db", db, "--from", "0"]);
       expect(tail.code).toBe(0);
       expect(tail.stderr).toBe("");
       expect(tail.stdout.endsWith("\n")).toBe(true);
       const rows = tail.stdout.slice(0, -1).split("\n");
-      expect(rows).toHaveLength(3);
-      expect(rows.map((row) => (JSON.parse(row) as { seq: number }).seq)).toEqual([1, 2, 3]);
+      // The park writes TWO rows in ONE commit, and the decision and the
+      // resume one each.
+      expect(rows).toHaveLength(6);
+      expect(rows.map((row) => (JSON.parse(row) as { seq: number }).seq)).toEqual([
+        1, 2, 3, 4, 5, 6,
+      ]);
 
       const failure = await run([MAIN, "frobnicate"]);
       expect(failure.code).toBe(2);

@@ -15,7 +15,32 @@ steps:
       review it
     transitions:
       PASS: implement
-      CONVERGED: done
+      CONVERGED: human_approval
+    recommends:
+      CONVERGED: approve
+  human_approval:
+    type: humanGate
+    role: operator
+    instruction: |-
+      The reviewer has converged. Decide how this run continues.
+    decisions:
+      approve:
+        target: commit_pending
+      request_rework:
+        target: implement
+        payload:
+          instruction:
+            required: true
+          refs:
+            required: false
+  commit_pending:
+    type: wait
+    wait:
+      kind: commit_pending
+      resumeEvents:
+        - COMMIT
+    onResume:
+      COMMIT: done
 terminal:
   - done
 roles:
@@ -29,6 +54,8 @@ roles:
     defaultAgentConfig:
       promptConcernRefs:
         - emit-envelope
+  operator:
+    defaultActor: human
 round:
   advanceOnArrivalAt:
     - implement

@@ -779,7 +779,7 @@ same invocation — no second audit command to remember.
       { "id": "K17", "class": "new-decision", "refs": [] },
       { "id": "K16", "class": "new-decision", "refs": [] },
       { "id": "K19", "class": "derived", "refs": ["contract:ch14-human-decision#C13", "prose:v3/src/ports/redaction.ts (the standing bundle redaction seam)"] },
-      { "id": "K15", "class": "anchored", "refs": ["prose:plan §14.4"] }
+      { "id": "K15", "class": "anchored", "refs": ["prose:plan §14.4 — the LIVE Packets-and-flow-mode table's ch14-p3a and ch14-p3b rows"] }
     ]
   }
 }

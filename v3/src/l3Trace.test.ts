@@ -33,10 +33,13 @@ import type { TraceFixture } from "./testkit/index.js";
  * rather than leaving each checker asserted in isolation.
  *
  * THE FIXTURE TEMPLATE IS AUTHORED HERE and is deliberately NOT the
- * shipped `local-pair-v0`, whose gate wiring is ch14-P3's: a trace
- * reaching for it would take P3's work into this packet. Three steps,
- * one of each class this chapter admits, which is what lets ONE
- * template drive every target class a decision can reach.
+ * shipped `local-pair-v0`. Since ch14-p3b the shipped template carries
+ * gate wiring of its own, so the original ground — that the wiring was
+ * still ch14-P3's to build — has expired; what stands is that this
+ * trace pins the park/decide/resume machinery INDEPENDENTLY of the
+ * product declaration, on three steps, one of each class this chapter
+ * admits, which is what lets ONE template drive every target class a
+ * decision can reach.
  *
  * The template is DIRECT-CHANNEL, so the gate class is spelled
  * `human_gate` — `humanGate` is the FILE-channel spelling and would not

@@ -68,7 +68,10 @@ describe("the context-free deferred-hold journey (J1)", () => {
       instanceId: "j1",
       templateRef: { id: "local-pair-v0", version: 1 },
       task: null,
-      binding: { implementer: "codex", reviewer: "claude" },
+      // ch14-p3b: `create` seeds the binding from EVERY role's
+      // `defaultActor`, so the shipped template's third role widens this
+      // closed literal. Re-pinned to the new closed set, not relaxed.
+      binding: { implementer: "codex", reviewer: "claude", operator: "human" },
       currentStep: null,
       round: 0,
       kernelStatus: "CREATED",
@@ -94,7 +97,10 @@ describe("the context-free deferred-hold journey (J1)", () => {
       instanceId: "j1",
       templateRef: { id: "local-pair-v0", version: 1 },
       task: null,
-      binding: { implementer: "codex", reviewer: "claude" },
+      // ch14-p3b: `create` seeds the binding from EVERY role's
+      // `defaultActor`, so the shipped template's third role widens this
+      // closed literal. Re-pinned to the new closed set, not relaxed.
+      binding: { implementer: "codex", reviewer: "claude", operator: "human" },
       currentStep: null,
       round: 0,
       kernelStatus: "WAITING",
@@ -163,7 +169,10 @@ describe("the context-free deferred-hold journey (J1)", () => {
       instanceId: "j1",
       templateRef: { id: "local-pair-v0", version: 1 },
       task: "ship the journey",
-      binding: { implementer: "codex", reviewer: "claude" },
+      // ch14-p3b: `create` seeds the binding from EVERY role's
+      // `defaultActor`, so the shipped template's third role widens this
+      // closed literal. Re-pinned to the new closed set, not relaxed.
+      binding: { implementer: "codex", reviewer: "claude", operator: "human" },
       currentStep: "implement",
       round: 1,
       kernelStatus: "ACTIVE",
@@ -189,7 +198,10 @@ describe("the context-free deferred-hold journey (J1)", () => {
       instanceId: "j1",
       templateRef: { id: "local-pair-v0", version: 1 },
       task: "ship the journey",
-      binding: { implementer: "codex", reviewer: "claude" },
+      // ch14-p3b: `create` seeds the binding from EVERY role's
+      // `defaultActor`, so the shipped template's third role widens this
+      // closed literal. Re-pinned to the new closed set, not relaxed.
+      binding: { implementer: "codex", reviewer: "claude", operator: "human" },
       currentStep: "implement",
       round: 1,
       kernelStatus: "TERMINAL",

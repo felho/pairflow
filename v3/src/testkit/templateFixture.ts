@@ -9,9 +9,11 @@ import type { DefinitionStore } from "../ports/definition.js";
  * (`templateFixture.test.ts` — the kit itself never imports
  * `definition/`; the ADR-005 stance is untouched).
  *
- * Shape: the model's local-pair-v0 — implement ⇄ review with
- * PASS/CONVERGED navigation, defaults implementer→codex,
- * reviewer→claude (the l0b trace's binding snapshot).
+ * Shape: the model's local-pair-v0 — implement ⇄ review with PASS
+ * navigation, and since ch14-p3b the CONVERGED edge parks at the
+ * `human_approval` gate, whose approve route waits at `commit_pending`
+ * for a COMMIT before `done`. Defaults implementer→codex,
+ * reviewer→claude, operator→human.
  *
  * ch11-P4 (Y2): the `round` declaration is carried HERE together with
  * the shipped `local-pair-v0@1.yaml` (Y1) — the model's own exhibited
@@ -32,7 +34,27 @@ export function fixtureTemplate(): WorkflowTemplate {
       review: {
         role: "reviewer",
         instruction: "review it",
-        transitions: { PASS: "implement", CONVERGED: "done" },
+        transitions: { PASS: "implement", CONVERGED: "human_approval" },
+        recommends: { CONVERGED: "approve" },
+      },
+      // ch14-p3b (T3/T4): the DIRECT channel spells the step class in its
+      // STORED form — `human_gate`, never the file channel's `humanGate`.
+      human_approval: {
+        type: "human_gate",
+        role: "operator",
+        instruction: "The reviewer has converged. Decide how this run continues.",
+        decisions: {
+          approve: { target: "commit_pending" },
+          request_rework: {
+            target: "implement",
+            payload: { instruction: { required: true }, refs: { required: false } },
+          },
+        },
+      },
+      commit_pending: {
+        type: "wait",
+        wait: { kind: "commit_pending", resumeEvents: ["COMMIT"] },
+        onResume: { COMMIT: "done" },
       },
     },
     terminal: ["done"],
@@ -45,6 +67,10 @@ export function fixtureTemplate(): WorkflowTemplate {
         defaultActor: "claude",
         defaultAgentConfig: { promptConcernRefs: ["emit-envelope"] },
       },
+      // A role that never dispatches has no agent config to default, so
+      // `defaultAgentConfig` is omitted — which is what makes the shipped
+      // `emit-envelope` block role-ASYMMETRIC for the first time.
+      operator: { defaultActor: "human" },
     },
     round: { advanceOnArrivalAt: ["implement"] },
     contextBlocks: { "emit-envelope": { body: EMIT_ENVELOPE_BODY } },
@@ -56,8 +82,9 @@ export function fixtureTemplate(): WorkflowTemplate {
  * HERE together with the canonical `local-pair-v0@1.yaml` — the ch8-P2
  * equality pin compares the two at the ADMITTED stage, so both gain the
  * catalog and BOTH role refs in the SAME commit and the pin test itself
- * is edited zero times (the ch11-P4 / ch12-P4 shape). The block is
- * role-SYMMETRIC because every actor emits.
+ * is edited zero times (the ch11-P4 / ch12-P4 shape). Since ch14-p3b the
+ * block is role-ASYMMETRIC: the `operator` role never dispatches, so it
+ * references no block, and only the two ACTOR roles do.
  *
  * The body is authored static text delivered without transformation;
  * the surface defines no interpolation syntax and reserves none, so the

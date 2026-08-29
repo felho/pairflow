@@ -49,10 +49,12 @@ const EMIT_ENVELOPE_BODY = [
 
 /**
  * ch13-p1b (D14 / family 10): the rendered blocks a dispatch from the
- * canonical template carries. The entry is ROLE-SYMMETRIC — both roles
- * reference it — so the same value is expected at each role's dispatch,
- * and a single-role drive could not tell a symmetric authoring from a
- * one-sided one.
+ * canonical template carries. Both ACTOR roles reference the entry, so
+ * the same value is expected at each of their dispatches, and a
+ * single-role drive could not tell a two-sided authoring from a
+ * one-sided one. Since ch14-p3b the template also declares a third role
+ * — `operator` — which references NO block and never dispatches, so the
+ * entry is no longer role-symmetric across the whole roles map.
  */
 const SHIPPED_CONTEXT_BLOCKS = [
   {
@@ -75,6 +77,8 @@ afterEach(() => {
 
 interface TimelineRow {
   seq: number;
+  /** ch14-p3b: the OP-LESS DECISION_REQUEST class's correlation key. */
+  requestRef?: string;
   // The STARTED lifecycle fact row (seq 1) carries opId at the top level
   // and no envelope/gateDecisions; transition rows carry the envelope pair.
   entryKind: string;
@@ -171,6 +175,19 @@ describe("cli — the full-lifecycle journey smoke (packet ch8-P2: J1/J2)", () =
       );
       expect(JSON.parse(converged.stdout.trim())).toMatchObject({ kind: "committed", version: 4 });
 
+      // ch14-p3b: CONVERGED PARKS at the shipped `human_approval` gate,
+      // so this journey's terminal is reached THROUGH the two operator
+      // verbs — the same shipped subprocess entrypoint, no seam.
+      const decided = await cli(
+        "submit-decision", id, "--db", db, "--decision", "approve",
+        "--templates-dir", templatesDir,
+      );
+      expect(JSON.parse(decided.stdout.trim())).toMatchObject({ kind: "committed", version: 5 });
+      const resumed = await cli(
+        "resume", id, "--db", db, "--event", "COMMIT", "--templates-dir", templatesDir,
+      );
+      expect(JSON.parse(resumed.stdout.trim())).toMatchObject({ kind: "committed", version: 6 });
+
       // terminal verified (detail — a shipped ch6 floor verb).
       const detail = await cli("detail", id, "--db", db);
       const detailDoc = JSON.parse(detail.stdout.trim()) as {
@@ -193,6 +210,16 @@ describe("cli — the full-lifecycle journey smoke (packet ch8-P2: J1/J2)", () =
       const timelineRows = JSON.parse(timeline.stdout.trim()) as TimelineRow[];
       const timelineTx = timelineRows.filter((r) => r.entryKind === "transition");
       expect(timelineRows[0]?.entryKind).toBe("STARTED");
+      // The whole row sequence, since the park and the two operator
+      // commits are what the terminal now runs through.
+      expect(timelineRows.map((r) => r.entryKind)).toEqual([
+        "STARTED",
+        "transition",
+        "transition",
+        "DECISION_REQUEST",
+        "DECISION_MADE",
+        "WAIT_RESUMED",
+      ]);
       expect(timelineTx.map((r) => r.envelope?.type)).toEqual(["PASS", "CONVERGED"]);
       // ch11-P2b R-ACTIVATION-JOURNEY discharge: the C27 read-surface
       // delta end-to-end — an ungated lifecycle's transition rows carry
@@ -211,12 +238,23 @@ describe("cli — the full-lifecycle journey smoke (packet ch8-P2: J1/J2)", () =
       // finding 3).
       expect(tailRows).toEqual(timelineRows);
       // Every row carries an op_id: the fact row at the top level, a
-      // transition row inside its envelope.
-      expect(
-        tailRows.every(
-          (r) => typeof (r.entryKind === "transition" ? r.envelope?.opId : r.opId) === "string",
-        ),
-      ).toBe(true);
+      // transition row inside its envelope. ch14-p3b: the ONE exception
+      // is the park's DECISION_REQUEST, which is kernel-derived and
+      // therefore OP-LESS by class — it correlates by `requestRef`, and
+      // the exception is stated as a POSITIVE requirement on that class
+      // rather than as a skip, so a row that lost its op id elsewhere
+      // still reds.
+      for (const r of tailRows) {
+        if (r.entryKind === "DECISION_REQUEST") {
+          expect(r.opId, "the DECISION_REQUEST class is op-less").toBeUndefined();
+          expect(typeof r.requestRef, "…and correlates by requestRef").toBe("string");
+          continue;
+        }
+        expect(
+          typeof (r.entryKind === "transition" ? r.envelope?.opId : r.opId),
+          `${r.entryKind} carries an op id`,
+        ).toBe("string");
+      }
     },
   );
 
@@ -296,10 +334,19 @@ describe("cli — the full-lifecycle journey smoke (packet ch8-P2: J1/J2)", () =
       expect(JSON.parse((await submit("PASS", 4, "implementer")).stdout.trim())).toMatchObject({
         kind: "committed", version: 5,
       });
-      // review →(CONVERGED)→ done (terminal)
+      // review →(CONVERGED)→ the human_approval gate (ch14-p3b): the run
+      // parks rather than terminating…
       expect(JSON.parse((await submit("CONVERGED", 5, "reviewer")).stdout.trim())).toMatchObject({
         kind: "committed", version: 6,
       });
+      // …and the terminal is reached through the operator's approve and
+      // the COMMIT resume. Neither edge is named by `advanceOnArrivalAt`,
+      // so the round the Y1 restoration made observable stays 2.
+      await cli(
+        "submit-decision", id, "--db", db, "--decision", "approve",
+        "--templates-dir", templatesDir,
+      );
+      await cli("resume", id, "--db", db, "--event", "COMMIT", "--templates-dir", templatesDir);
 
       const detail = await cli("detail", id, "--db", db);
       const detailDoc = JSON.parse(detail.stdout.trim()) as {
@@ -625,6 +672,198 @@ round:
       const row = rows.find((r) => r.instanceId === id);
       expect(row?.kernelStatus).toBe("TERMINAL");
       expect(row?.terminalDisposition).toBe("cancelled");
+    },
+  );
+
+  it(
+    "ch14-p3b J1: the CANONICAL local-pair-v0 — park → decide → resume through the SHIPPED verbs",
+    { timeout: 60_000 },
+    async () => {
+      // R-ACTIVATION-JOURNEY's discharge for THIS packet, and what
+      // distinguishes it from ch14-p3a's instance: the templates
+      // directory is the CANONICAL `v3/templates`, so the artifact under
+      // test is the SHIPPED file rather than a fixture written to prove
+      // a point. Production bindings, a DETERMINISTIC actor bound
+      // through the shipped actor-configuration surface (the file's own
+      // `roles.operator.defaultActor`), subprocesses throughout. No
+      // injected seam anywhere in this lane.
+      const tsxBin = join(process.cwd(), "..", "node_modules", ".bin", "tsx");
+      const mainPath = join(process.cwd(), "src", "cli", "main.ts");
+      const templatesDir = join(process.cwd(), "templates");
+      const dir = mkdtempSync(join(tmpdir(), "v3-journey-shipped-gate-"));
+      dirs.push(dir);
+      const db = join(dir, "store.db");
+      const cli = (...argv: string[]): Promise<{ stdout: string; stderr: string }> =>
+        execFileAsync(tsxBin, [mainPath, ...argv]); // rejects on nonzero exit
+      const failing = (
+        ...argv: string[]
+      ): Promise<{ code?: number; stdout?: string; stderr?: string }> =>
+        cli(...argv).then(
+          () => {
+            throw new Error(`expected a NONZERO exit from: ${argv.join(" ")}`);
+          },
+          (error: { code?: number; stdout?: string; stderr?: string }) => error,
+        );
+      const submit = (
+        type: string,
+        expectedVersion: number,
+        role: string,
+      ): Promise<{ stdout: string; stderr: string }> =>
+        cli(
+          "submit", "--db", db, "--instance", id, "--type", type,
+          "--expected-version", String(expectedVersion), "--expected-role", role,
+          "--templates-dir", templatesDir,
+        );
+
+      const created = await cli(
+        "create", "--db", db, "--task", "decide the shipped run",
+        "--templates-dir", templatesDir,
+      );
+      const id = (JSON.parse(created.stdout.trim()) as { instanceId: string }).instanceId;
+      await cli("start", id, "--db", db, "--templates-dir", templatesDir);
+
+      // implement →(PASS)→ review →(CONVERGED)→ the PARK.
+      expect(JSON.parse((await submit("PASS", 2, "implementer")).stdout.trim())).toMatchObject({
+        kind: "committed", version: 3,
+      });
+      expect(JSON.parse((await submit("CONVERGED", 3, "reviewer")).stdout.trim())).toMatchObject({
+        kind: "committed", version: 4,
+      });
+
+      // The operator DISCOVERS the Ask through the shipped read verb.
+      const parked = await cli("detail", id, "--db", db, "--templates-dir", templatesDir);
+      const parkedDoc = JSON.parse(parked.stdout.trim()) as {
+        instance: { currentStep: string; wait: { kind: string } };
+        pendingDecision: {
+          operator: string;
+          question: string;
+          recommendation: string;
+          allowedDecisions: string[];
+          decisionRequirements: Record<string, string[]>;
+          context: { task: string };
+        };
+      };
+      expect(parkedDoc.instance.currentStep).toBe("human_approval");
+      expect(parkedDoc.instance.wait.kind).toBe("human_decision");
+      expect(parkedDoc.pendingDecision).toMatchObject({
+        operator: "human",
+        question: "The reviewer has converged. Decide how this run continues.",
+        recommendation: "approve",
+        allowedDecisions: ["approve", "request_rework"],
+        // `refs` is declared `required: false`, so it reaches no
+        // requirement list — the field is a REQUIRED-field list.
+        decisionRequirements: { approve: [], request_rework: ["instruction"] },
+      });
+      expect(parkedDoc.pendingDecision.context.task).toBe("decide the shipped run");
+
+      // THE ORDER OF THE NEGATIVES IS PART OF THE ROUTE, because the
+      // third of them COMMITS and moves the run off the gate.
+      //
+      // NEGATIVE 1 — `override_required`: a verdict AGAINST the recorded
+      // recommendation without the flag. THE PAYLOAD IS PART OF THE LEG:
+      // the guard order runs `missing_required_field` BEFORE the override
+      // guards, so the same call without it would green on the wrong
+      // rejection.
+      const needsOverride = await failing(
+        "submit-decision", id, "--db", db, "--decision", "request_rework",
+        "--payload", '{"instruction":"tighten the error path"}',
+        "--templates-dir", templatesDir,
+      );
+      expect(needsOverride.code).toBe(3);
+      expect(JSON.parse((needsOverride.stdout ?? "").trim())).toEqual({
+        kind: "rejected", reason: "override_required",
+      });
+
+      // NEGATIVE 2 — `override_not_applicable`: AGREEING with the
+      // recommendation while carrying the flag. Non-committing too.
+      const notApplicable = await failing(
+        "submit-decision", id, "--db", db, "--decision", "approve", "--override",
+        "--templates-dir", templatesDir,
+      );
+      expect(notApplicable.code).toBe(3);
+      expect(JSON.parse((notApplicable.stdout ?? "").trim())).toEqual({
+        kind: "rejected", reason: "override_not_applicable",
+      });
+
+      // THE COMMITTING ONE: `request_rework` WITH the flag and its
+      // required payload — back to `implement`, in a NEW round.
+      const reworked = await cli(
+        "submit-decision", id, "--db", db, "--decision", "request_rework", "--override",
+        "--payload", '{"instruction":"tighten the error path"}',
+        "--templates-dir", templatesDir,
+      );
+      expect(JSON.parse(reworked.stdout.trim())).toMatchObject({ kind: "committed", version: 5 });
+      const reopened = await cli("detail", id, "--db", db, "--templates-dir", templatesDir);
+      const reopenedDoc = JSON.parse(reopened.stdout.trim()) as {
+        instance: { currentStep: string; kernelStatus: string; round: number };
+      };
+      expect(reopenedDoc.instance.currentStep).toBe("implement");
+      expect(reopenedDoc.instance.kernelStatus).toBe("ACTIVE");
+      // `implement` IS the round declaration's arrival step — the rework
+      // round advance, observable end to end.
+      expect(reopenedDoc.instance.round).toBe(2);
+
+      // A SECOND traversal to the second park, where the approve leg and
+      // the resume complete the route.
+      expect(JSON.parse((await submit("PASS", 5, "implementer")).stdout.trim())).toMatchObject({
+        kind: "committed", version: 6,
+      });
+      expect(JSON.parse((await submit("CONVERGED", 6, "reviewer")).stdout.trim())).toMatchObject({
+        kind: "committed", version: 7,
+      });
+
+      // DECIDE: `--by` ABSENT defaults to the bound operator the same
+      // read supplies.
+      const decided = await cli(
+        "submit-decision", id, "--db", db, "--decision", "approve",
+        "--templates-dir", templatesDir,
+      );
+      expect(JSON.parse(decided.stdout.trim())).toMatchObject({ kind: "committed", version: 8 });
+
+      const waiting = await cli("detail", id, "--db", db, "--templates-dir", templatesDir);
+      const waitingDoc = JSON.parse(waiting.stdout.trim()) as {
+        instance: { currentStep: string; wait: { kind: string } };
+      };
+      expect(waitingDoc.instance.currentStep).toBe("commit_pending");
+      expect(waitingDoc.instance.wait.kind).toBe("commit_pending");
+      // The gate is closed and the Ask is GONE, with NO key in its place.
+      expect(Object.keys(waitingDoc as Record<string, unknown>).sort()).toEqual([
+        "instance",
+        "runner",
+        "transcript",
+      ]);
+
+      // RESUME: the bare wait's declared event routes to the terminal.
+      const resumed = await cli(
+        "resume", id, "--db", db, "--event", "COMMIT", "--templates-dir", templatesDir,
+      );
+      expect(JSON.parse(resumed.stdout.trim())).toMatchObject({ kind: "committed", version: 9 });
+
+      // OBSERVED through the shipped read verbs.
+      const final = await cli("detail", id, "--db", db, "--templates-dir", templatesDir);
+      const finalDoc = JSON.parse(final.stdout.trim()) as {
+        instance: { kernelStatus: string; terminalDisposition: string | null; round: number };
+      };
+      expect(finalDoc.instance.kernelStatus).toBe("TERMINAL");
+      expect(finalDoc.instance.terminalDisposition).toBe("done");
+      // Neither operator edge is named by `advanceOnArrivalAt`, so the
+      // round stays where the rework put it.
+      expect(finalDoc.instance.round).toBe(2);
+
+      const timeline = await cli("timeline", id, "--db", db);
+      const rows = JSON.parse(timeline.stdout.trim()) as TimelineRow[];
+      expect(rows.map((r) => r.entryKind)).toEqual([
+        "STARTED",
+        "transition",
+        "transition",
+        "DECISION_REQUEST",
+        "DECISION_MADE",
+        "transition",
+        "transition",
+        "DECISION_REQUEST",
+        "DECISION_MADE",
+        "WAIT_RESUMED",
+      ]);
     },
   );
 

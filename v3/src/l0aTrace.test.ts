@@ -60,12 +60,17 @@ function wire(): { seams: TraceSeams; handle: StoreHandle } {
       submit: (raw) => ingress.submit(raw),
       create: (input) => kernel.create(input),
       start: (input) => kernel.start(input),
+      submitIntent: (raw) => ingress.submitIntent(raw),
       store: handle.store,
       template: admitted,
     },
     handle,
   };
 }
+
+/** The park's request ref under the controlled clock at 1_000 — the
+ * run's FIRST minted request, so a computable literal. */
+const R = "req-1000-1";
 
 const l0aFixture: TraceFixture = {
   name: "l0a concrete trace (lifted)",
@@ -85,7 +90,15 @@ const l0aFixture: TraceFixture = {
     { kind: "emit", opId: "a1", type: "PASS", actorId: "codex", payload: { ref: "diff-1" }, expect: { kind: "duplicate" } },
     { kind: "emit", opId: "b2", type: "PASS", actorId: "claude", payload: { note: "findings" }, expect: { kind: "committed", version: 4 } },
     { kind: "emit", opId: "c3", type: "PASS", actorId: "codex", expect: { kind: "committed", version: 5 } },
+    // ch14-p3b: CONVERGED now PARKS at the shipped `human_approval`
+    // gate — the transition row and the park's DECISION_REQUEST commit
+    // together.
     { kind: "emit", opId: "d4", type: "CONVERGED", actorId: "claude", expect: { kind: "committed", version: 6 } },
+    // The trace's terminal arrival is RESTATED against the new route:
+    // the bound operator approves (agreeing with the shipped edge's
+    // recommendation, so no override applies) and COMMIT reaches `done`.
+    { kind: "submit-decision", opId: "e5", requestRef: R, verdict: "approve", by: "human", expect: { kind: "committed", version: 7 } },
+    { kind: "resume-wait", opId: "f6", type: "COMMIT", expect: { kind: "committed", version: 8 } },
   ],
   finalTranscript: [
     [1, "op-start"],
@@ -93,13 +106,17 @@ const l0aFixture: TraceFixture = {
     [3, "b2"],
     [4, "c3"],
     [5, "d4"],
+    // The DECISION_REQUEST row is OP-LESS and correlates by request ref.
+    [6, R],
+    [7, "e5"],
+    [8, "f6"],
   ],
   finalState: {
     currentStep: "done",
     round: 2,
     kernelStatus: "TERMINAL",
     terminalDisposition: "done",
-    version: 6,
+    version: 8,
   },
 };
 
@@ -111,7 +128,7 @@ describe("l0a golden trace on the harness", () => {
   it("replays the model's steps — four rows, Duplicate at 3′, round 2, DONE", async () => {
     const { seams, handle } = wire();
     const result = await replayTrace(l0aFixture, seams);
-    expect(result.outcomes).toHaveLength(6);
+    expect(result.outcomes).toHaveLength(8);
     handle.close();
   });
 });
@@ -141,6 +158,9 @@ describe("harness negatives against the real kernel (claim dimensions 1–3, 5)"
         [2, "a1"],
         [3, "b2"],
         [4, "c3"],
+        [5, "d4"],
+        [6, R],
+        [7, "e5"],
       ],
     });
     await expect(replayTrace(truncated, seams)).rejects.toThrow(/final transcript/);

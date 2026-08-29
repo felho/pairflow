@@ -44,7 +44,11 @@ const instance: WorkflowInstance = {
   instanceId: "inst-1",
   templateRef: { id: "local-pair-v0", version: 1 },
   task: "t",
-  binding: { implementer: "codex", reviewer: "claude" },
+  // ch14-p3b: the shipped template declares a third role, and a run
+  // that reaches the gate needs its binding — the real `create` path
+  // seeds it from `roles.operator.defaultActor`, which this hand-built
+  // instance record restates rather than inherits.
+  binding: { implementer: "codex", reviewer: "claude", operator: "human" },
   currentStep: "implement",
   round: 1,
   kernelStatus: "ACTIVE",
@@ -91,6 +95,39 @@ function makeKernel(store: StorePort): Kernel {
 async function committed(kernel: Kernel, envelope: EventEnvelope): Promise<void> {
   const outcome = await kernel.handle(envelope);
   expect(outcome.kind).toBe("committed");
+}
+
+/** The shipped request-ref mint under the controlled clock at 0: the
+ * gate park is each lane's FIRST minted request, so the ref is a
+ * COMPUTABLE literal rather than a wildcard. */
+const R = "req-0-1";
+
+/** ch14-p3b (R2's re-pin discipline): the shipped CONVERGED edge no
+ * longer terminates — it PARKS at `human_approval`. The terminal
+ * arrival these lanes complete on is RESTATED against the new route,
+ * never dropped: the bound operator approves (routing to the
+ * `commit_pending` wait) and a COMMIT resume reaches `done`. Both legs
+ * commit, so each lane's row expectations GROW by the park's
+ * DECISION_REQUEST row and the two operator rows. */
+async function throughTheHuman(kernel: Kernel, parkedVersion: number): Promise<void> {
+  const decided = await kernel.submitDecision({
+    intent: "submit-decision",
+    instanceId: "inst-1",
+    opId: "d1",
+    expectedVersion: parkedVersion,
+    requestRef: R,
+    verdict: "approve",
+    by: "human",
+  });
+  expect(decided.kind).toBe("committed");
+  const resumed = await kernel.resumeWait({
+    intent: "resume-wait",
+    instanceId: "inst-1",
+    opId: "r1",
+    expectedVersion: parkedVersion + 1,
+    type: "COMMIT",
+  });
+  expect(resumed.kind).toBe("committed");
 }
 
 async function collect(rows: AsyncIterable<TranscriptEntry>): Promise<TranscriptEntry[]> {
@@ -185,13 +222,26 @@ describe("tailCommittedTimeline — the committed floor-tail seed (packet ch6-P2
     const kernel = makeKernel(handle.store);
     await committed(kernel, env("a1", "PASS", 1, { ref: "diff-1" }));
     await committed(kernel, env("b2", "CONVERGED", 2, undefined, "reviewer"));
+    // The run is now PARKED, not terminal: the terminal arrival this
+    // lane completes on runs THROUGH the human.
+    await throughTheHuman(kernel, 3);
 
     const scripted = createScriptedTailWait([]);
     const tail = createTail(handle.store, scripted.wait);
     const rows = await collect(tail.tailCommittedTimeline("inst-1", 0));
 
-    expect(rows.map((r) => r.seq)).toEqual([1, 2]);
-    expect(rows.map(opIdOf)).toEqual(["a1", "b2"]);
+    // The CONVERGED commit writes TWO rows — the transition and the
+    // park's op-less DECISION_REQUEST — so the replay is five rows, and
+    // the last committing entry before `done` is a WAIT_RESUMED.
+    expect(rows.map((r) => r.seq)).toEqual([1, 2, 3, 4, 5]);
+    expect(rows.map(opIdOf)).toEqual(["a1", "b2", R, "d1", "r1"]);
+    expect(rows.map((r) => r.entryKind)).toEqual([
+      "transition",
+      "transition",
+      "DECISION_REQUEST",
+      "DECISION_MADE",
+      "WAIT_RESUMED",
+    ]);
     expect(scripted.calls()).toBe(0);
     handle.close();
   });
@@ -208,15 +258,18 @@ describe("tailCommittedTimeline — the committed floor-tail seed (packet ch6-P2
       () => committed(kernel, env("b2", "PASS", 2, { ref: "diff-2" }, "reviewer")),
       () => committed(kernel, env("c3", "PASS", 3, { ref: "diff-3" })),
       () => committed(kernel, env("d4", "CONVERGED", 4, undefined, "reviewer")),
+      // ch14-p3b: the CONVERGED commit parks; the terminal commit this
+      // lane completes on is the RESUME, two operator steps later.
+      () => throughTheHuman(kernel, 5),
     ]);
     const tail = createTail(reader.store, scripted.wait);
     const rows = await collect(tail.tailCommittedTimeline("inst-1", 0));
 
     // Replay (a1) + every mid-tail commit, each exactly once, in seq
     // order, then completion after the cross-handle terminal commit.
-    expect(rows.map((r) => r.seq)).toEqual([1, 2, 3, 4]);
-    expect(rows.map(opIdOf)).toEqual(["a1", "b2", "c3", "d4"]);
-    expect(scripted.calls()).toBe(3);
+    expect(rows.map((r) => r.seq)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(rows.map(opIdOf)).toEqual(["a1", "b2", "c3", "d4", R, "d1", "r1"]);
+    expect(scripted.calls()).toBe(4);
     reader.close();
     writer.close();
   });
@@ -276,13 +329,14 @@ describe("tailCommittedTimeline — the committed floor-tail seed (packet ch6-P2
         rejectedOutcomes.push(await kernel.handle(env("a1", "PASS", 2, { ref: "TAMPERED" })));
       },
       () => committed(kernel, env("b2", "CONVERGED", 2, undefined, "reviewer")),
+      () => throughTheHuman(kernel, 3),
     ]);
     const tail = createTail(handle.store, scripted.wait);
     const rows = await collect(tail.tailCommittedTimeline("inst-1", 0));
 
     expect(rejectedOutcomes.map((o) => o.kind)).toEqual(["stale", "rejected"]);
-    expect(rows.map(opIdOf)).toEqual(["a1", "b2"]);
-    expect(scripted.calls()).toBe(2);
+    expect(rows.map(opIdOf)).toEqual(["a1", "b2", R, "d1", "r1"]);
+    expect(scripted.calls()).toBe(3);
     handle.close();
   });
 
