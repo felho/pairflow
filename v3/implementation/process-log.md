@@ -6484,3 +6484,61 @@ from two different defect classes on the same day, which makes this the
 third data point for one conclusion: THE PACKET'S PROSE IS THE SURFACE
 NOTHING MEASURES, and it is the surface a delegated build treats as its
 only authority.
+
+## 2026-08-29 — ROUTED TO THE BOUNDARY REVIEW: what may a hand-written masker claim, and whose instrument is `check_trace_narrow.py`?
+
+Routed by the owner's decision at the ch14-p3a build-close gate, 2026-08-29,
+choosing a separate carrier over a fourth aftermath round. The demonstrated
+hole (regex literals) IS fixed in that aftermath; the QUESTION below is not,
+and is deliberately not.
+
+**THE OBSERVATION.** The gate found the same shape three rounds running,
+each time in a different clothing: the new erasure entry applied
+context-blind (no masking at all); then the three LEGACY entries bypassing
+the masking that had just been built; then the masker recognizing strings,
+comments and template literals but not REGEX literals — where
+`/asDispatch(x)/` erases and a real re-pin rides through green. Each was a
+true finding and each was cheaply fixed. That is exactly what makes the
+pattern worth routing rather than folding again: THE FIXES KEEP WORKING AND
+THE CLASS KEEPS REGENERATING.
+
+**THE STRUCTURAL FACT UNDER IT.** `mask_noncode` is a hand-written lexer for
+a real language, and hand-written lexers are never complete. The next round
+plausibly finds tagged templates, JSX, or a `<T>` type assertion. No amount
+of adding cases converges, because the thing being approximated is a
+TypeScript grammar and the approximation has no closure condition. THE
+INSTRUMENT'S OWN CLAIM IS WHERE THIS BITES: a gate that decides whether a
+golden-trace edit is a compiler-forced narrow or a RE-PIN is making an
+assertion about SOURCE CODE, and it can only be as sound as its notion of
+what source code is.
+
+**THE QUESTION FOR THE REVIEW, in the form that admits an answer.** Not
+"add more literal forms" — that is the loop that produced this entry.
+Either (a) the checker becomes PARSER-BASED, so "is this span code" stops
+being an approximation; or (b) the checker's SCOPE SHRINKS to something a
+regex can be sound about — for instance erasures anchored to whole
+statements matched against a whitelist of exact known lines, where a
+non-match is a re-pin by default; or (c) the checker keeps its shape and
+the residual risk is stated as a KNOWN LIMIT with the argument for why a
+false green is tolerable there, which is the answer nobody has yet written
+down. Each is defensible; what is not defensible is the current implicit
+answer, which is (c) WITHOUT the argument.
+
+**WHOSE INSTRUMENT.** `check_trace_narrow.py` is ch14-p2a's — its K17 gate,
+its three original entries. ch14-p3a added a FOURTH entry, and the
+negatives written for that fourth entry are what exposed the other three
+(recorded in that packet's Build record and in `77e6118d`). So p3a has now
+spent three aftermath rounds hardening another packet's tool, on a surface
+its own claim never named. THE ROUTING GROUND IS THEREFORE TWO-PART: the
+question is unbounded, and it is not this packet's to answer. A packet
+whose aftermath keeps growing a neighbour's instrument is a signal about
+ownership, not only about the instrument.
+
+**THE CHEAP GENERAL RULE THIS SUGGESTS, offered rather than adopted:** an
+instrument that decides a question ABOUT SOURCE CODE should declare, in its
+own text, the grammar it assumes — and a finding against that declaration
+is a bug in the instrument, while a finding outside it is a scope change.
+The three rounds above were all arguably the second kind, and nobody could
+tell, because the declaration did not exist. The aftermath adds that
+declaration to `mask_noncode` as a stopgap; making it a form requirement is
+the review's call.
