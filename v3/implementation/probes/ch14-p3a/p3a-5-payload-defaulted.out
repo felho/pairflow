@@ -1,0 +1,33 @@
+
+ RUN  v4.1.10 /Users/felho/dev/pairflow/v3
+
+ ❯ src/cli/cli.test.ts (91 tests | 1 failed) 2311ms
+     × the ABSENT column is NOT uniform: --by DEFAULTS, --payload and --override reach the kernel as ABSENCES 31ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/cli/cli.test.ts > cli — ch14-p3a family 5: argument shape and the absence boundary > the ABSENT column is NOT uniform: --by DEFAULTS, --payload and --override reach the kernel as ABSENCES
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ src/cli/cli.test.ts:3279:45
+    3277|     const decided = rows.find((r) => r["entryKind"] === "DECISION_MADE…
+    3278|     expect(decided).toBeDefined();
+    3279|     expect(decided && "payload" in decided).toBe(false);
+       |                                             ^
+    3280|     // …and a SUPPLIED payload does land, which keeps the absence hone…
+    3281|     const withDb = tempDbPath();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 80 passed (81)
+      Tests  1 failed | 3093 passed (3094)
+   Start at  10:27:00
+   Duration  23.46s (transform 4.26s, setup 0ms, import 7.52s, tests 81.54s, environment 3ms)
+

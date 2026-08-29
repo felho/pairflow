@@ -1,0 +1,12 @@
+{
+  "probe_id": "p3a-4-reason-token-swap",
+  "file": "v3/src/kernel/operatorIntents.ts",
+  "original_sha256": "1be4103eb81c6a8f487586a0bdb40b87fb38b02635fe52d54b30c0a1a3a5aaba",
+  "mutated_sha256": "556584312b50614181c6b71b9491fdab571f43665cab2d8fb879cc6ef2a2cdd7",
+  "test_command": "pnpm exec vitest run",
+  "exit_code": 1,
+  "suite_red": true,
+  "baseline": "green",
+  "output_file": "v3/implementation/probes/ch14-p3a/p3a-4-reason-token-swap.out",
+  "restore_verified": true
+}

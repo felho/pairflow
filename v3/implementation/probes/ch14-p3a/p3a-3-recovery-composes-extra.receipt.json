@@ -1,0 +1,12 @@
+{
+  "probe_id": "p3a-3-recovery-composes-extra",
+  "file": "v3/src/cli/main.ts",
+  "original_sha256": "8f9392560d2577067835276ab5c9c499f569065a4f9624481565a35a4873aa0e",
+  "mutated_sha256": "dd5a91dedbee732c720e4e945f293f59e3188d445fc0360591a82bddb027ed53",
+  "test_command": "pnpm exec vitest run",
+  "exit_code": 1,
+  "suite_red": true,
+  "baseline": "green",
+  "output_file": "v3/implementation/probes/ch14-p3a/p3a-3-recovery-composes-extra.out",
+  "restore_verified": true
+}

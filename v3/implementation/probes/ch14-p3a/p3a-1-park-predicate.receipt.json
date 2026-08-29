@@ -1,0 +1,12 @@
+{
+  "probe_id": "p3a-1-park-predicate",
+  "file": "v3/src/floor/floor.ts",
+  "original_sha256": "fa26473c69a3f6fe0da78ba0c3578354832f3716c8a31b74f5f273a17f49a1da",
+  "mutated_sha256": "62855ddd4ecb6ecd27c92cf96ec2d6307d7528faa2631356c8d35c04e629fb8e",
+  "test_command": "pnpm exec vitest run",
+  "exit_code": 1,
+  "suite_red": true,
+  "baseline": "green",
+  "output_file": "v3/implementation/probes/ch14-p3a/p3a-1-park-predicate.out",
+  "restore_verified": true
+}

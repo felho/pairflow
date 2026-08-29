@@ -1,0 +1,12 @@
+{
+  "probe_id": "p3a-f2-regex-branch-deleted",
+  "file": "tools/v3-plan/check_trace_narrow.py",
+  "original_sha256": "f513fe1119e054d57cb5c0ada9553acac796761e238dbb4710758e67592007ba",
+  "mutated_sha256": "68ab9f0d3906b78db55a1b3f683252aaa5f4bc69795017d6f8ce6e763b686ba2",
+  "test_command": "python3 ./tools/v3-plan/check_trace_narrow.py --selftest",
+  "exit_code": 1,
+  "suite_red": true,
+  "baseline": "green",
+  "output_file": "v3/implementation/probes/ch14-p3a/p3a-f2-regex-branch-deleted.out",
+  "restore_verified": true
+}

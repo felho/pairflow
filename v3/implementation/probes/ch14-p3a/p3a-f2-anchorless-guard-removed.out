@@ -1,0 +1,3 @@
+selftest FAIL: dim NOT red: anchorless-entry-that-MATCHES (refused, but as IndexError('no such group'))
+selftest FAIL: dim NOT red: anchorless-entry-that-does-NOT-match (an anchorless entry was ACCEPTED)
+check-trace-narrow selftest: 28 red dims exercised, 2 failure(s)

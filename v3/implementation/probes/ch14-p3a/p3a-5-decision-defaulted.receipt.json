@@ -1,0 +1,12 @@
+{
+  "probe_id": "p3a-5-decision-defaulted",
+  "file": "v3/src/cli/main.ts",
+  "original_sha256": "8f9392560d2577067835276ab5c9c499f569065a4f9624481565a35a4873aa0e",
+  "mutated_sha256": "953f938f28c43def18ab6335e4161545b293b17f7107656178d9584c66000b87",
+  "test_command": "pnpm exec vitest run",
+  "exit_code": 1,
+  "suite_red": true,
+  "baseline": "green",
+  "output_file": "v3/implementation/probes/ch14-p3a/p3a-5-decision-defaulted.out",
+  "restore_verified": true
+}

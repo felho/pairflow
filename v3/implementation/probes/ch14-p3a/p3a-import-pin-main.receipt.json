@@ -1,0 +1,12 @@
+{
+  "probe_id": "p3a-import-pin-main",
+  "file": "v3/src/cli/main.ts",
+  "original_sha256": "8f9392560d2577067835276ab5c9c499f569065a4f9624481565a35a4873aa0e",
+  "mutated_sha256": "4ad425518c4b108c4b4e287b0dd5e5a756c3922c3b7f45ab0694ab04793ccd36",
+  "test_command": "pnpm exec vitest run",
+  "exit_code": 1,
+  "suite_red": true,
+  "baseline": "green",
+  "output_file": "v3/implementation/probes/ch14-p3a/p3a-import-pin-main.out",
+  "restore_verified": true
+}

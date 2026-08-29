@@ -1,0 +1,260 @@
+
+ RUN  v4.1.10 /Users/felho/dev/pairflow/v3
+
+ ❯ src/cli/cli.test.ts (91 tests | 12 failed) 2220ms
+     × family 10: the emitted `detail` keyset is CLOSED in EVERY state — ACTIVE, parked-derivable, parked-underivable, a NON-decision WAIT, and TERMINAL 34ms
+     × family 2b: ALL EIGHT integrity conditions reach the `internal` class on BOTH verb classes that derive 54ms
+     × the SUBMIT path's four lanes: two classes, four names, and nothing committed 50ms
+     × the PRE-LOAD guarantee, driven POSITIVELY: with an unyielded template every pre-load answer still arrives as DATA 13ms
+     × the KERNEL's OWN load stays reachable POST-admission on resume — BOTH shapes are its integrity error 14ms
+     × resume: every DRIVEN reason token reaches exit 3 as a stdout DATA document 40ms
+     × the SUCCESS kinds: committed and duplicate are stdout DATA at exit 0, stale is DATA at exit 3 14ms
+     × V5's route, OBSERVED: both verbs call their kernel handler directly and NO ingress is built 14ms
+     × submit-decision: ONE store is built, and the SAME instance serves the floor AND the kernel 15ms
+     × each WRITE verb performs EXACTLY ONE floor detail read per invocation 14ms
+     × no RETRY on a moved version: ONE floor read, ONE kernel attempt, and a `stale` DATA document 13ms
+     × a REPLAYED op_id reaches `duplicate` at exit 0, and two invocations do NOT collide 14ms
+ ❯ src/cli/journey.test.ts (6 tests | 1 failed) 7546ms
+     × ch14-p3a J1: park → decide → resume through the SHIPPED verbs, on a STAGED gate template 1105ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 13 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/cli/cli.test.ts > cli — ch14-p3a family 1/3/10: the detail document under every derivability state > family 10: the emitted `detail` keyset is CLOSED in EVERY state — ACTIVE, parked-derivable, parked-underivable, a NON-decision WAIT, and TERMINAL
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ src/cli/cli.test.ts:2419:7
+    2417|       (await run(["submit-decision", id, "--db", db, "--decision", "ap…
+    2418|                   "--templates-dir", dir], deps)).code,
+    2419|     ).toBe(EXIT.ok);
+       |       ^
+    2420|     const waitingDoc = dataDoc(
+    2421|       await run(["detail", id, "--db", db, "--templates-dir", dir], de…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/13]⎯
+
+ FAIL  src/cli/cli.test.ts > cli — ch14-p3a family 1/3/10: the detail document under every derivability state > family 2b: ALL EIGHT integrity conditions reach the `internal` class on BOTH verb classes that derive
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ src/cli/cli.test.ts:2574:50
+    2572|     // verbs, so an implementation that failed everything could not pa…
+    2573|     expect((await run(verbs[0]![1], deps)).code).toBe(EXIT.ok);
+    2574|     expect((await run(verbs[1]![1], deps)).code).toBe(EXIT.ok);
+       |                                                  ^
+    2575|   });
+    2576| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/13]⎯
+
+ FAIL  src/cli/cli.test.ts > cli — ch14-p3a family 6: resolution failure and its ZERO side effects > the SUBMIT path's four lanes: two classes, four names, and nothing committed
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ src/cli/cli.test.ts:2684:7
+    2682|       (await run(["submit-decision", controlId, "--db", controlDb, "--…
+    2683|                   "--templates-dir", dir], controlDeps)).code,
+    2684|     ).toBe(EXIT.ok);
+       |       ^
+    2685|     expect(kernelBuilds).toEqual(["createKernel"]);
+    2686|     // The write and the post-commit settle — `kernelCalls` is TOTAL o…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/13]⎯
+
+ FAIL  src/cli/cli.test.ts > cli — ch14-p3a family 6: resolution failure and its ZERO side effects > the PRE-LOAD guarantee, driven POSITIVELY: with an unyielded template every pre-load answer still arrives as DATA
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ src/cli/cli.test.ts:2762:7
+    2760|       (await run(["submit-decision", dupId, "--db", dupDb, "--decision…
+    2761|                   "--templates-dir", dir], dupDeps)).code,
+    2762|     ).toBe(EXIT.ok);
+       |       ^
+    2763|     dupNonce.pin("resume-1");
+    2764|     expect(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/13]⎯
+
+ FAIL  src/cli/cli.test.ts > cli — ch14-p3a family 6: resolution failure and its ZERO side effects > the KERNEL's OWN load stays reachable POST-admission on resume — BOTH shapes are its integrity error
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ src/cli/cli.test.ts:2823:9
+    2821|         (await run(["submit-decision", id, "--db", db, "--decision", "…
+    2822|                     "--templates-dir", dir], gatedDeps(dir))).code,
+    2823|       ).toBe(EXIT.ok);
+       |         ^
+    2824|       // Admission PASSES (a bare wait, a routed event, a fresh op, the
+    2825|       // right version) and the load lands after it — resume avoids the
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/13]⎯
+
+ FAIL  src/cli/cli.test.ts > cli — ch14-p3a family 4: the exit and channel matrix, TOTAL over BOTH unions > resume: every DRIVEN reason token reaches exit 3 as a stdout DATA document
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ src/cli/cli.test.ts:3034:9
+    3032|         (await run(["submit-decision", id, "--db", db, "--decision", "…
+    3033|                     "--templates-dir", dir], deps)).code,
+    3034|       ).toBe(EXIT.ok);
+       |         ^
+    3035|       control.pin(null);
+    3036|       await record("a DECLARED resume event with no route", "no_resume…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/13]⎯
+
+ FAIL  src/cli/cli.test.ts > cli — ch14-p3a family 4: the exit and channel matrix, TOTAL over BOTH unions > the SUCCESS kinds: committed and duplicate are stdout DATA at exit 0, stale is DATA at exit 3
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ src/cli/cli.test.ts:3063:28
+    3061|       deps,
+    3062|     );
+    3063|     expect(committed.code).toBe(EXIT.ok);
+       |                            ^
+    3064|     expect(dataDoc(committed)).toMatchObject({ kind: "committed", vers…
+    3065|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/13]⎯
+
+ FAIL  src/cli/cli.test.ts > cli — ch14-p3a family 4: the exit and channel matrix, TOTAL over BOTH unions > V5's route, OBSERVED: both verbs call their kernel handler directly and NO ingress is built
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ src/cli/cli.test.ts:3111:7
+    3109|       (await run(["submit-decision", id, "--db", db, "--decision", "ap…
+    3110|                   "--templates-dir", dir], gatedDeps(dir))).code,
+    3111|     ).toBe(EXIT.ok);
+       |       ^
+    3112|     // EXACTLY the one direct handler — not a second write, and not one
+    3113|     // reached through a wire record the verb serialized to itself.
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/13]⎯
+
+ FAIL  src/cli/cli.test.ts > cli — ch14-p3a family 5/V8: ONE definition store per invocation, and WHERE it goes > submit-decision: ONE store is built, and the SAME instance serves the floor AND the kernel
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ src/cli/cli.test.ts:3325:7
+    3323|       (await run(["submit-decision", id, "--db", db, "--decision", "ap…
+    3324|                   "--templates-dir", dir], gatedDeps(dir))).code,
+    3325|     ).toBe(EXIT.ok);
+       |       ^
+    3326|     // ONE store for the invocation…
+    3327|     expect(definitionStoreBuilds).toHaveLength(1);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/13]⎯
+
+ FAIL  src/cli/cli.test.ts > cli — ch14-p3a family 7/8: one read, no retry, and idempotency in both directions > each WRITE verb performs EXACTLY ONE floor detail read per invocation
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ src/cli/cli.test.ts:3383:7
+    3381|                   "--templates-dir", dir],
+    3382|                  gatedDeps(dir, { openStore: countingStore(submitCount…
+    3383|     ).toBe(EXIT.ok);
+       |       ^
+    3384|     expect(submitCounter.reads).toBe(1);
+    3385|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/13]⎯
+
+ FAIL  src/cli/cli.test.ts > cli — ch14-p3a family 7/8: one read, no retry, and idempotency in both directions > no RETRY on a moved version: ONE floor read, ONE kernel attempt, and a `stale` DATA document
+AssertionError: submit-decision: expected 1 to be 3 // Object.is equality
+
+- Expected
++ Received
+
+- 3
++ 1
+
+ ❯ src/cli/cli.test.ts:3444:33
+    3442|         gatedDeps(dir, { openStore: staleStore(counter) }),
+    3443|       );
+    3444|       expect(result.code, verb).toBe(EXIT.notFound);
+       |                                 ^
+    3445|       expect(dataDoc(result), verb).toMatchObject({ kind: "stale" });
+    3446|       expect(counter.reads, verb).toBe(1);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/13]⎯
+
+ FAIL  src/cli/cli.test.ts > cli — ch14-p3a family 7/8: one read, no retry, and idempotency in both directions > a REPLAYED op_id reaches `duplicate` at exit 0, and two invocations do NOT collide
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ src/cli/cli.test.ts:3459:7
+    3457|       (await run(["submit-decision", id, "--db", db, "--decision", "ap…
+    3458|                   "--templates-dir", dir], gatedDeps(dir))).code,
+    3459|     ).toBe(EXIT.ok);
+       |       ^
+    3460|
+    3461|     // The REPLAY half PINS the nonce source…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/13]⎯
+
+ FAIL  src/cli/journey.test.ts > cli — the full-lifecycle journey smoke (packet ch8-P2: J1/J2) > ch14-p3a J1: park → decide → resume through the SHIPPED verbs, on a STAGED gate template
+Error: Command failed: /Users/felho/dev/pairflow/node_modules/.bin/tsx /Users/felho/dev/pairflow/v3/src/cli/main.ts submit-decision f96c5ec8-cf14-41fb-93f3-2dcb7af8ddf8 --db /var/folders/3r/4nvs7jsx1f785ql71bk8tj380000gn/T/v3-journey-gate-D5raYX/store.db --decision approve --templates-dir /var/folders/3r/4nvs7jsx1f785ql71bk8tj380000gn/T/v3-journey-gate-tpl-99eIZK
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/13]⎯
+
+
+ Test Files  2 failed | 79 passed (81)
+      Tests  13 failed | 3081 passed (3094)
+   Start at  10:22:58
+   Duration  23.56s (transform 4.09s, setup 0ms, import 7.53s, tests 80.96s, environment 4ms)
+

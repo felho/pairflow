@@ -1,0 +1,35 @@
+
+ RUN  v4.1.10 /Users/felho/dev/pairflow/v3
+
+ ❯ src/domain/humanDecisionRequest.test.ts (18 tests | 1 failed) 20ms
+     × the tree carries EXACTLY ONE declaration of each moved name 16ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/domain/humanDecisionRequest.test.ts > F4 — the move's own properties > the tree carries EXACTLY ONE declaration of each moved name
+AssertionError: DecisionRequestBody: expected [ …(2) ] to deeply equal [ 'domain/humanDecisionRequest.ts' ]
+
+- Expected
++ Received
+
+  [
+    "domain/humanDecisionRequest.ts",
++   "ports/store.ts",
+  ]
+
+ ❯ src/domain/humanDecisionRequest.test.ts:273:70
+    271|     for (const [name, pattern] of declarations) {
+    272|       const homes = files.filter((file) => pattern.test(readFileSync(f…
+    273|       expect(homes.map((file) => file.slice(root.length + 1)), name).t…
+       |                                                                      ^
+    274|         join("domain", "humanDecisionRequest.ts"),
+    275|       ]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 80 passed (81)
+      Tests  1 failed | 3093 passed (3094)
+   Start at  10:31:03
+   Duration  23.39s (transform 4.00s, setup 0ms, import 7.56s, tests 81.38s, environment 4ms)
+

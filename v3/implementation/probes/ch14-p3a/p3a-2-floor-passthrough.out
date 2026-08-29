@@ -1,0 +1,614 @@
+
+ RUN  v4.1.10 /Users/felho/dev/pairflow/v3
+
+ ❯ src/floor/floor.test.ts (26 tests | 7 failed) 43ms
+     × PRESENT for a parked-on-human-decision run whose pinned template is yielded 4ms
+     × equals humanDecisionRequest(instance, template, request) by WHOLE VALUE 3ms
+     × uses the row `wait.requestRef` NAMES, not the newest — a recency read fails this 3ms
+     × THROWS when the wait's handle names no committed row, and when the handle is ABSENT 5ms
+     × propagates ALL SIX of the derivation's integrity throws — the floor catches NOTHING 2ms
+     × an INJECTED sentinel from the derivation reaches the caller AS ITSELF 1ms
+     × the floor's read surface grows by EXACTLY {pendingDecision}, and by NOTHING in every other state 1ms
+ ❯ src/cli/cli.test.ts (91 tests | 16 failed) 2150ms
+     × carries pendingDecision for a parked run, and grows by EXACTLY that one key 22ms
+     × emits the WHOLE document with the member ABSENT for all THREE underivable conditions — and adds NO key 19ms
+     × family 10: the emitted `detail` keyset is CLOSED in EVERY state — ACTIVE, parked-derivable, parked-underivable, a NON-decision WAIT, and TERMINAL 23ms
+     × family 2b: ALL EIGHT integrity conditions reach the `internal` class on BOTH verb classes that derive 18ms
+     × the SUBMIT path's four lanes: two classes, four names, and nothing committed 49ms
+     × the PRE-LOAD guarantee, driven POSITIVELY: with an unyielded template every pre-load answer still arrives as DATA 12ms
+     × the KERNEL's OWN load stays reachable POST-admission on resume — BOTH shapes are its integrity error 11ms
+     × submit-decision: every DRIVEN reason token reaches exit 3 as a stdout DATA document 12ms
+     × resume: every DRIVEN reason token reaches exit 3 as a stdout DATA document 37ms
+     × the SUCCESS kinds: committed and duplicate are stdout DATA at exit 0, stale is DATA at exit 3 13ms
+     × V5's route, OBSERVED: both verbs call their kernel handler directly and NO ingress is built 15ms
+     × the ABSENT column is NOT uniform: --by DEFAULTS, --payload and --override reach the kernel as ABSENCES 12ms
+     × submit-decision: ONE store is built, and the SAME instance serves the floor AND the kernel 12ms
+     × each WRITE verb performs EXACTLY ONE floor detail read per invocation 13ms
+     × no RETRY on a moved version: ONE floor read, ONE kernel attempt, and a `stale` DATA document 11ms
+     × a REPLAYED op_id reaches `duplicate` at exit 0, and two invocations do NOT collide 12ms
+ ❯ src/cli/journey.test.ts (6 tests | 1 failed) 7521ms
+     × ch14-p3a J1: park → decide → resume through the SHIPPED verbs, on a STAGED gate template 794ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 24 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/cli/cli.test.ts > cli — ch14-p3a family 1/3/10: the detail document under every derivability state > carries pendingDecision for a parked run, and grows by EXACTLY that one key
+AssertionError: expected [ 'instance', 'runner', 'transcript' ] to deeply equal [ 'instance', 'pendingDecision', …(2) ]
+
+- Expected
++ Received
+
+  [
+    "instance",
+-   "pendingDecision",
+    "runner",
+    "transcript",
+  ]
+
+ ❯ src/cli/cli.test.ts:2293:37
+    2291|     expect(parked.code).toBe(EXIT.ok);
+    2292|     // PER SURFACE, PER STATE, against a CLOSED literal keyset (F7).
+    2293|     expect(Object.keys(doc).sort()).toEqual([
+       |                                     ^
+    2294|       "instance",
+    2295|       "pendingDecision",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/24]⎯
+
+ FAIL  src/cli/cli.test.ts > cli — ch14-p3a family 1/3/10: the detail document under every derivability state > emits the WHOLE document with the member ABSENT for all THREE underivable conditions — and adds NO key
+AssertionError: expected [ 'instance', 'runner', 'transcript' ] to deeply equal [ 'instance', 'pendingDecision', …(2) ]
+
+- Expected
++ Received
+
+  [
+    "instance",
+-   "pendingDecision",
+    "runner",
+    "transcript",
+  ]
+
+ ❯ src/cli/cli.test.ts:2370:43
+    2368|     // member, which keeps the equalities above from being satisfiable…
+    2369|     // a build that emitted the same degraded document everywhere.
+    2370|     expect(Object.keys(derivable).sort()).toEqual([
+       |                                           ^
+    2371|       "instance",
+    2372|       "pendingDecision",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/24]⎯
+
+ FAIL  src/cli/cli.test.ts > cli — ch14-p3a family 1/3/10: the detail document under every derivability state > family 10: the emitted `detail` keyset is CLOSED in EVERY state — ACTIVE, parked-derivable, parked-underivable, a NON-decision WAIT, and TERMINAL
+AssertionError: parked-and-derivable: expected [ 'instance', 'runner', 'transcript' ] to deeply equal [ 'instance', 'pendingDecision', …(2) ]
+
+- Expected
++ Received
+
+  [
+    "instance",
+-   "pendingDecision",
+    "runner",
+    "transcript",
+  ]
+
+ ❯ src/cli/cli.test.ts:2405:56
+    2403|     // keyset grows, and by exactly the one member.
+    2404|     const id = await parkedRun(db, deps, dir);
+    2405|     expect(await keysetOf(id), "parked-and-derivable").toEqual([
+       |                                                        ^
+    2406|       "instance",
+    2407|       "pendingDecision",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/24]⎯
+
+ FAIL  src/cli/cli.test.ts > cli — ch14-p3a family 1/3/10: the detail document under every derivability state > family 2b: ALL EIGHT integrity conditions reach the `internal` class on BOTH verb classes that derive
+AssertionError: expected [ Array(1) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "{\"instance\":{\"instanceId\":\"inst-1\",\"templateRef\":{\"id\":\"gated-v0\",\"version\":1},\"task\":\"decide it\",\"binding\":{\"implementer\":\"codex\",\"operator\":\"decider-7\"},\"currentStep\":\"gate\",\"round\":1,\"kernelStatus\":\"WAITING\",\"terminalDisposition\":null,\"activationMode\":\"immediate\",\"wait\":{\"kind\":\"human_decision\",\"requestedBy\":\"gate\",\"resumeEvents\":[\"approve\",\"again\",\"finish\",\"rework\"],\"requestRef\":\"req-never\"},\"runtimeContext\":{\"state\":\"ready\",\"ref\":null},\"failureReason\":null,\"runOverrides\":{},\"version\":3},\"transcript\":[{\"entryKind\":\"STARTED\",\"seq\":1,\"opId\":\"op_e9959de8569ce87453c26e95f19e1c5fdc2a2d0af4dae04985fadf32026deb2e\",\"committedAt\":1000},{\"entryKind\":\"transition\",\"seq\":2,\"envelope\":{\"instanceId\":\"inst-1\",\"opId\":\"op_e42609fc72961b39c705c71d14acae6c7633c5a02d59eebbdbec20f8e46dfcad\",\"type\":\"PASS\",\"actorId\":\"operator\",\"expectedVersion\":2,\"expectedRole\":\"implementer\"},\"payloadDigest\":\"b14670c3dc18db79a9cd628b8d7b32a11aaed56881c473069da449254d2126ae\",\"gateDecisions\":[],\"issuedAgentConfig\":{},\"committedAt\":1000},{\"entryKind\":\"DECISION_REQUEST\",\"seq\":3,\"requestRef\":\"req-1000-1\",\"recipient\":\"operator\",\"decisions\":[\"approve\",\"again\",\"finish\",\"rework\"],\"recommendation\":\"approve\",\"recommendationSource\":{\"fromStep\":\"implement\",\"eventType\":\"PASS\"},\"committedAt\":1000}],\"runner\":{\"errand\":{\"unavailable\":\"no-runner-ledger\"},\"attach\":{\"available\":false,\"reason\":\"no-live-attempt\"},\"runtimeContextSummary\":{\"unavailable\":\"no-runtime-context\"}}}",
++ ]
+
+ ❯ errorDoc src/cli/cli.test.ts:409:25
+    407|
+    408| function errorDoc(result: Run): CliErrorDoc["error"] {
+    409|   expect(result.stdout).toEqual([]);
+       |                         ^
+    410|   expect(result.stderr).toHaveLength(1);
+    411|   const doc = JSON.parse(result.stderr[0] ?? "") as CliErrorDoc;
+ ❯ assertErrorContract src/cli/cli.test.ts:418:17
+ ❯ src/cli/cli.test.ts:2562:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/24]⎯
+
+ FAIL  src/cli/cli.test.ts > cli — ch14-p3a family 6: resolution failure and its ZERO side effects > the SUBMIT path's four lanes: two classes, four names, and nothing committed
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ src/cli/cli.test.ts:2684:7
+    2682|       (await run(["submit-decision", controlId, "--db", controlDb, "--…
+    2683|                   "--templates-dir", dir], controlDeps)).code,
+    2684|     ).toBe(EXIT.ok);
+       |       ^
+    2685|     expect(kernelBuilds).toEqual(["createKernel"]);
+    2686|     // The write and the post-commit settle — `kernelCalls` is TOTAL o…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/24]⎯
+
+ FAIL  src/cli/cli.test.ts > cli — ch14-p3a family 6: resolution failure and its ZERO side effects > the PRE-LOAD guarantee, driven POSITIVELY: with an unyielded template every pre-load answer still arrives as DATA
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ src/cli/cli.test.ts:2762:7
+    2760|       (await run(["submit-decision", dupId, "--db", dupDb, "--decision…
+    2761|                   "--templates-dir", dir], dupDeps)).code,
+    2762|     ).toBe(EXIT.ok);
+       |       ^
+    2763|     dupNonce.pin("resume-1");
+    2764|     expect(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/24]⎯
+
+ FAIL  src/cli/cli.test.ts > cli — ch14-p3a family 6: resolution failure and its ZERO side effects > the KERNEL's OWN load stays reachable POST-admission on resume — BOTH shapes are its integrity error
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ src/cli/cli.test.ts:2823:9
+    2821|         (await run(["submit-decision", id, "--db", db, "--decision", "…
+    2822|                     "--templates-dir", dir], gatedDeps(dir))).code,
+    2823|       ).toBe(EXIT.ok);
+       |         ^
+    2824|       // Admission PASSES (a bare wait, a routed event, a fresh op, the
+    2825|       // right version) and the load lands after it — resume avoids the
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/24]⎯
+
+ FAIL  src/cli/cli.test.ts > cli — ch14-p3a family 4: the exit and channel matrix, TOTAL over BOTH unions > submit-decision: every DRIVEN reason token reaches exit 3 as a stdout DATA document
+AssertionError: expected [ Array(1) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "{\"error\":{\"class\":\"internal\",\"name\":\"TemplateUnavailable\",\"message\":\"the pinned template for run 'inst-1' could not be loaded\"}}",
++ ]
+
+ ❯ dataDoc src/cli/cli.test.ts:2238:25
+    2236| /** A verb's DATA answer: exactly one stdout document, nothing on stde…
+    2237| function dataDoc(result: Run): Record<string, unknown> {
+    2238|   expect(result.stderr).toEqual([]);
+       |                         ^
+    2239|   expect(result.stdout).toHaveLength(1);
+    2240|   return JSON.parse(result.stdout[0] ?? "") as Record<string, unknown>;
+ ❯ decide src/cli/cli.test.ts:2893:19
+ ❯ src/cli/cli.test.ts:2901:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/24]⎯
+
+ FAIL  src/cli/cli.test.ts > cli — ch14-p3a family 4: the exit and channel matrix, TOTAL over BOTH unions > resume: every DRIVEN reason token reaches exit 3 as a stdout DATA document
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ src/cli/cli.test.ts:3034:9
+    3032|         (await run(["submit-decision", id, "--db", db, "--decision", "…
+    3033|                     "--templates-dir", dir], deps)).code,
+    3034|       ).toBe(EXIT.ok);
+       |         ^
+    3035|       control.pin(null);
+    3036|       await record("a DECLARED resume event with no route", "no_resume…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/24]⎯
+
+ FAIL  src/cli/cli.test.ts > cli — ch14-p3a family 4: the exit and channel matrix, TOTAL over BOTH unions > the SUCCESS kinds: committed and duplicate are stdout DATA at exit 0, stale is DATA at exit 3
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ src/cli/cli.test.ts:3063:28
+    3061|       deps,
+    3062|     );
+    3063|     expect(committed.code).toBe(EXIT.ok);
+       |                            ^
+    3064|     expect(dataDoc(committed)).toMatchObject({ kind: "committed", vers…
+    3065|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/24]⎯
+
+ FAIL  src/cli/cli.test.ts > cli — ch14-p3a family 4: the exit and channel matrix, TOTAL over BOTH unions > V5's route, OBSERVED: both verbs call their kernel handler directly and NO ingress is built
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ src/cli/cli.test.ts:3111:7
+    3109|       (await run(["submit-decision", id, "--db", db, "--decision", "ap…
+    3110|                   "--templates-dir", dir], gatedDeps(dir))).code,
+    3111|     ).toBe(EXIT.ok);
+       |       ^
+    3112|     // EXACTLY the one direct handler — not a second write, and not one
+    3113|     // reached through a wire record the verb serialized to itself.
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/24]⎯
+
+ FAIL  src/cli/cli.test.ts > cli — ch14-p3a family 5: argument shape and the absence boundary > the ABSENT column is NOT uniform: --by DEFAULTS, --payload and --override reach the kernel as ABSENCES
+AssertionError: expected [ Array(1) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "{\"error\":{\"class\":\"internal\",\"name\":\"TemplateUnavailable\",\"message\":\"the pinned template for run 'inst-1' could not be loaded\"}}",
++ ]
+
+ ❯ dataDoc src/cli/cli.test.ts:2238:25
+    2236| /** A verb's DATA answer: exactly one stdout document, nothing on stde…
+    2237| function dataDoc(result: Run): Record<string, unknown> {
+    2238|   expect(result.stderr).toEqual([]);
+       |                         ^
+    2239|   expect(result.stdout).toHaveLength(1);
+    2240|   return JSON.parse(result.stdout[0] ?? "") as Record<string, unknown>;
+ ❯ src/cli/cli.test.ts:3263:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/24]⎯
+
+ FAIL  src/cli/cli.test.ts > cli — ch14-p3a family 5/V8: ONE definition store per invocation, and WHERE it goes > submit-decision: ONE store is built, and the SAME instance serves the floor AND the kernel
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ src/cli/cli.test.ts:3325:7
+    3323|       (await run(["submit-decision", id, "--db", db, "--decision", "ap…
+    3324|                   "--templates-dir", dir], gatedDeps(dir))).code,
+    3325|     ).toBe(EXIT.ok);
+       |       ^
+    3326|     // ONE store for the invocation…
+    3327|     expect(definitionStoreBuilds).toHaveLength(1);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/24]⎯
+
+ FAIL  src/cli/cli.test.ts > cli — ch14-p3a family 7/8: one read, no retry, and idempotency in both directions > each WRITE verb performs EXACTLY ONE floor detail read per invocation
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ src/cli/cli.test.ts:3383:7
+    3381|                   "--templates-dir", dir],
+    3382|                  gatedDeps(dir, { openStore: countingStore(submitCount…
+    3383|     ).toBe(EXIT.ok);
+       |       ^
+    3384|     expect(submitCounter.reads).toBe(1);
+    3385|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/24]⎯
+
+ FAIL  src/cli/cli.test.ts > cli — ch14-p3a family 7/8: one read, no retry, and idempotency in both directions > no RETRY on a moved version: ONE floor read, ONE kernel attempt, and a `stale` DATA document
+AssertionError: submit-decision: expected 1 to be 3 // Object.is equality
+
+- Expected
++ Received
+
+- 3
++ 1
+
+ ❯ src/cli/cli.test.ts:3444:33
+    3442|         gatedDeps(dir, { openStore: staleStore(counter) }),
+    3443|       );
+    3444|       expect(result.code, verb).toBe(EXIT.notFound);
+       |                                 ^
+    3445|       expect(dataDoc(result), verb).toMatchObject({ kind: "stale" });
+    3446|       expect(counter.reads, verb).toBe(1);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/24]⎯
+
+ FAIL  src/cli/cli.test.ts > cli — ch14-p3a family 7/8: one read, no retry, and idempotency in both directions > a REPLAYED op_id reaches `duplicate` at exit 0, and two invocations do NOT collide
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ src/cli/cli.test.ts:3459:7
+    3457|       (await run(["submit-decision", id, "--db", db, "--decision", "ap…
+    3458|                   "--templates-dir", dir], gatedDeps(dir))).code,
+    3459|     ).toBe(EXIT.ok);
+       |       ^
+    3460|
+    3461|     // The REPLAY half PINS the nonce source…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/24]⎯
+
+ FAIL  src/cli/journey.test.ts > cli — the full-lifecycle journey smoke (packet ch8-P2: J1/J2) > ch14-p3a J1: park → decide → resume through the SHIPPED verbs, on a STAGED gate template
+AssertionError: expected [ 'instance', 'runner', 'transcript' ] to deeply equal [ 'instance', 'pendingDecision', …(2) ]
+
+- Expected
++ Received
+
+  [
+    "instance",
+-   "pendingDecision",
+    "runner",
+    "transcript",
+  ]
+
+ ❯ src/cli/journey.test.ts:754:45
+    752|       // The WHOLE top-level keyset, against a closed literal: a second
+    753|       // explanatory key would pass every field assert below.
+    754|       expect(Object.keys(parkedDoc).sort()).toEqual([
+       |                                             ^
+    755|         "instance",
+    756|         "pendingDecision",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[17/24]⎯
+
+ FAIL  src/floor/floor.test.ts > floor — F5 the pendingDecision member's presence rule (C21's binary) > PRESENT for a parked-on-human-decision run whose pinned template is yielded
+AssertionError: expected undefined to be defined
+ ❯ src/floor/floor.test.ts:578:37
+    576|     const detail = await createFloor(handle.store, gatedDefinitions).g…
+    577|     expect(detail?.instance.wait?.kind).toBe("human_decision");
+    578|     expect(detail?.pendingDecision).toBeDefined();
+       |                                     ^
+    579|     handle.close();
+    580|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[18/24]⎯
+
+ FAIL  src/floor/floor.test.ts > floor — F5/F4 the member's CONTENT is the derivation's own output > equals humanDecisionRequest(instance, template, request) by WHOLE VALUE
+AssertionError: expected undefined to strictly equal { instanceId: 'inst-gate', …(8) }
+
+- Expected:
+{
+  "allowedDecisions": [
+    "approve",
+    "finish",
+    "rework",
+  ],
+  "context": {
+    "handoff": {
+      "note": "done",
+    },
+    "task": "ship it",
+  },
+  "decisionRequirements": {
+    "approve": [],
+    "finish": [],
+    "rework": [
+      "instruction",
+    ],
+  },
+  "expectedVersion": 3,
+  "instanceId": "inst-gate",
+  "operator": "human-1",
+  "question": "approve it?",
+  "recommendation": "approve",
+  "requestRef": "req-0-1",
+}
+
++ Received:
+undefined
+
+ ❯ src/floor/floor.test.ts:664:36
+    662|     // the derivation itself — a keyset assert would pass a build that
+    663|     // reached the right arm and dropped `decisionRequirements`.
+    664|     expect(detail.pendingDecision).toStrictEqual(
+       |                                    ^
+    665|       humanDecisionRequest(raw.instance, admit(gatedTemplate), rows[0]…
+    666|     );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[19/24]⎯
+
+ FAIL  src/floor/floor.test.ts > floor — F3 the correlation JOIN, and F6's no-catch rule > uses the row `wait.requestRef` NAMES, not the newest — a recency read fails this
+AssertionError: expected undefined to be 'req-0-1' // Object.is equality
+
+- Expected:
+"req-0-1"
+
++ Received:
+undefined
+
+ ❯ src/floor/floor.test.ts:714:49
+    712|     }));
+    713|     const detail = await createFloor(store, gatedDefinitions).getInsta…
+    714|     expect(detail?.pendingDecision?.requestRef).toBe(firstRef);
+       |                                                 ^
+    715|     expect(decisionRequestRows(both!)[1]?.requestRef).not.toBe(firstRe…
+    716|     handle.close();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[20/24]⎯
+
+ FAIL  src/floor/floor.test.ts > floor — F3 the correlation JOIN, and F6's no-catch rule > THROWS when the wait's handle names no committed row, and when the handle is ABSENT
+AssertionError: promise resolved "{ instance: { …(14) }, …(1) }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "instance": {
++     "activationMode": "immediate",
++     "binding": {
++       "implementer": "codex",
++       "operator": "human-1",
++     },
++     "currentStep": "gate",
++     "failureReason": null,
++     "instanceId": "inst-gate",
++     "kernelStatus": "WAITING",
++     "round": 1,
++     "runOverrides": {},
++     "runtimeContext": {
++       "ref": null,
++       "state": "ready",
++     },
++     "task": "ship it",
++     "templateRef": {
++       "id": "gated-v0",
++       "version": 1,
++     },
++     "terminalDisposition": null,
++     "version": 3,
++     "wait": {
++       "kind": "human_decision",
++       "requestRef": "req-that-never-committed",
++       "requestedBy": "gate",
++       "resumeEvents": [
++         "approve",
++         "finish",
++         "rework",
++       ],
++     },
++   },
++   "transcript": [
++     {
++       "committedAt": 0,
++       "entryKind": "STARTED",
++       "opId": "inst-gate-start",
++       "seq": 1,
++     },
++     {
++       "committedAt": 0,
++       "entryKind": "transition",
++       "envelope": {
++         "actorId": "codex",
++         "expectedRole": "implementer",
++         "expectedVersion": 2,
++         "instanceId": "inst-gate",
++         "opId": "inst-gate-pass",
++         "payload": {
++           "note": "done",
++         },
++         "type": "PASS",
++       },
++       "gateDecisions": [],
++       "issuedAgentConfig": {},
++       "payloadDigest": "6068819491f9072bf32147f4d56365e2f3f3914e3deef36c73ae72961219dc2a",
++       "seq": 2,
++     },
++     {
++       "committedAt": 0,
++       "contextRef": {
++         "note": "done",
++       },
++       "decisions": [
++         "approve",
++         "finish",
++         "rework",
++       ],
++       "entryKind": "DECISION_REQUEST",
++       "recipient": "operator",
++       "recommendation": "approve",
++       "recommendationSource": {
++         "eventType": "PASS",
++         "fromStep": "implement",
++       },
++       "requestRef": "req-0-1",
++       "seq": 3,
++     },
++   ],
+  }
+
+ ❯ src/floor/floor.test.ts:742:6
+    740|     await expect(
+    741|       createFloor(unmatched, gatedDefinitions).getInstanceDetail("inst…
+    742|     ).rejects.toThrow(/floor integrity: .*with no committed DECISION_R…
+       |      ^
+    743|     const absent = doctoredStore(handle.store, (detail) => ({
+    744|       ...detail,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[21/24]⎯
+
+ FAIL  src/floor/floor.test.ts > floor — F3 the correlation JOIN, and F6's no-catch rule > propagates ALL SIX of the derivation's integrity throws — the floor catches NOTHING
+Error: expected a rejection, got a resolved value
+ ❯ rejection src/floor/floor.test.ts:89:9
+     87|     return error;
+     88|   }
+     89|   throw new Error("expected a rejection, got a resolved value");
+       |         ^
+     90| }
+     91|
+ ❯ src/floor/floor.test.ts:870:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[22/24]⎯
+
+ FAIL  src/floor/floor.test.ts > floor — F3 the correlation JOIN, and F6's no-catch rule > an INJECTED sentinel from the derivation reaches the caller AS ITSELF
+Error: expected a rejection, got a resolved value
+ ❯ rejection src/floor/floor.test.ts:89:9
+     87|     return error;
+     88|   }
+     89|   throw new Error("expected a rejection, got a resolved value");
+       |         ^
+     90| }
+     91|
+ ❯ src/floor/floor.test.ts:900:9
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[23/24]⎯
+
+ FAIL  src/floor/floor.test.ts > floor — F7/F1 non-movement, MEASURED, and the required-not-optional parameter > the floor's read surface grows by EXACTLY {pendingDecision}, and by NOTHING in every other state
+AssertionError: expected [ 'instance', 'transcript' ] to deeply equal [ 'instance', 'pendingDecision', …(1) ]
+
+- Expected
++ Received
+
+  [
+    "instance",
+-   "pendingDecision",
+    "transcript",
+  ]
+
+ ❯ src/floor/floor.test.ts:955:49
+    953|     // union over states would pass the very placement error this pin
+    954|     // exists to catch.
+    955|     expect(Object.keys(derivable ?? {}).sort()).toEqual([
+       |                                                 ^
+    956|       "instance",
+    957|       "pendingDecision",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[24/24]⎯
+
+
+ Test Files  3 failed | 78 passed (81)
+      Tests  24 failed | 3070 passed (3094)
+   Start at  10:14:45
+   Duration  23.72s (transform 4.00s, setup 0ms, import 7.71s, tests 81.92s, environment 4ms)
+

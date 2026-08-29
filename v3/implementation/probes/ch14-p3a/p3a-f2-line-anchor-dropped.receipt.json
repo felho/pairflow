@@ -1,0 +1,12 @@
+{
+  "probe_id": "p3a-f2-line-anchor-dropped",
+  "file": "tools/v3-plan/check_trace_narrow.py",
+  "original_sha256": "f513fe1119e054d57cb5c0ada9553acac796761e238dbb4710758e67592007ba",
+  "mutated_sha256": "5e470d21799aeb29c31c7a6c4fa9ab0dec345bb66be77c61f689f5fb8a9b4251",
+  "test_command": "python3 ./tools/v3-plan/check_trace_narrow.py --selftest",
+  "exit_code": 1,
+  "suite_red": true,
+  "baseline": "green",
+  "output_file": "v3/implementation/probes/ch14-p3a/p3a-f2-line-anchor-dropped.out",
+  "restore_verified": true
+}

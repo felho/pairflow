@@ -1,0 +1,115 @@
+
+ RUN  v4.1.10 /Users/felho/dev/pairflow/v3
+
+ ❯ src/floor/floor.test.ts (26 tests | 2 failed) 38ms
+     × ABSENT for every non-parked member of dimension 1 — ACTIVE, a NON-decision wait, TERMINAL — each with a dependency that WOULD yield ITS OWN template, and ZERO loads per member 2ms
+     × the floor's read surface grows by EXACTLY {pendingDecision}, and by NOTHING in every other state 2ms
+ ❯ src/cli/cli.test.ts (91 tests | 3 failed) 2421ms
+     × C3: committed-only verbs NEVER create the diag file 26ms
+     × detail carries both classes too — the SAME rows through the other document 4ms
+     × family 10: the emitted `detail` keyset is CLOSED in EVERY state — ACTIVE, parked-derivable, parked-underivable, a NON-decision WAIT, and TERMINAL 32ms
+ ❯ src/cli/runnerJourney.test.ts (4 tests | 1 failed) 6103ms
+     × J-DELIVER: create → start → runner run --once through the tmux channel → the emitted op commits, the errand confirms, the attempt ran in the worktree cwd 1880ms
+ ❯ src/cli/journey.test.ts (6 tests | 1 failed) 7757ms
+     × ch14-p3a J1: park → decide → resume through the SHIPPED verbs, on a STAGED gate template 1265ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 7 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/cli/cli.test.ts > cli — write-path wiring + separation (packet ch7-P4: V5/M11/C3/dimension 8) > C3: committed-only verbs NEVER create the diag file
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ src/cli/cli.test.ts:1212:64
+    1210|
+    1211|     expect((await run(["list", "--db", db], deps)).code).toBe(EXIT.ok);
+    1212|     expect((await run(["detail", id, "--db", db], deps)).code).toBe(EX…
+       |                                                                ^
+    1213|     expect((await run(["timeline", id, "--db", db], deps)).code).toBe(…
+    1214|     // The plain tail (V2) — already-terminal, zero waits, no diag ope…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/7]⎯
+
+ FAIL  src/cli/cli.test.ts > cli — the two operator classes survive the shipped documents WHOLE (family 13) > detail carries both classes too — the SAME rows through the other document
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ src/cli/cli.test.ts:2023:25
+    2021|     const id = await seedOperatorRows(db);
+    2022|     const detail = await run(["detail", id, "--db", db], deps);
+    2023|     expect(detail.code).toBe(EXIT.ok);
+       |                         ^
+    2024|     const doc = JSON.parse(detail.stdout[0] ?? "") as {
+    2025|       transcript: Record<string, unknown>[];
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/7]⎯
+
+ FAIL  src/cli/cli.test.ts > cli — ch14-p3a family 1/3/10: the detail document under every derivability state > family 10: the emitted `detail` keyset is CLOSED in EVERY state — ACTIVE, parked-derivable, parked-underivable, a NON-decision WAIT, and TERMINAL
+AssertionError: expected [ Array(1) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "{\"error\":{\"class\":\"internal\",\"name\":\"Error\",\"message\":\"floor integrity: instance 'inst-2' is WAITING(human_decision) with NO request_ref on its wait record\"}}",
++ ]
+
+ ❯ dataDoc src/cli/cli.test.ts:2238:25
+    2236| /** A verb's DATA answer: exactly one stdout document, nothing on stde…
+    2237| function dataDoc(result: Run): Record<string, unknown> {
+    2238|   expect(result.stderr).toEqual([]);
+       |                         ^
+    2239|   expect(result.stdout).toHaveLength(1);
+    2240|   return JSON.parse(result.stdout[0] ?? "") as Record<string, unknown>;
+ ❯ src/cli/cli.test.ts:2420:24
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/7]⎯
+
+ FAIL  src/cli/journey.test.ts > cli — the full-lifecycle journey smoke (packet ch8-P2: J1/J2) > ch14-p3a J1: park → decide → resume through the SHIPPED verbs, on a STAGED gate template
+Error: Command failed: /Users/felho/dev/pairflow/node_modules/.bin/tsx /Users/felho/dev/pairflow/v3/src/cli/main.ts detail 871a825f-656c-45e0-bdb7-6d7ea1455445 --db /var/folders/3r/4nvs7jsx1f785ql71bk8tj380000gn/T/v3-journey-gate-c8gsht/store.db --templates-dir /var/folders/3r/4nvs7jsx1f785ql71bk8tj380000gn/T/v3-journey-gate-tpl-x2kO8f
+{"error":{"class":"internal","name":"Error","message":"floor integrity: instance '871a825f-656c-45e0-bdb7-6d7ea1455445' is WAITING(human_decision) with NO request_ref on its wait record"}}
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/7]⎯
+
+ FAIL  src/cli/runnerJourney.test.ts > cli — the operator runner activation journeys (packet ch9-p4b: J1) > J-DELIVER: create → start → runner run --once through the tmux channel → the emitted op commits, the errand confirms, the attempt ran in the worktree cwd
+SyntaxError: Unexpected end of JSON input
+ ❯ src/cli/runnerJourney.test.ts:265:27
+    263|       // projection (the summary needs `--templates-dir` for the provi…
+    264|       // the degrade-vs-demand election: without it, detail degrades i…
+    265|       const detail = JSON.parse(
+       |                           ^
+    266|         (await cli("detail", id, "--db", db, "--templates-dir", templa…
+    267|       ) as DetailDoc;
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/7]⎯
+
+ FAIL  src/floor/floor.test.ts > floor — F5 the pendingDecision member's presence rule (C21's binary) > ABSENT for every non-parked member of dimension 1 — ACTIVE, a NON-decision wait, TERMINAL — each with a dependency that WOULD yield ITS OWN template, and ZERO loads per member
+ FAIL  src/floor/floor.test.ts > floor — F7/F1 non-movement, MEASURED, and the required-not-optional parameter > the floor's read surface grows by EXACTLY {pendingDecision}, and by NOTHING in every other state
+Error: floor integrity: instance 'inst-held' is WAITING(human_decision) with NO request_ref on its wait record
+ ❯ pendingRequest src/floor/floor.ts:144:13
+    142|     const requestRef = detail.instance.wait?.requestRef;
+    143|     if (requestRef === undefined) {
+    144|       throw new Error(
+       |             ^
+    145|         `floor integrity: instance '${detail.instance.instanceId}' is …
+    146|           `WAITING(human_decision) with NO request_ref on its wait rec…
+ ❯ withPendingDecision src/floor/floor.ts:193:65
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/7]⎯
+
+
+ Test Files  4 failed | 77 passed (81)
+      Tests  7 failed | 3087 passed (3094)
+   Start at  10:13:09
+   Duration  23.46s (transform 3.74s, setup 0ms, import 7.47s, tests 81.90s, environment 4ms)
+

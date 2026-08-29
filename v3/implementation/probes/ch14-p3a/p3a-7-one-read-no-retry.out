@@ -1,0 +1,33 @@
+
+ RUN  v4.1.10 /Users/felho/dev/pairflow/v3
+
+ ❯ src/cli/cli.test.ts (91 tests | 1 failed) 2338ms
+     × no RETRY on a moved version: ONE floor read, ONE kernel attempt, and a `stale` DATA document 35ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/cli/cli.test.ts > cli — ch14-p3a family 7/8: one read, no retry, and idempotency in both directions > no RETRY on a moved version: ONE floor read, ONE kernel attempt, and a `stale` DATA document
+AssertionError: resume: expected 2 to be 1 // Object.is equality
+
+- Expected
++ Received
+
+- 1
++ 2
+
+ ❯ src/cli/cli.test.ts:3446:35
+    3444|       expect(result.code, verb).toBe(EXIT.notFound);
+    3445|       expect(dataDoc(result), verb).toMatchObject({ kind: "stale" });
+    3446|       expect(counter.reads, verb).toBe(1);
+       |                                   ^
+    3447|       // EXACTLY ONE kernel attempt — no second call, and no other han…
+    3448|       expect(kernelWrites, verb).toEqual([expectedCall]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 80 passed (81)
+      Tests  1 failed | 3093 passed (3094)
+   Start at  10:29:28
+   Duration  23.39s (transform 3.85s, setup 0ms, import 7.28s, tests 81.18s, environment 4ms)
+

@@ -1,0 +1,181 @@
+
+ RUN  v4.1.10 /Users/felho/dev/pairflow/v3
+
+ ❯ src/kernel/operatorIntents.test.ts (76 tests | 4 failed) 59ms
+     × an unknown verdict → unknown_decision 6ms
+     × COMBINATION: an unknown verdict WITH an inapplicable override → unknown_decision 2ms
+     × →[own-property-indexes]: a HOSTILE verdict spelling a prototype member → unknown_decision 1ms
+     × the CLOSED empty set rejects at every member, ABSENT rejects, a nonempty value is the control 1ms
+ ❯ src/kernel/diagEmission.test.ts (58 tests | 2 failed) 51ms
+     × a REJECTED operator intent emits `rejected` with its reason 5ms
+     × submitDecision: a rejected decision is classified with its reason 1ms
+ ❯ src/cli/cli.test.ts (91 tests | 1 failed) 2334ms
+     × submit-decision: every DRIVEN reason token reaches exit 3 as a stdout DATA document 18ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 7 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/cli/cli.test.ts > cli — ch14-p3a family 4: the exit and channel matrix, TOTAL over BOTH unions > submit-decision: every DRIVEN reason token reaches exit 3 as a stdout DATA document
+AssertionError: an UNDECLARED decision key: expected 'missing_required_field' to be 'unknown_decision' // Object.is equality
+
+Expected: "unknown_decision"
+Received: "missing_required_field"
+
+ ❯ decide src/cli/cli.test.ts:2895:39
+    2893|       const doc = dataDoc(result);
+    2894|       expect(doc["kind"], scenario).toBe("rejected");
+    2895|       expect(doc["reason"], scenario).toBe(expected);
+       |                                       ^
+    2896|       observed.set(doc["reason"] as string, result.code);
+    2897|     };
+ ❯ src/cli/cli.test.ts:2901:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/7]⎯
+
+ FAIL  src/kernel/diagEmission.test.ts > family 16 — the two operator intents' diagnostic arms > a REJECTED operator intent emits `rejected` with its reason
+AssertionError: expected [ { source: 'kernel', …(4) } ] to deeply equal [ { source: 'kernel', …(4) } ]
+
+- Expected
++ Received
+
+  [
+    {
+      "instanceId": "d-1",
+      "kind": "rejected",
+      "opId": "d1",
+-     "reason": "unknown_decision",
++     "reason": "missing_required_field",
+      "source": "kernel",
+    },
+  ]
+
+ ❯ src/kernel/diagEmission.test.ts:980:24
+    978|       by: "human-1",
+    979|     });
+    980|     expect(rec.events).toEqual([
+       |                        ^
+    981|       {
+    982|         source: "kernel",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/7]⎯
+
+ FAIL  src/kernel/diagEmission.test.ts > family 16 — the FULL rider set, DRIVEN: each rider's exact emitted sequence > submitDecision: a rejected decision is classified with its reason
+AssertionError: expected [ { source: 'kernel', …(4) } ] to deeply equal [ { source: 'kernel', …(4) } ]
+
+- Expected
++ Received
+
+  [
+    {
+      "instanceId": "rd-1",
+      "kind": "rejected",
+      "opId": "d1",
+-     "reason": "unknown_decision",
++     "reason": "missing_required_field",
+      "source": "kernel",
+    },
+  ]
+
+ ❯ src/kernel/diagEmission.test.ts:1578:28
+    1576|         // THE EXACT SEQUENCE, whole values, in order — never a filter…
+    1577|         // never a `kind` projection: a spurious emit of ANY class red…
+    1578|         expect(rec.events).toEqual(testCase.emits);
+       |                            ^
+    1579|       });
+    1580|     }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/7]⎯
+
+ FAIL  src/kernel/operatorIntents.test.ts > family 6 — the key-scoped guard ORDER and the required-payload set > an unknown verdict → unknown_decision
+AssertionError: expected { kind: 'rejected', …(1) } to deeply equal { kind: 'rejected', …(1) }
+
+- Expected
++ Received
+
+  {
+    "kind": "rejected",
+-   "reason": "unknown_decision",
++   "reason": "missing_required_field",
+  }
+
+ ❯ src/kernel/operatorIntents.test.ts:681:7
+    679|         decisionIntent("i-k1", { requestRef: base.requestRef, verdict:…
+    680|       ),
+    681|     ).toEqual({ kind: "rejected", reason: "unknown_decision" });
+       |       ^
+    682|   });
+    683|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/7]⎯
+
+ FAIL  src/kernel/operatorIntents.test.ts > family 6 — the key-scoped guard ORDER and the required-payload set > COMBINATION: an unknown verdict WITH an inapplicable override → unknown_decision
+AssertionError: expected { kind: 'rejected', …(1) } to deeply equal { kind: 'rejected', …(1) }
+
+- Expected
++ Received
+
+  {
+    "kind": "rejected",
+-   "reason": "unknown_decision",
++   "reason": "missing_required_field",
+  }
+
+ ❯ src/kernel/operatorIntents.test.ts:696:7
+    694|         }),
+    695|       ),
+    696|     ).toEqual({ kind: "rejected", reason: "unknown_decision" });
+       |       ^
+    697|   });
+    698|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/7]⎯
+
+ FAIL  src/kernel/operatorIntents.test.ts > family 6 — the key-scoped guard ORDER and the required-payload set > →[own-property-indexes]: a HOSTILE verdict spelling a prototype member → unknown_decision
+AssertionError: expected { kind: 'rejected', …(1) } to deeply equal { kind: 'rejected', …(1) }
+
+- Expected
++ Received
+
+  {
+    "kind": "rejected",
+-   "reason": "unknown_decision",
++   "reason": "missing_required_field",
+  }
+
+ ❯ src/kernel/operatorIntents.test.ts:708:7
+    706|         decisionIntent("i-k3", { requestRef: base.requestRef, verdict:…
+    707|       ),
+    708|     ).toEqual({ kind: "rejected", reason: "unknown_decision" });
+       |       ^
+    709|   });
+    710|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/7]⎯
+
+ FAIL  src/kernel/operatorIntents.test.ts > family 6 — the key-scoped guard ORDER and the required-payload set > the CLOSED empty set rejects at every member, ABSENT rejects, a nonempty value is the control
+AssertionError: null: expected { kind: 'rejected', …(1) } to deeply equal { kind: 'rejected', …(1) }
+
+- Expected
++ Received
+
+  {
+    "kind": "rejected",
+-   "reason": "missing_required_field",
++   "reason": "unknown_decision",
+  }
+
+ ❯ src/kernel/operatorIntents.test.ts:731:9
+    729|         ),
+    730|         label,
+    731|       ).toEqual({ kind: "rejected", reason: "missing_required_field" }…
+       |         ^
+    732|     }
+    733|     // ABSENT is its own condition.
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/7]⎯
+
+
+ Test Files  3 failed | 78 passed (81)
+      Tests  7 failed | 3087 passed (3094)
+   Start at  10:23:47
+   Duration  23.83s (transform 3.96s, setup 0ms, import 7.55s, tests 82.82s, environment 4ms)
+

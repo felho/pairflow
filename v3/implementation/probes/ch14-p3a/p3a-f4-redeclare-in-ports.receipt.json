@@ -1,0 +1,12 @@
+{
+  "probe_id": "p3a-f4-redeclare-in-ports",
+  "file": "v3/src/ports/store.ts",
+  "original_sha256": "8e909fc03ace2193b126cadf98f110ca1993f3e99b2bf4b12fdba28d31808ee5",
+  "mutated_sha256": "593d5e34b1c20343abb787aca25de33e1723c60e511c651c3c4bce9a34bd0ec2",
+  "test_command": "pnpm exec vitest run",
+  "exit_code": 1,
+  "suite_red": true,
+  "baseline": "green",
+  "output_file": "v3/implementation/probes/ch14-p3a/p3a-f4-redeclare-in-ports.out",
+  "restore_verified": true
+}

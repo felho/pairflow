@@ -1,0 +1,2 @@
+selftest FAIL: dim NOT red: asDispatch-inside-a-regex-literal (no error containing 'RE-PIN'): []
+check-trace-narrow selftest: 28 red dims exercised, 1 failure(s)

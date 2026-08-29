@@ -1,0 +1,36 @@
+
+ RUN  v4.1.10 /Users/felho/dev/pairflow/v3
+
+ ❯ src/cli/cli.test.ts (91 tests | 1 failed) 2398ms
+     × every production file under `cli/` names the BARREL, never the leaf 7ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/cli/cli.test.ts > cli — ch14-p3a: the kernel and ingress import origins are PINNED > every production file under `cli/` names the BARREL, never the leaf
+AssertionError: expected [ 'main.ts: kernel/kernel.js', …(1) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "main.ts: kernel/kernel.js",
++   "main.ts: kernel/kernel.js",
++ ]
+
+ ❯ src/cli/cli.test.ts:283:23
+    281|     }
+    282|     expect(seen).toBeGreaterThan(0);
+    283|     expect(offenders).toEqual([]);
+       |                       ^
+    284|   });
+    285|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 80 passed (81)
+      Tests  1 failed | 3093 passed (3094)
+   Start at  10:24:36
+   Duration  23.59s (transform 4.05s, setup 0ms, import 7.47s, tests 82.42s, environment 4ms)
+

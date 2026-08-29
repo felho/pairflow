@@ -515,6 +515,17 @@ re-discovered.
   NOT in the boundary — a verb needing a new error class or a new
   shared helper is a finding, not a build choice.
 
+**THE BOUNDARY IS EXTENDED AFTERMATH-SCOPED (§4), and the extension is
+ENUMERATED rather than globbed because the checker admits no patterns —
+which is the right shape: a boundary is a DECLARED CLAIM, and enumerating
+is what makes it one.** The 96 probe artifacts of
+`v3/implementation/probes/ch14-p3a/` join it at the fifth aftermath commit.
+THE `.backup` FILES ARE DELIBERATELY ABSENT from both the tree and this
+list. RECORDED BECAUSE IT WAS A MISS: this context told the build agent
+that probe receipts were "artifacts, not boundary violations" WITHOUT
+running the audit — the same assert-without-checking that produced this
+packet's other defects, and the post-build audit caught it in one run.
+
 ```json
 {
   "mutation_boundary": {
@@ -546,9 +557,104 @@ re-discovered.
       "v3/src/cli/main.ts",
       "v3/src/cli/runnerVerbs.ts",
       "v3/src/cli/cli.test.ts",
-      
       "v3/src/cli/journey.test.ts",
-      "v3/src/l0bTrace.test.ts"
+      "v3/src/l0bTrace.test.ts",
+      "v3/implementation/probes/ch14-p3a/p3a-1-eager-load.baseline.out",
+      "v3/implementation/probes/ch14-p3a/p3a-1-eager-load.out",
+      "v3/implementation/probes/ch14-p3a/p3a-1-eager-load.receipt.json",
+      "v3/implementation/probes/ch14-p3a/p3a-1-park-predicate.baseline.out",
+      "v3/implementation/probes/ch14-p3a/p3a-1-park-predicate.out",
+      "v3/implementation/probes/ch14-p3a/p3a-1-park-predicate.receipt.json",
+      "v3/implementation/probes/ch14-p3a/p3a-10-key-in-non-decision-states.baseline.out",
+      "v3/implementation/probes/ch14-p3a/p3a-10-key-in-non-decision-states.out",
+      "v3/implementation/probes/ch14-p3a/p3a-10-key-in-non-decision-states.receipt.json",
+      "v3/implementation/probes/ch14-p3a/p3a-10-optional-second-parameter.baseline.out",
+      "v3/implementation/probes/ch14-p3a/p3a-10-optional-second-parameter.out",
+      "v3/implementation/probes/ch14-p3a/p3a-10-optional-second-parameter.receipt.json",
+      "v3/implementation/probes/ch14-p3a/p3a-10-second-floor-member.baseline.out",
+      "v3/implementation/probes/ch14-p3a/p3a-10-second-floor-member.out",
+      "v3/implementation/probes/ch14-p3a/p3a-10-second-floor-member.receipt.json",
+      "v3/implementation/probes/ch14-p3a/p3a-2-floor-passthrough.baseline.out",
+      "v3/implementation/probes/ch14-p3a/p3a-2-floor-passthrough.out",
+      "v3/implementation/probes/ch14-p3a/p3a-2-floor-passthrough.receipt.json",
+      "v3/implementation/probes/ch14-p3a/p3a-2b-bare-catch.baseline.out",
+      "v3/implementation/probes/ch14-p3a/p3a-2b-bare-catch.out",
+      "v3/implementation/probes/ch14-p3a/p3a-2b-bare-catch.receipt.json",
+      "v3/implementation/probes/ch14-p3a/p3a-2b-degrade-one-condition.baseline.out",
+      "v3/implementation/probes/ch14-p3a/p3a-2b-degrade-one-condition.out",
+      "v3/implementation/probes/ch14-p3a/p3a-2b-degrade-one-condition.receipt.json",
+      "v3/implementation/probes/ch14-p3a/p3a-2b-f6-trycatch.baseline.out",
+      "v3/implementation/probes/ch14-p3a/p3a-2b-f6-trycatch.out",
+      "v3/implementation/probes/ch14-p3a/p3a-2b-f6-trycatch.receipt.json",
+      "v3/implementation/probes/ch14-p3a/p3a-2b-recency-read.baseline.out",
+      "v3/implementation/probes/ch14-p3a/p3a-2b-recency-read.out",
+      "v3/implementation/probes/ch14-p3a/p3a-2b-recency-read.receipt.json",
+      "v3/implementation/probes/ch14-p3a/p3a-2b-rewrap-new-error.baseline.out",
+      "v3/implementation/probes/ch14-p3a/p3a-2b-rewrap-new-error.out",
+      "v3/implementation/probes/ch14-p3a/p3a-2b-rewrap-new-error.receipt.json",
+      "v3/implementation/probes/ch14-p3a/p3a-3-member-less-document.baseline.out",
+      "v3/implementation/probes/ch14-p3a/p3a-3-member-less-document.out",
+      "v3/implementation/probes/ch14-p3a/p3a-3-member-less-document.receipt.json",
+      "v3/implementation/probes/ch14-p3a/p3a-3-recovery-composes-extra.baseline.out",
+      "v3/implementation/probes/ch14-p3a/p3a-3-recovery-composes-extra.out",
+      "v3/implementation/probes/ch14-p3a/p3a-3-recovery-composes-extra.receipt.json",
+      "v3/implementation/probes/ch14-p3a/p3a-4-lifecycle-exit-code.baseline.out",
+      "v3/implementation/probes/ch14-p3a/p3a-4-lifecycle-exit-code.out",
+      "v3/implementation/probes/ch14-p3a/p3a-4-lifecycle-exit-code.receipt.json",
+      "v3/implementation/probes/ch14-p3a/p3a-4-reason-token-swap.baseline.out",
+      "v3/implementation/probes/ch14-p3a/p3a-4-reason-token-swap.out",
+      "v3/implementation/probes/ch14-p3a/p3a-4-reason-token-swap.receipt.json",
+      "v3/implementation/probes/ch14-p3a/p3a-5-by-constant.baseline.out",
+      "v3/implementation/probes/ch14-p3a/p3a-5-by-constant.out",
+      "v3/implementation/probes/ch14-p3a/p3a-5-by-constant.receipt.json",
+      "v3/implementation/probes/ch14-p3a/p3a-5-decision-defaulted.baseline.out",
+      "v3/implementation/probes/ch14-p3a/p3a-5-decision-defaulted.out",
+      "v3/implementation/probes/ch14-p3a/p3a-5-decision-defaulted.receipt.json",
+      "v3/implementation/probes/ch14-p3a/p3a-5-payload-defaulted.baseline.out",
+      "v3/implementation/probes/ch14-p3a/p3a-5-payload-defaulted.out",
+      "v3/implementation/probes/ch14-p3a/p3a-5-payload-defaulted.receipt.json",
+      "v3/implementation/probes/ch14-p3a/p3a-6-v4ii-keyed-on-member-absence.baseline.out",
+      "v3/implementation/probes/ch14-p3a/p3a-6-v4ii-keyed-on-member-absence.out",
+      "v3/implementation/probes/ch14-p3a/p3a-6-v4ii-keyed-on-member-absence.receipt.json",
+      "v3/implementation/probes/ch14-p3a/p3a-7-one-read-no-retry.baseline.out",
+      "v3/implementation/probes/ch14-p3a/p3a-7-one-read-no-retry.out",
+      "v3/implementation/probes/ch14-p3a/p3a-7-one-read-no-retry.receipt.json",
+      "v3/implementation/probes/ch14-p3a/p3a-8-idempotency-constant-nonce.baseline.out",
+      "v3/implementation/probes/ch14-p3a/p3a-8-idempotency-constant-nonce.out",
+      "v3/implementation/probes/ch14-p3a/p3a-8-idempotency-constant-nonce.receipt.json",
+      "v3/implementation/probes/ch14-p3a/p3a-f2-anchor-check-neutered.baseline.out",
+      "v3/implementation/probes/ch14-p3a/p3a-f2-anchor-check-neutered.out",
+      "v3/implementation/probes/ch14-p3a/p3a-f2-anchor-check-neutered.receipt.json",
+      "v3/implementation/probes/ch14-p3a/p3a-f2-anchorless-guard-removed.baseline.out",
+      "v3/implementation/probes/ch14-p3a/p3a-f2-anchorless-guard-removed.out",
+      "v3/implementation/probes/ch14-p3a/p3a-f2-anchorless-guard-removed.receipt.json",
+      "v3/implementation/probes/ch14-p3a/p3a-f2-legacy-context-blind.baseline.out",
+      "v3/implementation/probes/ch14-p3a/p3a-f2-legacy-context-blind.out",
+      "v3/implementation/probes/ch14-p3a/p3a-f2-legacy-context-blind.receipt.json",
+      "v3/implementation/probes/ch14-p3a/p3a-f2-line-anchor-dropped.baseline.out",
+      "v3/implementation/probes/ch14-p3a/p3a-f2-line-anchor-dropped.out",
+      "v3/implementation/probes/ch14-p3a/p3a-f2-line-anchor-dropped.receipt.json",
+      "v3/implementation/probes/ch14-p3a/p3a-f2-mask-union-dropped.baseline.out",
+      "v3/implementation/probes/ch14-p3a/p3a-f2-mask-union-dropped.out",
+      "v3/implementation/probes/ch14-p3a/p3a-f2-mask-union-dropped.receipt.json",
+      "v3/implementation/probes/ch14-p3a/p3a-f2-regex-branch-deleted.baseline.out",
+      "v3/implementation/probes/ch14-p3a/p3a-f2-regex-branch-deleted.out",
+      "v3/implementation/probes/ch14-p3a/p3a-f2-regex-branch-deleted.receipt.json",
+      "v3/implementation/probes/ch14-p3a/p3a-f4-redeclare-in-ports.baseline.out",
+      "v3/implementation/probes/ch14-p3a/p3a-f4-redeclare-in-ports.out",
+      "v3/implementation/probes/ch14-p3a/p3a-f4-redeclare-in-ports.receipt.json",
+      "v3/implementation/probes/ch14-p3a/p3a-import-pin-main.baseline.out",
+      "v3/implementation/probes/ch14-p3a/p3a-import-pin-main.out",
+      "v3/implementation/probes/ch14-p3a/p3a-import-pin-main.receipt.json",
+      "v3/implementation/probes/ch14-p3a/p3a-import-pin-runnerverbs.baseline.out",
+      "v3/implementation/probes/ch14-p3a/p3a-import-pin-runnerverbs.out",
+      "v3/implementation/probes/ch14-p3a/p3a-import-pin-runnerverbs.receipt.json",
+      "v3/implementation/probes/ch14-p3a/p3a-observer-origin-selective.baseline.out",
+      "v3/implementation/probes/ch14-p3a/p3a-observer-origin-selective.out",
+      "v3/implementation/probes/ch14-p3a/p3a-observer-origin-selective.receipt.json",
+      "v3/implementation/probes/ch14-p3a/p3a-observer-origin-v4-path.baseline.out",
+      "v3/implementation/probes/ch14-p3a/p3a-observer-origin-v4-path.out",
+      "v3/implementation/probes/ch14-p3a/p3a-observer-origin-v4-path.receipt.json"
     ]
   }
 }
@@ -1525,11 +1631,17 @@ current shape WITH the argument for why a residual false green is
 tolerable — the current implicit answer being the third WITHOUT the
 argument.
 
-THE DIRECTION IS NOW MECHANICAL RATHER THAN CAREFUL, which is the part
-worth keeping: masking never removes a byte from the compared text —
-`sub_in_code` matches and splices the ORIGINAL — so more masking can only
-leave more difference VISIBLE. Over-masking yields a false RED by
-construction, never a false green. Measured both ways: two divisions
+THE DIRECTION WAS CLAIMED TO BE MECHANICAL AND THE CLAIM WAS FALSE —
+corrected at gate 2 pass 5, which caught the regression it licensed. The
+argument ran: masking never removes a byte from the compared text, so more
+masking can only leave more difference VISIBLE, and over-masking yields a
+false RED by construction. **IT ASSUMED THE MASKER IS MONOTONE.** A
+SPECULATIVE scanner is not: a division slash opened a regex scan that ran
+to a `/` inside a later string on the same line, CONSUMING that string's
+opening quote — so the string's body was no longer masked at all and its
+contents erased as code. The failure was not "too much masking"; it was
+masking the WRONG SPAN. The invariant is now enforced by construction
+rather than argued (see the fifth aftermath below). Measured both ways: two divisions
 spanning a narrow (`a / o.intent / c`) now RED, which is the safe
 direction, and a regex literal left unchanged beside a real narrow and a
 real division still erases.
@@ -1569,28 +1681,63 @@ right that "a receipt each" was a narrative claim with no durable
 artifact behind it, and that a review re-running the probes does not
 substitute for the record carrying them:
 
-| Family / target | Wrong implementation applied | RED observed |
+| Family / target | Wrong implementation applied | Probe id (receipt) |
 |---|---|---|
-| F2 instrument, legacy entries | original context-blind entry restored | 3 dims red (string / line- / block-comment) |
-| F2 instrument, anchor design | anchor check neutered | 8 dims red, incl. `createFloor-inside-a-block-comment` |
-| F2 instrument, two-anchor pair | line anchor dropped, code anchor kept | the 2 lanes that do not falsify HEAD stay red |
-| F2 instrument, anchorless guard | pre-loop guard removed | both anchorless lanes red; non-matching one is HEAD's actual defect |
-| F2 instrument, regex masking | regex branch deleted | 1 dim red (`asDispatch-inside-a-regex-literal`) |
-| 1 member presence | park predicate `WAITING \|\| TERMINAL`; eager load | `no request_ref`; `expected 1 to be +0` |
-| 2 member content | floor left a pass-through | `pendingDecision` undefined vs computed Ask |
-| 2b integrity + join | recency read; bare `catch`; degrade one condition; re-wrap `new Error(msg)` | 2 floor lanes; read-verb lane; `expected [Array(1)] to deeply equal []`; 4 identity lanes (115/115 GREEN before) |
-| 2b, F6 no-catch | `try/catch` around `pendingRequest` | `expected ['try','catch'] to deeply equal []` |
-| 3 read verb underivable | member-less document; `{...recovered, transcript: []}` | absent-member lane; `expected [] to strictly equal [Array(3)]` |
-| 4 exit/channel matrix | `lifecycleExitCode`; swap `unknown_decision`↔`missing_required_field` | 4 lanes incl. `stale`; `expected 'missing_required_field' to be 'unknown_decision'` |
-| 4/6/7 observer origin | SELECTIVE leaf-built kernel on the V4 path | 4 lanes (89/89 GREEN before) |
-| 4/6/7 import pin | `main.ts`, then `runnerVerbs.ts` single-quoted, to leaf | pin red (91/91 + eslint clean before) |
-| 5 argument shape | `--decision` defaulted; `--payload` → `{}`; `--by` constant | arg-shape lane; both absence lanes |
-| 6 resolution failure | V4 (ii) keyed on member absence; kernel built+called then remapped; register the unknown id | 4-lane test; 2 lanes (3089 GREEN before); `observeGhost` |
-| 7 one read no retry | extra `resumeWait` after a stale | `['resumeWait','resumeWait']` vs `['resumeWait']` |
-| 8 idempotency | constant nonce on `submit-decision` only | `{kind:'duplicate'}` vs `{kind:'committed'}` |
-| 9 journey | floor left a pass-through | `pendingDecision` missing from the subprocess doc |
-| 10 non-movement | optional 2nd parameter; a second floor member; a key only in non-decision states | `tsc` arity pin; both keyset pins; 3 failures across floor/CLI/journey |
-| F4 move | `DecisionRequestBody` re-declared in `ports/store.ts` | inventory row + single-definition sweep |
+| F2 legacy entries | original context-blind entry restored | `p3a-f2-legacy-context-blind` |
+| F2 anchor design | anchor check neutered | `p3a-f2-anchor-check-neutered` |
+| F2 two-anchor pair | line anchor dropped, code anchor kept | `p3a-f2-line-anchor-dropped` ⚠ |
+| F2 anchorless guard | pre-loop guard removed | `p3a-f2-anchorless-guard-removed` |
+| F2 regex masking | regex branch deleted | `p3a-f2-regex-branch-deleted` |
+| F2 mask monotonicity | the union dropped (pass 5's own fix) | `p3a-f2-mask-union-dropped` |
+| 1 member presence | park predicate `WAITING \|\| TERMINAL`; eager load | `p3a-1-park-predicate`, `p3a-1-eager-load` |
+| 2 member content | floor left a pass-through | `p3a-2-floor-passthrough` |
+| 2b integrity + join | recency read; bare `catch`; degrade one condition; re-wrap `new Error(msg)` | `p3a-2b-recency-read`, `-bare-catch`, `-degrade-one-condition`, `-rewrap-new-error` |
+| 2b F6 no-catch | `try/catch` around `pendingRequest` | `p3a-2b-f6-trycatch` |
+| 3 read verb underivable | member-less document; recovery composes extra | `p3a-3-member-less-document`, `p3a-3-recovery-composes-extra` |
+| 4 exit/channel matrix | `lifecycleExitCode`; reason-token swap | `p3a-4-lifecycle-exit-code`, `p3a-4-reason-token-swap` |
+| 4/6/7 observer origin | SELECTIVE leaf-built kernel on the V4 path | `p3a-observer-origin-v4-path` † |
+| 4/6/7 import pin | `main.ts`, then `runnerVerbs.ts` single-quoted, to leaf | `p3a-import-pin-main`, `p3a-import-pin-runnerverbs` ‡ |
+| 5 argument shape | `--decision` defaulted; `--payload` → `{}`; `--by` constant | `p3a-5-decision-defaulted`, `-payload-defaulted`, `-by-constant` |
+| 6 resolution failure | V4 (ii) keyed on member absence; kernel built+called then remapped | `p3a-6-v4ii-keyed-on-member-absence`, `p3a-observer-origin-v4-path` † |
+| 6 resolution failure | register the unknown id on the way to reporting it | **NO RECEIPT — see below** |
+| 7 one read no retry | extra `resumeWait` after a stale | `p3a-7-one-read-no-retry` |
+| 8 idempotency | constant nonce on `submit-decision` only | `p3a-8-idempotency-constant-nonce` |
+| 9 journey | floor left a pass-through | `p3a-2-floor-passthrough` (journey lane reds in its log) |
+| 10 non-movement | optional 2nd parameter; a second floor member; a key only in non-decision states | `p3a-10-optional-second-parameter` (tsc), `-second-floor-member`, `-key-in-non-decision-states` |
+| F4 move | `DecisionRequestBody` re-declared in `ports/store.ts` | `p3a-f4-redeclare-in-ports` |
+
+Receipts: `v3/implementation/probes/ch14-p3a/<probe-id>.receipt.json`, each
+with its `.out` and `.baseline.out` log. **ALL 32: `baseline: green`,
+`suite_red: true`, `restore_verified: true` — no probe returned the
+runner's exit 3 (suite stayed green), so no receipt here is vacuous.**
+
+**THREE QUALIFICATIONS, because a table that hides them is the prose it
+replaced.** ⚠ `p3a-f2-line-anchor-dropped` is receipt-backed RED but NOT
+for its row's stated reason: dropping the line anchor reds by REFUSING
+seven green controls, so the probe never reaches the row's INSENSITIVITY
+observation. The receipt evidences a real property; it is not the one the
+row states. † `p3a-observer-origin-v4-path` discharges two rows at once and
+necessarily reds the import pin too, since it uses a leaf specifier — the
+rows are conflated in that one receipt. ‡ the import-pin rows cite "eslint
+clean before"; the probe command was the vitest suite alone, so the eslint
+half is not re-measured by these receipts.
+
+**ONE ROW HAS NO RECEIPT AND WAS NOT FABRICATED:** "register the unknown id
+on the way to reporting it unknown". The lane guards a build that CREATED
+`ghost` while answering not-found — but the CLI layer has no `StorePort`
+write path at all, so any reconstruction would have to invent a write
+surface that is not the one originally probed. Left un-probed and named
+here.
+
+**A MISRECONSTRUCTION WORTH KEEPING, because it measures something the
+faithful probe cannot.** The first observer-origin attempt put the
+leaf-built kernel on the V4 SUCCESS path: ZERO observer lanes red, only the
+lexical import pin caught it. That is CORRECT behaviour, not a hole — the
+mock sits on the leaf module, so a leaf build IS observed, and the
+observers' empty-array claims are about the V4 RESOLUTION-FAILURE path,
+which that mutation never touched. It is receipted
+(`p3a-observer-origin-selective`) and kept, because it is the measurement
+that shows the two guards divide the work rather than duplicating it.
 
 **FOURTH AFTERMATH COMMIT — three files, all inside the boundary, no
 production file touched:** `tools/v3-plan/check_trace_narrow.py`,
@@ -1600,13 +1747,95 @@ agent for the four code folds; this context for the routed process-log
 entry, the two record corrections and the table above, and for the
 independent re-probe of the regex fix and the declared JSX hole.
 
+---
+
+**ARM GATE 2, PASS 5 on `c201b23f`: `not ready`, THREE findings — one P1
+that was OUR OWN FIX'S REGRESSION, one P2 that turned out to be a
+protocol violation running the whole packet's length, one P3. All folded.**
+
+**THE P1: THE REGEX MASKING INTRODUCED A FALSE GREEN.** Reproduced
+independently in this context, both directions:
+`const ratio = total / divisor; expect(label).toBe("prefix/_x")` →
+`…("prefix/_asDispatch(x)")` is RED at `c201b23f^` and GREEN at
+`c201b23f`. The DIVISION slash opened a speculative regex scan that ran to
+the `/` inside the later string, CONSUMING that string's opening quote, so
+its body was read as code and the call erased. A line-comment twin
+reproduces identically. This is not another unrecognized literal form —
+the routed class — but a regression the fix itself carried, and the
+paragraph above now says so where the false claim used to sit.
+
+**THE FIX IS A UNION, NOT A CLEVERER SCAN, and that is the durable part.**
+`mask_noncode` now runs its scan TWICE — once regex-blind, once
+speculative — and unions the masked position sets. The superset invariant
+then holds BY CONSTRUCTION: the strings-and-comments pass is one of the
+two unioned, so no position it masks can ever be lost. No
+division-vs-regex heuristic anywhere, its failure direction being the
+wrong one.
+
+**AND THE INVARIANT IS NOW CHECKED RATHER THAN ARGUED**, which is the
+whole lesson of this finding. A duplicated, deliberately NOT-shared
+regex-blind reference scanner drives a 60-input corpus: all 56 module
+fixtures (auto-collected, so a fixture added later joins without anyone
+remembering), the two counterexamples, and THE REAL CONTENTS OF THE FOUR
+LIVE GOLDEN-TRACE FILES — 17,234 reference positions from the live files
+alone. Falsification measured by grafting `c201b23f`'s masker into the new
+selftest: three failures, naming nine corpus inputs and byte offsets.
+Selftest 25 → 28 red dims.
+
+**THE MEASUREMENT THAT EXPLAINS WHY THE GATE STAYED GREEN THROUGH IT:**
+under the broken masker the four LIVE trace files show ZERO monotonicity
+violations. The regression was live in the instrument and INVISIBLE on the
+live receipts, which is exactly why the live leg passed every round. A
+corpus of real inputs would never have found it; the counterexamples did.
+That is a general caution about receipt-driven gates — they measure the
+inputs they have, and an instrument defect that no current input exercises
+is not a defect any receipt can see.
+
+**THE P2 WAS NOT A MISSING TABLE COLUMN. IT WAS A PROTOCOL VIOLATION, AND
+IT IS THE ORCHESTRATOR'S.** `tools/v3-plan/probe_runner.py` is the
+ratified R-DERIVED-PROBES execution protocol — GREEN-BASELINE GATE (a
+probe against an already-red baseline yields a vacuous receipt, a measured
+historical hole), byte-copy backup with VERIFIED restore (git-based
+rollback forbidden, three live incidents), captured log, and a receipt the
+Build-record table cites by id, which is *"the machine evidence the arm's
+spot-check audits — never the builder's prose"*. EVERY PROBE ACROSS THIS
+PACKET'S BUILD AND ITS FOUR AFTERMATH ROUNDS RAN BY HAND, because every
+delegation prompt this context wrote prescribed a hand protocol and never
+named the runner. The reviewer said "not receipt-backed" for four
+consecutive rounds and was right each time; the table was prose wearing a
+table's shape. THIRTY-TWO RECEIPTS now exist, all `baseline: green`,
+`suite_red: true`, `restore_verified: true`, none returning the runner's
+exit 3 — and the table above cites them, with its three qualifications and
+its one un-probed row stated rather than smoothed.
+
+**ARTIFACT RULING, this context's:** the 32 `.backup` files are byte
+copies of live production source, kept by the runner after a verified
+restore — NOT committed and deleted, since a stale duplicate of source is
+a liability rather than evidence (the restore verification is what the
+receipt carries). The receipt JSONs and their `.out` / `.baseline.out`
+logs ARE committed: the receipt is the evidence, and a citation whose
+target is not in the tree is the dangling-pointer class this corpus
+retires elsewhere. Receipt `file` and `output_file` fields were rewritten
+from absolute to REPO-RELATIVE paths — as written they named this
+machine's home directory and would not travel.
+
+**FIFTH AFTERMATH COMMIT — two files inside the boundary plus the probe
+artifacts:** `tools/v3-plan/check_trace_narrow.py`,
+`v3/src/floor/floor.test.ts`, and `v3/implementation/probes/ch14-p3a/`.
+Suite 3094 (unchanged — the new property lives in the Python selftest);
+selftest 25 → 28 red dims. Author: a fresh-context delegated agent for the
+fix, the property test and the 32 probe runs; this context for the
+artifact ruling, the path normalization, the table rewrite and the
+independent re-verification of both regressions and the monotonicity
+superset on the live trace file.
+
 ```json
 {
   "packet_metrics": {
     "class": "operability",
     "prediction": { "predicted": "projection", "reasoning": "the ratified ch14-human-decision contract legislates both surfaces (C21, C23); the split leaves this part reading them", "discovered": "projection" },
     "provenance": { "anchored": 5, "derived": 11, "new_decision": 2 },
-    "rounds": { "review": 5, "doc_refinement": 0, "implementation": 5 },
+    "rounds": { "review": 5, "doc_refinement": 0, "implementation": 6 },
     "stops": [{"type": "1:late-b-signal", "what": "the disposition of a NON-YIELDED pinned template is undecided by C21 (read side) and C23 (write side), and V4 reads C23(c) down to avoid it; raised at the pre-build arm gate on the third occurrence of the same signal", "resolution": "ratifier chose a narrow ch14 contract reopen over re-anchoring in the packet, 2026-08-28 — the packet anchors to the new row instead of deciding"}],
     "detector_misses": [{"found_at": "arm-approve", "what": "the C27 reopen split the two write verbs apart and thirteen sentences kept speaking of them as one; the packet was marked APPROVED with the whole class alive", "why_missed": "five internal panel lenses and two arm passes read the text against itself, and every one of the thirteen was well-formed prose — only a trace against the code or against a sibling sentence falsifies them; the packet lint does not read prose at all"}, {"found_at": "arm-build-close", "what": "nine of gate 2's eleven findings were one class — a lane asserting what the code does, or standing on a fixture where right and wrong behave identically; and the F2 checker entry was text-level, so it erased inside string literals and comments", "why_missed": "the CLI families' tests were written AFTER the verbs and their RED receipts produced post-hoc by mutation probes, which proves sensitivity to the mutations chosen and not fail-first independence from the implementation the tests were read from; the F2 negatives guarded the VALUE axis while the CONTEXT axis went unprobed"}, {"found_at": "arm-approve", "what": "arm gate 1 was left open — the folded bytes never got their hash-citing re-check, and the gate record was not on a repo surface", "why_missed": "the discipline's two halves are one sentence in README §5.5 and the second half has no machine carrier; the packet header attested the passes in prose while the Build record held its placeholder"}],
     "learned": "an instance-wise fold of a class defect regenerates its own next round — 2/3/4/4/0 across five closing arm passes; the pass that bounded it swept against the stated cause",

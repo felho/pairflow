@@ -1,0 +1,12 @@
+{
+  "probe_id": "p3a-10-key-in-non-decision-states",
+  "file": "v3/src/floor/floor.ts",
+  "original_sha256": "fa26473c69a3f6fe0da78ba0c3578354832f3716c8a31b74f5f273a17f49a1da",
+  "mutated_sha256": "f4d488ac67abd2087bcf4b8e11667a0b12d8448af5c5e81eec45ba62a8342099",
+  "test_command": "pnpm exec vitest run",
+  "exit_code": 1,
+  "suite_red": true,
+  "baseline": "green",
+  "output_file": "v3/implementation/probes/ch14-p3a/p3a-10-key-in-non-decision-states.out",
+  "restore_verified": true
+}

@@ -1,0 +1,12 @@
+{
+  "probe_id": "p3a-10-optional-second-parameter",
+  "file": "v3/src/floor/floor.ts",
+  "original_sha256": "fa26473c69a3f6fe0da78ba0c3578354832f3716c8a31b74f5f273a17f49a1da",
+  "mutated_sha256": "074b93debdcb3131c4555b6ee2b532c792690bd489170375aacc96e44251061a",
+  "test_command": "pnpm exec tsc --noEmit",
+  "exit_code": 2,
+  "suite_red": true,
+  "baseline": "green",
+  "output_file": "v3/implementation/probes/ch14-p3a/p3a-10-optional-second-parameter.out",
+  "restore_verified": true
+}

@@ -1,0 +1,95 @@
+
+ RUN  v4.1.10 /Users/felho/dev/pairflow/v3
+
+ ❯ src/floor/floor.test.ts (26 tests | 2 failed) 38ms
+     × ABSENT for every non-parked member of dimension 1 — ACTIVE, a NON-decision wait, TERMINAL — each with a dependency that WOULD yield ITS OWN template, and ZERO loads per member 4ms
+     × the park test SHORT-CIRCUITS the load — a NOT-parked run reaches the dependency ZERO times 1ms
+ ❯ src/cli/cli.test.ts (91 tests | 2 failed) 2402ms
+     × the read verb's ORDERING: a NOT-parked run with a REJECTING template takes ZERO loads and exactly ONE detail read 18ms
+     × the ORDERING member, submit-only: NOT parked + an unreadable pinned file answers (ii) at exit 3 10ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/cli/cli.test.ts > cli — ch14-p3a family 1/3/10: the detail document under every derivability state > the read verb's ORDERING: a NOT-parked run with a REJECTING template takes ZERO loads and exactly ONE detail read
+AssertionError: expected 2 to be 1 // Object.is equality
+
+- Expected
++ Received
+
+- 1
++ 2
+
+ ❯ src/cli/cli.test.ts:2458:27
+    2456|     );
+    2457|     expect(result.code).toBe(EXIT.ok);
+    2458|     expect(counter.reads).toBe(1);
+       |                           ^
+    2459|     // …and the SAME rejecting dir on a PARKED run DOES take the recov…
+    2460|     // read, which is what keeps the 1 above from being vacuous.
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  src/cli/cli.test.ts > cli — ch14-p3a family 6: resolution failure and its ZERO side effects > the ORDERING member, submit-only: NOT parked + an unreadable pinned file answers (ii) at exit 3
+AssertionError: expected 1 to be 3 // Object.is equality
+
+- Expected
++ Received
+
+- 3
++ 1
+
+ ❯ assertErrorContract src/cli/cli.test.ts:419:23
+    417| function assertErrorContract(result: Run, expectedClass: string, expec…
+    418|   const error = errorDoc(result);
+    419|   expect(result.code).toBe(expectedCode);
+       |                       ^
+    420|   expect(error.class).toBe(expectedClass);
+    421|   const keys = Object.keys(error).sort();
+ ❯ src/cli/cli.test.ts:2720:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  src/floor/floor.test.ts > floor — F5 the pendingDecision member's presence rule (C21's binary) > ABSENT for every non-parked member of dimension 1 — ACTIVE, a NON-decision wait, TERMINAL — each with a dependency that WOULD yield ITS OWN template, and ZERO loads per member
+AssertionError: inst-1: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ src/floor/floor.test.ts:608:36
+    606|       // WAITING or any TERMINAL state would reach the dependency here,
+    607|       // and the dependency WOULD answer.
+    608|       expect(counting.loads(), id).toBe(0);
+       |                                    ^
+    609|     }
+    610|     handle.close();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  src/floor/floor.test.ts > floor — F5 the pendingDecision member's presence rule (C21's binary) > the park test SHORT-CIRCUITS the load — a NOT-parked run reaches the dependency ZERO times
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ src/floor/floor.test.ts:642:19
+    640|     };
+    641|     await createFloor(handle.store, counting).getInstanceDetail("inst-…
+    642|     expect(loads).toBe(0);
+       |                   ^
+    643|     // …and the SAME store IS reached for a parked one (the control th…
+    644|     // keeps the zero from being vacuous).
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  2 failed | 79 passed (81)
+      Tests  4 failed | 3090 passed (3094)
+   Start at  10:13:57
+   Duration  23.64s (transform 3.91s, setup 0ms, import 7.53s, tests 82.51s, environment 4ms)
+

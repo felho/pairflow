@@ -1,0 +1,12 @@
+{
+  "probe_id": "p3a-f2-anchorless-guard-removed",
+  "file": "tools/v3-plan/check_trace_narrow.py",
+  "original_sha256": "f513fe1119e054d57cb5c0ada9553acac796761e238dbb4710758e67592007ba",
+  "mutated_sha256": "be21e5fe38faa6c84467f4edfa2067d6027c176cee85c3f7f4709e5ae2488bab",
+  "test_command": "python3 ./tools/v3-plan/check_trace_narrow.py --selftest",
+  "exit_code": 1,
+  "suite_red": true,
+  "baseline": "green",
+  "output_file": "v3/implementation/probes/ch14-p3a/p3a-f2-anchorless-guard-removed.out",
+  "restore_verified": true
+}

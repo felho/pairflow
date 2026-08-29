@@ -1,0 +1,91 @@
+
+ RUN  v4.1.10 /Users/felho/dev/pairflow/v3
+
+ ❯ src/cli/cli.test.ts (91 tests | 4 failed) 2300ms
+     × submit-decision: every DRIVEN reason token reaches exit 3 as a stdout DATA document 85ms
+     × resume: every DRIVEN reason token reaches exit 3 as a stdout DATA document 45ms
+     × the SUCCESS kinds: committed and duplicate are stdout DATA at exit 0, stale is DATA at exit 3 23ms
+     × a REPLAYED op_id reaches `duplicate` at exit 0, and two invocations do NOT collide 40ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/cli/cli.test.ts > cli — ch14-p3a family 4: the exit and channel matrix, TOTAL over BOTH unions > submit-decision: every DRIVEN reason token reaches exit 3 as a stdout DATA document
+AssertionError: a nonce a DIFFERENT entry kind already consumed: expected 'committed' to be 'rejected' // Object.is equality
+
+Expected: "rejected"
+Received: "committed"
+
+ ❯ decide src/cli/cli.test.ts:2894:37
+    2892|       );
+    2893|       const doc = dataDoc(result);
+    2894|       expect(doc["kind"], scenario).toBe("rejected");
+       |                                     ^
+    2895|       expect(doc["reason"], scenario).toBe(expected);
+    2896|       observed.set(doc["reason"] as string, result.code);
+ ❯ src/cli/cli.test.ts:2937:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  src/cli/cli.test.ts > cli — ch14-p3a family 4: the exit and channel matrix, TOTAL over BOTH unions > resume: every DRIVEN reason token reaches exit 3 as a stdout DATA document
+AssertionError: a nonce the DECISION_MADE row already consumed: expected 'committed' to be 'rejected' // Object.is equality
+
+Expected: "rejected"
+Received: "committed"
+
+ ❯ record src/cli/cli.test.ts:2992:37
+    2990|       const result = await run(argv, deps);
+    2991|       const doc = dataDoc(result);
+    2992|       expect(doc["kind"], scenario).toBe("rejected");
+       |                                     ^
+    2993|       expect(doc["reason"], scenario).toBe(expected);
+    2994|       observed.set(doc["reason"] as string, result.code);
+ ❯ src/cli/cli.test.ts:3040:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  src/cli/cli.test.ts > cli — ch14-p3a family 4: the exit and channel matrix, TOTAL over BOTH unions > the SUCCESS kinds: committed and duplicate are stdout DATA at exit 0, stale is DATA at exit 3
+AssertionError: expected +0 to be 3 // Object.is equality
+
+- Expected
++ Received
+
+- 3
++ 0
+
+ ❯ src/cli/cli.test.ts:3086:24
+    3084|       }),
+    3085|     );
+    3086|     expect(stale.code).toBe(EXIT.notFound);
+       |                        ^
+    3087|     expect(dataDoc(stale)).toMatchObject({ kind: "stale" });
+    3088|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  src/cli/cli.test.ts > cli — ch14-p3a family 7/8: one read, no retry, and idempotency in both directions > a REPLAYED op_id reaches `duplicate` at exit 0, and two invocations do NOT collide
+AssertionError: expected { kind: 'duplicate' } to match object { kind: 'committed' }
+
+- Expected
++ Received
+
+  {
+-   "kind": "committed",
++   "kind": "duplicate",
+  }
+
+ ❯ src/cli/cli.test.ts:3500:26
+    3498|     const secondSubmit = dataDoc(await run(submitArgv, submitDeps));
+    3499|     expect(firstSubmit).toMatchObject({ kind: "committed" });
+    3500|     expect(secondSubmit).toMatchObject({ kind: "committed" });
+       |                          ^
+    3501|     expect(secondSubmit["version"]).not.toBe(firstSubmit["version"]);
+    3502|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  1 failed | 80 passed (81)
+      Tests  4 failed | 3090 passed (3094)
+   Start at  10:30:16
+   Duration  23.39s (transform 3.96s, setup 0ms, import 7.60s, tests 81.26s, environment 4ms)
+

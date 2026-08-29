@@ -1,0 +1,140 @@
+
+ RUN  v4.1.10 /Users/felho/dev/pairflow/v3
+
+ ❯ src/floor/floor.test.ts (26 tests | 1 failed) 41ms
+     × THROWS when the wait's handle names no committed row, and when the handle is ABSENT 6ms
+ ❯ src/cli/cli.test.ts (91 tests | 1 failed) 2421ms
+     × family 2b: ALL EIGHT integrity conditions reach the `internal` class on BOTH verb classes that derive 22ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/cli/cli.test.ts > cli — ch14-p3a family 1/3/10: the detail document under every derivability state > family 2b: ALL EIGHT integrity conditions reach the `internal` class on BOTH verb classes that derive
+AssertionError: expected [ Array(1) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "{\"instance\":{\"instanceId\":\"inst-1\",\"templateRef\":{\"id\":\"gated-v0\",\"version\":1},\"task\":\"decide it\",\"binding\":{\"implementer\":\"codex\",\"operator\":\"decider-7\"},\"currentStep\":\"gate\",\"round\":1,\"kernelStatus\":\"WAITING\",\"terminalDisposition\":null,\"activationMode\":\"immediate\",\"wait\":{\"kind\":\"human_decision\",\"requestedBy\":\"gate\",\"resumeEvents\":[\"approve\",\"again\",\"finish\",\"rework\"]},\"runtimeContext\":{\"state\":\"ready\",\"ref\":null},\"failureReason\":null,\"runOverrides\":{},\"version\":3},\"transcript\":[{\"entryKind\":\"STARTED\",\"seq\":1,\"opId\":\"op_6db693d8c9c04d14840a7103711c6301a5897aa83052aa200728d2b579744dc4\",\"committedAt\":1000},{\"entryKind\":\"transition\",\"seq\":2,\"envelope\":{\"instanceId\":\"inst-1\",\"opId\":\"op_804809fe091208caa05ae9b4d35969540288a69df0786f692ba8deac0da8b815\",\"type\":\"PASS\",\"actorId\":\"operator\",\"expectedVersion\":2,\"expectedRole\":\"implementer\"},\"payloadDigest\":\"b14670c3dc18db79a9cd628b8d7b32a11aaed56881c473069da449254d2126ae\",\"gateDecisions\":[],\"issuedAgentConfig\":{},\"committedAt\":1000},{\"entryKind\":\"DECISION_REQUEST\",\"seq\":3,\"requestRef\":\"req-1000-1\",\"recipient\":\"operator\",\"decisions\":[\"approve\",\"again\",\"finish\",\"rework\"],\"recommendation\":\"approve\",\"recommendationSource\":{\"fromStep\":\"implement\",\"eventType\":\"PASS\"},\"committedAt\":1000}],\"runner\":{\"errand\":{\"unavailable\":\"no-runner-ledger\"},\"attach\":{\"available\":false,\"reason\":\"no-live-attempt\"},\"runtimeContextSummary\":{\"unavailable\":\"no-runtime-context\"}}}",
++ ]
+
+ ❯ errorDoc src/cli/cli.test.ts:409:25
+    407|
+    408| function errorDoc(result: Run): CliErrorDoc["error"] {
+    409|   expect(result.stdout).toEqual([]);
+       |                         ^
+    410|   expect(result.stderr).toHaveLength(1);
+    411|   const doc = JSON.parse(result.stderr[0] ?? "") as CliErrorDoc;
+ ❯ assertErrorContract src/cli/cli.test.ts:418:17
+ ❯ src/cli/cli.test.ts:2562:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/floor/floor.test.ts > floor — F3 the correlation JOIN, and F6's no-catch rule > THROWS when the wait's handle names no committed row, and when the handle is ABSENT
+AssertionError: promise resolved "{ instance: { …(14) }, …(1) }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "instance": {
++     "activationMode": "immediate",
++     "binding": {
++       "implementer": "codex",
++       "operator": "human-1",
++     },
++     "currentStep": "gate",
++     "failureReason": null,
++     "instanceId": "inst-gate",
++     "kernelStatus": "WAITING",
++     "round": 1,
++     "runOverrides": {},
++     "runtimeContext": {
++       "ref": null,
++       "state": "ready",
++     },
++     "task": "ship it",
++     "templateRef": {
++       "id": "gated-v0",
++       "version": 1,
++     },
++     "terminalDisposition": null,
++     "version": 3,
++     "wait": {
++       "kind": "human_decision",
++       "requestedBy": "gate",
++       "resumeEvents": [
++         "approve",
++         "finish",
++         "rework",
++       ],
++     },
++   },
++   "transcript": [
++     {
++       "committedAt": 0,
++       "entryKind": "STARTED",
++       "opId": "inst-gate-start",
++       "seq": 1,
++     },
++     {
++       "committedAt": 0,
++       "entryKind": "transition",
++       "envelope": {
++         "actorId": "codex",
++         "expectedRole": "implementer",
++         "expectedVersion": 2,
++         "instanceId": "inst-gate",
++         "opId": "inst-gate-pass",
++         "payload": {
++           "note": "done",
++         },
++         "type": "PASS",
++       },
++       "gateDecisions": [],
++       "issuedAgentConfig": {},
++       "payloadDigest": "6068819491f9072bf32147f4d56365e2f3f3914e3deef36c73ae72961219dc2a",
++       "seq": 2,
++     },
++     {
++       "committedAt": 0,
++       "contextRef": {
++         "note": "done",
++       },
++       "decisions": [
++         "approve",
++         "finish",
++         "rework",
++       ],
++       "entryKind": "DECISION_REQUEST",
++       "recipient": "operator",
++       "recommendation": "approve",
++       "recommendationSource": {
++         "eventType": "PASS",
++         "fromStep": "implement",
++       },
++       "requestRef": "req-0-1",
++       "seq": 3,
++     },
++   ],
+  }
+
+ ❯ src/floor/floor.test.ts:756:6
+    754|     await expect(
+    755|       createFloor(absent, gatedDefinitions).getInstanceDetail("inst-ga…
+    756|     ).rejects.toThrow(/floor integrity: .*with NO request_ref on its w…
+       |      ^
+    757|     handle.close();
+    758|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  2 failed | 79 passed (81)
+      Tests  2 failed | 3092 passed (3094)
+   Start at  10:17:10
+   Duration  23.65s (transform 4.12s, setup 0ms, import 7.68s, tests 82.95s, environment 4ms)
+

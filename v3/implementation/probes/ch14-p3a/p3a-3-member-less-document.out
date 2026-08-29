@@ -1,0 +1,37 @@
+
+ RUN  v4.1.10 /Users/felho/dev/pairflow/v3
+
+ ❯ src/cli/cli.test.ts (91 tests | 1 failed) 2379ms
+     × family 2b: ALL EIGHT integrity conditions reach the `internal` class on BOTH verb classes that derive 20ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/cli/cli.test.ts > cli — ch14-p3a family 1/3/10: the detail document under every derivability state > family 2b: ALL EIGHT integrity conditions reach the `internal` class on BOTH verb classes that derive
+AssertionError: expected [ Array(1) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "{\"instance\":{\"instanceId\":\"inst-1\",\"templateRef\":{\"id\":\"gated-v0\",\"version\":1},\"task\":\"decide it\",\"binding\":{\"implementer\":\"codex\",\"operator\":\"decider-7\"},\"currentStep\":\"gate\",\"round\":1,\"kernelStatus\":\"WAITING\",\"terminalDisposition\":null,\"activationMode\":\"immediate\",\"wait\":{\"kind\":\"human_decision\",\"requestedBy\":\"gate\",\"resumeEvents\":[\"approve\",\"again\",\"finish\",\"rework\"],\"requestRef\":\"req-never\"},\"runtimeContext\":{\"state\":\"ready\",\"ref\":null},\"failureReason\":null,\"runOverrides\":{},\"version\":3},\"transcript\":[{\"entryKind\":\"STARTED\",\"seq\":1,\"opId\":\"op_6db693d8c9c04d14840a7103711c6301a5897aa83052aa200728d2b579744dc4\",\"committedAt\":1000},{\"entryKind\":\"transition\",\"seq\":2,\"envelope\":{\"instanceId\":\"inst-1\",\"opId\":\"op_804809fe091208caa05ae9b4d35969540288a69df0786f692ba8deac0da8b815\",\"type\":\"PASS\",\"actorId\":\"operator\",\"expectedVersion\":2,\"expectedRole\":\"implementer\"},\"payloadDigest\":\"b14670c3dc18db79a9cd628b8d7b32a11aaed56881c473069da449254d2126ae\",\"gateDecisions\":[],\"issuedAgentConfig\":{},\"committedAt\":1000},{\"entryKind\":\"DECISION_REQUEST\",\"seq\":3,\"requestRef\":\"req-1000-1\",\"recipient\":\"operator\",\"decisions\":[\"approve\",\"again\",\"finish\",\"rework\"],\"recommendation\":\"approve\",\"recommendationSource\":{\"fromStep\":\"implement\",\"eventType\":\"PASS\"},\"committedAt\":1000}],\"runner\":{\"errand\":{\"unavailable\":\"no-runner-ledger\"},\"attach\":{\"available\":false,\"reason\":\"no-live-attempt\"},\"runtimeContextSummary\":{\"unavailable\":\"no-runtime-context\"}}}",
++ ]
+
+ ❯ errorDoc src/cli/cli.test.ts:409:25
+    407|
+    408| function errorDoc(result: Run): CliErrorDoc["error"] {
+    409|   expect(result.stdout).toEqual([]);
+       |                         ^
+    410|   expect(result.stderr).toHaveLength(1);
+    411|   const doc = JSON.parse(result.stderr[0] ?? "") as CliErrorDoc;
+ ❯ assertErrorContract src/cli/cli.test.ts:418:17
+ ❯ src/cli/cli.test.ts:2562:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 80 passed (81)
+      Tests  1 failed | 3093 passed (3094)
+   Start at  10:19:36
+   Duration  23.65s (transform 4.30s, setup 0ms, import 7.73s, tests 82.78s, environment 4ms)
+

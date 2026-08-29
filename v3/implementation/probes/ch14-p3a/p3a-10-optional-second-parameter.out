@@ -1,0 +1,2 @@
+src/floor/floor.test.ts(931,11): error TS2322: Type 'true' is not assignable to type 'false'.
+src/floor/floor.ts(220,7): error TS2322: Type 'true' is not assignable to type 'false'.

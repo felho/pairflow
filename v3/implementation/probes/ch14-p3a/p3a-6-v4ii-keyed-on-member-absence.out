@@ -1,0 +1,34 @@
+
+ RUN  v4.1.10 /Users/felho/dev/pairflow/v3
+
+ ❯ src/cli/cli.test.ts (91 tests | 1 failed) 2342ms
+     × the SUBMIT path's four lanes: two classes, four names, and nothing committed 36ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/cli/cli.test.ts > cli — ch14-p3a family 6: resolution failure and its ZERO side effects > the SUBMIT path's four lanes: two classes, four names, and nothing committed
+AssertionError: expected 3 to be 1 // Object.is equality
+
+- Expected
++ Received
+
+- 1
++ 3
+
+ ❯ assertErrorContract src/cli/cli.test.ts:419:23
+    417| function assertErrorContract(result: Run, expectedClass: string, expec…
+    418|   const error = errorDoc(result);
+    419|   expect(result.code).toBe(expectedCode);
+       |                       ^
+    420|   expect(error.class).toBe(expectedClass);
+    421|   const keys = Object.keys(error).sort();
+ ❯ src/cli/cli.test.ts:2663:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 80 passed (81)
+      Tests  1 failed | 3093 passed (3094)
+   Start at  10:28:40
+   Duration  24.12s (transform 3.63s, setup 0ms, import 7.50s, tests 82.13s, environment 4ms)
+

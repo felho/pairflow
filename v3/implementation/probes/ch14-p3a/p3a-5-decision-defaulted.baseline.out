@@ -1,0 +1,9 @@
+
+ RUN  v4.1.10 /Users/felho/dev/pairflow/v3
+
+
+ Test Files  81 passed (81)
+      Tests  3094 passed (3094)
+   Start at  10:25:48
+   Duration  23.42s (transform 3.83s, setup 0ms, import 7.63s, tests 81.53s, environment 4ms)
+

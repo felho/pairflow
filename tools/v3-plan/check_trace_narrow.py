@@ -223,6 +223,79 @@ def _regex_literal_end(text: str, start: int) -> int | None:
     return None
 
 
+def _scan_noncode(text: str, *, regex_literals: bool) -> list[bool]:
+    """ONE scanning pass, returning the mask as a POSITION SET.
+
+    `regex_literals=False` is EXACTLY the pre-regex-literal masker:
+    comments, strings and template literals, and a `/` that opens
+    neither `//` nor `/*` is ordinary code. `regex_literals=True` adds
+    the speculative regex-literal scan. Newlines are never masked, in
+    either pass, so line structure is preserved.
+
+    The two passes are kept as passes — not merged into one scanner with
+    a flag threaded through the middle — because `mask_noncode` UNIONS
+    them, and the union is the whole monotonicity guarantee.
+    """
+    masked = [False] * len(text)
+    i = 0
+    n = len(text)
+    while i < n:
+        char = text[i]
+        if char == "/" and text.startswith("//", i):
+            while i < n and text[i] != "\n":
+                masked[i] = True
+                i += 1
+        elif char == "/" and text.startswith("/*", i):
+            while i < n and not text.startswith("*/", i):
+                if text[i] != "\n":
+                    masked[i] = True
+                i += 1
+            for _ in range(2):
+                if i < n:
+                    masked[i] = True
+                    i += 1
+        elif char == "/" and regex_literals:
+            # A REGEX LITERAL. It is tried LAST among the `/` forms —
+            # `//` and `/*` are decided above — because an empty regex
+            # is not expressible, so `//` is always the comment.
+            end = _regex_literal_end(text, i)
+            if end is None:
+                i += 1
+            else:
+                while i < end:
+                    masked[i] = True
+                    i += 1
+        elif char in "\"'`":
+            quote = char
+            masked[i] = True
+            i += 1
+            while i < n:
+                current = text[i]
+                if current == "\\":
+                    masked[i] = True
+                    if i + 1 < n and text[i + 1] != "\n":
+                        masked[i + 1] = True
+                    i += 2
+                    continue
+                if current == quote:
+                    masked[i] = True
+                    i += 1
+                    break
+                # An unterminated single-quoted string does not swallow the
+                # rest of the file; a template literal legitimately spans
+                # lines and does.
+                if current == "\n":
+                    if quote != "`":
+                        break
+                    i += 1
+                    continue
+                masked[i] = True
+                i += 1
+        else:
+            i += 1
+    return masked
+
+
 def mask_noncode(text: str) -> str:
     """Return `text` with every COMMENT, STRING-LITERAL and REGEX-LITERAL
     character replaced by a filler, positions and newlines preserved.
@@ -233,10 +306,37 @@ def mask_noncode(text: str) -> str:
     never make an erasure apply where it should not, which is the false
     GREEN this gate exists to refuse. So an ambiguous byte (a `/` that
     opens a regex literal, a quote inside one) is allowed to over-mask.
-    The direction holds MECHANICALLY and not by care: masking never
-    removes a byte from the compared text — `sub_in_code` matches and
-    splices the ORIGINAL — it only VETOES erasures, so more masking can
-    only leave more difference visible.
+
+    THE UNION, AND WHY IT IS THE IMPLEMENTATION AND NOT A TIDINESS. The
+    result is the union of TWO independent passes: the strings-and-
+    comments pass alone, and the same pass WITH the speculative
+    regex-literal scan. That is a correction of a claim this docstring
+    used to make — that the safe direction held "MECHANICALLY and not by
+    care" because masking never removes a byte from the compared text.
+    The reasoning assumed masking is MONOTONE in the recognized forms.
+    IT IS NOT, FOR A SPECULATIVE SCANNER, and the counterexample was
+    live in the shipped gate (build-close review, gate 2 pass 5):
+
+        const ratio = total / divisor; expect(label).toBe("prefix/_x");
+
+    The DIVISION slash opens a speculative regex scan that runs to the
+    `/` INSIDE the string literal and consumes the string's OPENING
+    QUOTE. The rest of the string body is then read as code, so a re-pin
+    to `"prefix/_asDispatch(x)"` erased on both sides and rode through
+    green — a form the pre-regex-literal masker had caught. Adding a
+    recognized form UNMASKED a span. Over-masking is safe; MIS-masking
+    is not, and a speculative scanner mis-tokenizes by design.
+
+    The union restores monotonicity BY CONSTRUCTION rather than by
+    argument: the masked set is a superset of the strings-and-comments
+    pass for EVERY input, because that pass is one of the two unioned.
+    No division-versus-regex token-context heuristic is used to choose
+    between the passes — such a heuristic's failure direction is toward
+    false GREEN. The property is DRIVEN, not asserted: the selftest
+    checks the superset relation against an INDEPENDENT reference
+    scanner over a corpus that includes the counterexample above, its
+    line-comment twin, every fixture in this file, and the real contents
+    of the four live golden-trace files.
 
     WHAT IT RECOGNIZES AS NON-CODE, listed so the next reader meets the
     limit as KNOWN rather than discovering it a fourth time (no masking
@@ -264,63 +364,12 @@ def mask_noncode(text: str) -> str:
     parser-based, or should instead shrink its scope, is a routed
     boundary question and is deliberately not answered here.
     """
+    plain = _scan_noncode(text, regex_literals=False)
+    speculative = _scan_noncode(text, regex_literals=True)
     out = list(text)
-    i = 0
-    n = len(text)
-    while i < n:
-        char = text[i]
-        if char == "/" and text.startswith("//", i):
-            while i < n and text[i] != "\n":
-                out[i] = _MASK
-                i += 1
-        elif char == "/" and text.startswith("/*", i):
-            while i < n and not text.startswith("*/", i):
-                if text[i] != "\n":
-                    out[i] = _MASK
-                i += 1
-            for _ in range(2):
-                if i < n:
-                    out[i] = _MASK
-                    i += 1
-        elif char == "/":
-            # A REGEX LITERAL. It is tried LAST among the `/` forms —
-            # `//` and `/*` are decided above — because an empty regex
-            # is not expressible, so `//` is always the comment.
-            end = _regex_literal_end(text, i)
-            if end is None:
-                i += 1
-            else:
-                while i < end:
-                    out[i] = _MASK
-                    i += 1
-        elif char in "\"'`":
-            quote = char
+    for i in range(len(text)):
+        if plain[i] or speculative[i]:
             out[i] = _MASK
-            i += 1
-            while i < n:
-                current = text[i]
-                if current == "\\":
-                    out[i] = _MASK
-                    if i + 1 < n and text[i + 1] != "\n":
-                        out[i + 1] = _MASK
-                    i += 2
-                    continue
-                if current == quote:
-                    out[i] = _MASK
-                    i += 1
-                    break
-                # An unterminated single-quoted string does not swallow the
-                # rest of the file; a template literal legitimately spans
-                # lines and does.
-                if current == "\n":
-                    if quote != "`":
-                        break
-                    i += 1
-                    continue
-                out[i] = _MASK
-                i += 1
-        else:
-            i += 1
     return "".join(out)
 
 
@@ -610,6 +659,36 @@ CALL_REGEX_CONTEXT = 'expect(label).toMatch(/asDispatch(x)/);\nconst half = tota
 CALL_REGEX_CONTEXT_BEFORE = BEFORE + CALL_REGEX_CONTEXT
 CALL_REGEX_CONTEXT_AFTER = AFTER_CLEAN + CALL_REGEX_CONTEXT
 
+# packet ch14-p3a AFTERMATH (build-close review, gate 2 pass 5): THE
+# REGEX FIX'S OWN FALSE GREEN. A DIVISION slash opened the speculative
+# regex scan; the scan ran to the `/` inside the LATER non-code region
+# on the same physical line and ATE ITS OPENING DELIMITER, so the rest
+# of that region was read as code. Both lanes are RED at `c201b23f^`
+# (before the regex branch existed) and GREEN at `c201b23f` — the fix
+# UNMASKED what the simpler masker had covered, which is why the union
+# and not a cleverer scan is the answer.
+#
+# The `_` after `prefix/` is load-bearing and not decoration: the regex
+# scan takes trailing ALPHA characters as flags, so `prefix/asDispatch`
+# would swallow the call head by accident and the lane would be red for
+# the wrong reason. A non-alpha byte stops the flag run and leaves the
+# call head standing in what the scanner then believes is code.
+SLASH_STRING_LINE = 'const ratio = total / divisor; expect(label).toBe("prefix/_%s");\n'
+SLASH_STRING_BEFORE = BEFORE + SLASH_STRING_LINE % "x"
+SLASH_STRING_AFTER = AFTER_CLEAN + SLASH_STRING_LINE % "asDispatch(x)"
+
+SLASH_COMMENT_LINE = "const ratio = total / divisor; // the site: prefix/_%s\n"
+SLASH_COMMENT_BEFORE = BEFORE + SLASH_COMMENT_LINE % "x"
+SLASH_COMMENT_AFTER = AFTER_CLEAN + SLASH_COMMENT_LINE % "asDispatch(x)"
+
+# The GREEN control for the pair: the same division and the same
+# non-code region present and UNCHANGED while the real call site takes
+# the narrow. Without it both lanes above are satisfied by a masker that
+# had simply started swallowing every line containing a `/`.
+SLASH_CONTEXT = SLASH_STRING_LINE % "x" + SLASH_COMMENT_LINE % "x"
+SLASH_CONTEXT_BEFORE = BEFORE + SLASH_CONTEXT
+SLASH_CONTEXT_AFTER = AFTER_CLEAN + SLASH_CONTEXT
+
 # ── the DECLARATION entry ────────────────────────────────────────────
 # The erased construct spans lines, so its string-literal lane needs a
 # TEMPLATE literal — the only string form that legitimately does.
@@ -653,6 +732,95 @@ IMPORT_BLOCK_AFTER = IMPORT_AFTER_CLEAN + "/*\n" + IMPORT_LINE + "\n*/\n"
 
 IMPORT_CONTEXT_BEFORE = IMPORT_BEFORE + "// " + IMPORT_LINE + "\n"
 IMPORT_CONTEXT_AFTER = IMPORT_AFTER_CLEAN + "// " + IMPORT_LINE + "\n"
+
+
+# ── the MONOTONICITY reference ───────────────────────────────────────
+# The pre-regex-literal masker, RE-IMPLEMENTED HERE and deliberately NOT
+# shared with the scanner it checks. A reference that calls the code
+# under test proves nothing; this one is written from the same spec and
+# would have gone red on the shipped `c201b23f`, which is the only
+# evidence that matters for it.
+#
+# It is knowingly a DUPLICATE, and the duplication is the point: the
+# invariant it drives is that ADDING a recognized form may only ADD
+# masked positions. A shared helper would make the two sides move
+# together and the property vacuous.
+
+
+def _reference_noncode_positions(text: str) -> set[int]:
+    """Positions of every COMMENT and STRING character, regex-blind.
+
+    `//` to end of line; `/* … */` non-nesting; `'` and `"` ended by the
+    quote or the line end; `` ` `` spanning lines; a backslash escapes
+    the next character inside a string. Newlines are never included. A
+    `/` that opens neither comment form is ordinary code — which is
+    exactly the assumption the speculative scan overturned.
+    """
+    found: set[int] = set()
+    i = 0
+    n = len(text)
+    while i < n:
+        char = text[i]
+        if text.startswith("//", i):
+            while i < n and text[i] != "\n":
+                found.add(i)
+                i += 1
+        elif text.startswith("/*", i):
+            while i < n and not text.startswith("*/", i):
+                if text[i] != "\n":
+                    found.add(i)
+                i += 1
+            for _ in range(2):
+                if i < n:
+                    found.add(i)
+                    i += 1
+        elif char in "\"'`":
+            found.add(i)
+            i += 1
+            while i < n:
+                if text[i] == "\\":
+                    found.add(i)
+                    if i + 1 < n and text[i + 1] != "\n":
+                        found.add(i + 1)
+                    i += 2
+                    continue
+                if text[i] == char:
+                    found.add(i)
+                    i += 1
+                    break
+                if text[i] == "\n":
+                    if char != "`":
+                        break
+                    i += 1
+                    continue
+                found.add(i)
+                i += 1
+        else:
+            i += 1
+    return found
+
+
+def _live_trace_sources() -> list[tuple[str, str]]:
+    """The four LIVE golden-trace files, by their receipt entries.
+
+    Real source is in the corpus because the fixtures in this file are
+    small and hand-shaped: the mis-tokenization that shipped needs a
+    division and a later same-line literal, and only real test code says
+    whether such lines exist in the files this gate actually guards.
+
+    A missing receipts file or a missing source file is a FAILURE
+    reported by the caller, never a silent skip — a corpus that quietly
+    shrinks to nothing is the same defect as a property asserted in
+    prose.
+    """
+    repo = Path(__file__).resolve().parents[2]
+    receipts_path = repo / "v3" / "src" / "drift" / "traceNarrowReceipts.json"
+    entries = json.loads(receipts_path.read_text(encoding="utf-8"))
+    sources: list[tuple[str, str]] = []
+    for entry in entries:
+        name = entry["file"]
+        sources.append((name, (repo / name).read_text(encoding="utf-8")))
+    return sources
 
 
 def selftest() -> int:
@@ -791,6 +959,16 @@ def selftest() -> int:
         "asDispatch-regex-context-green", CALL_REGEX_CONTEXT_BEFORE, CALL_REGEX_CONTEXT_AFTER
     )
 
+    # 15c-15d. the AFTERMATH-2 lanes: a DIVISION slash on the same
+    #          physical line as a later string / line comment. The
+    #          speculative regex scan ate the literal's opening
+    #          delimiter and re-read its body as code, so the regex fix
+    #          UNMASKED a span the simpler masker had covered. Both are
+    #          red at `c201b23f^` and green at `c201b23f`.
+    assert_context_red("division-then-string-literal", SLASH_STRING_BEFORE, SLASH_STRING_AFTER)
+    assert_context_red("division-then-line-comment", SLASH_COMMENT_BEFORE, SLASH_COMMENT_AFTER)
+    assert_context_green("division-slash-context-green", SLASH_CONTEXT_BEFORE, SLASH_CONTEXT_AFTER)
+
     # 18-20. the DECLARATION entry in each non-code context.
     assert_context_red("declaration-inside-a-string-literal", DECL_LITERAL_BEFORE, DECL_LITERAL_AFTER)
     assert_context_red("declaration-inside-a-line-comment", DECL_COMMENT_BEFORE, DECL_COMMENT_AFTER)
@@ -894,6 +1072,53 @@ def selftest() -> int:
     )
     if checker.errors:
         failures.append(f"green NOT green: a clean receipt was refused ({checker.errors})")
+
+    # ── THE MONOTONICITY PROPERTY, DRIVEN OVER A CORPUS ──────────────
+    # The acceptance criterion of the aftermath fold that produced the
+    # union: the masked positions must be a SUPERSET of what the
+    # PRE-REGEX-LITERAL masker produced, for EVERY input. Never fewer.
+    #
+    # This is the lane the shipped `c201b23f` had no equivalent of. Its
+    # docstring ARGUED the direction was safe ("masking never removes a
+    # byte from the compared text, so over-masking can only leave more
+    # difference visible") and the argument was wrong, because it
+    # assumed masking is monotone in the recognized forms and a
+    # speculative scanner is not. A property asserted in prose and not
+    # checked is precisely what produced that finding.
+    #
+    # The corpus is EVERY fixture in this module — so a fixture added
+    # later joins it without anyone remembering to — plus the two
+    # counterexample lines and the real contents of the four live
+    # golden-trace files.
+    corpus: list[tuple[str, str]] = [
+        (name, value)
+        for name, value in sorted(globals().items())
+        if name.isupper() and isinstance(value, str)
+    ]
+    try:
+        corpus.extend(_live_trace_sources())
+    except (OSError, ValueError, KeyError) as exc:  # noqa: BLE001 - reported, never skipped
+        failures.append(f"monotonicity corpus: the LIVE trace sources could not be read ({exc!r})")
+    dims.append("mask-monotonicity-over-corpus")
+    lost: list[str] = []
+    for name, text in corpus:
+        masked = mask_noncode(text)
+        missing = sorted(
+            i for i in _reference_noncode_positions(text) if masked[i] != _MASK
+        )
+        if missing:
+            at = missing[0]
+            lost.append(
+                f"{name}: {len(missing)} position(s) the strings-and-comments masker "
+                f"covered are UNMASKED, first at {at} ({text[max(0, at - 40) : at + 40]!r})"
+            )
+    if lost:
+        failures.append(
+            "MASK MONOTONICITY VIOLATED — adding a recognized form removed masking: "
+            + "; ".join(lost)
+        )
+    if len(corpus) < 5:
+        failures.append(f"monotonicity corpus is implausibly small ({len(corpus)} input(s))")
 
     for failure in failures:
         print(f"selftest FAIL: {failure}", file=sys.stderr)

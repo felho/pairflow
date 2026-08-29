@@ -1,0 +1,12 @@
+{
+  "probe_id": "p3a-f2-anchor-check-neutered",
+  "file": "tools/v3-plan/check_trace_narrow.py",
+  "original_sha256": "f513fe1119e054d57cb5c0ada9553acac796761e238dbb4710758e67592007ba",
+  "mutated_sha256": "0c65407c759fee7b3bfafc1a1008bc525b12f61ab736ee2aca65e2cae16a202f",
+  "test_command": "python3 ./tools/v3-plan/check_trace_narrow.py --selftest",
+  "exit_code": 1,
+  "suite_red": true,
+  "baseline": "green",
+  "output_file": "v3/implementation/probes/ch14-p3a/p3a-f2-anchor-check-neutered.out",
+  "restore_verified": true
+}

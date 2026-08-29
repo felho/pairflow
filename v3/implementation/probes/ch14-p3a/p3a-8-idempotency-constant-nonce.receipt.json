@@ -1,0 +1,12 @@
+{
+  "probe_id": "p3a-8-idempotency-constant-nonce",
+  "file": "v3/src/cli/main.ts",
+  "original_sha256": "8f9392560d2577067835276ab5c9c499f569065a4f9624481565a35a4873aa0e",
+  "mutated_sha256": "f0510a4c6de3a232942ed3c39004112aececbefb958040e19ea79b4e00e4e207",
+  "test_command": "pnpm exec vitest run",
+  "exit_code": 1,
+  "suite_red": true,
+  "baseline": "green",
+  "output_file": "v3/implementation/probes/ch14-p3a/p3a-8-idempotency-constant-nonce.out",
+  "restore_verified": true
+}

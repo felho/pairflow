@@ -1,0 +1,56 @@
+
+ RUN  v4.1.10 /Users/felho/dev/pairflow/v3
+
+ ❯ src/floor/floor.test.ts (26 tests | 2 failed) 38ms
+     × ABSENT for every non-parked member of dimension 1 — ACTIVE, a NON-decision wait, TERMINAL — each with a dependency that WOULD yield ITS OWN template, and ZERO loads per member 5ms
+     × the floor's read surface grows by EXACTLY {pendingDecision}, and by NOTHING in every other state 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/floor/floor.test.ts > floor — F5 the pendingDecision member's presence rule (C21's binary) > ABSENT for every non-parked member of dimension 1 — ACTIVE, a NON-decision wait, TERMINAL — each with a dependency that WOULD yield ITS OWN template, and ZERO loads per member
+AssertionError: inst-1: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ src/floor/floor.test.ts:604:57
+    602|       const detail = await createFloor(handle.store, counting.store).g…
+    603|       expect(detail, id).not.toBeNull();
+    604|       expect(detail && "pendingDecision" in detail, id).toBe(false);
+       |                                                         ^
+    605|       // The park test SHORT-CIRCUITS: a predicate that admitted any
+    606|       // WAITING or any TERMINAL state would reach the dependency here,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/floor/floor.test.ts > floor — F7/F1 non-movement, MEASURED, and the required-not-optional parameter > the floor's read surface grows by EXACTLY {pendingDecision}, and by NOTHING in every other state
+AssertionError: not-parked: expected [ 'instance', 'pendingDecision', …(1) ] to deeply equal [ 'instance', 'transcript' ]
+
+- Expected
++ Received
+
+  [
+    "instance",
++   "pendingDecision",
+    "transcript",
+  ]
+
+ ❯ src/floor/floor.test.ts:980:55
+    978|     ] as const) {
+    979|       const detail = await floor.getInstanceDetail(id);
+    980|       expect(Object.keys(detail ?? {}).sort(), state).toEqual(["instan…
+       |                                                       ^
+    981|     }
+    982|     handle.close();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed | 80 passed (81)
+      Tests  2 failed | 3092 passed (3094)
+   Start at  10:22:04
+   Duration  23.69s (transform 3.97s, setup 0ms, import 7.67s, tests 83.09s, environment 4ms)
+

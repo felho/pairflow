@@ -1,0 +1,12 @@
+{
+  "probe_id": "p3a-4-lifecycle-exit-code",
+  "file": "v3/src/cli/main.ts",
+  "original_sha256": "8f9392560d2577067835276ab5c9c499f569065a4f9624481565a35a4873aa0e",
+  "mutated_sha256": "cc277c6c7b5ade11d5ef4c10bb08a78cce7be88b0ec454c7309597e00af54018",
+  "test_command": "pnpm exec vitest run",
+  "exit_code": 1,
+  "suite_red": true,
+  "baseline": "green",
+  "output_file": "v3/implementation/probes/ch14-p3a/p3a-4-lifecycle-exit-code.out",
+  "restore_verified": true
+}

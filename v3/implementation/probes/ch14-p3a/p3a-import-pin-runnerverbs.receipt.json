@@ -1,0 +1,12 @@
+{
+  "probe_id": "p3a-import-pin-runnerverbs",
+  "file": "v3/src/cli/runnerVerbs.ts",
+  "original_sha256": "cfa55ecb82ccb014963971a5692ee489de54b6ca05d27411e0e4df9e883c08cb",
+  "mutated_sha256": "b9cee90bf2b7189f233ad7ec8fb868446cb6de4249a1304cf06a20246f6489ca",
+  "test_command": "pnpm exec vitest run",
+  "exit_code": 1,
+  "suite_red": true,
+  "baseline": "green",
+  "output_file": "v3/implementation/probes/ch14-p3a/p3a-import-pin-runnerverbs.out",
+  "restore_verified": true
+}

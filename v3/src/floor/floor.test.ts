@@ -884,9 +884,15 @@ describe("floor — F3 the correlation JOIN, and F6's no-catch rule", () => {
     // errors, which all carry a `kernel integrity:` message. This one
     // does not, so it also refuses the narrower wrong build: a floor
     // that re-wraps on a MESSAGE TOKEN and lets the recognized shapes
-    // through. (It is still an `Error` — the lint rule forbids throwing
-    // anything else — so a re-wrap keyed on the CLASS alone would be
-    // invisible to every lane in this file.)
+    // through. What this lane adds is discrimination on the MESSAGE
+    // AXIS, and only that. It is NOT the guard against a re-wrap keyed
+    // on the CLASS: every lane here asserts OBJECT identity, which no
+    // re-wrap survives whatever it keys on — probed, a floor re-wrapping
+    // on `error.constructor === Error` reds the six-site loop AND this
+    // lane. (An earlier note here claimed the opposite, that a
+    // class-keyed re-wrap would be invisible to every lane in this file.
+    // Understating a guard teaches the next reader to build armor that
+    // already exists, which is the same defect as overstating one.)
     const sentinel = new Error("sentinel: no integrity token in this message");
     derivationThrow = sentinel;
     try {

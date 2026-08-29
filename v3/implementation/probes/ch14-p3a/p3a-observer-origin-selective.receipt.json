@@ -1,0 +1,12 @@
+{
+  "probe_id": "p3a-observer-origin-selective",
+  "file": "v3/src/cli/main.ts",
+  "original_sha256": "8f9392560d2577067835276ab5c9c499f569065a4f9624481565a35a4873aa0e",
+  "mutated_sha256": "b7f533946fe932c24f108093f45b67a3852cd0679417a931f7483f6b7a84dc54",
+  "test_command": "pnpm exec vitest run",
+  "exit_code": 1,
+  "suite_red": true,
+  "baseline": "green",
+  "output_file": "v3/implementation/probes/ch14-p3a/p3a-observer-origin-selective.out",
+  "restore_verified": true
+}

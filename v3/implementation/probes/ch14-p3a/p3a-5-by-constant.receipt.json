@@ -1,0 +1,12 @@
+{
+  "probe_id": "p3a-5-by-constant",
+  "file": "v3/src/cli/main.ts",
+  "original_sha256": "8f9392560d2577067835276ab5c9c499f569065a4f9624481565a35a4873aa0e",
+  "mutated_sha256": "36db4e1b7d3715d26ef7c6ba70b4d92a4cb046308ae48724eb0344a39ca4bbb9",
+  "test_command": "pnpm exec vitest run",
+  "exit_code": 1,
+  "suite_red": true,
+  "baseline": "green",
+  "output_file": "v3/implementation/probes/ch14-p3a/p3a-5-by-constant.out",
+  "restore_verified": true
+}

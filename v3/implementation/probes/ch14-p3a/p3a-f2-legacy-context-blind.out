@@ -1,0 +1,11 @@
+selftest FAIL: dim NOT red: asDispatch-inside-a-string-literal (no error containing 'RE-PIN'): []
+selftest FAIL: dim NOT red: asDispatch-inside-a-line-comment (no error containing 'RE-PIN'): []
+selftest FAIL: dim NOT red: asDispatch-inside-a-block-comment (no error containing 'RE-PIN'): []
+selftest FAIL: dim NOT red: asDispatch-inside-a-regex-literal (no error containing 'RE-PIN'): []
+selftest FAIL: dim NOT red: division-then-string-literal (no error containing 'RE-PIN'): []
+selftest FAIL: dim NOT red: division-then-line-comment (no error containing 'RE-PIN'): []
+selftest FAIL: dim NOT red: declaration-inside-a-string-literal (no error containing 'RE-PIN'): []
+selftest FAIL: dim NOT red: declaration-inside-a-block-comment (no error containing 'RE-PIN'): []
+selftest FAIL: dim NOT red: import-inside-a-string-literal (no error containing 'RE-PIN'): []
+selftest FAIL: dim NOT red: import-inside-a-block-comment (no error containing 'RE-PIN'): []
+check-trace-narrow selftest: 28 red dims exercised, 10 failure(s)

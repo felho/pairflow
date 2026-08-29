@@ -1,0 +1,12 @@
+{
+  "probe_id": "p3a-f2-legacy-context-blind",
+  "file": "tools/v3-plan/check_trace_narrow.py",
+  "original_sha256": "f513fe1119e054d57cb5c0ada9553acac796761e238dbb4710758e67592007ba",
+  "mutated_sha256": "3d2e97fd927ffc1b5905b04f0dbe9186910fe0b649548d579ac6eb78dc97ddf4",
+  "test_command": "python3 ./tools/v3-plan/check_trace_narrow.py --selftest",
+  "exit_code": 1,
+  "suite_red": true,
+  "baseline": "green",
+  "output_file": "v3/implementation/probes/ch14-p3a/p3a-f2-legacy-context-blind.out",
+  "restore_verified": true
+}

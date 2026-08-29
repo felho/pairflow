@@ -1,0 +1,12 @@
+{
+  "probe_id": "p3a-6-v4ii-keyed-on-member-absence",
+  "file": "v3/src/cli/main.ts",
+  "original_sha256": "8f9392560d2577067835276ab5c9c499f569065a4f9624481565a35a4873aa0e",
+  "mutated_sha256": "b6e2e7c2f18ddfd92f0ad90c9754f84ab1909769af9324454ea1bda34602e2d9",
+  "test_command": "pnpm exec vitest run",
+  "exit_code": 1,
+  "suite_red": true,
+  "baseline": "green",
+  "output_file": "v3/implementation/probes/ch14-p3a/p3a-6-v4ii-keyed-on-member-absence.out",
+  "restore_verified": true
+}

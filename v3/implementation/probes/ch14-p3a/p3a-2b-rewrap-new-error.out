@@ -1,0 +1,80 @@
+
+ RUN  v4.1.10 /Users/felho/dev/pairflow/v3
+
+ ❯ src/floor/floor.test.ts (26 tests | 3 failed) 42ms
+     × `floor.ts` carries NO exception handling — F6's rule pinned at the source 4ms
+     × propagates ALL SIX of the derivation's integrity throws — the floor catches NOTHING 4ms
+     × an INJECTED sentinel from the derivation reaches the caller AS ITSELF 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/floor/floor.test.ts > floor — F3 the correlation JOIN, and F6's no-catch rule > `floor.ts` carries NO exception handling — F6's rule pinned at the source
+AssertionError: expected [ 'try', 'catch' ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "try",
++   "catch",
++ ]
+
+ ❯ src/floor/floor.test.ts:806:93
+    804|
+    805|   it("`floor.ts` carries NO exception handling — F6's rule pinned at t…
+    806|     expect(exceptionHandling(readFileSync(new URL("./floor.ts", import…
+       |                                                                                             ^
+    807|       [],
+    808|     );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  src/floor/floor.test.ts > floor — F3 the correlation JOIN, and F6's no-catch rule > propagates ALL SIX of the derivation's integrity throws — the floor catches NOTHING
+AssertionError: null currentStep: expected Error: kernel integrity: instance 'inst-g… to be Error: kernel integrity: instance 'inst-g… // Object.is equality
+
+If it should pass with deep equality, replace "toBe" with "toStrictEqual"
+
+Expected: Error: kernel integrity: instance 'inst-g…
+Received: serializes to the same string
+
+
+Compared values have no visual difference.
+
+ ❯ src/floor/floor.test.ts:875:28
+    873|       // came from somewhere else entirely.
+    874|       expect(derivationCaught, site).toBeInstanceOf(Error);
+    875|       expect(thrown, site).toBe(derivationCaught);
+       |                            ^
+    876|     }
+    877|     handle.close();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  src/floor/floor.test.ts > floor — F3 the correlation JOIN, and F6's no-catch rule > an INJECTED sentinel from the derivation reaches the caller AS ITSELF
+AssertionError: expected Error: sentinel: no integrity token in th… to be Error: sentinel: no integrity token in th… // Object.is equality
+
+If it should pass with deep equality, replace "toBe" with "toStrictEqual"
+
+Expected: Error: sentinel: no integrity token in th…
+Received: serializes to the same string
+
+
+Compared values have no visual difference.
+
+ ❯ src/floor/floor.test.ts:903:9
+    901|           createFloor(handle.store, gatedDefinitions).getInstanceDetai…
+    902|         ),
+    903|       ).toBe(sentinel);
+       |         ^
+    904|     } finally {
+    905|       derivationThrow = null;
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed | 80 passed (81)
+      Tests  3 failed | 3091 passed (3094)
+   Start at  10:17:58
+   Duration  24.28s (transform 3.82s, setup 0ms, import 7.50s, tests 83.37s, environment 4ms)
+
