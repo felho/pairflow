@@ -6653,3 +6653,61 @@ carries the rule forward. Should a `REV-NO-KEY-MEANING`-class discharge
 REQUIRE a decorrelation lane as its evidence, the way a claim requires
 its measurement? No measurement of the `operatorIntents` suite was made
 here, and this entry takes no position on how far the pattern runs.
+
+## 2026-09-01 — ROUTED TO THE BOUNDARY REVIEW: three owner-carried items, entered out-of-band so the review meets them as routed rather than as interjections
+
+Routed by the owner, 2026-09-01, from the supervisor session. Until this
+entry the three facts below had either no repo carrier or a carrier with
+a missing link; the owner chose to land them on this surface BEFORE the
+ch14 boundary review opens rather than drop them into it mid-review.
+That choice is itself the fourth item.
+
+**(1) THE 2026-08-28 "two error classes" ENTRY HAS A THIRD SIGHTING,
+recorded on a packet surface but never attached to the class.** The
+class: a well-formed sentence whose justification or quantifier is wider
+than its evidence. At the ch14-p3b approve (2026-08-29), the flag-2
+ratification record stated a ground its row does not carry — the refused
+alternative's cost claimed as "covered on three other carriers", which
+the row does not state and which is not true. The fact IS on a repo
+surface: ch14-p3b's arm-gate-1 record names it as reconciliation finding
+F1 ("a ratification record stating a ground its row does not carry"),
+self-caught and rewritten to the real cost — the cost the owner actually
+ratified. What no surface carries is the ATTACHMENT: F1 is a third data
+point for the two-error-classes entry's second class, found this time in
+the loop's own bookkeeping prose rather than in a packet row. The review
+counts it when it weighs that class.
+
+**(2) THE ch14 CLOSE'S INHERITANCE OF THE MUTATION STOP LIVES ONLY IN A
+COMMIT MESSAGE.** The ch13 boundary review's verdict (b) is on this
+surface in full — STOP, nine runs, zero arm-missed defects, the wiring
+stays, the revival shape named. The ch14 chapter close correctly applied
+it: `v3:mutation` is the one bridge deliberately absent from its green
+list, and X1 asked the close to decide the bridge's standing rather than
+inherit it silently. The close DID decide it — but the statement lives
+only in commit `8b96ca95`'s message, which no future close reads. The
+review's question: where does a chapter close record an inherited
+disposition so the NEXT close finds it without re-deriving it, and does
+verdict (b) itself need a normative home outside a review entry?
+
+**(3) THE GATE PROTOCOL ON THE PACKET SURFACE — PRACTICE OR RULE?**
+ch14-p3a's third detector miss was a gate record that lived only in
+`/tmp`; ch14-p3b answered it by writing both arm gates' protocols (hash
+chain, per-pass verdicts and findings, transport and tier validation,
+the reconciliation findings) into the packet's own Build record. It
+worked — this entry's item (1) cites a fact that reached a repo surface
+ONLY because of it. Nothing ratified requires the next packet to do the
+same. The review decides whether this stays a per-packet practice or
+becomes a standing rule with a named home (task-packet template or
+README §5.5), and if a rule, its minimum content — on the evidence, the
+hash chain and per-pass verdicts at least.
+
+**(4) THE SHARED OBSERVATION.** All three were born at owner-facing
+moments — an approve, a close report, a design choice inside a build —
+and each reached this surface only because the owner remembered to carry
+it. The supervisor-session boundary (decisions travel to the agent;
+process observations travel to the repo via the boundary review)
+presumes a carrier for the second half, and this entry is that carrier,
+hand-operated. The review's question: does the loop need a named landing
+place for approve-time and close-time observations as they occur, or is
+the hand-operated route's cost — three items in one chapter, one of them
+nearly lost — acceptable and simply now measured?
