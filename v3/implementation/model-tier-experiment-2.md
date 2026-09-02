@@ -388,3 +388,23 @@ design and this divergence is informative, not a defect. Spread:
   post-approve (the trace-narrow hardening aftermath — the routed
   instrument-ownership signal, quantified), recorded without
   re-scoring per the index's own rule.
+- 2026-09-02 — ch14-p3a and ch14-p3b D/E calls RESOLVED at the ch14
+  boundary review (owner-ratified stepwise, one packet per decision;
+  the A–C halves and the never-computed-at-approve breach are the
+  2026-09-02 entry above). **ch14-p3a: D 1** (the verbs' runtime is
+  synchronous store reads plus one transactional commit; the
+  pending-Ask read is stateful-persistent; the subprocess journey is
+  test-side harness, not the packet's runtime substrate — the p2a
+  build-time-tooling line and ch13-p1b's D 0 CLI precedent, not
+  ch13-P0's runner reading, where the subprocess WAS the product
+  runtime) · **E 1** (new module from existing idioms; nothing
+  declared idiom-minting under ADR-019's regime) — **Σ 6, MEDIUM**.
+  **ch14-p3b: D 0** (the production delta is declaration-side — a
+  template the EXISTING admission loads, plus tests; the park/decide/
+  resume machinery was already built upstream) · **E 1** (precedented
+  in kind: the ch13 activation-floor template wiring and p2a's
+  checker-with-adversarial-negatives class) — **Σ 5, MEDIUM**. The
+  disputable E 2 reading of p3b's single-use declared edit class was
+  weighed at the ratification and recorded: at D 0 it is
+  band-invariant (Σ 6, still Medium); the band flips only on D 1 AND
+  E 2 together, both against the ratified calls independently.
