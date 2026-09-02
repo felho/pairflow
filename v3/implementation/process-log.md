@@ -6711,3 +6711,38 @@ hand-operated. The review's question: does the loop need a named landing
 place for approve-time and close-time observations as they occur, or is
 the hand-operated route's cost — three items in one chapter, one of them
 nearly lost — acceptable and simply now measured?
+
+- 2026-09-02 (ch14 CLOSE, the dogfooding checkpoint — RUN, late: after
+  the mechanical close commit rather than before it) · **THE OPERATOR
+  SURFACE, DRIVEN BY HAND, END TO END — TWICE THROUGH THE PARK.**
+  Executed on the shipped surfaces (`pnpm v3:cli`, the canonical
+  `v3/templates/local-pair-v0@1.yaml`, a throwaway store): create →
+  start → PASS → CONVERGED → the park, the pending Ask discovered
+  through `detail` (question, recommendation, allowedDecisions, the
+  per-decision REQUIRED-field lists, the task context) →
+  `request_rework` WITHOUT `--override` refused `override_required` at
+  exit 3 → `request_rework --override` with its required instruction
+  COMMITTED, the handoff instruction arriving verbatim in the round-2
+  implementer packet → PASS → CONVERGED → the second park →
+  `submit-decision --decision approve` → the `commit_pending` wait →
+  `resume --event COMMIT` → `done` (TERMINAL, round 2, version 9; the
+  transcript carries both DECISION_REQUEST/DECISION_MADE pairs and the
+  WAIT_RESUMED). NO product finding: the surface behaved as the
+  chapter's rows say. Three operator-experience observations, none a
+  defect: (i) the `override_required` rejection names no remedy — not
+  which flag, not what the recommendation was — so a human re-reads
+  `detail`; consistent under the JSON contract, recorded as a candidate
+  for a later operator-UX pass, not folded. (ii) a hand-miscounted
+  `--expected-version` was answered by `{"kind":"stale",
+  "currentVersion":5}` — the CAS surface self-corrects the operator,
+  working as designed. (iii) the read verbs' option surfaces differ:
+  `detail` accepts `--templates-dir` (it derives the pending Ask),
+  `timeline` refuses it with a usage error — principled (need-based)
+  but surprising at the prompt. The store was removed after the run;
+  this entry is the receipt. THE PROCESS FACT rides with the run
+  rather than beside it: the checkpoint ran AFTER the mechanical close
+  (8b96ca95) because nothing in the close sequence gates on the DoD's
+  dogfooding element — neither a run nor the user's recorded waiver was
+  present and the close still read as complete. That is the third fact
+  of the 2026-08-27 "no gate-point for its own close column" entry's
+  class, and the boundary agenda's own item 0a is its evidence.
